@@ -58,7 +58,12 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
 {
     mMeshURI = mesh;
     ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
+
+    if (ptr)
+    {
+        std::cout<<"\n\nGot into notify\n\n";
+        MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
+    }
 }
 
 URI const& ProxyMeshObject::getMesh () const

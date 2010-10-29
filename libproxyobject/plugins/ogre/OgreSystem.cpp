@@ -751,6 +751,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             //bftm changed
             std::cout<<"\n\nadd listener to dlPlanner in OgreSystem.cpp\n\n";
             p->getProxyManager()->addListener(dlPlanner);
+            p->addListener(dlPlanner);
             //bftm changed
         }
     }

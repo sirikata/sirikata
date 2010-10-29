@@ -743,6 +743,8 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 }
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
+    std::cout<<"\n\nGot into handleProximityMessage\n\n";
+    
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
@@ -776,6 +778,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
+                std::cout<<"\n\nAbout to try to createProxy from handleProximityMessage\n\n";
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
             }
             else {
@@ -843,11 +846,18 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     returner->setLocation(tmv);
     returner->setOrientation(tmq);
     returner->setBounds(bs);
+
+    std::cout<<"\n\nInside of createProxy\n\n";
     
     if (!is_camera && meshuri)
     {
+        std::cout<<"\n\nabout to check if it's a mesh object\n\n";
         ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
-        if (mesh) mesh->setMesh(meshuri);
+        if (mesh)
+        {
+            std::cout<<"\n\nAbout to set mesh\n\n";
+            mesh->setMesh(meshuri);
+        }
     }
 
     return returner;
