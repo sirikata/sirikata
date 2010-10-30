@@ -56,7 +56,10 @@ void ProxyWebViewObject::loadHTML(const std::string& html)
 
 void ProxyWebViewObject::evaluateJS(const std::string& javascript)
 {
-	WebViewProvider::notify(&WebViewListener::evaluateJS, javascript);
+    std::cout<<"\n\n\n";
+    std::cout<<"Got into evaluateJS";
+    std::cout<<"\n\n\n";
+    WebViewProvider::notify(&WebViewListener::evaluateJS, javascript);
 }
 
 void ProxyWebViewObject::setPosition(const OverlayPosition& position)
