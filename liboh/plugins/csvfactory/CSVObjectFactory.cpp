@@ -236,7 +236,7 @@ void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<Tim
 
         PerPresenceData* pd = NULL;
         //oci.object->addSimListeners(pd,oh_sims,sims);
-        oci.object->addListeners(pd,tss);
+        //oci.object->addListeners(pd,tss);
 
         
         std::cout<<"\n\nPotential memory leak.  Never deleting pd\n\n";

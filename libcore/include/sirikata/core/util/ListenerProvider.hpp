@@ -88,11 +88,9 @@ protected:
      */
     template <typename T, typename A, typename B>
       void notify(T func, A newA, B newB){
-        std::cout<<"\n\nGot into 3 notify in listenerProvider.hpp\n\n";
         for (int32 i=(int32)mListeners.size()-1;
              i>=0&&i<(int32)mListeners.size();
              --i) {
-            std::cout<<"\n\nNotifying i: "<<i<<"\n\n";
             ((&*mListeners[i])->*func)(newA,newB);
         }
     }

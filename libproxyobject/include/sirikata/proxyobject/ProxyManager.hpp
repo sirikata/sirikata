@@ -64,7 +64,6 @@ public:
     //bftm
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const = 0;
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const = 0;
-
 };
 
 typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;

@@ -366,7 +366,8 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
 bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     ++sNumOgreSystems;
     proxyManager->addListener(this);
-
+    
+    
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
 
@@ -747,9 +748,8 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         } else if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
+            std::cout<<"\n\n************GOT INTO add new object\n\n";
             dlPlanner->addNewObject(p, mesh);
-            //bftm changed
-            //bftm changed
         }
     }
     if (!created) {

@@ -184,9 +184,22 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
     SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
     if (it == mSpaceData->end())
     {
-        it = mSpaceData->insert(
-            SpaceDataMap::value_type( SpaceObjectReference(space,oref), PerPresenceData(this, space,oref) )
-        ).first;
+        std::cout<<"\n\nLooking for: "<<space<<"   "<<oref<<"\n\n";
+        // SpaceDataMap::const_iterator twoIt = mSpaceData->begin();
+        // // for (twoIt = mSpaceData->begin(); twoIt != mSpaceData->end(); ++twoIt)
+        // // {
+        // //     SpaceObjectReference tmp = twoIt->first;
+        // //     std::cout<<"values: "<<tmp<<"\n";
+        // // }
+        // it = mSpaceData->insert(
+        //     SpaceDataMap::value_type( SpaceObjectReference(space,oref), PerPresenceData(this, space,oref) )
+        // ).first;
+        
+        std::cout<<"\n\n*********Potential error: should I just be inserting into space data map if don't have the proxymanager?**********\n\n";
+
+        ProxyManagerPtr returner;
+        return returner;
+        
     }
     return it->second.proxyManager;
 }
@@ -366,6 +379,7 @@ void HostedObject::addListeners(PerPresenceData*&pd,TimeSteppedSimulation* os)
     
     pd = new PerPresenceData (this,space);
     pd->getProxyManager()->addListener(os);
+    
 }
 
 
@@ -393,9 +407,10 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     }
 
     SpaceObjectReference self_objref(space, obj);
-    
     if(mSpaceData->find(self_objref) == mSpaceData->end())
     {
+        std::cout<<"\nAdding "<<self_objref<<" to mspacedata map\n";
+        
         if (ppd != NULL)
         {
             ppd->populateSpaceObjRef(SpaceObjectReference(space,obj));
@@ -696,6 +711,12 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     SpaceID space = spaceobj.space();
     ObjectReference oref = spaceobj.object();
     ProxyManagerPtr proxy_manager = getProxyManager(space, oref);
+
+    if (!proxy_manager)
+    {
+        return true;
+    }
+    
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
@@ -743,7 +764,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 }
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    std::cout<<"\n\nGot into handleProximityMessage\n\n";
+    std::cout<<"\nGot into handleProximityMessage\n";
     
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
@@ -770,18 +791,33 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
 
 
-            if (!getProxyManager(proximateID.space(),proximateID.object())->getProxyObject(proximateID)) {
-                TimedMotionQuaternion orient(convertToApproxLocalTime(addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+            ProxyManagerPtr pmp = getProxyManager(spaceobj.space(),spaceobj.object());
+            if (! pmp)
+            {
+                return true;
+            }
+
+
+            
+            if (!getProxyManager(spaceobj.space(),spaceobj.object())->getProxyObject(proximateID)) {
+                TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
                 URI meshuri;
                 if (addition.has_mesh()) meshuri = URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
-                std::cout<<"\n\nAbout to try to createProxy from handleProximityMessage\n\n";
+                std::cout<<"\nAbout to try to createProxy from handleProximityMessage\n";
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+
+                // lkjs; may need the proxymanager to notify listeners;
+                // but why are we missing proxy managers;
+
+                
             }
             else {
+                //ProxyManagerPtr proxy_manager =
+                //getProxyManager(spaceobj.space(), spaceobj.object());
                 ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                         ObjectReference(addition.object())));
@@ -847,11 +883,9 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     returner->setOrientation(tmq);
     returner->setBounds(bs);
 
-    std::cout<<"\n\nInside of createProxy\n\n";
     
     if (!is_camera && meshuri)
     {
-        std::cout<<"\n\nabout to check if it's a mesh object\n\n";
         ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
         if (mesh)
         {
@@ -867,7 +901,19 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 //initilize position and quaternion correctly
 ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera)
 {
-    ProxyManagerPtr proxy_manager = getProxyManager(objref.space(), objref.object());
+    //ProxyManagerPtr proxy_manager = getProxyManager(objref.space(),
+    //objref.object());
+    ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
+
+    if (!proxy_manager)
+    {
+        //mSpaceData->insert(SpaceDataMap::value_type( objref, PerPresenceData(this, objref.space(),objref.object()) ));
+        //proxy_manager = getProxyManager(objref.space(), objref.object());
+        mSpaceData->insert(SpaceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object()) ));
+        proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
+    }
+
+    
     ProxyObjectPtr proxy_obj;
 
     if (is_camera) proxy_obj = ProxyObject::construct<ProxyCameraObject>
