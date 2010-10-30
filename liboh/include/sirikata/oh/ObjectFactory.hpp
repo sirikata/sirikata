@@ -53,7 +53,6 @@ class SIRIKATA_OH_EXPORT ObjectFactory {
 
     /** Generate objects for the scene and connect them to the space. */
     virtual void generate() = 0;
-    virtual void generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims,TimeSteppedSimulation* tss) = 0;
 };
 
 /** ObjectFactoryFactory creates ObjectFactories.  To create an ObjectFactory,

@@ -86,6 +86,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
  : mParent(ho),
    mManager(jMan)
 {
+
+    std::cout<<"\n\n\nGOT INTO CONSTRUCTOR OF JSOBJECTSCRIPT\n\n";
+    
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
@@ -119,6 +122,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         ObjectReference obj_refer = space_it->object();
         mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
 
+                
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
         if (mScriptingPort)
@@ -170,19 +174,8 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& m
 
   std::string serializedCreate;
   creator.SerializeToString(&serializedCreate);
-  // RoutableMessageBody body;
-  // body.add_message("CreateObject", serializedCreate);
-  // std::string serialized;
-  // body.SerializeToString(&serialized);
-
 
   FIXME_GET_SPACE_OREF();
-  // const HostedObject::SpaceSet& spaces = mParent->spaces();
-  // SpaceID spaceider = *(spaces.begin());
-
-  //ODP::Endpoint dest (spaceider,mParent->getObjReference(spaceider),Services::RPC);
-  //The .object call to SpaceObjectReference gets out the ObjectReference.
-//  ODP::Endpoint dest (space,(mParent->id(space)).object(),Services::RPC);
 
   ODP::Endpoint dest (space,oref,Services::CREATE_ENTITY);
   //mCreateEntityPort->send(dest, MemoryReference(serialized.data(),

@@ -74,6 +74,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
 void JSObjectScriptManager::createMathTemplate()
 {
+    v8::HandleScope handle_scope;
     mMathTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     // An internal field holds the JSObjectScript*
@@ -98,6 +99,7 @@ void JSObjectScriptManager::createMathTemplate()
 //no motion (for now).  May special-case motion stuff
 void JSObjectScriptManager::createContextTemplate()
 {
+    v8::HandleScope handle_scope;
     // And we expose some functionality directly
     mContextTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     
@@ -137,7 +139,7 @@ void JSObjectScriptManager::createSystemTemplate()
     // And we expose some functionality directly
     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
     // An internal field holds the JSObjectScript*
-    mContextTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
+    system_templ->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
 
     // Functions / types

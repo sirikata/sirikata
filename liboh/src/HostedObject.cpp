@@ -184,6 +184,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
     SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
     if (it == mSpaceData->end())
     {
+        std::cout<<"\n\nClean getProxyManager function so that it's apparent may get back null\n\n";
         std::cout<<"\n\nLooking for: "<<space<<"   "<<oref<<"\n\n";
         // SpaceDataMap::const_iterator twoIt = mSpaceData->begin();
         // // for (twoIt = mSpaceData->begin(); twoIt != mSpaceData->end(); ++twoIt)
@@ -194,9 +195,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
         // it = mSpaceData->insert(
         //     SpaceDataMap::value_type( SpaceObjectReference(space,oref), PerPresenceData(this, space,oref) )
         // ).first;
-        
-        std::cout<<"\n\n*********Potential error: should I just be inserting into space data map if don't have the proxymanager?**********\n\n";
-
         ProxyManagerPtr returner;
         return returner;
         
@@ -216,7 +214,10 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
 
     SpaceDataMap::const_iterator smapIter;
     for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
+    {
+        std::cout<<"\nin getSpaceObjRefs.  This is a space obj:  "<<smapIter->second.space<<smapIter->second.object<<"\n";
         ss.insert(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
+    }
 }
 
 
@@ -372,15 +373,6 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
     }
 }
 
-void HostedObject::addListeners(PerPresenceData*&pd,TimeSteppedSimulation* os)
-{
-    std::cout<<"\n\nFIXME: defaulting objects into first space available in addSimListeners\n\n";
-    SpaceID space = mObjectHost->getDefaultSpace();
-    
-    pd = new PerPresenceData (this,space);
-    pd->getProxyManager()->addListener(os);
-    
-}
 
 
 
@@ -398,7 +390,6 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 
 void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
-    std::cout<<"\n\n\nhandleConnectedIndirect\n\n";
     std::cout.flush();
     
     if (server == NullServerID) {
@@ -409,8 +400,6 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     SpaceObjectReference self_objref(space, obj);
     if(mSpaceData->find(self_objref) == mSpaceData->end())
     {
-        std::cout<<"\nAdding "<<self_objref<<" to mspacedata map\n";
-        
         if (ppd != NULL)
         {
             ppd->populateSpaceObjRef(SpaceObjectReference(space,obj));
@@ -498,12 +487,6 @@ bool HostedObject::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
 
     SpaceID space = mSpaceData->begin()->first.space();
     
-    // std::cout<<"\n\nPotentially incorrect: arbitrarily routing through first space in route\n\n";
-    // std::cout<<"space size: "<<mSpaceData->size()<<"\n";
-    // SpaceDataMap::iterator it;
-    // for (it = mSpaceData->begin(); it != mSpaceData->end(); ++it)
-    //     std::cout<<"Space:  "<<it->first.space()<<"\n";
-    
     return mObjectHost->send(getSharedPtr(), space, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
 }
 
@@ -587,11 +570,26 @@ void HostedObject::processInitScriptMessage(MemoryReference& body)
 
 
 
+bool HostedObject::handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
+{
+    //if the message isn't on the create_entity port, then it's good.
+    //Otherwise, it's bad.
+    if (dst.port() != Services::CREATE_ENTITY)
+        return false;
+
+    return true;
+}
+
+
+
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
     // Convert to ODP runtime format
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
+
+    std::cout<<"\n\nReceived message \n\n";
+    
     
     // FIXME to transition to real ODP instead of ObjectMessageRouter +
     // ObjectMessageDispatcher, we need to allow the old route as well.  First
@@ -764,7 +762,6 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 }
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    std::cout<<"\nGot into handleProximityMessage\n";
     
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
@@ -777,8 +774,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
         for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
-            //std::cout << "Proximity addition: " << addition.object().toString()  << " , "
-            //          << addition.mesh() << " , "  <<  addition.location().position()  << "\n";
 
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
             TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
@@ -807,17 +802,9 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
-                std::cout<<"\nAbout to try to createProxy from handleProximityMessage\n";
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
-
-                // lkjs; may need the proxymanager to notify listeners;
-                // but why are we missing proxy managers;
-
-                
             }
             else {
-                //ProxyManagerPtr proxy_manager =
-                //getProxyManager(spaceobj.space(), spaceobj.object());
                 ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                         ObjectReference(addition.object())));
@@ -860,22 +847,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-
-// //This function is used to create an empty ProxyObjectPtr.
-// //Can fill in the ProxyObjectPtr after connection using the
-// //afterConnection function of ProxyObjectPtr.
-// ProxyObjectPtr HostedObject::createDummyProxyManager(bool is_camera)
-// {
-//     ProxyObjectPtr returner;
-//     if (is_camera)
-//         returner = ProxyObject::construct<ProxyCameraObject>();
-//     else
-//         returner = ProxyObject::construct<ProxyMeshObject>();
-
-//     return returner;
-// }
-
-
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,is_camera);
@@ -889,7 +860,6 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
         ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
         if (mesh)
         {
-            std::cout<<"\n\nAbout to set mesh\n\n";
             mesh->setMesh(meshuri);
         }
     }
@@ -928,14 +898,14 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
 ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyManager: should try to match space!!!\n\n";
+    std::cout<<"\n\nINCORRECT in getDefaultProxyManager: should try to match object!!!\n\n";
     ObjectReference oref = mSpaceData->begin()->first.object();
     return  getProxyManager(space, oref);
 }
 
 ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match space!!!\n\n";
+    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match object!!!\n\n";
     ObjectReference oref = mSpaceData->begin()->first.object();
     return  getProxy(space, oref);
 }

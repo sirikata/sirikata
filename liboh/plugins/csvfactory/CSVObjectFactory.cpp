@@ -35,7 +35,7 @@
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <vector>
-#include <sirikata/proxyobject/SimulationFactory.hpp>
+
 
 
 namespace Sirikata {
@@ -63,12 +63,6 @@ T safeLexicalCast(const String& orig) {
 }
 
 void CSVObjectFactory::generate()
-{
-    std::cout<<"\n\nHave not finished this function\n\n";
-    assert(false);
-}
-
-void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims, TimeSteppedSimulation* tss)
 {
     typedef std::vector<String> StringList;
 
@@ -191,7 +185,6 @@ void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeStepp
                     if(script_file_idx < (int)line_parts.size())
                     {
                         scriptFile = line_parts[script_file_idx];
-                        std::cout << "\n\n Got a script file: " << scriptFile<<"\n\n";
                         scriptType = line_parts[script_file_idx + 1];
                     }
                 }
@@ -219,13 +212,13 @@ void CSVObjectFactory::generate(std::list<String>& oh_sims,std::vector<TimeStepp
     }
 
     fp.close();
-    connectObjects(oh_sims,sims,tss);
+    connectObjects();
 
     return;
 }
 
 
-void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims, TimeSteppedSimulation* tss)
+void CSVObjectFactory::connectObjects()
 {
     if (mContext->stopped())
         return;
@@ -234,16 +227,11 @@ void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<Tim
         ObjectConnectInfo oci = mIncompleteObjects.front();
         mIncompleteObjects.pop();
 
-        PerPresenceData* pd = NULL;
-        //oci.object->addSimListeners(pd,oh_sims,sims);
-        //oci.object->addListeners(pd,tss);
 
-        
-        std::cout<<"\n\nPotential memory leak.  Never deleting pd\n\n";
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
-            UUID::null(), pd,oci.scriptFile,
+            UUID::null(), NULL,oci.scriptFile,
             oci.scriptType
         );
     }
@@ -251,7 +239,7 @@ void CSVObjectFactory::connectObjects(std::list<String>& oh_sims,std::vector<Tim
     if (!mIncompleteObjects.empty())
         mContext->mainStrand->post(
             Duration::seconds(1.f),
-            std::tr1::bind(&CSVObjectFactory::connectObjects, this,oh_sims,sims,tss)
+            std::tr1::bind(&CSVObjectFactory::connectObjects, this)
         );
 }
 

@@ -49,14 +49,12 @@ public:
     virtual ~CSVObjectFactory() {}
 
     virtual void generate();
-    virtual void generate(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims, TimeSteppedSimulation* tss);
 
     
 private:
     // Connects one batch of objects and sets up another callback for more
     // additions if necessary.
-    //void connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims);
-    void connectObjects(std::list<String>& oh_sims,std::vector<TimeSteppedSimulation*>& sims, TimeSteppedSimulation* tss);
+    void connectObjects();
     
     ObjectHostContext* mContext;
     ObjectHost* mOH;
