@@ -35,10 +35,17 @@
 #include "WebView.hpp"
 #include <OgreBitwise.h>
 
+#ifdef HAVE_BERKELIUM
+#include "berkelium/StringUtil.hpp"
+#include "berkelium/ScriptVariant.hpp"
+#endif
+
 using namespace Ogre;
 
 namespace Sirikata {
 namespace Graphics {
+
+using Berkelium::UTF8String;
 
 WebView::WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
@@ -71,10 +78,17 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
-    mBorderLeft=2;
-    mBorderRight=2;
-    mBorderTop=25;
-    mBorderBottom=2;
+    if (tier == TIER_FRONT) {
+        mBorderTop = 1;
+        mBorderLeft = 1;
+        mBorderBottom = 1;
+        mBorderRight = 1;
+    } else {
+        mBorderLeft=2;
+        mBorderRight=2;
+        mBorderTop=25;
+        mBorderBottom=2;
+    }
 	createMaterial();
 
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
@@ -127,7 +141,7 @@ WebView::~WebView()
 	if(alphaCache)
 		delete[] alphaCache;
 #ifdef HAVE_BERKELIUM
-    delete webView;
+    webView->destroy();
 #endif
 	if(overlay)
 		delete overlay;
@@ -164,7 +178,8 @@ void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& pro
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 {
 #ifdef HAVE_BERKELIUM
-    initializeWebView(Berkelium::Window::create());
+    initializeWebView(Berkelium::Window::create(
+                          WebViewManager::getSingleton().bkContext));
 #endif
 }
 
@@ -177,6 +192,16 @@ void WebView::initializeWebView(
 #ifdef HAVE_BERKELIUM
     webView = win;
     webView->setDelegate(this);
+    webView->addBindOnStartLoading(WideString::point_to(L"chrome"),
+                  Berkelium::Script::Variant::emptyObject());
+    webView->addBindOnStartLoading(WideString::point_to(L"chrome.send_"),
+                  Berkelium::Script::Variant::bindFunction(
+                      WideString::point_to(L"send"), false));
+    webView->addEvalOnStartLoading(
+        WideString::point_to(L"chrome.send = function(n, args) {\n"
+                             L"console.log([n].concat(args));\n"
+                             L"chrome.send_.apply(this, [n].concat(args));\n"
+                             L"};"));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
         webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
@@ -354,13 +379,18 @@ void WebView::createMaterial()
  #endif
  }
 
- void WebView::evaluateJS(const std::string& utf8js)
+ void WebView::evaluateJS(const std::string& utf8jsoo)
  {
+     std::string utf8js = utf8jsoo + ";//";
  #if defined(HAVE_BERKELIUM)
-     wchar_t *outchars = new wchar_t[utf8js.size()+1];
-     size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
-     webView->executeJavascript(outchars,len);
-     delete []outchars;
+     WideString wideJS = Berkelium::UTF8ToWide(
+         UTF8String::point_to(utf8js.data(), utf8js.length()));
+     UTF8String uJS = Berkelium::WideToUTF8(
+         WideString::point_to(wideJS.data(), wideJS.length()));
+     SILOG(webview,debug,"Eval JS: "<<uJS);
+     webView->executeJavascript(wideJS);
+     Berkelium::stringUtil_free(uJS);
+     Berkelium::stringUtil_free(wideJS);
  #endif
  }
 
@@ -778,19 +808,46 @@ void WebView::resize(int width, int height)
 
 
 ///////// Berkelium Callbacks...
-void WebView::onAddressBarChanged(Berkelium::Window*, const char*newURL, size_t newURLLength) {
-    SILOG(webview,debug,"onAddressBarChanged"<<std::string(newURL,newURLLength));
+void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
+    SILOG(webview,debug,"onAddressBarChanged"<<newURL);
 }
-void WebView::onStartLoading(Berkelium::Window*, const char*newURL, size_t newURLLength) {
-    SILOG(webview,debug,"onStartLoading"<<std::string(newURL,newURLLength));
+void WebView::onStartLoading(Berkelium::Window*, URLString newURL) {
+    SILOG(webview,debug,"onStartLoading"<<newURL);
 }
+void WebView::onTitleChanged(Berkelium::Window*, WideString wtitle) {
+    UTF8String textString = Berkelium::WideToUTF8(wtitle);
+    std::string title (textString.data(), textString.length());
+    Berkelium::stringUtil_free(textString);
+    SILOG(webview,debug,"onTitleChanged"<<title);
+}
+void WebView::onTooltipChanged(Berkelium::Window*, WideString wtext) {
+    UTF8String textString = Berkelium::WideToUTF8(wtext);
+    std::string tooltip (textString.data(), textString.length());
+    Berkelium::stringUtil_free(textString);
+    SILOG(webview,debug,"onTooltipChanged"<<tooltip);
+}
+
 void WebView::onLoad(Berkelium::Window*) {
     SILOG(webview,debug,"onLoad");
 }
-void WebView::onLoadError(Berkelium::Window*, const char* error, size_t errorLength) {
-    SILOG(webview,debug,"onLoadError"<<std::string(error,errorLength));
-}
 
+void WebView::onConsoleMessage(Berkelium::Window *win, WideString wmessage,
+                               WideString wsourceId, int line_no) {
+    UTF8String textString = Berkelium::WideToUTF8(wmessage);
+    UTF8String sourceString = Berkelium::WideToUTF8(wsourceId);
+    std::string message (textString.data(), textString.length());
+    std::string sourceId (sourceString.data(), sourceString.length());
+    Berkelium::stringUtil_free(textString);
+    Berkelium::stringUtil_free(sourceString);
+    SILOG(webview,debug,"onConsoleMessage " << message << " at file " << sourceId << ":" << line_no);
+}
+void WebView::onScriptAlert(Berkelium::Window *win, WideString message,
+                            WideString defaultValue, URLString url,
+                            int flags, bool &success, WideString &value) {
+    // FIXME: C++ string conversion functions are a pile of garbage.
+    UTF8String textString = Berkelium::WideToUTF8(message);
+    SILOG(webview,debug,"onScriptAlert "<<textString);
+}
 
 #ifdef HAVE_BERKELIUM
 Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
@@ -847,6 +904,7 @@ Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
 
 void WebView::onPaint(Berkelium::Window*win,
                       const unsigned char*srcBuffer, const Berkelium::Rect&rect,
+                      size_t numCopyRects, const Berkelium::Rect *copyRects,
                       int dx, int dy, const Berkelium::Rect&clipRect) {
 #ifdef HAVE_BERKELIUM
     TexturePtr texture = backingTexture.isNull()?viewTexture:backingTexture;
@@ -868,12 +926,6 @@ void WebView::onPaint(Berkelium::Window*win,
         }
       }
 #endif
-}
-void WebView::onBeforeUnload(Berkelium::Window*, bool*) {
-    SILOG(webview,debug,"onBeforeUnload");
-}
-void WebView::onCancelUnload(Berkelium::Window*) {
-    SILOG(webview,debug,"onCancelUnload");
 }
 void WebView::onCrashed(Berkelium::Window*) {
     SILOG(webview,debug,"onCrashed");
@@ -1015,6 +1067,8 @@ void WebView::onWidgetPaint(
         Berkelium::Widget *wid,
         const unsigned char *sourceBuffer,
         const Berkelium::Rect &rect,
+        size_t numCopyRects,
+        const Berkelium::Rect *copyRects,
         int dx, int dy,
         const Berkelium::Rect &scrollRect) {
 #ifdef HAVE_BERKELIUM
@@ -1040,18 +1094,36 @@ void WebView::onWidgetPaint(
 #endif //HAVE_BERKELIUM
 }
 
-void WebView::onChromeSend(Berkelium::Window *win, const Berkelium::WindowDelegate::Data name, const Berkelium::WindowDelegate::Data*args, size_t numArgs) {
+void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLString origin, WideString funcName, Berkelium::Script::Variant *args, size_t numArgs) {
 #ifdef HAVE_BERKELIUM
-    std::string nameStr(name.message,name.length);
+    if (numArgs < 1) {
+        if (replyMsg)
+            win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
+        return;
+    }
+    const Berkelium::Script::Variant &name = args[0];
+    args++;
+    numArgs--;
+    UTF8String nameUTF8 = Berkelium::WideToUTF8(name.toString());
+    std::string nameStr(nameUTF8.get<std::string>());
+    Berkelium::stringUtil_free(nameUTF8);
 	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
 	if(i != delegateMap.end()) {
         JSArguments argVector;
+        std::vector<UTF8String> argStorage;
         for (size_t j=0;j!=numArgs;++j) {
-            argVector.push_back(JSArgument(args[j].message,args[j].length));
+            UTF8String temp = Berkelium::WideToUTF8(args[j].toString());
+            argStorage.push_back(temp);
+            argVector.push_back(JSArgument(temp.data(), temp.length()));
         }
 		i->second(this, argVector);
+        for (size_t j=0;j<argStorage.size();j++) {
+            Berkelium::stringUtil_free(argStorage[j]);
+        }
 	}
+    if (replyMsg)
+        win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
 #endif
 }
 

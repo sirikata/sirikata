@@ -44,6 +44,10 @@
 #include <stdlib.h>
 #endif
 
+#ifdef HAVE_BERKELIUM
+#include "berkelium/Context.hpp"
+#endif
+
 template<> Sirikata::Graphics::WebViewManager* Ogre::Singleton<Sirikata::Graphics::WebViewManager>::ms_Singleton = 0;
 
 namespace Sirikata {
@@ -92,7 +96,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
     }
 #endif
 #ifdef HAVE_BERKELIUM
-    Berkelium::init();
+    Berkelium::init(Berkelium::FileString::empty());
+    bkContext = Berkelium::Context::create();
 #endif
 #ifdef HAVE_BERKELIUM
 /*
@@ -109,9 +114,8 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->setTransparent(true);
 */
 
-        /*chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
-        FILE * testfile=NULL;
-        chromeWebView->loadFile("chrome/navbar.html");*/
+        chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView->loadFile("chrome/navbar.html");
 
         /*
         WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
@@ -139,6 +143,7 @@ WebViewManager::~WebViewManager()
 		delete toDelete;
 	}
 #ifdef HAVE_BERKELIUM
+    bkContext->destroy();
     Berkelium::destroy();
 #endif
 }

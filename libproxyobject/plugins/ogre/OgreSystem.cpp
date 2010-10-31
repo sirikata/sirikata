@@ -543,11 +543,10 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     allocMouseHandler();
     new WebViewManager(0, mInputManager, getResourcesDir()); ///// FIXME: Initializing singleton class
 
-/*  // Test web view
+  // Test web view
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());
     //view->setProxyObject(webviewpxy);
     view->loadURL("http://www.google.com");
-*/
 
     return true;
 }

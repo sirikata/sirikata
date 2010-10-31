@@ -288,6 +288,10 @@ protected:
 	bool isDraggingFocusedWebView;
     std::string baseDirectory;
 
+#ifdef HAVE_BERKELIUM
+    Berkelium::Context *bkContext;
+#endif
+
 	WebView* getTopWebView(int x, int y);
 	void onResizeTooltip(WebView* WebView, const JSArguments& args);
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
