@@ -32,10 +32,19 @@
 
 #include <sirikata/core/options/CommonOptions.hpp>
 
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
     InitOptions();
+
+    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* mainStrand = ios->createStrand();
+
+    delete mainStrand;
+    Network::IOServiceFactory::destroyIOService(ios);
 
     return 0;
 }
