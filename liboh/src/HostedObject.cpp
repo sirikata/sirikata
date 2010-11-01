@@ -40,7 +40,6 @@
 #include <Protocol_Subscription.pbj.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/RoutableMessage.hpp>
-#include <sirikata/core/persistence/PersistenceSentMessage.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
@@ -203,7 +202,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 }
 
 
-n
+
 void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
 {
     if (mSpaceData == NULL)

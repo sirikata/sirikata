@@ -203,6 +203,8 @@ void CSVObjectFactory::generate()
                 oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
+                oci.scriptType = scriptType;
+                oci.scriptFile = scriptFile;
                 mIncompleteObjects.push(oci);
 
                 count++;
@@ -231,7 +233,8 @@ void CSVObjectFactory::connectObjects()
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
-            UUID::null(), NULL,oci.scriptFile,
+            UUID::null(), NULL,
+            oci.scriptFile,
             oci.scriptType
         );
     }

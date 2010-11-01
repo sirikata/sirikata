@@ -36,7 +36,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/oh/ObjectHostTimeOffsetManager.hpp>
 #include <vector>
 
 namespace Sirikata {

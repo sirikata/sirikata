@@ -35,7 +35,6 @@
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/oh/SpaceTimeOffsetManager.hpp>
 #include <vector>
 
 

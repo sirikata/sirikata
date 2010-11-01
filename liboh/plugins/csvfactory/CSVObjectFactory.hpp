@@ -66,6 +66,8 @@ private:
         Location loc;
         BoundingSphere3f bounds;
         String mesh;
+        String scriptFile;
+        String scriptType;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;
     int32 mConnectRate;
