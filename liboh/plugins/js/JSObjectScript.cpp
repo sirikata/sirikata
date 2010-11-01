@@ -86,9 +86,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
  : mParent(ho),
    mManager(jMan)
 {
-
-    std::cout<<"\n\n\nGOT INTO CONSTRUCTOR OF JSOBJECTSCRIPT\n\n";
-    
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
@@ -758,7 +755,6 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 //parses them.
 void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
-    
     Sirikata::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
     if (!parsed)

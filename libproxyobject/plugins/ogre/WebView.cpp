@@ -1056,15 +1056,18 @@ void WebView::onWidgetPaint(
 void WebView::onChromeSend(Berkelium::Window *win, const Berkelium::WindowDelegate::Data name, const Berkelium::WindowDelegate::Data*args, size_t numArgs) {
 #ifdef HAVE_BERKELIUM
     std::string nameStr(name.message,name.length);
-	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
+    std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
-	if(i != delegateMap.end()) {
+    if(i != delegateMap.end())
+    {
         JSArguments argVector;
-        for (size_t j=0;j!=numArgs;++j) {
+        for (size_t j=0;j!=numArgs;++j)
+        {
             argVector.push_back(JSArgument(args[j].message,args[j].length));
         }
-		i->second(this, argVector);
-	}
+        
+        i->second(this, argVector);
+    }
 #endif
 }
 

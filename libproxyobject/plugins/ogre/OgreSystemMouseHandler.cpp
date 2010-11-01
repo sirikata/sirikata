@@ -701,6 +701,7 @@ private:
     void createUIAction(const String& ui_page) {
         WebView* ui_wv = WebViewManager::getSingleton().createWebView("__object", "__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
         ui_wv->loadFile(ui_page);
+
     }
 
     /** Create a UI element for interactively scripting an object.
@@ -744,6 +745,12 @@ private:
 
                     ui_info.scripting = new_scripting_ui;
                     mScriptingUIObjects[new_scripting_ui] = obj;
+                    //new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript,this,_1,_2));
+                    //        lkjs;
+
+                    new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+
+            //lkjs;
                     return;
                 }
 
@@ -758,6 +765,9 @@ private:
 
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
+                new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+                //lkjs
+                //new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript,this,_1,_2));
                 onceInitialized = true;
 
             }
@@ -838,7 +848,8 @@ private:
 */
     }
 
-    void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
+    void onUploadObjectEvent(WebView* webview, const JSArguments& args)
+    {
         /*
         if (args.size() < 1) {
             SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
@@ -1025,33 +1036,71 @@ private:
      *  The target of the command is determined implicitly based on
      *  the webview this is coming from.
      */
-    void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args)
-    {
-        typedef std::tr1::unordered_map<String, String> StringMap;
+//     void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args)
+//     {
+//         typedef std::tr1::unordered_map<String, String> StringMap;
         
+//         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
+//         if (objit == mScriptingUIObjects.end())
+//             return;
+//         ProxyObjectPtr target_obj(objit->second.lock());
+
+//         if (!target_obj) return;
+
+//         StringMap::const_iterator command_it = args.find("Command");
+//         assert(command_it != args.end());
+        
+//         Get Proxy
+//         Protocol::ScriptingMessage scripting_msg;
+//         Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+//         scripting_req.set_id(0);
+//         scripting_req.set_body(command_it->second);
+//         std::string serialized_scripting_request;
+//         scripting_msg.SerializeToString(&serialized_scripting_request);
+//         target_obj->sendMessage(
+//             Services::SCRIPTING,
+//             MemoryReference(serialized_scripting_request)
+//         );
+//     }
+
+
+
+    
+    void executeScript(WebView* wv, const JSArguments& args)
+    {
         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
         if (objit == mScriptingUIObjects.end())
             return;
         ProxyObjectPtr target_obj(objit->second.lock());
 
         if (!target_obj) return;
-
-        StringMap::const_iterator command_it = args.find("Command");
-        assert(command_it != args.end());
         
-        //Get Proxy
-        Protocol::ScriptingMessage scripting_msg;
-        Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
-        scripting_req.set_id(0);
-        scripting_req.set_body(command_it->second);
-        std::string serialized_scripting_request;
-        scripting_msg.SerializeToString(&serialized_scripting_request);
-        target_obj->sendMessage(
-            Services::SCRIPTING,
-            MemoryReference(serialized_scripting_request)
-        );
+
+        JSIter command_it;
+        for (command_it = args.begin(); command_it != args.end(); ++command_it)
+        {
+            std::cout<<"\n\nBFTM: Fix selection in execute script of OgreSystemMouseHandler\n\n";
+            std::string strcmp (command_it->begin());
+            if (strcmp == "Command")
+            {
+                Protocol::ScriptingMessage  scripting_msg;
+                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+                scripting_req.set_id(0);
+                //scripting_req.set_body(String(command_it->second));
+                JSIter nexter = command_it + 1;
+                String msgBody = String(nexter->begin());
+                scripting_req.set_body(msgBody);
+                std::string serialized_scripting_request;
+                scripting_msg.SerializeToString(&serialized_scripting_request);
+                target_obj->sendMessage(
+                    Services::SCRIPTING,
+                    MemoryReference(serialized_scripting_request)
+                );
+            }
+        }
     }
 
+    
     /** Closes a webview. */
     void closeWebView(WebView* wv, const std::tr1::unordered_map<String, String>& args) {
         ScriptingUIObjectMap::iterator scriptui_it = mScriptingUIObjects.find(wv);
@@ -1586,9 +1635,6 @@ private:
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
-
-
-
         
         return EventResponse::nop();
     }
@@ -1932,7 +1978,8 @@ public:
 
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
-        mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+        //lkjs;
+        //mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
 
         mInputResponses["closeWebView"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::closeWebView, this, _1, _2));
 
@@ -2066,10 +2113,11 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright"), mInputResponses["rotateYNeg"]);
 
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
-
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
 
-        mInputBinding.add(InputBindingEvent::Web("__scripting", "ExecScript"), mInputResponses["executeScript"]);
+
+        //lkjs;
+        //mInputBinding.add(InputBindingEvent::Web("__scripting", "ExecScript"), mInputResponses["executeScript"]);
         mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
     }
 

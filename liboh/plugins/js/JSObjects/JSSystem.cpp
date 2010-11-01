@@ -184,9 +184,6 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
-    //std::cout<<"\n\n\nDEBUG PRINT\n\n";
-
-    std::cout<<"\n\nGot into the print statement\n";
     
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {

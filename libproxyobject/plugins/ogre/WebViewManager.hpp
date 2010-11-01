@@ -50,6 +50,7 @@ namespace Sirikata {
 
 typedef Sirikata::DataReference<const char*> JSArgument;
 typedef std::vector<JSArgument> JSArguments;
+typedef JSArguments::const_iterator JSIter;
 
 namespace Graphics {
 

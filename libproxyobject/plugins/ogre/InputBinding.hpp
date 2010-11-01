@@ -49,7 +49,6 @@ public:
     ~InputBinding();
 
     void add(const InputBindingEvent& evt, InputResponse* response);
-
     void handle(Input::InputEventPtr& evt);
 private:
     Binding mResponses;
