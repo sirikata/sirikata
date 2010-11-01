@@ -757,20 +757,6 @@ private:
     }
 
     void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
-        /*
-        if (args.size() < 1) {
-            SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
-            return;
-        }
-
-        // We've passed all the checks, just convert everything and we're good to go
-    //    String name = args[0].toString();
-        String name((char*)args[0].data(), args[0].size());
-        JSArguments event_args;
-        event_args.insert(event_args.begin(), args.begin() + 1, args.end());
-
-        mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
-        */
         printf("upload object event fired arg length = %d\n", (int)args.size());
         if (args.size() != 3) {
             printf("expected 3 arguments, returning.\n");
@@ -806,8 +792,8 @@ private:
             mFPSWidgetView = NULL;
         } else {
             printf("creating fps widget\n");
-            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 45,
-                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
+            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 30,
+                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT, 0, WebView::WebViewBorderSize(2,2,10,2));
             mFPSWidgetView->loadFile("chrome/fps.html");
             mFPSWidgetView->setTransparent(true);
         }

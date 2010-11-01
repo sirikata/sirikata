@@ -38,7 +38,7 @@
 #include <OgreSubEntity.h>
 #include <OgreEntity.h>
 #include "resourceManager/GraphicsResourceManager.hpp"
-#include "WebView.hpp"
+#include "WebViewManager.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <stdio.h>

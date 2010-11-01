@@ -38,22 +38,11 @@
 #include "input/InputEvents.hpp"
 #include "input/InputManager.hpp"
 #include "task/EventManager.hpp"
-
-#ifdef HAVE_BERKELIUM
-#include "berkelium/Berkelium.hpp"
-#include "berkelium/Widget.hpp"
-#include "berkelium/Window.hpp"
-#include "berkelium/WindowDelegate.hpp"
-#endif
+#include "WebView.hpp"
 
 namespace Sirikata {
 
-typedef Sirikata::DataReference<const char*> JSArgument;
-typedef std::vector<JSArgument> JSArguments;
-
 namespace Graphics {
-
-class WebView;
 
 /**
 * Enumerates internal mouse button IDs. Used by WebViewManager::injectMouseDown, WebViewManager::injectMouseUp
@@ -132,8 +121,10 @@ public:
 	/**
 	* Creates a WebView.
 	*/
-	WebView* createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
-		bool asyncRender = false, int maxAsyncRenderRate = 70, Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
+	WebView* createWebView(const std::string &webViewName, unsigned short width, unsigned short height,
+	        const OverlayPosition &webViewPosition,	bool asyncRender = false, int maxAsyncRenderRate = 70,
+	        Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0,
+	        const WebView::WebViewBorderSize& border = WebView::mDefaultBorder);
 
 #ifdef HAVE_BERKELIUM
 	/**

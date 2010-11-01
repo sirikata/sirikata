@@ -35,10 +35,17 @@
 
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
-#include "WebViewManager.hpp"
+#include "ViewportOverlay.hpp"
 #include <sirikata/proxyobject/ProxyObjectListener.hpp>
 #include <sirikata/proxyobject/WebViewListener.hpp>
 #include <sirikata/proxyobject/ProxyWebViewObject.hpp>
+
+#ifdef HAVE_BERKELIUM
+#include "berkelium/Berkelium.hpp"
+#include "berkelium/Widget.hpp"
+#include "berkelium/Window.hpp"
+#include "berkelium/WindowDelegate.hpp"
+#endif
 
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
@@ -52,6 +59,10 @@ namespace Berkelium {
 #endif
 
 namespace Sirikata {
+
+typedef Sirikata::DataReference<const char*> JSArgument;
+typedef std::vector<JSArgument> JSArguments;
+
 namespace Graphics {
 
 	class WebView;
@@ -343,6 +354,20 @@ namespace Graphics {
 
 		void resize(int width, int height);
 
+		class WebViewBorderSize {
+		public:
+		    unsigned short mBorderLeft;
+		    unsigned short mBorderRight;
+		    unsigned short mBorderTop;
+		    unsigned short mBorderBottom;
+		    WebViewBorderSize(unsigned short left, unsigned short right,
+		            unsigned short top, unsigned short bottom)
+		    : mBorderLeft(left), mBorderRight(right),
+		      mBorderTop(top), mBorderBottom(bottom) {}
+		};
+
+		static const WebViewBorderSize mDefaultBorder;
+
 	protected:
 #ifdef HAVE_BERKELIUM
 		Berkelium::Window* webView;
@@ -420,7 +445,7 @@ namespace Graphics {
 		friend class WebViewManager;
 
 		WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
+			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border = mDefaultBorder);
 
 		WebView(const std::string& name, unsigned short width, unsigned short height,
 			Ogre::FilterOptions texFiltering);

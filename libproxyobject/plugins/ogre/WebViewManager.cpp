@@ -202,7 +202,7 @@ void WebViewManager::Update()
 }
 
 WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
-			bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport)
+			bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport, const WebView::WebViewBorderSize& border)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
 		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
@@ -223,7 +223,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, unsigned 
 		zOrder = highestZOrder + 1;
 
         WebView* newWebView = new WebView(webViewName, width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
-            viewport? viewport : defaultViewport);
+            viewport? viewport : defaultViewport, border);
         newWebView->createWebView(asyncRender, maxAsyncRenderRate);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
