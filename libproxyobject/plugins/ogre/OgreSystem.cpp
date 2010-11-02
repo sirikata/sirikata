@@ -701,7 +701,6 @@ OgreSystem::~OgreSystem() {
     destroyMouseHandler();
     delete mInputManager;
 
-    delete mEventManager;
     delete mWorkQueue;
 
     delete mModelParser;
