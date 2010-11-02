@@ -161,6 +161,7 @@ class OgreSystem::MouseHandler {
 
     WebView* mUploadWebView;
     WebView* mFPSWidgetView;
+    WebView* mUIWidgetView;
 
     WebView* mQueryAngleWidgetView;
     // To avoid too many messages, update only after a timeout
@@ -1645,6 +1646,7 @@ public:
        mLastFpsTime(Task::LocalTime::now()),
        mUploadWebView(NULL),
        mFPSWidgetView(NULL),
+       mUIWidgetView(NULL),
        mQueryAngleWidgetView(NULL),
        mNewQueryAngle(0.f),
        mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&MouseHandler::handleSetQueryAngleTimeout, this)) ),
@@ -1845,9 +1847,24 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
 
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
+
     }
 
     ~MouseHandler() {
+
+        if(mUploadWebView) {
+            WebViewManager::getSingleton().destroyWebView(mUploadWebView);
+            mUploadWebView = NULL;
+        }
+        if(mFPSWidgetView) {
+            WebViewManager::getSingleton().destroyWebView(mFPSWidgetView);
+            mFPSWidgetView = NULL;
+        }
+        if(mUIWidgetView) {
+            WebViewManager::getSingleton().destroyWebView(mUIWidgetView);
+            mUIWidgetView = NULL;
+        }
+
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
              iter != mEvents.end();
              ++iter) {
@@ -1876,6 +1893,14 @@ public:
         cameraPathTick(t);
         fpsUpdateTick(t);
         screenshotTick(t);
+
+        if(!mUIWidgetView) {
+            mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget",
+                    mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
+                    OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
+            mUIWidgetView->loadFile("chrome/ui.html");
+            mUIWidgetView->setTransparent(true);
+        }
     }
 };
 

@@ -1,0 +1,111 @@
+<html>
+<head>
+<title>UI</title>
+
+<script type="text/javascript" src="../jquery/js/jquery-1.4.2.min.js"></script>
+<script type="text/javascript" src="../jquery_plugins/jquery.dimensions.js"></script>
+<script type="text/javascript" src="../jquery/development-bundle/ui/jquery-ui-1.8.5.custom.js"></script>
+<script type="text/javascript" src="../jquery_plugins/jquery.menu.js"></script>
+
+<link href="css/jquery.menu.css" rel="stylesheet" type="text/css" />
+<link href="../jquery/development-bundle/themes/base/jquery.ui.all.css" rel="stylesheet" type="text/css" />
+
+<style type="text/css">
+	body {
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		height: 100%;
+	}
+	div#transparency {
+		float: left;
+		opacity: 0;
+		width: 100%;
+		height: 100%;
+	}
+	div#ui-box {
+		font: 85% Verdana, Arial, sans-serif;
+		position: absolute;
+		top: 0px;
+		left: 0px;
+		background-color: #ffffff;
+		border: 1px solid #000000;
+	}
+</style>
+<script type="text/javascript">
+$(document).ready(function() {
+	var options = {minWidth: 120, arrowSrc: 'arrow_right.gif', onClick: function(e, menuItem){
+		
+		$.Menu.closeAll();
+		
+		var $dialog = $('<div></div>')
+			.html('You clicked "' + $(this).text() + '"!')
+			.dialog({
+				title: 'Test Dialog'
+			});
+		
+		//alert('you clicked item "' + $(this).text() + '"');  
+	}};  
+	$('#menuone').menu(options);  
+});
+</script>
+</head>
+
+<body>
+<div id='transparency'>
+</div>
+<div id='ui-box'>
+
+<ul id="menuone" class="menu">
+	<li class="menumain">File
+		<ul><li>New&nbsp;window</li>
+			<li></li>
+			<li>Save...</li>
+			<li>Print...</li>
+			<li></li>
+			<li>Exit</li>
+		</ul>
+	</li>
+	<li class="menumain">Edit
+		<ul><li>Undo</li>
+			<li>Redo</li>
+			<li></li>
+			<li>Cut</li>
+			<li>Copy</li>
+			<li>Paste<ul><li>All</li><li>Something</li></ul></li>
+			<li>Delete</li>
+		</ul>
+	</li>
+	<li class="menumain">Bookmarks
+		<ul><li>Bookmark&nbsp;manager</li>
+			<li></li>
+			<li>some&nbsp;bookmark</li>
+			<li>another&nbsp;bookmark</li>
+			<li></li>
+			<li>Imported&nbsp;bookmarks
+				<ul><li>bookmark&nbsp;one</li>
+					<li>bookmark&nbsp;two</li>
+					<li>bookmark&nbsp;three</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+	<li class="menumain" style="float:right;">Help
+		<ul><li>Help&nbsp;index</li>
+			<li></li>
+			<li>About...
+				<ul>
+					<li>me</li>
+					<li>you</li>
+					<li>them</li>
+				</ul>
+			</li>
+		</ul>
+	</li>
+</ul>
+
+</div>
+
+</body>
+
+</html>
