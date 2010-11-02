@@ -1,7 +1,7 @@
 /*  Sirikata
- *  SpaceContext.cpp
+ *  ObjectSessionManager.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,23 +30,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/space/SpaceContext.hpp>
-#include <sirikata/core/network/IOStrandImpl.hpp>
+#ifndef _SIRIKATA_SPACE_OBJECT_SESSION_MANAGER_HPP_
+#define _SIRIKATA_SPACE_OBJECT_SESSION_MANAGER_HPP_
 
+#include <sirikata/space/Platform.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
 
-SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration)
- : Context("Space", ios, strand, _trace, epoch, duration),
-   mID(_id),
-   mServerRouter(NULL),
-   mServerDispatcher(NULL),
-   mSpaceTrace( new SpaceTrace(_trace) )
-{
-}
+class SIRIKATA_SPACE_EXPORT ObjectSession {
+  public:
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
 
-SpaceContext::~SpaceContext() {
-}
+    ObjectSession(ObjectReference& objid, SSTStreamPtr strm)
+        : mID(objid),
+        mSSTStream(strm)
+    {}
+
+    const ObjectReference& id() const { return mID; }
+
+    SSTStreamPtr getStream() const { return mSSTStream; }
+
+  private:
+    ObjectReference mID;
+    SSTStreamPtr mSSTStream;
+};
+
+class SIRIKATA_SPACE_EXPORT ObjectSessionListener {
+  public:
+    virtual void newSession(ObjectSession* session) {}
+    virtual ~ObjectSessionListener() {}
+};
+
+class SIRIKATA_SPACE_EXPORT ObjectSessionManager : public Provider<ObjectSessionListener*> {
+  public:
+    virtual ObjectSession* getSession(const ObjectReference& objid) const = 0;
+    virtual ~ObjectSessionManager() {}
+};
 
 } // namespace Sirikata
+
+#endif //_SIRIKATA_SPACE_OBJECT_SESSION_MANAGER_HPP_

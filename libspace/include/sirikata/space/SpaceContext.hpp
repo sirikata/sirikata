@@ -37,7 +37,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/space/Trace.hpp>
-#include <sirikata/core/network/SSTImpl.hpp>
+#include <sirikata/space/ObjectSessionManager.hpp>
 
 namespace Sirikata {
 
@@ -75,17 +75,8 @@ public:
         return mCSeg.read();
     }
 
-    typedef Stream<SpaceObjectReference> SSTStream;
-    typedef SSTStream::Ptr SSTStreamPtr;
-
-    void newStream(int err, SSTStreamPtr s);
-
-    SSTStreamPtr getObjectStream(const ObjectReference& objid) {
-      if (mObjectStreams.find(objid) != mObjectStreams.end()) {
-        return mObjectStreams[objid];
-      }
-
-      return SSTStreamPtr();
+    ObjectSessionManager* sessionManager() const {
+        return mObjectSessionManager;
     }
 
     SpaceTrace* spacetrace() const { return mSpaceTrace; }
@@ -102,7 +93,7 @@ private:
 
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
-    std::map<ObjectReference, SSTStreamPtr>  mObjectStreams;
+    Sirikata::AtomicValue<ObjectSessionManager*> mObjectSessionManager;
 
     SpaceTrace* mSpaceTrace;
 }; // class SpaceContext

@@ -75,6 +75,9 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     mContext->mCSeg = mCSeg;
+    mContext->mObjectSessionManager = this;
+
+    this->addListener((ObjectSessionListener*)mLocationService);
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 
@@ -118,9 +121,10 @@ void Server::newStream(int err, Stream<SpaceObjectReference>::Ptr s) {
     return;
   }
 
-  mLocationService->newStream(s);
-
-  mContext->newStream(err, s);
+  ObjectReference objid = s->remoteEndPoint().endPoint.object();
+  ObjectSession* new_obj_session = new ObjectSession(objid, s);
+  mObjectSessions[objid] = new_obj_session;
+  notify(&ObjectSessionListener::newSession, new_obj_session);
 }
 
 Server::~Server()
@@ -181,6 +185,12 @@ bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endp
     // ODP::Service to communicate with any non-local objects, so just use the
     // local forwarder.
     return mLocalForwarder->tryForward(msg);
+}
+
+ObjectSession* Server::getSession(const ObjectReference& objid) const {
+    ObjectSessionMap::const_iterator it = mObjectSessions.find(objid);
+    if (it == mObjectSessions.end()) return NULL;
+    return it->second;
 }
 
 bool Server::isObjectConnected(const UUID& object_id) const {
@@ -605,6 +615,11 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     mForwarder->removeObjectConnection(obj_id);
 
     mObjects.erase(obj_id);
+
+    ObjectReference obj(obj_id);
+    delete mObjectSessions[obj];
+    mObjectSessions.erase(obj);
+
     delete conn;
 }
 
@@ -863,6 +878,9 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
 
             mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
+            ObjectReference obj(obj_id);
+            delete mObjectSessions[obj];
+            mObjectSessions.erase(obj);
         }
     }
 
