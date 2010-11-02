@@ -8,10 +8,11 @@
 <script type="text/javascript" src="../jquery_plugins/jquery.menu.js"></script>
 
 <link href="css/jquery.menu.css" rel="stylesheet" type="text/css" />
-<link href="../jquery/css/ui-lightness/jquery-ui-1.8.5.custom.css" rel="stylesheet" type="text/css" />
+<link href="../jquery_themes/redmond/jquery-ui-1.8.6.custom.css" rel="stylesheet" type="text/css" />
 
 <style type="text/css">
 	body {
+		font: 85% Verdana, Arial, sans-serif;
 		margin: 0;
 		padding: 0;
 		width: 100%;
@@ -24,30 +25,41 @@
 		height: 100%;
 	}
 	div#ui-box {
-		font: 85% Verdana, Arial, sans-serif;
 		position: absolute;
-		top: 0px;
-		left: 0px;
-		background-color: #ffffff;
-		border: 1px solid #000000;
+		top: 1px;
+		left: 1px;
 	}
 </style>
 <script type="text/javascript">
 $(document).ready(function() {
-	var options = {minWidth: 120, arrowSrc: 'arrow_right.gif', onClick: function(e, menuItem){
+	var options = {copyClassAttr: true, minWidth: 120, arrowSrc: 'arrow_right.gif', onClick: function(e, menuItem){
 		
 		$.Menu.closeAll();
 		
-		var $dialog = $('<div></div>')
-			.html('You clicked "' + $(this).text() + '"!')
-			.dialog({
-				title: 'Test Dialog'
-			});
+		var action_clicked = $(this).attr('class');
 		
-		//alert('you clicked item "' + $(this).text() + '"');  
+		if(action_clicked == 'action_exit') {
+			alert_permanent('Exiting', 'Please wait while Sirikata client exits...');
+			setTimeout(function() { 
+				chrome.send("ui-action", [action_clicked]);
+			}, 1000);
+		}
+
 	}};  
 	$('#menuone').menu(options);  
 });
+
+function alert_permanent(title, text) {
+	var $dialog = $('<div></div>')
+	.html(text)
+	.dialog({
+		closeOnEscape: false,
+		draggable: false,
+		resizable: false,
+		beforeClose: function(event, ui) { return false; },
+		title: title
+	});
+}
 </script>
 </head>
 
@@ -58,48 +70,13 @@ $(document).ready(function() {
 
 <ul id="menuone" class="menu">
 	<li class="menumain">File
-		<ul><li>New&nbsp;window</li>
-			<li></li>
-			<li>Save...</li>
-			<li>Print...</li>
-			<li></li>
-			<li>Exit</li>
+		<ul>
+			<li class='action_exit'>Exit</li>
 		</ul>
 	</li>
-	<li class="menumain">Edit
-		<ul><li>Undo</li>
-			<li>Redo</li>
-			<li></li>
-			<li>Cut</li>
-			<li>Copy</li>
-			<li>Paste<ul><li>All</li><li>Something</li></ul></li>
-			<li>Delete</li>
-		</ul>
-	</li>
-	<li class="menumain">Bookmarks
-		<ul><li>Bookmark&nbsp;manager</li>
-			<li></li>
-			<li>some&nbsp;bookmark</li>
-			<li>another&nbsp;bookmark</li>
-			<li></li>
-			<li>Imported&nbsp;bookmarks
-				<ul><li>bookmark&nbsp;one</li>
-					<li>bookmark&nbsp;two</li>
-					<li>bookmark&nbsp;three</li>
-				</ul>
-			</li>
-		</ul>
-	</li>
-	<li class="menumain" style="float:right;">Help
-		<ul><li>Help&nbsp;index</li>
-			<li></li>
-			<li>About...
-				<ul>
-					<li>me</li>
-					<li>you</li>
-					<li>them</li>
-				</ul>
-			</li>
+	<li class="menumain">CDN
+		<ul>
+			<li class='action_cdn_upload'>Upload Tool</li>
 		</ul>
 	</li>
 </ul>

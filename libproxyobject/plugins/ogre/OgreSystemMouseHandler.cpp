@@ -757,6 +757,22 @@ private:
 */
     }
 
+    void onUIAction(WebView* webview, const JSArguments& args) {
+        printf("ui action event fired arg length = %d\n", (int)args.size());
+        if (args.size() != 1) {
+            printf("expected 1 argument, returning.\n");
+            return;
+        }
+
+        String action_triggered(args[0].data());
+
+        printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
+
+        if(action_triggered == "action_exit") {
+            quitAction();
+        }
+    }
+
     void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
         printf("upload object event fired arg length = %d\n", (int)args.size());
         if (args.size() != 3) {
@@ -1898,6 +1914,7 @@ public:
             mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget",
                     mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
                     OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
+            mUIWidgetView->bind("ui-action", std::tr1::bind(&MouseHandler::onUIAction, this, _1, _2));
             mUIWidgetView->loadFile("chrome/ui.html");
             mUIWidgetView->setTransparent(true);
         }
