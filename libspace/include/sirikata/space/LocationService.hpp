@@ -127,7 +127,7 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService, public ObjectSessionListener {
 public:
     enum TrackingType {
         NotTracking,
@@ -143,24 +143,8 @@ public:
         return mContext;
     }
 
-    virtual void newStream(Stream<SpaceObjectReference>::Ptr s) {
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-
-        Connection<SpaceObjectReference>::Ptr conn = s->connection().lock();
-        assert(conn);
-
-        SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
-
-
-        conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
-            std::tr1::bind(
-                &LocationService::locationUpdate, this,
-                sourceObject.object().getAsUUID(),
-                std::tr1::placeholders::_1,std::tr1::placeholders::_2
-            )
-        );
-    }
+    // ObjectSessionListener Interface
+    virtual void newSession(ObjectSession* session);
 
     /** Indicates whether this location service is tracking the given object.  It is only
      *  safe to request information */
@@ -221,7 +205,9 @@ public:
     virtual void locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
     Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
-        return mContext->getObjectStream(ObjectReference(uuid));
+        ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(uuid));
+        if (session == NULL) return Stream<SpaceObjectReference>::Ptr();
+        return session->getStream();
     }
 
 protected:
