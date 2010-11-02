@@ -24,10 +24,26 @@
 		width: 100%;
 		height: 100%;
 	}
-	div#ui-box {
+	div#ui-container {
 		position: absolute;
-		top: 1px;
-		left: 1px;
+		top: 0px;
+		left: 0px;
+		width: 100%;
+		padding: 0;
+		margin: 0;
+	}
+	div#ui-box {
+		margin: 0;
+		padding: 0;
+		margin-left: 1px;
+		margin-right: 1px;
+		background: -moz-linear-gradient(top,  #589ae1,  #3f75cd);
+		background: -webkit-gradient(linear, left top, left bottom, from(#589ae1), to(#3f75cd));
+		color: #eeeeff;
+		border-bottom: 1px solid #004db8;
+	}
+	div#flush-right {
+		float: right;
 	}
 </style>
 <script type="text/javascript">
@@ -46,7 +62,26 @@ $(document).ready(function() {
 		}
 
 	}};  
-	$('#menuone').menu(options);  
+	$('#menuone').menu(options);
+	
+	function timeClock () {
+		var curTime = new Date();
+		var h = curTime.getHours();
+		var m = curTime.getMinutes();
+		if(m < 10) {
+			m = "0" + m;
+		}
+		var ampm = (h < 12) ? "AM" : "PM";
+		if(h > 12) {
+			h = h - 12;
+		}
+		
+		$('#flush-right').html('' + h + ':' + m + ' ' + ampm);
+		
+		setTimeout(timeClock, 1000);
+	}
+	
+	timeClock();
 });
 
 function alert_permanent(title, text) {
@@ -66,6 +101,8 @@ function alert_permanent(title, text) {
 <body>
 <div id='transparency'>
 </div>
+<div id='ui-container'>
+
 <div id='ui-box'>
 
 <ul id="menuone" class="menu">
@@ -80,6 +117,12 @@ function alert_permanent(title, text) {
 		</ul>
 	</li>
 </ul>
+
+&nbsp;
+
+<div id='flush-right'>&nbsp;</div>
+
+</div>
 
 </div>
 
