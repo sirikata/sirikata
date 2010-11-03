@@ -42,6 +42,8 @@
 
 #include <iostream>
 
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
+
 namespace Sirikata { namespace Models {
 
 ColladaDocumentLoader::ColladaDocumentLoader (Transfer::URI const& uri, const SHA256& hash)
@@ -50,13 +52,13 @@ ColladaDocumentLoader::ColladaDocumentLoader (Transfer::URI const& uri, const SH
         mDocumentImporter ( new ColladaDocumentImporter ( uri, hash ) ),
         mFramework ( new COLLADAFW::Root ( mSaxLoader, mDocumentImporter ) )
 {
-    assert((std::cout << "MCB: ColladaDocumentLoader::ColladaDocumentLoader() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentLoader::ColladaDocumentLoader() entered");
 
 }
 
 ColladaDocumentLoader::~ColladaDocumentLoader ()
 {
-    assert((std::cout << "MCB: ColladaDocumentLoader::~ColladaDocumentLoader() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentLoader::~ColladaDocumentLoader() entered");
 
     delete mFramework;
     delete mDocumentImporter;

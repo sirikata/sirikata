@@ -49,6 +49,7 @@
 #include <iostream>
 #include <fstream>
 
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
 
 using namespace std;
 using namespace Sirikata;
@@ -59,18 +60,17 @@ namespace Sirikata { namespace Models {
 ColladaSystem::ColladaSystem ()
     :   mDocuments ()
 {
-    assert((std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaSystem::ColladaSystem() entered");
 }
 
 ColladaSystem::~ColladaSystem ()
 {
-    assert((std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl,true));
-
+    COLLADA_LOG(insane, "ColladaSystem::~ColladaSystem() entered");
 }
 
 ColladaSystem* ColladaSystem::create (String const& options)
 {
-    assert((std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaSystem::create( " << options << ") entered");
     ColladaSystem* system ( new ColladaSystem );
 
     if ( system->initialize (options ) )
@@ -81,7 +81,7 @@ ColladaSystem* ColladaSystem::create (String const& options)
 
 bool ColladaSystem::initialize(String const& options)
 {
-    assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaSystem::initialize() entered");
 
     InitializeClassOptions ( "colladamodels", this, NULL );
     OptionSet::getOptions ( "colladamodels", this )->parse ( options );

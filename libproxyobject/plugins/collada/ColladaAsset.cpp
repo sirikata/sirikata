@@ -37,6 +37,8 @@
 #include <cassert>
 #include <iostream>
 
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
+
 namespace Sirikata { namespace Models {
 
 ColladaAsset::ColladaAsset ()
@@ -44,41 +46,41 @@ ColladaAsset::ColladaAsset ()
         mUnitName ( "meter" ),
         mUpAxis ( Vector3< float > ( 0.0f, 1.0f, 0.0f ) )
 {
-    assert((std::cout << "MCB: ColladaAsset::ColladaAsset() entered" << std::endl,true));
-    
+    COLLADA_LOG(insane,  "ColladaAsset::ColladaAsset() entered");
+
 }
 
 ColladaAsset::ColladaAsset ( ColladaAsset const& rhs )
 {
-    assert((std::cout << "MCB: ColladaAsset::ColladaAsset(copy) entered" << std::endl,true));
-    
+    COLLADA_LOG(insane, "ColladaAsset::ColladaAsset(copy) entered");
+
 }
 
 ColladaAsset& ColladaAsset::operator = ( ColladaAsset const& rhs )
 {
-    assert((std::cout << "MCB: ColladaAsset::operator=() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaAsset::operator=() entered");
     return *this;
 }
 
 ColladaAsset::~ColladaAsset ()
 {
-    assert((std::cout << "MCB: ColladaAsset::~ColladaAsset() entered" << std::endl,true));
-    
+    COLLADA_LOG(insane, "ColladaAsset::~ColladaAsset() entered");
+
 }
 
 /////////////////////////////////////////////////////////////////////
 
 bool ColladaAsset::import ( ColladaDocumentImporter& importer, COLLADAFW::FileInfo const& asset )
 {
-    assert((std::cout << "MCB: ColladaAsset::import() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaAsset::import() entered");
 
     bool ok = true;
-    
+
     computeUpAxis ( asset );
 
     mUnitName = asset.getUnit ().getLinearUnitName ();
     mUnitMeter = asset.getUnit ().getLinearUnitMeter ();
-    
+
     return ok;
 }
 
@@ -93,14 +95,14 @@ void ColladaAsset::computeUpAxis ( COLLADAFW::FileInfo const& asset )
             mUpAxis = Vector3< float > ( 1.0f, 0.0f, 0.0f );
             break;
         }
-            
+
         case COLLADAFW::FileInfo::Y_UP:
         default:
         {
             mUpAxis = Vector3< float > ( 0.0f, 1.0f, 0.0f );
             break;
         }
-            
+
         case COLLADAFW::FileInfo::Z_UP:
         {
             mUpAxis = Vector3< float > ( 0.0f, 0.0f, 1.0f );
@@ -108,7 +110,7 @@ void ColladaAsset::computeUpAxis ( COLLADAFW::FileInfo const& asset )
         }
     }
 }
-    
+
 /////////////////////////////////////////////////////////////////////
 
 

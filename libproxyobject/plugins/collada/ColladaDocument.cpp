@@ -35,28 +35,30 @@
 #include <cassert>
 #include <iostream>
 
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
+
 namespace Sirikata { namespace Models {
 
 ColladaDocument::ColladaDocument ( Transfer::URI const& uri )
     :   mURI ( uri ),
         mAsset()
 {
-    assert((std::cout << "MCB: ColladaDocument::ColladaDocument() entered" << std::endl,true));
-    
+    COLLADA_LOG(insane,  "ColladaDocument::ColladaDocument() entered");
+
 }
 
 
 ColladaDocument::~ColladaDocument ()
 {
-    assert((std::cout << "MCB: ColladaDocument::~ColladaDocument() entered" << std::endl,true));
-    
+    COLLADA_LOG(insane,  "ColladaDocument::~ColladaDocument() entered");
+
 }
-    
+
 /////////////////////////////////////////////////////////////////////
 
 bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::FileInfo const& asset )
 {
-    assert((std::cout << "MCB: ColladaDocument::import(COLLADAFW::FileInfo) entered" << std::endl,true));
+    COLLADA_LOG(insane,  "ColladaDocument::import(COLLADAFW::FileInfo) entered");
 
     bool ok = mAsset.import ( importer, asset );
 
@@ -67,7 +69,7 @@ bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::Fil
 
 bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::Geometry const& geometry )
 {
-    assert((std::cout << "MCB: ColladaDocument::import(COLLADAFW::Geometry) entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocument::import(COLLADAFW::Geometry) entered");
 
     // MCB: I don't like this approach. It's too tightly coupled to MeshObject.
     // MCB: How about a set of ColladaGeometry objects here instead?
@@ -78,9 +80,9 @@ bool ColladaDocument::import ( ColladaDocumentImporter& importer, COLLADAFW::Geo
 }
 
 /////////////////////////////////////////////////////////////////////
-    
+
 /////////////////////////////////////////////////////////////////////
-    
+
 
 } // namespace Models
 } // namespace Sirikata
