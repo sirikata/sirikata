@@ -818,7 +818,6 @@ SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(
   ${ProtocolBuffersSourcesCore}
-  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -830,7 +829,6 @@ ADD_PBJ_TARGET(
 ADD_PBJ_TARGET(
   ${ProtocolBuffersSources}
   DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
-  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
