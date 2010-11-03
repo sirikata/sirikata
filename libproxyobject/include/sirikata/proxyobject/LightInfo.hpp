@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_LIGHT_INFO_HPP_
 #define _SIRIKATA_LIGHT_INFO_HPP_
 
+#include <sirikata/proxyobject/Platform.hpp>
+
 namespace Sirikata {
 typedef Vector3f Color;
 

@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_DYNAMIC_LIBRARY_HPP_
 #define _SIRIKATA_DYNAMIC_LIBRARY_HPP_
 
+#include <sirikata/core/util/Platform.hpp>
+
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
 struct HINSTANCE__;
 #  define DL_HANDLE struct HINSTANCE__*
