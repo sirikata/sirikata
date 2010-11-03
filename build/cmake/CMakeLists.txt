@@ -775,7 +775,7 @@ SET(ProtocolBuffersSourcesCore
   ${SirikataProtocolRoot}/TimedMotionVector
   ${SirikataProtocolRoot}/TimedMotionQuaternion
 )
-SET(ProtocolBuffersSources
+SET(ProtocolBuffersSourcesPublic
   # Core protocol messages
   ${SirikataProtocolRoot}/Empty
   ${SirikataProtocolRoot}/Frame
@@ -787,8 +787,8 @@ SET(ProtocolBuffersSources
   ${SirikataProtocolRoot}/SSTHeader
   ${SirikataProtocolRoot}/Loc
   ${SirikataProtocolRoot}/Prox
-
-
+)
+SET(ProtocolBuffersSourcesInternal
   # Additional internal stuff
   ${ProtocolBuffersRoot}/Persistence
   ${ProtocolBuffersRoot}/Test
@@ -827,16 +827,28 @@ ADD_PBJ_TARGET(
   GENERATE_CPP
 )
 ADD_PBJ_TARGET(
-  ${ProtocolBuffersSources}
+  ${ProtocolBuffersSourcesPublic}
   DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Protocol_PBJ_CPP_FILES
+  GENERATED_CPP_FILES ProtocolPublic_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   EXPORTMACRO SIRIKATA_EXPORT
   ${PROTOCOLBUFFERS_GENS}
 )
+ADD_PBJ_TARGET(
+  ${ProtocolBuffersSourcesInternal}
+  DEPENDS ${ProtocolCore_PBJ_CPP_FILES} ${ProtocolPublic_PBJ_CPP_FILES}
+  PLUGINNAME "Protocol"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES ProtocolInternal_PBJ_CPP_FILES
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  ${PROTOCOLBUFFERS_GENS}
+)
+SET(Protocol_PBJ_CPP_FILES ${ProtocolPublic_PBJ_CPP_FILES} ${ProtocolInternal_PBJ_CPP_FILES})
 #Aggregate core and normal
 SET(Protocol_PBJ_CPP_FILES ${ProtocolCore_PBJ_CPP_FILES} ${Protocol_PBJ_CPP_FILES})
 
