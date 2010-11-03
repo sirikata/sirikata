@@ -361,7 +361,7 @@ private:
 
   std::tr1::weak_ptr<Connection<EndPointType> > mWeakThis;
 
-  uint mNumInitialRetransmissionAttempts;
+  uint16 mNumInitialRetransmissionAttempts;
 
   google::protobuf::LogSilencer logSilencer;
 
