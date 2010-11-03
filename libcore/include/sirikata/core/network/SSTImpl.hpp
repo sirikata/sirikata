@@ -425,6 +425,9 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
+  void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      serviceConnection(conn);
+  }
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
     const Time curTime = Timer::now();
 
@@ -504,7 +507,7 @@ private:
 
       if (!inSendingMode || mState == CONNECTION_PENDING_CONNECT) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
-                                       std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
+                                       std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
       }
     }
     else {
@@ -533,7 +536,7 @@ private:
       inSendingMode = true;
 
       getContext()->mainStrand->post(Duration::microseconds(1),
-                                     std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
+                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
     }
 
     return true;
@@ -718,7 +721,7 @@ private:
         if (inSendingMode) {
 
           getContext()->mainStrand->post(Duration::milliseconds(1.0),
-                                         std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this, mWeakThis.lock()) );
+                                         std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()) );
         }
       }
     }
@@ -775,7 +778,7 @@ private:
         inSendingMode = true;
 
         getContext()->mainStrand->post(
-                                     std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
+                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
 
         if (rand() % mCwnd == 0)  {
           mCwnd += 1;
@@ -1470,7 +1473,7 @@ public:
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
       return len;
     }
@@ -1496,7 +1499,7 @@ public:
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
       return currOffset;
     }
@@ -1763,6 +1766,10 @@ private:
     mStreamReturnCallbackMap.erase(c->localEndPoint());
   }
 
+  void serviceStreamNoReturn(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      serviceStream(strm, conn);
+  }
+
   /* Returns false only if this is the root stream of a connection and it was
      unable to connect. In that case, the connection for this stream needs to
      be closed and the 'false' return value is an indication of this for
@@ -1874,7 +1881,7 @@ private:
           std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
           if (conn)
             getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-              std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
         }
       }
     }
@@ -1904,7 +1911,7 @@ private:
     std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
     if (conn)
       getContext()->mainStrand->post(Duration::seconds(0.01),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
 
 
@@ -2120,7 +2127,7 @@ private:
     conn->sendData( buffer.data(), buffer.size(), false );
 
     getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
   }
 
   void sendAckPacket() {
