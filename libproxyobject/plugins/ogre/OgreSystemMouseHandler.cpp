@@ -160,7 +160,6 @@ class OgreSystem::MouseHandler {
     InputBinding mInputBinding;
 
     WebView* mUploadWebView;
-    WebView* mFPSWidgetView;
     WebView* mUIWidgetView;
 
     WebView* mQueryAngleWidgetView;
@@ -799,20 +798,6 @@ private:
                     OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
             mUploadWebView->bind("event", std::tr1::bind(&MouseHandler::onUploadObjectEvent, this, _1, _2));
             mUploadWebView->loadFile("chrome/upload.html");
-        }
-    }
-
-    void handleFPSWidget() {
-        if(mFPSWidgetView) {
-            printf("closing fps widget\n");
-            WebViewManager::getSingleton().destroyWebView(mFPSWidgetView);
-            mFPSWidgetView = NULL;
-        } else {
-            printf("creating fps widget\n");
-            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", 114, 30,
-                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT, 0, WebView::WebViewBorderSize(2,2,10,2));
-            mFPSWidgetView->loadFile("chrome/fps.html");
-            mFPSWidgetView->setTransparent(true);
         }
     }
 
@@ -1573,14 +1558,14 @@ private:
     }
 
     void fpsUpdateTick(const Task::LocalTime& t) {
-        if(mFPSWidgetView) {
+        if(mUIWidgetView) {
             Task::DeltaTime dt = t - mLastFpsTime;
             if(dt.toSeconds() > 1) {
                 mLastFpsTime = t;
                 Ogre::RenderTarget::FrameStats stats = mParent->getRenderTarget()->getStatistics();
                 ostringstream os;
                 os << stats.avgFPS;
-                mFPSWidgetView->evaluateJS("update_fps(" + os.str() + ")");
+                mUIWidgetView->evaluateJS("update_fps(" + os.str() + ")");
             }
         }
     }
@@ -1661,7 +1646,6 @@ public:
        mLastCameraTime(Task::LocalTime::now()),
        mLastFpsTime(Task::LocalTime::now()),
        mUploadWebView(NULL),
-       mFPSWidgetView(NULL),
        mUIWidgetView(NULL),
        mQueryAngleWidgetView(NULL),
        mNewQueryAngle(0.f),
@@ -1779,7 +1763,6 @@ public:
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
-        mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
         mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
 
         // Session
@@ -1819,7 +1802,6 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
 
         // Drag modes
@@ -1871,10 +1853,6 @@ public:
         if(mUploadWebView) {
             WebViewManager::getSingleton().destroyWebView(mUploadWebView);
             mUploadWebView = NULL;
-        }
-        if(mFPSWidgetView) {
-            WebViewManager::getSingleton().destroyWebView(mFPSWidgetView);
-            mFPSWidgetView = NULL;
         }
         if(mUIWidgetView) {
             WebViewManager::getSingleton().destroyWebView(mUIWidgetView);

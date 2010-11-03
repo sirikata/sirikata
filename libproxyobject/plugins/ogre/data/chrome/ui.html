@@ -42,11 +42,43 @@
 		color: #eeeeff;
 		border-bottom: 1px solid #004db8;
 	}
-	div#flush-right {
+	div.flush-right {
 		float: right;
+		padding: 0;
+		margin: 0;
+		padding-right: 5px;
+		padding-left: 5px;
+		border-left: 1px solid #004db8;
 	}
 </style>
 <script type="text/javascript">
+
+var timeClockEnabled = true;
+function timeClock () {
+	if(timeClockEnabled) {
+		var curTime = new Date();
+		var h = curTime.getHours();
+		var m = curTime.getMinutes();
+		if(m < 10) {
+			m = "0" + m;
+		}
+		var ampm = (h < 12) ? "AM" : "PM";
+		if(h > 12) {
+			h = h - 12;
+		}
+		
+		$('#time-clock').html('' + h + ':' + m + ' ' + ampm);
+		
+		setTimeout(timeClock, 1000);
+	}
+}
+
+var fpsDisplayEnabled = true;
+function update_fps(num) {
+	var formatted = (Math.round(num*10)/10).toFixed(1);
+	$("#fps-num").html(formatted);
+}
+
 $(document).ready(function() {
 	var options = {copyClassAttr: true, minWidth: 120, arrowSrc: 'arrow_right.gif', onClick: function(e, menuItem){
 		
@@ -60,27 +92,31 @@ $(document).ready(function() {
 				chrome.send("ui-action", [action_clicked]);
 			}, 1000);
 		}
+		
+		if(action_clicked == 'action_toggle_clock') {
+			if(timeClockEnabled) {
+				timeClockEnabled = false;
+				$('#time-clock').hide();
+			} else {
+				$('#time-clock').show();
+				timeClockEnabled = true;
+				timeClock();
+			}
+		}
+		
+		if(action_clicked == 'action_toggle_fps') {
+			if(fpsDisplayEnabled) {
+				fpsDisplayEnabled = false;
+				$('#fps-display').hide();
+			} else {
+				fpsDisplayEnabled = true;
+				$('#fps-display').show();
+			}
+		}
 
 	}};  
 	$('#menuone').menu(options);
-	
-	function timeClock () {
-		var curTime = new Date();
-		var h = curTime.getHours();
-		var m = curTime.getMinutes();
-		if(m < 10) {
-			m = "0" + m;
-		}
-		var ampm = (h < 12) ? "AM" : "PM";
-		if(h > 12) {
-			h = h - 12;
-		}
-		
-		$('#flush-right').html('' + h + ':' + m + ' ' + ampm);
-		
-		setTimeout(timeClock, 1000);
-	}
-	
+
 	timeClock();
 });
 
@@ -116,11 +152,18 @@ function alert_permanent(title, text) {
 			<li class='action_cdn_upload'>Upload Tool</li>
 		</ul>
 	</li>
+	<li class="menumain">Options
+		<ul>
+			<li class='action_toggle_clock'>Toggle Clock</li>
+			<li class='action_toggle_fps'>Toggle FPS Display</li>
+		</ul>
+	</li>
 </ul>
 
 &nbsp;
 
-<div id='flush-right'>&nbsp;</div>
+<div class='flush-right' id='time-clock'>&nbsp;</div>
+<div class='flush-right' id='fps-display'>Average FPS: <span id='fps-num'>0</span></div>
 
 </div>
 
