@@ -1755,7 +1755,7 @@ private:
       cb(SST_IMPL_FAILURE, StreamPtr() );
 
       return;
-    }    
+    }
 
     c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
 	      c->localEndPoint().port, c->remoteEndPoint().port);
@@ -1790,7 +1790,7 @@ private:
         assert(conn);
 
         mStreamReturnCallbackMap.erase(conn->localEndPoint());
-        
+
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
@@ -2248,15 +2248,18 @@ private:
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
 #endif
 
-class SSTConnectionManager : public PollingService {
+class SSTConnectionManager : public Service {
 public:
     SSTConnectionManager(Context* ctx)
-      : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10000)), // FIXME
+     : Service(),
        mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
     {
     }
 
-    void poll() {
+    virtual void start() {
+    }
+    virtual void stop() {
+        Connection<SpaceObjectReference>::closeConnections();
     }
 
     ~SSTConnectionManager() {

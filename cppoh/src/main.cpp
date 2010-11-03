@@ -230,6 +230,8 @@ int main (int argc, char** argv) {
 
     delete spaceMap;
 
+    delete sstConnMgr;
+
     delete ctx;
 
     trace->shutdown();
