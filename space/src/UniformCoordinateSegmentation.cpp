@@ -162,7 +162,7 @@ std::vector<ServerID> UniformCoordinateSegmentation::lookupBoundingBox(const Bou
   for (ServerID i=1; i <= numServers(); i++) {
     BoundingBoxList bboxList = serverRegion(i);
 
-    for (uint j=0; j<bboxList.size(); j++) {
+    for (uint32 j=0; j<bboxList.size(); j++) {
       BoundingBox3f jth_bbox = bboxList[j];
     
       if ( jth_bbox.intersects(bbox) ) {

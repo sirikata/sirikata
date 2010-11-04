@@ -34,6 +34,10 @@
 
 #include <sirikata/proxyobject/ModelsSystemFactory.hpp>
 
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#define snprintf _snprintf
+#endif
+
 namespace Sirikata {
 
 
@@ -166,7 +170,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     return;
   }
 
-  for (uint i= 0; i < children.size(); i++) {
+  for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
 
     if (!mLoc->contains(child_uuid)) {
@@ -201,9 +205,9 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   std::tr1::shared_ptr<Meshdata> agg_mesh =  std::tr1::shared_ptr<Meshdata>( new Meshdata() );
   BoundingSphere3f bnds = mLoc->bounds(uuid);
 
-  uint   numAddedSubMeshGeometries = 0;
+  uint32   numAddedSubMeshGeometries = 0;
   double totalVertices = 0;
-  for (uint i= 0; i < children.size(); i++) {
+  for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
 
     Vector3f location = mLoc->currentPosition(child_uuid);
@@ -259,11 +263,11 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
-    for (uint i = 0; i < m->instances.size(); i++) {
+    for (uint32 i = 0; i < m->instances.size(); i++) {
       const GeometryInstance& geomInstance = m->instances[i];
       SubMeshGeometry smg = m->geometry[geomInstance.geometryIndex];
 
-      for (uint j = 0; j < smg.positions.size(); j++) {
+      for (uint32 j = 0; j < smg.positions.size(); j++) {
         Vector4f jth_vertex_4f =  geomInstance.transform*Vector4f(smg.positions[j].x,
                                                                   smg.positions[j].y,
                                                                   smg.positions[j].z,
@@ -287,10 +291,10 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     //std::cout << scalingfactor  << " : scalingfactor\n";
     /** End: find scaling factor **/
 
-    uint geometrySize = agg_mesh->geometry.size();
+    uint32 geometrySize = agg_mesh->geometry.size();
 
     std::vector<GeometryInstance> instances;
-    for (uint i = 0; i < m->instances.size(); i++) {
+    for (uint32 i = 0; i < m->instances.size(); i++) {
       GeometryInstance geomInstance = m->instances[i];
 
       assert (geomInstance.geometryIndex < m->geometry.size());
@@ -300,7 +304,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       smg.aabb = BoundingBox3f3f::null();
 
-      for (uint j = 0; j < smg.positions.size(); j++) {
+      for (uint32 j = 0; j < smg.positions.size(); j++) {
         Vector4f jth_vertex_4f =  geomInstance.transform*Vector4f(smg.positions[j].x,
                                                                   smg.positions[j].y,
                                                                   smg.positions[j].z,
@@ -332,7 +336,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       totalVertices = totalVertices + smg.positions.size();
     }
 
-    for (uint i = 0; i < instances.size(); i++) {
+    for (uint32 i = 0; i < instances.size(); i++) {
       GeometryInstance geomInstance = instances[i];
 
       for (GeometryInstance::MaterialBindingMap::iterator mat_it = geomInstance.materialBindingMap.begin();
@@ -348,11 +352,11 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                                m->materials.begin(),
                                m->materials.end());
 
-    uint lightsSize = agg_mesh->lights.size();
+    uint32 lightsSize = agg_mesh->lights.size();
     agg_mesh->lights.insert(agg_mesh->lights.end(),
                             m->lights.begin(),
                             m->lights.end());
-    for (uint j = 0; j < m->lightInstances.size(); j++) {
+    for (uint32 j = 0; j < m->lightInstances.size(); j++) {
       LightInstance& lightInstance = m->lightInstances[j];
       lightInstance.lightIndex += lightsSize;
       agg_mesh->lightInstances.push_back(lightInstance);
@@ -365,7 +369,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       }
   }
 
-  for (uint i= 0; i < children.size(); i++) {
+  for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
