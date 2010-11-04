@@ -86,6 +86,7 @@ IOTimerPtr IOTimer::create(IOService& io, const IOCallback& cb) {
 
 IOTimer::~IOTimer() {
     cancel();
+    delete mTimer;
 }
 
 IOService IOTimer::service() const {
