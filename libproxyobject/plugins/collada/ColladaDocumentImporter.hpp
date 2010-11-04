@@ -132,6 +132,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     protected:
         String documentURI() const;
 
+        Matrix4x4f mChangeUp;
+
         // The following keep track of the components of the scene, as
         // identified by COLLADAFW::UniqueIds.  We use these to chase indirect
         // references within the file.

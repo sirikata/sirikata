@@ -195,7 +195,6 @@ struct Meshdata {
 
     std::string uri;
     SHA256 hash;
-    int up_axis;
     long id;
 
     GeometryInstanceList instances;
