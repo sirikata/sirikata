@@ -1448,6 +1448,7 @@ SET(MESH_TOOL_SOURCES
   ${MESH_TOOL_SOURCE_DIR}/Filter.cpp
   ${MESH_TOOL_SOURCE_DIR}/LoadFilter.cpp
   ${MESH_TOOL_SOURCE_DIR}/SaveFilter.cpp
+  ${MESH_TOOL_SOURCE_DIR}/ComputeBoundsFilter.cpp
   ${MESH_TOOL_SOURCE_DIR}/main.cpp
 )
 
