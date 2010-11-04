@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);
     Scenario* scenario = ScenarioFactory::getSingleton().getConstructor(GetOptionValue<String>("scenario"))(GetOptionValue<String>("scenario-options"));
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     // If we're one of the initial nodes, we'll have to wait until we hit the start time
     {

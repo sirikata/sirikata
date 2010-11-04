@@ -2257,12 +2257,6 @@ SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectRefere
 
 class SSTConnectionManager : public Service {
 public:
-    SSTConnectionManager(Context* ctx)
-     : Service(),
-       mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
-    {
-    }
-
     virtual void start() {
     }
     virtual void stop() {
@@ -2271,10 +2265,7 @@ public:
 
     ~SSTConnectionManager() {
         Connection<SpaceObjectReference>::closeConnections();
-        delete mProfiler;
     }
-private:
-    TimeProfiler::Stage* mProfiler;
 };
 
 

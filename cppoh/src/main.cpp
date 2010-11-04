@@ -111,7 +111,7 @@ int main (int argc, char** argv) {
     ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, trace, start_time, duration);
 
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     SpaceIDMap *spaceMap = new SpaceIDMap;
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
