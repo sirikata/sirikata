@@ -72,7 +72,7 @@ bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength )
 {
 
 
-    bool ok = mFramework->loadDocument ( getDocument()->getURI().toString(), buffer, bufferLength );
+    bool ok = mFramework->loadDocument ( mDocumentImporter->documentURI(), buffer, bufferLength );
 
     return ok;
 }
