@@ -609,7 +609,7 @@ ELSE()
                    ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
                    ${CMAKE_CURRENT_BINARY_DIR}/chrome/plugin_carbon_interpose.dylib
                    ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d
-                   ${TOP_LEVEL}/cdn.txt ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
+                   ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
 
 
@@ -1933,7 +1933,6 @@ IF(CHROME_FOUND)
 
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
 
-      ${TOP_LEVEL}/cdn.txt
       ${CMAKE_CURRENT_BINARY_DIR}/scene.db
       )
 
@@ -2234,7 +2233,7 @@ IF(APPLE)
       ${CHROME_SYMLINKS_COMMAND} && ln -sf ${TOP_LEVEL}/libproxyobject
       ${CMAKE_CURRENT_BINARY_DIR}/${CHROME_SYMLINKS_COMMAND_TARGET}/ ${APPLE_PLUGIN_COMMANDS})
     ENDIF()
-#    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${TOP_LEVEL}/cdn.txt sirikata.app/Contents/MacOS/cdn.txt && ln -sf ${GENERATED_SCENE_DB} sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
+#    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${GENERATED_SCENE_DB} sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
 
 ELSE()
 IF(NOT WIN32)
@@ -2363,9 +2362,6 @@ ELSE()
     GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
   ENDIF()
 ENDIF()
-
-INSTALL(FILES ${TOP_LEVEL}/cdn.txt
-        DESTINATION bin/)
 
 IF(PYTHON_EXECUTABLE)
   IF(${GENERATED_SCENE_DB})
