@@ -39,7 +39,6 @@
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
