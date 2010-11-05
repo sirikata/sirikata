@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  ProxyLightObject.hpp
+/*  Sirikata
+ *  ComputeBoundsFilter.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,27 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PROXY_LIGHT_OBJECT_HPP_
-#define _SIRIKATA_PROXY_LIGHT_OBJECT_HPP_
-#include "LightListener.hpp"
-#include "ProxyObject.hpp"
+#include "Filter.hpp"
+
 namespace Sirikata {
+namespace MeshTool {
 
-typedef MarkovianProvider1<LightListener*,LightInfo> LightProvider;
-
-/**
- * This class represents a ProxyObject that holds a LightInfo
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ProxyLightObject
-  : public LightProvider,
-    public ProxyObject {
-    LightInfo mLastInfo;
+class ComputeBoundsFilter : public Filter {
 public:
-    ProxyLightObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwptr, const SpaceObjectReference& owner_sor);
-    void update(const LightInfo &li);
-    const LightInfo &getLastLightInfo() const {
-        return mLastInfo;
-    }
+    static Filter* create(const String& args) { return new ComputeBoundsFilter(args); }
+
+    ComputeBoundsFilter(const String& args);
+    virtual ~ComputeBoundsFilter() {}
+
+    virtual FilterDataPtr apply(FilterDataPtr input);
+private:
+    std::string mFilename;
 };
-}
-#endif
+
+} // namespace MeshTool
+} // namespace Sirikata

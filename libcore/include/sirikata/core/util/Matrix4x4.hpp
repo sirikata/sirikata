@@ -46,6 +46,12 @@ public:
     class COLUMN_MAJOR{};
     class ROW_MAJOR{};
 
+    enum Dimension {
+        X = 0,
+        Y = 1,
+        Z = 2,
+        W = 3
+    };
 private:
     Vector4x mCol[4];
 public:
@@ -66,6 +72,44 @@ public:
             Vector4x(0, 0, 0, 1),
                                    COLUMNS());
         return identity;
+    }
+    // Generate a matrix for swapping two dimensions.
+    static Matrix4x4 swapDimensions(Dimension old_up, Dimension new_up) {
+        assert(old_up != W && new_up != W);
+        if (old_up == new_up) return identity();
+        Vector4x dims[3] = { Vector4x::unitX(), Vector4x::unitY(), Vector4x::unitZ() };
+        std::swap(dims[old_up], dims[new_up]);
+        return Matrix4x4(
+            dims[0], dims[1], dims[2],
+            Vector4x(0, 0, 0, 1),
+            COLUMNS()
+        );
+    }
+    static Matrix4x4 reflection(Dimension across) {
+        return Matrix4x4(
+            (across == X ? -1.f : 1.f) * Vector4x::unitX(),
+            (across == Y ? -1.f : 1.f) * Vector4x::unitY(),
+            (across == Z ? -1.f : 1.f) * Vector4x::unitZ(),
+            Vector4x(0, 0, 0, 1),
+            COLUMNS());
+    }
+    static Matrix4x4 scale(Dimension dim, scalar s) {
+        return Matrix4x4(
+            (dim == X ? s : 1.f) * Vector4x::unitX(),
+            (dim == Y ? s : 1.f) * Vector4x::unitY(),
+            (dim == Z ? s : 1.f) * Vector4x::unitZ(),
+            Vector4x(0, 0, 0, 1),
+            COLUMNS()
+        );
+    }
+    static Matrix4x4 scale(scalar s) {
+        return Matrix4x4(
+            Vector4x::unitX() * s,
+            Vector4x::unitY() * s,
+            Vector4x::unitZ() * s,
+            Vector4x(0, 0, 0, 1),
+            COLUMNS()
+        );
     }
     Matrix4x4(const Vector4x&col1, const Vector4x&col2, const Vector4x&col3, const Vector4x&col4, COLUMNS c){
         setCol(0,col1);

@@ -34,7 +34,6 @@
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
-#include "LightEntity.hpp"
 #include "Lights.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
@@ -42,7 +41,6 @@
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyLightObject.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
@@ -88,25 +86,19 @@ bool compareEntity (const Entity* one, const Entity* two) {
     ProxyObject *pp = one->getProxyPtr().get();
 
     ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyLightObject* light1 = dynamic_cast<ProxyLightObject*>(pp);
     ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
     Time now = one->getScene()->simTime();
     Location loc1 = pp->globalLocation(now);
     pp = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
     ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyLightObject* light2 = dynamic_cast<ProxyLightObject*>(pp);
     ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
     if (camera1 && !camera2) return true;
     if (camera2 && !camera1) return false;
     if (camera1 && camera2) {
         return loc1.getPosition().x < loc2.getPosition().x;
     }
-    if (light1 && mesh2) return true;
-    if (mesh1 && light2) return false;
-    if (light1 && light2) {
-        return loc1.getPosition().x < loc2.getPosition().x;
-    }
+
     if (mesh1 && mesh2) {
         return mesh1->getPhysical().name < mesh2->getPhysical().name;
     }
@@ -877,61 +869,6 @@ private:
 */
     }
 
-    std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
-/*
-        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        if (!camera) return std::tr1::shared_ptr<ProxyLightObject>();
-        SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
-        ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
-        Location loc (camera->getProxy().globalLocation(now));
-        loc.setPosition(loc.getPosition());
-        loc.setOrientation(Quaternion(0.886995, 0.000000, -0.461779, 0.000000, Quaternion::WXYZ()));
-
-        std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId, camera->getProxy().odp()));
-        proxyMgr->createObject(newLightObject,camera->getProxy().getQueryTracker());
-        {
-            LightInfo li;
-            li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));
-            li.setLightAmbientColor(Color(.24,.25,.18));
-            li.setLightSpecularColor(Color(0,0,0));
-            li.setLightShadowColor(Color(0,0,0));
-            li.setLightPower(1.0);
-            li.setLightRange(75);
-            li.setLightFalloff(1,0,0.03);
-            li.setLightSpotlightCone(30,40,1);
-            li.setCastsShadow(true);
-            // set li according to some sample light in the scene file!
-            newLightObject->update(li);
-        }
-
-        Entity *parentent = mParent->getEntity(mCurrentGroup);
-        if (parentent) {
-            Location localLoc = loc.toLocal(parentent->getProxy().globalLocation(now));
-            newLightObject->setParent(parentent->getProxyPtr(), now, loc, localLoc);
-            newLightObject->resetLocation(now, localLoc);
-        }
-        else {
-            newLightObject->resetLocation(now, loc);
-        }
-        mSelectedObjects.clear();
-        mSelectedObjects.insert(newLightObject);
-        Entity *ent = mParent->getEntity(newId);
-        if (ent) {
-            ent->setSelected(true);
-        }
-        return newLightObject;
-    */
-        return std::tr1::shared_ptr<ProxyLightObject>();
-    }
-    void createLightAction() {
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        if (!camera) return;
-        Time now = mParent->simTime();
-        createLight(now);
-    }
-
 	ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy) {
 		ProxyObjectPtr parentProxy;
 		while ((parentProxy=camProxy->getParentProxy())) {
@@ -1143,7 +1080,6 @@ private:
         Time now = mParent->simTime();
         Location loc = pp->globalLocation(now);
         ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
 
         double x,y,z;
@@ -1168,29 +1104,6 @@ private:
             if (parentMesh) {
                 parent = physicalName(parentMesh, saveSceneNames);
             }
-        }
-        if (light) {
-            const char *typestr = "directional";
-            const LightInfo &linfo = light->getLastLightInfo();
-            if (linfo.mType == LightInfo::POINT) {
-                typestr = "point";
-            }
-            if (linfo.mType == LightInfo::SPOTLIGHT) {
-                typestr = "spotlight";
-            }
-            float32 ambientPower, shadowPower;
-            ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
-                    linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
-                    linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
-                    linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,
-                    linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,
-                    (int)linfo.mCastsShadow);
         }
         else if (mesh) {
             URI uri = mesh->getMesh();
@@ -1720,7 +1633,6 @@ public:
         mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "object/object.html"));
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
-        mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
         mInputResponses["groupObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::groupObjectsAction, this));
@@ -1790,7 +1702,6 @@ public:
         // Various other actions
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);

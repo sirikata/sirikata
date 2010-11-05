@@ -13,7 +13,7 @@ message NameResponse
 	enum StatusCode {
 		SUCCESS = 200;
 		NOT_FOUND = 404;
-		ERROR = 500;
+		INTERNAL_ERROR = 500;
 	}
 	
 	//Status of the name lookup

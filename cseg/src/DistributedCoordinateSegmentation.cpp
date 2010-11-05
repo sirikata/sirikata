@@ -44,6 +44,9 @@
 #include "WorldPopulationBSPTree.hpp"
 #include <sirikata/core/network/ServerIDMap.hpp>
 
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#define snprintf _snprintf
+#endif
 
 namespace Sirikata {
 
@@ -314,7 +317,7 @@ std::vector<ServerID> DistributedCoordinateSegmentation::lookupBoundingBox(const
 
   std::map<ServerID, std::vector<SegmentedRegion*> > otherCSEGServers;
 
-  for (uint i = 0; i < segmentedRegionsList.size(); i++) {
+  for (uint32 i = 0; i < segmentedRegionsList.size(); i++) {
     SegmentedRegion* segRegion = segmentedRegionsList[i];
     ServerID topLevelIdx = segRegion->mServer;
 
@@ -339,7 +342,7 @@ std::vector<ServerID> DistributedCoordinateSegmentation::lookupBoundingBox(const
         }
       }
 
-      for (uint j = 0; j < regionList.size(); j++) {
+      for (uint32 j = 0; j < regionList.size(); j++) {
         serverList.push_back(regionList[j]->mServer);
       }
     }
@@ -816,7 +819,7 @@ void DistributedCoordinateSegmentation::asyncLLRead(boost::shared_ptr<tcp::socke
         std::vector<SegmentedRegion*> vect;
         (*it).second->lookupBoundingBox(bbox, vect);
 
-        for (uint j = 0; j < vect.size(); j++) {
+        for (uint32 j = 0; j < vect.size(); j++) {
           serverList.push_back(vect[j]->mServer);
         }
       }
@@ -1019,7 +1022,7 @@ void DistributedCoordinateSegmentation::callLowerLevelCSEGServersForLookupBoundi
     Sirikata::Protocol::CSeg::CSegMessage csegMessage;
     csegMessage.mutable_ll_lookup_bbox_request_message().set_bbox(lookedUpBbox);
 
-    for (uint j = 0; j < segRegionList.size(); j++) {
+    for (uint32 j = 0; j < segRegionList.size(); j++) {
       csegMessage.mutable_ll_lookup_bbox_request_message().add_candidate_boxes(segRegionList[j]->mBoundingBox);
     }
 
@@ -1242,7 +1245,7 @@ void DistributedCoordinateSegmentation::writeCSEGMessage(boost::shared_ptr<tcp::
 
 void DistributedCoordinateSegmentation::readCSEGMessage(boost::shared_ptr<tcp::socket> socket,
                                                         Sirikata::Protocol::CSeg::CSegMessage& csegMessage,
-                                                        uint8* bufferSoFar, uint bufferSoFarSize
+                                                        uint8* bufferSoFar, uint32 bufferSoFarSize
                                                         )
 {
   assert(bufferSoFarSize <= 4);

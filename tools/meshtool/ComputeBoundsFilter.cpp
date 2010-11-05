@@ -1,7 +1,7 @@
-/*  Sirikata Graphical Object Host
- *  LightEntity.cpp
+/*  Sirikata
+ *  ComputeBoundsFilter.cpp
  *
- *  Copyright (c) 2009, Patrick Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,40 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "OgreSystem.hpp"
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/LightListener.hpp>
-#include "LightEntity.hpp"
-#include <sirikata/proxyobject/ProxyLightObject.hpp>
-#include "Lights.hpp"
+#include "ComputeBoundsFilter.hpp"
 
 namespace Sirikata {
-namespace Graphics {
+namespace MeshTool {
 
-LightEntity::LightEntity(OgreSystem *scene, const std::tr1::shared_ptr<ProxyLightObject> &plo, const std::string &id)
-    : Entity(scene,
-             plo,
-             id.length()?id:ogreLightName(plo->getObjectReference()),
-             scene->getSceneManager()->createLight(id.length()?id:ogreLightName(plo->getObjectReference()))) {
-    getProxy().LightProvider::addListener(this);
+ComputeBoundsFilter::ComputeBoundsFilter(const String& args) {
 }
 
-LightEntity::~LightEntity() {
-    Ogre::Light *toDestroy=getOgreLight();
-    init(NULL);
-    mScene->getSceneManager()->destroyLight(toDestroy);
-    getProxy().LightProvider::removeListener(this);
+FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
+    // The bounding box is just the bounding box of all the component geometry
+    // instances.  These were already computed, post-transform, for each
+    // instance, so this is a simple computation.
+
+    BoundingBox3f3f bbox = BoundingBox3f3f::null();
+    for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
+        MeshdataPtr mesh = *mesh_it;
+        for(Meshdata::GeometryInstanceList::iterator it = mesh->instances.begin(); it != mesh->instances.end(); it++) {
+            if (bbox.degenerate())
+                bbox = it->aabb;
+            else
+                bbox.mergeIn(it->aabb);
+        }
+    }
+    std::cout << bbox << std::endl;
+    return input;
 }
 
-void LightEntity::notify(const LightInfo& linfo){
-    updateOgreLight(getOgreLight(),linfo);
-}
-std::string LightEntity::ogreLightName(const SpaceObjectReference&ref) {
-    return "Light:"+ref.toString();
-}
-std::string LightEntity::ogreMovableName()const{
-    return ogreLightName(id());
-}
-
-}
-}
+} // namespace MeshTool
+} // namespace Sirikata

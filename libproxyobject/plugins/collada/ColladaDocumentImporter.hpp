@@ -80,6 +80,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         ColladaDocumentPtr getDocument () const;
 
+        String documentURI() const;
+
         std::tr1::shared_ptr<Meshdata> getMeshdata() {
           return std::tr1::shared_ptr<Meshdata>(mMesh);
         }
@@ -130,7 +132,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         virtual bool writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene );
 
     protected:
-        String documentURI() const;
+
+        Matrix4x4f mChangeUp;
+        Matrix4x4f mUnitScale; // For adjusting units to meters
 
         // The following keep track of the components of the scene, as
         // identified by COLLADAFW::UniqueIds.  We use these to chase indirect

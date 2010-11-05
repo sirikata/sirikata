@@ -356,23 +356,6 @@ void MeshEntity::processMesh(URI const& meshFile)
     mResource->setMeshResource ( newModelPtr );
 }
 
-Vector3f fixUp(int up, Vector3f v) {
-    if (up==3) return Vector3f(v[0],v[2], -v[1]);
-    else if (up==2) return v;
-    std::cerr << "ERROR: X up? You gotta be frakkin' kiddin'\n";
-    assert(false);
-}
-
-BoundingBox3f3f fixUp(int up, const BoundingBox3f3f& aabb) {
-    Vector3f new_aabb_min = fixUp(up, aabb.min());
-    Vector3f new_aabb_max = fixUp(up, aabb.max());
-
-    // We need to get these right because ogre doesn't like AABBs that
-    // are invalid...
-    return BoundingBox3f(new_aabb_min.min(new_aabb_max), new_aabb_max.max(new_aabb_min));
-}
-
-
 bool MeshEntity::createMeshWork(MeshdataPtr md) {
     createMesh(md);
     return true;
@@ -666,7 +649,6 @@ public:
         String hash = sha.convertToHexString();
         bool useSharedBuffer = true;
         size_t totalVertexCount=0;
-        int up = md.up_axis;
         for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
 
@@ -728,10 +710,9 @@ public:
             if (geoinst.geometryIndex >= md.geometry.size())
                 continue;
             const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
-            BoundingBox3f3f fixed_bounds = fixUp(up, geoinst.aabb);
             AxisAlignedBox ogresubmeshaabb(
-                Graphics::toOgre(fixed_bounds.min()),
-                Graphics::toOgre(fixed_bounds.max())
+                Graphics::toOgre(geoinst.aabb.min()),
+                Graphics::toOgre(geoinst.aabb.max())
             );
             double rad=0;
             if (geoinst_it != md.instances.begin()) {
@@ -772,7 +753,6 @@ public:
                         Vector3f v = submesh.positions[i];
                         Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
                         v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
-                        v = fixUp(up, v);
                         memcpy(pData,&v.x,sizeof(float));
                         memcpy(pData+sizeof(float),&v.y,sizeof(float));
                         memcpy(pData+2*sizeof(float),&v.z,sizeof(float));
@@ -780,7 +760,6 @@ public:
                         if (submesh.normals.size()==submesh.positions.size()) {
                             Vector3f normal = submesh.normals[i];
                             normal = (normal_xform * normal).normal();
-                            normal = fixUp(up, normal);
                             memcpy(pData,&normal.x,sizeof(float));
                             memcpy(pData+sizeof(float),&normal.y,sizeof(float));
                             memcpy(pData+2*sizeof(float),&normal.z,sizeof(float));
@@ -789,7 +768,6 @@ public:
                         if (submesh.tangents.size()==submesh.positions.size()) {
                             Vector3f tangent = submesh.tangents[i];
                             tangent = normal_xform * tangent;
-                            tangent = fixUp(up, tangent);
                             memcpy(pData,&tangent.x,sizeof(float));
                             memcpy(pData+sizeof(float),&tangent.y,sizeof(float));
                             memcpy(pData+2*sizeof(float),&tangent.z,sizeof(float));
@@ -963,7 +941,6 @@ void MeshEntity::createMesh(MeshdataPtr mdptr) {
             reload->prepareResource(&*mo);
             reload->loadResource(&*mo);
         }else {
-            int up = md.up_axis;
             /// FIXME: set bounds, bounding radius here
             Ogre::ManualObject mo(hash);
             mo.clear();
@@ -996,12 +973,10 @@ void MeshEntity::createMesh(MeshdataPtr mdptr) {
                         Vector3f v = submesh.positions[j];
                         Vector4f v_xform = pos_xform * Vector4f(v[0], v[1], v[2], 1.f);
                         v = Vector3f(v_xform[0], v_xform[1], v_xform[2]);
-                        v = fixUp(up, v);
                         mo.position(v[0], v[1], v[2]);
                         std::cerr<<"Mo pos "<<v[0]<<","<<v[1]<<","<<v[2]<<"\n";
                         Vector3f normal = submesh.normals[j];
                         normal = normal_xform * normal;
-                        normal = fixUp(up, normal);
                         mo.normal(normal[0], normal[1], normal[2]);
                         std::cerr<<"Mo norm "<<normal[0]<<","<<normal[1]<<","<<normal[2]<<"\n";
                         mo.colour(1.0,1.0,1.0,1.0);

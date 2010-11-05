@@ -66,7 +66,6 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyLightObject.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
 
@@ -131,7 +130,6 @@ using ::Sirikata::Time;
 using ::Sirikata::Duration;
 using ::Sirikata::ProxyCameraObject;
 using ::Sirikata::ProxyMeshObject;
-using ::Sirikata::ProxyLightObject;
 using ::Sirikata::BoundingBox;
 using ::Sirikata::BoundingSphere;
 using ::Sirikata::BoundingInfo;

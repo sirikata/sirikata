@@ -34,6 +34,7 @@
 #include "Filter.hpp"
 #include "LoadFilter.hpp"
 #include "SaveFilter.hpp"
+#include "ComputeBoundsFilter.hpp"
 
 void usage() {
     printf("Usage: meshtool --filter1 --filter2=filter,options\n");
@@ -58,6 +59,7 @@ int main(int argc, char** argv) {
     // Register filters
     FilterFactory::getSingleton().registerConstructor("load", LoadFilter::create);
     FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
+    FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
 
     FilterDataPtr current_data(new FilterData);
     for(int argi = 1; argi < argc; argi++) {

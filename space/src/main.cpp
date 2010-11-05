@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(space_context);
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     space_context->add(space_context);
     space_context->add(gNetwork);

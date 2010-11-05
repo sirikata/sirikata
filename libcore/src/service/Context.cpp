@@ -55,6 +55,7 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
 }
 
 Context::~Context() {
+    delete profiler;
 }
 
 void Context::start() {
