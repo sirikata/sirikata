@@ -1079,7 +1079,6 @@ private:
         JSIter command_it;
         for (command_it = args.begin(); command_it != args.end(); ++command_it)
         {
-            std::cout<<"\n\nBFTM: Fix selection in execute script of OgreSystemMouseHandler\n\n";
             std::string strcmp (command_it->begin());
             if (strcmp == "Command")
             {

@@ -183,8 +183,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
     SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
     if (it == mSpaceData->end())
     {
-        std::cout<<"\n\nClean getProxyManager function so that it's apparent may get back null\n\n";
-        std::cout<<"\n\nLooking for: "<<space<<"   "<<oref<<"\n\n";
         // SpaceDataMap::const_iterator twoIt = mSpaceData->begin();
         // // for (twoIt = mSpaceData->begin(); twoIt != mSpaceData->end(); ++twoIt)
         // // {
@@ -214,7 +212,6 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
     SpaceDataMap::const_iterator smapIter;
     for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
     {
-        std::cout<<"\nin getSpaceObjRefs.  This is a space obj:  "<<smapIter->second.space<<smapIter->second.object<<"\n";
         ss.insert(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
     }
 }
@@ -288,7 +285,6 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         if (fileScriptToAttach != "")
         {
-            std::cout<<"\n\nAttaching script: "<<fileScriptToAttach<<"\n\n";
             mObjectScript->attachScript(fileScriptToAttach);
         }
     }
@@ -342,7 +338,6 @@ void HostedObject::connect(
 
 void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
 {
-    std::cout<<"\n\nFIXME: defaulting objects into first space available in addSimListeners\n\n";
     SpaceID space = mObjectHost->getDefaultSpace();
     
     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
@@ -389,8 +384,6 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 
 void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
-    std::cout.flush();
-    
     if (server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
         return;
@@ -586,9 +579,6 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
-
-    std::cout<<"\n\nReceived message \n\n";
-    
     
     // FIXME to transition to real ODP instead of ObjectMessageRouter +
     // ObjectMessageDispatcher, we need to allow the old route as well.  First
@@ -831,7 +821,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             }
             else continue;
 
-            //std::cout << "Proximity removal: " << removal.object().toString()  <<  "\n";
 
             CONTEXT_OHTRACE(prox,
                 getUUID(),
@@ -908,17 +897,6 @@ ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
     ObjectReference oref = mSpaceData->begin()->first.object();
     return  getProxy(space, oref);
 }
-
-
-
-
-// Identification
-// SpaceObjectReference HostedObject::id(const SpaceID& space) const
-// {
-//     SpaceDataMap::const_iterator it = mSpaceData->find(space);
-//     if (it == mSpaceData->end()) return SpaceObjectReference::null();
-//     return it->second.id();
-// }
 
 
 
@@ -1130,7 +1108,7 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 
     std::string payload = serializePBJMessage(container);
 
-    std::cout<<"\n\nBFTM: fix.  Calling getUUID, may make changes to the wrong oref in sendLocUpdateRequest\n\n";
+    //std::cout<<"\n\nBFTM: fix.  Calling getUUID, may make changes to the wrong oref in sendLocUpdateRequest\n\n";
     boost::shared_ptr<Stream<UUID> > spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != boost::shared_ptr<Stream<UUID> >()) {
         boost::shared_ptr<Connection<UUID> > conn = spaceStream->connection().lock();
