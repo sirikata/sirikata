@@ -37,8 +37,6 @@
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
 #include <sirikata/proxyobject/ProxyObjectListener.hpp>
-#include <sirikata/proxyobject/WebViewListener.hpp>
-#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"
@@ -74,20 +72,12 @@ namespace Graphics {
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
 	class WebView
-        : public Ogre::ManualResourceLoader,
+        : public Ogre::ManualResourceLoader
 #ifdef HAVE_BERKELIUM
-          public Berkelium::WindowDelegate,
+        , public Berkelium::WindowDelegate
 #endif
-          public Sirikata::WebViewListener,
-          public Sirikata::ProxyObjectListener
 	{
 	public:
-
-            // ProxyObjectListener Interface
-            void destroyed();
-
-
-		void setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject);
 
 		/**
 		* Loads a URL into the main frame.
@@ -438,9 +428,6 @@ namespace Graphics {
 		std::map<std::string, JSDelegate> delegateMap;
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
-
-        ///shared pointer to proxy object that supplies this webview
-		std::tr1::shared_ptr<ProxyWebViewObject> proxyObject;
 
 		friend class WebViewManager;
 

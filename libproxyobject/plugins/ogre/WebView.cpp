@@ -35,6 +35,7 @@
 #include "WebView.hpp"
 #include "WebViewManager.hpp"
 #include <OgreBitwise.h>
+#include <sirikata/core/util/UUID.hpp>
 
 using namespace Ogre;
 
@@ -139,27 +140,6 @@ WebView::~WebView()
         this->viewTexture.setNull();
         Ogre::TextureManager::getSingleton().remove(res);
     }
-
-	setProxyObject(std::tr1::shared_ptr<ProxyWebViewObject>());
-}
-
-void WebView::destroyed() {
-	WebViewManager::getSingleton().destroyWebView(this);
-}
-
-void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
-{
-	if(this->proxyObject) {
-		this->proxyObject->WebViewProvider::removeListener(this);
-		this->proxyObject->ProxyObjectProvider::removeListener(this);
-    }
-
-	this->proxyObject = proxyObject;
-
-	if(this->proxyObject) {
-		proxyObject->WebViewProvider::addListener(this);
-		proxyObject->ProxyObjectProvider::addListener(this);
-	}
 }
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)

@@ -719,17 +719,8 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         }
     }
     {
-        std::tr1::shared_ptr<ProxyWebViewObject> webviewpxy=std::tr1::dynamic_pointer_cast<ProxyWebViewObject>(p);
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
-        if (webviewpxy) {
-            WebView* view = WebViewManager::getSingleton().createWebViewMaterial(
-				p->getObjectReference().toString(), 512, 512, Ogre::FO_ANISOTROPIC);
-            view->setProxyObject(webviewpxy);
-            view->bind("close", std::tr1::bind(&KillWebView, this, p));
-            MeshEntity *mesh=new MeshEntity(this,webviewpxy);
-            mesh->bindTexture("webview", p->getObjectReference());
-            created = true;
-        } else if (meshpxy) {
+        if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
             dlPlanner->addNewObject(p, mesh);
