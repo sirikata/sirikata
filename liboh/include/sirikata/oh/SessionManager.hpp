@@ -61,7 +61,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&)> ConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
@@ -157,7 +157,7 @@ private:
     // This gets invoked when the connection really is ready -- after
     // successful response and we have time sync info. It does some
     // additional setup work (sst stream) and then invokes the real callback
-    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, ConnectedCallback real_cb);
+    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb);
 
     void retryOpenConnection(const UUID&uuid,ServerID sid);
 
@@ -268,7 +268,7 @@ private:
 
         // Marks as connected and returns the server connected to. do_cb
         // specifies whether the callback should be invoked or deferred
-        ServerID handleConnectSuccess(const UUID& obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, bool do_cb);
+      ServerID handleConnectSuccess(const UUID& obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, bool do_cb);
 
         void handleConnectError(const UUID& objid);
 

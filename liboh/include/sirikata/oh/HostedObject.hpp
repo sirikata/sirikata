@@ -180,9 +180,9 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
     void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
+			 const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh);
     void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
+				 const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
 
