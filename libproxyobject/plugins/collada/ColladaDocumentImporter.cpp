@@ -235,7 +235,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         GeometryInstance new_geo_inst;
                         new_geo_inst.geometryIndex = geo_it->second;
-                        new_geo_inst.transform = mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                        new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                         new_geo_inst.radius=0;
                         new_geo_inst.aabb=BoundingBox3f3f::null();
                         const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -268,7 +268,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             GeometryInstance new_geo_inst;
                             new_geo_inst.geometryIndex = geo_it->second;
-                            new_geo_inst.transform = mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                            new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                             new_geo_inst.radius=0;
                             new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -299,7 +299,7 @@ void ColladaDocumentImporter::finish ()
                     }
                     LightInstance new_light_inst;
                     new_light_inst.lightIndex = light_it->second;
-                    new_light_inst.transform = mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    new_light_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                     mMesh->lightInstances.push_back(new_light_inst);
                 }
 
@@ -358,6 +358,7 @@ bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asse
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered");
     bool ok = mDocument->import ( *this, *asset );
     mChangeUp = getChangeUpMatrix(asset->getUpAxisType());
+    mUnitScale = Matrix4x4f::scale(asset->getUnit().getLinearUnitMeter());
     return ok;
 }
 

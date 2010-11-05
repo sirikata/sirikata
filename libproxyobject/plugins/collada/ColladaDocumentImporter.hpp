@@ -134,6 +134,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
     protected:
 
         Matrix4x4f mChangeUp;
+        Matrix4x4f mUnitScale; // For adjusting units to meters
 
         // The following keep track of the components of the scene, as
         // identified by COLLADAFW::UniqueIds.  We use these to chase indirect

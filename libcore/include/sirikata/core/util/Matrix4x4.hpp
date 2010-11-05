@@ -93,6 +93,24 @@ public:
             Vector4x(0, 0, 0, 1),
             COLUMNS());
     }
+    static Matrix4x4 scale(Dimension dim, scalar s) {
+        return Matrix4x4(
+            (dim == X ? s : 1.f) * Vector4x::unitX(),
+            (dim == Y ? s : 1.f) * Vector4x::unitY(),
+            (dim == Z ? s : 1.f) * Vector4x::unitZ(),
+            Vector4x(0, 0, 0, 1),
+            COLUMNS()
+        );
+    }
+    static Matrix4x4 scale(scalar s) {
+        return Matrix4x4(
+            Vector4x::unitX() * s,
+            Vector4x::unitY() * s,
+            Vector4x::unitZ() * s,
+            Vector4x(0, 0, 0, 1),
+            COLUMNS()
+        );
+    }
     Matrix4x4(const Vector4x&col1, const Vector4x&col2, const Vector4x&col3, const Vector4x&col4, COLUMNS c){
         setCol(0,col1);
         setCol(1,col2);
