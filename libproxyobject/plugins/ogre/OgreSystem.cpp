@@ -40,10 +40,8 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyLightObject.hpp>
 #include "CameraEntity.hpp"
 #include "MeshEntity.hpp"
-#include "LightEntity.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
 #include "input/SDLInputManager.hpp"
@@ -717,13 +715,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
         if (camera) {
             CameraEntity *cam=new CameraEntity(this,camera);
-            created = true;
-        }
-    }
-    {
-        std::tr1::shared_ptr<ProxyLightObject> light=std::tr1::dynamic_pointer_cast<ProxyLightObject>(p);
-        if (light) {
-            LightEntity *lig=new LightEntity(this,light);
             created = true;
         }
     }

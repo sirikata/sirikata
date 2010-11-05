@@ -1157,7 +1157,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/AnyModelsSystem.cpp
@@ -1265,7 +1264,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${INPUT}/InputDevice.cpp
   ${INPUT}/SDLInputDevice.cpp
   ${GFX}/Entity.cpp
-  ${GFX}/LightEntity.cpp
   ${GFX}/MeshEntity.cpp
   ${GFX}/CameraEntity.cpp
   ${GFX}/OgrePlugin.cpp
