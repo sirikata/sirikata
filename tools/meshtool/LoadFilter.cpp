@@ -43,16 +43,38 @@ LoadFilter::LoadFilter(const String& args) {
 FilterDataPtr LoadFilter::apply(FilterDataPtr input) {
     using namespace Sirikata::Transfer;
 
+    typedef std::tr1::shared_ptr<SparseData> SparseDataPtr;
+
     ModelsSystem* parser = ModelsSystemFactory::getSingleton().getConstructor("any")("");
 
     // Load the file into a DenseData
-    FILE* fp = fopen(mFilename.c_str(), "rb");
-    fseek(fp, 0, SEEK_END);
-    int fp_len = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    MutableDenseDataPtr filedata(new DenseData(Range(0, fp_len, Transfer::LENGTH, true)));
-    fread(filedata->writableData(), 1, fp_len, fp);
-    fclose(fp);
+    DenseDataPtr filedata;
+    if (mFilename.empty()) { // use stdin
+        SparseDataPtr sparse_data(new SparseData());
+        FILE* fp = stdin;
+        int offset = 0;
+        while(!feof(fp)) {
+            char buf[256];
+            int nread = fread(&buf, 1, 256, fp);
+            if (nread > 0) {
+                MutableDenseDataPtr data_seg(new DenseData(Range(offset, nread, Transfer::LENGTH, false)));
+                memcpy(data_seg->writableData(), buf, nread);
+                offset += nread;
+                sparse_data->addValidData(data_seg);
+            }
+        }
+        filedata = sparse_data->flatten();
+    }
+    else {
+        FILE* fp = fopen(mFilename.c_str(), "rb");
+        fseek(fp, 0, SEEK_END);
+        int fp_len = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        MutableDenseDataPtr mutable_filedata(new DenseData(Range(0, fp_len, Transfer::LENGTH, true)));
+        fread(mutable_filedata->writableData(), 1, fp_len, fp);
+        fclose(fp);
+        filedata = mutable_filedata;
+    }
 
     URI fileuri(std::string("file://") + mFilename);
     Fingerprint hash = Fingerprint::computeDigest(filedata->data(), filedata->size());
