@@ -10,6 +10,7 @@ import zipfile
 import xml.dom.minidom
 import math
 import euclid
+import subprocess
 
 def extract_entity_id(entity_url):
     id_url_prefix = 'http://sketchup.google.com/3dwarehouse/data/entities/'
@@ -57,6 +58,9 @@ class ColladaZip:
     def find_kmls(self):
         return [x for x in self.zf.namelist() if x.endswith('.kml')]
 
+    def find_daes(self):
+        return [x for x in self.zf.namelist() if x.endswith('.dae')]
+
     def get_file(self, fname):
         return self.zf.open(fname)
 
@@ -71,6 +75,9 @@ class ModelOrientation:
 class ModelScale:
     def __init__(self, x, y, z):
         self.x, self.y, self.z = x, y, z
+
+    def radius(self):
+        return math.sqrt(self.x*self.x + self.y*self.y + self.z*self.z) * 0.5;
 
 class ModelLocation:
     def __init__(self, pos, orient, scale):
@@ -119,6 +126,24 @@ def extract_kml_info(model_id, work_dir):
     sz = float(getXmlContents(getXmlChildByName(scale_node, 'z')))
 
     return  ModelLocation(ModelPosition(loc_lat, loc_long, loc_alt), ModelOrientation(orient_heading, orient_tilt, orient_roll), ModelScale(sx, sy, sz))
+
+def compute_scale(model_id, work_dir):
+    assert(have_model(model_id, work_dir))
+
+    fname = model_filename(model_id, work_dir)
+    cz = ColladaZip(fname)
+
+    daes = cz.find_daes()
+    assert(len(daes) == 1)
+    (dae,) = daes
+
+    dae_fp = cz.get_file(dae)
+    # We need to manually pass the dae data because subprocess can't handle ZipFile objects
+    dae_data = ''.join(dae_fp.readlines())
+    bounds_str = subprocess.Popen(['meshtool_d', '--load', '--compute-bounds'], stdin=subprocess.PIPE, stdout=subprocess.PIPE).communicate(dae_data)[0]
+    # Horrible parsing because re isn't doing what I want it to
+    bounds_list = [float(z.strip().strip('<>')) for z in bounds_str.split(',')]
+    return ModelScale(bounds_list[3] - bounds_list[0], bounds_list[4] - bounds_list[1], bounds_list[5] - bounds_list[2])
 
 def average(l):
     return sum(l) / float(len(l))
@@ -177,6 +202,9 @@ class WarehouseScene:
         objdata = {}
         for objid in self._db:
             objdata[objid] = extract_kml_info(objid, self._work_dir)
+            model_scale = compute_scale(objid, self._work_dir)
+            kml_scale = objdata[objid].scale
+            objdata[objid].scale = ModelScale(model_scale.x * kml_scale.x, model_scale.y * kml_scale.y, model_scale.z * kml_scale.z)
 
         # Next, figure out where to center things
         avg_lat = average([obj.pos.lat for obj in objdata.values()])
@@ -224,7 +252,8 @@ class WarehouseScene:
 
                 rot = [0,0,0,1]
                 mesh = "meerkat:///ewencp/%s.dae" % (objid)
-                size = min(obj.scale.x, obj.scale.y, obj.scale.z)
+                # obj.scale contains the extents, compute a radius
+                size = obj.scale.radius()
                 print >>fout, '"mesh",%f,%f,%f,%f,%f,%f,%f,"%s",%f' % (pos[0], pos[1], pos[2], rot[0], rot[1], rot[2], rot[3], mesh, size)
 
 
