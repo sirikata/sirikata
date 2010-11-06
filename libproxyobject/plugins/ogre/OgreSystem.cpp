@@ -142,6 +142,7 @@ OgreSystem::OgreSystem(Context* ctx)
     // FIXME need to support multiple parsers, see #124
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
      mQuitRequested(false),
+     mQuitRequestHandled(false),
      mFloatingPointOffset(0,0,0),
      mSuspended(false),
      mPrimaryCamera(NULL)
@@ -943,8 +944,10 @@ void OgreSystem::poll(){
     Meru::SequentialWorkQueue::getSingleton().dequeuePoll();
     Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
 
-    if (mQuitRequested)
+    if (mQuitRequested && !mQuitRequestHandled) {
         mContext->shutdown();
+        mQuitRequestHandled = true;
+    }
 }
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
