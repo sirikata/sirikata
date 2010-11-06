@@ -221,8 +221,8 @@ bool ObjectHost::unregisterService(uint64 port) {
     return false;
 }
 
-boost::shared_ptr<Stream<UUID> > ObjectHost::getSpaceStream(const UUID& objectID) {
-    return mSessionManager.getSpaceStream(objectID);
+Stream<SpaceObjectReference>::Ptr ObjectHost::getSpaceStream(const UUID& objectID) {
+    return mSessionManager.getSpaceStream(ObjectReference(objectID));
 }
 
 } // namespace Sirikata

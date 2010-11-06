@@ -43,4 +43,8 @@ ObjectHostContext::ObjectHostContext(ObjectHostID _id, Network::IOService* ios, 
 {
 }
 
+ObjectHostContext::~ObjectHostContext() {
+    delete mOHTrace;
+}
+
 } // namespace Sirikata

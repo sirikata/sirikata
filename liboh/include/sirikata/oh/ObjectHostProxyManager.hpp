@@ -38,6 +38,7 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <vector>
 
+
 namespace Sirikata {
 
 class HostedObject;
@@ -46,7 +47,6 @@ class SIRIKATA_OH_EXPORT ObjectHostProxyManager :public ProxyManager, public Non
 protected:
     struct ObjectHostProxyInfo {
         ProxyObjectPtr obj;
-        std::tr1::unordered_multiset<QueryTracker*> viewers;
         ObjectHostProxyInfo(const ProxyObjectPtr &obj)
             : obj(obj) {
         }
@@ -71,14 +71,14 @@ public:
     void initialize();
     void destroy();
 
-    void createObject(const ProxyObjectPtr &newObj, QueryTracker*viewer);
-    void destroyObject(const ProxyObjectPtr &delObj, QueryTracker*viewer);
 
     //bftm
     void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
     void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
     
-    QueryTracker *getQueryTracker(const SpaceObjectReference &id);
+    void createObject(const ProxyObjectPtr &newObj);
+    void destroyObject(const ProxyObjectPtr &delObj);
+
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };

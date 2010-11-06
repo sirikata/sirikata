@@ -1,0 +1,174 @@
+<html>
+<head>
+<title>UI</title>
+
+<script type="text/javascript" src="../jquery/js/jquery-1.4.2.min.js"></script>
+<script type="text/javascript" src="../jquery_plugins/jquery.dimensions.js"></script>
+<script type="text/javascript" src="../jquery/js/jquery-ui-1.8.5.custom.min.js"></script>
+<script type="text/javascript" src="../jquery_plugins/jquery.menu.js"></script>
+
+<link href="css/jquery.menu.css" rel="stylesheet" type="text/css" />
+<link href="../jquery_themes/redmond/jquery-ui-1.8.6.custom.css" rel="stylesheet" type="text/css" />
+
+<style type="text/css">
+	body {
+		font: 85% Verdana, Arial, sans-serif;
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		height: 100%;
+	}
+	div#transparency {
+		float: left;
+		opacity: 0;
+		width: 100%;
+		height: 100%;
+	}
+	div#ui-container {
+		position: absolute;
+		top: 0px;
+		left: 0px;
+		width: 100%;
+		padding: 0;
+		margin: 0;
+	}
+	div#ui-box {
+		margin: 0;
+		padding: 0;
+		margin-left: 1px;
+		margin-right: 1px;
+		background: -moz-linear-gradient(top,  #589ae1,  #3f75cd);
+		background: -webkit-gradient(linear, left top, left bottom, from(#589ae1), to(#3f75cd));
+		color: #eeeeff;
+		border-bottom: 1px solid #004db8;
+	}
+	div.flush-right {
+		float: right;
+		padding: 0;
+		margin: 0;
+		padding-right: 5px;
+		padding-left: 5px;
+		border-left: 1px solid #004db8;
+	}
+</style>
+<script type="text/javascript">
+
+var timeClockEnabled = true;
+function timeClock () {
+	if(timeClockEnabled) {
+		var curTime = new Date();
+		var h = curTime.getHours();
+		var m = curTime.getMinutes();
+		if(m < 10) {
+			m = "0" + m;
+		}
+		var ampm = (h < 12) ? "AM" : "PM";
+		if(h > 12) {
+			h = h - 12;
+		}
+		
+		$('#time-clock').html('' + h + ':' + m + ' ' + ampm);
+		
+		setTimeout(timeClock, 1000);
+	}
+}
+
+var fpsDisplayEnabled = true;
+function update_fps(num) {
+	var formatted = (Math.round(num*10)/10).toFixed(1);
+	$("#fps-num").html(formatted);
+}
+
+$(document).ready(function() {
+	var options = {copyClassAttr: true, minWidth: 120, arrowSrc: 'arrow_right.gif', onClick: function(e, menuItem){
+		
+		$.Menu.closeAll();
+		
+		var action_clicked = $(this).attr('class');
+		
+		if(action_clicked == 'action_exit') {
+			alert_permanent('Exiting', 'Please wait while Sirikata client exits...');
+			setTimeout(function() { 
+				chrome.send("ui-action", [action_clicked]);
+			}, 1000);
+		}
+		
+		if(action_clicked == 'action_toggle_clock') {
+			if(timeClockEnabled) {
+				timeClockEnabled = false;
+				$('#time-clock').hide();
+			} else {
+				$('#time-clock').show();
+				timeClockEnabled = true;
+				timeClock();
+			}
+		}
+		
+		if(action_clicked == 'action_toggle_fps') {
+			if(fpsDisplayEnabled) {
+				fpsDisplayEnabled = false;
+				$('#fps-display').hide();
+			} else {
+				fpsDisplayEnabled = true;
+				$('#fps-display').show();
+			}
+		}
+
+	}};  
+	$('#menuone').menu(options);
+
+	timeClock();
+});
+
+function alert_permanent(title, text) {
+	var $dialog = $('<div></div>')
+	.html(text)
+	.dialog({
+		closeOnEscape: false,
+		draggable: false,
+		resizable: false,
+		beforeClose: function(event, ui) { return false; },
+		title: title
+	});
+}
+</script>
+</head>
+
+<body>
+<div id='transparency'>
+</div>
+<div id='ui-container'>
+
+<div id='ui-box'>
+
+<ul id="menuone" class="menu">
+	<li class="menumain">File
+		<ul>
+			<li class='action_exit'>Exit</li>
+		</ul>
+	</li>
+	<li class="menumain">CDN
+		<ul>
+			<li class='action_cdn_upload'>Upload Tool</li>
+		</ul>
+	</li>
+	<li class="menumain">Options
+		<ul>
+			<li class='action_toggle_clock'>Toggle Clock</li>
+			<li class='action_toggle_fps'>Toggle FPS Display</li>
+		</ul>
+	</li>
+</ul>
+
+&nbsp;
+
+<div class='flush-right' id='time-clock'>&nbsp;</div>
+<div class='flush-right' id='fps-display'>Average FPS: <span id='fps-num'>0</span></div>
+
+</div>
+
+</div>
+
+</body>
+
+</html>

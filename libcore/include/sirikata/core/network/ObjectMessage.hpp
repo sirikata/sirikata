@@ -76,43 +76,6 @@ public:
 // FIXME get rid of this
 SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
 
-/** Interface for classes that need to receive object messages, i.e. those that
- *  need to talk to objects/object hosts.
- */
-class SIRIKATA_EXPORT ObjectMessageRecipient {
-public:
-    virtual ~ObjectMessageRecipient() {}
-
-    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
-};
-
-class SIRIKATA_EXPORT ObjectMessageDispatcher {
-public:
-    virtual ~ObjectMessageDispatcher() {}
-
-    // Registration and unregistration for object messages destined for the space
-    void registerObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
-    void unregisterObjectMessageRecipient(ObjectMessagePort port, ObjectMessageRecipient* recipient);
-protected:
-
-    virtual bool dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
-
-private:
-
-    typedef std::map<ObjectMessagePort, ObjectMessageRecipient*> ObjectMessageRecipientMap;
-    ObjectMessageRecipientMap mObjectMessageRecipients;
-}; // class ObjectMessageDispatcher
-
-class SIRIKATA_EXPORT ObjectMessageRouter {
-public:
-
-    virtual ~ObjectMessageRouter() {}
-
-    WARN_UNUSED
-    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg) = 0;
-};
-
-
 } // namespace Sirikata
 
 #endif //_SIRIKATA_OBJECT_MESSAGE_HPP_

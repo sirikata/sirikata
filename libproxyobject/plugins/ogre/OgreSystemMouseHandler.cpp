@@ -34,7 +34,6 @@
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "CameraEntity.hpp"
-#include "LightEntity.hpp"
 #include "Lights.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
@@ -42,7 +41,6 @@
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyLightObject.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
@@ -57,8 +55,6 @@
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
-#include "Protocol_Sirikata.pbj.hpp"
-#include <sirikata/core/util/RoutableMessageBody.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/util/KnownMessages.hpp>
 #include <sirikata/core/util/KnownScriptTypes.hpp>
@@ -92,25 +88,19 @@ bool compareEntity (const Entity* one, const Entity* two) {
     ProxyObject *pp = one->getProxyPtr().get();
 
     ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyLightObject* light1 = dynamic_cast<ProxyLightObject*>(pp);
     ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
     Time now = one->getScene()->simTime();
     Location loc1 = pp->globalLocation(now);
     pp = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
     ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyLightObject* light2 = dynamic_cast<ProxyLightObject*>(pp);
     ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
     if (camera1 && !camera2) return true;
     if (camera2 && !camera1) return false;
     if (camera1 && camera2) {
         return loc1.getPosition().x < loc2.getPosition().x;
     }
-    if (light1 && mesh2) return true;
-    if (mesh1 && light2) return false;
-    if (light1 && light2) {
-        return loc1.getPosition().x < loc2.getPosition().x;
-    }
+
     if (mesh1 && mesh2) {
         return mesh1->getPhysical().name < mesh2->getPhysical().name;
     }
@@ -181,7 +171,7 @@ class OgreSystem::MouseHandler {
     InputBinding mInputBinding;
 
     WebView* mUploadWebView;
-    WebView* mFPSWidgetView;
+    WebView* mUIWidgetView;
 
     WebView* mQueryAngleWidgetView;
     // To avoid too many messages, update only after a timeout
@@ -629,7 +619,7 @@ private:
             }
             if (hasSubObjects) {
                 parentEnt->setSelected(false);
-                proxyMgr->destroyObject(parentEnt->getProxyPtr(),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
+                proxyMgr->destroyObject(parentEnt->getProxyPtr());
                 parentEnt = NULL; // dies.
                 numUngrouped++;
             }
@@ -856,14 +846,16 @@ private:
             return;
         }
 
-        // We've passed all the checks, just convert everything and we're good to go
-    //    String name = args[0].toString();
-        String name((char*)args[0].data(), args[0].size());
-        JSArguments event_args;
-        event_args.insert(event_args.begin(), args.begin() + 1, args.end());
+        String action_triggered(args[0].data());
 
-        mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
-        */
+        printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
+
+        if(action_triggered == "action_exit") {
+            quitAction();
+        }
+    }
+
+    void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
         printf("upload object event fired arg length = %d\n", (int)args.size());
         if (args.size() != 3) {
             printf("expected 3 arguments, returning.\n");
@@ -891,21 +883,6 @@ private:
             mUploadWebView->loadFile("chrome/upload.html");
         }
     }
-
-    void handleFPSWidget() {
-        if(mFPSWidgetView) {
-            printf("closing fps widget\n");
-            WebViewManager::getSingleton().destroyWebView(mFPSWidgetView);
-            mFPSWidgetView = NULL;
-        } else {
-            printf("creating fps widget\n");
-            mFPSWidgetView = WebViewManager::getSingleton().createWebView("fps_widget", "fps_widget",114, 45,
-                    OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
-            mFPSWidgetView->loadFile("chrome/fps.html");
-            mFPSWidgetView->setTransparent(true);
-        }
-    }
-
 
     void handleQueryAngleWidget() {
         if(mQueryAngleWidgetView) {
@@ -985,6 +962,40 @@ private:
     }
 
 
+    
+    void executeScript(WebView* wv, const JSArguments& args)
+    {
+        ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
+        if (objit == mScriptingUIObjects.end())
+            return;
+        ProxyObjectPtr target_obj(objit->second.lock());
+
+        if (!target_obj) return;
+        
+
+        JSIter command_it;
+        for (command_it = args.begin(); command_it != args.end(); ++command_it)
+        {
+            std::string strcmp (command_it->begin());
+            if (strcmp == "Command")
+            {
+                Protocol::ScriptingMessage  scripting_msg;
+                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+                scripting_req.set_id(0);
+                //scripting_req.set_body(String(command_it->second));
+                JSIter nexter = command_it + 1;
+                String msgBody = String(nexter->begin());
+                scripting_req.set_body(msgBody);
+                std::string serialized_scripting_request;
+                scripting_msg.SerializeToString(&serialized_scripting_request);
+                target_obj->sendMessage(
+                    Services::SCRIPTING,
+                    MemoryReference(serialized_scripting_request)
+                );
+            }
+        }
+    }
+
     /**
        This function sends out a message on KnownServices port
        LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
@@ -1029,157 +1040,17 @@ private:
             
         }
     }
-
-    /** Executes a script chunk in an object.
-     *  Implicit parameters in args:
-     *   Command: (string) command(s) to execute.
-     *  The target of the command is determined implicitly based on
-     *  the webview this is coming from.
-     */
-//     void executeScript(WebView* wv, const std::tr1::unordered_map<String, String>& args)
-//     {
-//         typedef std::tr1::unordered_map<String, String> StringMap;
-        
-//         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
-//         if (objit == mScriptingUIObjects.end())
-//             return;
-//         ProxyObjectPtr target_obj(objit->second.lock());
-
-//         if (!target_obj) return;
-
-//         StringMap::const_iterator command_it = args.find("Command");
-//         assert(command_it != args.end());
-        
-//         Get Proxy
-//         Protocol::ScriptingMessage scripting_msg;
-//         Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
-//         scripting_req.set_id(0);
-//         scripting_req.set_body(command_it->second);
-//         std::string serialized_scripting_request;
-//         scripting_msg.SerializeToString(&serialized_scripting_request);
-//         target_obj->sendMessage(
-//             Services::SCRIPTING,
-//             MemoryReference(serialized_scripting_request)
-//         );
-//     }
-
-
-
     
-    void executeScript(WebView* wv, const JSArguments& args)
+
+
+    ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy)
     {
-        ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
-        if (objit == mScriptingUIObjects.end())
-            return;
-        ProxyObjectPtr target_obj(objit->second.lock());
-
-        if (!target_obj) return;
-        
-
-        JSIter command_it;
-        for (command_it = args.begin(); command_it != args.end(); ++command_it)
-        {
-            std::string strcmp (command_it->begin());
-            if (strcmp == "Command")
-            {
-                Protocol::ScriptingMessage  scripting_msg;
-                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
-                scripting_req.set_id(0);
-                //scripting_req.set_body(String(command_it->second));
-                JSIter nexter = command_it + 1;
-                String msgBody = String(nexter->begin());
-                scripting_req.set_body(msgBody);
-                std::string serialized_scripting_request;
-                scripting_msg.SerializeToString(&serialized_scripting_request);
-                target_obj->sendMessage(
-                    Services::SCRIPTING,
-                    MemoryReference(serialized_scripting_request)
-                );
-            }
+        ProxyObjectPtr parentProxy;
+        while ((parentProxy=camProxy->getParentProxy())) {
+            camProxy=parentProxy;
         }
+        return camProxy;
     }
-
-    
-    /** Closes a webview. */
-    void closeWebView(WebView* wv, const std::tr1::unordered_map<String, String>& args) {
-        ScriptingUIObjectMap::iterator scriptui_it = mScriptingUIObjects.find(wv);
-        if (scriptui_it != mScriptingUIObjects.end()) {
-            ProxyObjectPtr target_obj(scriptui_it->second.lock());
-
-            if (target_obj) {
-                ObjectUIMap::iterator ui_it = mObjectUIs.find(target_obj->getObjectReference());
-                if (ui_it != mObjectUIs.end())
-                    mObjectUIs.erase(ui_it);
-            }
-
-            mScriptingUIObjects.erase(scriptui_it);
-        }
-
-        WebViewManager::getSingleton().destroyWebView(wv);
-    }
-
-    std::tr1::shared_ptr<ProxyLightObject> createLight(Time now) {
-/*
-        float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        if (!camera) return std::tr1::shared_ptr<ProxyLightObject>();
-        SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
-        ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
-        Location loc (camera->getProxy().globalLocation(now));
-        loc.setPosition(loc.getPosition());
-        loc.setOrientation(Quaternion(0.886995, 0.000000, -0.461779, 0.000000, Quaternion::WXYZ()));
-
-        std::tr1::shared_ptr<ProxyLightObject> newLightObject (new ProxyLightObject(proxyMgr, newId, camera->getProxy().odp()));
-        proxyMgr->createObject(newLightObject,camera->getProxy().getQueryTracker());
-        {
-            LightInfo li;
-            li.setLightDiffuseColor(Color(0.976471, 0.992157, 0.733333));
-            li.setLightAmbientColor(Color(.24,.25,.18));
-            li.setLightSpecularColor(Color(0,0,0));
-            li.setLightShadowColor(Color(0,0,0));
-            li.setLightPower(1.0);
-            li.setLightRange(75);
-            li.setLightFalloff(1,0,0.03);
-            li.setLightSpotlightCone(30,40,1);
-            li.setCastsShadow(true);
-            // set li according to some sample light in the scene file!
-            newLightObject->update(li);
-        }
-
-        Entity *parentent = mParent->getEntity(mCurrentGroup);
-        if (parentent) {
-            Location localLoc = loc.toLocal(parentent->getProxy().globalLocation(now));
-            newLightObject->setParent(parentent->getProxyPtr(), now, loc, localLoc);
-            newLightObject->resetLocation(now, localLoc);
-        }
-        else {
-            newLightObject->resetLocation(now, loc);
-        }
-        mSelectedObjects.clear();
-        mSelectedObjects.insert(newLightObject);
-        Entity *ent = mParent->getEntity(newId);
-        if (ent) {
-            ent->setSelected(true);
-        }
-        return newLightObject;
-    */
-        return std::tr1::shared_ptr<ProxyLightObject>();
-    }
-    void createLightAction() {
-        CameraEntity *camera = mParent->mPrimaryCamera;
-        if (!camera) return;
-        Time now = mParent->simTime();
-        createLight(now);
-    }
-
-	ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy) {
-		ProxyObjectPtr parentProxy;
-		while ((parentProxy=camProxy->getParentProxy())) {
-			camProxy=parentProxy;
-		}
-		return camProxy;
-	}
 
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
@@ -1393,7 +1264,6 @@ private:
         Time now = mParent->simTime();
         Location loc = pp->globalLocation(now);
         ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-        ProxyLightObject* light = dynamic_cast<ProxyLightObject*>(pp);
         ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
 
         double x,y,z;
@@ -1418,29 +1288,6 @@ private:
             if (parentMesh) {
                 parent = physicalName(parentMesh, saveSceneNames);
             }
-        }
-        if (light) {
-            const char *typestr = "directional";
-            const LightInfo &linfo = light->getLastLightInfo();
-            if (linfo.mType == LightInfo::POINT) {
-                typestr = "point";
-            }
-            if (linfo.mType == LightInfo::SPOTLIGHT) {
-                typestr = "spotlight";
-            }
-            float32 ambientPower, shadowPower;
-            ambientPower = computeClosestPower(linfo.mDiffuseColor, linfo.mAmbientColor, linfo.mPower);
-            shadowPower = computeClosestPower(linfo.mSpecularColor, linfo.mShadowColor,  linfo.mPower);
-            fprintf(fp, "light,%s,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,,,,,,,,,,,,,",typestr,parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%lf,%f,%f,%f,%f,%f,%f,%f,%d\n",
-                    linfo.mDiffuseColor.x,linfo.mDiffuseColor.y,linfo.mDiffuseColor.z,ambientPower,
-                    linfo.mSpecularColor.x,linfo.mSpecularColor.y,linfo.mSpecularColor.z,shadowPower,
-                    linfo.mLightRange,linfo.mConstantFalloff,linfo.mLinearFalloff,linfo.mQuadraticFalloff,
-                    linfo.mConeInnerRadians,linfo.mConeOuterRadians,linfo.mPower,linfo.mConeFalloff,
-                    (int)linfo.mCastsShadow);
         }
         else if (mesh) {
             URI uri = mesh->getMesh();
@@ -1812,14 +1659,14 @@ private:
     }
 
     void fpsUpdateTick(const Task::LocalTime& t) {
-        if(mFPSWidgetView) {
+        if(mUIWidgetView) {
             Task::DeltaTime dt = t - mLastFpsTime;
             if(dt.toSeconds() > 1) {
                 mLastFpsTime = t;
                 Ogre::RenderTarget::FrameStats stats = mParent->getRenderTarget()->getStatistics();
                 ostringstream os;
                 os << stats.avgFPS;
-                mFPSWidgetView->evaluateJS("update_fps(" + os.str() + ")");
+                mUIWidgetView->evaluateJS("update_fps(" + os.str() + ")");
             }
         }
     }
@@ -1900,7 +1747,7 @@ public:
        mLastCameraTime(Task::LocalTime::now()),
        mLastFpsTime(Task::LocalTime::now()),
        mUploadWebView(NULL),
-       mFPSWidgetView(NULL),
+       mUIWidgetView(NULL),
        mQueryAngleWidgetView(NULL),
        mNewQueryAngle(0.f),
        mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&MouseHandler::handleSetQueryAngleTimeout, this)) ),
@@ -1980,9 +1827,6 @@ public:
         //lkjs;
         //mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
 
-        mInputResponses["closeWebView"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::closeWebView, this, _1, _2));
-
-        mInputResponses["createLight"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createLightAction, this));
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
         mInputResponses["groupObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::groupObjectsAction, this));
@@ -2026,7 +1870,6 @@ public:
 
 
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
-        mInputResponses["handleFPSWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleFPSWidget, this));
         mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
 
 
@@ -2056,7 +1899,6 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_ALT), mInputResponses["openScriptingUI"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_B), mInputResponses["createLight"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
@@ -2069,7 +1911,6 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
 
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_F, Input::MOD_CTRL), mInputResponses["handleFPSWidget"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
 
 
@@ -2114,13 +1955,21 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
 
-
-        //lkjs;
-        //mInputBinding.add(InputBindingEvent::Web("__scripting", "ExecScript"), mInputResponses["executeScript"]);
         mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
+
     }
 
     ~MouseHandler() {
+
+        if(mUploadWebView) {
+            WebViewManager::getSingleton().destroyWebView(mUploadWebView);
+            mUploadWebView = NULL;
+        }
+        if(mUIWidgetView) {
+            WebViewManager::getSingleton().destroyWebView(mUIWidgetView);
+            mUIWidgetView = NULL;
+        }
+
         for (std::vector<SubscriptionId>::const_iterator iter = mEvents.begin();
              iter != mEvents.end();
              ++iter) {
@@ -2149,6 +1998,15 @@ public:
         cameraPathTick(t);
         fpsUpdateTick(t);
         screenshotTick(t);
+
+        if(!mUIWidgetView) {
+            mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget",
+                    mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
+                    OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
+            mUIWidgetView->bind("ui-action", std::tr1::bind(&MouseHandler::onUIAction, this, _1, _2));
+            mUIWidgetView->loadFile("chrome/ui.html");
+            mUIWidgetView->setTransparent(true);
+        }
     }
 };
 

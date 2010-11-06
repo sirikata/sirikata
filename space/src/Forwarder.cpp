@@ -56,6 +56,8 @@
 #include "RegionODPFlowScheduler.hpp"
 #include "CSFQODPFlowScheduler.hpp"
 
+#include <sirikata/core/odp/DelegateService.hpp>
+
 // FIXME we shouldn't have oseg specific things here, this should be delegated
 // to OSeg as necessary
 #include "Protocol_OSeg.pbj.hpp"
@@ -113,12 +115,7 @@ Forwarder::Forwarder(SpaceContext* ctx)
 
     // Fill in the rest of the context
     mContext->mServerRouter = this;
-    mContext->mObjectRouter = this;
     mContext->mServerDispatcher = this;
-    mContext->mObjectDispatcher = this;
-
-    mSSTDatagramLayer = BaseDatagramLayer<UUID>::createDatagramLayer(UUID::null(), ctx, this, this);
-
 
     // Messages destined for objects are subscribed to here so we can easily pick them
     // out and decide whether they can be delivered directly or need forwarding
@@ -150,21 +147,33 @@ Forwarder::Forwarder(SpaceContext* ctx)
     Assigning time and mObjects, which should have been constructed in Server's constructor.
   */
 void Forwarder::initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc)
-  {
+{
     addODPServerMessageService(loc);
 
     mOSegLookups = new OSegLookupQueue(mContext->mainStrand, oseg);
     mServerMessageQueue = smq;
     mServerMessageReceiver = smr;
-  }
+}
 
-void Forwarder::handleObjectMessageLoop(Sirikata::Protocol::Object::ObjectMessage* obj_msg) const {
-    dispatchMessage(*obj_msg);
+void Forwarder::setODPService(ODP::DelegateService* odp) {
+    mDelegateODPService = odp;
+    mSSTDatagramLayer = BaseDatagramLayer<SpaceObjectReference>::createDatagramLayer(
+        SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), mContext, odp
+    );
+}
+
+
+void Forwarder::dispatchMessage(Sirikata::Protocol::Object::ObjectMessage* obj_msg) const {
+    mDelegateODPService->deliver(
+        ODP::Endpoint(SpaceID::null(), ObjectReference(obj_msg->source_object()), obj_msg->source_port()),
+        ODP::Endpoint(SpaceID::null(), ObjectReference(obj_msg->dest_object()), obj_msg->dest_port()),
+        MemoryReference(obj_msg->payload())
+    );
     delete obj_msg;
 }
 
-bool Forwarder::dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage&msg) const {
-    return ObjectMessageDispatcher::dispatchMessage(msg);
+void Forwarder::handleObjectMessageLoop(Sirikata::Protocol::Object::ObjectMessage* obj_msg) const {
+    dispatchMessage(obj_msg);
 }
 
 // Service Implementation
@@ -344,8 +353,7 @@ void Forwarder::forwarderServiceMessageReady(ServerID dest_server) {
 void Forwarder::routeObjectHostMessage(Sirikata::Protocol::Object::ObjectMessage* obj_msg) {
     // Messages destined for the space skip the object message queue and just get dispatched
     if (obj_msg->dest_object() == UUID::null()) {
-        dispatchMessage(*obj_msg);
-        delete obj_msg;
+        dispatchMessage(obj_msg);
         return;
     }
 
@@ -355,13 +363,6 @@ void Forwarder::routeObjectHostMessage(Sirikata::Protocol::Object::ObjectMessage
         TRACE_DROP(DROPPED_DURING_FORWARDING);
         delete obj_msg;
     }
-}
-
-// --- From local space server services
-bool Forwarder::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-  msg->set_unique(GenerateUniqueID(mContext->id()));
-  //return forward(msg, NullServerID);
-  return mLocalForwarder->tryForward(msg);
 }
 
 // --- Forwarded from other space servers
@@ -390,8 +391,7 @@ void Forwarder::receiveObjectRoutingMessage(Message* msg) {
 
     // Special case: Object 0 is the space itself
     if (dest == UUID::null()) {
-        dispatchMessage(*obj_msg);
-        delete obj_msg;
+        dispatchMessage(obj_msg);
         return;
     }
 

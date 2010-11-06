@@ -96,8 +96,6 @@ private:
  *  payload.
  */
 typedef std::tr1::function<void(const Endpoint& src, const Endpoint& dst, MemoryReference)> MessageHandler;
-typedef std::tr1::function<void(const RoutableMessageHeader&, MemoryReference)> OldMessageHandler;
-
 
 /** A fully qualified ODP endpoint: SpaceID, ObjectReference, and PortID.
  *  Note that this does not have to be bound to unique values.  For instance,

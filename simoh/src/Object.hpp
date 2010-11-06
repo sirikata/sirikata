@@ -43,6 +43,8 @@
 
 #include <sirikata/core/util/SimpleExtrapolator.hpp>
 
+#include <sirikata/core/odp/DelegateService.hpp>
+#include <sirikata/core/odp/DelegatePort.hpp>
 
 #include <boost/thread/shared_mutex.hpp>
 
@@ -99,7 +101,7 @@ struct MaxDistUpdatePredicate {
     }
 };
 
-class Object : public Service, public ObjectMessageRouter, public ObjectMessageDispatcher {
+class Object : public Service {
 public:
     /** Standard constructor. */
     Object(ObjectFactory* obj_factory, const UUID& id, MotionPath* motion, const BoundingSphere3f& bnds, bool regQuery, SolidAngle queryAngle, const ObjectHostContext* ctx);
@@ -123,6 +125,13 @@ public:
     bool connected();
     bool send(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 private:
+    typedef EndPoint<SpaceObjectReference> EndPointType;
+    typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
+    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef Connection<SpaceObjectReference> SSTConnection;
+    typedef SSTConnection::Ptr SSTConnectionPtr;
 
     // Initiate a connection
     void connect();
@@ -133,11 +142,11 @@ private:
     void handleNextLocUpdate(const TimedMotionVector3f& up);
 
     // Handlers for substreams for space-managed updates
-    void handleLocationSubstream(int err, boost::shared_ptr< Stream<UUID> > s);
-    void handleProximitySubstream(int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleLocationSubstream(int err, SSTStreamPtr s);
+    void handleProximitySubstream(int err, SSTStreamPtr s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
-    void handleProximitySubstreamRead(boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleLocationSubstreamRead(SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
 
     bool locationMessage(const std::string& payload);
     bool proximityMessage(const std::string& payload);
@@ -151,9 +160,17 @@ private:
     void handleSpaceMigration(const SpaceID& space, const ObjectReference&, ServerID sid);
     void handleSpaceStreamCreated();
 
-    bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
-
     void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
+
+
+    // ODP::Service Interface
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);
+    virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
+    virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
+    ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
+    bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     // THREAD SAFE:
     // These are thread safe (they don't change after initialization)
@@ -179,7 +196,8 @@ private:
 
     Network::IOTimerPtr mLocUpdateTimer;
 
-    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
+    ODP::DelegateService* mDelegateODPService;
+    BaseDatagramLayerPtr mSSTDatagramLayer;
 }; // class Object
 
 } // namespace Sirikata

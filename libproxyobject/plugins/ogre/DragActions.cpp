@@ -34,7 +34,6 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "CameraEntity.hpp"
-#include "LightEntity.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
 #include "DragActions.hpp"
@@ -120,7 +119,6 @@ Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, fl
 
 
 void rotateCamera(CameraEntity *camera, float radianX, float radianY) {
-
     Time now = camera->getScene()->simTime();
 
     Quaternion orient(camera->getProxy().globalLocation(now).getOrientation());
@@ -470,7 +468,6 @@ void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraE
 
 void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent) {
     SILOG(input,debug,"zoom "<<value);
-
 
     Time now = parent->simTime();
 

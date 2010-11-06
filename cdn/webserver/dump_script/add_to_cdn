@@ -1,0 +1,87 @@
+BASE_DIR='/disk/local/meru'
+USERNAME=$1
+FILETODO=$2
+
+usage="no"
+if [ ! -e "${FILETODO}" ] ; then
+	usage="yes"
+fi
+prefixlen=`expr length "$USERNAME"`
+if [ $prefixlen -lt 4 ] ; then
+	usage="yes"
+fi
+
+if [ "$usage" == "yes" ] ; then
+	echo "Usage: add_to_cdn username /path/to/file"
+	echo "   Prefixes the named file with username"
+	echo "   username must be at least length 4"
+	exit
+fi
+
+sum=`sha256sum $FILETODO | cut -f 1 -d " "`
+echo "SHA 256 hash = $sum"
+
+first_dir=${USERNAME:0:2}
+second_dir=${USERNAME:2:2}
+
+if [ ! -d "$BASE_DIR/dns/global/$first_dir" ] ; then
+	echo "Creating $BASE_DIR/dns/global/$first_dir"
+	mkdir $BASE_DIR/dns/global/$first_dir
+	chgrp meru $BASE_DIR/dns/global/$first_dir
+	chmod 775 $BASE_DIR/dns/global/$first_dir
+fi
+
+if [ ! -d "$BASE_DIR/dns/global/$first_dir/$second_dir" ] ; then
+	echo "Creating $BASE_DIR/dns/global/$first_dir/$second_dir"
+	mkdir $BASE_DIR/dns/global/$first_dir/$second_dir
+	chgrp meru $BASE_DIR/dns/global/$first_dir/$second_dir
+	chmod 775 $BASE_DIR/dns/global/$first_dir/$second_dir
+fi
+
+if [ ! -d "$BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME" ] ; then
+	echo "Creating $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME"
+	mkdir $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME
+	chgrp meru $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME
+	chmod 775 $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME
+fi
+
+FILENAME=`echo "$FILETODO" | awk -F/ '{print $NF}'`
+
+if [ -e "$BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME/$FILENAME" ] ; then
+	echo "Error: File already exists at $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME/$FILENAME"
+#	exit 1
+fi
+
+first_hex=${sum:0:3}
+second_hex=${sum:3:3}
+
+if [ ! -d "$BASE_DIR/uploadsystem/files/global/$first_hex" ] ; then
+	echo "Creating $BASE_DIR/uploadsystem/files/global/$first_hex"
+	mkdir $BASE_DIR/uploadsystem/files/global/$first_hex
+	chgrp meru $BASE_DIR/uploadsystem/files/global/$first_hex
+	chmod 775 $BASE_DIR/uploadsystem/files/global/$first_hex
+fi
+
+if [ ! -d "$BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex" ] ; then
+	echo "Creating $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex"
+	mkdir $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex
+	chgrp meru $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex
+	chmod 775 $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex
+
+fi
+
+if [ -e "$BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex/$sum" ] ; then
+	echo "Error: File already exists at $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex/$sum"
+#	exit 1
+fi
+
+echo "Copying contents of $FILENAME to $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex/$sum"
+cp $FILETODO $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex/$sum
+chgrp meru $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex/$sum
+chmod 664 $BASE_DIR/uploadsystem/files/global/$first_hex/$second_hex/$sum
+echo "Putting hash into $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME/$FILENAME"
+echo "mhash:///$sum" > $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME/$FILENAME
+chgrp meru $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME/$FILENAME
+chmod 644 $BASE_DIR/dns/global/$first_dir/$second_dir/$USERNAME/$FILENAME
+echo "Finished. To fetch file, use: http://cdn.sirikata.com/files/global/$sum"
+echo "For name lookup, use: http://cdn.sirikata.com/dns/global/$USERNAME/$FILENAME"

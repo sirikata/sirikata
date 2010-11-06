@@ -75,12 +75,18 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
    mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
 {
     mContext->mCSeg = mCSeg;
+    mContext->mObjectSessionManager = this;
+
+    this->addListener((ObjectSessionListener*)mLocationService);
+
+    mTimeSyncServer = new TimeSyncServer(mContext);
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
-      mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
+    mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
+    mForwarder->setODPService(this);
 
       mOSeg->setWriteListener((OSegWriteListener*)this);
 
@@ -106,18 +112,21 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    Stream<UUID>::listen( std::tr1::bind(&Server::newStream, this, _1, _2),
-			  EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT) );
+    Stream<SpaceObjectReference>::listen(
+        std::tr1::bind(&Server::newStream, this, _1, _2),
+        EndPoint<SpaceObjectReference>(SpaceObjectReference(SpaceID::null(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT)
+    );
 }
 
-void Server::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
+void Server::newStream(int err, Stream<SpaceObjectReference>::Ptr s) {
   if (err != SST_IMPL_SUCCESS){
     return;
   }
 
-  mLocationService->newStream(s);
-
-  mContext->newStream(err, s);
+  ObjectReference objid = s->remoteEndPoint().endPoint.object();
+  ObjectSession* new_obj_session = new ObjectSession(objid, s);
+  mObjectSessions[objid] = new_obj_session;
+  notify(&ObjectSessionListener::newSession, new_obj_session);
 }
 
 Server::~Server()
@@ -166,17 +175,25 @@ ODP::DelegatePort* Server::createDelegateODPPort(DelegateService*, const SpaceOb
 
 bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload) {
     // Create new ObjectMessage
-    Sirikata::Protocol::Object::ObjectMessage* msg = new Sirikata::Protocol::Object::ObjectMessage();
-    msg->set_source_object(source_ep.object().getAsUUID());
-    msg->set_source_port(source_ep.port());
-    msg->set_dest_object(dest_ep.object().getAsUUID());
-    msg->set_dest_port(dest_ep.port());
-    msg->set_payload(String((char*)payload.data(), payload.size()));
+    Sirikata::Protocol::Object::ObjectMessage* msg =
+        createObjectMessage(
+            mContext->id(),
+            source_ep.object().getAsUUID(), source_ep.port(),
+            dest_ep.object().getAsUUID(), dest_ep.port(),
+            String((char*)payload.data(), payload.size())
+        );
+
 
     // This call needs to be thread safe, and we shouldn't be using this
     // ODP::Service to communicate with any non-local objects, so just use the
     // local forwarder.
     return mLocalForwarder->tryForward(msg);
+}
+
+ObjectSession* Server::getSession(const ObjectReference& objid) const {
+    ObjectSessionMap::const_iterator it = mObjectSessions.find(objid);
+    if (it == mObjectSessions.end()) return NULL;
+    return it->second;
 }
 
 bool Server::isObjectConnected(const UUID& object_id) const {
@@ -601,6 +618,11 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     mForwarder->removeObjectConnection(obj_id);
 
     mObjects.erase(obj_id);
+
+    ObjectReference obj(obj_id);
+    delete mObjectSessions[obj];
+    mObjectSessions.erase(obj);
+
     delete conn;
 }
 
@@ -859,6 +881,9 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
 
             mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
+            ObjectReference obj(obj_id);
+            delete mObjectSessions[obj];
+            mObjectSessions.erase(obj);
         }
     }
 

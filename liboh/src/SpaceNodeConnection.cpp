@@ -120,6 +120,7 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
         TRACE_DROP(OH_DROPPED_AT_RECEIVE_QUEUE);
+        delete msg;
     }
 
     mHandleReadStage->finished();

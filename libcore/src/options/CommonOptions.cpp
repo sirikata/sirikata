@@ -89,6 +89,11 @@ void ParseOptions(int argc, char** argv) {
     options->parse(argc, argv);
 }
 
+void ParseOptionsFile(const String& fname, bool required) {
+    OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
+    options->parseFile(fname, required);
+}
+
 OptionValue* GetOption(const char* name) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     return options->referenceOption(name);

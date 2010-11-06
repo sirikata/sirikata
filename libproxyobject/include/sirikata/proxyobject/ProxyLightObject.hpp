@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
+/*  Sirikata
  *  ProxyLightObject.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,15 +32,16 @@
 
 #ifndef _SIRIKATA_PROXY_LIGHT_OBJECT_HPP_
 #define _SIRIKATA_PROXY_LIGHT_OBJECT_HPP_
-#include "LightListener.hpp"
-#include "ProxyObject.hpp"
+
+#include <sirikata/core/util/Platform.hpp>
+
 namespace Sirikata {
 
-typedef MarkovianProvider1<LightListener*,LightInfo> LightProvider;
-
-/**
- * This class represents a ProxyObject that holds a LightInfo
+/** Provides utilities for interacting with signals. These are all static since
+ *  signals are program wide.  For each type of signal we maintain a set of
+ *  listeners and invoke them on the signal.
  */
+
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyLightObject
   : public LightProvider,
     public ProxyObject {
@@ -53,6 +54,6 @@ public:
     const LightInfo &getLastLightInfo() const {
         return mLastInfo;
     }
+
 };
-}
 #endif

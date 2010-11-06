@@ -166,7 +166,7 @@ public:
  *  transactions (meaning there's no support for compare sets).  Both temporary
  *  and best effort stored object store systems should implement this interface.
  */
-class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler, public MessageService {
+class SIRIKATA_EXPORT ReadWriteHandler : public ObjectStorageHandler {
     template <class ReadWrite> class DestroyReadWrite {public:
         static void destroyReadWriteSet(ReadWrite*mt) {delete mt;}
     };
@@ -185,19 +185,15 @@ public:
     template <class ReadWrite> void apply(ReadWrite*rws, const ResultCallback& cb) {
         applyInternal(rws,cb,&DestroyReadWrite<ReadWrite>::destroyReadWriteSet);
     }
-    template <class ReadWrite> void applyMessage(const RoutableMessageHeader &rmh,ReadWrite*rws) {
-        applyInternal(rmh,rws,&DestroyReadWrite<ReadWrite>::destroyReadWriteSet);
-    }
   protected:
     virtual void applyInternal(Protocol::ReadWriteSet* rws, const ResultCallback& cb,void(*)(Protocol::ReadWriteSet*)) = 0;
-    virtual void applyInternal(const RoutableMessageHeader&hdr,Persistence::Protocol::ReadWriteSet*,void(*)(Protocol::ReadWriteSet*))=0;
 };
 
 /** MinitransactionHandler is the abstract base class for implementations which
  *  handle ACID minitransactions.  Transactional storage systems should implement
  *  this interface.
  */
-class SIRIKATA_EXPORT MinitransactionHandler : public ObjectStorageHandler, public MessageService {
+class SIRIKATA_EXPORT MinitransactionHandler : public ObjectStorageHandler {
     template <class Minitransaction> class DestroyMinitransaction {public:
         static void destroyMinitransaction(Minitransaction*mt) {delete mt;}
     };
@@ -220,12 +216,8 @@ public:
     template <class Minitransaction> void transact(Minitransaction*rws, const ResultCallback& cb) {
         applyInternal(rws,cb,&DestroyMinitransaction<Minitransaction>::destroyMinitransaction);
     }
-    template <class Minitransaction> void transactMessage(const RoutableMessageHeader &rmh,Minitransaction*rws) {
-        applyInternal(rmh,rws,&DestroyMinitransaction<Minitransaction>::destroyMinitransaction);
-    }
 
   protected:
-    virtual void applyInternal(const RoutableMessageHeader&hdr,Persistence::Protocol::Minitransaction*, void(*minitransactionDestruction)(Protocol::Minitransaction*))=0;
     virtual void applyInternal(Protocol::Minitransaction* mt, const ResultCallback& cb, void(*minitransactionDestruction)(Protocol::Minitransaction*)) = 0;
 };
 

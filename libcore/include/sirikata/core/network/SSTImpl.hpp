@@ -41,9 +41,9 @@
 
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/shared_ptr.hpp>
 
-#include <sirikata/core/network/ObjectMessage.hpp>
+#include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/odp/Port.hpp>
 #include <sirikata/core/util/Timer.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
@@ -51,6 +51,8 @@
 #include <bitset>
 
 #include <sirikata/core/util/SerializationCheck.hpp>
+
+#include <sirikata/core/network/Message.hpp>
 
 #include "Protocol_SSTHeader.pbj.hpp"
 
@@ -77,6 +79,10 @@ public:
 
     return this->port < ep.port ;
   }
+
+    std::string toString() const {
+        return endPoint.toString() + boost::lexical_cast<std::string>(port);
+    }
 };
 
 class Mutex {
@@ -106,97 +112,143 @@ class Stream;
 class  SSTConnectionManager;
 
 template <typename EndPointType>
-class SIRIKATA_EXPORT BaseDatagramLayer:public ObjectMessageRecipient
+class SIRIKATA_EXPORT BaseDatagramLayer
 {
-private:
+  public:
+    typedef std::tr1::shared_ptr<BaseDatagramLayer<EndPointType> > Ptr;
+    typedef Ptr BaseDatagramLayerPtr;
 
-  BaseDatagramLayer(const Context* ctx, ObjectMessageRouter* router, ObjectMessageDispatcher* dispatcher) :
-    mRouter(router), mDispatcher(dispatcher), mContext(ctx) { }
+    static BaseDatagramLayerPtr getDatagramLayer(EndPointType endPoint) {
+        if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
+            return sDatagramLayerMap[endPoint];
+        }
 
-
-public:
-  static boost::shared_ptr<BaseDatagramLayer<EndPointType> > getDatagramLayer(EndPointType endPoint) {
-    if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
-      return sDatagramLayerMap[endPoint];
+        return BaseDatagramLayerPtr();
     }
 
-    return boost::shared_ptr<BaseDatagramLayer<EndPointType> > ();
-  }
+    static BaseDatagramLayerPtr createDatagramLayer(
+        EndPointType endPoint,
+        const Context* ctx,
+        ODP::Service* odp)
+    {
+        if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
+            return sDatagramLayerMap[endPoint];
+        }
 
-  static boost::shared_ptr<BaseDatagramLayer<EndPointType> > createDatagramLayer(
-								  EndPointType endPoint,
-                                                                  const Context* ctx,
-                                                                  ObjectMessageRouter* router,
-	 							  ObjectMessageDispatcher* dispatcher)
-  {
-    if (sDatagramLayerMap.find(endPoint) != sDatagramLayerMap.end()) {
-      return sDatagramLayerMap[endPoint];
+        BaseDatagramLayerPtr datagramLayer(
+            new BaseDatagramLayer(ctx, odp)
+        );
+
+        sDatagramLayerMap[endPoint] = datagramLayer;
+
+        return datagramLayer;
     }
 
-    boost::shared_ptr<BaseDatagramLayer<EndPointType> > datagramLayer =
-                                            boost::shared_ptr<BaseDatagramLayer<EndPointType> >
-                                              (new BaseDatagramLayer(ctx, router, dispatcher));
+    static void listen(EndPoint<EndPointType>& listeningEndPoint) {
+        EndPointType endPointID = listeningEndPoint.endPoint;
 
-    sDatagramLayerMap[endPoint] = datagramLayer;
+        BaseDatagramLayerPtr bdl = sDatagramLayerMap[endPointID];
+        bdl->listenOn(listeningEndPoint);
+    }
 
-    return datagramLayer;
-  }
+    void listenOn(EndPoint<EndPointType>& listeningEndPoint, ODP::MessageHandler cb) {
+        ODP::Port* port = allocatePort(listeningEndPoint);
+        port->receive(cb);
+    }
 
-  static void listen(EndPoint<EndPointType>& listeningEndPoint) {
-    EndPointType endPointID = listeningEndPoint.endPoint;
+    void unlisten(EndPoint<EndPointType>& ep) {
+        // To stop listening, just destroy the corresponding port
+        typename PortMap::iterator it = mAllocatedPorts.find(ep);
+        if (it == mAllocatedPorts.end()) return;
+        delete it->second;
+        mAllocatedPorts.erase(it);
+    }
 
-    sDatagramLayerMap[endPointID]->dispatcher()->registerObjectMessageRecipient(
-							     listeningEndPoint.port,
-							     sDatagramLayerMap[endPointID].get());
-  }
+    void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
+        boost::mutex::scoped_lock lock(mMutex);
 
-  void send(EndPoint<EndPointType>* src, EndPoint<EndPointType>* dest, void* data, int len) {
-    boost::mutex::scoped_lock lock(mMutex);
+        ODP::Port* port = getOrAllocatePort(*src);
 
-    ObjectMessage* objectMessage = new ObjectMessage();
-    objectMessage->set_source_object(src->endPoint);
-    objectMessage->set_source_port(src->port);
-    objectMessage->set_dest_object(dest->endPoint);
-    objectMessage->set_dest_port(dest->port);
-    objectMessage->set_payload(String((char*) data, len));
+        port->send(
+            ODP::Endpoint(dest->endPoint, dest->port),
+            MemoryReference(data, len)
+        );
+    }
 
-    bool val = mRouter->route(  objectMessage  );
-  }
+    const Context* context() {
+        return mContext;
+    }
 
-  /* This function will also have to be re-implemented to support receiving
-     using other kinds of packets. For now, I'll implement only for ODP. */
-  virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
-    Connection<EndPointType>::handleReceive(mRouter,
-                                  EndPoint<UUID> (msg.source_object(), msg.source_port()),
-                                  EndPoint<UUID> (msg.dest_object(), msg.dest_port()),
-                                  (void*) msg.payload().data(), msg.payload().size() );
-  }
+  private:
+    BaseDatagramLayer(const Context* ctx, ODP::Service* odpservice)
+        : mContext(ctx),
+        mODP(odpservice)
+        {
+        }
 
-  ObjectMessageDispatcher* dispatcher() {
-    return mDispatcher;
-  }
+    ODP::Port* allocatePort(const EndPoint<EndPointType>& ep) {
+        ODP::Port* port = mODP->bindODPPort(
+            ep.endPoint, ep.port
+        );
+        mAllocatedPorts[ep] = port;
+        return port;
+    }
 
-  const Context* context() {
-    return mContext;
-  }
+    ODP::Port* getPort(const EndPoint<EndPointType>& ep) {
+        typename PortMap::iterator it = mAllocatedPorts.find(ep);
+        if (it == mAllocatedPorts.end()) return NULL;
+        return it->second;
+    }
 
-private:
-  ObjectMessageRouter* mRouter;
-  ObjectMessageDispatcher* mDispatcher;
-  const Context* mContext;
+    ODP::Port* getOrAllocatePort(const EndPoint<EndPointType>& ep) {
+        ODP::Port* result = getPort(ep);
+        if (result != NULL) return result;
+        result = allocatePort(ep);
+        return result;
+    }
 
-  boost::mutex mMutex;
+    void listenOn(const EndPoint<EndPointType>& listeningEndPoint) {
+        ODP::Port* port = allocatePort(listeningEndPoint);
+        port->receive(
+            std::tr1::bind(
+                &BaseDatagramLayer::receiveMessage, this,
+                std::tr1::placeholders::_1,
+                std::tr1::placeholders::_2,
+                std::tr1::placeholders::_3
+            )
+        );
+    }
 
-  static std::map<EndPointType, boost::shared_ptr<BaseDatagramLayer<EndPointType> > > sDatagramLayerMap;
+    void receiveMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+        Connection<EndPointType>::handleReceive(
+            EndPoint<EndPointType> (SpaceObjectReference(src.space(), src.object()), src.port()),
+            EndPoint<EndPointType> (SpaceObjectReference(dst.space(), dst.object()), dst.port()),
+            (void*) payload.data(), payload.size()
+        );
+    }
+
+
+    const Context* mContext;
+    ODP::Service* mODP;
+
+    typedef std::map<EndPoint<EndPointType>, ODP::Port*> PortMap;
+    PortMap mAllocatedPorts;
+
+    boost::mutex mMutex;
+
+    static std::map<EndPointType, BaseDatagramLayerPtr > sDatagramLayerMap;
 };
 
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<Sirikata::UUID>;
+//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<Sirikata::UUID>;
+SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT BaseDatagramLayer<SpaceObjectReference>;
 #endif
 
-typedef std::tr1::function< void(int, boost::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
+//typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<UUID> > ) > ConnectionReturnCallbackFunction;
+//typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<UUID> >) >  StreamReturnCallbackFunction;
+typedef std::tr1::function< void(int, std::tr1::shared_ptr< Connection<SpaceObjectReference> > ) > ConnectionReturnCallbackFunction;
+typedef std::tr1::function< void(int, std::tr1::shared_ptr< Stream<SpaceObjectReference> >) >  StreamReturnCallbackFunction;
 
-typedef std::tr1::function< void(int, boost::shared_ptr< Stream<UUID> >) >  StreamReturnCallbackFunction;
 typedef std::tr1::function< void (int, void*) >  DatagramSendDoneCallback;
 
 typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
@@ -242,14 +294,20 @@ public:
 };
 
 template <class EndPointType>
-class SIRIKATA_EXPORT Connection : public ObjectMessageRecipient {
+class SIRIKATA_EXPORT Connection {
+  public:
+    typedef std::tr1::shared_ptr<Connection> Ptr;
+    typedef Ptr ConnectionPtr;
 
 private:
+    typedef BaseDatagramLayer<EndPointType> BaseDatagramLayerType;
+    typedef std::tr1::shared_ptr<BaseDatagramLayerType> BaseDatagramLayerPtr;
+
   friend class Stream<EndPointType>;
   friend class SSTConnectionManager;
   friend class BaseDatagramLayer<EndPointType>;
 
-  typedef std::map<EndPoint<EndPointType>, boost::shared_ptr<Connection> >  ConnectionMap;
+  typedef std::map<EndPoint<EndPointType>, std::tr1::shared_ptr<Connection> >  ConnectionMap;
   typedef std::map<EndPoint<EndPointType>, ConnectionReturnCallbackFunction>  ConnectionReturnCallbackMap;
   typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction>   StreamReturnCallbackMap;
 
@@ -265,7 +323,8 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
-  boost::shared_ptr<BaseDatagramLayer<EndPointType> > mDatagramLayer;
+
+  BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
   uint16 mRemoteChannelID;
@@ -275,8 +334,8 @@ private:
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
 
 
-  std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
-  std::map<LSID, boost::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
+  std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
+  std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
   std::map<uint16, StreamReturnCallbackFunction> mListeningStreamsCallbackMap;
   std::map<uint16, std::vector<ReadDatagramCallback> > mReadDatagramCallbacks;
@@ -286,8 +345,8 @@ private:
 
   uint16 mNumStreams;
 
-  std::deque< boost::shared_ptr<ChannelSegment> > mQueuedSegments;
-  std::deque< boost::shared_ptr<ChannelSegment> > mOutstandingSegments;
+  std::deque< std::tr1::shared_ptr<ChannelSegment> > mQueuedSegments;
+  std::deque< std::tr1::shared_ptr<ChannelSegment> > mOutstandingSegments;
 
   uint16 mCwnd;
   int64 mRTOMicroseconds; // RTO in microseconds
@@ -301,25 +360,36 @@ private:
   float  CC_ALPHA;
   Time mLastTransmitTime;
 
-  boost::weak_ptr<Connection<EndPointType> > mWeakThis;
+  std::tr1::weak_ptr<Connection<EndPointType> > mWeakThis;
+
+  uint16 mNumInitialRetransmissionAttempts;
 
   google::protobuf::LogSilencer logSilencer;
 
 private:
 
-  Connection(ObjectMessageRouter* router, EndPoint<EndPointType> localEndPoint,
+  Connection(EndPoint<EndPointType> localEndPoint,
              EndPoint<EndPointType> remoteEndPoint)
     : mLocalEndPoint(localEndPoint), mRemoteEndPoint(remoteEndPoint),
       mState(CONNECTION_DISCONNECTED),
       mRemoteChannelID(0), mLocalChannelID(1), mTransmitSequenceNumber(1),
       mLastReceivedSequenceNumber(1),
-      mNumStreams(0), mCwnd(1), mRTOMicroseconds(2000000),
+      mNumStreams(0), mCwnd(1), mRTOMicroseconds(10000000),
       mFirstRTO(true),  MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
-      MAX_QUEUED_SEGMENTS(300),
-      CC_ALPHA(0.8), mLastTransmitTime(Time::null()), inSendingMode(true), numSegmentsSent(0)
+      MAX_QUEUED_SEGMENTS(3000),
+      CC_ALPHA(0.8), mLastTransmitTime(Time::null()), inSendingMode(true), numSegmentsSent(0),
+      mNumInitialRetransmissionAttempts(0)
   {
-    mDatagramLayer = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
-    mDatagramLayer->dispatcher()->registerObjectMessageRecipient(localEndPoint.port, this);
+      mDatagramLayer = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
+      mDatagramLayer->listenOn(
+          localEndPoint,
+          std::tr1::bind(
+              &Connection::receiveODPMessage, this,
+              std::tr1::placeholders::_1,
+              std::tr1::placeholders::_2,
+              std::tr1::placeholders::_3
+          )
+      );
   }
 
   void sendSSTChannelPacket(Sirikata::Protocol::SST::SSTChannelHeader& sstMsg) {
@@ -338,14 +408,14 @@ private:
      available channel. */
   static int getAvailableChannel() {
     //TODO: faster implementation.
-    for (uint32 i = sAvailableChannels.size() - 1; i>= 0; i--) {
+    for (uint32 i = sAvailableChannels.size() - 1; i>0; i--) {
       if (!sAvailableChannels.test(i)) {
 	sAvailableChannels.set(i, 1);
 	return i;
       }
     }
 
-    return -1;
+    return 0;
   }
 
   static void releaseChannel(uint16 channel) {
@@ -356,19 +426,22 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
-  bool serviceConnection(boost::shared_ptr<Connection<EndPointType> > conn) {
+  void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      serviceConnection(conn);
+  }
+  bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
     const Time curTime = Timer::now();
 
-    conn->localEndPoint();
+    if (mState == CONNECTION_PENDING_CONNECT) {
+      mOutstandingSegments.clear();
+    }
 
     // should start from ssthresh, the slow start lower threshold, but starting
     // from 1 for now. Still need to implement slow start.
     if (mState == CONNECTION_DISCONNECTED) {
-        boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+      std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-            getContext()->mainStrand->post(Duration::seconds(0.01),
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                          thus) );
+          cleanup(thus);
         }else {
             SILOG(sst,error,"FATAL: disconnected lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -379,11 +452,9 @@ private:
 
       if (mQueuedSegments.empty()) {
         mState = CONNECTION_DISCONNECTED;
-        boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+        std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-            getContext()->mainStrand->post(Duration::seconds(0.01),
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                          thus ));
+          cleanup(thus);
         }else {
             SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -397,7 +468,7 @@ private:
       numSegmentsSent = 0;
 
       for (int i = 0; (!mQueuedSegments.empty()) && mOutstandingSegments.size() <= mCwnd; i++) {
-	  boost::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
+	  std::tr1::shared_ptr<ChannelSegment> segment = mQueuedSegments.front();
 
 	  Sirikata::Protocol::SST::SSTChannelHeader sstMsg;
 	  sstMsg.set_channel_id( mRemoteChannelID );
@@ -407,39 +478,43 @@ private:
 
 	  sstMsg.set_payload(segment->mBuffer, segment->mBufferLength);
 
-	  /*printf("%s sending packet from data sending loop to %s ",
-	    mLocalEndPoint.endPoint.readableHexData().c_str()
-            , mRemoteEndPoint.endPoint.readableHexData().c_str());*/
+          /*printf("%s sending packet from data sending loop to %s \n",
+                   mLocalEndPoint.endPoint.toString().c_str()
+                   , mRemoteEndPoint.endPoint.toString().c_str());*/
+
 
 	  sendSSTChannelPacket(sstMsg);
 
+          if (mState == CONNECTION_PENDING_CONNECT) {
+            mNumInitialRetransmissionAttempts++;
+
+          }
+
 	  segment->mTransmitTime = curTime;
 	  mOutstandingSegments.push_back(segment);
-
-	  mQueuedSegments.pop_front();
 
 	  numSegmentsSent++;
 
 	  mLastTransmitTime = curTime;
 
-          inSendingMode = false;
+
+          if (mState != CONNECTION_PENDING_CONNECT || mNumInitialRetransmissionAttempts > 3) {
+
+            inSendingMode = false;
+            mQueuedSegments.pop_front();
+          }
       }
 
-      if (!inSendingMode) {
+      if (!inSendingMode || mState == CONNECTION_PENDING_CONNECT) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
-                                       std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this, mWeakThis.lock()) );
+                                       std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
       }
     }
     else {
-
-
       if (mState == CONNECTION_PENDING_CONNECT) {
-        boost::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
+        std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
-
-            getContext()->mainStrand->post(Duration::seconds(0.01),
-                                           std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                          thus) );
+          cleanup(thus);
         }else {
             SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -460,7 +535,7 @@ private:
       inSendingMode = true;
 
       getContext()->mainStrand->post(Duration::microseconds(1),
-                                     std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this, mWeakThis.lock()) );
+                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
     }
 
     return true;
@@ -482,11 +557,10 @@ private:
                               // point.
        CONNECTION_PENDING_DISCONNECT=5,  // The connection is in the process of
                               // disconnecting from the remote end point.
-
   };
 
 
-  /* Creates a connection for the application to a remote
+  /* Create a connection for the application to a remote
      endpoint. The EndPoint argument specifies the location of the remote
      endpoint. It is templatized to enable it to refer to either IP
      addresses and ports, or object identifiers. The
@@ -502,15 +576,14 @@ private:
                called once the connection is created and will provide  a
                reference-counted, shared-pointer to the  connection.
                ConnectionReturnCallbackFunction should have the signature
-               void (boost::shared_ptr<Connection>). If the boost::shared_ptr argument
+               void (std::tr1::shared_ptr<Connection>). If the std::tr1::shared_ptr argument
                is NULL, the connection setup failed.
 
      @return false if it's not possible to create this connection, e.g. if another connection
      is already using the same local endpoint; true otherwise.
   */
 
-  static bool createConnection(ObjectMessageRouter* router,
-			       EndPoint <EndPointType> localEndPoint,
+  static bool createConnection(EndPoint <EndPointType> localEndPoint,
 			       EndPoint <EndPointType> remoteEndPoint,
                                ConnectionReturnCallbackFunction cb,
 			       StreamReturnCallbackFunction scb)
@@ -524,10 +597,15 @@ private:
       return false;
     }
 
-    boost::shared_ptr<Connection>  conn =  boost::shared_ptr<Connection> (
-						        new Connection(router, localEndPoint, remoteEndPoint));
-    sConnectionMap[localEndPoint] = conn;
     uint16 availableChannel = getAvailableChannel();
+
+    if (availableChannel == 0)
+      return false;
+
+    std::tr1::shared_ptr<Connection>  conn =  std::tr1::shared_ptr<Connection> (
+                    new Connection(localEndPoint, remoteEndPoint));
+
+    sConnectionMap[localEndPoint] = conn;
     sConnectionReturnCallbackMap[localEndPoint] = cb;
 
     lock.unlock();
@@ -582,7 +660,7 @@ private:
                                  sent?). The function will provide a
                                  reference counted, shared pointer to the
                                  connection. StreamReturnCallbackFunction
-                                 should have the signature void (int,boost::shared_ptr<Stream>).
+                                 should have the signature void (int,std::tr1::shared_ptr<Stream>).
 
   */
   virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
@@ -597,8 +675,8 @@ private:
     USID usid = createNewUSID();
     LSID lsid = ++mNumStreams;
 
-    boost::shared_ptr<Stream<EndPointType> > stream =
-      boost::shared_ptr<Stream<EndPointType> >
+    std::tr1::shared_ptr<Stream<EndPointType> > stream =
+      std::tr1::shared_ptr<Stream<EndPointType> >
       ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid,
 				 initial_data, length, false, 0, cb) );
     stream->mWeakThis = stream;
@@ -635,13 +713,13 @@ private:
     }
     else {
       if (mQueuedSegments.size() < MAX_QUEUED_SEGMENTS) {
-        mQueuedSegments.push_back( boost::shared_ptr<ChannelSegment>(
+        mQueuedSegments.push_back( std::tr1::shared_ptr<ChannelSegment>(
                                    new ChannelSegment(data, length, mTransmitSequenceNumber, mLastReceivedSequenceNumber) ) );
         pushedIntoQueue = true;
 
         if (inSendingMode) {
-          getContext()->mainStrand->post(Duration::seconds(0.01),
-                                         std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this, mWeakThis.lock()) );
+          getContext()->mainStrand->post(Duration::milliseconds(1.0),
+                                         std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()) );
         }
       }
     }
@@ -678,10 +756,10 @@ private:
   }
 
   void markAcknowledgedPacket(uint64 receivedAckNum) {
-    for (std::deque< boost::shared_ptr<ChannelSegment> >::iterator it = mOutstandingSegments.begin();
+    for (std::deque< std::tr1::shared_ptr<ChannelSegment> >::iterator it = mOutstandingSegments.begin();
          it != mOutstandingSegments.end(); it++)
     {
-      boost::shared_ptr<ChannelSegment> segment = *it;
+      std::tr1::shared_ptr<ChannelSegment> segment = *it;
 
       if (segment->mChannelSequenceNumber == receivedAckNum) {
 	segment->mAckTime = Timer::now();
@@ -698,7 +776,7 @@ private:
         inSendingMode = true;
 
         getContext()->mainStrand->post(
-                                     std::tr1::bind(&Connection<Sirikata::UUID>::serviceConnection, this, mWeakThis.lock()) );
+                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
 
         if (rand() % mCwnd == 0)  {
           mCwnd += 1;
@@ -710,8 +788,8 @@ private:
     }
   }
 
-  virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg)  {
-    receiveMessage((void*) msg.payload().data(), msg.payload().size() );
+  void receiveODPMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
+    receiveMessage((void*) payload.data(), payload.size() );
   }
 
   void parsePacket(Sirikata::Protocol::SST::SSTChannelHeader* received_channel_msg )
@@ -750,8 +828,8 @@ private:
 	USID usid = createNewUSID();
 	LSID newLSID = ++mNumStreams;
 
-	boost::shared_ptr<Stream<EndPointType> > stream =
-	  boost::shared_ptr<Stream<EndPointType> >
+	std::tr1::shared_ptr<Stream<EndPointType> > stream =
+	  std::tr1::shared_ptr<Stream<EndPointType> >
 	  (new Stream<EndPointType> (received_stream_msg->psid(), mWeakThis,
 				     received_stream_msg->dest_port(),
 				     received_stream_msg->src_port(),
@@ -782,11 +860,12 @@ private:
       LSID initiatingLSID = received_stream_msg->rsid();
 
       if (mOutgoingSubstreamMap.find(initiatingLSID) != mOutgoingSubstreamMap.end()) {
-	boost::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
+	std::tr1::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
 	mIncomingSubstreamMap[incomingLsid] = stream;
 
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
+          stream->mStreamReturnCallback = NULL;
 	  stream->receiveData(received_stream_msg, received_stream_msg->payload().data(),
 			      received_stream_msg->bsn(),
 			      received_stream_msg->payload().size() );
@@ -802,7 +881,7 @@ private:
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
-      boost::shared_ptr< Stream<EndPointType> > stream_ptr =
+      std::tr1::shared_ptr< Stream<EndPointType> > stream_ptr =
 	mIncomingSubstreamMap[incomingLsid];
       stream_ptr->receiveData( received_stream_msg,
 			       received_stream_msg->payload().data(),
@@ -819,7 +898,7 @@ private:
     LSID incomingLsid = received_stream_msg->lsid();
 
     if (mIncomingSubstreamMap.find(incomingLsid) != mIncomingSubstreamMap.end()) {
-      boost::shared_ptr< Stream<EndPointType> > stream_ptr =
+      std::tr1::shared_ptr< Stream<EndPointType> > stream_ptr =
 	mIncomingSubstreamMap[incomingLsid];
       stream_ptr->receiveData( received_stream_msg,
 			       received_stream_msg->payload().data(),
@@ -916,7 +995,7 @@ private:
       if (sConnectionReturnCallbackMap.find(mLocalEndPoint) != sConnectionReturnCallbackMap.end())
       {
         if (sConnectionMap.find(mLocalEndPoint) != sConnectionMap.end()) {
-          boost::shared_ptr<Connection> conn = sConnectionMap[mLocalEndPoint];
+          std::tr1::shared_ptr<Connection> conn = sConnectionMap[mLocalEndPoint];
 
           sConnectionReturnCallbackMap[mLocalEndPoint] (SST_IMPL_SUCCESS, conn);
         }
@@ -944,7 +1023,10 @@ private:
   }
 
 
-  static void cleanup(boost::shared_ptr<Connection<EndPointType> > conn) {
+  // This is the version of cleanup is used from all the normal methods in Connection
+  static void cleanup(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+    conn->mDatagramLayer->unlisten(conn->mLocalEndPoint);
+
     int connState = conn->mState;
 
     if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
@@ -958,23 +1040,56 @@ private:
         cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
       }
 
-      boost::shared_ptr<Connection>  failed_conn = conn;
+
+      std::tr1::shared_ptr<Connection>  failed_conn = conn;
 
       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
       sConnectionMap.erase(conn->localEndPoint());
 
       lock.unlock();
 
-      if (connState == CONNECTION_PENDING_CONNECT && cb != NULL)
+
+      if (connState == CONNECTION_PENDING_CONNECT && cb ) {
         cb(SST_IMPL_FAILURE, failed_conn);
+      }
+
+      conn->mState = CONNECTION_DISCONNECTED;
     }
+  }
+  // This version should only be called by the destructor!
+  void finalCleanup() {
+    if (mState != CONNECTION_DISCONNECTED) {
+        mDatagramLayer->unlisten(mLocalEndPoint);
+
+        close(true);
+        mState = CONNECTION_DISCONNECTED;
+    }
+
+    releaseChannel(mLocalChannelID);
   }
 
   static void closeConnections() {
-    sConnectionMap.clear();
+      // We have to be careful with this function. Because it is going to free
+      // the connections, we have to make sure not to let them get freed where
+      // the deleter will modify sConnectionMap while we're still modifying it.
+      //
+      // Our approach is to just pick out the first connection, make a copy of
+      // its shared_ptr to make sure it doesn't get freed until we want it to,
+      // remove it from sConnectionMap, and then get rid of the shared_ptr to
+      // allow the connection to be freed.
+      //
+      // Note that we don't lock sStaticMembers lock. At this point, that
+      // shouldn't be a problem since we should be the only thread still
+      // modifying this data. If we did lock it, we'd deadlock since the
+      // destructor will also, indirectly, lock it.
+      while(!sConnectionMap.empty()) {
+          ConnectionPtr saved = sConnectionMap.begin()->second;
+          sConnectionMap.erase(sConnectionMap.begin());
+          saved.reset();
+      }
   }
 
-  static void handleReceive(ObjectMessageRouter* router, EndPoint<EndPointType> remoteEndPoint,
+  static void handleReceive(EndPoint<EndPointType> remoteEndPoint,
                             EndPoint<EndPointType> localEndPoint, void* recv_buffer, int len)
   {
     char* data = (char*) recv_buffer;
@@ -995,7 +1110,7 @@ private:
 	std::cout << "Someone's already connected at this port on object " << localEndPoint.endPoint.toString() << "\n";
 	return;
       }
-      boost::shared_ptr<Connection<EndPointType> > conn = sConnectionMap[localEndPoint];
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = sConnectionMap[localEndPoint];
 
       conn->receiveMessage(data, len);
     }
@@ -1016,9 +1131,9 @@ private:
         payload[1] = htons(availablePort);
 
         EndPoint<EndPointType> newLocalEndPoint(localEndPoint.endPoint, availablePort);
-        boost::shared_ptr<Connection>  conn =
-                   boost::shared_ptr<Connection>(
-				    new Connection(router, newLocalEndPoint, remoteEndPoint));
+        std::tr1::shared_ptr<Connection>  conn =
+                   std::tr1::shared_ptr<Connection>(
+				    new Connection(newLocalEndPoint, remoteEndPoint));
 
 	conn->listenStream(newLocalEndPoint.port, sListeningConnectionsCallbackMap[localEndPoint]);
         conn->mWeakThis = conn;
@@ -1040,17 +1155,9 @@ private:
 
 public:
 
-  ~Connection() {
-    mDatagramLayer->dispatcher()->unregisterObjectMessageRecipient(mLocalEndPoint.port, this);
-
-    if (mState != CONNECTION_DISCONNECTED) {
-      // Setting mState to CONNECTION_DISCONNECTED implies close() is being
-      //called from the destructor.
-      mState = CONNECTION_DISCONNECTED;
-      close(true);
-    }
-
-    releaseChannel(mLocalChannelID);
+  virtual ~Connection() {
+      // Make sure we've fully cleaned up
+      finalCleanup();
   }
 
 
@@ -1234,7 +1341,8 @@ public:
 
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUID>;
+//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<Sirikata::UUID>;
+SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Connection<SpaceObjectReference>;
 #endif
 
 class StreamBuffer{
@@ -1267,6 +1375,10 @@ public:
 template <class EndPointType>
 class SIRIKATA_EXPORT Stream  {
 public:
+    typedef std::tr1::shared_ptr<Stream> Ptr;
+    typedef Ptr StreamPtr;
+    typedef Connection<EndPointType> ConnectionType;
+    typedef EndPoint<EndPointType> EndpointType;
 
    enum StreamStates {
        DISCONNECTED = 1,
@@ -1288,8 +1400,7 @@ public:
   }
 
 
-  static bool connectStream(ObjectMessageRouter* router,
-			    EndPoint <EndPointType> localEndPoint,
+  static bool connectStream(EndPoint <EndPointType> localEndPoint,
 			    EndPoint <EndPointType> remoteEndPoint,
 			    StreamReturnCallbackFunction cb)
   {
@@ -1300,10 +1411,9 @@ public:
     mStreamReturnCallbackMap[localEndPoint] = cb;
 
 
-    bool result = Connection<EndPointType>::createConnection(router, localEndPoint,
+    bool result = Connection<EndPointType>::createConnection(localEndPoint,
 							     remoteEndPoint,
 							     connectionCreated, cb);
-
     return result;
   }
 
@@ -1331,7 +1441,7 @@ public:
            streams.
   */
   void listenSubstream(uint16 port, StreamReturnCallbackFunction scb) {
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
 
     conn->listenStream(port, scb);
@@ -1357,14 +1467,15 @@ public:
       if (mCurrentQueueLength+len > MAX_QUEUE_LENGTH) {
 	return 0;
       }
-      mQueuedBuffers.push_back( boost::shared_ptr<StreamBuffer>(new StreamBuffer(data, len, mNumBytesSent)) );
+      mQueuedBuffers.push_back( std::tr1::shared_ptr<StreamBuffer>(new StreamBuffer(data, len, mNumBytesSent)) );
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
-      boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
-      if (conn) 
+
+      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+      if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
       return len;
     }
@@ -1379,7 +1490,7 @@ public:
 	  break;
 	}
 
-	mQueuedBuffers.push_back( boost::shared_ptr<StreamBuffer>(new StreamBuffer(data+currOffset, buffLen, mNumBytesSent)) );
+	mQueuedBuffers.push_back( std::tr1::shared_ptr<StreamBuffer>(new StreamBuffer(data+currOffset, buffLen, mNumBytesSent)) );
 	currOffset += buffLen;
 	mCurrentQueueLength += buffLen;
 	mNumBytesSent += buffLen;
@@ -1387,10 +1498,11 @@ public:
 	count++;
       }
 
-      boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+
+      std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
       return currOffset;
     }
@@ -1466,7 +1578,8 @@ public:
       mConnected = false;
       mState = DISCONNECTED;
 
-      boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       if (conn)
         conn->eraseDisconnectedStream(this);
 
@@ -1500,7 +1613,7 @@ public:
   /* Returns the top-level connection that created this stream.
      @return a pointer to the connection that created this stream.
   */
-  virtual boost::weak_ptr<Connection<EndPointType> > connection() {
+  virtual std::tr1::weak_ptr<Connection<EndPointType> > connection() {
     return mConnection;
   }
 
@@ -1526,7 +1639,7 @@ public:
   virtual void createChildStream(StreamReturnCallbackFunction cb, void* data, int length,
 				 uint16 local_port, uint16 remote_port)
   {
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
     conn->stream(cb, data, length, local_port, remote_port, mLSID);
   }
@@ -1537,7 +1650,7 @@ public:
     @return the local endpoint.
   */
   virtual EndPoint <EndPointType> localEndPoint()  {
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
 
     return EndPoint<EndPointType> (conn->localEndPoint().endPoint, mLocalPort);
@@ -1549,7 +1662,7 @@ public:
     @return the remote endpoint.
   */
   virtual EndPoint <EndPointType> remoteEndPoint()  {
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
 
     return EndPoint<EndPointType> (conn->remoteEndPoint().endPoint, mRemotePort);
@@ -1560,7 +1673,7 @@ public:
   }
 
 private:
-  Stream(LSID parentLSID, boost::weak_ptr<Connection<EndPointType> > conn,
+  Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
 	 USID usid, LSID lsid, void* initial_data, uint32 length,
 	 bool remotelyInitiated, LSID remoteLSID, StreamReturnCallbackFunction cb)
@@ -1575,7 +1688,8 @@ private:
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
     MAX_RECEIVE_WINDOW(10000),
-    mStreamRTOMicroseconds(2000000),
+    mFirstRTO(true),
+    mStreamRTOMicroseconds(10000000),
     FL_ALPHA(0.8),
     mTransmitWindowSize(MAX_RECEIVE_WINDOW),
     mReceiveWindowSize(MAX_RECEIVE_WINDOW),
@@ -1628,7 +1742,7 @@ private:
 
   const Context* getContext() {
     if (mContext == NULL) {
-      boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       assert(conn);
 
       mContext = conn->getContext();
@@ -1637,18 +1751,18 @@ private:
     return mContext;
   }
 
-  static void connectionCreated( int errCode, boost::shared_ptr<Connection<EndPointType> > c) {
+  static void connectionCreated( int errCode, std::tr1::shared_ptr<Connection<EndPointType> > c) {
+    assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
+
     if (errCode != SST_IMPL_SUCCESS) {
 
       StreamReturnCallbackFunction cb = mStreamReturnCallbackMap[c->localEndPoint()];
       mStreamReturnCallbackMap.erase(c->localEndPoint());
 
-      cb(SST_IMPL_FAILURE, boost::shared_ptr<Stream<EndPointType> >() );
+      cb(SST_IMPL_FAILURE, StreamPtr() );
 
       return;
     }
-
-    assert(mStreamReturnCallbackMap.find(c->localEndPoint()) != mStreamReturnCallbackMap.end());
 
     c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
 	      c->localEndPoint().port, c->remoteEndPoint().port);
@@ -1656,11 +1770,17 @@ private:
     mStreamReturnCallbackMap.erase(c->localEndPoint());
   }
 
+  void serviceStreamNoReturn(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      serviceStream(strm, conn);
+  }
+
   /* Returns false only if this is the root stream of a connection and it was
      unable to connect. In that case, the connection for this stream needs to
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
-  bool serviceStream(boost::shared_ptr<Stream<EndPointType> > strm, boost::shared_ptr<Connection<EndPointType> > conn) {
+
+  bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+
     const Time curTime = Timer::now();
 
     if (mState != CONNECTED && mState != DISCONNECTED) {
@@ -1679,35 +1799,29 @@ private:
       mInitialDataLength = 0;
 
       if (!mConnected) {
-        boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+        std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
         assert(conn);
 
         mStreamReturnCallbackMap.erase(conn->localEndPoint());
 
-        bool retVal = true;
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
           conn->close(true);
-          retVal = false;
+
+          Connection<EndPointType>::cleanup(conn);
 	}
 
 	//send back an error to the app by calling mStreamReturnCallback
 	//with an error code.
         if (mStreamReturnCallback) {
-            mStreamReturnCallback(SST_IMPL_FAILURE, boost::shared_ptr<Stream<UUID> >() );
+            mStreamReturnCallback(SST_IMPL_FAILURE, StreamPtr());
             mStreamReturnCallback = NULL;
         }
 
         mState = DISCONNECTED;
 
-        if (!retVal) {
-          getContext()->mainStrand->post(Duration::seconds(0.01),
-                                         std::tr1::bind(&Connection<EndPointType>::cleanup,
-                                                        conn) );
-        }
-
-	return retVal;
+	return false;
       }
       else {
 	mState = CONNECTED;
@@ -1731,7 +1845,7 @@ private:
 	{
 	    mState = DISCONNECTED;
 
-            boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+            std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
             assert(conn);
             conn->eraseDisconnectedStream(this);
 
@@ -1742,7 +1856,7 @@ private:
 
         bool sentSomething = false;
 	while ( !mQueuedBuffers.empty() ) {
-	  boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
+	  std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
 	  if (mTransmitWindowSize < buffer->mBufferLength) {
 	    break;
@@ -1770,10 +1884,10 @@ private:
 	}
 
         if (sentSomething) {
-          boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+          std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
           if (conn)
             getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-              std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
         }
       }
     }
@@ -1784,7 +1898,7 @@ private:
   inline void resendUnackedPackets() {
     boost::mutex::scoped_lock lock(mQueueMutex);
 
-    for(std::map<uint64,boost::shared_ptr<StreamBuffer> >::const_reverse_iterator it=mChannelToBufferMap.rbegin(),
+    for(std::map<uint64,std::tr1::shared_ptr<StreamBuffer> >::const_reverse_iterator it=mChannelToBufferMap.rbegin(),
             it_end=mChannelToBufferMap.rend();
         it != it_end; it++)
      {
@@ -1800,15 +1914,14 @@ private:
        }
      }
 
-    boost::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+
+    std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
     if (conn)
       getContext()->mainStrand->post(Duration::seconds(0.01),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
-
-
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
-      boost::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
+      std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
 
       if (mTransmitWindowSize < buffer->mBufferLength) {
         mTransmitWindowSize = buffer->mBufferLength;
@@ -1818,7 +1931,7 @@ private:
     mNumOutstandingBytes = 0;
 
     if (!mChannelToBufferMap.empty()) {
-      if (mStreamRTOMicroseconds < 2000000) {
+      if (mStreamRTOMicroseconds < 20000000) {
         mStreamRTOMicroseconds *= 2;
       }
       mChannelToBufferMap.clear();
@@ -1937,7 +2050,7 @@ private:
       mChannelToBufferMap.erase(offset);
 
       std::vector <uint64> channelOffsets;
-      for(std::map<uint64, boost::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
+      for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
           it != mChannelToBufferMap.end(); ++it)
 	{
 	  if (it->second->mOffset == dataOffset) {
@@ -1956,7 +2069,7 @@ private:
         mChannelToStreamOffsetMap.erase(offset);
 
         std::vector <uint64> channelOffsets;
-        for(std::map<uint64, boost::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
+        for(std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >::iterator it = mChannelToBufferMap.begin();
             it != mChannelToBufferMap.end(); ++it)
           {
             if (it->second->mOffset == dataOffset) {
@@ -1976,16 +2089,16 @@ private:
   }
 
   void updateRTO(Time sampleStartTime, Time sampleEndTime) {
-    static bool firstRTO = true;
+
 
     if (sampleStartTime > sampleEndTime ) {
       std::cout << "Bad sample\n";
       return;
     }
 
-    if (firstRTO) {
+    if (mFirstRTO) {
       mStreamRTOMicroseconds = (sampleEndTime - sampleStartTime).toMicroseconds() ;
-      firstRTO = false;
+      mFirstRTO = false;
     }
     else {
 
@@ -2012,14 +2125,17 @@ private:
 
     std::string buffer = serializePBJMessage(sstMsg);
 
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
 
     if (!conn) return;
 
     conn->sendData( buffer.data(), buffer.size(), false );
 
     getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+
   }
 
   void sendAckPacket() {
@@ -2034,7 +2150,7 @@ private:
 
     //printf("Sending Ack packet with window %d\n", (int)sstMsg.window());
 
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
     conn->sendData(  buffer.data(), buffer.size(), true);
   }
@@ -2054,7 +2170,7 @@ private:
 
     std::string buffer = serializePBJMessage(sstMsg);
 
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
     return conn->sendData(  buffer.data(), buffer.size(), false);
   }
@@ -2074,7 +2190,7 @@ private:
     sstMsg.set_payload(data, len);
     std::string buffer = serializePBJMessage(sstMsg);
 
-    boost::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
+    std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
     conn->sendData(  buffer.data(), buffer.size(), false);
   }
@@ -2089,13 +2205,13 @@ private:
   LSID mParentLSID;
 
   //weak_ptr to avoid circular dependency between Connection and Stream classes
-  boost::weak_ptr<Connection<EndPointType> > mConnection;
+  std::tr1::weak_ptr<Connection<EndPointType> > mConnection;
   const Context* mContext;
 
-  std::map<uint64, boost::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
+  std::map<uint64, std::tr1::shared_ptr<StreamBuffer> >  mChannelToBufferMap;
   std::map<uint64, uint32> mChannelToStreamOffsetMap;
 
-  std::deque< boost::shared_ptr<StreamBuffer> > mQueuedBuffers;
+  std::deque< std::tr1::shared_ptr<StreamBuffer> > mQueuedBuffers;
   uint32 mCurrentQueueLength;
 
   USID mUSID;
@@ -2107,6 +2223,7 @@ private:
 
   boost::mutex mQueueMutex;
 
+  bool mFirstRTO;
   int64 mStreamRTOMicroseconds;
   float FL_ALPHA;
 
@@ -2139,29 +2256,25 @@ private:
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
 
-  boost::weak_ptr<Stream<EndPointType> > mWeakThis;
+
+  std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
-SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
+//SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<Sirikata::UUID>;
+SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
 #endif
 
-class SSTConnectionManager : public PollingService {
+class SSTConnectionManager : public Service {
 public:
-    SSTConnectionManager(Context* ctx)
-      : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10000)), // FIXME
-       mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
-    {
+    virtual void start() {
     }
-
-    void poll() {
+    virtual void stop() {
+        Connection<SpaceObjectReference>::closeConnections();
     }
 
     ~SSTConnectionManager() {
-        Connection<UUID>::closeConnections();
-        delete mProfiler;
+        Connection<SpaceObjectReference>::closeConnections();
     }
-private:
-    TimeProfiler::Stage* mProfiler;
 };
 
 

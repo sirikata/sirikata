@@ -150,17 +150,6 @@ SQLiteObjectStorage::~SQLiteObjectStorage() {
         _mLocalWorkQueue.destroyWorkerThreads(mWorkQueueThread);
     }
 }
-void SQLiteObjectStorage::applyInternal(const RoutableMessageHeader&rmh,Protocol::Minitransaction*mt, void (*destroyMinitransaction)(Protocol::Minitransaction*)){
-    assert(mTransactional == true);
-
-    mDiskWorkQueue->enqueue(new ApplyTransactionMessage(this,mt,rmh,destroyMinitransaction));
-}
-
-void SQLiteObjectStorage::applyInternal(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*mt, void (*destroyReadWriteSet)(Protocol::ReadWriteSet*)){
-    assert(mTransactional == false);
-
-    mDiskWorkQueue->enqueue(new ApplyReadWriteMessage(this,mt,rmh,destroyReadWriteSet));
-}
 
 void SQLiteObjectStorage::applyInternal(Protocol::ReadWriteSet* rws, const ResultCallback& cb, void (*destroyReadWriteSet)(Protocol::ReadWriteSet*)){
     assert(mTransactional == false);
@@ -264,11 +253,10 @@ void SQLiteObjectStorage::ApplyReadWriteWorker::operator() () {
     cb(mResponse);
     delete this;
 }
-SQLiteObjectStorage::ApplyTransactionMessage::ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* mt,const RoutableMessageHeader&hdr, void (*destroyMinitransaction)(Protocol::Minitransaction*)){
+SQLiteObjectStorage::ApplyTransactionMessage::ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* mt, void (*destroyMinitransaction)(Protocol::Minitransaction*)){
     mDestroyMinitransaction=destroyMinitransaction;
     mParent=parent;
     this->mt=mt;
-    this->hdr=hdr;
 }
 void SQLiteObjectStorage::ApplyReadWriteMessage::operator() () {
     Protocol::Response response;
@@ -276,8 +264,6 @@ void SQLiteObjectStorage::ApplyReadWriteMessage::operator() () {
     processReadWrite();
     assert(mResponse!=NULL);
     (*mDestroyReadWrite)(rws);
-    hdr.swap_source_and_destination();
-    mParent->forward(hdr,response);
     mResponse=NULL;
     delete this;
 }
@@ -287,18 +273,15 @@ void SQLiteObjectStorage::ApplyTransactionMessage::operator() () {
     processTransaction();
     assert(mResponse!=NULL);
     (*mDestroyMinitransaction)(mt);
-    hdr.swap_source_and_destination();
-    mParent->forward(hdr,response);
     mResponse=NULL;
     delete this;
 }
 
 
-SQLiteObjectStorage::ApplyReadWriteMessage::ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws,const RoutableMessageHeader&hdr, void (*destroyRWS)(Protocol::ReadWriteSet*)){
+SQLiteObjectStorage::ApplyReadWriteMessage::ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, void (*destroyRWS)(Protocol::ReadWriteSet*)){
     mDestroyReadWrite=destroyRWS;
     mParent=parent;
     this->rws=rws;
-    this->hdr=hdr;
 }
 /*
 void SQLiteObjectStorage::handleResult(const EventPtr& evt) const {
@@ -600,63 +583,6 @@ Persistence::Protocol::ReadWriteSet* SQLiteObjectStorage::createReadWriteSet(int
 
 void SQLiteObjectStorage::destroyResponse(Persistence::Protocol::Response*res) {
     delete res;
-}
-
-bool SQLiteObjectStorage::forwardMessagesTo(MessageService*ms) {
-    mDiskWorkQueue->enqueue(new AddMessageServiceMessage(this,ms));
-    return true;
-}
-void SQLiteObjectStorage::AddMessageServiceMessage::operator() (){
-    mParent->mInterestedParties.push_back(toAdd);
-    delete this;
-}
-
-void SQLiteObjectStorage::RemoveMessageServiceMessage::operator()(){
-    std::vector<MessageService*>::iterator where=mParent->mInterestedParties.begin();
-    while (where!=mParent->mInterestedParties.end()) {
-        where=std::find(where,mParent->mInterestedParties.end(),toRemove);
-        if (where!=mParent->mInterestedParties.end()) {
-            where=mParent->mInterestedParties.erase(where);
-        }
-    }
-    *done=true;
-    delete this;
-}
-
-bool SQLiteObjectStorage::endForwardingMessagesTo(MessageService*ms) {
-    volatile bool complete=false;
-    mDiskWorkQueue->enqueue(new RemoveMessageServiceMessage(this,ms,&complete));
-    while(!complete) {
-    }
-    delete this;
-    return true;
-}
-
-void SQLiteObjectStorage::processMessage(const RoutableMessageHeader&hdr,MemoryReference ref) {
-    if (mTransactional) {
-        Protocol::Minitransaction *trans=createMinitransaction(0,0,0);
-        if (trans->ParseFromArray(ref.data(),ref.size())) {
-            transactMessage(hdr,trans);
-        }
-    }else {
-        Protocol::ReadWriteSet *rws=createReadWriteSet(0,0);
-        if (rws->ParseFromArray(ref.data(),ref.size())) {
-            applyMessage(hdr,rws);
-        }
-
-    }
-
-}
-
-void SQLiteObjectStorage::forward (RoutableMessageHeader&hdr, Protocol::Response&resp) {
-    String databuf;
-    resp.SerializeToString(&databuf);
-    MemoryReference membuf(databuf);
-    for (std::vector<MessageService*>::iterator i=mInterestedParties.begin(),ie=mInterestedParties.end();
-         i!=ie;
-         ++i) {
-        (*i)->processMessage(hdr,membuf);
-    }
 }
 
 

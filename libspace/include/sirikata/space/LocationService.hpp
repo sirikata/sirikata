@@ -127,7 +127,7 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
 /** Interface for location services.  This provides a way for other components
  *  to get the most current information about object locations.
  */
-class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public ObjectMessageRecipient, public PollingService {
+class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService, public ObjectSessionListener {
 public:
     enum TrackingType {
         NotTracking,
@@ -143,20 +143,8 @@ public:
         return mContext;
     }
 
-    virtual void newStream(boost::shared_ptr< Stream<UUID> > s) {
-        using std::tr1::placeholders::_1;
-        using std::tr1::placeholders::_2;
-
-      boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
-      assert(conn);
-
-      UUID sourceObject = conn->remoteEndPoint().endPoint;
-
-
-      conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
-					  std::tr1::bind(&LocationService::locationUpdate, this, sourceObject, std::tr1::placeholders::_1,std::tr1::placeholders::_2) );
-
-    }
+    // ObjectSessionListener Interface
+    virtual void newSession(ObjectSession* session);
 
     /** Indicates whether this location service is tracking the given object.  It is only
      *  safe to request information */
@@ -213,13 +201,13 @@ public:
 
     /** MessageRecipient Interface. */
     virtual void receiveMessage(Message* msg) = 0;
-    /** ObjectMessageRecipient Interface. */
-    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) = 0;
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
-    boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
-      return mContext->getObjectStream(uuid);
+    Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
+        ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(uuid));
+        if (session == NULL) return Stream<SpaceObjectReference>::Ptr();
+        return session->getStream();
     }
 
 protected:

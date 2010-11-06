@@ -48,9 +48,6 @@ ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const
    mScale(1.f, 1.f, 1.f)
 {
 }
-
-
-
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshObject
 
@@ -58,13 +55,9 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
 {
     mMeshURI = mesh;
     ProxyObjectPtr ptr = getSharedPtr();
-
-    if (ptr)
-    {
-        std::cout<<"\n\nGot into notify\n\n";
-        MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
-    }
+    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
 }
+
 
 URI const& ProxyMeshObject::getMesh () const
 {

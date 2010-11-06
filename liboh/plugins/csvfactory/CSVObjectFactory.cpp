@@ -37,7 +37,6 @@
 #include <vector>
 
 
-
 namespace Sirikata {
 
 CSVObjectFactory::CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate)
@@ -79,10 +78,6 @@ void CSVObjectFactory::generate()
     int quat_vel_idx = -1;
     int script_file_idx = -1;
     int scale_idx = -1;
-
-
-    int count = 0;
-
 
     // For each line
     while(fp && count < mMaxObjects) {
@@ -209,11 +204,13 @@ void CSVObjectFactory::generate()
 
                 count++;
 
+
             }
         }
     }
 
     fp.close();
+
     connectObjects();
 
     return;
@@ -228,7 +225,6 @@ void CSVObjectFactory::connectObjects()
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();
         mIncompleteObjects.pop();
-
 
         oci.object->connect(
             mSpace,

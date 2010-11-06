@@ -78,6 +78,11 @@ public:
     virtual void service();
 
 private:
+    typedef Stream<SpaceObjectReference>::Ptr SSTStreamPtr;
+
+    void tryCreateChildStream(SSTStreamPtr parent_stream, std::string* msg, int count);
+    void locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_substream, std::string* msg, int count);
+
     bool trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
     bool trySend(const ServerID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu);
 

@@ -42,7 +42,6 @@
 #include <sirikata/core/util/Time.hpp>
 #include "MonoArray.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 //#include "ResourceID.hpp"
 namespace Mono {
 

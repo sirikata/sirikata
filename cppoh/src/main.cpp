@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
@@ -44,7 +43,6 @@
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <Protocol_Persistence.pbj.hpp>
-#include <Protocol_Sirikata.pbj.hpp>
 #include <time.h>
 #include <boost/thread.hpp>
 
@@ -116,7 +114,7 @@ int main (int argc, char** argv) {
     ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, trace, start_time, duration);
 
 
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(ctx);
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     SpaceIDMap *spaceMap = new SpaceIDMap;
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
@@ -145,7 +143,6 @@ int main (int argc, char** argv) {
         SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
         oh->addServerIDMap(newSpace, server_id_map);
     }
-
 
     
     // FIXME simple test example
@@ -211,6 +208,7 @@ int main (int argc, char** argv) {
     delete oh;
     delete pd;
 
+
     for(std::vector<TimeSteppedSimulation*>::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
         delete *it;
     }
@@ -219,6 +217,8 @@ int main (int argc, char** argv) {
     SimulationFactory::destroy();
 
     delete spaceMap;
+
+    delete sstConnMgr;
 
     delete ctx;
 

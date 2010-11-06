@@ -55,7 +55,7 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, con
     :   mDocument ( new ColladaDocument ( uri ) ),
         mState ( IDLE )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri);
 
 //    SHA256 hash = SHA256::computeDigest(uri.toString());    /// rest of system uses hash
 //    lastURIString = hash.convertToHexString();
@@ -70,15 +70,14 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, con
 }
 
 ColladaDocumentImporter::ColladaDocumentImporter ( std::vector<Transfer::URI> uriList ) {
-  assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered, uriListLen: " << uriList.size() << std::endl,true));
-
+  COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered, uriListLen: " << uriList.size());
   //mMesh = new Meshdata();
 
 }
 
 ColladaDocumentImporter::~ColladaDocumentImporter ()
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::~ColladaDocumentImporter() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::~ColladaDocumentImporter() entered");
     for (size_t i=0;i<mColladaClonedCommonEffects.size();++i) {
         delete mColladaClonedCommonEffects[i];
     }
@@ -111,7 +110,7 @@ String ColladaDocumentImporter::documentURI() const {
 
 void ColladaDocumentImporter::postProcess ()
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::postProcess() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::postProcess() entered");
 
 }
 
@@ -120,14 +119,14 @@ void ColladaDocumentImporter::postProcess ()
 
 void ColladaDocumentImporter::cancel ( COLLADAFW::String const& errorMessage )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::cancel(" << errorMessage << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::cancel(" << errorMessage << ") entered");
 
     mState = CANCELLED;
 }
 
 void ColladaDocumentImporter::start ()
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::start() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::start() entered");
 
     mState = STARTED;
 }
@@ -186,7 +185,7 @@ void ColladaDocumentImporter::finish ()
 {
     using namespace Sirikata::Models::Collada;
 
-    assert((std::cout << "MCB: ColladaDocumentImporter::finish() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::finish() entered");
 
     postProcess ();
 
@@ -199,8 +198,10 @@ void ColladaDocumentImporter::finish ()
     mMesh->geometry.swap(mGeometries);
     mMesh->lights.swap( mLights);
 
-    std::cout << mMesh->geometry.size() << " : mMesh->geometry.size()\n";
-    std::cout << mVisualScenes.size() << " : mVisualScenes\n";
+
+    COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
+    COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
+
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -235,7 +236,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         GeometryInstance new_geo_inst;
                         new_geo_inst.geometryIndex = geo_it->second;
-                        new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                        new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                         new_geo_inst.radius=0;
                         new_geo_inst.aabb=BoundingBox3f3f::null();
                         const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -268,7 +269,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             GeometryInstance new_geo_inst;
                             new_geo_inst.geometryIndex = geo_it->second;
-                            new_geo_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                            new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                             new_geo_inst.radius=0;
                             new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -301,7 +302,7 @@ void ColladaDocumentImporter::finish ()
                     }
                     LightInstance new_light_inst;
                     new_light_inst.lightIndex = light_it->second;
-                    new_light_inst.transform = Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    new_light_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
                     mMesh->lightInstances.push_back(new_light_inst);
                 }
 
@@ -346,11 +347,21 @@ void ColladaDocumentImporter::finish ()
     mState = FINISHED;
 }
 
+static Matrix4x4f getChangeUpMatrix(int up) {
+    // Swap the one that was up with Y
+    Matrix4x4f change = Matrix4x4f::swapDimensions((Matrix4x4f::Dimension)(up-1), Matrix4x4f::Y);
+    // And for X and Z, we need to then flip the Y
+    if (up == 1 || up == 3)
+        change = change * Matrix4x4f::reflection(Matrix4x4f::Y);
+    return change;
+}
+
 bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asset )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeGLobalAsset(" << asset << ") entered");
     bool ok = mDocument->import ( *this, *asset );
-    mMesh->up_axis=asset->getUpAxisType();
+    mChangeUp = getChangeUpMatrix(asset->getUpAxisType());
+    mUnitScale = Matrix4x4f::scale(asset->getUnit().getLinearUnitMeter());
     return ok;
 }
 
@@ -365,7 +376,7 @@ bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 
 bool ColladaDocumentImporter::writeVisualScene ( COLLADAFW::VisualScene const* visualScene )
 {
-    std::cout << "WriteVisualScene\n";
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeVisualScene(" << visualScene << ") entered");
 
     mVisualScenes[visualScene->getUniqueId()] = visualScene;
     return true;
@@ -451,7 +462,7 @@ IndexSet createIndexSet(const COLLADAFW::MeshPrimitive*prim,
 bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometry )
 {
     String uri = mDocument->getURI().toString();
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeGeometry(" << geometry << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeGeometry(" << geometry << ") entered");
 
     COLLADAFW::Mesh const* mesh = dynamic_cast<COLLADAFW::Mesh const*>(geometry);
     if (!mesh) {
@@ -640,7 +651,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
 
 bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* material )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeMaterial(" << material << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeMaterial(" << material << ") entered");
 
     mMaterialMap[material->getUniqueId()]=material->getInstantiatedEffect();
 
@@ -750,7 +761,7 @@ bool ColladaDocumentImporter::makeTexture
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << eff << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeEffect(" << eff << ") entered");
     mColladaEffects.insert(ColladaEffectMap::value_type(eff->getUniqueId(),*eff));
     COLLADAFW::Effect *effect = &mColladaEffects.find(eff->getUniqueId())->second;
     COLLADAFW::CommonEffectPointerArray &commonEffect=effect->getCommonEffects();
@@ -819,14 +830,14 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         mat.textures.back().color.z=effect->getStandardColor().getBlue();
         mat.textures.back().color.w=effect->getStandardColor().getAlpha();
     }
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeEffect(" << effect << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeEffect(" << effect << ") entered");
     return retval;
 }
 
 
 bool ColladaDocumentImporter::writeCamera ( COLLADAFW::Camera const* camera )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeCamera(" << camera << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeCamera(" << camera << ") entered");
     return true;
 }
 
@@ -834,7 +845,7 @@ bool ColladaDocumentImporter::writeCamera ( COLLADAFW::Camera const* camera )
 bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 {
     std::string imageUri = image->getImageURI().getURIString();
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeImage(" << imageUri << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeImage(" << imageUri << ") entered");
     mTextureMap[image->getUniqueId()]=imageUri;
     mMesh->textureMap[image->getUniqueId().toAscii()] = imageUri;
     mMesh->textures.push_back(imageUri);
@@ -844,7 +855,7 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
 
 bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeLight(" << light << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeLight(" << light << ") entered");
     mLightMap[light->getUniqueId()] = mLights.size();
     mLights.push_back(LightInfo());
     LightInfo *sublight = &mLights.back();
@@ -887,14 +898,14 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
 
 bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* animation )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeAnimation(" << animation << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimation(" << animation << ") entered");
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList const* animationList )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::ColladaDocumentImporter() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered");
     return true;
 }
 
@@ -941,7 +952,7 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
         copy->jointIndices.push_back((*jointIndices)[i]);
     }
 
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered");
     return true;
 }
 
@@ -958,19 +969,19 @@ bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* con
         }
     }
 
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeController(" << controller << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
     return true;
 }
 
 bool ColladaDocumentImporter::writeFormulas ( COLLADAFW::Formulas const* formulas )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeFormulas(" << formulas << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeFormulas(" << formulas << ") entered");
     return true;
 }
 
 bool ColladaDocumentImporter::writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene )
 {
-    assert((std::cout << "MCB: ColladaDocumentImporter::writeKinematicsScene(" << kinematicsScene << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeKinematicsScene(" << kinematicsScene << ") entered");
     return true;
 }
 

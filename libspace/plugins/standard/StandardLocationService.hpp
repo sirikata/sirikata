@@ -71,7 +71,6 @@ public:
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
-    virtual void receiveMessage(const Sirikata::Protocol::Object::ObjectMessage& msg);
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length);
 

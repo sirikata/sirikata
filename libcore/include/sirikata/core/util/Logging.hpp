@@ -55,7 +55,7 @@ enum LOGGING_LEVEL {
 # else
 //needs to use unsafeAs because the LOGGING_LEVEL typeinfos are not preserved across dll lines
 #  define SILOGP(module,lvl) \
-    (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel)->unsafeAs<Sirikata::Logging::LOGGING_LEVEL>()>=Sirikata::Logging::lvl&& \
+    (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel)->unsafeAs<Sirikata::Logging::LOGGING_LEVEL>()>=Sirikata::Logging::lvl && \
         ( (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)==reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \
            reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_defaultLevel)->unsafeAs<Sirikata::Logging::LOGGING_LEVEL>()>=(Sirikata::Logging::lvl)) \
 		   || (reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().find(#module)!=reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel)->unsafeAs<std::tr1::unordered_map<std::string,Sirikata::Logging::LOGGING_LEVEL> >().end() && \

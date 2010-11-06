@@ -42,8 +42,6 @@
 
 namespace Sirikata {
 
-class QueryTracker;
-
 /** VWObject is the basic interface that must be provided by virtual world
  *  objects. This interface gives ProxyObjects, related classes, and
  *  ProxyObject-based simulations (such as graphical display) the most basic
@@ -55,8 +53,6 @@ public:
     VWObject();
     virtual ~VWObject();
 
-    ///The tracker managing state for outstanding requests this object has made
-    virtual QueryTracker*getTracker(const SpaceID& space, const ObjectReference&)=0;
 
     // Identification
     //virtual SpaceObjectReference id(const SpaceID& space) const = 0;
@@ -67,7 +63,13 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor) = 0;
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb) = 0;
-    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb) = 0;
+
+    // Timing information
+    virtual Time spaceTime(const SpaceID& space, const Time& t) = 0;
+    virtual Time currentSpaceTime(const SpaceID& space) = 0;
+    virtual Time localTime(const SpaceID& space, const Time& t) = 0;
+    virtual Time currentLocalTime() = 0;
+
 
     // Timing information
     virtual Time spaceTime(const SpaceID& space, const Time& t) = 0;

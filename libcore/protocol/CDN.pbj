@@ -1,0 +1,34 @@
+
+"pbj-0.0.3"
+
+package Sirikata.Protocol.CDN;
+
+message NameRequest
+{
+	required string m_filename			= 1;
+}
+
+message NameResponse
+{
+	enum StatusCode {
+		SUCCESS = 200;
+		NOT_FOUND = 404;
+		INTERNAL_ERROR = 500;
+	}
+	
+	//Status of the name lookup
+	required StatusCode m_status		= 1;
+	
+	//If m_status != 200, this may have some additional
+	// human-readable text with an explanation of the error
+	optional string	m_status_message	= 2;
+	
+	//The below will all be returned if m_status = SUCCESS:
+	
+	//Hash of the file
+	optional uuid m_hash				= 3;
+	//Length of the file
+	optional uint64 m_content_length	= 4;
+	//Content type string
+	optional string m_content_type		= 5;
+}

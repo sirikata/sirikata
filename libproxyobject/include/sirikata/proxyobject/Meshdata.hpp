@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
 #define _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
 
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/Sha256.hpp>
 #include "LightInfo.hpp"
 
 
@@ -40,11 +42,12 @@ namespace Sirikata {
 
 struct SubMeshGeometry {
     std::string name;
-    std::vector<Sirikata::Vector3f> positions; 
+    std::vector<Sirikata::Vector3f> positions;
 
   //used only during simplification
   std::vector< Matrix4x4f  > positionQs;
-  
+
+
 
 
     std::vector<Sirikata::Vector3f> normals;
@@ -63,7 +66,7 @@ struct SubMeshGeometry {
     std::vector<TextureSet>texUVs;
     struct Primitive {
         std::vector<unsigned short> indices;
-      
+
         enum PrimitiveType {
             TRIANGLES,
             LINES,
@@ -79,8 +82,6 @@ struct SubMeshGeometry {
     double radius;
     std::vector<Primitive> primitives;
 
-
-  
 };
 struct GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
@@ -193,13 +194,12 @@ struct Meshdata {
 
     std::string uri;
     SHA256 hash;
-    int up_axis;
     long id;
 
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
-    
+
 
 };
 

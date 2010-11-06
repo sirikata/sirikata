@@ -33,7 +33,6 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 
 namespace Sirikata {
 namespace ODP {
@@ -42,12 +41,20 @@ DelegatePort::DelegatePort(DelegateService* parent, const Endpoint& ep, SendFunc
  : mParent(parent),
    mEndpoint(ep),
    mSendFunc(send_func),
-   mFromHandlers()
+   mFromHandlers(),
+   mInvalidated(false)
 {
 }
 
 DelegatePort::~DelegatePort() {
     // Get it out of the parent map to ensure we won't get any more messages
+    if (!mInvalidated)
+        mParent->deallocatePort(this);
+}
+
+void DelegatePort::invalidate() {
+    // Marke and remove from parent
+    mInvalidated = true;
     mParent->deallocatePort(this);
 }
 
@@ -56,6 +63,7 @@ const Endpoint& DelegatePort::endpoint() const {
 }
 
 bool DelegatePort::send(const Endpoint& to, MemoryReference payload) {
+    if (mInvalidated) return false;
     return mSendFunc(to, payload);
 }
 
@@ -63,26 +71,10 @@ void DelegatePort::receiveFrom(const Endpoint& from, const MessageHandler& cb) {
     mFromHandlers[from] = cb;
 }
 
-void DelegatePort::receiveFrom(const Endpoint& from, const OldMessageHandler& cb) {
-    mFromOldHandlers[from] = cb;
-}
 
-bool DelegatePort::deliver(const RoutableMessageHeader& header, MemoryReference data) const {
-    Endpoint ep(header.source_space(), header.source_object(), header.source_port());
+bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const {
+    if (mInvalidated) return false;
 
-    // See ODP::Port documentation for details on this ordering.
-    if (tryDeliver(ep, ep, header, data)) return true;
-    if (tryDeliver(Endpoint(ep.space(), ObjectReference::any(), ep.port()), ep, header, data)) return true;
-    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), ep.port()), ep, header, data)) return true;
-    if (tryDeliver(Endpoint(ep.space(), ep.object(), PortID::any()), ep, header, data)) return true;
-    if (tryDeliver(Endpoint(ep.space(), ObjectReference::any(), PortID::any()), ep, header, data)) return true;
-    if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), PortID::any()), ep, header, data)) return true;
-
-    return false;
-}
-
-bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const
-{
     // See ODP::Port documentation for details on this ordering.
     if (tryDeliver(src, src, dst, data)) return true;
     if (tryDeliver(Endpoint(src.space(), ObjectReference::any(), src.port()), src, dst, data)) return true;
@@ -92,16 +84,6 @@ bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, M
     if (tryDeliver(Endpoint(SpaceID::any(), ObjectReference::any(), PortID::any()), src, dst, data)) return true;
 
     return false;
-}
-
-bool DelegatePort::tryDeliver(const Endpoint& match_ep, const Endpoint& real_ep, const RoutableMessageHeader& header, MemoryReference data) const {
-    ReceiveFromOldHandlers::const_iterator rit = mFromOldHandlers.find(match_ep);
-    if (rit == mFromOldHandlers.end())
-        return false;
-
-    const OldMessageHandler& handler = rit->second;
-    handler(header, data);
-    return true;
 }
 
 

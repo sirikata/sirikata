@@ -38,10 +38,7 @@
 #include "btBulletDynamicsCommon.h"
 #include "btBulletCollisionCommon.h"
 #include "BulletSystem.hpp"
-#include "Protocol_Sirikata.pbj.hpp"
 #include "Protocol_Physics.pbj.hpp"
-#include <sirikata/core/util/RoutableMessageBody.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 using namespace std;
 using std::tr1::placeholders::_1;
@@ -404,6 +401,8 @@ void BulletObj::buildBulletBody() {
     system->bt2siri[body]=this;
 }
 
+/* No longer use this protocol, but some of this code might be useful when
+ * converting to new protocol.
 void BulletObj::requestLocation(TemporalValue<Location>::Time timeStamp, const Protocol::ObjLoc& reqLoc) {
     mPIDControlEnabled = true;      /// need a way to turn this off!
     if (reqLoc.has_velocity()) {
@@ -424,9 +423,10 @@ void BulletObj::requestLocation(TemporalValue<Location>::Time timeStamp, const P
         axis *= reqLoc.angular_speed();
         btVector3 btangvel(axis.x, axis.y, axis.z);
 //        mBulletBodyPtr->setAngularVelocity(btangvel);
-        mDesiredAngularVelocity = btangvel;
-    }
+        mDesiredAngularVelocity = btangvel;}
 }
+
+*/
 
 void BulletSystem::addPhysicalObject(BulletObj* obj,
                                      positionOrientation po,
@@ -463,6 +463,7 @@ void BulletSystem::addPhysicalObject(BulletObj* obj,
         //}
     }
 }
+
 
 void BulletSystem::removePhysicalObject(BulletObj* obj) {
     /// this is tricky, and not well tested
@@ -564,11 +565,12 @@ void BulletSystem::poll() {
             */
 
             /// collision messages
+/* Uses old RoutableMessage interface, needs to use ODP.
             std::map<ObjectReference,RoutableMessageBody> mBeginCollisionMessagesToSend;
             std::map<ObjectReference,RoutableMessageBody> mEndCollisionMessagesToSend;
             BulletObj* anExampleCollidingMesh=NULL;
             for (customDispatch::CollisionPairMap::iterator i=dispatcher->collisionPairs.begin();
-                    i != dispatcher->collisionPairs.end(); /*increment in if*/) {
+                    i != dispatcher->collisionPairs.end(); ) { // increment in if
                 BulletObj* b0=anExampleCollidingMesh=i->first.getLower();
                 BulletObj* b1=i->first.getHigher();
                 ObjectReference b0id=b0->getObjectReference();
@@ -658,6 +660,7 @@ void BulletSystem::poll() {
                     }
                 }
             }
+*/
         }
     }
     DEBUG_OUTPUT(cout << endl;)
@@ -840,9 +843,9 @@ struct  raycastCallback : public btCollisionWorld::RayResultCallback {
         return rayResult.m_hitFraction;
     }
 };
-
+/*
 void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference message_body) {
-/* Note: Both this interface and implementation need to change.  They
+  Note: Both this interface and implementation need to change.  They
     should use ODP::Service and ODP::Port (or something layered on top
     of them).  One-off unreliable messages probably don't even make
     sense for this service.
@@ -850,9 +853,9 @@ void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference m
     for (vector<MessageService*>::iterator i=messageServices.begin(),ie=messageServices.end();i!=ie;++i) {
         (*i)->processMessage(mh,message_body);
     }
-*/
-}
 
+}
+*/
 bool BulletSystem::queryRay(const Vector3d& position,
                             const Vector3f& direction,
                             const double maxDistance,

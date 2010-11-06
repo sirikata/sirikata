@@ -196,7 +196,7 @@ private:
     void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 
                           Sirikata::Protocol::CSeg::CSegMessage& csegMessage,
                           uint8* bufferSoFar,
-                          uint bufferSoFarSize 
+                          uint32 bufferSoFarSize 
                          );
 
     void readCSEGMessage(boost::shared_ptr<tcp::socket> socket, 

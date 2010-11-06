@@ -44,7 +44,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyCameraObject
     public ProxyObject {
 public:
     ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
-
     virtual void destroy();
     void attach(const String&renderTargetName,
                 uint32 width,

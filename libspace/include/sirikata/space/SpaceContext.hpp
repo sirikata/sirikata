@@ -35,21 +35,17 @@
 
 #include <sirikata/space/Platform.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/util/UUID.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/space/Trace.hpp>
+#include <sirikata/space/ObjectSessionManager.hpp>
 
 namespace Sirikata {
 
 class ServerMessageRouter;
-class ObjectMessageRouter;
 class ServerMessageDispatcher;
-class ObjectMessageDispatcher;
 
 class Forwarder;
 class MockForwarder;
-
-template <class EndPointType>
-class Stream;
 
 class CoordinateSegmentation;
 
@@ -71,32 +67,20 @@ public:
         return mServerRouter.read();
     }
 
-    ObjectMessageRouter* objectRouter() const {
-        return mObjectRouter.read();
-    }
-
     ServerMessageDispatcher* serverDispatcher() const {
         return mServerDispatcher.read();
-    }
-    ObjectMessageDispatcher* objectDispatcher() const {
-        return mObjectDispatcher.read();
     }
 
     CoordinateSegmentation* cseg() const {
         return mCSeg.read();
     }
 
-    void newStream(int err, boost::shared_ptr< Stream<UUID> > s);
-
-    boost::shared_ptr< Stream<UUID> > getObjectStream(const UUID& uuid) {
-      if (mObjectStreams.find(uuid) != mObjectStreams.end()) {
-        return mObjectStreams[uuid];
-      }
-
-      return boost::shared_ptr<Stream<UUID> >();
+    ObjectSessionManager* sessionManager() const {
+        return mObjectSessionManager;
     }
 
     SpaceTrace* spacetrace() const { return mSpaceTrace; }
+
 private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
@@ -105,13 +89,11 @@ private:
     Sirikata::AtomicValue<ServerID> mID;
 
     Sirikata::AtomicValue<ServerMessageRouter*> mServerRouter;
-    Sirikata::AtomicValue<ObjectMessageRouter*> mObjectRouter;
     Sirikata::AtomicValue<ServerMessageDispatcher*> mServerDispatcher;
-    Sirikata::AtomicValue<ObjectMessageDispatcher*> mObjectDispatcher;
 
     Sirikata::AtomicValue<CoordinateSegmentation*> mCSeg;
 
-    std::map<UUID, boost::shared_ptr<Stream<UUID> > >  mObjectStreams;
+    Sirikata::AtomicValue<ObjectSessionManager*> mObjectSessionManager;
 
     SpaceTrace* mSpaceTrace;
 }; // class SpaceContext

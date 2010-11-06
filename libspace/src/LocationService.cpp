@@ -94,6 +94,27 @@ LocationService::~LocationService() {
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOCATION, this);
 }
 
+void LocationService::newSession(ObjectSession* session) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    Stream<SpaceObjectReference>::Ptr strm = session->getStream();
+
+    Connection<SpaceObjectReference>::Ptr conn = strm->connection().lock();
+    assert(conn);
+
+    SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
+
+
+    conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
+        std::tr1::bind(
+            &LocationService::locationUpdate, this,
+            sourceObject.object().getAsUUID(),
+            std::tr1::placeholders::_1,std::tr1::placeholders::_2
+        )
+    );
+}
+
 void LocationService::poll() {
     mProfiler->started();
     service();

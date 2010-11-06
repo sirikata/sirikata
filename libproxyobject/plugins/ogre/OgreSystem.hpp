@@ -88,7 +88,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     void tickInputHandler(const Task::LocalTime& t) const;
 
     Task::WorkQueue* mWorkQueue;
-    Task::GenEventManager* mEventManager;
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;

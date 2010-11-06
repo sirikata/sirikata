@@ -33,9 +33,7 @@
 #define _SIRIKATA_HOSTED_OBJECT_HPP_
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 
 #include <sirikata/core/odp/DelegateService.hpp>
@@ -70,7 +68,7 @@ class HostedObject;
 class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public ObjectMessageRouter, public ObjectMessageDispatcher {
+class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
 //------- Private inner classes
 
     struct PrivateCallbacks;
@@ -95,7 +93,18 @@ protected:
                     // more flexible selection of proxy type
 
     ODP::DelegateService* mDelegateODPService;
-    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
+
+
+    typedef EndPoint<SpaceObjectReference> EndPointType;
+    typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
+    typedef BaseDatagramLayerType::Ptr BaseDatagramLayerPtr;
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+    typedef Connection<SpaceObjectReference> SSTConnection;
+    typedef SSTConnection::Ptr SSTConnectionPtr;
+
+    // FIXME maintain a proper map here or put in per-presence data
+    std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;
 
 //------- Constructors/Destructors
 
@@ -130,6 +139,10 @@ public:
     virtual Time currentSpaceTime(const SpaceID& space);
     virtual Time localTime(const SpaceID& space, const Time& t);
     virtual Time currentLocalTime();
+
+    ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
+    void initializeScript(const String&script, const std::map<String,String> &args);
+
 
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     //void initializeScript(const String&script, const std::map<String,String> &args);
@@ -209,20 +222,6 @@ public:
 
     void attachScript(const String& );
 
-    // ObjectMessageRouter Interface
-    WARN_UNUSED
-    virtual bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
-
-protected:
-
-    struct SendService: public MessageService {
-        HostedObject *ho;
-        void processMessage(const RoutableMessageHeader &hdr, MemoryReference body) {
-            ho->send(hdr, body);
-        }
-        bool forwardMessagesTo(MessageService*) { return false; }
-        bool endForwardingMessagesTo(MessageService*) { return false; }
-    } mSendService;
 
 public:
 
@@ -307,24 +306,6 @@ public:
     /// to our runtime ODP structure and deliver it.
     void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
 
-  private:
-    
-
-    /** Sends directly via an attached space, without going through the ObjectHost.
-        No messages with a null SpaceId (i.e. for a local object or message service)
-        may be delivered using this path.
-        @see send
-    */
-    void sendViaSpace(const RoutableMessageHeader &hdr, MemoryReference body);
-
-    /** Sends a message from the space hdr.destination_space() to the object
-        hdr.destination_object(). Note that this will properly route locally destined
-        messages via a WorkQueue in the ObjectHost.
-        @param header  A RoutableMessageHeader: must include destination_space/object.
-        @param body  An encoded RoutableMessageBody.
-    */
-    void send(const RoutableMessageHeader &header, MemoryReference body);
-
 
   public:
     //BFTM_FIXME: need to actually write this function.
@@ -349,7 +330,6 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
-    virtual void registerDefaultODPHandler(const ODP::OldMessageHandler& cb);
 
     // Movement Interface
     //note: location update services both position and velocity
@@ -389,11 +369,11 @@ public:
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     // Handlers for substreams for space-managed updates
-    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
-    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, boost::shared_ptr< Stream<UUID> > s);
+    void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
+    void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     // Handlers for substream read events for space-managed updates
-    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream* prevdata, uint8* buffer, int length);
-    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, boost::shared_ptr< Stream<UUID> > s, std::stringstream** prevdata, uint8* buffer, int length);
+    void handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);

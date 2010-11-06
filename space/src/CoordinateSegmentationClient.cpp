@@ -216,7 +216,8 @@ boost::shared_ptr<TCPSocket> CoordinateSegmentationClient::getLeasedSocket() {
 ServerID CoordinateSegmentationClient::lookup(const Vector3f& pos)  {
   {
     boost::mutex::scoped_lock cachelock(mCacheMutex);
-    for (uint i=0 ; i<mLookupCache.size(); i++) {
+
+    for (uint32 i=0 ; i<mLookupCache.size(); i++) {
       if (mLookupCache[i].bbox.contains(pos)) {
         
         assert(mLookupCache[i].sid >= 1 && mLookupCache[i].sid <= 5);

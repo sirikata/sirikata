@@ -622,7 +622,7 @@ ELSE()
                    ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
                    ${CMAKE_CURRENT_BINARY_DIR}/chrome/plugin_carbon_interpose.dylib
                    ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d
-                   ${TOP_LEVEL}/cdn.txt ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
+                   ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
 
 
@@ -692,10 +692,12 @@ SET(CPPOH_SOURCE_DIR ${CPPOH_DIR}/src)
 SET(SIMOH_SOURCE_DIR ${TOP_LEVEL}/simoh/src)
 SET(CSEG_SOURCE_DIR ${TOP_LEVEL}/cseg/src)
 SET(PINTO_SOURCE_DIR ${TOP_LEVEL}/pinto/src)
+SET(CDN_NAMESERVER_SOURCE_DIR ${TOP_LEVEL}/cdn/src/nameserver)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
 SET(EMERSON_SOURCE_DIR ${TOP_LEVEL}/liboh/plugins/js/emerson)
 SET(STREAM_ECHO_SOURCE_DIR ${TOP_LEVEL}/tools/stream_echo)
+SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
 
 #plugins locations
@@ -790,7 +792,7 @@ SET(ProtocolBuffersSourcesCore
   ${SirikataProtocolRoot}/TimedMotionVector
   ${SirikataProtocolRoot}/TimedMotionQuaternion
 )
-SET(ProtocolBuffersSources
+SET(ProtocolBuffersSourcesPublic
   # Core protocol messages
   ${SirikataProtocolRoot}/Empty
   ${SirikataProtocolRoot}/Frame
@@ -802,14 +804,10 @@ SET(ProtocolBuffersSources
   ${SirikataProtocolRoot}/SSTHeader
   ${SirikataProtocolRoot}/Loc
   ${SirikataProtocolRoot}/Prox
-
-
+)
+SET(ProtocolBuffersSourcesInternal
   # Additional internal stuff
   ${ProtocolBuffersRoot}/Persistence
-  ${ProtocolBuffersRoot}/MessageHeader
-  ${ProtocolBuffersRoot}/Sirikata
-  ${ProtocolBuffersRoot}/Time
-  ${ProtocolBuffersRoot}/Subscription
   ${ProtocolBuffersRoot}/Test
 
   ${ProtocolBuffersRoot}/ServerProx
@@ -819,6 +817,7 @@ SET(ProtocolBuffersSources
   ${ProtocolBuffersRoot}/Migration
   ${ProtocolBuffersRoot}/OSeg
   ${ProtocolBuffersRoot}/Forwarder
+  ${ProtocolBuffersRoot}/CDN
   )
 
 # Based on dependencies, generate arguments for protocol buffers generation
@@ -836,7 +835,6 @@ SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
 ADD_PBJ_TARGET(
   ${ProtocolBuffersSourcesCore}
-  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
@@ -846,17 +844,28 @@ ADD_PBJ_TARGET(
   GENERATE_CPP
 )
 ADD_PBJ_TARGET(
-  ${ProtocolBuffersSources}
+  ${ProtocolBuffersSourcesPublic}
   DEPENDS ${ProtocolCore_PBJ_CPP_FILES}
-  INPUTDIR ""
   PLUGINNAME "Protocol"
   IMPORTS ${ProtocolBuffersRoot}
   OUTPUTDIR ${SirikataProtocolDirectory}
-  GENERATED_CPP_FILES Protocol_PBJ_CPP_FILES
+  GENERATED_CPP_FILES ProtocolPublic_PBJ_CPP_FILES
   CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
   EXPORTMACRO SIRIKATA_EXPORT
   ${PROTOCOLBUFFERS_GENS}
 )
+ADD_PBJ_TARGET(
+  ${ProtocolBuffersSourcesInternal}
+  DEPENDS ${ProtocolCore_PBJ_CPP_FILES} ${ProtocolPublic_PBJ_CPP_FILES}
+  PLUGINNAME "Protocol"
+  IMPORTS ${ProtocolBuffersRoot}
+  OUTPUTDIR ${SirikataProtocolDirectory}
+  GENERATED_CPP_FILES ProtocolInternal_PBJ_CPP_FILES
+  CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+  EXPORTMACRO SIRIKATA_EXPORT
+  ${PROTOCOLBUFFERS_GENS}
+)
+SET(Protocol_PBJ_CPP_FILES ${ProtocolPublic_PBJ_CPP_FILES} ${ProtocolInternal_PBJ_CPP_FILES})
 #Aggregate core and normal
 SET(Protocol_PBJ_CPP_FILES ${ProtocolCore_PBJ_CPP_FILES} ${Protocol_PBJ_CPP_FILES})
 
@@ -917,11 +926,7 @@ ENDIF(V8_FOUND)
 # For scripting
 SET(ScriptingProtocolBuffersSources
   Persistence
-  Sirikata
-  Time
-  Subscription
   Test
-  MessageHeader
   Physics
   )
 
@@ -1077,6 +1082,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/SSTImpl.cpp
         ${LIBCORE_SOURCE_DIR}/network/PBJDebug.cpp
         ${LIBCORE_SOURCE_DIR}/network/Frame.cpp
+        ${LIBCORE_SOURCE_DIR}/service/Signal.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1092,9 +1098,8 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
         ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
+  ${LIBCORE_SOURCE_DIR}/util/MeshSimplifier.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
-        ${LIBCORE_SOURCE_DIR}/util/SentMessage.cpp
-        ${LIBCORE_SOURCE_DIR}/util/QueryTracker.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
@@ -1185,6 +1190,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/AnyModelsSystem.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ModelsSystemFactory.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/LightInfo.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
@@ -1290,7 +1296,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${INPUT}/InputDevice.cpp
   ${INPUT}/SDLInputDevice.cpp
   ${GFX}/Entity.cpp
-  ${GFX}/LightEntity.cpp
   ${GFX}/MeshEntity.cpp
   ${GFX}/CameraEntity.cpp
   ${GFX}/OgrePlugin.cpp
@@ -1450,6 +1455,7 @@ SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/main.cpp
   )
 
+
 SET(EMERSON_SOURCES
   ${EMERSON_SOURCE_DIR}/EmersonLexer.cpp
   ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
@@ -1461,6 +1467,12 @@ SET(EMERSON_SOURCES
 SET(JSCOMPILE_SOURCES
    ${EMERSON_SOURCE_DIR}/jsutil/JSCompile.cpp
    )
+
+
+
+SET(CDN_NAMESERVER_SOURCES
+  ${CDN_NAMESERVER_SOURCE_DIR}/main.cpp
+  )
 
 
 SET(ANALYSIS_SOURCES
@@ -1476,6 +1488,14 @@ SET(ANALYSIS_SOURCES
 
 SET(STREAM_ECHO_SOURCES
   ${STREAM_ECHO_SOURCE_DIR}/StreamEcho.cpp
+)
+
+SET(MESH_TOOL_SOURCES
+  ${MESH_TOOL_SOURCE_DIR}/Filter.cpp
+  ${MESH_TOOL_SOURCE_DIR}/LoadFilter.cpp
+  ${MESH_TOOL_SOURCE_DIR}/SaveFilter.cpp
+  ${MESH_TOOL_SOURCE_DIR}/ComputeBoundsFilter.cpp
+  ${MESH_TOOL_SOURCE_DIR}/main.cpp
 )
 
 SET(BENCH_SOURCES
@@ -1502,12 +1522,9 @@ libcore/test/MinitransactionHandlerTest.hpp
 libcore/test/ObjectStorageTest.hpp
 libcore/test/OptionValueListTest.hpp
 libcore/test/OptionTest.hpp
-#libcore/test/ProxTest.hpp
 libcore/test/QuaternionTest.hpp
-libcore/test/RoutableMessageTest.hpp
 libcore/test/TCPSSTCloseTest.hpp
 libcore/test/TCPSSTConnectTest.hpp
-libcore/test/SubscriptionTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
 libcore/test/Vector3Test.hpp
@@ -1589,6 +1606,7 @@ SET(SPACE_BINARY space)
 SET(CPPOH_BINARY cppoh)
 SET(TEST_BINARY tests)
 SET(STREAM_ECHO_BINARY stream_echo)
+SET(MESH_TOOL_BINARY meshtool)
 SET(BENCH_BINARY bench)
 
 
@@ -1951,6 +1969,14 @@ TARGET_LINK_LIBRARIES(pinto
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
+ADD_EXECUTABLE(cdn_nameserver ${CDN_NAMESERVER_SOURCES})
+SET_TARGET_PROPERTIES(cdn_nameserver PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(cdn_nameserver
+        ${Boost_LIBRARIES}
+        ${SIRIKATA_CORE_LIB}
+        ${PROTOCOLBUFFERS_LIBRARIES}
+        )
+
 ADD_EXECUTABLE(analysis ${ANALYSIS_SOURCES})
 SET_TARGET_PROPERTIES(analysis PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(analysis
@@ -1966,6 +1992,14 @@ TARGET_LINK_LIBRARIES(${STREAM_ECHO_BINARY}
   ${Boost_LIBRARIES}
   ${SIRIKATA_CORE_LIB}
   ${PROTOCOLBUFFERS_LIBRARIES}
+  )
+
+ADD_EXECUTABLE(${MESH_TOOL_BINARY} ${MESH_TOOL_SOURCES})
+SET_TARGET_PROPERTIES(${MESH_TOOL_BINARY} PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(${MESH_TOOL_BINARY}
+  ${Boost_LIBRARIES}
+  ${SIRIKATA_CORE_LIB}
+  ${SIRIKATA_PROXYOBJECT_LIB}
   )
 
 ADD_EXECUTABLE(${BENCH_BINARY} ${BENCH_SOURCES})
@@ -1995,7 +2029,6 @@ IF(CHROME_FOUND)
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
 
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
-
       ${TOP_LEVEL}/cdn.txt
       ${CMAKE_CURRENT_BINARY_DIR}/scene.db
       )
@@ -2021,7 +2054,7 @@ ADD_DEPENDENCIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB})
 ADD_DEPENDENCIES(${SPACE_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB} )
 ADD_DEPENDENCIES(${CPPOH_BINARY} ${SIRIKATA_CORE_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_OH_LIB})
 
-SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh genpack cseg pinto analysis ${STREAM_ECHO_BINARY} ${BENCH_BINARY}
+SET_TARGET_PROPERTIES(${SPACE_BINARY} ${CPPOH_BINARY} ${TEST_BINARY} simoh genpack cseg pinto analysis ${STREAM_ECHO_BINARY} ${MESH_TOOL_BINARY} ${BENCH_BINARY}
                       PROPERTIES
                       DEBUG_POSTFIX "_d" )
 TARGET_LINK_LIBRARIES(${TEST_BINARY} ${SIRIKATA_CORE_LIB}
@@ -2296,7 +2329,7 @@ IF(APPLE)
       ${CHROME_SYMLINKS_COMMAND} && ln -sf ${TOP_LEVEL}/libproxyobject
       ${CMAKE_CURRENT_BINARY_DIR}/${CHROME_SYMLINKS_COMMAND_TARGET}/ ${APPLE_PLUGIN_COMMANDS})
     ENDIF()
-#    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${TOP_LEVEL}/cdn.txt sirikata.app/Contents/MacOS/cdn.txt && ln -sf ${GENERATED_SCENE_DB} sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
+#    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${GENERATED_SCENE_DB} sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
 
 ELSE()
 IF(NOT WIN32)
@@ -2425,9 +2458,6 @@ ELSE()
     GET_TARGET_PROPERTY(TEST_RUNABLE ${TEST_BINARY} LOCATION)
   ENDIF()
 ENDIF()
-
-INSTALL(FILES ${TOP_LEVEL}/cdn.txt
-        DESTINATION bin/)
 
 IF(PYTHON_EXECUTABLE)
   IF(${GENERATED_SCENE_DB})

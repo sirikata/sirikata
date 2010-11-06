@@ -81,7 +81,7 @@ def ClusterSubstitute(command, host, user, index=0, user_params=None):
 
 # Runs the given command on all nodes of the cluster, dumps output to stdout, and waits until all connections to nodes have
 # been closed.
-def ClusterRun(cc, command, io=util.stdio.StdIO()):
+def ClusterRun(cc, command, io=util.stdio.StdIO(), interactive=False):
     new_environ = os.environ
     new_environ['DISPLAY'] = ':0.0'
     new_environ['XAUTHORITY'] = new_environ['HOME'] + '/.Xauthority'
@@ -89,15 +89,19 @@ def ClusterRun(cc, command, io=util.stdio.StdIO()):
     mts = []
     for node in cc.nodes:
         node_command = ClusterSubstitute(command, host=node.node, user=node.user)
-        (outp,inp)=os.pipe();
-        os.write(inp,node_command)
-        os.close(inp)
-        #f.seek(0);
-        sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh'], 0, None, outp, subprocess.PIPE, subprocess.STDOUT, None, False, False, None, new_environ)
-        mt = NodeMonitorThread(node.str(), sp, io)
-        mt.start()
-        mts.append(mt)
-        time.sleep(.1)
+        if not interactive:
+            (outp,inp)=os.pipe();
+            os.write(inp,node_command)
+            os.close(inp)
+            sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh'], stdin=outp, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=new_environ)
+            mt = NodeMonitorThread(node.str(), sp, io=io)
+            mt.start()
+            mts.append(mt)
+            time.sleep(.1)
+        else:
+            print node, ':', node_command, '-->'
+            sp = subprocess.Popen(['ssh',xforward,cc.headnode,'ssh '+xforward+' '+node.str()+' sh -c ' + '"\\"' + node_command + '\\""'], stdin=None, stdout=None, stderr=None, env=new_environ)
+            sp.wait()
     for mt in mts:
         mt.join()
 
@@ -148,14 +152,17 @@ def ClusterRunSummaryCode(returned):
     return 0
 
 def main():
-    if (len(sys.argv) != 2):
-        print "Syntax: cluster_run.py \"my; commands;\""
+    interactive = ('--interactive' in sys.argv)
+    args = [arg for arg in sys.argv if arg != '--interactive']
+
+    if (len(args) != 2):
+        print "Syntax: cluster_run.py [--interactive] \"my; commands;\""
         exit(-1)
 
-    command = sys.argv[1]
+    command = args[1]
 
     cc = ClusterConfig()
-    results = ClusterRun(cc, command)
+    results = ClusterRun(cc, command, interactive=interactive)
     if (ClusterRunFailed(results)):
         return 1
 

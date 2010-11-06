@@ -37,7 +37,6 @@
 #include "MonoAssembly.hpp"
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include "MonoContext.hpp"
 namespace Sirikata {
 
@@ -96,55 +95,6 @@ MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjec
 }
 MonoVWObjectScript::~MonoVWObjectScript() {
     //mono_jit_cleanup(mDomain.domain());
-}
-
-bool MonoVWObjectScript::forwardMessagesTo(MessageService*){
-    NOT_IMPLEMENTED(mono);
-    return false;
-}
-
-bool MonoVWObjectScript::endForwardingMessagesTo(MessageService*){
-    NOT_IMPLEMENTED(mono);
-    return false;
-}
-
-bool MonoVWObjectScript::processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue){
-    MonoContext::getSingleton().push(MonoContextData(mDomain, mParent));
-    std::string header;
-    receivedHeader.SerializeToString(&header);
-    try {
-        Mono::Object mono_header = mDomain.ByteArray(header.data(),(unsigned int)header.size());
-        Mono::Object mono_rpc_name = mDomain.String(name);
-        Mono::Object mono_body = mDomain.ByteArray((const char*)args.data(),(int)args.size());
-        Mono::Object retval = mObject.send(&mProcessRPCCache, "processRPC", mono_header, mono_rpc_name, mono_body);
-        if (!retval.null()) {
-            returnValue=retval.unboxByteArray();
-            MonoContext::getSingleton().pop();
-            return true;
-        }
-        MonoContext::getSingleton().pop();
-        return false;
-    }catch (Mono::Exception&e) {
-        SILOG(mono,debug,"RPC Exception "<<e);
-        MonoContext::getSingleton().pop();
-        return false;
-    }
-    MonoContext::getSingleton().pop();
-    return true;
-}
-
-void MonoVWObjectScript::processMessage(const RoutableMessageHeader& receivedHeader, MemoryReference body){
-    std::string header;
-    receivedHeader.SerializeToString(&header);
-    MonoContext::getSingleton().push(MonoContextData(mDomain, mParent));
-    try {
-        Mono::Object mono_header = mDomain.ByteArray(header.data(),(unsigned int)header.size());
-        Mono::Object mono_body = mDomain.ByteArray((const char*)body.data(),(unsigned int)body.size());
-        Mono::Object retval = mObject.send(&mProcessMessageCache, "processMessage", mono_header, mono_body);
-    }catch (Mono::Exception&e) {
-        SILOG(mono,debug,"Message Exception "<<e);
-    }
-    MonoContext::getSingleton().pop();
 }
 
 bool MonoVWObjectScript::valid() const {

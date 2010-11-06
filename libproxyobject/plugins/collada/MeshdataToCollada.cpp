@@ -29,7 +29,7 @@
 namespace Sirikata {
 
   std::string removeNonAlphaNumeric(std::string str) {
-    for (uint i = 0; i < str.size(); i++) {
+    for (uint32 i = 0; i < str.size(); i++) {
       char ch = str[i];
       if ( !isalnum(ch)) {
         str[i]='_';
@@ -74,7 +74,8 @@ namespace Sirikata {
     void exportMaterial(const Meshdata& meshdata) {
       openLibrary();
 
-      for (uint i=0; i < meshdata.materials.size(); i++) {
+
+      for (uint32 i=0; i < meshdata.materials.size(); i++) {
         char effectNameStr[256];
         snprintf(effectNameStr, 256, "material%d", i);
         std::string effectName = effectNameStr;
@@ -101,7 +102,7 @@ namespace Sirikata {
     void exportEffect(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, std::map<String,int>& textureList) {
         openLibrary();
 
-        for (uint i=0; i < meshdata.materials.size(); i++) {
+        for (uint32 i=0; i < meshdata.materials.size(); i++) {
           char effectNameStr[256];
           snprintf(effectNameStr, 256, "material%d", i);
           std::string effectName = effectNameStr;
@@ -114,10 +115,9 @@ namespace Sirikata {
           effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
 
 
-          std::cout << meshdata.materials[i].textures.size() << " : meshdata.materials[i].textures.size()\n";
 
           //dealing with texture.
-          for (uint j=0; j<meshdata.materials[i].textures.size(); j++) {
+          for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
             const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
 
             COLLADASW::ColorOrTexture colorOrTexture;
@@ -154,7 +154,8 @@ namespace Sirikata {
 
               colorOrTexture = COLLADASW::ColorOrTexture(colladaTexture);
 
-              std::cout << "TEXTURE.URI=" << texture.uri << "\n";
+
+              //              std::cout << "TEXTURE.URI=" << texture.uri << "\n";
             }
             else {
               colorOrTexture = COLLADASW::ColorOrTexture( COLLADASW::Color(texture.color.x,
@@ -162,10 +163,12 @@ namespace Sirikata {
                                                                            texture.color.z,
                                                                            texture.color.w));
 
-              printf("COLOR: %f %f %f %f\n", texture.color.x,
+
+              /*printf("COLOR: %f %f %f %f\n", texture.color.x,
                      texture.color.y,
                      texture.color.z,
-                     texture.color.w);
+                     texture.color.w);*/
+
             }
 
             switch(texture.affecting) {
@@ -202,7 +205,8 @@ namespace Sirikata {
     void exportGeometry(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata) {
       openLibrary();
 
-      for (uint i=0; i<meshdata.geometry.size(); i++) {
+
+      for (uint32 i=0; i<meshdata.geometry.size(); i++) {
         char geometryNameStr[256];
         snprintf(geometryNameStr, 256, "mesh%d-geometry", i);
         std::string geometryName = geometryNameStr;
@@ -225,7 +229,8 @@ namespace Sirikata {
 
           colladaSource.prepareToAppendValues();
 
-          for (uint j = 0; j < meshdata.geometry[i].positions.size(); j++) {
+
+          for (uint32 j = 0; j < meshdata.geometry[i].positions.size(); j++) {
             colladaSource.appendValues(meshdata.geometry[i].positions[j].x,
                                        meshdata.geometry[i].positions[j].y,
                                        meshdata.geometry[i].positions[j].z);
@@ -250,7 +255,8 @@ namespace Sirikata {
 
           colladaSource.prepareToAppendValues();
 
-          for (uint j = 0; j < meshdata.geometry[i].normals.size(); j++) {
+
+          for (uint32 j = 0; j < meshdata.geometry[i].normals.size(); j++) {
             colladaSource.appendValues(meshdata.geometry[i].normals[j].x,
                                        meshdata.geometry[i].normals[j].y,
                                        meshdata.geometry[i].normals[j].z);
@@ -260,7 +266,8 @@ namespace Sirikata {
         }
 
         //uvs
-        for (uint j = 0; j < meshdata.geometry[i].texUVs.size(); j++)
+
+        for (uint32 j = 0; j < meshdata.geometry[i].texUVs.size(); j++)
         {
           COLLADASW::FloatSource colladaSource (streamWriter);
           colladaSource.setId(geometryName + "-uv");
@@ -274,7 +281,8 @@ namespace Sirikata {
           colladaSource.setAccessorCount(meshdata.geometry[i].texUVs[j].uvs.size()/2);
           colladaSource.prepareToAppendValues();
 
-          for (uint k = 0; k+1 < meshdata.geometry[i].texUVs[j].uvs.size(); k+=2) {
+
+          for (uint32 k = 0; k+1 < meshdata.geometry[i].texUVs[j].uvs.size(); k+=2) {
             colladaSource.appendValues(meshdata.geometry[i].texUVs[j].uvs[k],
                                      meshdata.geometry[i].texUVs[j].uvs[k+1]
                                      );
@@ -296,14 +304,16 @@ namespace Sirikata {
 
         //triangles
         const GeometryInstance* geoInst = NULL;
-        for (uint j=0; j<meshdata.instances.size(); j++) {
+
+        for (uint32 j=0; j<meshdata.instances.size(); j++) {
           if (meshdata.instances[j].geometryIndex == i) {
             geoInst = &(meshdata.instances[j]);
             break;
           }
         }
 
-        for(uint j = 0; geoInst != NULL && j < meshdata.geometry[i].primitives.size(); ++j )
+
+        for(uint32 j = 0; geoInst != NULL && j < meshdata.geometry[i].primitives.size(); ++j )
         {
           if (meshdata.geometry[i].primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
 
@@ -355,7 +365,8 @@ public:
     openLibrary();
     openVisualScene( "Space_Aggregated_Scene" );
 
-    for(uint i = 0; i < meshdata.instances.size(); i++)
+
+    for(uint32 i = 0; i < meshdata.instances.size(); i++)
     {
       char geometryNameStr[256];
       snprintf(geometryNameStr, 256, "mesh%d-geometry", i);
@@ -379,7 +390,8 @@ public:
              meshdata.instances[i].materialBindingMap.begin();
            it != meshdata.instances[i].materialBindingMap.end(); it++)
       {
-        uint materialIdx = it->second;
+
+        uint32 materialIdx = it->second;
 
         char effectNameStr[256];
         snprintf(effectNameStr, 256, "material%d", materialIdx);

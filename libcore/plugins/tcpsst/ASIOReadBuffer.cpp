@@ -358,7 +358,6 @@ void ASIOReadBuffer::translateBuffer(const MultiplexedSocketPtr &thus) {
                     break;
                 }
             }
-            break;
         }else {
             unsigned int packetHeaderLength= mBufferPos-chunkPos;
             if (packetLength.unserialize(mBuffer+chunkPos,packetHeaderLength)) {//if there is enough room to parse the length of the length-delimited packet

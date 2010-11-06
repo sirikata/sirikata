@@ -351,6 +351,30 @@ void OptionSet::parse(int argc, const char * const *argv){
     if (dienow)
         exit(0);
 }
+void OptionSet::parseFile(const std::string& file, bool required) {
+    mParsingStage=PARSED_UNBLANK_OPTIONS;
+    boost::program_options::options_description options;
+    boost::program_options::variables_map output;
+    {
+        boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
+        OptionRegistration::register_options(mNames,options);
+    }
+    options.add_options()("help","Print available options");
+    std::ifstream cf_fp(file.c_str());
+    if (!cf_fp) {
+        if (required) exit(0);
+        return;
+    }
+    boost::program_options::store( boost::program_options::parse_config_file(cf_fp, options), output);
+    cf_fp.close();
+    bool dienow=false;
+    {
+        boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
+        dienow=!OptionRegistration::update_options(mNames,options,output);
+    }
+    if (dienow)
+        exit(0);
+}
 void OptionSet::parse(const std::string&args){
     if (args.size())
         mParsingStage=PARSED_UNBLANK_OPTIONS;

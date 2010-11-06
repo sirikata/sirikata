@@ -139,25 +139,38 @@ void AlwaysLocationUpdatePolicy::service() {
     mObjectSubscriptions.service();
 }
 
-static void locSubstreamCallback(int x, boost::shared_ptr<Stream<UUID> > substream) {
-    if (!substream)
-        SILOG(always_loc,error,"Unhandled error when opening substream.");
+void AlwaysLocationUpdatePolicy::tryCreateChildStream(SSTStreamPtr parent_stream, std::string* msg, int count) {
+    parent_stream->createChildStream(
+        std::tr1::bind(&AlwaysLocationUpdatePolicy::locSubstreamCallback, this, _1, _2, parent_stream, msg, count+1),
+        (void*)msg->data(), msg->size(),
+        OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
+    );
+}
+
+void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_stream, std::string* msg, int count) {
+    // If we got it, the data got sent and we can drop the stream
+    if (substream) return;
+
+    // If we didn't get it and we haven't retried too many times, try
+    // again. Otherwise, report error and give up.
+    if (count < 5)
+        tryCreateChildStream(parent_stream, msg, count);
+    else
+        SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
 {
   std::string bluMsg = serializePBJMessage(blu);
-  boost::shared_ptr<Stream<UUID> > locServiceStream = mLocService->getObjectStream(dest);
+  SSTStreamPtr locServiceStream = mLocService->getObjectStream(dest);
 
   bool sent = false;
-  if (locServiceStream != boost::shared_ptr<Stream<UUID> >()) {
+  if (locServiceStream) {
       Sirikata::Protocol::Frame msg_frame;
       msg_frame.set_payload(bluMsg);
-      std::string framed_loc_msg = serializePBJMessage(msg_frame);
-
-    locServiceStream->createChildStream(locSubstreamCallback, (void*)framed_loc_msg.data(), framed_loc_msg.size(),
-        OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION);
-    sent = true;
+      std::string* framed_loc_msg = new std::string(serializePBJMessage(msg_frame));
+      tryCreateChildStream(locServiceStream, framed_loc_msg, 0);
+      sent = true;
   }
 
   return sent;

@@ -35,10 +35,13 @@
 
 #include <sirikata/oh/ObjectFactory.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+<<<<<<< HEAD
 #include <vector>
 #include <list>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
+=======
+>>>>>>> origin/master
 
 namespace Sirikata {
 
@@ -55,7 +58,11 @@ private:
     // Connects one batch of objects and sets up another callback for more
     // additions if necessary.
     void connectObjects();
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/master
     ObjectHostContext* mContext;
     ObjectHost* mOH;
     SpaceID mSpace;
@@ -66,8 +73,11 @@ private:
         Location loc;
         BoundingSphere3f bounds;
         String mesh;
+<<<<<<< HEAD
         String scriptFile;
         String scriptType;
+=======
+>>>>>>> origin/master
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;
     int32 mConnectRate;

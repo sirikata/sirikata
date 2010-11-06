@@ -69,8 +69,12 @@ class ODPFlowScheduler;
 class LocationService;
 class LocalForwarder;
 
-class Forwarder : public ServerMessageDispatcher, public ObjectMessageDispatcher,
-		    public ServerMessageRouter, public ObjectMessageRouter,
+namespace ODP {
+class DelegateService;
+}
+
+class Forwarder : public ServerMessageDispatcher,
+		    public ServerMessageRouter,
                     public MessageRecipient,
                     public ServerMessageQueue::Sender,
                   public ServerMessageReceiver::Listener,
@@ -84,8 +88,14 @@ private:
     ServerMessageReceiver* mServerMessageReceiver;
 
     LocalForwarder* mLocalForwarder;
-    OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of messages that are being looked up in oseg.
-    boost::shared_ptr<BaseDatagramLayer<UUID> >  mSSTDatagramLayer;
+    OSegLookupQueue* mOSegLookups; //this maps the object ids to a list of
+                                   //messages that are being looked up in oseg.
+
+    // We maintain a pointer to this Server's DelegateODPService because the
+    // forwarder is the one that actually intercepts messages
+    ODP::DelegateService* mDelegateODPService;
+    // And here we also maintain the core SST datagram layer for the server
+    BaseDatagramLayer<SpaceObjectReference>::Ptr mSSTDatagramLayer;
 
 
     // Object connections, identified by a separate unique ID to handle fast migrations
@@ -127,16 +137,15 @@ private:
   public:
       Forwarder(SpaceContext* ctx);
       ~Forwarder();
+
     void initialize(ObjectSegmentation* oseg, ServerMessageQueue* smq, ServerMessageReceiver* smr, LocationService* loc);
+    void setODPService(ODP::DelegateService* odp);
 
     void setLocalForwarder(LocalForwarder* lf) { mLocalForwarder = lf; }
 
     // Service Implementation
     void start();
     void stop();
-  protected:
-
-    virtual bool dispatchMessage(const Sirikata::Protocol::Object::ObjectMessage& msg) const;
 
   private:
     // Init method: adds an odp routing service to the ForwarderServiceQueue and
@@ -161,9 +170,6 @@ private:
     // cache.
     WARN_UNUSED
     bool tryCacheForward(Sirikata::Protocol::Object::ObjectMessage* msg);
-
-    WARN_UNUSED
-    bool route(Sirikata::Protocol::Object::ObjectMessage* msg);
 
     // -- Real routing interface + implementation
 
@@ -194,6 +200,9 @@ private:
     void routeObjectMessageToServerNoReturn(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
     WARN_UNUSED
     bool routeObjectMessageToServer(Sirikata::Protocol::Object::ObjectMessage* msg, const OSegEntry& dest_serv, OSegLookupQueue::ResolvedFrom resolved_from, ServerID forwardFrom = NullServerID);
+
+    // Dispatches a message destined for the space server itself
+    void dispatchMessage(Sirikata::Protocol::Object::ObjectMessage* msg) const;
 
     // Handles the case where OSeg told us we have the object. Post this to the
     // main strand.

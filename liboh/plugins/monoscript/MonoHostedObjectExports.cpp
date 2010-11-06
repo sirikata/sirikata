@@ -44,7 +44,6 @@
 #include "MonoArray.hpp"
 #include "MonoException.hpp"
 #include "MonoConvert.hpp"
-#include <sirikata/core/util/SentMessage.hpp>
 
 
 using namespace Sirikata;

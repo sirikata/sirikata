@@ -49,6 +49,7 @@
 #include <iostream>
 #include <fstream>
 
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
 
 using namespace std;
 using namespace Sirikata;
@@ -59,18 +60,17 @@ namespace Sirikata { namespace Models {
 ColladaSystem::ColladaSystem ()
     :   mDocuments ()
 {
-    assert((std::cout << "MCB: ColladaSystem::ColladaSystem() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaSystem::ColladaSystem() entered");
 }
 
 ColladaSystem::~ColladaSystem ()
 {
-    assert((std::cout << "MCB: ColladaSystem::~ColladaSystem() entered" << std::endl,true));
-
+    COLLADA_LOG(insane, "ColladaSystem::~ColladaSystem() entered");
 }
 
 ColladaSystem* ColladaSystem::create (String const& options)
 {
-    assert((std::cout << "MCB: ColladaSystem::create( " << options << ") entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaSystem::create( " << options << ") entered");
     ColladaSystem* system ( new ColladaSystem );
 
     if ( system->initialize (options ) )
@@ -81,7 +81,7 @@ ColladaSystem* ColladaSystem::create (String const& options)
 
 bool ColladaSystem::initialize(String const& options)
 {
-    assert((std::cout << "MCB: ColladaSystem::initialize() entered" << std::endl,true));
+    COLLADA_LOG(insane, "ColladaSystem::initialize() entered");
 
     InitializeClassOptions ( "colladamodels", this, NULL );
     OptionSet::getOptions ( "colladamodels", this )->parse ( options );
@@ -91,6 +91,24 @@ bool ColladaSystem::initialize(String const& options)
 
 /////////////////////////////////////////////////////////////////////
 // overrides from ModelsSystem
+
+bool ColladaSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) {
+    // There's no magic number for collada files. Instead, search for
+    // a <COLLADA> tag (just the beginning since it has other content
+    // in it).  Originally we'd check for the closing tag too, but to
+    // keep this check minimal, we only check the beginning of the
+    // document, so we can't check for the closing tag.
+    if (!data) return false;
+
+    // Create a string out of the first 1K
+    int32 sublen = std::min((int)data->length(), (int)1024);
+    std::string subset((const char*)data->begin(), (std::size_t)sublen);
+
+    if (subset.find("<COLLADA") != subset.npos)
+        return true;
+
+    return false;
+}
 
 MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data)
@@ -103,16 +121,16 @@ MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Finger
       Transfer::DenseDataPtr flatData = data_reflatten.flatten();
 
       char const* buffer = reinterpret_cast<char const*>(flatData->begin());
-
-
       loader.load(buffer, flatData->length());
 
 
       return loader.getMeshdata();
 }
 
-void ColladaSystem::convertMeshdata(const Meshdata& meshdata, const std::string& filename) {
-    meshdataToCollada(meshdata, filename);
+bool ColladaSystem::convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) {
+    // format is ignored, we only know one format
+    int result = meshdataToCollada(meshdata, filename);
+    return (result == 0);
 }
 
 

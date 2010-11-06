@@ -41,31 +41,12 @@ SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStr
  : Context("Space", ios, strand, _trace, epoch, duration),
    mID(_id),
    mServerRouter(NULL),
-   mObjectRouter(NULL),
    mServerDispatcher(NULL),
-   mObjectDispatcher(NULL),
    mSpaceTrace( new SpaceTrace(_trace) )
 {
 }
 
 SpaceContext::~SpaceContext() {
-    mObjectStreams.clear();
-}
-
-void SpaceContext::newStream(int err, boost::shared_ptr< Stream<UUID> > s) {
-  boost::shared_ptr<Connection<UUID> > conn = s->connection().lock();
-  assert(conn);
-  UUID sourceObject = conn->remoteEndPoint().endPoint;
-
-  if (mObjectStreams.find(sourceObject) != mObjectStreams.end()) {
-    std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";fflush(stdout);
-
-    boost::shared_ptr<Connection<UUID> > sstConnection = mObjectStreams[sourceObject]->connection().lock();
-    assert(sstConnection);
-    sstConnection->close(false);
-  }
-
-  mObjectStreams[sourceObject] = s;
 }
 
 } // namespace Sirikata

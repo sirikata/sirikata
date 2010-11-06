@@ -93,8 +93,13 @@ public:
     class ReceiveDamage {
         UUID mID;
         DamagableObject *mParent;
-        boost::shared_ptr<Stream<UUID> > mSendStream;
-        boost::shared_ptr<Stream<UUID> > mReceiveStream;
+
+        typedef EndPoint<SpaceObjectReference> SSTEndpoint;
+        typedef Stream<SpaceObjectReference> SSTStream;
+        typedef SSTStream::Ptr SSTStreamPtr;
+
+        SSTStreamPtr mSendStream;
+        SSTStreamPtr mReceiveStream;
 
         uint8 mPartialUpdate[sizeof(HPTYPE)];
         int mPartialCount;
@@ -117,21 +122,21 @@ public:
             ++offset;
             int port = parent->mListenPort+offset;
             SILOG(hitpoint,error,"Listen/Connecting "<<mID.toString()<<" to "<<mParent->object->uuid().toString());
-            Stream<UUID>::listen(std::tr1::bind(&DamagableObject::ReceiveDamage::login,this,_1,_2),
-                                 EndPoint<UUID>(mID,parent->mListenPort));
-            Stream<UUID>::connectStream(mParent->object,
-                                        EndPoint<UUID>(mParent->object->uuid(),port),
-                                        EndPoint<UUID>(mID,parent->mListenPort),
-                                        std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
+            SSTStream::listen(std::tr1::bind(&DamagableObject::ReceiveDamage::login,this,_1,_2),
+                SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mID)), parent->mListenPort));
+            SSTStream::connectStream(
+                SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mParent->object->uuid())), port),
+                SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mID)), parent->mListenPort),
+                std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
 
         }
-        void connectionCallback(int port, int err, boost::shared_ptr<Stream<UUID> > s) {
+        void connectionCallback(int port, int err, SSTStreamPtr s) {
             if (err != 0 ) {
                 SILOG(hitpoint,error,"Failed to connect two objects...Retry"<<mParent->object->uuid().toString()<<" - "<<mID.toString());
-                Stream<UUID>::connectStream(mParent->object,
-                                            EndPoint<UUID>(mParent->object->uuid(),port),
-                                            EndPoint<UUID>(mID,mParent->mListenPort),
-                                            std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
+                SSTStream::connectStream(
+                    SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mParent->object->uuid())), port),
+                    SSTEndpoint(SpaceObjectReference(SpaceID::null(), ObjectReference(mID)), mParent->mListenPort),
+                    std::tr1::bind(&DamagableObject::ReceiveDamage::connectionCallback,this,port,_1,_2));
 
             }else {
                 SILOG(hitpoint,error,"Got connection "<<mParent->object->uuid().toString()<<" - "<<mID.toString());
@@ -139,7 +144,7 @@ public:
                 s->registerReadCallback( std::tr1::bind( &DamagableObject::ReceiveDamage::senderShouldNotGetUpdate, this, _1, _2)  ) ;
             }
         }
-        void login(int err, boost::shared_ptr< Stream<UUID> > s) {
+        void login(int err, SSTStreamPtr s) {
             if (err != 0) {
                 SILOG(hitpoint,error,"Failed to listen on port for two objects\n");
             }else {

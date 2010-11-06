@@ -35,7 +35,6 @@
 #include <sirikata/core/persistence/ObjectStorage.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include "SQLite.hpp"
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 namespace Sirikata { namespace Persistence {
 
@@ -56,22 +55,15 @@ public:
     virtual void destroyResponse(Persistence::Protocol::Response*);
 
     virtual Persistence::Protocol::ReadWriteSet* createReadWriteSet(int numReadKeys, int numWriteKeys);
-    virtual void applyInternal(const RoutableMessageHeader&rmh,Protocol::Minitransaction*, void(*minitransactionDestruction)(Protocol::Minitransaction*));
-    virtual void applyInternal(const RoutableMessageHeader&rmh,Protocol::ReadWriteSet*,void(*)(Protocol::ReadWriteSet*));
     virtual void applyInternal(Sirikata::Persistence::Protocol::Minitransaction*, const ResultCallback&, void(*minitransactionDestruction)(Protocol::Minitransaction*));
     virtual void applyInternal(Sirikata::Persistence::Protocol::ReadWriteSet*, const ResultCallback&,void(*)(Protocol::ReadWriteSet*));
 
-    bool forwardMessagesTo(MessageService*);
-    bool endForwardingMessagesTo(MessageService*);
-    void processMessage(const RoutableMessageHeader&,MemoryReference);
     static SQLiteObjectStorage*create(bool transactional,const String&);
 private:
-    std::vector<MessageService*>mInterestedParties;
     OptionSet*mOptions;
     Task::WorkQueue *mDiskWorkQueue;
     Task::ThreadSafeWorkQueue _mLocalWorkQueue;
     Task::WorkQueueThread* mWorkQueueThread;
-    void forward (RoutableMessageHeader&hdr, Protocol::Response&);
     SQLiteObjectStorage(bool transactional, const String& pl);
 
     /** Worker method which will be executed in another thread to perform the
@@ -91,9 +83,8 @@ private:
         void operator()();
     };
     class ApplyReadWriteMessage:public ApplyReadWriteWorker{
-        RoutableMessageHeader hdr;
     public:
-        ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, const RoutableMessageHeader&hdr,void (*mDestroyReadWrite)(Protocol::ReadWriteSet*));
+        ApplyReadWriteMessage(SQLiteObjectStorage*parent, Protocol::ReadWriteSet* rws, void (*mDestroyReadWrite)(Protocol::ReadWriteSet*));
         void operator()();
     };
 
@@ -114,37 +105,10 @@ private:
         void operator()();
     };
     class ApplyTransactionMessage:public ApplyTransactionWorker{
-        RoutableMessageHeader hdr;
     public:
-        ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* rws, const RoutableMessageHeader&,void (*mDestroyMinitransaction)(Protocol::Minitransaction*));
+        ApplyTransactionMessage(SQLiteObjectStorage*parent, Protocol::Minitransaction* rws, void (*mDestroyMinitransaction)(Protocol::Minitransaction*));
         void operator()();
     };
-
-    class AddMessageServiceMessage:public Task::WorkItem {
-    protected:
-        SQLiteObjectStorage*mParent;
-        MessageService*toAdd;
-    public:
-        AddMessageServiceMessage(SQLiteObjectStorage*p,MessageService*a){
-            toAdd=a;mParent=p;
-        }
-        void operator()();
-    };
-
-    class RemoveMessageServiceMessage:public Task::WorkItem {
-    protected:
-        SQLiteObjectStorage*mParent;
-        MessageService*toRemove;
-        volatile bool *done;
-    public:
-        RemoveMessageServiceMessage(SQLiteObjectStorage*p,MessageService*a,volatile bool*d){
-            toRemove=a;
-            mParent=p;
-            done=d;
-        }
-        void operator()();
-    };
-
 
     /** Starts a database transaction. */
     void beginTransaction(const SQLiteDBPtr& db);

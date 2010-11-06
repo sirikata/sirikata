@@ -60,18 +60,6 @@ SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
 {
 }
 
-// ObjectConnectionRouter Implementation
-SessionManager::ObjectConnectionRouter::ObjectConnectionRouter(SessionManager* _parent, const UUID& _uuid)
- : parent(_parent),
-   uuid(_uuid)
-{
-}
-
-bool SessionManager::ObjectConnectionRouter::route(Sirikata::Protocol::Object::ObjectMessage* msg) {
-    assert(msg->source_object() == uuid);
-    return parent->send(uuid, msg->source_port(), msg->dest_object(), msg->dest_port(), msg->payload());
-}
-
 // ObjectConnections Implementation
 
 SessionManager::ObjectConnections::ObjectConnections(SessionManager* _parent)
@@ -417,12 +405,13 @@ void SessionManager::migrate(const UUID& obj_id, ServerID sid) {
 
     OH_LOG(insane,"Starting migration of " << obj_id.toString() << " to " << sid);
 
-    //forcibly close the SST connection for this object to its current previous space server
-    if (mObjectToSpaceStreams.find(obj_id) != mObjectToSpaceStreams.end()) {
+    //forcibly close the SST connection for this object to its current previous
+    //space server
+    ObjectReference objref(obj_id);
+    if (mObjectToSpaceStreams.find(objref) != mObjectToSpaceStreams.end()) {
       std::cout << "deleting object-space streams  of " << obj_id.toString() << " to " << sid << "\n";
-      mObjectToSpaceStreams[obj_id]->connection().lock()->close(true);
-      mObjectToSpaceStreams.erase(obj_id);
-      mObjectConnectionRouters.erase(obj_id);
+      mObjectToSpaceStreams[objref]->connection().lock()->close(true);
+      mObjectToSpaceStreams.erase(objref);
     }
 
     mObjectConnections.startMigration(obj_id, sid);
@@ -760,9 +749,6 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
 	    ServerID connected_to = mObjectConnections.handleConnectSuccess(obj, loc, orient, bnds, time_synced);
 
-            // Initialize a new router for SST
-            mObjectConnectionRouters[obj] = new ObjectConnectionRouter(this, obj);
-
 	    // Send an ack so the server (our first conn or after migrating) can start sending data to us
 	    Sirikata::Protocol::Session::Container ack_msg;
 	    Sirikata::Protocol::Session::IConnectAck connect_ack_msg = ack_msg.mutable_connect_ack();
@@ -803,46 +789,47 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 }
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, ConnectedCallback real_cb) {
-    Stream<UUID>::connectStream(mObjectConnectionRouters[obj.getAsUUID()],
-        EndPoint<UUID>(obj.getAsUUID(), OBJECT_SPACE_PORT),
-        EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
-        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj.getAsUUID())
-    );
+    SpaceObjectReference spaceobj(space, obj);
 
     real_cb(space, obj, server, loc, orient, bnds);
+
+    SSTStream::connectStream(
+        SSTEndpoint(spaceobj, OBJECT_SPACE_PORT),
+        SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
+        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+    );
 }
 
-boost::shared_ptr<Stream<UUID> > SessionManager::getSpaceStream(const UUID& objectID) {
+SessionManager::SSTStreamPtr SessionManager::getSpaceStream(const ObjectReference& objectID) {
   if (mObjectToSpaceStreams.find(objectID) != mObjectToSpaceStreams.end()) {
     return mObjectToSpaceStreams[objectID];
   }
 
-  return boost::shared_ptr<Stream<UUID> >();
+  return SSTStreamPtr();
 }
 
-void SessionManager::spaceConnectCallback(int err, boost::shared_ptr< Stream<UUID> > s, UUID obj) {
+void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference spaceobj) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-  OH_LOG(debug, "SST object-space connect callback for " << obj.toString() << " : " << err << "\n");
+    OH_LOG(debug, "SST object-space connect callback for " << spaceobj.toString() << " : " << err << "\n");
 
-  if (err != SST_IMPL_SUCCESS) {
-    // retry creating an SST stream from the space server to object 'obj'.
+    if (err != SST_IMPL_SUCCESS) {
+        // retry creating an SST stream from the space server to object 'obj'.
+        SSTStream::connectStream(
+            SSTEndpoint(spaceobj, OBJECT_SPACE_PORT),
+            SSTEndpoint(SpaceObjectReference(spaceobj.space(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
+            std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+        );
+        return;
+    }
 
-      Stream<UUID>::connectStream(mObjectConnectionRouters[obj],
-                                EndPoint<UUID>(obj, OBJECT_SPACE_PORT),
-                                EndPoint<UUID>(UUID::null(), OBJECT_SPACE_PORT),
-                                std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, obj)
-                                );
+    mObjectToSpaceStreams[spaceobj.object()] = s;
 
-    return;
-  }
 
-  mObjectToSpaceStreams[obj] = s;
-
-  assert(mTimeSyncClient != NULL);
-  bool time_synced = mTimeSyncClient->valid();
-  mObjectConnections.handleConnectStream(obj, time_synced);
+    assert(mTimeSyncClient != NULL);
+    bool time_synced = mTimeSyncClient->valid();
+    mObjectConnections.handleConnectStream(spaceobj.object().getAsUUID(), time_synced);
 }
 
 } // namespace Sirikata
