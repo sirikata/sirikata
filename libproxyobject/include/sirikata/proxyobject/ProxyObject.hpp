@@ -153,6 +153,8 @@ public:
     }
 
 
+    ~ProxyObject();
+    
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -189,6 +191,8 @@ public:
         }
     }
 
+    bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
+    
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {
         Vector3f angaxis;

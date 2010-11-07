@@ -58,7 +58,7 @@
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/util/KnownMessages.hpp>
 #include <sirikata/core/util/KnownScriptTypes.hpp>
-
+#include "Protocol_JSMessage.pbj.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
@@ -838,22 +838,6 @@ private:
 */
     }
 
-    void onUploadObjectEvent(WebView* webview, const JSArguments& args)
-    {
-        /*
-        if (args.size() < 1) {
-            SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
-            return;
-        }
-
-        String action_triggered(args[0].data());
-
-        printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
-
-        if(action_triggered == "action_exit") {
-            quitAction();
-        }
-    }
 
     void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
         printf("upload object event fired arg length = %d\n", (int)args.size());
@@ -909,7 +893,7 @@ private:
 
 
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
-/*
+        /*
         typedef std::tr1::unordered_map<String, String> StringMap;
         printf("createScriptedObjectAction: %d\n", (int)args.size());
         // Filter out the script type from rest of args
@@ -979,8 +963,10 @@ private:
             std::string strcmp (command_it->begin());
             if (strcmp == "Command")
             {
-                Protocol::ScriptingMessage  scripting_msg;
-                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+                Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
+                Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+//                Protocol::ScriptingMessage  scripting_msg;
+//                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
                 scripting_req.set_id(0);
                 //scripting_req.set_body(String(command_it->second));
                 JSIter nexter = command_it + 1;
@@ -992,6 +978,7 @@ private:
                     Services::SCRIPTING,
                     MemoryReference(serialized_scripting_request)
                 );
+
             }
         }
     }
@@ -1006,42 +993,55 @@ private:
              selectIter != mSelectedObjects.end(); ++selectIter) {
             ProxyObjectPtr obj(selectIter->lock());
 
-            Protocol::ScriptingInit init_script;
+            Sirikata::JS::Protocol::ScriptingInit init_script;
 
             // Filter out the script type from rest of args
             //String script_type = "js"; // FIXME how to decide this?
             init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
-
-            std::string serializedInitScript;
+            init_script.set_messager(KnownMessages::INIT_SCRIPT);
+            String serializedInitScript;
             init_script.SerializeToString(&serializedInitScript);
-
-            // RoutableMessageBody body;
-            // body.add_message("InitScript", serializedInitScript);
-            // std::string serialized;
-            // body.SerializeToString(&serialized);
-            
-            // obj->sendMessage(
-            //     Services::RPC,
-            //     MemoryReference(serialized.data(), serialized.length())
-            // );
-
-
-            RoutableMessageBody body;
-            //body.add_message("InitScript", serializedInitScript);
-            body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
-            std::string serialized;
-            body.SerializeToString(&serialized);
+            //std::string serialized;
+            //init_script.SerializeToString(&serialized);
             
             obj->sendMessage(
                 Services::LISTEN_FOR_SCRIPT_BEGIN,
-                MemoryReference(serialized.data(), serialized.length())
+                MemoryReference(serializedInitScript.data(), serializedInitScript.length())
+                //  MemoryReference(serialized.data(), serialized.length())
             );
-
-            
         }
     }
     
 
+//     void initScriptOnSelectedObjects() {
+//         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
+//              selectIter != mSelectedObjects.end(); ++selectIter) {
+//             ProxyObjectPtr obj(selectIter->lock());
+
+//             Sirikata::JS::Protocol::ScriptingInit init_script;
+
+//             // Filter out the script type from rest of args
+//             //String script_type = "js"; // FIXME how to decide this?
+//             init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
+
+//             std::string serializedInitScript;
+//             init_script.SerializeToString(&serializedInitScript);
+
+
+//             RoutableMessageBody body;
+//             //body.add_message("InitScript", serializedInitScript);
+//             body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
+//             std::string serialized;
+//             body.SerializeToString(&serialized);
+            
+//             obj->sendMessage(
+//                 Services::LISTEN_FOR_SCRIPT_BEGIN,
+//                 MemoryReference(serialized.data(), serialized.length())
+//             );
+//         }
+//     }
+
+    
 
     ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy)
     {
@@ -1955,7 +1955,7 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
 
-        mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
+        //mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
 
     }
 
@@ -1994,13 +1994,30 @@ public:
         mSelectedObjects.insert(obj);
     }
 
+    
+    void onUIAction(WebView* webview, const JSArguments& args) {
+        printf("ui action event fired arg length = %d\n", (int)args.size());
+        if (args.size() != 1) {
+            printf("expected 1 argument, returning.\n");
+            return;
+        }
+
+        String action_triggered(args[0].data());
+
+        printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
+
+        if(action_triggered == "action_exit") {
+            quitAction();
+        }
+    }
+
     void tick(const Task::LocalTime& t) {
         cameraPathTick(t);
         fpsUpdateTick(t);
         screenshotTick(t);
 
         if(!mUIWidgetView) {
-            mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget",
+            mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget","ui_widget",
                     mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
                     OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
             mUIWidgetView->bind("ui-action", std::tr1::bind(&MouseHandler::onUIAction, this, _1, _2));

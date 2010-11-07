@@ -59,8 +59,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
     public:
         virtual ~ModelsSystem () {}
 
-<<<<<<< HEAD
-=======
+
         /** Check if this ModelsSystem will be able to parse the
          *  data.  This doesn't guarantee successful parsing:
          *  generally it only checks for magic numbers to see if it is
@@ -68,15 +67,11 @@ class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
          */
         virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
 
->>>>>>> origin/master
         /** Load a mesh into a Meshdata object. */
         virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
 
-<<<<<<< HEAD
-        /** Convert a Meshdata to the format for this ModelsSystem. */
-        virtual void convertMeshdata(const Meshdata& meshdata, const std::string& filename) = 0;
-=======
+
         /** Convert a Meshdata to the format for this ModelsSystem.
          *  \param meshdata the Meshdata to save to disk
          *  \param format format hint (may or may not be used by plugin)
@@ -84,7 +79,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
          *  \returns true if the conversion was successful, false otherwise
          */
         virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) = 0;
->>>>>>> origin/master
 
     protected:
 

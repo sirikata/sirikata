@@ -3,7 +3,6 @@
 #include "JSSerializer.hpp"
 #include <string>
 #include "Protocol_Sirikata.pbj.hpp"
-#include <sirikata/core/util/RoutableMessageBody.hpp>
 #include "JSUtil.hpp"
 
 /*
@@ -172,14 +171,14 @@ bool JSSerializer::deserializeObject( Sirikata::JS::Protocol::JSMessage jsmessag
 
 
 
-bool JSSerializer::deserializeObject( MemoryReference payload,v8::Local<v8::Object>& deserializeTo)
-{
-    RoutableMessageBody body;
-    body.ParseFromArray(payload.data(), payload.size());
-    std::string msgString(body.payload());
+// bool JSSerializer::deserializeObject( MemoryReference payload,v8::Local<v8::Object>& deserializeTo)
+// {
+//     RoutableMessageBody body;
+//     body.ParseFromArray(payload.data(), payload.size());
+//     std::string msgString(body.payload());
 
-    return deserializeObject(msgString,deserializeTo);
-}
+//     return deserializeObject(msgString,deserializeTo);
+// }
 
 
 

@@ -63,6 +63,7 @@ T safeLexicalCast(const String& orig) {
 
 void CSVObjectFactory::generate()
 {
+    int count;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
@@ -80,7 +81,8 @@ void CSVObjectFactory::generate()
     int scale_idx = -1;
 
     // For each line
-    while(fp && count < mMaxObjects) {
+    while(fp && (count < mMaxObjects))
+    {
         String line;
         std::getline(fp, line);
         // First char is # and not the first non whitespace char

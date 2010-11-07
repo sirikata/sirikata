@@ -71,13 +71,6 @@ public:
     virtual Time currentLocalTime() = 0;
 
 
-    // Timing information
-    virtual Time spaceTime(const SpaceID& space, const Time& t) = 0;
-    virtual Time currentSpaceTime(const SpaceID& space) = 0;
-    virtual Time localTime(const SpaceID& space, const Time& t) = 0;
-    virtual Time currentLocalTime() = 0;
-
-
     // Movement Interface
     // virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) = 0;
     // virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& loc) = 0;

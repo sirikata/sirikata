@@ -809,7 +809,7 @@ SET(ProtocolBuffersSourcesInternal
   # Additional internal stuff
   ${ProtocolBuffersRoot}/Persistence
   ${ProtocolBuffersRoot}/Test
-
+  ${ProtocolBuffersRoot}/JSMessage
   ${ProtocolBuffersRoot}/ServerProx
   ${ProtocolBuffersRoot}/MasterPinto
   ${ProtocolBuffersRoot}/CSeg
@@ -910,7 +910,7 @@ ADD_PBJ_TARGET(
 SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
 
 
-IF(V8_FOUND)
+#IF(V8_FOUND)
   SET(JS_ProtocolBuffersSources JSMessage)
   ADD_PBJ_TARGET(${JS_ProtocolBuffersSources}
     INPUTDIR ${ProtocolBuffersRoot}
@@ -921,7 +921,7 @@ IF(V8_FOUND)
     CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
     ${PROTOCOLBUFFERS_GENS}
     )
-ENDIF(V8_FOUND)
+#ENDIF(V8_FOUND)
 
 # For scripting
 SET(ScriptingProtocolBuffersSources
@@ -1187,7 +1187,6 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyLightObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyWebViewObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/AnyModelsSystem.cpp

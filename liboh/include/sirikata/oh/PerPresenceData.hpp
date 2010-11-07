@@ -2,7 +2,6 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 
@@ -21,7 +20,6 @@ public:
     ObjectReference object;
     ProxyObjectPtr mProxyObject;
     ProxyObject::Extrapolator mUpdatedLocation;
-    QueryTracker* tracker;
     ObjectHostProxyManagerPtr proxyManager;
     bool validSpaceObjRef;
     
@@ -35,7 +33,6 @@ public:
     
     SpaceObjectReference id() const;    
     void initializeAs(ProxyObjectPtr proxyobj);
-    void destroy(QueryTracker *tracker) const;
     
 };
 

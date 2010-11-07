@@ -247,6 +247,7 @@ void MeshEntity::loadMesh(const String& meshname)
             getScene()->getSceneManager()->destroyEntity(oldMeshObj);
         }
         return;
+        */
     }
     SILOG(ogre,debug,"Bounding box: " << new_entity->getBoundingBox());
     if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {

@@ -3,7 +3,6 @@
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/core/util/QueryTracker.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/PerPresenceData.hpp>
@@ -33,7 +32,6 @@ namespace Sirikata{
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       tracker(NULL),
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(true)
     {
@@ -48,7 +46,6 @@ namespace Sirikata{
             Location(Vector3d(0,0,0),Quaternion(Quaternion::identity()),
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
-       tracker(NULL),
        proxyManager(new ObjectHostProxyManager(_space)),
        validSpaceObjRef(false)
     {
@@ -70,20 +67,9 @@ namespace Sirikata{
         object = proxyobj->getObjectReference().object();
 
         mProxyObject = proxyobj;
-
-        // Use any port for tracker
-        tracker = new QueryTracker(parent->bindODPPort(id()), parent->mContext->ioService);
-        tracker->forwardMessagesTo(&parent->mSendService);
     }
 
-    void PerPresenceData::destroy(QueryTracker *tracker) const
-    {
-        if (tracker) 
-        {
-            tracker->endForwardingMessagesTo(&parent->mSendService);
-            delete tracker;
-        }
-    }
+
 
 }
 

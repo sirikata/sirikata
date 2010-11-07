@@ -23,7 +23,7 @@ private:
 public:
     static std::string serializeObject(v8::Local<v8::Value> v8Val);;
     static bool deserializeObject( std::string strDecode,v8::Local<v8::Object>& deserializeTo);
-    static bool deserializeObject( MemoryReference payload,v8::Local<v8::Object>& deserializeTo);
+    //static bool deserializeObject( MemoryReference payload,v8::Local<v8::Object>& deserializeTo);
     static bool deserializeObject( Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo);
 };
 

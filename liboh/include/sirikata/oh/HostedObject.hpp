@@ -236,10 +236,6 @@ public:
         return mInternalObjectReference;
     }
     
-    /// Returns QueryTracker object that tracks of message ids awaiting reply.
-    QueryTracker* getTracker(const SpaceID& space, const ObjectReference& oref);
-    /// Returns QueryTracker object that tracks of message ids awaiting reply (const edition).
-    const QueryTracker*getTracker(const SpaceID& space, const ObjectReference& oref) const;
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
     virtual ProxyManagerPtr getDefaultProxyManager(const SpaceID& space);

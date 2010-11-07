@@ -59,10 +59,6 @@ public:
     JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan);
     ~JSObjectScript();
 
-    bool forwardMessagesTo(MessageService*);
-    bool endForwardingMessagesTo(MessageService*);
-    bool processRPC(const RoutableMessageHeader &receivedHeader, const std::string &name, MemoryReference args, MemoryBuffer &returnValue);
-    void processMessage(const RoutableMessageHeader& header, MemoryReference body);
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     
     void updateAddressable();
@@ -164,7 +160,7 @@ private:
 
 
 
-    v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
+//    v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
     v8::Local<v8::Object> getMessageSender(const ODP::Endpoint& src);
     
     void flushQueuedHandlerEvents();

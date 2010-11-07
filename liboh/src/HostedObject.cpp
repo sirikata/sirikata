@@ -49,6 +49,7 @@
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/util/KnownMessages.hpp>
+#include <sirikata/core/util/KnownScriptTypes.hpp>
 
 #include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
@@ -61,9 +62,12 @@
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Frame.pbj.hpp"
+#include "Protocol_JSMessage.pbj.hpp"
+#include "Protocol_Sirikata.pbj.hpp"
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
+
 
 #define HO_LOG(lvl,msg) SILOG(ho,lvl,"[HO] " << msg);
 
@@ -155,20 +159,6 @@ Time HostedObject::currentLocalTime() {
 }
 
 
-ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space) {
-    SpaceDataMap::const_iterator it = mSpaceData->find(space);
-    if (it == mSpaceData->end()) {
-        it = mSpaceData->insert(
-            SpaceDataMap::value_type( space, PerSpaceData(this, space) )
-        ).first;
-    }
-    return it->second.proxyManager;
-}
-
-Time HostedObject::currentLocalTime() {
-    return mContext->simTime();
-}
-
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
     SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
@@ -249,7 +239,8 @@ void HostedObject::attachScript(const String& script_name)
   mObjectScript->attachScript(script_name);
 }
 
-void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach) {
+void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach)
+{
     if (mObjectScript) {
         SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
         return;
@@ -320,11 +311,8 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         queryAngle,
-<<<<<<< HEAD
+
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, scriptFile,scriptType,ppd),
-=======
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6),
->>>>>>> origin/master
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1) 
     );
@@ -363,7 +351,6 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
     }
 }
 
-<<<<<<< HEAD
 
 
 
@@ -381,25 +368,6 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 
 void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
-=======
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds) {
-    // FIXME should be using per presence SST layers
-    mSSTDatagramLayers.push_back(
-        BaseDatagramLayerType::createDatagramLayer(
-            SpaceObjectReference(space, obj),
-            mContext, mDelegateODPService
-        )
-    );
-
-    // We have to manually do what mContext->mainStrand->wrap( ... ) should be
-    // doing because it can't handle > 5 arguments.
-    mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds)
-    );
-}
-
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds) {
->>>>>>> origin/master
     if (server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
         return;
@@ -488,51 +456,91 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 }
 
 
+// //returns true if this is a script init message.  returns false otherwise
+// bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
+// {
+//     if (dst.port() != Services::LISTEN_FOR_SCRIPT_BEGIN)
+//         return false;
+
+//     //I don't really know what this segment of code does.  I copied it from processRPC
+//     RoutableMessageBody msg;
+//     RoutableMessageBody outer_msg;
+//     outer_msg.ParseFromArray(bodyData.data(), bodyData.length());
+//     if (outer_msg.has_payload())
+//     {
+//         assert( outer_msg.message_size() == 0 );
+//         msg.ParseFromString(outer_msg.payload());
+//     }
+//     else
+//         msg = outer_msg;
+
+
+//     int numNames = msg.message_size();
+//     if (numNames <= 0)
+//     {
+//         // Invalid message!
+//         //was a poorly formatted message to the listen_for_script_begin port.
+//         //send back a protocol error.
+//         RoutableMessageHeader replyHeader;
+//         replyHeader.set_return_status(RoutableMessageHeader::PROTOCOL_ERROR);
+//         sendViaSpace(replyHeader, MemoryReference::null());
+//         return true;
+//     }
+
+//     //if any of the names match, then we're going to go ahead an create a script
+//     //for it.
+//     for (int i = 0; i < numNames; ++i)
+//     {
+//         std::string name = msg.message_names(i);
+//         MemoryReference body(msg.message_arguments(i));
+        
+//         //means that we are supposed to create a new scripted object
+//         if (name == KnownMessages::INIT_SCRIPT)
+//             processInitScriptMessage(body);
+//     }
+
+//     //it was on the script init port, so it was a scripting init message
+//     return true;
+// }
+
+
+
 //returns true if this is a script init message.  returns false otherwise
 bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
 {
     if (dst.port() != Services::LISTEN_FOR_SCRIPT_BEGIN)
         return false;
 
-    //I don't really know what this segment of code does.  I copied it from processRPC
-    RoutableMessageBody msg;
-    RoutableMessageBody outer_msg;
-    outer_msg.ParseFromArray(bodyData.data(), bodyData.length());
-    if (outer_msg.has_payload())
-    {
-        assert( outer_msg.message_size() == 0 );
-        msg.ParseFromString(outer_msg.payload());
-    }
-    else
-        msg = outer_msg;
+    //I don't really know what this segment of code does.  I copied it from
+    //processRPC
+    Sirikata::JS::Protocol::ScriptingInit sMessage;
 
 
-    int numNames = msg.message_size();
-    if (numNames <= 0)
+    bool parsed = sMessage.ParseFromArray(bodyData.data(),bodyData.size());
+    
+    if (! parsed)
+        return false;
+
+    if (!((sMessage.has_script()) && (sMessage.has_messager())))
     {
-        // Invalid message!
-        //was a poorly formatted message to the listen_for_script_begin port.
-        //send back a protocol error.
-        RoutableMessageHeader replyHeader;
-        replyHeader.set_return_status(RoutableMessageHeader::PROTOCOL_ERROR);
-        sendViaSpace(replyHeader, MemoryReference::null());
-        return true;
+        return false;
     }
 
+    String scriptType = sMessage.script();
+    String messager   = sMessage.messager();
 
-    //if any of the names match, then we're going to go ahead an create a script
-    //for it.
-    for (int i = 0; i < numNames; ++i)
+    if (messager != KnownMessages::INIT_SCRIPT)
+        return false;
+    
+    if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
     {
-        std::string name = msg.message_names(i);
-        MemoryReference body(msg.message_arguments(i));
-        
-        //means that we are supposed to create a new scripted object
-        if (name == KnownMessages::INIT_SCRIPT)
-            processInitScriptMessage(body);
+        mHasScript = true;
+        mScriptType = scriptType;
+
+        ObjectScriptManager::Arguments scriptargs;
+        initializeScript(scriptType,scriptargs,"");
     }
 
-    //it was on the script init port, so it was a scripting init message
     return true;
 }
 
@@ -541,29 +549,30 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 //init script message (from checks in handleScriptInitMessage).  
 //Does some additional checking on the message body, and then sets a few global
 //variables and calls the object's initializeScript function
-void HostedObject::processInitScriptMessage(MemoryReference& body)
-{
-    Protocol::ScriptingInit si;
-    si.ParseFromArray(body.data(),body.size());
+// void HostedObject::processInitScriptMessage(MemoryReference& body)
+// {
+//     Sirikata::JS::Protocol::ScriptingInit si;
+//     //Protocol::ScriptingInit si;
+//     si.ParseFromArray(body.data(),body.size());
     
-    if (si.has_script())
-    {
-        String script_type = si.script();
-        ObjectScriptManager::Arguments script_args;
-        if (si.has_script_args())
-        {
+//     if (si.has_script())
+//     {
+//         String script_type = si.script();
+//         ObjectScriptManager::Arguments script_args;
+//         if (si.has_script_args())
+//         {
             
-            Protocol::StringMapProperty args_map = si.script_args();
-            assert(args_map.keys_size() == args_map.values_size());
-            for (int i = 0; i < args_map.keys_size(); ++i)
-                script_args[ args_map.keys(i) ] = args_map.values(i);
-        }
-        mHasScript = true;
-        mScriptType = script_type;
-        mScriptArgs = script_args;
-        initializeScript(script_type, script_args);
-    }
-}
+//             Protocol::StringMapProperty args_map = si.script_args();
+//             assert(args_map.keys_size() == args_map.values_size());
+//             for (int i = 0; i < args_map.keys_size(); ++i)
+//                 script_args[ args_map.keys(i) ] = args_map.values(i);
+//         }
+//         mHasScript = true;
+//         mScriptType = script_type;
+//         mScriptArgs = script_args;
+//         initializeScript(script_type, script_args);
+//     }
+// }
 
 
 
@@ -606,6 +615,10 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
         SILOG(cppoh,debug,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
         delete msg;
     }
+
+}
+
+
 
 void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
     s->registerReadCallback( std::tr1::bind(&HostedObject::handleLocationSubstreamRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
@@ -846,7 +859,7 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
 // The call to createObject must occur before trying to do any other
 // operations so that any listeners will be set up.
-    proxy_manager->createObject(proxy_obj, getTracker(objref.space(),objref.object()));
+    proxy_manager->createObject(proxy_obj);
     return proxy_obj;
 }
 

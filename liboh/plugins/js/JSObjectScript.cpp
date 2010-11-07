@@ -35,8 +35,8 @@
 
 #include "Protocol_Sirikata.pbj.hpp"
 
-#include <sirikata/core/util/RoutableMessageHeader.hpp>
-#include <sirikata/core/util/RoutableMessageBody.hpp>
+
+
 #include <sirikata/core/util/KnownServices.hpp>
 
 
@@ -220,35 +220,6 @@ JSObjectScript::~JSObjectScript()
     mEventHandlers.clear();
 
     mContext.Dispose();
-}
-
-
-
-bool JSObjectScript::forwardMessagesTo(MessageService*){
-    NOT_IMPLEMENTED(js);
-    return false;
-}
-
-bool JSObjectScript::endForwardingMessagesTo(MessageService*){
-    NOT_IMPLEMENTED(js);
-    return false;
-}
-
-bool JSObjectScript::processRPC(
-    const RoutableMessageHeader &receivedHeader,
-    const std::string& name,
-    MemoryReference args,
-    MemoryBuffer &returnValue)
-{
-    NOT_IMPLEMENTED(js);
-    return false;
-}
-
-void JSObjectScript::processMessage(
-    const RoutableMessageHeader& receivedHeader,
-    MemoryReference body)
-{
-    NOT_IMPLEMENTED(js);
 }
 
 
@@ -465,16 +436,19 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
 {
     // FIXME using the raw pointer isn't safe
     FIXME_GET_SPACE_OREF();
+
+    std::cout<<"\n\nFIXME: need to re-write timeout function in JSObjectScript.\n\n";
+    assert(false);
     
-    mParent->getTracker(space,oref)->getIOService()->post(
-        dur,
-        std::tr1::bind(
-            &JSObjectScript::handleTimeout,
-            this,
-            target,
-            cb
-        )
-    );
+//     mParent->getTracker(space,oref)->getIOService()->post(
+//         dur,
+//         std::tr1::bind(
+//             &JSObjectScript::handleTimeout,
+//             this,
+//             target,
+//             cb
+//         )
+//     );
 }
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
