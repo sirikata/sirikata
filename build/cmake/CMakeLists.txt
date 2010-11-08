@@ -1021,6 +1021,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${TRACE_PBJ_CPP_FILES}
 	${LIBCORE_SOURCE_DIR}/transfer/TransferMediator.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/DiskManager.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
