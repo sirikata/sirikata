@@ -2,6 +2,7 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "JSSerializer.hpp"
 #include <string>
+#include "Protocol_Sirikata.pbj.hpp"
 #include "JSUtil.hpp"
 
 /*

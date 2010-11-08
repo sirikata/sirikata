@@ -33,6 +33,10 @@
 
 #include <sirikata/oh/Platform.hpp>
 
+#include "Protocol_Sirikata.pbj.hpp"
+
+
+
 #include <sirikata/core/util/KnownServices.hpp>
 
 
@@ -86,7 +90,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
     mPres = NULL; //bftm change.
-
+    
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -115,14 +119,14 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         ObjectReference obj_refer = space_it->object();
         mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
 
-
+                
         //FIXME: using deprecated version of receive (that's why we added the 1
         //there).  Change it to the new MessageHandler function when you get a chance.
         if (mScriptingPort)
             mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
 
 
-
+        
         //register port for messaging
         mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
 
@@ -150,32 +154,32 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& m
   //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
   // get the script type
-/*
-  String script_type = "js";
-  Sirikata::Protocol::CreateObject creator;
-  Sirikata::Protocol::IConnectToSpace spacer = creator.add_space_properties();
-  Sirikata::Protocol::IObjLoc loc = spacer.mutable_requested_object_loc();
+  // String script_type = "js";
+  // Sirikata::Protocol::CreateObject creator;
+  // Sirikata::Protocol::IConnectToSpace spacer = creator.add_space_properties();
+  // Sirikata::Protocol::IObjLoc loc = spacer.mutable_requested_object_loc();
 
-  loc.set_position(vec);
-  loc.set_velocity(Vector3f(0,0,0));
-  loc.set_angular_speed(0);
-  loc.set_rotational_axis(Vector3f(1,0,0));
+  // loc.set_position(vec);
+  // loc.set_velocity(Vector3f(0,0,0));
+  // loc.set_angular_speed(0);
+  // loc.set_rotational_axis(Vector3f(1,0,0));
 
-  creator.set_mesh(mesh_name);
-  creator.set_scale(Vector3f(1,1,1));
-  creator.set_script(script_type);
-  creator.set_script_name(script_name);
+  // creator.set_mesh(mesh_name);
+  // creator.set_scale(Vector3f(1,1,1));
+  // creator.set_script(script_type);
+  // creator.set_script_name(script_name);
 
-  std::string serializedCreate;
-  creator.SerializeToString(&serializedCreate);
+  // std::string serializedCreate;
+  // creator.SerializeToString(&serializedCreate);
 
-  FIXME_GET_SPACE_OREF();
+  // FIXME_GET_SPACE_OREF();
 
-  ODP::Endpoint dest (space,oref,Services::CREATE_ENTITY);
-  //mCreateEntityPort->send(dest, MemoryReference(serialized.data(),
-  //serialized.length()));
-  mCreateEntityPort->send(dest, MemoryReference(serializedCreate));
-*/
+  // ODP::Endpoint dest (space,oref,Services::CREATE_ENTITY);
+  // //mCreateEntityPort->send(dest, MemoryReference(serialized.data(),
+  // //serialized.length()));
+  // mCreateEntityPort->send(dest, MemoryReference(serializedCreate));
+
+    assert(false);
 }
 
 
@@ -257,7 +261,7 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
         tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
         tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(mAddressableList[s]));
-
+            
 
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
@@ -316,34 +320,34 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
     TryCatch try_catch;
-
-
+   
+	  
     // Special casing emerson compilation
 
 
     #ifdef __EMERSON_COMPILE_ON__
-
+    
     String em_script_str_new = em_script_str;
 
     if(em_script_str.at(em_script_str.size() -1) != '\n')
     {
-        em_script_str_new.push_back('\n');
+        em_script_str_new.push_back('\n'); 
     }
-
+			 
     emerson_init();
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     cout << " js script = \n" <<js_script_str << "\n";
-
+    
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
-
+    
     // assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
     #endif
 
 
-
+    
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
@@ -375,7 +379,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
 void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferences) const
 {
     allAvailableObjectReferences.clear();
-
+    
     HostedObject::SpaceObjRefSet allSporefs;
     mParent->getSpaceObjRefs(allSporefs);
 
@@ -436,7 +440,7 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
 
     std::cout<<"\n\nFIXME: need to re-write timeout function in JSObjectScript.\n\n";
     assert(false);
-
+    
 //     mParent->getTracker(space,oref)->getIOService()->post(
 //         dur,
 //         std::tr1::bind(
@@ -579,9 +583,9 @@ void JSObjectScript::printAllHandlerLocations()
 
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
-
+    
     SpaceObjectReference* sporef = new SpaceObjectReference(src.space(),src.object());
-
+    
     Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
     tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
     tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sporef));
@@ -597,7 +601,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
 
 
     std::cout<<"\n\nComm: dst space: "<<dst.space()<<"\n\n";
-
+    
     v8::Local<v8::Object> msgSender = getMessageSender(src);
     //try deserialization
 
@@ -605,15 +609,15 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
 
 //bftm:clean all this up later
-
+    
     if (! parsed)
     {
         std::cout<<"\n\nCannot parse the message that I received on this port\n\n";
         assert(false);
     }
-
+    
     bool deserializeWorks = JSSerializer::deserializeObject( js_msg,obj);
-
+    
     if (! deserializeWorks)
         return;
 
@@ -759,7 +763,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
 
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
-
+    
     return returner;
 }
 
@@ -787,7 +791,7 @@ Handle<Object> JSObjectScript::getSystemObject()
   // easier to find the pointer in different calls. Note that in this case we
   // don't use the prototype -- non-global objects work as we would expect.
   Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
-
+  
   Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
   return ret_obj;
 }
@@ -849,9 +853,9 @@ void JSObjectScript::populatePresences(Handle<Object>& system_obj)
         JSPresenceStruct* presToAdd = new JSPresenceStruct;
         presToAdd->jsObjScript = this;
         presToAdd->sporef = new SpaceObjectReference(*it);
-
+        
         mPresenceList.push_back(presToAdd);
-
+        
         tmpObj->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
         arrayObj->Set(v8::Number::New(s),tmpObj);
 
@@ -869,12 +873,12 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
    HandleScope handle_scope;
    //takes care of the addressable array in sys.
-
+   
    system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD, External::New(this));
-
+   
    //FIXME: May need an initialize addressable
    populateAddressable(system_obj);
-
+   
    initializePresences(system_obj);
 
    populateMath(system_obj);
@@ -897,7 +901,7 @@ void JSObjectScript::populateMath(Handle<Object>& system_obj)
 
 void JSObjectScript::attachScript(const String& script_name)
 {
-    import(script_name);
+    import(script_name);  
 }
 
 void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
@@ -917,10 +921,10 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
 
   std::cout<<"\n\nERROR: Must fix create_presence to use new connect interface\n\n";
   assert(false);
-
+  
   //FIXME: will need to add this presence to the presences vector.
   //but only want to do so when the function has succeeded.
-
+  
 }
 
 
@@ -1021,7 +1025,7 @@ v8::Handle<v8::Value> JSObjectScript::getVisualFunction(const SpaceObjectReferen
 
     if (! hasMesh)
         return v8::Undefined();
-
+    
     std::string string_returner = uri_returner.toString();
     return v8::String::New(string_returner.c_str(), string_returner.size());
 }
