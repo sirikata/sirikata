@@ -1109,10 +1109,10 @@ Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& 
 //BFTM_FIXME: need to actually write this function (called by ObjectHost's updateAddressable).
 void HostedObject::updateAddressable()
 {
-    std::cout<<"\n\n\n";
-    std::cout<<"BFTM: need to actually write this function";
-    std::cout<<"\n\n\n";
-    assert(false);
+    if(mObjectScript)
+    {
+        mObjectScript->updateAddressable();
+    }
 }
 
 

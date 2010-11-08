@@ -60,8 +60,8 @@ public:
     virtual ~JSObjectScript();
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    virtual void updateAddressable();
 
-    void updateAddressable();
 
     virtual void attachScript(const String&);
 
@@ -82,10 +82,6 @@ public:
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
 
-    // virtual void attachScript(const String& filename)
-    // {
-    //     import(filename);
-    // }
 
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
