@@ -133,6 +133,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     void quit();
 
     bool mQuitRequested;
+    bool mQuitRequestHandled;
 
     bool mSuspended;
 

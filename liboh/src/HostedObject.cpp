@@ -32,7 +32,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
 #include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
@@ -311,7 +310,8 @@ void HostedObject::connect(
         mesh,
         queryAngle,
 
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, scriptFile,scriptType,ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, _7, scriptFile,scriptType,ppd),
+
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1) 
     );
@@ -351,11 +351,7 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
 }
 
 
-
-
-
-
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -368,12 +364,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds,scriptFile,scriptType, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds,mesh,scriptFile,scriptType, ppd)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
     if (server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
@@ -402,7 +398,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, URI(), mIsCamera, local_loc, local_orient, bnds);
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, URI(mesh), mIsCamera, local_loc, local_orient, bnds);
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
