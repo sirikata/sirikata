@@ -715,7 +715,6 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
-    std::cout<<"\n\n\n**********GOT INTO ON CREATE PROXY\n\n\n";
     
     bool created = false;
     {
@@ -739,7 +738,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
         } else if (meshpxy) {
             MeshEntity *mesh=new MeshEntity(this,meshpxy);
             created = true;
-            std::cout<<"\n\n************GOT INTO add new object\n\n";
             dlPlanner->addNewObject(p, mesh);
         }
     }
@@ -992,7 +990,6 @@ void OgreSystem::screenshot(const String& filename) {
 // ConnectionEventListener Interface
 void OgreSystem::onConnected(const Network::Address& addr)
 {
-    std::cout<<"\n\nOgre got an onconected event\n\n";
 }
 
 void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, const String& reason) {
