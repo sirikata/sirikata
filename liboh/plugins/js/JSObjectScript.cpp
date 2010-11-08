@@ -33,10 +33,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 
-#include "Protocol_Sirikata.pbj.hpp"
-
-
-
 #include <sirikata/core/util/KnownServices.hpp>
 
 
