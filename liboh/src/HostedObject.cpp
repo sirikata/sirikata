@@ -1115,5 +1115,75 @@ void HostedObject::updateAddressable()
     }
 }
 
+void HostedObject::EntityState::persistToFile(std::ofstream& fp)
+{
+   /* We need to persist the things that are not part of the state. Like the meta state definitions. so,we are writing this file over and over again */
+
+   fp << "\"" << objType << "\"" << "," << "\"" << subType << "\"" << "," << "\"" << name << "\"" << ",";
+   /* Persist each field separated by a comma */
+   /* persist the position  */
+
+	 fp << pos.x << "," << pos.y << "," << pos.z << ",";
+
+
+	 /* persist the quaternion.. How do it do it? I don't have x,y,z,w */
+	 fp << orient.x << "," << orient.y << "," << orient.z << "," << orient.w << "," ;
+
+	 /* persist the velocity */
+	 
+	 fp << vel.x << "," << vel.y << "," << vel.z << "," ;
+
+	 /* persist the rotation */
+
+	 fp << rot.x << "," << rot.y << "," << rot.z << ",";
+
+	 /* persist the angular speed*/
+
+	 fp << angular_speed << ",";
+
+	 /*  persist the mesh url*/
+
+	 fp << "\"" << mesh << "\""  << "," ;
+
+	 /* persist the scale */
+
+	 fp << scale << std::endl;
+}
+
+
+HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space)
+{
+  HostedObject::EntityState* es = new HostedObject::EntityState();
+	ProxyObjectPtr poptr = getProxy(space);
+  Location loc = getLocation(space);
+  es->objType = "mesh";
+	es->subType = "graphiconly";
+  
+	// FIXME : HostedObject does not take the name of the entity into account right now after reading from the scene file.
+	es->name = "unknown";
+	es->pos = loc.getPosition();
+	es->orient = loc.getOrientation();
+  es->vel = loc.getVelocity();
+  es->rot = loc.getAxisOfRotation();	
+	es->angular_speed = loc.getAngularSpeed(); 
+  
+	ProxyMeshObjectPtr proxyMeshObject = (std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (poptr));
+	
+	if(proxyMeshObject)
+	{
+	  cout << "\n\n Setting the mesh object here\n\n";
+	  es->mesh = proxyMeshObject->getMesh().toString();    
+	}
+
+
+	/* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
+	es->scale = poptr->getBounds().radius(); 
+
+	return es;
+}
+
+
+
+
 
 }
