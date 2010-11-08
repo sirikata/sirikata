@@ -50,7 +50,7 @@ class MonoVWObjectScript : public ObjectScript{
     Mono::ThreadSafeSingleMethodLookupCache mProcessMessageCache;
 public:
     MonoVWObjectScript(Mono::MonoSystem*, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args);
-    ~MonoVWObjectScript();
+    virtual ~MonoVWObjectScript();
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.

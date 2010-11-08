@@ -57,10 +57,10 @@ public:
     //args, v8::Persistent<v8::ObjectTemplate>& global_template,
     //v8::Persistent<v8::ObjectTemplate>& oref_template);
     JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan);
-    ~JSObjectScript();
+    virtual ~JSObjectScript();
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-    
+
     void updateAddressable();
 
     virtual void attachScript(const String&);
@@ -77,7 +77,7 @@ public:
     void sendMessageToEntity(SpaceObjectReference* reffer, const std::string& msgBody) const;
     void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
     int  getAddressableSize();
-    
+
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -86,10 +86,10 @@ public:
     // {
     //     import(filename);
     // }
-    
+
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
-    
+
     /** reboot the state of the script, basically reset the state */
     void reboot();
 
@@ -100,8 +100,8 @@ public:
     //void create_presence(const SpaceID&);
     void create_presence(const SpaceID& new_space,std::string new_mesh);
     void create_presence(const SpaceID& new_space);
-    
-    
+
+
     v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
     void  setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
 
@@ -113,14 +113,14 @@ public:
 
     void  setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
     v8::Handle<v8::Value> getOrientationFunction(const SpaceObjectReference* sporef);
-    
+
     v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
     void setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newvis);
 
     v8::Handle<v8::Value> getOrientationVelFunction(const SpaceObjectReference* sporef);
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
 
-    
+
     v8::Handle<v8::Value> getAxisOfRotation();
     void setAxisOfRotation(v8::Local<v8::Value>& newval);
     v8::Handle<v8::Value> getAngularSpeed();
@@ -134,7 +134,7 @@ public:
     JSEventHandler* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
 
-    void deleteHandler(JSEventHandler* toDelete);    
+    void deleteHandler(JSEventHandler* toDelete);
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
@@ -142,15 +142,15 @@ public:
 
     v8::Handle<v8::Value> getVelocity(SpaceID&);
     void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
-    
+
 private:
     typedef std::vector<SpaceObjectReference*> AddressableList;
     AddressableList mAddressableList;
-    
+
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-    
+
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
 
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
@@ -162,17 +162,17 @@ private:
 
 //    v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
     v8::Local<v8::Object> getMessageSender(const ODP::Endpoint& src);
-    
+
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
     JSEventHandlerList mQueuedHandlerEventsDelete;
     void removeHandler(JSEventHandler* toRemove);
 
-    
+
     HostedObjectPtr mParent;
     v8::Persistent<v8::Context> mContext;
-    
+
 
     Handle<Object> getSystemObject();
     Handle<Object> getGlobalObject();
@@ -182,8 +182,8 @@ private:
     void populatePresences(Handle<Object>& system_obj );
     void populateSystemObject(Handle<Object>& system_obj );
     void populateMath(Handle<Object>& system_obj);
-    
-    
+
+
     void initializePresences(Handle<Object>& system_obj);
     void clearAllPresences(Handle<Object>& system_obj);
 
@@ -191,14 +191,14 @@ private:
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
 
-    
+
     JSObjectScriptManager* mManager;
 
     typedef std::vector<JSPresenceStruct*> PresenceList;
     PresenceList mPresenceList;
 
     JSPresenceStruct* mPres;
-    
+
 };
 
 } // namespace JS
