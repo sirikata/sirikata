@@ -174,6 +174,7 @@ void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const
             it->listener->localObjectRemoved(uuid, agg);
 }
 
+
 void LocationService::notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
@@ -191,6 +192,7 @@ void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, bool agg, const
         if (!agg || it->wantAggregates)
             it->listener->localBoundsUpdated(uuid, agg, newval);
 }
+
 
 void LocationService::notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
@@ -210,6 +212,7 @@ void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
 }
 
 void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+    std::cout<<"\n\nInside of notifyreplicalocationupdated\n";
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         it->listener->replicaLocationUpdated(uuid, newval);
 }

@@ -60,7 +60,9 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
+
 class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
+
     ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
 
@@ -85,6 +87,9 @@ public:
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
+    //FIXME: this call will have to go away sooner or later.
+    SpaceID getDefaultSpace();
+    
     /** Caller is responsible for starting a thread
      *
      * @param spaceIDMap space ID map used to resolve space IDs to servers
@@ -128,6 +133,7 @@ public:
     bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
 
 
+
     /** Register object by private UUID, so that it is possible to
         talk to objects/services which are not part of any space.
         Done automatically by HostedObject::initialize* functions.
@@ -147,12 +153,20 @@ public:
     /// Returns the SpaceID -> Network::Address lookup map.
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
 
+
     virtual void start();
     virtual void stop();
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
     /// DEPRECATED
     ProxyManager *getProxyManager(const SpaceID&space) const;
+
+
+    void updateAddressable() const;
+
+    
+    /** Attach and run this script after the entity is initialized */
+    void attachScript(String&) const;
 
 
   private:
@@ -164,6 +178,7 @@ public:
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;
+
 }; // class ObjectHost
 
 } // namespace Sirikata

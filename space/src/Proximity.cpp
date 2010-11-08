@@ -170,8 +170,6 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
 
-
-
     // Start the processing thread
     mProxThread = new Thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
@@ -397,8 +395,6 @@ void Proximity::invokeAggregateEventHandler() {
 }
 
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
-
-
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
 
     mAggregateEventHandlers.push(
@@ -418,7 +414,8 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
     mAggregateManager->addAggregate(objid);
 }
 
-  void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+
+void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
 
   if (mLocService->contains(objid)) {
     mLocService->updateLocalAggregateLocation(
@@ -725,8 +722,6 @@ void Proximity::poll() {
         sendObjectResult(msg_front);
         mObjectResultsToSend.pop_front();
     }
-
-
 }
 
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
@@ -927,6 +922,7 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                 UUID objid = evt.additions()[aidx].id();
                 if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
+
                     mContext->mainStrand->post(
                         std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
                     );

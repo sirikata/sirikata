@@ -31,6 +31,11 @@
  */
 
 #include "CSVObjectFactory.hpp"
+#include <list>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <vector>
+
 
 namespace Sirikata {
 
@@ -56,7 +61,9 @@ T safeLexicalCast(const String& orig) {
     return safeLexicalCast<T>(orig, (T)0);
 }
 
-void CSVObjectFactory::generate() {
+void CSVObjectFactory::generate()
+{
+    int count;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
@@ -70,16 +77,20 @@ void CSVObjectFactory::generate() {
     int mesh_idx = -1;
 
     int quat_vel_idx = -1;
-
+    int script_file_idx = -1;
     int scale_idx = -1;
 
-    int count = 0;
-
     // For each line
-    while(fp && count < mMaxObjects) {
+    while(fp && (count < mMaxObjects))
+    {
         String line;
         std::getline(fp, line);
-
+        // First char is # and not the first non whitespace char
+	// then this is a comment
+        if(line.length() > 0 && line.at(0) == '#')
+       {
+         continue;   
+       } 
         // Split into parts
         StringList line_parts;
         int last_comma = -1;
@@ -112,13 +123,16 @@ void CSVObjectFactory::generate() {
                 if (line_parts[idx] == "vel_x") vel_idx = idx;
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
+                if (line_parts[idx] == "script_file") script_file_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
             }
 
             is_first = false;
         }
         else {
-            assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
+            //note: script_file is not required, so not checking it witht he assert
+            assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
+            //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {
                 Vector3d pos(
@@ -161,10 +175,22 @@ void CSVObjectFactory::generate() {
 
                 String mesh( line_parts[mesh_idx] );
 
+                String scriptFile = "";
+                String scriptType = "";
+                if(script_file_idx != -1)
+                {
+                    if(script_file_idx < (int)line_parts.size())
+                    {
+                        scriptFile = line_parts[script_file_idx];
+                        scriptType = line_parts[script_file_idx + 1];
+                    }
+                }
+
                 float scale =
                     scale_idx == -1 ?
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
+
 
                 HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
                 obj->init();
@@ -174,9 +200,13 @@ void CSVObjectFactory::generate() {
                 oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
+                oci.scriptType = scriptType;
+                oci.scriptFile = scriptFile;
                 mIncompleteObjects.push(oci);
 
                 count++;
+
+
             }
         }
     }
@@ -188,17 +218,22 @@ void CSVObjectFactory::generate() {
     return;
 }
 
-void CSVObjectFactory::connectObjects() {
+
+void CSVObjectFactory::connectObjects()
+{
     if (mContext->stopped())
         return;
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();
         mIncompleteObjects.pop();
+
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
-            UUID::null()
+            UUID::null(), NULL,
+            oci.scriptFile,
+            oci.scriptType
         );
     }
 

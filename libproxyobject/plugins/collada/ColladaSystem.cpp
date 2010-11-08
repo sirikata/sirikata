@@ -121,8 +121,6 @@ MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Finger
       Transfer::DenseDataPtr flatData = data_reflatten.flatten();
 
       char const* buffer = reinterpret_cast<char const*>(flatData->begin());
-
-
       loader.load(buffer, flatData->length());
 
 

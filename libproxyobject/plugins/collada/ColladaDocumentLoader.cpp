@@ -70,8 +70,6 @@ ColladaDocumentLoader::~ColladaDocumentLoader ()
 
 bool ColladaDocumentLoader::load ( char const* buffer, size_t bufferLength )
 {
-
-
     bool ok = mFramework->loadDocument ( mDocumentImporter->documentURI(), buffer, bufferLength );
 
     return ok;

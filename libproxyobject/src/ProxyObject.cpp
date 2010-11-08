@@ -50,6 +50,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
     mDefaultPort = mParent->bindODPPort(owner_sor);
 }
 
+
 ProxyObject::~ProxyObject() {
     delete mDefaultPort;
 }
@@ -58,6 +59,14 @@ void ProxyObject::destroy() {
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
+
+
+
+bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference message) const {
+    ODP::Endpoint dest(mID.space(), mID.object(), dest_port);
+    return mDefaultPort->send(dest, message);
+}
+
 
 bool ProxyObject::UpdateNeeded::operator() (
     const Location&updatedValue,
@@ -72,6 +81,7 @@ bool ProxyObject::UpdateNeeded::operator() (
 bool ProxyObject::isStatic() const {
     return mLoc.velocity() == Vector3f::nil() && mOrientation.velocity() == Quaternion::identity();
 }
+
 
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
     mLoc = reqloc;

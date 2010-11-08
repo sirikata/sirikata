@@ -198,6 +198,7 @@ private:
 
     /** Time Sync related utilities **/
 
+
     // ODP::DelegateService dependencies
     ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
@@ -331,6 +332,7 @@ private:
 
     void spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference obj);
     std::map<ObjectReference, SSTStreamPtr> mObjectToSpaceStreams;
+
 }; // class SessionManager
 
 } // namespace Sirikata

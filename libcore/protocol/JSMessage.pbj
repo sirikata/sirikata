@@ -1,0 +1,59 @@
+
+"pbj-0.0.3"
+
+package Sirikata.JS.Protocol;
+
+
+
+
+message StringMapProperty {
+    repeated string keys=2;
+    repeated string values=3;
+}
+
+
+message ScriptingInit {
+    optional string script = 1;
+    optional string messager = 2;
+}
+
+
+
+message JSFieldValue
+{
+	optional string s_value = 1;
+	optional int32 i_value = 2;
+
+}
+
+message JSField
+{
+	// every field in the original message can have three
+	// attributes: 1. name 2. value 3. prototype( or type)
+	// name is required while other two are optional
+
+	required string name = 1;
+	optional JSFieldValue value = 2; // could be a blank value
+	optional string prototype = 3;
+
+}
+message JSMessage
+{
+	repeated JSField fields = 1;
+}
+
+
+message ScriptingRequest {
+    optional uint32 id = 1;
+    optional string body = 2;
+}
+
+message ScriptingReply {
+    optional uint32 id = 1;
+    optional string body = 2;
+}
+
+message ScriptingMessage {
+    repeated ScriptingRequest requests = 1;
+    repeated ScriptingReply replies = 2;
+}

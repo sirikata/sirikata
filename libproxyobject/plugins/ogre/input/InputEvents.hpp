@@ -494,6 +494,7 @@ public:
         return Task::IdPair(getEventId(), IdPair::Secondary::null());
     }
 
+    Graphics::WebView* wv;
     String webview;
     String name;
     std::vector<String> args; // The pointer here is annoying, but necessary to avoid having to include the defintion here, which in turn causes circular includes

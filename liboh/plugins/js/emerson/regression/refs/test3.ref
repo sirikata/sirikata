@@ -1,0 +1,67 @@
+Trying to compile 
+ 
+
+var minDist = 6;
+var howFastToEvadeConst = 3;
+var evading = 0;
+var howLongToFlee = 2;
+var orientationCallbackResolution = .2; //will blend quaternions every .2 seconds
+var blendQuaternion_factor = .7; //how much of goal quaternion vs how much of current orientation. (high is more of goal).
+
+var runOrientationCallback = true;
+//var runOrientationCallback = false;
+
+var runDartingAboutCallback = true;
+var scaleRandomness = 3.0;
+
+var realCenter= new system.Vec3(0,0,-12);
+var maxRadiusFromCenter = 3;
+var dartingAboutCallbackPeriod = 1; //how long to go before calling darting about callback
+var minVelocitySquared = 1.0;
+var constBirdVelocity = .7;
+
+ var returner = system.sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ);
+
+
+
+// array declaration
+
+var z =  [
+    [(qWqW + qXqX - qYqY - qZqZ) / d,
+     2 * (qWqZ + qXqY) / d,
+     2 * (qXqZ - qWqY) / d, 0],
+    [2 * (qXqY - qWqZ) / d,
+     (qWqW - qXqX + qYqY - qZqZ) / d,
+     2 * (qWqX + qYqZ) / d, 0],
+    [2 * (qWqY + qXqZ) / d,
+     2 * (qYqZ - qWqX) / d,
+     (qWqW - qXqX - qYqY + qZqZ) / d, 0],
+    [0, 0, 0, 1]];
+
+
+var z = { field1:2, field2:"field2"};
+
+
+
+
+Emerson Tree after parsing 
+(PROG (VARLIST (VAR minDist (COND_EXPR (POSTEXPR 6)))) (VARLIST (VAR howFastToEvadeConst (COND_EXPR (POSTEXPR 3)))) (VARLIST (VAR evading (COND_EXPR (POSTEXPR 0)))) (VARLIST (VAR howLongToFlee (COND_EXPR (POSTEXPR 2)))) (VARLIST (VAR orientationCallbackResolution (COND_EXPR (POSTEXPR .2)))) (VARLIST (VAR blendQuaternion_factor (COND_EXPR (POSTEXPR .7)))) (VARLIST (VAR runOrientationCallback (COND_EXPR (POSTEXPR true)))) (VARLIST (VAR runDartingAboutCallback (COND_EXPR (POSTEXPR true)))) (VARLIST (VAR scaleRandomness (COND_EXPR (POSTEXPR 3.0)))) (VARLIST (VAR realCenter (COND_EXPR (POSTEXPR (NEW (DOT system Vec3) (ARGLIST (COND_EXPR (POSTEXPR 0)) (COND_EXPR (POSTEXPR 0)) (COND_EXPR (UNARY_MINUS (POSTEXPR 12))))))))) (VARLIST (VAR maxRadiusFromCenter (COND_EXPR (POSTEXPR 3)))) (VARLIST (VAR dartingAboutCallbackPeriod (COND_EXPR (POSTEXPR 1)))) (VARLIST (VAR minVelocitySquared (COND_EXPR (POSTEXPR 1.0)))) (VARLIST (VAR constBirdVelocity (COND_EXPR (POSTEXPR .7)))) (VARLIST (VAR returner (COND_EXPR (POSTEXPR (CALL (DOT system sqrt) (ARGLIST (COND_EXPR (ADD (ADD (MULT (POSTEXPR diffX) (POSTEXPR diffX)) (MULT (POSTEXPR diffY) (POSTEXPR diffY))) (MULT (POSTEXPR diffZ) (POSTEXPR diffZ)))))))))) (VARLIST (VAR z (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (DIV (POSTEXPR (EXPR_LIST (COND_EXPR (SUB (SUB (ADD (POSTEXPR qWqW) (POSTEXPR qXqX)) (POSTEXPR qYqY)) (POSTEXPR qZqZ))))) (POSTEXPR d))) (COND_EXPR (POSTEXPR 0))))) (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 0)) (COND_EXPR (POSTEXPR 1)))))))))) (VARLIST (VAR z (COND_EXPR (POSTEXPR (OBJ_LITERAL (NAME_VALUE field1 (COND_EXPR (POSTEXPR 2))) (NAME_VALUE field2 (COND_EXPR (POSTEXPR "field2")))))))))
+The generated code is 
+ var minDist = 6;
+var howFastToEvadeConst = 3;
+var evading = 0;
+var howLongToFlee = 2;
+var orientationCallbackResolution = .2;
+var blendQuaternion_factor = .7;
+var runOrientationCallback = true;
+var runDartingAboutCallback = true;
+var scaleRandomness = 3.0;
+var realCenter = new system.Vec3 ( 00-12 ) ;
+var maxRadiusFromCenter = 3;
+var dartingAboutCallbackPeriod = 1;
+var minVelocitySquared = 1.0;
+var constBirdVelocity = .7;
+var returner = system.sqrt ( diffX * diffX + diffY * diffY + diffZ * diffZ ) ;
+var z = [ [ qWqW + qXqX - qYqY - qZqZ / d0 ] [ 01 ]  ] ;
+var z = { field1 : 2, field2 : "field2" } ;
+ 

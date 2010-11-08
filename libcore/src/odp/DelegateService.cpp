@@ -104,10 +104,13 @@ void DelegateService::registerDefaultODPHandler(const MessageHandler& cb) {
 
 bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryReference data) const {
     // Check from most to least specific
+
     PortMap const* pm = getPortMap(dst.spaceObject());
     if (pm != NULL) {
         PortMap::const_iterator it = pm->find(dst.port());
-        if (it != pm->end()) {
+        
+        if (it != pm->end())
+        {
             DelegatePort* port = it->second;
             bool delivered = port->deliver(src, dst, data);
             if (delivered)

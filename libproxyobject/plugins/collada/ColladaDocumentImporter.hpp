@@ -80,6 +80,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         ColladaDocumentPtr getDocument () const;
 
+
         String documentURI() const;
 
         std::tr1::shared_ptr<Meshdata> getMeshdata() {

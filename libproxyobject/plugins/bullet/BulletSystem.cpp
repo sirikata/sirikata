@@ -425,7 +425,9 @@ void BulletObj::requestLocation(TemporalValue<Location>::Time timeStamp, const P
 //        mBulletBodyPtr->setAngularVelocity(btangvel);
         mDesiredAngularVelocity = btangvel;}
 }
+
 */
+
 void BulletSystem::addPhysicalObject(BulletObj* obj,
                                      positionOrientation po,
                                      float density, float friction, float bounce, Vector3f hull,

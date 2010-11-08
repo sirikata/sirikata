@@ -323,6 +323,7 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
+
   BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
@@ -454,7 +455,6 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
           cleanup(thus);
-
         }else {
             SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -515,7 +515,6 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
           cleanup(thus);
-
         }else {
             SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -719,7 +718,6 @@ private:
         pushedIntoQueue = true;
 
         if (inSendingMode) {
-
           getContext()->mainStrand->post(Duration::milliseconds(1.0),
                                          std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()) );
         }
@@ -1030,6 +1028,7 @@ private:
     conn->mDatagramLayer->unlisten(conn->mLocalEndPoint);
 
     int connState = conn->mState;
+
     if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
       //Deal with the connection not getting connected with the remote endpoint.
       //This is in contrast to the case where the connection got connected, but
@@ -1041,12 +1040,14 @@ private:
         cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
       }
 
+
       std::tr1::shared_ptr<Connection>  failed_conn = conn;
 
       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
       sConnectionMap.erase(conn->localEndPoint());
 
       lock.unlock();
+
 
       if (connState == CONNECTION_PENDING_CONNECT && cb ) {
         cb(SST_IMPL_FAILURE, failed_conn);
@@ -1470,6 +1471,7 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
+
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
@@ -1495,6 +1497,7 @@ public:
 
 	count++;
       }
+
 
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
@@ -1574,6 +1577,7 @@ public:
     if (force) {
       mConnected = false;
       mState = DISCONNECTED;
+
 
       std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       if (conn)
@@ -1774,7 +1778,9 @@ private:
      unable to connect. In that case, the connection for this stream needs to
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
+
   bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+
     const Time curTime = Timer::now();
 
     if (mState != CONNECTED && mState != DISCONNECTED) {
@@ -1908,12 +1914,11 @@ private:
        }
      }
 
+
     std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
     if (conn)
       getContext()->mainStrand->post(Duration::seconds(0.01),
         std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
-
-
 
     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
       std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
@@ -2120,6 +2125,7 @@ private:
 
     std::string buffer = serializePBJMessage(sstMsg);
 
+
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
 
     if (!conn) return;
@@ -2127,7 +2133,9 @@ private:
     conn->sendData( buffer.data(), buffer.size(), false );
 
     getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
+
         std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+
   }
 
   void sendAckPacket() {
@@ -2247,6 +2255,7 @@ private:
   uint16 mInitialDataLength;
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
+
 
   std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
 };

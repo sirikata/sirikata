@@ -37,6 +37,10 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/Factory.hpp>
 #include <sirikata/core/util/SpaceID.hpp>
+#include <vector>
+#include <list>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+
 
 namespace Sirikata {
 

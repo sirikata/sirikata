@@ -35,6 +35,8 @@
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <vector>
+
 
 namespace Sirikata {
 
@@ -79,5 +81,29 @@ ProxyObjectPtr ObjectHostProxyManager::getProxyObject(const SpaceObjectReference
 
     return ProxyObjectPtr();
 }
+
+
+
+//runs through all object references held by this particular object host proxy
+//manager and returns them in vecotr form.
+void ObjectHostProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const
+{
+    ProxyMap::const_iterator iter;
+    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
+        allObjReferences.push_back(SpaceObjectReference(mSpaceID,iter->first));
+}
+
+void ObjectHostProxyManager::getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const
+{
+    ProxyMap::const_iterator iter;
+    for (iter = mProxyMap.begin(); iter != mProxyMap.end(); ++iter)
+    {
+        //ObjectReference tmp = iter->first;
+        SpaceObjectReference* toPush = new SpaceObjectReference(mSpaceID, iter->first);
+        //allObjReferences.push_back(iter->first);
+        allObjReferences.push_back(toPush);
+    }
+}
+
 
 }

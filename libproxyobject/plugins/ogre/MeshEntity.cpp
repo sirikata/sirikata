@@ -217,7 +217,8 @@ void MeshEntity::unbindTexture(const std::string &textureName) {
 
 void MeshEntity::loadMesh(const String& meshname)
 {
-    Ogre::Entity * oldMeshObj=getOgreEntity();
+    unloadMesh();
+
     mReplacedMaterials.clear();
 
     /** FIXME we need a better way of generating unique id's. We should
@@ -237,6 +238,7 @@ void MeshEntity::loadMesh(const String& meshname)
       }
     } catch (...) {
         SILOG(ogre,error,"Failed to load mesh "<<getProxy().getMesh()<< " (id "<<id()<<")!");
+
         return;
         //new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
         /*
@@ -271,9 +273,6 @@ void MeshEntity::loadMesh(const String& meshname)
     }
 
     init(new_entity);
-    if (oldMeshObj) {
-        getScene()->getSceneManager()->destroyEntity(oldMeshObj);
-    }
     fixTextures();
     if (mActiveCDNArchive) {
         CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
@@ -327,8 +326,6 @@ void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
 
 void MeshEntity::processMesh(URI const& meshFile)
 {
-
-
     Ogre::Entity * meshObj=getOgreEntity();
 
     if (meshObj && meshFile.filename() == "" ) {
@@ -812,7 +809,7 @@ public:
                             //assert( i*stride < submesh.texUVs[tc].uvs.size() );
                             // but so many models seem to get this
                             // wrong that we need to hack around it.
-                            if ( i*stride < submesh.texUVs[tc].uvs.size() )
+                            if ( i*stride < (int)submesh.texUVs[tc].uvs.size() )
                                 memcpy(pData,&submesh.texUVs[tc].uvs[i*stride],sizeof(float)*stride);
                             else { // The hack: just zero out the data
                                 warn_texcoords = true;
@@ -895,10 +892,13 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, D
     else {
         // Otherwise, follow the rest of the normal process.
         MeshdataPtr mesh_data = mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response);
-        if (!mesh_data) {
+        if (!mesh_data)
+        {
             SILOG(ogre,error,"Failed to parse mesh " << mURI.toString() << " --> " << request->getMetadata().getFingerprint().toString());
             return true;
         }
+        
+
         handleMeshParsed(mesh_data);
     }
     return true;

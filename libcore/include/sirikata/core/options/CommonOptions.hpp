@@ -51,6 +51,7 @@ namespace Sirikata {
 SIRIKATA_FUNCTION_EXPORT void InitOptions();
 SIRIKATA_FUNCTION_EXPORT void ParseOptions(int argc, char** argv);
 SIRIKATA_FUNCTION_EXPORT void ParseOptionsFile(const String& fname, bool required=true);
+
 // Parses empty options to get options properly initialized
 SIRIKATA_FUNCTION_EXPORT void FakeParseOptions();
 

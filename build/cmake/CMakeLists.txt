@@ -357,6 +357,19 @@ IF(MONO_FOUND)
   FIND_PACKAGE(Cecil)
 ENDIF(MONO_FOUND)
 
+# V8 for JS plugin
+IF(NOT V8_ROOT)
+  IF(WIN32)
+    SET(V8_ROOT ${PLATFORM_LIBS}/v8)
+    # TODO: Add path to some prebuilt version of V8 for Win32
+  ELSEIF(APPLE)
+    SET(V8_ROOT ${PLATFORM_LIBS}/installed-v8)
+  ELSE()
+    SET(V8_ROOT ${PLATFORM_LIBS}/installed-v8)
+  ENDIF()
+ENDIF()
+FIND_PACKAGE(V8)
+
 #dependency: protocolbuffers
 IF(EXISTS ${PLATFORM_LIBS}/installed-protobufs/bin)
   SET(PROTOCOLBUFFERS_ROOT ${PLATFORM_LIBS}/installed-protobufs)
@@ -682,6 +695,7 @@ SET(PINTO_SOURCE_DIR ${TOP_LEVEL}/pinto/src)
 SET(CDN_NAMESERVER_SOURCE_DIR ${TOP_LEVEL}/cdn/src/nameserver)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
+SET(EMERSON_SOURCE_DIR ${TOP_LEVEL}/liboh/plugins/js/emerson)
 SET(STREAM_ECHO_SOURCE_DIR ${TOP_LEVEL}/tools/stream_echo)
 SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
@@ -738,6 +752,9 @@ ENDIF()
 IF(bullet_FOUND)
   SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${bullet_INCLUDE_DIRS})
 ENDIF()
+IF(V8_FOUND)
+  SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${V8_INCLUDE_DIRS})
+ENDIF()
 
 
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${TOP_LEVEL}/externals/pbj/)
@@ -792,7 +809,7 @@ SET(ProtocolBuffersSourcesInternal
   # Additional internal stuff
   ${ProtocolBuffersRoot}/Persistence
   ${ProtocolBuffersRoot}/Test
-
+  ${ProtocolBuffersRoot}/JSMessage
   ${ProtocolBuffersRoot}/ServerProx
   ${ProtocolBuffersRoot}/MasterPinto
   ${ProtocolBuffersRoot}/CSeg
@@ -892,6 +909,19 @@ ADD_PBJ_TARGET(
 # Aggregate core and full pbj files
 SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
 
+
+#IF(V8_FOUND)
+  SET(JS_ProtocolBuffersSources JSMessage)
+  ADD_PBJ_TARGET(${JS_ProtocolBuffersSources}
+    INPUTDIR ${ProtocolBuffersRoot}
+    PLUGINNAME "JS"
+    IMPORTS ${ProtocolBuffersRoot}
+    OUTPUTDIR ${SirikataProtocolDirectory}
+    GENERATED_CPP_FILES JS_PBJ_CPP_FILES
+    CPP_HEADER ${PROTOCOLBUFFERS_CPP_HEADER}
+    ${PROTOCOLBUFFERS_GENS}
+    )
+#ENDIF(V8_FOUND)
 
 # For scripting
 SET(ScriptingProtocolBuffersSources
@@ -1174,6 +1204,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHostProxyManager.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectScriptManagerFactory.cpp
                   ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
+                  ${LIBOH_SOURCE_DIR}/PerPresenceData.cpp
                   ${LIBOH_SOURCE_DIR}/Trace.cpp
                    )
 
@@ -1423,9 +1454,25 @@ SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/main.cpp
   )
 
+
+SET(EMERSON_SOURCES
+  ${EMERSON_SOURCE_DIR}/EmersonLexer.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonTree.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp
+		${EMERSON_SOURCE_DIR}/main.cpp
+  )
+
+SET(JSCOMPILE_SOURCES
+   ${EMERSON_SOURCE_DIR}/jsutil/JSCompile.cpp
+   )
+
+
+
 SET(CDN_NAMESERVER_SOURCES
   ${CDN_NAMESERVER_SOURCE_DIR}/main.cpp
   )
+
 
 SET(ANALYSIS_SOURCES
   ${ANALYSIS_SOURCE_DIR}/Analysis.cpp
@@ -1783,6 +1830,39 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
 ENDIF()
 
 
+SET(LIBOH_PLUGIN_JS_DIR ${LIBOH_PLUGIN_DIR}/js)
+SET(LIBOH_PLUGIN_JS_SOURCES
+  ${JS_PBJ_CPP_FILES}
+  ${LIBOH_PLUGIN_JS_DIR}/JSPlugin.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectScriptManager.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectScript.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSUtil.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVec3.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSMath.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
+  ${EMERSON_SOURCES}
+  )
+IF(V8_FOUND)
+ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
+ADD_PLUGIN_TARGET(scripting-js
+                    SOURCES ${LIBOH_PLUGIN_JS_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS} ${BERKELIUM_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}  
+                    TARGET_CXXFLAGS  ${BERKELIUM_CFLAGS}
+                    LIBRARIES ${V8_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} ${ANTLR_LIBRARIES}
+                    )
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} scripting-js)
+ENDIF()
+
+
 SET(LIBOH_PLUGIN_CSVFACTORY_DIR ${LIBOH_PLUGIN_DIR}/csvfactory)
 SET(LIBOH_PLUGIN_CSVFACTORY_SOURCES
  ${LIBOH_PLUGIN_CSVFACTORY_DIR}/CSVObjectFactory.cpp
@@ -1794,6 +1874,7 @@ ADD_PLUGIN_TARGET(csvfactory
                     TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
                     LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} csvfactory)
+
 
 
 SET(LIBPROXYOBJECT_PLUGIN_COLLADAMODELS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/collada)
@@ -1860,6 +1941,23 @@ TARGET_LINK_LIBRARIES(cseg
         ${SIRIKATA_CORE_LIB}
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
+
+ADD_DEFINITIONS(-DEMERSON_COMPILE)
+ADD_EXECUTABLE(emerson ${EMERSON_SOURCES})
+SET_TARGET_PROPERTIES(emerson PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(emerson
+        ${Boost_LIBRARIES}
+        ${ANTLR_LIBRARIES}
+        )
+
+
+ADD_EXECUTABLE(jscompile ${JSCOMPILE_SOURCES})
+SET_TARGET_PROPERTIES(jscompile PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(jscompile
+          ${Boost_LIBRARIES}
+					${V8_LIBRARIES}
+          )
+
 
 ADD_EXECUTABLE(pinto ${PINTO_SOURCES})
 SET_TARGET_PROPERTIES(pinto PROPERTIES ${COMPILE_DEFS_OPT})
@@ -1930,7 +2028,7 @@ IF(CHROME_FOUND)
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
 
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
-
+      ${TOP_LEVEL}/cdn.txt
       ${CMAKE_CURRENT_BINARY_DIR}/scene.db
       )
 
@@ -1995,7 +2093,6 @@ IF(WIN32)
 ELSE()
   SET_TARGET_PROPERTIES(${SIRIKATA_CORE_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/core/util/Standard.hh")
   SET_TARGET_PROPERTIES(${SIRIKATA_PROXYOBJECT_LIB} PROPERTIES COMPILE_FLAGS "-include sirikata/proxyobject/Platform.hpp")
-
 ENDIF()
 
 

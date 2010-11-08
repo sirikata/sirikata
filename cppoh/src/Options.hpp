@@ -47,7 +47,13 @@
 #define OPT_OBJECT_FACTORY       "object-factory"
 #define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
 
+
+#define OPT_CAMERASCRIPT         "camerascript"
+#define OPT_CAMERASCRIPTTYPE         "camerascripttype"
 #define OPT_OH_SIMS              "oh.sims"
+
+
+
 
 namespace Sirikata {
 

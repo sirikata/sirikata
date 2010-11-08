@@ -81,6 +81,8 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 
+    mTimeSyncServer = new TimeSyncServer(mContext);
+
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
     mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
@@ -180,6 +182,7 @@ bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endp
             dest_ep.object().getAsUUID(), dest_ep.port(),
             String((char*)payload.data(), payload.size())
         );
+
 
     // This call needs to be thread safe, and we shouldn't be using this
     // ODP::Service to communicate with any non-local objects, so just use the

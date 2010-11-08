@@ -53,6 +53,7 @@
 #include <sirikata/core/sync/TimeSyncServer.hpp>
 #include <sirikata/space/ObjectSessionManager.hpp>
 
+
 namespace Sirikata
 {
 class Forwarder;
@@ -73,6 +74,7 @@ class ObjectHostConnectionManager;
    *  object -> server mapping.  This is a singleton for each simulated
    *  server.  Other servers are referenced by their ServerID.
    */
+
 class Server : public MessageRecipient, public Service, public OSegWriteListener, public ODP::DelegateService, ObjectSessionManager
 {
 public:
@@ -92,6 +94,7 @@ private:
     // ODP::DelegateService dependencies
     ODP::DelegatePort* createDelegateODPPort(DelegateService*, const SpaceObjectReference& sor, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
+
 
     // ObjectSessionManager Interface
     virtual ObjectSession* getSession(const ObjectReference& objid) const;

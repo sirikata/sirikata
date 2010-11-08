@@ -34,7 +34,10 @@
 #ifndef _SIRIKATA_ObjectHostProxyManager_HPP_
 #define _SIRIKATA_ObjectHostProxyManager_HPP_
 
+#include <sirikata/oh/Platform.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
+#include <vector>
+
 
 namespace Sirikata {
 
@@ -58,16 +61,24 @@ protected:
     ProxyMap mProxyMap;
     SpaceID mSpaceID;
 public:
+
     ObjectHostProxyManager(const SpaceID& space)
         : mSpaceID(space)
     {}
+
 
     ~ObjectHostProxyManager();
     void initialize();
     void destroy();
 
+
+    //bftm
+    void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
+    void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
+    
     void createObject(const ProxyObjectPtr &newObj);
     void destroyObject(const ProxyObjectPtr &delObj);
+
 
     ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const;
 };

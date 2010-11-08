@@ -42,13 +42,16 @@ using namespace Ogre;
 namespace Sirikata {
 namespace Graphics {
 
-WebView::WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border)
+
+WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
+    Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border)
+
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
 	viewName = name;
+        viewType = type;
 	viewWidth = width;
 	viewHeight = height;
 	maxUpdatePS = 0;
@@ -85,17 +88,19 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
 }
 
-WebView::WebView(const std::string& name, unsigned short width, unsigned short height,
+WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
 			Ogre::FilterOptions texFiltering)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
+
     mBorderLeft=2;
     mBorderRight=2;
     mBorderTop=25;
     mBorderBottom=2;
 	viewName = name;
+        viewType = type;
 	viewWidth = width;
 	viewHeight = height;
 	overlay = 0;
@@ -543,6 +548,11 @@ void WebView::createMaterial()
  std::string WebView::getName()
  {
      return viewName;
+ }
+
+ std::string WebView::getType()
+ {
+     return viewType;
  }
 
  std::string WebView::getViewTextureName()
@@ -1024,15 +1034,18 @@ void WebView::onWidgetPaint(
 void WebView::onChromeSend(Berkelium::Window *win, const Berkelium::WindowDelegate::Data name, const Berkelium::WindowDelegate::Data*args, size_t numArgs) {
 #ifdef HAVE_BERKELIUM
     std::string nameStr(name.message,name.length);
-	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
+    std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
-	if(i != delegateMap.end()) {
+    if(i != delegateMap.end())
+    {
         JSArguments argVector;
-        for (size_t j=0;j!=numArgs;++j) {
+        for (size_t j=0;j!=numArgs;++j)
+        {
             argVector.push_back(JSArgument(args[j].message,args[j].length));
         }
-		i->second(this, argVector);
-	}
+        
+        i->second(this, argVector);
+    }
 #endif
 }
 

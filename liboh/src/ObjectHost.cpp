@@ -115,6 +115,19 @@ void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& spac
     }
 }
 
+//This function just returns the first space id in the unordered map
+//associated with mSessionManagers.
+SpaceID ObjectHost::getDefaultSpace()
+{
+    if (mSessionManagers.size() == 0)
+    {
+        std::cout<<"\n\nERROR: no record of space in object host\n\n";
+        assert(false);
+    }
+
+    return mSessionManagers.begin()->first;
+}
+
 // Primary HostedObject API
 
 void ObjectHost::connect(
@@ -198,6 +211,27 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
     DEPRECATED();
     NOT_IMPLEMENTED(oh);
     return NULL;
+}
+
+/**
+  This method should update the addressable list of all
+  the entities on the object host.
+  This would happen because of Pinto updates. 
+  Right now, this is being called after the creation of a new
+  entity so that the new entity is addressable by the neighboring 
+  entities.
+*/
+
+void ObjectHost::updateAddressable() const
+{
+   // Pull out the list of all the entitites
+    
+    HostedObjectMap::const_iterator it = mHostedObjects.begin();
+    for(  ; it != mHostedObjects.end(); it++)
+    {
+        HostedObjectPtr objPtr = (*it).second;
+        objPtr->updateAddressable();
+    }
 }
 
 

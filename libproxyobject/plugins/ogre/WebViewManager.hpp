@@ -42,6 +42,12 @@
 
 namespace Sirikata {
 
+
+typedef Sirikata::DataReference<const char*> JSArgument;
+typedef std::vector<JSArgument> JSArguments;
+typedef JSArguments::const_iterator JSIter;
+
+
 namespace Graphics {
 
 /**
@@ -121,7 +127,7 @@ public:
 	/**
 	* Creates a WebView.
 	*/
-	WebView* createWebView(const std::string &webViewName, unsigned short width, unsigned short height,
+    WebView* createWebView(const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height,
 	        const OverlayPosition &webViewPosition,	bool asyncRender = false, int maxAsyncRenderRate = 70,
 	        Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0,
 	        const WebView::WebViewBorderSize& border = WebView::mDefaultBorder);

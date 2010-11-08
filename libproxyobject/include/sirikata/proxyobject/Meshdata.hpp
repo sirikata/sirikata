@@ -49,6 +49,7 @@ struct SubMeshGeometry {
 
 
 
+
     std::vector<Sirikata::Vector3f> normals;
     std::vector<Sirikata::Vector3f> tangents;
     std::vector<Sirikata::Vector4f> colors;
@@ -80,8 +81,6 @@ struct SubMeshGeometry {
     BoundingBox3f3f aabb;
     double radius;
     std::vector<Primitive> primitives;
-
-
 
 };
 struct GeometryInstance {

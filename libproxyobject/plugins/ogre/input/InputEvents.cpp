@@ -70,6 +70,7 @@ EventDescriptor WindowEvent::getDescriptor() const {
     return EventDescriptor::Window(t);
 }
 
+
 WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std::vector<String>& _args)
  : InputEvent(InputDeviceWPtr(), IdPair(getEventId(), _name)),
    webview(wvName),
@@ -77,6 +78,8 @@ WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std:
    args(_args)
 {
 }
+
+
 
 WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
  : InputEvent(InputDeviceWPtr(), IdPair(getEventId(),
@@ -91,6 +94,11 @@ WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference
         }
     }
 }
+
+
+
+
+
 
 WebViewEvent::~WebViewEvent() {
 }

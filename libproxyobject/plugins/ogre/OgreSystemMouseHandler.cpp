@@ -55,7 +55,9 @@
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
 #include <sirikata/core/util/KnownServices.hpp>
-
+#include <sirikata/core/util/KnownMessages.hpp>
+#include <sirikata/core/util/KnownScriptTypes.hpp>
+#include "Protocol_JSMessage.pbj.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
@@ -120,6 +122,23 @@ class OgreSystem::MouseHandler {
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
     SelectedObjectSet mSelectedObjects;
+
+    struct UIInfo {
+        UIInfo()
+         : scripting(NULL)
+        {}
+
+        WebView* scripting;
+    };
+    typedef std::map<SpaceObjectReference, UIInfo> ObjectUIMap;
+    ObjectUIMap mObjectUIs;
+    // Currently we don't have a good way to push the space object reference to
+    // the webview because doing it too early causes it to fail since the JS in
+    // the page hasn't been executed yet.  Instead, we maintain a map so we can
+    // extract it from the webview ID.
+    typedef std::map<WebView*, ProxyObjectWPtr> ScriptingUIObjectMap;
+    ScriptingUIObjectMap mScriptingUIObjects;
+
     SpaceObjectReference mLastShiftSelected;
     IntersectResult mMouseDownTri;
     ProxyObjectWPtr mMouseDownObject;
@@ -669,8 +688,79 @@ private:
 
     /** Create a UI element using a web view. */
     void createUIAction(const String& ui_page) {
-        WebView* ui_wv = WebViewManager::getSingleton().createWebView("__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+        WebView* ui_wv = WebViewManager::getSingleton().createWebView("__object", "__object", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
         ui_wv->loadFile(ui_page);
+
+    }
+
+    /** Create a UI element for interactively scripting an object.
+        Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
+        HostedObject. 
+     */
+    void createScriptingUIAction() {
+
+        static bool onceInitialized = false;
+
+        // Ask all the objects to initialize scripting
+        initScriptOnSelectedObjects();
+
+        // Then bring up windows for each of them
+        for(SelectedObjectSet::iterator sel_it = mSelectedObjects.begin(); sel_it != mSelectedObjects.end(); sel_it++) {
+            ProxyObjectPtr obj(sel_it->lock());
+            if (!obj) continue;
+
+            SpaceObjectReference objid = obj->getObjectReference();
+
+            ObjectUIMap::iterator ui_it = mObjectUIs.find(objid);
+            if (ui_it == mObjectUIs.end()) {
+                mObjectUIs.insert( ObjectUIMap::value_type(objid, UIInfo()) );
+                ui_it = mObjectUIs.find(objid);
+            }
+            UIInfo& ui_info = ui_it->second;
+
+            if (ui_info.scripting != NULL) {
+                // Already there, just make sure its showing
+                ui_info.scripting->show();
+            }
+            else {
+                if (onceInitialized)
+                {
+                    WebView* new_scripting_ui =
+                        WebViewManager::getSingleton().createWebView(
+                            String("__scripting") + objid.toString(), "__scripting", 300, 300,
+                            OverlayPosition(RP_BOTTOMCENTER)
+                        );
+                    new_scripting_ui->loadFile("scripting/prompt.html");
+
+                    ui_info.scripting = new_scripting_ui;
+                    mScriptingUIObjects[new_scripting_ui] = obj;
+                    //new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript,this,_1,_2));
+                    //        lkjs;
+
+                    new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+
+            //lkjs;
+                    return;
+                }
+
+
+                //name it something else, and put it in a different place
+                WebView* new_scripting_ui =
+                    WebViewManager::getSingleton().createWebView(
+                        String("__scripting") + objid.toString(), "__scripting", 300, 300,
+                        OverlayPosition(RP_TOPLEFT)
+                    );
+                new_scripting_ui->loadFile("scripting/prompt.html");
+
+                ui_info.scripting = new_scripting_ui;
+                mScriptingUIObjects[new_scripting_ui] = obj;
+                new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+                //lkjs
+                //new_scripting_ui->bind("event", std::tr1::bind(&MouseHandler::executeScript,this,_1,_2));
+                onceInitialized = true;
+
+            }
+        }
     }
 
     void LOCAL_createWebviewAction() {
@@ -747,21 +837,6 @@ private:
 */
     }
 
-    void onUIAction(WebView* webview, const JSArguments& args) {
-        printf("ui action event fired arg length = %d\n", (int)args.size());
-        if (args.size() != 1) {
-            printf("expected 1 argument, returning.\n");
-            return;
-        }
-
-        String action_triggered(args[0].data());
-
-        printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
-
-        if(action_triggered == "action_exit") {
-            quitAction();
-        }
-    }
 
     void onUploadObjectEvent(WebView* webview, const JSArguments& args) {
         printf("upload object event fired arg length = %d\n", (int)args.size());
@@ -785,7 +860,7 @@ private:
             mUploadWebView->focus();
         } else {
             printf("startUploadObject called. Opening upload UI.\n");
-            mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", 404, 227,
+            mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", "upload_tool",404, 227,
                     OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
             mUploadWebView->bind("event", std::tr1::bind(&MouseHandler::onUploadObjectEvent, this, _1, _2));
             mUploadWebView->loadFile("chrome/upload.html");
@@ -797,7 +872,7 @@ private:
             WebViewManager::getSingleton().destroyWebView(mQueryAngleWidgetView);
             mQueryAngleWidgetView = NULL;
         } else {
-            mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", 300, 100,
+            mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", "query_angle_widget",300, 100,
                     OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
             mQueryAngleWidgetView->bind("set_query_angle", std::tr1::bind(&MouseHandler::handleSetQueryAngle, this, _1, _2));
             mQueryAngleWidgetView->loadFile("debug/query_angle.html");
@@ -815,8 +890,9 @@ private:
         printf("New query angle: %f\n", mNewQueryAngle);
     }
 
+
     void createScriptedObjectAction(const std::tr1::unordered_map<String, String>& args) {
-/*
+        /*
         typedef std::tr1::unordered_map<String, String> StringMap;
         printf("createScriptedObjectAction: %d\n", (int)args.size());
         // Filter out the script type from rest of args
@@ -868,13 +944,112 @@ private:
 */
     }
 
-	ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy) {
-		ProxyObjectPtr parentProxy;
-		while ((parentProxy=camProxy->getParentProxy())) {
-			camProxy=parentProxy;
-		}
-		return camProxy;
-	}
+
+    
+    void executeScript(WebView* wv, const JSArguments& args)
+    {
+        ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
+        if (objit == mScriptingUIObjects.end())
+            return;
+        ProxyObjectPtr target_obj(objit->second.lock());
+
+        if (!target_obj) return;
+        
+
+        JSIter command_it;
+        for (command_it = args.begin(); command_it != args.end(); ++command_it)
+        {
+            std::string strcmp (command_it->begin());
+            if (strcmp == "Command")
+            {
+                Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
+                Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+//                Protocol::ScriptingMessage  scripting_msg;
+//                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+                scripting_req.set_id(0);
+                //scripting_req.set_body(String(command_it->second));
+                JSIter nexter = command_it + 1;
+                String msgBody = String(nexter->begin());
+                scripting_req.set_body(msgBody);
+                std::string serialized_scripting_request;
+                scripting_msg.SerializeToString(&serialized_scripting_request);
+                target_obj->sendMessage(
+                    Services::SCRIPTING,
+                    MemoryReference(serialized_scripting_request)
+                );
+
+            }
+        }
+    }
+
+    /**
+       This function sends out a message on KnownServices port
+       LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
+       object receives the message and attaches a JSObjectScript to the HostedObject.
+     */
+    void initScriptOnSelectedObjects() {
+        for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
+             selectIter != mSelectedObjects.end(); ++selectIter) {
+            ProxyObjectPtr obj(selectIter->lock());
+
+            Sirikata::JS::Protocol::ScriptingInit init_script;
+
+            // Filter out the script type from rest of args
+            //String script_type = "js"; // FIXME how to decide this?
+            init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
+            init_script.set_messager(KnownMessages::INIT_SCRIPT);
+            String serializedInitScript;
+            init_script.SerializeToString(&serializedInitScript);
+            //std::string serialized;
+            //init_script.SerializeToString(&serialized);
+            
+            obj->sendMessage(
+                Services::LISTEN_FOR_SCRIPT_BEGIN,
+                MemoryReference(serializedInitScript.data(), serializedInitScript.length())
+                //  MemoryReference(serialized.data(), serialized.length())
+            );
+        }
+    }
+    
+
+//     void initScriptOnSelectedObjects() {
+//         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
+//              selectIter != mSelectedObjects.end(); ++selectIter) {
+//             ProxyObjectPtr obj(selectIter->lock());
+
+//             Sirikata::JS::Protocol::ScriptingInit init_script;
+
+//             // Filter out the script type from rest of args
+//             //String script_type = "js"; // FIXME how to decide this?
+//             init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
+
+//             std::string serializedInitScript;
+//             init_script.SerializeToString(&serializedInitScript);
+
+
+//             RoutableMessageBody body;
+//             //body.add_message("InitScript", serializedInitScript);
+//             body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
+//             std::string serialized;
+//             body.SerializeToString(&serialized);
+            
+//             obj->sendMessage(
+//                 Services::LISTEN_FOR_SCRIPT_BEGIN,
+//                 MemoryReference(serialized.data(), serialized.length())
+//             );
+//         }
+//     }
+
+    
+
+    ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy)
+    {
+        ProxyObjectPtr parentProxy;
+        while ((parentProxy=camProxy->getParentProxy())) {
+            camProxy=parentProxy;
+        }
+        return camProxy;
+    }
 
     void moveAction(Vector3f dir, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
@@ -883,13 +1058,16 @@ private:
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
-
+        ObjectReference oref = cam->getObjectReference().object();
+        
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
 
         // Get the updated position
         Time now = mParent->simTime();
@@ -899,7 +1077,7 @@ private:
         // Request updates from spcae
         TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
         SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
-        cam_vwobj->requestLocationUpdate(space, newloc);
+        cam_vwobj->requestLocationUpdate(space, oref,newloc);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setLocation(newloc);
     }
@@ -911,14 +1089,17 @@ private:
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
-
+        ObjectReference oref = cam->getObjectReference().object();
+        
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
+        
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -926,7 +1107,7 @@ private:
 
         // Request updates from spcae
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
-        cam_vwobj->requestOrientationUpdate(space, neworient);
+        cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setOrientation(neworient);
     }
@@ -939,14 +1120,17 @@ private:
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
-
+        ObjectReference oref = cam->getObjectReference().object();
+        
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
         // for it to change over time.
         VWObjectPtr cam_vwobj = cam->getOwner();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
+        
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -961,7 +1145,7 @@ private:
 
         // Request updates from spcae
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
-        cam_vwobj->requestOrientationUpdate(space, neworient);
+        cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setOrientation(neworient);
     }
@@ -1296,7 +1480,7 @@ private:
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
-
+        
         return EventResponse::nop();
     }
 
@@ -1387,12 +1571,16 @@ private:
         loc.setAngularSpeed(0);
         VWObjectPtr cam_vwobj = cam->getOwner();
         SpaceID space = cam->getObjectReference().space();
-        if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        ObjectReference oref = cam->getObjectReference().object();
+
+        //FIXME: these checks do not make sense any more for multi-presenced objects.
+        //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
+        //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
         Location oldloc = cam->extrapolateLocation(now);
         cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))));
         TimedMotionVector3f newplace(now,MotionVector3f(Vector3f(oldloc.getPosition()),Vector3f(pos-oldloc.getPosition())));
         cam->setLocation(newplace);
-        cam_vwobj->requestLocationUpdate(space, newplace);
+        cam_vwobj->requestLocationUpdate(space, oref,newplace);
     }
 
     void cameraPathSetToKeyFrame(uint32 idx) {
@@ -1629,9 +1817,15 @@ public:
 
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createWebviewAction, this));
 
+
+        mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptingUIAction, this));
         mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "object/object.html"));
 
+
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&MouseHandler::createScriptedObjectAction, this, _1));
+        //lkjs;
+        //mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&MouseHandler::executeScript, this, _1, _2));
+
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::enterObjectAction, this));
         mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::leaveObjectAction, this));
         mInputResponses["groupObjects"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::groupObjectsAction, this));
@@ -1673,8 +1867,10 @@ public:
 
         mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&MouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
 
+
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
         mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
+
 
         // Session
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["suspend"]);
@@ -1701,6 +1897,7 @@ public:
         // Various other actions
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
+        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_ALT), mInputResponses["openScriptingUI"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
@@ -1711,8 +1908,10 @@ public:
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, Input::MOD_CTRL), mInputResponses["cloneObjects"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
+
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
+
 
         // Drag modes
         mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
@@ -1753,8 +1952,9 @@ public:
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright"), mInputResponses["rotateYNeg"]);
 
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
-
         mInputBinding.add(InputBindingEvent::Web("__object", "CreateScriptedObject"), mInputResponses["createScriptedObject"]);
+
+        //mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
 
     }
 
@@ -1793,13 +1993,30 @@ public:
         mSelectedObjects.insert(obj);
     }
 
+    
+    void onUIAction(WebView* webview, const JSArguments& args) {
+        printf("ui action event fired arg length = %d\n", (int)args.size());
+        if (args.size() != 1) {
+            printf("expected 1 argument, returning.\n");
+            return;
+        }
+
+        String action_triggered(args[0].data());
+
+        printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
+
+        if(action_triggered == "action_exit") {
+            quitAction();
+        }
+    }
+
     void tick(const Task::LocalTime& t) {
         cameraPathTick(t);
         fpsUpdateTick(t);
         screenshotTick(t);
 
         if(!mUIWidgetView) {
-            mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget",
+            mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget","ui_widget",
                     mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
                     OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
             mUIWidgetView->bind("ui-action", std::tr1::bind(&MouseHandler::onUIAction, this, _1, _2));

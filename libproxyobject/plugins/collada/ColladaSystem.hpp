@@ -69,6 +69,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaSystem
         std::tr1::shared_ptr<const Transfer::DenseData> data);
     virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename);
 
+
   private:
     ColladaSystem (); // called by create()
     ColladaSystem ( ColladaSystem const& ); // not implemented

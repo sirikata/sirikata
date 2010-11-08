@@ -186,18 +186,23 @@ private:
         // update to values.
         void propertyUpdated(const UUID& uuid, LocationService* locservice, UpdateFunctor fup) {
             // Add the update to each subscribed object
+
+            
             typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
             if (obj_sub_it == mObjectSubscribers.end()) return;
 
             SubscriberSet* object_subscribers = obj_sub_it->second;
-
-            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++) {
+            
+            for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++)
+            {
+                
                 if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
                 assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
                 SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
                 if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
                 assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
 
+                
                 if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
                     UpdateInfo new_ui;
                     new_ui.location = locservice->location(uuid);
@@ -212,10 +217,10 @@ private:
             }
         }
 
-        static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) { ui.location = newval; }
+        static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) {ui.location = newval; }
         static void setUIOrientation(UpdateInfo& ui, const TimedMotionQuaternion& newval) { ui.orientation = newval; }
         static void setUIBounds(UpdateInfo& ui, const BoundingSphere3f& newval) { ui.bounds = newval; }
-        static void setUIMesh(UpdateInfo& ui, const String& newval) { ui.mesh = newval; }
+        static void setUIMesh(UpdateInfo& ui, const String& newval) {ui.mesh = newval;}
 
         void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
             propertyUpdated(

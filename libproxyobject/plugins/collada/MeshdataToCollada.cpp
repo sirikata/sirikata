@@ -74,6 +74,7 @@ namespace Sirikata {
     void exportMaterial(const Meshdata& meshdata) {
       openLibrary();
 
+
       for (uint32 i=0; i < meshdata.materials.size(); i++) {
         char effectNameStr[256];
         snprintf(effectNameStr, 256, "material%d", i);
@@ -114,7 +115,6 @@ namespace Sirikata {
           effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
 
 
-          //std::cout << meshdata.materials[i].textures.size() << " : meshdata.materials[i].textures.size()\n";
 
           //dealing with texture.
           for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
@@ -154,6 +154,7 @@ namespace Sirikata {
 
               colorOrTexture = COLLADASW::ColorOrTexture(colladaTexture);
 
+
               //              std::cout << "TEXTURE.URI=" << texture.uri << "\n";
             }
             else {
@@ -162,10 +163,12 @@ namespace Sirikata {
                                                                            texture.color.z,
                                                                            texture.color.w));
 
+
               /*printf("COLOR: %f %f %f %f\n", texture.color.x,
                      texture.color.y,
                      texture.color.z,
                      texture.color.w);*/
+
             }
 
             switch(texture.affecting) {
@@ -202,6 +205,7 @@ namespace Sirikata {
     void exportGeometry(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata) {
       openLibrary();
 
+
       for (uint32 i=0; i<meshdata.geometry.size(); i++) {
         char geometryNameStr[256];
         snprintf(geometryNameStr, 256, "mesh%d-geometry", i);
@@ -224,6 +228,7 @@ namespace Sirikata {
           colladaSource.setAccessorCount(meshdata.geometry[i].positions.size());
 
           colladaSource.prepareToAppendValues();
+
 
           for (uint32 j = 0; j < meshdata.geometry[i].positions.size(); j++) {
             colladaSource.appendValues(meshdata.geometry[i].positions[j].x,
@@ -250,6 +255,7 @@ namespace Sirikata {
 
           colladaSource.prepareToAppendValues();
 
+
           for (uint32 j = 0; j < meshdata.geometry[i].normals.size(); j++) {
             colladaSource.appendValues(meshdata.geometry[i].normals[j].x,
                                        meshdata.geometry[i].normals[j].y,
@@ -260,6 +266,7 @@ namespace Sirikata {
         }
 
         //uvs
+
         for (uint32 j = 0; j < meshdata.geometry[i].texUVs.size(); j++)
         {
           COLLADASW::FloatSource colladaSource (streamWriter);
@@ -273,6 +280,7 @@ namespace Sirikata {
 
           colladaSource.setAccessorCount(meshdata.geometry[i].texUVs[j].uvs.size()/2);
           colladaSource.prepareToAppendValues();
+
 
           for (uint32 k = 0; k+1 < meshdata.geometry[i].texUVs[j].uvs.size(); k+=2) {
             colladaSource.appendValues(meshdata.geometry[i].texUVs[j].uvs[k],
@@ -296,12 +304,14 @@ namespace Sirikata {
 
         //triangles
         const GeometryInstance* geoInst = NULL;
+
         for (uint32 j=0; j<meshdata.instances.size(); j++) {
           if (meshdata.instances[j].geometryIndex == i) {
             geoInst = &(meshdata.instances[j]);
             break;
           }
         }
+
 
         for(uint32 j = 0; geoInst != NULL && j < meshdata.geometry[i].primitives.size(); ++j )
         {
@@ -355,6 +365,7 @@ public:
     openLibrary();
     openVisualScene( "Space_Aggregated_Scene" );
 
+
     for(uint32 i = 0; i < meshdata.instances.size(); i++)
     {
       char geometryNameStr[256];
@@ -379,6 +390,7 @@ public:
              meshdata.instances[i].materialBindingMap.begin();
            it != meshdata.instances[i].materialBindingMap.end(); it++)
       {
+
         uint32 materialIdx = it->second;
 
         char effectNameStr[256];

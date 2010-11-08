@@ -185,7 +185,9 @@ public:
             SILOG(input,insane,"moveSelection: Found no selected objects");
             return;
         }
+
         Time now = mParent->simTime();
+
 
         /// dbm new way: ignore camera, just move along global axes
         Vector3d toMove(0,0,0);
@@ -347,7 +349,9 @@ public:
         dragMultiplier = mParent->getInputManager()->mDragMultiplier->as<float>();
     }
     void mouseMoved(MouseDragEventPtr ev) {
+
         Time now = mParent->simTime();
+
         Vector3d avgPos(0,0,0);
         if (ev->deltaLastY() != 0) {
             float scaleamt = exp(dragMultiplier*ev->deltaLastY());
@@ -441,6 +445,7 @@ public:
     }
     void mouseMoved(MouseDragEventPtr ev) {
         Time now = mParent->simTime();
+
         Location cameraLoc = camera->getProxy().globalLocation(now);
         if (mPanDistance) {
             float radianX, radianY;
@@ -465,6 +470,7 @@ void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const st
     SILOG(input,debug,"zoom "<<value);
 
     Time now = parent->simTime();
+
     Location cameraLoc = camera->getProxy().extrapolateLocation(now);
     Location cameraGlobalLoc = camera->getProxy().globalLocation(now);
     Vector3d toMove;
@@ -554,7 +560,9 @@ public:
         camera = info.camera;
     }
     void mouseMoved(MouseDragEventPtr ev) {
+
         Time now = mParent->simTime();
+
         Location cameraLoc = camera->getProxy().globalLocation(now);
         Vector3d amount (ev->deltaX(), ev->deltaY(), 0);
 /*

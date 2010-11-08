@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_PROXY_OBJECT_HPP_
 #define _SIRIKATA_PROXY_OBJECT_HPP_
 
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "ProxyObjectListener.hpp"
@@ -102,7 +103,7 @@ public:
         proximity event was generated for
     */
     ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
-    virtual ~ProxyObject();
+
 
     /// Subclasses can do any necessary cleanup first.
     virtual void destroy();
@@ -128,19 +129,32 @@ public:
     inline Vector3d getPosition() const{
         return Vector3d(mLoc.position());
     }
+
+    /// returns the last updated velocity for this object
+    inline Vector3d getVelocity() const
+    {
+        return Vector3d(mLoc.velocity());
+    }
+    
     /// Returns the last updated Quaternion for this object.
     inline const Quaternion& getOrientation() const{
         return mOrientation.position();
     }
 
-    inline Vector3f getVelocity() {
-        return mLoc.velocity();
+    /// Returns the Quaternion speed (I know that's not the right term; maybe
+    /// angular velocity???) for this object.
+    inline const Quaternion& getOrientationSpeed() const{
+        return mOrientation.velocity();
     }
+    
 
     inline const BoundingSphere3f& getBounds() const {
         return mBounds;
     }
 
+
+    ~ProxyObject();
+    
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -177,6 +191,8 @@ public:
         }
     }
 
+    bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
+    
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {
         Vector3f angaxis;

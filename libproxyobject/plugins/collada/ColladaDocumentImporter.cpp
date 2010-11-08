@@ -71,7 +71,6 @@ ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, con
 
 ColladaDocumentImporter::ColladaDocumentImporter ( std::vector<Transfer::URI> uriList ) {
   COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered, uriListLen: " << uriList.size());
-
   //mMesh = new Meshdata();
 
 }
@@ -199,8 +198,10 @@ void ColladaDocumentImporter::finish ()
     mMesh->geometry.swap(mGeometries);
     mMesh->lights.swap( mLights);
 
+
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
+
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -284,6 +285,8 @@ void ColladaDocumentImporter::finish ()
 
                                 mMesh->instances.push_back(new_geo_inst);
                             }
+                            new_geo_inst.radius=sqrt(new_geo_inst.radius);
+                            mMesh->instances.push_back(new_geo_inst);
                         }
                     }
                 }
@@ -451,12 +454,10 @@ IndexSet createIndexSet(const COLLADAFW::MeshPrimitive*prim,
     //gather the indices from the previous set
     uniqueIndexSet.positionIndices=prim->getPositionIndices()[whichIndex];
     uniqueIndexSet.normalIndices=prim->hasNormalIndices()?prim->getNormalIndices()[whichIndex]:uniqueIndexSet.positionIndices;
-
     for (size_t uvSet=0;uvSet < prim->getUVCoordIndicesArray().getCount();++uvSet) {
         uniqueIndexSet.uvIndices.push_back(prim->getUVCoordIndices(uvSet)->getIndex(whichIndex));
     }
     return uniqueIndexSet;
-
 }
 bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometry )
 {
@@ -672,7 +673,6 @@ bool ColladaDocumentImporter::makeTexture
             color.getColor().getAlpha()||forceBlack) {
             output.push_back(MaterialEffectInfo::Texture());
             MaterialEffectInfo::Texture &retval=output.back();
-
             retval.color.x=color.getColor().getRed();
             retval.color.y=color.getColor().getGreen();
             retval.color.z=color.getColor().getBlue();

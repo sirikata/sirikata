@@ -830,6 +830,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
 
     mObjectToSpaceStreams[spaceobj.object()] = s;
 
+
     assert(mTimeSyncClient != NULL);
     bool time_synced = mTimeSyncClient->valid();
     mObjectConnections.handleConnectStream(spaceobj.object().getAsUUID(), time_synced);

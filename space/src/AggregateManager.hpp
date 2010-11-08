@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 #ifndef _AGGREGATE_MANAGER_HPP
 #define _AGGREGATE_MANAGER_HPP
 
@@ -42,10 +43,12 @@
 
 #include <sirikata/space/LocationService.hpp>
 
+
 #include <sirikata/proxyobject/Meshdata.hpp>
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 
 #include <sirikata/core/util/MeshSimplifier.hpp>
+
 
 namespace Sirikata {
 
@@ -56,7 +59,9 @@ private:
   LocationService* mLoc;
 
   ModelsSystem* mModelsSystem;
+
   MeshSimplifier mMeshSimplifier;
+
 
   typedef struct AggregateObject{
     UUID mUUID;

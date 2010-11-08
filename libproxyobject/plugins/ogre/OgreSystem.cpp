@@ -365,10 +365,12 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
 bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     ++sNumOgreSystems;
     proxyManager->addListener(this);
-
+    
+    
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
 
+    
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -509,11 +511,12 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             sRenderTarget=mRenderTarget=rw;
 
         } else if (createWindow->as<bool>()) {
-            Ogre::RenderWindow *rw;
-            mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
-            rw->setVisible(true);
-            if (sRenderTarget==NULL)
-                sRenderTarget=mRenderTarget;
+                Ogre::RenderWindow *rw;
+                //mRenderTarget=rw=sRoot->createRenderWindow(UUID::random().rawHexData(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                rw->setVisible(true);
+                if (sRenderTarget==NULL)
+                    sRenderTarget=mRenderTarget;
         }else {
             mRenderTarget=createRenderTarget(windowTitle->as<String>(),
                                              mWindowWidth->as<uint32>(),
@@ -700,6 +703,7 @@ OgreSystem::~OgreSystem() {
     destroyMouseHandler();
     delete mInputManager;
 
+
     delete mWorkQueue;
 
     delete mModelParser;
@@ -710,7 +714,9 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     p->getProxyManager()->destroyObject(p);
 }
 
+
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
+    
     bool created = false;
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
@@ -718,7 +724,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
             CameraEntity *cam=new CameraEntity(this,camera);
             created = true;
         }
-    }
+     }
     {
         std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
         if (meshpxy) {
@@ -976,7 +982,8 @@ void OgreSystem::screenshot(const String& filename) {
 }
 
 // ConnectionEventListener Interface
-void OgreSystem::onConnected(const Network::Address& addr) {
+void OgreSystem::onConnected(const Network::Address& addr)
+{
 }
 
 void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, const String& reason) {

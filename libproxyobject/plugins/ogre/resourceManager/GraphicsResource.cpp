@@ -207,11 +207,12 @@ void GraphicsResource::checkDependenciesParsed()
 void GraphicsResource::fullyParsed()
 {
   sCostPropEpoch++;
-  assert(mDepCost == 0);
 
-  set<SharedResourcePtr>::iterator itr, eitr;
-  for (itr = mDependencies.begin(), eitr = mDependencies.end(); itr != eitr; ++itr) {
-    mDepCost += (*itr)->getDepCost(sCostPropEpoch);
+  if (mDepCost == 0) {
+      set<SharedResourcePtr>::iterator itr, eitr;
+      for (itr = mDependencies.begin(), eitr = mDependencies.end(); itr != eitr; ++itr) {
+          mDepCost += (*itr)->getDepCost(sCostPropEpoch);
+      }
   }
 }
 

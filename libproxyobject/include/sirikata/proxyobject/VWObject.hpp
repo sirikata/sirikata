@@ -1,5 +1,5 @@
 /*  Sirikata liboh -- Object Host
- *  VWObject.hpp
+ *  HostedObject.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -35,8 +35,10 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/odp/Service.hpp>
+#include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
+
 
 namespace Sirikata {
 
@@ -51,8 +53,9 @@ public:
     VWObject();
     virtual ~VWObject();
 
+
     // Identification
-    virtual SpaceObjectReference id(const SpaceID& space) const = 0;
+    //virtual SpaceObjectReference id(const SpaceID& space) const = 0;
 
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) = 0;
@@ -69,10 +72,16 @@ public:
 
 
     // Movement Interface
-    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) = 0;
-    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& loc) = 0;
-    virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) = 0;
-    virtual void requestMeshUpdate(const SpaceID& space, const String& mesh) = 0;
+    // virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) = 0;
+    // virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& loc) = 0;
+    // virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) = 0;
+    // virtual void requestMeshUpdate(const SpaceID& space, const String& mesh) = 0;
+
+    virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc) = 0;
+    virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& loc) = 0;
+    virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) = 0;
+    virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
+    
 }; // class VWObject
 
 typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
