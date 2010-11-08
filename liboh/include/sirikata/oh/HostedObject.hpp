@@ -77,8 +77,27 @@ protected:
 //------- Members
     ObjectHostContext* mContext;
 
+  public:
+     struct EntityState
+	   {
+		  public:
 
-    
+		    String objType;
+			  String subType;
+			  String name;
+			  Vector3d pos;
+			  Quaternion orient;
+		    Vector3f vel;	
+        Vector3f rot;
+        float angular_speed;
+        String mesh;
+			  float scale;
+     
+		    void persistToFile(std::ofstream&);
+      
+	    };
+		typedef struct EntityState EntityState;
+	  
   private:
     //SpaceSet mSpaces;
 
@@ -102,6 +121,9 @@ protected:
     typedef SSTStream::Ptr SSTStreamPtr;
     typedef Connection<SpaceObjectReference> SSTConnection;
     typedef SSTConnection::Ptr SSTConnectionPtr;
+
+
+    
 
     // FIXME maintain a proper map here or put in per-presence data
     std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;

@@ -168,6 +168,7 @@ public:
     /** Attach and run this script after the entity is initialized */
     void attachScript(String&) const;
 
+		void persistEntityState(const SpaceID&, const String&);
 
   private:
     // Session Management Implementation
