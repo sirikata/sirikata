@@ -357,6 +357,14 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
+    // FIXME this never gets cleaned out on disconnect
+    mSSTDatagramLayers.push_back(
+        BaseDatagramLayerType::createDatagramLayer(
+            SpaceObjectReference(space, obj),
+            mContext, mDelegateODPService
+        )
+    );
+
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
