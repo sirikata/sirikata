@@ -63,7 +63,6 @@
 #include <sirikata/core/network/Frame.hpp>
 #include "Protocol_Frame.pbj.hpp"
 #include "Protocol_JSMessage.pbj.hpp"
-#include "Protocol_Sirikata.pbj.hpp"
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
@@ -85,7 +84,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mObjectHost=parent;
     mObjectScript=NULL;
 
-    
+
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
             &HostedObject::createDelegateODPPort, this,
@@ -122,7 +121,7 @@ struct HostedObject::PrivateCallbacks {
         if (thus) {
             //FIXME: need to pass object reference here as well.
             assert(false);
-            
+
             // SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
             // if (where!=thus->mSpaceData->end()) {
             //     where->second.destroy(thus->getTracker(sid));
@@ -135,7 +134,7 @@ struct HostedObject::PrivateCallbacks {
                                 const SpaceID&sid,
                                 Network::Stream::ConnectionStatus ce,
                                 const String&reason) {
-        
+
         if (ce!=Network::Stream::Connected) {
             disconnectionEvent(thus,sid,reason);
         }
@@ -175,7 +174,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
         // ).first;
         ProxyManagerPtr returner;
         return returner;
-        
+
     }
     return it->second.proxyManager;
 }
@@ -226,7 +225,7 @@ bool myisalphanum(char c) {
 }
 
 
-// attaches a script to the entity. This is like running 
+// attaches a script to the entity. This is like running
 // the script after the entity is initialized
 // the entity should have been intialized
 void HostedObject::attachScript(const String& script_name)
@@ -247,7 +246,7 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     }
 
     SILOG(oh,debug,"[OH] Creating a script object for " << getUUID().toString() << "(internal id)");
-    
+
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script)) {
@@ -314,7 +313,7 @@ void HostedObject::connect(
 
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, scriptFile,scriptType,ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1) 
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1)
     );
 
 }
@@ -323,19 +322,19 @@ void HostedObject::connect(
 void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
 {
     SpaceID space = mObjectHost->getDefaultSpace();
-    
+
     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
         SILOG(cppoh,error,*it);
 
     pd = new PerPresenceData (this,space);
 
     ObjectHostProxyManagerPtr proxyManPtr = pd->getProxyManager();
-    
+
     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
     {
         String simName = *it;
         HO_LOG(info,String("[OH] Initializing ") + simName);
-        
+
         TimeSteppedSimulation *sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
         if (!sim) {
             HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -391,7 +390,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
             );
         }
     }
-    
+
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
@@ -419,7 +418,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
         ObjectScriptManager::Arguments script_args;  //these can just be empty;
         this->initializeScript(scriptType,script_args,scriptFile);
     }
-    
+
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -493,7 +492,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 //     {
 //         std::string name = msg.message_names(i);
 //         MemoryReference body(msg.message_arguments(i));
-        
+
 //         //means that we are supposed to create a new scripted object
 //         if (name == KnownMessages::INIT_SCRIPT)
 //             processInitScriptMessage(body);
@@ -517,7 +516,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
 
     bool parsed = sMessage.ParseFromArray(bodyData.data(),bodyData.size());
-    
+
     if (! parsed)
         return false;
 
@@ -531,7 +530,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
     if (messager != KnownMessages::INIT_SCRIPT)
         return false;
-    
+
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
     {
         mHasScript = true;
@@ -546,7 +545,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
 
 //The processInitScriptSetup takes in a message body that we know should be an
-//init script message (from checks in handleScriptInitMessage).  
+//init script message (from checks in handleScriptInitMessage).
 //Does some additional checking on the message body, and then sets a few global
 //variables and calls the object's initializeScript function
 // void HostedObject::processInitScriptMessage(MemoryReference& body)
@@ -554,14 +553,14 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 //     Sirikata::JS::Protocol::ScriptingInit si;
 //     //Protocol::ScriptingInit si;
 //     si.ParseFromArray(body.data(),body.size());
-    
+
 //     if (si.has_script())
 //     {
 //         String script_type = si.script();
 //         ObjectScriptManager::Arguments script_args;
 //         if (si.has_script_args())
 //         {
-            
+
 //             Protocol::StringMapProperty args_map = si.script_args();
 //             assert(args_map.keys_size() == args_map.values_size());
 //             for (int i = 0; i < args_map.keys_size(); ++i)
@@ -596,7 +595,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
-        
+
         delete msg;
     }
     else if (handleScriptInitMessage(src_ep,dst_ep,MemoryReference(msg->payload())))
@@ -680,7 +679,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     {
         return true;
     }
-    
+
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
@@ -729,7 +728,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 }
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    
+
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
@@ -759,7 +758,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             }
 
 
-            
+
             if (!getProxyManager(spaceobj.space(),spaceobj.object())->getProxyObject(proximateID)) {
                 TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
@@ -821,7 +820,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     returner->setOrientation(tmq);
     returner->setBounds(bs);
 
-    
+
     if (!is_camera && meshuri)
     {
         ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
@@ -850,7 +849,7 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
-    
+
     ProxyObjectPtr proxy_obj;
 
     if (is_camera) proxy_obj = ProxyObject::construct<ProxyCameraObject>
@@ -1008,7 +1007,7 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
 
 bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri)
 {
-    
+
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
@@ -1016,7 +1015,7 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
     //this cast does not work.
     ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
 
-    
+
     if (proxy_mesh_obj )
         return false;
 
