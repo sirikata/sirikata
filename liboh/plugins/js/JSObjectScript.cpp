@@ -145,7 +145,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
 		mParent->getObjectHost()->persistEntityState(String("scene.db"));
 }
 
-
+void JSObjectScript::runGraphics(const SpaceObjectReference& sporef, const String& simname)
+{
+    mParent->runGraphics(sporef,simname);
+}
 
 void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& mesh_name)
 {

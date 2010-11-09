@@ -148,45 +148,48 @@ int main (int argc, char** argv) {
     // FIXME simple test example
     // This is the camera.  We need it early on because other things depend on
     // having its ObjectHostProxyManager.
-    std::list<String> ohOptions( GetOptionValue<std::list<String> >(OPT_OH_SIMS));
-    HostedObjectPtr obj;
-    if (! ohOptions.empty())
-    {
-        obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
-        obj->init();
-    }
+    // std::list<String> ohOptions( GetOptionValue<std::list<String> >(OPT_OH_SIMS));
+    // HostedObjectPtr obj;
+    // if (! ohOptions.empty())
+    // {
+    //     obj = HostedObject::construct<HostedObject>(ctx, oh, UUID::random(), true);
+    //     obj->init();
+    // }
 
 
-    std::vector<TimeSteppedSimulation*> sims;
-    PerPresenceData* pd = NULL;
-    if (obj)
-        obj->addSimListeners(pd,ohOptions,sims);
+    // std::vector<TimeSteppedSimulation*> sims;
+    // PerPresenceData* pd = NULL;
+    // if (obj)
+    //     obj->addSimListeners(pd,ohOptions,sims);
 
-    String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
+    // String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
 
-    // FIXME
-    // TEST
-    if (obj)
-        obj->connect(
-            mainSpace,
-            Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
-            BoundingSphere3f(Vector3f::nil(), 1.f),
-            "meerakat:///ewencp/male_avatar.dae",
-            SolidAngle(0.00000001f),
-            UUID::null(),
-            pd,
-            scriptFile,
-            scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
+    // // FIXME
+    // // TEST
+    // if (obj)
+    //     obj->connect(
+    //         mainSpace,
+    //         Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
+    //         BoundingSphere3f(Vector3f::nil(), 1.f),
+    //         "meerakat:///ewencp/male_avatar.dae",
+    //         SolidAngle(0.00000001f),
+    //         UUID::null(),
+    //         pd,
+    //         scriptFile,
+    //         scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
 
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
     ObjectFactory* obj_factory = NULL;
+    std::cout<<"\n\nAbout to try to go into object factory\n\n";
     if (!objfactory_type.empty())
     {
+        std::cout<<"\n\nNon-empty object factory\n\n";
         obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
         obj_factory->generate();
     }
+    std::cout<<"\n\nOut\n\n";
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
@@ -195,26 +198,33 @@ int main (int argc, char** argv) {
 
 
 
-    for(std::vector<TimeSteppedSimulation*>::iterator it = sims.begin(); it != sims.end(); it++)
-        ctx->add(*it);
+    // for(std::vector<TimeSteppedSimulation*>::iterator it = sims.begin(); it != sims.end(); it++)
+    //     ctx->add(*it);
+    // ctx->run(1);
+
+    
+
+
     ctx->run(1);
 
-
-    obj.reset();
+    //FIXME: add back an obj.reset call
+    //obj.reset();
 
     ctx->cleanup();
     trace->prepareShutdown();
 
-    //pd->getProxyManager().reset();
-    //proxy_manager.reset();
+
     delete oh;
-    delete pd;
+    //delete pd;
 
 
-    for(std::vector<TimeSteppedSimulation*>::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
-        delete *it;
-    }
-    sims.clear();
+    //FIXME: leaking memory
+    // for(std::vector<TimeSteppedSimulation*>::reverse_iterator it = sims.rbegin(); it != sims.rend(); it++) {
+    //     delete *it;
+    // }
+    // sims.clear();
+
+    
     plugins.gc();
     SimulationFactory::destroy();
 

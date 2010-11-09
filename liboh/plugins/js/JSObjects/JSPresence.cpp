@@ -57,6 +57,26 @@ namespace Sirikata
 	    return v8::Undefined();
         }
 
+        v8::Handle<v8::Value>runGraphics(const v8::Arguments& args)
+        {
+            std::cout<<"\n\nGot into runGraphics!!!!\n\n";
+            
+            if (args.Length() != 1)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runGraphics function. (It should probably be 'ogregraphics'.)\n\n")) );
+
+            
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in runGraphics function.  Invalid presence struct.")) );
+
+            v8::String::Utf8Value str(args[0]);
+            const char* cstr = ToCString(str);
+            String simname(cstr);
+
+            mStruct->jsObjScript->runGraphics(*(mStruct->sporef),simname);
+            return v8::Undefined();
+        }
+        
 
         //changine this function to actually do something
         //args should contain a string that can be converted to a uri

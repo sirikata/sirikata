@@ -94,6 +94,29 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mHasScript = false;
 }
 
+void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String& simName)
+{
+    TimeSteppedSimulation* sim = NULL;
+
+    SpaceDataMap::iterator psd_it = mSpaceData->find(sporef);
+    if (psd_it == mSpaceData->end())
+    {
+        std::cout<<"\n\nERROR: should have an entry for this space object reference in spacedatamap.  Aborting.\n\n";
+        assert(false);
+    }
+    
+    PerPresenceData& pd =  psd_it->second;
+    addSimListeners(pd,simName,sim);
+
+
+    if (sim != NULL)
+    {
+        HO_LOG(info, "Adding simulation to context");
+        mContext->add(sim);
+    }
+}
+
+
 HostedObject::~HostedObject() {
     destroy();
     delete mSpaceData;
@@ -283,8 +306,9 @@ void HostedObject::connect(
         const String& scriptFile,
         const String& scriptType)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd);
+    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd,scriptFile,scriptType);
 }
+
 
 void HostedObject::connect(
         const SpaceID&spaceID,
@@ -323,36 +347,65 @@ void HostedObject::connect(
 }
 
 
-void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
+
+void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
 {
     SpaceID space = mObjectHost->getDefaultSpace();
     
-    for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
-        SILOG(cppoh,error,*it);
 
-    pd = new PerPresenceData (this,space);
+    SILOG(cppoh,error,simName);
 
-    ObjectHostProxyManagerPtr proxyManPtr = pd->getProxyManager();
-    
-    for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
+
+    ObjectHostProxyManagerPtr proxyManPtr = pd.getProxyManager();
+
+    HO_LOG(info,String("[OH] Initializing ") + simName);
+    sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
+    if (!sim)
     {
-        String simName = *it;
-        HO_LOG(info,String("[OH] Initializing ") + simName);
-        
-        TimeSteppedSimulation *sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
-        if (!sim) {
-            HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
-            std::cerr << "Press enter to continue" << std::endl;
-            fgetc(stdin);
-            exit(0);
-        }
-        else {
-            mObjectHost->addListener(sim);
-            HO_LOG(info,String("Successfully initialized ") + simName);
-            sims.push_back(sim);
-        }
+        HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
+        std::cerr << "Press enter to continue" << std::endl;
+        fgetc(stdin);
+        exit(0);
+    }
+    else
+    {
+        mObjectHost->addListener(sim);
+        HO_LOG(info,String("Successfully initialized ") + simName);
     }
 }
+
+
+
+// void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
+// {
+//     SpaceID space = mObjectHost->getDefaultSpace();
+    
+//     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
+//         SILOG(cppoh,error,*it);
+
+//     pd = new PerPresenceData (this,space);
+
+//     ObjectHostProxyManagerPtr proxyManPtr = pd->getProxyManager();
+    
+//     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
+//     {
+//         String simName = *it;
+//         HO_LOG(info,String("[OH] Initializing ") + simName);
+        
+//         TimeSteppedSimulation *sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
+//         if (!sim) {
+//             HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
+//             std::cerr << "Press enter to continue" << std::endl;
+//             fgetc(stdin);
+//             exit(0);
+//         }
+//         else {
+//             mObjectHost->addListener(sim);
+//             HO_LOG(info,String("Successfully initialized ") + simName);
+//             sims.push_back(sim);
+//         }
+//     }
+// }
 
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
@@ -552,35 +605,6 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
     return true;
 }
 
-
-//The processInitScriptSetup takes in a message body that we know should be an
-//init script message (from checks in handleScriptInitMessage).  
-//Does some additional checking on the message body, and then sets a few global
-//variables and calls the object's initializeScript function
-// void HostedObject::processInitScriptMessage(MemoryReference& body)
-// {
-//     Sirikata::JS::Protocol::ScriptingInit si;
-//     //Protocol::ScriptingInit si;
-//     si.ParseFromArray(body.data(),body.size());
-    
-//     if (si.has_script())
-//     {
-//         String script_type = si.script();
-//         ObjectScriptManager::Arguments script_args;
-//         if (si.has_script_args())
-//         {
-            
-//             Protocol::StringMapProperty args_map = si.script_args();
-//             assert(args_map.keys_size() == args_map.values_size());
-//             for (int i = 0; i < args_map.keys_size(); ++i)
-//                 script_args[ args_map.keys(i) ] = args_map.values(i);
-//         }
-//         mHasScript = true;
-//         mScriptType = script_type;
-//         mScriptArgs = script_args;
-//         initializeScript(script_type, script_args);
-//     }
-// }
 
 
 

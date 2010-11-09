@@ -183,8 +183,7 @@ public:
      *  underlying ObjectHost.
      */
     void init();
-
-    void addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims);
+    void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
     
     
@@ -251,6 +250,9 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
+    void runGraphics(const SpaceObjectReference& sporef, const String& simName);
+
+    
     
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and

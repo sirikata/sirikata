@@ -63,12 +63,14 @@ T safeLexicalCast(const String& orig) {
 
 void CSVObjectFactory::generate()
 {
-    int count = 0;
+
+    int count =0;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
     if (!fp) return;
 
+    
     bool is_first = true;
     int objtype_idx = -1;
     int pos_idx = -1;
@@ -91,8 +93,10 @@ void CSVObjectFactory::generate()
 	// then this is a comment
         if(line.length() > 0 && line.at(0) == '#')
        {
-         continue;
+         continue;   
        }
+        
+
         // Split into parts
         StringList line_parts;
         int last_comma = -1;
@@ -119,7 +123,6 @@ void CSVObjectFactory::generate()
         }
 
 
-
         if (is_first) {
             for(uint32 idx = 0; idx < line_parts.size(); idx++) {
 						    std::cout << "\n  line_parts[" << idx << "] = " << line_parts[idx] << "\n"; 
@@ -142,7 +145,7 @@ void CSVObjectFactory::generate()
             is_first = false;
         }
         else {
-            //note: script_file is not required, so not checking it witht he assert
+            //note: script_file is not required, so not checking it with the assert
             assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
             //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
@@ -211,6 +214,12 @@ void CSVObjectFactory::generate()
                 }
 								*/
 
+
+
+                std::cout<<"\n\nThis is scriptFile:  "<<scriptFile<<"\n\n";
+                std::cout<<"\n\nThis is scriptType:  "<<scriptType<<"\n\n";
+                std::cout.flush();
+                
                 float scale =
                     scale_idx == -1 ?
                     1.f :
@@ -261,6 +270,7 @@ void CSVObjectFactory::generate()
         }
     }
 
+    
     fp.close();
 
     connectObjects();
@@ -271,8 +281,13 @@ void CSVObjectFactory::generate()
 
 void CSVObjectFactory::connectObjects()
 {
+    std::cout<<"\n\nGot into connectObjects\n\n";
+    
     if (mContext->stopped())
+    {
+        std::cout<<"\n\nContext stopped.  Will not get anywhere\n\n";
         return;
+    }
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();
