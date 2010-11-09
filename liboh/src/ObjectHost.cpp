@@ -96,6 +96,7 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
+    std::cout << "\n\n Here Here Here \n\n";
     NOT_IMPLEMENTED(oh);
 }
 
@@ -233,6 +234,28 @@ void ObjectHost::updateAddressable() const
         objPtr->updateAddressable();
     }
 }
+
+
+void ObjectHost::persistEntityState( const String& filename)
+{
+  
+   
+	std::ofstream fp(filename.c_str());
+	
+
+  fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\" " << std::endl;
+
+	HostedObjectMap::iterator it = mHostedObjects.begin();
+	for( ; it != mHostedObjects.end(); it++)
+	{
+	  HostedObjectPtr objPtr = (*it).second;
+    objPtr->persistToFile(fp);
+	}
+
+
+}
+
+
 
 
 

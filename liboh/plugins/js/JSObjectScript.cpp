@@ -140,6 +140,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
         //shouldn't need to receive on this port
     }
+
+
+		mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
 
