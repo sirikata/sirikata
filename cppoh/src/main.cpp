@@ -144,7 +144,7 @@ int main (int argc, char** argv) {
         oh->addServerIDMap(newSpace, server_id_map);
     }
 
-    
+
     // FIXME simple test example
     // This is the camera.  We need it early on because other things depend on
     // having its ObjectHostProxyManager.
@@ -156,25 +156,27 @@ int main (int argc, char** argv) {
         obj->init();
     }
 
-    
+
     std::vector<TimeSteppedSimulation*> sims;
     PerPresenceData* pd = NULL;
-    obj->addSimListeners(pd,ohOptions,sims);
+    if (obj)
+        obj->addSimListeners(pd,ohOptions,sims);
 
     String scriptFile=GetOptionValue<String>(OPT_CAMERASCRIPT);
 
     // FIXME
     // TEST
-    obj->connect(
-        mainSpace,
-        Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
-        BoundingSphere3f(Vector3f::nil(), 1.f),
-        "meerakat:///ewencp/male_avatar.dae",
-        SolidAngle(0.00000001f),
-        UUID::null(),
-        pd,
-        scriptFile,
-        scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
+    if (obj)
+        obj->connect(
+            mainSpace,
+            Location( Vector3d::nil(), Quaternion::identity(), Vector3f::nil(), Vector3f::nil(), 0),
+            BoundingSphere3f(Vector3f::nil(), 1.f),
+            "meerakat:///ewencp/male_avatar.dae",
+            SolidAngle(0.00000001f),
+            UUID::null(),
+            pd,
+            scriptFile,
+            scriptFile.empty()?String():GetOptionValue<String>(OPT_CAMERASCRIPTTYPE));
 
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
@@ -192,7 +194,7 @@ int main (int argc, char** argv) {
     ctx->add(sstConnMgr);
 
 
-    
+
     for(std::vector<TimeSteppedSimulation*>::iterator it = sims.begin(); it != sims.end(); it++)
         ctx->add(*it);
     ctx->run(1);
