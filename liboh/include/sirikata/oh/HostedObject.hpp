@@ -407,7 +407,12 @@ public:
 
     // Helper for constructing and sending location update
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
+
+    public:
+    HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);
+    void persistToFile(std::ofstream& file);
 };
+
 
 
 

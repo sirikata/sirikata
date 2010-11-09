@@ -294,6 +294,7 @@ void SessionManager::connect(
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
     using std::tr1::placeholders::_6;
+		using std::tr1::placeholders::_7;
 
     ConnectingInfo ci;
     ci.loc = init_loc;
@@ -302,6 +303,8 @@ void SessionManager::connect(
     ci.regQuery = regQuery;
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
+
+		std::cout << "\n\n\n connect :  MESH MESH MESH " << ci.mesh << " \n\n\n";
 
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
@@ -794,7 +797,9 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb) {
     SpaceObjectReference spaceobj(space, obj);
-
+    
+		std::cout << "\n\n\n MESH MESH MESH " << mesh << " \n\n\n";
+		
     real_cb(space, obj, server, loc, orient, bnds, mesh);
 
     SSTStream::connectStream(

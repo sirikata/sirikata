@@ -555,6 +555,8 @@ void Server::finishAddObject(const UUID& obj_id)
     resp_orient.set_position( orient.position() );
     resp_orient.set_velocity( orient.velocity() );
     response.set_bounds(bnds);
+		if(sc.conn_msg.has_mesh())
+		  response.set_mesh(obj_mesh);
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
         mContext->id(),

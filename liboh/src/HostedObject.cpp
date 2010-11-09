@@ -353,6 +353,7 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
+    std::cout << "\n\n\n handleConnected: MESH MESH MESH " << mesh << "\n\n\n";
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
         BaseDatagramLayerType::createDatagramLayer(
@@ -398,6 +399,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
+		std::cout << "\n\n\n Creating proxy with mesh = "  << mesh << "\n\n\n";
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, URI(mesh), mIsCamera, local_loc, local_orient, bnds);
 
     // Use to initialize PerSpaceData
@@ -819,20 +821,34 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
+    std::cout << "\n\n\n HostedObject::createProxy has mesh uri = " << meshuri.toString() << "\n\n\n" ;
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,is_camera);
     returner->setLocation(tmv);
     returner->setOrientation(tmq);
     returner->setBounds(bs);
 
     
-    if (!is_camera && meshuri)
+    if (!is_camera)
     {
-        ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
-        if (mesh)
-        {
-            mesh->setMesh(meshuri);
-        }
+		   
+		    std::cout << "\n\n\n NOT A CAMERA \n\n\n";
+
+				if(meshuri)
+				{
+          ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
+          if (mesh)
+          {
+				     std::cout << "\n\n\n Setting the mesh on the proxy object \n\n\n";
+             mesh->setMesh(meshuri);
+          }
+			  }
+				else
+				{
+				  std::cout << "\n\n With no camera and no mesh \n\n\n";
+				}
     }
+
+
 
     return returner;
 }
@@ -1115,6 +1131,22 @@ void HostedObject::updateAddressable()
     }
 }
 
+void HostedObject::persistToFile(std::ofstream& fp)
+{
+  SpaceObjRefSet ss;
+
+	getSpaceObjRefs(ss);
+
+	SpaceObjRefSet::iterator it = ss.begin();
+
+	for(; it != ss.end(); it++)
+	{
+	  HostedObject::EntityState* es = getEntityState((*it).space(), (*it).object()); 
+    es->persistToFile(fp);
+	}
+}
+
+
 void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 {
    /* We need to persist the things that are not part of the state. Like the meta state definitions. so,we are writing this file over and over again */
@@ -1151,11 +1183,12 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 }
 
 
-HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space)
+HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, const ObjectReference& oref)
 {
+
   HostedObject::EntityState* es = new HostedObject::EntityState();
-	ProxyObjectPtr poptr = getProxy(space);
-  Location loc = getLocation(space);
+	ProxyObjectPtr poptr = getProxy(space, oref);
+  Location loc = getLocation(space, oref);
   es->objType = "mesh";
 	es->subType = "graphiconly";
   
