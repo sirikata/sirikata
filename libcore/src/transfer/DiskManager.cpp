@@ -44,34 +44,57 @@ void DiskManager::destroy() {
     AutoSingleton<DiskManager>::destroy();
 }
 
-std::string DiskManager::DiskFile::getPath() {
-    return "";
-}
-
-std::string DiskManager::DiskFile::getFullPath() {
-    return "";
-}
-
-std::string DiskManager::DiskFile::getLeafName() {
-    return "";
-}
-
-bool DiskManager::DiskFile::isDirectory() {
-    return true;
-}
-
-bool DiskManager::DiskFile::isFile() {
-    return true;
-}
-
-DiskManager::ScanRequest::ScanRequest(DiskFile path, DiskManager::ScanRequest::ScanRequestCallback cb) {
+DiskManager::ScanRequest::ScanRequest(Filesystem::Path path, DiskManager::ScanRequest::ScanRequestCallback cb)
+    : mCb(cb), mPath(path) {
 }
 
 void DiskManager::ScanRequest::execute() {
+    std::tr1::shared_ptr<DirectoryListing> badResult;
+    std::tr1::shared_ptr<DirectoryListing> dirListing(new DirectoryListing());
+
+    if(!fs::exists(mPath)) {
+        mCb(badResult);
+    }
+
+    for(fs::directory_iterator it(mPath); it != fs::directory_iterator(); it++) {
+        dirListing->push_back(it->path());
+    }
+
+    mCb(dirListing);
 }
 
 DiskManager::DiskManager() {
+    mWorkerThread = new Thread(std::tr1::bind(&DiskManager::workerThread, this));
+}
 
+DiskManager::~DiskManager() {
+    //Add an empty request to the queue and then wait for workerThread to finish
+    std::tr1::shared_ptr<DiskRequest> nullReq;
+    boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
+    mRequestQueue.push(nullReq);
+    destroyCV.wait(sleep_cv);
+
+    delete mWorkerThread;
+}
+
+void DiskManager::addRequest(std::tr1::shared_ptr<DiskRequest> req) {
+    mRequestQueue.push(req);
+}
+
+void DiskManager::workerThread() {
+    while(true) {
+        std::tr1::shared_ptr<DiskRequest> req;
+        mRequestQueue.blockingPop(req);
+
+        if(!req) break;
+
+        req->execute();
+    }
+
+    {
+        boost::unique_lock<boost::mutex> wake_cv(destroyLock);
+        destroyCV.notify_one();
+    }
 }
 
 }

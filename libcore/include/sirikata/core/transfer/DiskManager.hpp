@@ -36,39 +36,21 @@
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
 #include <sirikata/core/util/Singleton.hpp>
+#include <boost/filesystem.hpp>
 
 namespace Sirikata {
 namespace Transfer {
+
+namespace fs = boost::filesystem;
+
+namespace Filesystem {
+    typedef boost::filesystem::path Path;
+}
 
 class SIRIKATA_EXPORT DiskManager
     : public AutoSingleton<DiskManager> {
 
 public:
-
-    /*
-     * Stores information about a single file or directory.
-     *
-     * Examples:
-     *    1. /usr/bin/ls
-     *          getPath() = /usr/bin
-     *          getFullPath() = /usr/bin/ls
-     *          getLeafName() = ls
-     *          isDirectory() = false
-     *          isFile() = true
-     *    2. /home/person
-     *          getPath() = /home
-     *          getFullPath() = /home/person
-     *          getLeafName() = person
-     *          isDirectory() = true
-     *          isFile() = false
-     */
-    class DiskFile {
-        std::string getPath();
-        std::string getFullPath();
-        std::string getLeafName();
-        bool isDirectory();
-        bool isFile();
-    };
 
     class DiskRequest {
     public:
@@ -79,24 +61,33 @@ public:
 
     class ScanRequest : public DiskRequest {
     public:
-        typedef std::vector<DiskFile> DirectoryListing;
+        typedef std::vector<Filesystem::Path> DirectoryListing;
         typedef std::tr1::function<void(
                     std::tr1::shared_ptr<DirectoryListing> dirListing
                 )> ScanRequestCallback;
 
-        ScanRequest(DiskFile path, ScanRequestCallback cb);
+        ScanRequest(Filesystem::Path path, ScanRequestCallback cb);
         void execute();
     private:
         ScanRequestCallback mCb;
+        Filesystem::Path mPath;
     };
 
     DiskManager();
+    ~DiskManager();
 
-    DiskManager& getSingleton();
-    void destroy();
+    void addRequest(std::tr1::shared_ptr<DiskRequest> req);
+
+    static DiskManager& getSingleton();
+    static void destroy();
 
 private:
     ThreadSafeQueue<std::tr1::shared_ptr<DiskRequest> > mRequestQueue;
+    Thread *mWorkerThread;
+    boost::mutex destroyLock;
+    boost::condition_variable destroyCV;
+
+    void workerThread();
 
 };
 

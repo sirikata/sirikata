@@ -41,6 +41,9 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
+#include <sirikata/core/transfer/DiskManager.hpp>
+#include <sirikata/core/transfer/LRUPolicy.hpp>
+
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
 
@@ -626,6 +629,49 @@ public:
             done.notify_all();
         }
 	}
+
+};
+
+class DiskManagerTest : public CxxTest::TestSuite {
+
+public:
+
+    DiskManagerTest()
+         : CxxTest::TestSuite() {
+    }
+
+    void setUp() {
+
+    }
+
+    void tearDown() {
+
+    }
+
+    void callback(std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
+        SILOG(transfer, debug, "Callbackomg!");
+
+        typedef Transfer::DiskManager::ScanRequest::DirectoryListing DirectoryListing;
+        for(DirectoryListing::iterator it = dirListing->begin(); it != dirListing->end(); it++) {
+            SILOG(transfer, debug, it->filename());
+        }
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.notify_all();
+    }
+
+    void testDiskCache_extraFuncs( void ) {
+        SILOG(transfer,debug,"Testing reading root dir...");
+
+        std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req(
+                new Transfer::DiskManager::ScanRequest("/",
+                std::tr1::bind(&DiskManagerTest::callback, this, std::tr1::placeholders::_1)));
+
+        Transfer::DiskManager::getSingleton().addRequest(req);
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.wait(lock);
+    }
 
 };
 
