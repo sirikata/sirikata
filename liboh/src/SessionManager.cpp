@@ -190,6 +190,21 @@ void SessionManager::ObjectConnections::remove(const UUID& objid) {
     mInternalIDs.erase( ObjectReference(objid) );
 }
 
+void SessionManager::ObjectConnections::handleUnderlyingDisconnect(ServerID sid, const String& reason) {
+    ObjectServerMap::const_iterator server_it = mObjectServerMap.find(sid);
+    if (server_it == mObjectServerMap.end())
+        return;
+
+    typedef std::vector<UUID> UUIDVector;
+    const UUIDVector& objects = server_it->second;
+
+    for(UUIDVector::const_iterator obj_it = objects.begin(); obj_it != objects.end(); obj_it++) {
+        UUID obj = *obj_it;
+        mObjectInfo[obj].disconnectedCB(mObjectInfo[obj].connectedAs, Disconnect::Forced);
+        parent->mObjectDisconnectedCallback(obj, Disconnect::Forced);
+    }
+}
+
 ServerID SessionManager::ObjectConnections::getConnectedServer(const UUID& obj_id, bool allow_connecting) {
     // FIXME getConnectedServer during migrations?
 
@@ -631,27 +646,36 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         return;
     SpaceNodeConnection* conn = conn_it->second;
 
-    OH_LOG(debug,"Handling space connection...");
-    if (status!=Sirikata::Network::Stream::Connected) {
+    OH_LOG(debug,"Handling space connection event...");
+
+    if (status == Sirikata::Network::Stream::Connected) {
+        OH_LOG(debug,"Successfully connected to " << sid);
+
+        // Try to setup time syncing if it isn't on yet.
+        if (mTimeSyncClient == NULL) {
+            // The object IDs and ports used are bogus since the space server just
+            // ignores them
+            mTimeSyncClient = new TimeSyncClient(
+                mContext, this->bindODPPort(mSpace, ObjectReference(UUID::random()), OBJECT_PORT_TIMESYNC),
+                ODP::Endpoint(mSpace, ObjectReference::spaceServiceID(), OBJECT_PORT_TIMESYNC),
+                Duration::seconds(5),
+                std::tr1::bind(&SessionManager::timeSyncUpdated, this)
+            );
+            mContext->add(mTimeSyncClient);
+        }
+    }
+    else if (status == Sirikata::Network::Stream::ConnectionFailed) {
         OH_LOG(error,"Failed to connect to server " << sid << ": " << reason);
         delete conn;
         mConnections.erase(sid);
+        return;    }
+    else if (status == Sirikata::Network::Stream::Disconnected) {
+        OH_LOG(error,"Disconnected from server " << sid << ": " << reason);
+        delete conn;
+        mConnections.erase(sid);
+        // Notify connected objects
+        mObjectConnections.handleUnderlyingDisconnect(sid, reason);
         return;
-    }
-
-    OH_LOG(debug,"Successfully connected to " << sid);
-
-    // Try to setup time syncing if it isn't on yet.
-    if (mTimeSyncClient == NULL) {
-        // The object IDs and ports used are bogus since the space server just
-        // ignores them
-        mTimeSyncClient = new TimeSyncClient(
-            mContext, this->bindODPPort(mSpace, ObjectReference(UUID::random()), OBJECT_PORT_TIMESYNC),
-            ODP::Endpoint(mSpace, ObjectReference::spaceServiceID(), OBJECT_PORT_TIMESYNC),
-            Duration::seconds(5),
-            std::tr1::bind(&SessionManager::timeSyncUpdated, this)
-        );
-        mContext->add(mTimeSyncClient);
     }
 }
 

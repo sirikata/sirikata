@@ -285,6 +285,11 @@ private:
 
         void remove(const UUID& obj);
 
+        // Handle a disconnection triggered by the loss of the underlying
+        // network connection, i.e. because the TCPSST connection was lost
+        // rather than the space server closing an individual session.
+        void handleUnderlyingDisconnect(ServerID sid, const String& reason);
+
         // Lookup the server the object is connected to.  With allow_connecting, allows using
         // the server currently being connected to, not just one where a session has been
         // established
