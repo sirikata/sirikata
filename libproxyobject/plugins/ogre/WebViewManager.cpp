@@ -787,6 +787,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventP
 
 Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::EventPtr evt)
 {
+    
     MouseDownEventPtr e = std::tr1::dynamic_pointer_cast<MouseDownEvent>(evt);
     if (!e) {
         return Sirikata::Task::EventResponse::nop();

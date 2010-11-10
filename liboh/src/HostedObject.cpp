@@ -455,7 +455,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
-		std::cout << "\n\n\n Creating proxy with mesh = "  << mesh << "\n\n\n";
+    std::cout << "\n\n\n Creating proxy with mesh = "  << mesh << "\n\n\n";
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, URI(mesh), mIsCamera, local_loc, local_orient, bnds);
 
     // Use to initialize PerSpaceData
@@ -856,19 +856,12 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     
     if (!is_camera)
     {
-		   
-
-				if(meshuri)
-				{
-          ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
-          if (mesh)
-          {
-             mesh->setMesh(meshuri);
-          }
-			  }
-				else
-				{
-				}
+        if(meshuri)
+        {
+            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
+            if (mesh)
+                mesh->setMesh(meshuri);
+        }
     }
 
 

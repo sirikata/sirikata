@@ -1053,10 +1053,34 @@ private:
     }
 
     void moveAction(Vector3f dir, float amount) {
+
+        std::cout<<"\n\n\nGot into moveAction of OgreSystemMouseHandler.cpp\n\n";
+        
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-        if (!mParent||!mParent->mPrimaryCamera) return;
+
+        if (! mParent)
+        {
+            std::cout<<"\n\nNo parent!\n\n";
+            return;
+        }
+
+        if (! mParent->mPrimaryCamera)
+        {
+            std::cout<<"\n\nnot primary camera\n\n";
+        }
+        
+        if (!mParent||!mParent->mPrimaryCamera)
+        {
+            std::cout<<"\n\nNo parent.  Or parent is not primary camera\n\n";
+            return;
+        }
+        
         ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
-        if (!cam) return;
+        if (!cam)
+        {
+            std::cout<<"\n\nSecond not primary camera\n\n";
+            return;
+        }
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
