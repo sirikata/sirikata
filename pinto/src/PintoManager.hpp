@@ -82,6 +82,7 @@ private:
     void tick();
 
     PintoContext* mContext;
+    Network::IOStrand* mStrand;
     Network::StreamListener* mListener;
 
     struct ClientData {
