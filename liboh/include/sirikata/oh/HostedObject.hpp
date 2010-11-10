@@ -144,7 +144,7 @@ public:
 private:
 //------- Private member functions:
     // When a connection to a space is setup, initialize it to handle default behaviors
-    void initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
+    void initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
 public:
 
     /** Get a set of spaces the object is currently connected to. */

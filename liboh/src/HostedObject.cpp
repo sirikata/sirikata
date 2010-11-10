@@ -406,7 +406,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
-    initializePerSpaceData(psd, self_proxy);
+    initializePerPresenceData(psd, self_proxy);
 
     // Special case for camera
     ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
@@ -446,7 +446,7 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
     }
 }
 
-void HostedObject::initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
+void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
 }
 
@@ -462,6 +462,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 }
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+    disconnectFromSpace(spaceobj.space(), spaceobj.object());
 }
 
 // //returns true if this is a script init message.  returns false otherwise
