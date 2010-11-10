@@ -675,6 +675,13 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         mConnections.erase(sid);
         // Notify connected objects
         mObjectConnections.handleUnderlyingDisconnect(sid, reason);
+        // If we have no connections left, we have to give up on TimeSync
+        if (mConnections.empty() && mTimeSyncClient != NULL) {
+            mContext->remove(mTimeSyncClient);
+            mTimeSyncClient->stop();
+            delete mTimeSyncClient;
+            mTimeSyncClient = NULL;
+        }
         return;
     }
 }

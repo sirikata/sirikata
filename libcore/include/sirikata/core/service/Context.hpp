@@ -102,6 +102,15 @@ public:
         ps->start();
     }
 
+    void remove(Service* ps) {
+        for(ServiceList::iterator it = mServices.begin(); it != mServices.end(); it++) {
+            if (*it == ps) {
+                mServices.erase(it);
+                return;
+            }
+        }
+    }
+
     void run(uint32 nthreads = 1);
 
     // Stop the simulation
@@ -146,7 +155,8 @@ protected:
     Sirikata::AtomicValue<Time> mEpoch;
     Sirikata::AtomicValue<Time> mLastSimTime;
     Duration mSimDuration;
-    std::vector<Service*> mServices;
+    typedef std::vector<Service*> ServiceList;
+    ServiceList mServices;
 
     std::tr1::shared_ptr<Thread> mKillThread;
     Network::IOService* mKillService;
