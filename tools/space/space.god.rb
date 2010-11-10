@@ -15,6 +15,8 @@
 #SIRIKATA_OWNER = 'myname'
 #SIRIKATA_OWNER_EMAIL = 'me@example.com'
 #SIRIKATA_SYSTEM_EMAIL = 'god@example.com'
+## Optional: If you want to cap the memory usage, fill in
+#SIRIKATA_MAX_MEMORY = 2.gigabytes
 #
 # Then replace this path with the path to your config file.
 SIRIKATA_CONFIG = '/path/to/user/config.god.rb'
@@ -84,9 +86,11 @@ God.watch do |w|
 
   # restart if memory or cpu is too high
   w.transition(:up, :restart) do |on|
-    on.condition(:memory_usage) do |c|
-      c.above = 2.gigabytes
-      c.times = [3, 5]
+    if defined? SIRIKATA_MAX_MEMORY
+      on.condition(:memory_usage) do |c|
+        c.above = SIRIKATA_MAX_MEMORY
+        c.times = [3, 5]
+      end
     end
   end
 
