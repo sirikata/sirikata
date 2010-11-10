@@ -1176,10 +1176,16 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 	 /*  persist the mesh url*/
 
 	 fp << "\"" << mesh << "\""  << "," ;
-
+   
+	 
 	 /* persist the scale */
 
-	 fp << scale << std::endl;
+	 fp << scale << ",";
+
+
+	 /* persist the object id */
+
+	 fp << objectID << std:: endl;
 }
 
 
@@ -1211,7 +1217,7 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
 
 	/* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
 	es->scale = poptr->getBounds().radius(); 
-
+  es->objectID = oref.toString(); 
 	return es;
 }
 

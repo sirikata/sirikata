@@ -142,7 +142,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
     }
 
 
-		mParent->getObjectHost()->persistEntityState(String("scene.persist"));
+		mParent->getObjectHost()->persistEntityState(String("scene.db"));
 }
 
 

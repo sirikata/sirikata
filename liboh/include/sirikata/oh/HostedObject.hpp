@@ -92,7 +92,7 @@ protected:
         float angular_speed;
         String mesh;
 			  float scale;
-     
+        String objectID; 
 		    void persistToFile(std::ofstream&);
       
 	    };

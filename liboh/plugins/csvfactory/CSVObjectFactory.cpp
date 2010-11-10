@@ -79,6 +79,7 @@ void CSVObjectFactory::generate()
     int quat_vel_idx = -1;
     int script_file_idx = -1;
     int scale_idx = -1;
+		int objid_idx = -1;
 
     // For each line
     while(fp && (count < mMaxObjects))
@@ -125,6 +126,11 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
                 if (line_parts[idx] == "script_file") script_file_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
+								if(line_parts[idx] == "objid") 
+								{
+								   std::cout << "\n\n Setting the object id \n\n";
+								   objid_idx = idx;
+								}
             }
 
             is_first = false;
@@ -191,8 +197,33 @@ void CSVObjectFactory::generate()
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
 
+                /*
+								
+								  Ticket #134 
 
-                HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+								*/
+								String objid = "";
+								if(objid_idx != -1)
+								{
+								  objid = line_parts[objid_idx];
+								}
+
+                HostedObjectPtr obj;
+
+								if(objid_idx == -1)
+								{
+								  std::cout << "\n\n DID NOT  get any existing object id \n\n";
+								  obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+
+								}
+								else
+								{
+								  std::cout << "\n\n GOT existing object id as " << objid << "\n\n";
+								  
+								  obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
+								}
+
+
                 obj->init();
 
                 ObjectConnectInfo oci;
