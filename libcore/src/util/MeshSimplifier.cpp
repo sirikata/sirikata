@@ -358,8 +358,7 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
     }
 
 
-    if (remainingVertices % 10000 == 0)
-      std::cout << remainingVertices << " : remainingVertices\n";
+    
 
     vertexPairs.pop();
   }

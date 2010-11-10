@@ -73,10 +73,13 @@ private:
     Time mLastGenerateTime;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID) :
-      mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null())
+      mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
+      mTreeLevel(0)
     {
-      mMeshdata = std::tr1::shared_ptr<Meshdata>();
-    }
+      mMeshdata = std::tr1::shared_ptr<Meshdata>();      
+    }    
+    
+    uint16 mTreeLevel;
     
   } AggregateObject;
 
@@ -92,33 +95,27 @@ private:
 
   bool mThreadRunning;
 
-
-
-  std::vector<UUID> mEmptyVector;
-  std::vector<UUID>& getChildren(const UUID& uuid) {
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-
-    if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
-      return mEmptyVector;
-    }
-
-    std::vector<UUID>& children = mAggregateObjects[uuid]->mChildren;
-
-    return children;
-  }
-
-  void generateAggregateMeshAsync(const UUID uuid, Time postTime);
-
-
-
   boost::mutex mUploadQueueMutex;
 
   std::map<UUID, std::tr1::shared_ptr<Meshdata> > mUploadQueue;
 
   boost::condition_variable mCondVar;
 
-  void uploadQueueServiceThread();
+  Time mAggregateGenerationStartTime;
 
+  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher> mDirtyAggregateObjects;
+
+  std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
+
+  std::vector<UUID>& getChildren(const UUID& uuid);
+
+  void generateMeshesFromQueue(Time postTime);
+
+  void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
+  
+  void generateAggregateMeshAsync(const UUID uuid, Time postTime);
+
+  void uploadQueueServiceThread();
 
 
 public:
