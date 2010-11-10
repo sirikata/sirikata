@@ -47,6 +47,7 @@ void ObjectHostProxyManager::destroy() {
          iter != mProxyMap.end();
          ++iter) {
         iter->second.obj->destroy();
+        notify(&ProxyCreationListener::onDestroyProxy,iter->second.obj);
     }
     mProxyMap.clear();
 }

@@ -22,18 +22,19 @@ public:
     ProxyObject::Extrapolator mUpdatedLocation;
     ObjectHostProxyManagerPtr proxyManager;
     bool validSpaceObjRef;
-    
+
 
     PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref);
     PerPresenceData(HostedObject* _parent, const SpaceID& _space);
+    ~PerPresenceData();
 
     void populateSpaceObjRef(const SpaceObjectReference& sporef);
-        
+
     ObjectHostProxyManagerPtr getProxyManager();
-    
-    SpaceObjectReference id() const;    
+
+    SpaceObjectReference id() const;
     void initializeAs(ProxyObjectPtr proxyobj);
-    
+
 };
 
 }//end namespace sirikata

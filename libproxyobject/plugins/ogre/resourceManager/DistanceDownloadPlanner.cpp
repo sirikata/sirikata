@@ -76,7 +76,8 @@ void DistanceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
     if (meshptr) {
         meshptr->MeshProvider::removeListener(this);
         vector<Resource>::iterator it = findResource(p);
-        resources.erase(it);
+        if (it != resources.end())
+            resources.erase(it);
     }
 }
 
@@ -89,6 +90,10 @@ void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
         Resource r(mesh, p);
         resources.push_back(r);
     }
+}
+
+void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
+    onDestroyProxy(p);
 }
 
 void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)

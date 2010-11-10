@@ -10,7 +10,7 @@
 
 
 namespace Sirikata{
-    
+
     SpaceObjectReference PerPresenceData::id() const
     {
         if (! validSpaceObjRef)
@@ -51,6 +51,13 @@ namespace Sirikata{
     {
     }
 
+PerPresenceData::~PerPresenceData() {
+    // We no longer have this session, so none of the proxies are usable
+    // anymore. We can't delete the ProxyManager, but we can clear it out and
+    // trigger destruction events for the proxies it holds.
+    proxyManager->destroy();
+}
+
     void PerPresenceData::populateSpaceObjRef(const SpaceObjectReference& sporef)
     {
         validSpaceObjRef = true;
@@ -72,4 +79,3 @@ namespace Sirikata{
 
 
 }
-

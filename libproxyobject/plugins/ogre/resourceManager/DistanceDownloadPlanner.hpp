@@ -56,6 +56,7 @@ public:
     ~DistanceDownloadPlanner();
 
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void removeObject(ProxyObjectPtr p);
 
     //ProxyCreationListener interface
     virtual void onCreateProxy ( ProxyObjectPtr object );

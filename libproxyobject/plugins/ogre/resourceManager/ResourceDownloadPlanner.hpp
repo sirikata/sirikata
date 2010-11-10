@@ -56,6 +56,7 @@ public:
     ~ResourceDownloadPlanner();
 
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void removeObject(ProxyObjectPtr p) = 0;
     virtual void setCamera(Graphics::CameraEntity *entity);
 
     //ProxyCreationListener interface
@@ -66,7 +67,7 @@ public:
     virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
     virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
-    
+
     //PollingService interface
     virtual void poll();
     virtual void stop();
