@@ -76,20 +76,19 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     PluginManager *mScriptPlugins;
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
 public:
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
-    typedef SessionCallback MigratedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     //FIXME: this call will have to go away sooner or later.
     SpaceID getDefaultSpace();
-    
+
     /** Caller is responsible for starting a thread
      *
      * @param spaceIDMap space ID map used to resolve space IDs to servers
@@ -164,7 +163,7 @@ public:
 
     void updateAddressable() const;
 
-    
+
     /** Attach and run this script after the entity is initialized */
     void attachScript(String&) const;
 

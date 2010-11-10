@@ -58,14 +58,13 @@ class ServerIDMap;
  */
 class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateService {
   public:
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
-    typedef SessionCallback MigratedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
