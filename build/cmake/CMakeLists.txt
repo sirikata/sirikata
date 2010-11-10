@@ -1306,15 +1306,7 @@ ${GFX}/resourceManager/CDNArchive.cpp
 ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
 ${GFX}/resourceManager/GraphicsResource.cpp
-${GFX}/resourceManager/GraphicsResourceAsset.cpp
-${GFX}/resourceManager/GraphicsResourceEntity.cpp
 ${GFX}/resourceManager/GraphicsResourceManager.cpp
-${GFX}/resourceManager/GraphicsResourceMaterial.cpp
-${GFX}/resourceManager/GraphicsResourceModel.cpp
-${GFX}/resourceManager/GraphicsResourceName.cpp
-${GFX}/resourceManager/GraphicsResourceShader.cpp
-${GFX}/resourceManager/GraphicsResourceSkeleton.cpp
-${GFX}/resourceManager/GraphicsResourceTexture.cpp
 ${GFX}/resourceManager/ManualMaterialLoader.cpp
 ${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDependencyTask.cpp

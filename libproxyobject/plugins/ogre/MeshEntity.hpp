@@ -47,8 +47,6 @@
 #include "Entity.hpp"
 #include <OgreEntity.h>
 
-#include "resourceManager/GraphicsResourceEntity.hpp"
-
 namespace Sirikata {
 namespace Graphics {
 
@@ -59,13 +57,9 @@ class MeshEntity
         public MeshListener
 {
 public:
-    typedef std::tr1::shared_ptr<Meru::GraphicsResourceEntity> SharedResourcePtr;
     typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
     typedef std::map<String, String > TextureBindingsMap;
 private:
-    SharedResourcePtr mResource;
-    BoundingInfo mBoundingInfo;
-
     ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
@@ -123,17 +117,6 @@ public:
     void unloadMesh();
 
     virtual void setSelected(bool selected);
-
-    ///Returns the scaled bounding info
-    const BoundingInfo& getBoundingInfo()const{
-        return mBoundingInfo;
-    }
-    const SharedResourcePtr &getResource() const {
-        return mResource;
-    }
-    void setResource(const SharedResourcePtr &resourcePtr) {
-        mResource = resourcePtr;
-    }
 
     void downloadMeshFile(URI const& uri);
 

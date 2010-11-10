@@ -50,13 +50,7 @@ class GraphicsResource : public SelfWeakPtr<GraphicsResource>
 {
 public:
   enum Type {
-    NAME,
-    ENTITY,
-    MATERIAL,
-    SKELETON,
-    TEXTURE,
-    SHADER,
-    MODEL
+    ENTITY
   };
 
   enum ParseState {
