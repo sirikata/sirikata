@@ -1312,7 +1312,6 @@ ${GFX}/resourceManager/ResourceDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
 ${GFX}/resourceManager/DistanceDownloadPlanner.cpp
 ${GFX}/resourceManager/SAngleDownloadPlanner.cpp
-${GFX}/resourceManager/ResourceManager.cpp
 ${GFX}/ViewportOverlay.cpp
 ${GFX}/WebView.cpp
 ${GFX}/WebViewManager.cpp

@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include "GraphicsResourceManager.hpp"
-#include "ResourceManager.hpp"
 #include "../meruCompat/Event.hpp"
 #include "../meruCompat/EventSource.hpp"
 #include "ResourceDownloadPlanner.hpp"

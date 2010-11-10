@@ -49,14 +49,12 @@
 #include "input/InputEvents.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
-#include "resourceManager/ResourceManager.hpp"
 #include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 
 using Meru::GraphicsResourceManager;
-using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
 
@@ -428,7 +426,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Meru::EventSource::InitializeEventTypes();
             Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
             new SequentialWorkQueue(mWorkQueue);
-            new ResourceManager();
             new GraphicsResourceManager();
 
             mCDNArchivePlugin = new CDNArchivePlugin;
