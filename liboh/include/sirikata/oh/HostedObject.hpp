@@ -49,13 +49,13 @@
 
 #include <sirikata/core/transfer/URI.hpp>
 
+#include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/PerPresenceData.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
 namespace Sirikata {
 class ObjectHostContext;
-class ObjectHost;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
@@ -87,17 +87,17 @@ protected:
 			  String name;
 			  Vector3d pos;
 			  Quaternion orient;
-		    Vector3f vel;	
+		    Vector3f vel;
         Vector3f rot;
         float angular_speed;
         String mesh;
 			  float scale;
-     
+
 		    void persistToFile(std::ofstream&);
-      
+
 	    };
 		typedef struct EntityState EntityState;
-	  
+
   private:
     //SpaceSet mSpaces;
 
@@ -123,7 +123,7 @@ protected:
     typedef SSTConnection::Ptr SSTConnectionPtr;
 
 
-    
+
 
     // FIXME maintain a proper map here or put in per-presence data
     std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;
@@ -151,7 +151,7 @@ public:
     typedef std::set<SpaceObjectReference> SpaceObjRefSet;
     void getSpaceObjRefs(SpaceObjRefSet& ss) const;
 
-    
+
 
 //------- Public member functions:
     ObjectHostContext* context() { return mContext; }
@@ -169,11 +169,11 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     //void initializeScript(const String&script, const std::map<String,String> &args);
     void initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach="");
-    
+
     bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void processInitScriptMessage(MemoryReference& body);
     bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-    
+
     /// Attempt to restore this item from database including script
     //void initializeRestoreFromDatabase(const SpaceID&spaceID);
 
@@ -184,8 +184,8 @@ public:
 
     void addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims);
 
-    
-    
+
+
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
@@ -201,12 +201,12 @@ public:
     const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
 
 
-    
-	/** These are properties related the object script 
+
+	/** These are properties related the object script
 	    that would be attached to this hosted object in case
 		it is a scripted object
 	*/
-	
+
     bool mHasScript;
     String mScriptType;
     ObjectScriptManager::Arguments mScriptArgs;
@@ -222,7 +222,7 @@ public:
     {
         mHasScript = t;
     }
-    
+
     void setScriptType(String s)
     {
         mScriptType = s;
@@ -249,7 +249,7 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
-    
+
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
         persistence messages.
@@ -257,12 +257,12 @@ public:
     const UUID &getUUID() const {
         return mInternalObjectReference;
     }
-    
+
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
     virtual ProxyManagerPtr getDefaultProxyManager(const SpaceID& space);
     virtual ProxyObjectPtr  getDefaultProxyObject(const SpaceID& space);
-    
+
     /** Called once per frame, at a certain framerate. */
     void tick();
 
@@ -287,7 +287,7 @@ public:
         const String& scriptType = "");
 
 
-    
+
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
 
@@ -301,8 +301,8 @@ public:
         PerPresenceData* ppd,
         const String& scriptFile = "",
         const String& scriptType = "");
-    
-    
+
+
   private:
 
     // Because IOStrand->wrap() can't handle > 5 parameters (because the
@@ -312,16 +312,17 @@ public:
 
     void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
     void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
-    
+
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
+    void handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc);
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
     void disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref);
-    
+
     /// Receive an ObjectMessage from the space via the ObjectHost. Translate it
     /// to our runtime ODP structure and deliver it.
     void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
@@ -331,7 +332,7 @@ public:
     //BFTM_FIXME: need to actually write this function.
     void updateAddressable();
 
-    
+
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
@@ -356,7 +357,7 @@ public:
 
     virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref,const TimedMotionVector3f& loc);
 
-    
+
     virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
     virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
 
@@ -373,17 +374,17 @@ public:
     virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
     virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
 
-    
+
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
-    
+
 
     virtual void requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo);
     virtual bool requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler);
 
     virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
-    
-    
+
+
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);

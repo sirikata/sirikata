@@ -89,19 +89,19 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2)
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
     );
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
-    std::cout << "\n\n Here Here Here \n\n";
-    NOT_IMPLEMENTED(oh);
+    // ignored
 }
 
 void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
-    NOT_IMPLEMENTED(oh);
+    // ignored
 }
 
 void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
@@ -114,6 +114,10 @@ void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& spac
         OH_LOG(warn, "Got message for " << internalID.toString() << " but no such object exists.");
         delete msg;
     }
+}
+
+void ObjectHost::handleObjectDisconnected(const UUID& internalID, Disconnect::Code) {
+    // ignored
 }
 
 //This function just returns the first space id in the unordered map
@@ -139,11 +143,13 @@ void ObjectHost::connect(
     const String& mesh,
     const SolidAngle& init_sa,
     ConnectedCallback connected_cb,
-    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
+    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+    DisconnectedCallback disconnected_cb
+)
 {
     bool with_query = init_sa != SolidAngle::Max;
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-    mSessionManagers[space]->connect(obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh, connected_cb, migrated_cb, stream_created_cb);
+    mSessionManagers[space]->connect(obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh, connected_cb, migrated_cb, stream_created_cb, disconnected_cb);
 }
 
 void ObjectHost::disconnect(HostedObjectPtr obj, const SpaceID& space) {
@@ -217,16 +223,16 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
 /**
   This method should update the addressable list of all
   the entities on the object host.
-  This would happen because of Pinto updates. 
+  This would happen because of Pinto updates.
   Right now, this is being called after the creation of a new
-  entity so that the new entity is addressable by the neighboring 
+  entity so that the new entity is addressable by the neighboring
   entities.
 */
 
 void ObjectHost::updateAddressable() const
 {
    // Pull out the list of all the entitites
-    
+
     HostedObjectMap::const_iterator it = mHostedObjects.begin();
     for(  ; it != mHostedObjects.end(); it++)
     {
@@ -238,10 +244,10 @@ void ObjectHost::updateAddressable() const
 
 void ObjectHost::persistEntityState( const String& filename)
 {
-  
-   
+
+
 	std::ofstream fp(filename.c_str());
-	
+
 
   fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\" " << std::endl;
 

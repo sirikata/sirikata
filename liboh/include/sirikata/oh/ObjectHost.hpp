@@ -83,8 +83,9 @@ public:
     // intents and purposes this is the point at which the transition happens
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
-
-    typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
+    // Notifies the ObjectHost of object connection that was closed, including a
+    // reason.
+    typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
 
     //FIXME: this call will have to go away sooner or later.
     SpaceID getDefaultSpace();
@@ -113,7 +114,9 @@ public:
         const String& mesh,
         const SolidAngle& init_sa,
         ConnectedCallback connected_cb,
-        MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
+        MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+        DisconnectedCallback disconnected_cb
+    );
 
     /** Disconnect the object from the space. */
     void disconnect(HostedObjectPtr obj, const SpaceID& space);
@@ -174,7 +177,7 @@ public:
     void handleObjectConnected(const UUID& internalID, ServerID server);
     void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
     void handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
-
+    void handleObjectDisconnected(const UUID& internalID, Disconnect::Code);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;

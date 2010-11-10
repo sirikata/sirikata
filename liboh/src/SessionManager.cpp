@@ -32,13 +32,9 @@
 
 #include <sirikata/oh/SessionManager.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
-
 #include <sirikata/core/network/IOStrandImpl.hpp>
-
 #include <sirikata/core/network/StreamFactory.hpp>
-
 #include <sirikata/core/options/CommonOptions.hpp>
-
 #include <sirikata/core/odp/DelegatePort.hpp>
 
 #include "Protocol_Session.pbj.hpp"
@@ -65,8 +61,11 @@ SessionManager::ObjectConnections::ObjectConnections(SessionManager* _parent)
 {
 }
 
-void SessionManager::ObjectConnections::add(const UUID& objid, ConnectingInfo ci, ConnectedCallback connect_cb,
-					MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb)
+void SessionManager::ObjectConnections::add(
+    const UUID& objid, ConnectingInfo ci, ConnectedCallback connect_cb,
+    MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb,
+    DisconnectedCallback disconnected_cb
+)
 {
     // Make sure we have this object's info stored
     ObjectInfoMap::iterator it = mObjectInfo.find(objid);
@@ -80,6 +79,7 @@ void SessionManager::ObjectConnections::add(const UUID& objid, ConnectingInfo ci
     obj_info.connectedCB = connect_cb;
     obj_info.migratedCB = migrate_cb;
     obj_info.streamCreatedCB = stream_created_cb;
+    obj_info.disconnectedCB = disconnected_cb;
     // Add to reverse index // FIXME we need a real ObjectReference to use here
     mInternalIDs[ObjectReference(objid)] = objid;
 }
@@ -218,7 +218,11 @@ void SessionManager::ObjectConnections::invokeDeferredCallbacks() {
 
 // SessionManager Implementation
 
-SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb, ObjectMessageHandlerCallback msg_cb)
+SessionManager::SessionManager(
+    ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap,
+    ObjectConnectedCallback conn_cb, ObjectMigratedCallback mig_cb,
+    ObjectMessageHandlerCallback msg_cb, ObjectDisconnectedCallback disconn_cb
+)
  : ODP::DelegateService( std::tr1::bind(&SessionManager::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,  std::tr1::placeholders::_3) ),
    mContext( ctx ),
    mSpace(space),
@@ -227,6 +231,7 @@ SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, Ser
    mObjectConnectedCallback(conn_cb),
    mObjectMigratedCallback(mig_cb),
    mObjectMessageHandlerCallback(msg_cb),
+   mObjectDisconnectedCallback(disconn_cb),
    mObjectConnections(this),
    mTimeSyncClient(NULL),
    mShuttingDown(false)
@@ -271,7 +276,9 @@ void SessionManager::connect(
     const UUID& objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
     bool regQuery, const SolidAngle& init_sa, const String& init_mesh,
-    ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb)
+    ConnectedCallback connect_cb, MigratedCallback migrate_cb,
+    StreamCreatedCallback stream_created_cb, DisconnectedCallback disconn_cb
+)
 {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -301,7 +308,7 @@ void SessionManager::connect(
 		       _1, _2, _3, _4, _5, _6, _7,
             connect_cb
         ),
-        migrate_cb, stream_created_cb
+        migrate_cb, stream_created_cb, disconn_cb
     );
 
     // Get a connection to request

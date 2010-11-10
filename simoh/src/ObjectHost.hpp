@@ -61,8 +61,11 @@ public:
     // intents and purposes this is the point at which the transition happens
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
-
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
+    // Notifies the ObjectHost of object connection that was closed, including a
+    // reason.
+    typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
+
 
     // FIXME the ServerID is used to track unique sources, we need to do this separately for object hosts
     ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap* sidmap);
@@ -74,9 +77,14 @@ public:
 
     /** Connect the object to the space with the given starting parameters. */
     void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb,
-		 MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
-    void connect(Object* obj, ConnectedCallback connected_cb, MigratedCallback migrated_cb,
-		 StreamCreatedCallback stream_created_cb);
+        MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+        DisconnectedCallback disconnected_cb
+    );
+    void connect(Object* obj,
+        ConnectedCallback connected_cb, MigratedCallback migrated_cb,
+        StreamCreatedCallback stream_created_cb,
+        DisconnectedCallback disconnected_cb
+    );
     /** Disconnect the object from the space. */
     void disconnect(Object* obj);
 
@@ -107,7 +115,7 @@ private:
     void handleObjectConnected(const UUID& internalID, ServerID server);
     void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
     void handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg);
-
+    void handleObjectDisconnected(const UUID& internalID, Disconnect::Code);
 
     OptionSet* mStreamOptions;
 

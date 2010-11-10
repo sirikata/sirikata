@@ -1,7 +1,7 @@
-/*  Sirikata
- *  ObjectHostListener.hpp
+/*  Sirikata liboh -- Object Host
+ *  HostedObject.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,26 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
-#define _SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
-
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/UUID.hpp>
+#ifndef _SIRIKATA_OH_DISCONNECT_CODES_HPP_
+#define _SIRIKATA_OH_DISCONNECT_CODES_HPP_
 
 namespace Sirikata {
+namespace Disconnect {
 
-class ObjectHost;
-class Object;
-
-class ObjectHostListener {
-public:
-    virtual ~ObjectHostListener() {}
-
-    virtual void objectHostConnectedObject(ObjectHost* oh, Object* obj, const ServerID& server) {}
-    virtual void objectHostMigratedObject(ObjectHost* oh, const UUID& objid, const ServerID& from_server, const ServerID& to_server) {}
-    virtual void objectHostDisconnectedObject(ObjectHost* oh, Object* obj) {}
+enum Code {
+    Requested,
+    Forced
 };
 
+} // namespace Disconnect
 } // namespace Sirikata
 
-#endif //_SIRIKATA_OH_OBJECT_HOST_LISTENER_HPP_
+#endif //_SIRIKATA_OH_DISCONNECT_CODES_HPP_

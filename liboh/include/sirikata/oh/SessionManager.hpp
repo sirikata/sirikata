@@ -44,6 +44,8 @@
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/sync/TimeSyncClient.hpp>
 
+#include <sirikata/oh/DisconnectCodes.hpp>
+
 namespace Sirikata {
 
 class ServerIDMap;
@@ -58,6 +60,7 @@ class ServerIDMap;
  */
 class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateService {
   public:
+
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> ConnectedCallback;
@@ -66,6 +69,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     // intents and purposes this is the point at which the transition happens
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
@@ -76,6 +80,9 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     typedef std::tr1::function<void(const UUID&,ServerID,ServerID)> ObjectMigratedCallback;
     // Returns a message to the object host for handling.
     typedef std::tr1::function<void(const UUID&, Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
+    // Notifies the ObjectHost of object connection that was closed, including a
+    // reason.
+    typedef std::tr1::function<void(const UUID&, Disconnect::Code)> ObjectDisconnectedCallback;
 
     // SST stream related typedefs
     typedef Stream<SpaceObjectReference> SSTStream;
@@ -83,7 +90,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     typedef SSTStream::EndpointType SSTEndpoint;
 
 
-    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback);
+    SessionManager(ObjectHostContext* ctx, const SpaceID& space, ServerIDMap* sidmap, ObjectConnectedCallback, ObjectMigratedCallback, ObjectMessageHandlerCallback, ObjectDisconnectedCallback);
     ~SessionManager();
 
     // NOTE: The public interface is only safe to access from the main strand.
@@ -95,7 +102,8 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
         bool regquery, const SolidAngle& init_sa, const String& init_mesh,
-        ConnectedCallback connect_cb, MigratedCallback migrate_cb, StreamCreatedCallback
+        ConnectedCallback connect_cb, MigratedCallback migrate_cb,
+        StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
     /** Disconnect the object from the space. */
     void disconnect(const UUID& id);
@@ -227,6 +235,7 @@ private:
     ObjectConnectedCallback mObjectConnectedCallback;
     ObjectMigratedCallback mObjectMigratedCallback;
     ObjectMessageHandlerCallback mObjectMessageHandlerCallback;
+    ObjectDisconnectedCallback mObjectDisconnectedCallback;
 
     // Only main strand accesses and manipulates the map, although other strand
     // may access the SpaceNodeConnection*'s.
@@ -251,8 +260,11 @@ private:
         ObjectConnections(SessionManager* _parent);
 
         // Add the object, completely disconnected, to the index
-        void add(const UUID& objid, ConnectingInfo ci, ConnectedCallback connect_cb, MigratedCallback migrate_cb,
-	       StreamCreatedCallback stream_created_cb);
+        void add(
+            const UUID& objid, ConnectingInfo ci,
+            ConnectedCallback connect_cb, MigratedCallback migrate_cb,
+            StreamCreatedCallback stream_created_cb, DisconnectedCallback disconnected_cb
+        );
 
         // Mark the object as connecting to the given server
         ConnectingInfo& connectingTo(const UUID& obj, ServerID connecting_to);
@@ -305,6 +317,7 @@ private:
             ConnectedCallback connectedCB;
             MigratedCallback migratedCB;
   	    StreamCreatedCallback streamCreatedCB;
+  	    DisconnectedCallback disconnectedCB;
         };
         typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;

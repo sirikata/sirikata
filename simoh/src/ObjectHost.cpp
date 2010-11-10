@@ -58,7 +58,8 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Trace::Trace* trace, ServerIDMap*
        ctx, SpaceID::null(), sidmap, // FIXME should have non-null SpaceID
        std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
        std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-       std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2)
+       std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, _2),
+       std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
    )
 {
     mPingId=0;
@@ -77,9 +78,12 @@ const ObjectHostContext* ObjectHost::context() const {
     return mContext;
 }
 
-void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connect_cb,
-			 MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb)
-
+void ObjectHost::connect(
+    Object* obj, const SolidAngle& init_sa,
+    ConnectedCallback connect_cb,
+    MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb,
+    DisconnectedCallback disconnected_cb
+)
 {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -89,11 +93,18 @@ void ObjectHost::connect(Object* obj, const SolidAngle& init_sa, ConnectedCallba
     TimedMotionQuaternion init_orient(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity()));
     BoundingSphere3f init_bounds = obj->bounds();
 
-    mSessionManager.connect(obj->uuid(), init_loc, init_orient, init_bounds, true, init_sa, "", connect_cb, migrate_cb, stream_created_cb);
+    mSessionManager.connect(
+        obj->uuid(), init_loc, init_orient, init_bounds, true, init_sa, "",
+        connect_cb, migrate_cb, stream_created_cb, disconnected_cb
+    );
 }
 
-void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCallback migrate_cb,
-			 StreamCreatedCallback stream_created_cb)
+void ObjectHost::connect(
+    Object* obj,
+    ConnectedCallback connect_cb, MigratedCallback migrate_cb,
+    StreamCreatedCallback stream_created_cb,
+    DisconnectedCallback disconnected_cb
+)
 {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
@@ -103,7 +114,10 @@ void ObjectHost::connect(Object* obj, ConnectedCallback connect_cb, MigratedCall
     TimedMotionQuaternion init_orient(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity()));
     BoundingSphere3f init_bounds = obj->bounds();
 
-    mSessionManager.connect(obj->uuid(), init_loc, init_orient, init_bounds, false, SolidAngle::Max, "", connect_cb, migrate_cb, stream_created_cb);
+    mSessionManager.connect(
+        obj->uuid(), init_loc, init_orient, init_bounds, false, SolidAngle::Max, "",
+        connect_cb, migrate_cb, stream_created_cb, disconnected_cb
+    );
 }
 
 void ObjectHost::disconnect(Object* obj) {
@@ -203,6 +217,10 @@ void ObjectHost::handleObjectMessage(const UUID& internalID, Sirikata::Protocol:
             delete msg;
         }
     }
+}
+
+void ObjectHost::handleObjectDisconnected(const UUID& objid, Disconnect::Code) {
+    notify(&ObjectHostListener::objectHostDisconnectedObject, this, mObjects[objid]);
 }
 
 bool ObjectHost::registerService(uint64 port, const ObjectMessageCallback&cb) {
