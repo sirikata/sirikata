@@ -33,6 +33,7 @@
 #include <sirikata/core/queue/SizedThreadSafeQueue.hpp>
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/core/util/EWA.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
 #define SEND_LATENCY_EWA_ALPHA .10f
 
@@ -43,6 +44,7 @@ class ASIOReadBuffer;
 void triggerMultiplexedConnectionError(MultiplexedSocket*,ASIOSocketWrapper*,const boost::system::error_code &error);
 void ASIOLogBuffer(void * pointerkey, const char extension[16], const uint8* buffer, size_t buffersize);
 class ASIOSocketWrapper {
+    IOStrand* mStrand;
     TCPSocket*mSocket;
 
     ASIOReadBuffer *mReadBuffer;
@@ -198,7 +200,7 @@ public:
     void shutdownAndClose();
 
     ///Creates a lowlevel TCPSocket using the following io service
-    void createSocket(IOService&io, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
+    void createSocket(unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
     ///Destroys the lowlevel TCPSocket
     void destroySocket();

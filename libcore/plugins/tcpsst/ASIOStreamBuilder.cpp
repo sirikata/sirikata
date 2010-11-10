@@ -238,7 +238,7 @@ void buildStream(TcpSstHeaderArray *buffer,
         where->second.mWebSocketResponses[socket] = reply_str;
         if (numConnections==(unsigned int)where->second.mSockets.size()) {
             MultiplexedSocketPtr shared_socket(
-                MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,data->cb,base64Stream));
+                MultiplexedSocket::construct<MultiplexedSocket>(data->strand,context,data->cb,base64Stream));
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();

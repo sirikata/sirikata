@@ -252,7 +252,7 @@ Stream::StreamID MultiplexedSocket::getNewID() {
     assert(retval>1);
     return Stream::StreamID(retval);
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelim)
+MultiplexedSocket::MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelim)
  : SerializationCheck(),
    mIO(io),
    mNewSubstreamCallback(substreamCallback),
@@ -262,7 +262,7 @@ MultiplexedSocket::MultiplexedSocket(IOService*io, const Stream::SubstreamCallba
     mNewRequests=NULL;
     mSocketConnectionPhase=PRECONNECTION;
 }
-MultiplexedSocket::MultiplexedSocket(IOService*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, bool zeroDelimited)
+MultiplexedSocket::MultiplexedSocket(IOStrand*io,const UUID&uuid,const Stream::SubstreamCallback &substreamCallback, bool zeroDelimited)
  :SerializationCheck(),
   mIO(io),
      mNewSubstreamCallback(substreamCallback),
@@ -456,7 +456,7 @@ void MultiplexedSocket::prepareConnect(unsigned int numSockets, size_t max_enque
         for (unsigned int i=oldSize;i<numSockets;++i) {
             mSockets.push_back(ASIOSocketWrapper(max_enqueued_send_size, max_enqueued_send_size>ASIO_SEND_BUFFER_SIZE?max_enqueued_send_size:ASIO_SEND_BUFFER_SIZE,getSharedPtr()));
             mSockets.back().bindFunctions(getSharedPtr());
-            mSockets.back().createSocket(getASIOService(), kernelSendBufferSize, kernelReceiveBufferSize);
+            mSockets.back().createSocket(kernelSendBufferSize, kernelReceiveBufferSize);
         }
     }
 }
