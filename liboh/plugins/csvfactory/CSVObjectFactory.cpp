@@ -63,7 +63,7 @@ T safeLexicalCast(const String& orig) {
 
 void CSVObjectFactory::generate()
 {
-    int count;
+    int count = 0;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
@@ -89,8 +89,8 @@ void CSVObjectFactory::generate()
 	// then this is a comment
         if(line.length() > 0 && line.at(0) == '#')
        {
-         continue;   
-       } 
+         continue;
+       }
         // Split into parts
         StringList line_parts;
         int last_comma = -1;
