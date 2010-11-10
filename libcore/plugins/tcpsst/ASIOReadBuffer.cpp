@@ -32,6 +32,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
@@ -63,21 +64,31 @@ struct ASIOReadBufferUtil {
     }
 };
 
-void ASIOReadBuffer::bindFunctions() {
-    mAsioReadIntoChunk=std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
-                                      this,
-                                      _1,
-                                      _2);
-    mAsioReadIntoFixedBuffer=std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
-                                      this,
-                                      _1,
-                                      _2);
-
-    mAsioReadIntoZeroDelimChunk=std::tr1::bind(&ASIOReadBuffer::asioReadIntoZeroDelimChunk,
-                                      this,
-                                      _1,
-                                      _2);
-
+void ASIOReadBuffer::bindFunctions(IOStrand* strand) {
+    mAsioReadIntoChunk =
+        strand->wrap(
+            std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
+                this,
+                _1,
+                _2
+            )
+        );
+    mAsioReadIntoFixedBuffer =
+        strand->wrap(
+            std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
+                this,
+                _1,
+                _2
+            )
+        );
+    mAsioReadIntoZeroDelimChunk =
+        strand->wrap(
+            std::tr1::bind(&ASIOReadBuffer::asioReadIntoZeroDelimChunk,
+                this,
+                _1,
+                _2
+            )
+        );
 }
 
 void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
@@ -527,7 +538,8 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
     }
 }
 ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
-    bindFunctions();
+    IOStrand* strand = parentSocket->getStrand();
+    bindFunctions(strand);
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;

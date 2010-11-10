@@ -48,6 +48,7 @@ namespace Sirikata {
 
 PintoManager::PintoManager(PintoContext* ctx)
  : mContext(ctx),
+   mStrand(ctx->ioService->createStrand()),
    mLastTime(Time::null()),
    mDt(Duration::milliseconds((int64)1))
 {
@@ -56,7 +57,7 @@ PintoManager::PintoManager(PintoContext* ctx)
 
     OptionSet* listener_protocol_optionset = StreamListenerFactory::getSingleton().getOptionParser(listener_protocol)(listener_protocol_options);
 
-    mListener = StreamListenerFactory::getSingleton().getConstructor(listener_protocol)(mContext->ioService, listener_protocol_optionset);
+    mListener = StreamListenerFactory::getSingleton().getConstructor(listener_protocol)(mStrand, listener_protocol_optionset);
 
     String listener_host = GetOptionValue<String>(OPT_PINTO_HOST);
     String listener_port = GetOptionValue<String>(OPT_PINTO_PORT);
@@ -77,8 +78,8 @@ PintoManager::PintoManager(PintoContext* ctx)
 
 PintoManager::~PintoManager() {
     delete mListener;
-
     delete mQueryHandler;
+    delete mStrand;
 }
 
 void PintoManager::start() {

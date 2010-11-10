@@ -45,11 +45,11 @@ namespace Network {
  */
 class TCPStreamListener : public StreamListener {
 public:
-    TCPStreamListener(IOService&, OptionSet*);
+    TCPStreamListener(IOStrand*, OptionSet*);
     virtual ~TCPStreamListener();
 
-    static TCPStreamListener* construct(Network::IOService*io, OptionSet*options) {
-        return new TCPStreamListener(*io,options);
+    static TCPStreamListener* construct(Network::IOStrand*io, OptionSet*options) {
+        return new TCPStreamListener(io,options);
     }
 
     virtual bool listen(const Address&addr, const Stream::SubstreamCallback&newStreamCallback);
@@ -62,7 +62,7 @@ public:
         static void startAccept(std::tr1::shared_ptr<Data>& data);
         static void handleAccept(std::tr1::shared_ptr<Data>& data, const boost::system::error_code& error);
     public:
-        Data(IOService& io,
+        Data(IOStrand* io,
              uint8 maxSimultaneousSockets,
              uint32 sendBufferSize,
              bool noDelay,
@@ -71,7 +71,6 @@ public:
         ~Data();
         ///start the listening process
         void start(std::tr1::shared_ptr<Data>);
-        IOService& ios;
         IOStrand* strand;
         TCPListener* acceptor;
         TCPSocket* socket;

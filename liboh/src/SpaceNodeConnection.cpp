@@ -48,7 +48,7 @@ SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStra
    mHandleReadStage(handle_read_stage),
    mSpace(spaceid),
    mServer(sid),
-   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(&ioStrand->service(),streamOptions)),
+   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(ioStrand,streamOptions)),
    mAddr(addr),
    mConnecting(false),
    receive_queue(GetOptionValue<int32>("object-host-receive-buffer"), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),

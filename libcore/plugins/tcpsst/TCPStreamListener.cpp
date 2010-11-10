@@ -45,14 +45,14 @@ namespace Network {
 
 using namespace boost::asio::ip;
 
-TCPStreamListener::Data::Data(IOService& io,
+TCPStreamListener::Data::Data(IOStrand* io,
                               uint8 maxSimultaneousSockets,
                               uint32 sendBufferSize,
                               bool noDelay,
                               uint32 kernelSendBufferSize,
                               uint32 kernelReceiveBufferSize)
-    : ios(io),
-     acceptor(NULL),
+ : strand(io),
+   acceptor(NULL),
      socket(NULL),
      cb(0),
      mMaxSimultaneousSockets(maxSimultaneousSockets),
@@ -61,11 +61,9 @@ TCPStreamListener::Data::Data(IOService& io,
      mKernelSendBufferSize(kernelSendBufferSize),
      mKernelReceiveBufferSize(kernelReceiveBufferSize)
 {
-    strand = ios.createStrand();
 }
 
 TCPStreamListener::Data::~Data() {
-    delete strand;
     delete acceptor;
     delete socket;
 }
@@ -81,7 +79,7 @@ void TCPStreamListener::Data::start(DataPtr shared_this) {
 // All the real work happens here in these methods
 void TCPStreamListener::Data::startAccept(DataPtr& data) {
     assert(data->socket == NULL);
-    data->socket = new TCPSocket(data->ios);
+    data->socket = new TCPSocket(data->strand->service());
     if (data->mKernelReceiveBufferSize) {
         boost::asio::socket_base::receive_buffer_size option(data->mKernelReceiveBufferSize);
         data->socket->set_option(option);
@@ -121,7 +119,7 @@ void TCPStreamListener::Data::handleAccept(DataPtr& data, const boost::system::e
 }
 
 
-TCPStreamListener::TCPStreamListener(IOService& io, OptionSet*options)
+TCPStreamListener::TCPStreamListener(IOStrand* io, OptionSet*options)
 {
     OptionValue *maxSimultSockets=options->referenceOption("max-parallel-sockets");
     OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
@@ -147,7 +145,7 @@ bool TCPStreamListener::listen (const Address&address,
                                 const Stream::SubstreamCallback&newStreamCallback) {
     close();
 
-    mData->acceptor = new TCPListener(mData->ios,tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
+    mData->acceptor = new TCPListener(mData->strand->service(),tcp::endpoint(tcp::v4(), atoi(address.getService().c_str())));
     mData->cb = newStreamCallback;
     mData->start(mData);
 

@@ -32,6 +32,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "TCPStream.hpp"
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
@@ -238,7 +239,7 @@ void buildStream(TcpSstHeaderArray *buffer,
         where->second.mWebSocketResponses[socket] = reply_str;
         if (numConnections==(unsigned int)where->second.mSockets.size()) {
             MultiplexedSocketPtr shared_socket(
-                MultiplexedSocket::construct<MultiplexedSocket>(&data->ios,context,data->cb,base64Stream));
+                MultiplexedSocket::construct<MultiplexedSocket>(data->strand,context,data->cb,base64Stream));
             shared_socket->initFromSockets(where->second.mSockets,data->mSendBufferSize);
             std::string port=shared_socket->getASIOSocketWrapper(0).getLocalEndpoint().getService();
             std::string resource_name='/'+context.toString();
@@ -296,7 +297,8 @@ void beginNewStream(TCPSocket*socket, std::tr1::shared_ptr<TCPStreamListener::Da
     boost::asio::async_read(*socket,
                             boost::asio::buffer(buffer->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
                             CheckWebSocketRequest (buffer),
-                            std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,data,_1,_2));
+        data->strand->wrap( std::tr1::bind(&ASIOStreamBuilder::buildStream,buffer,socket,data,_1,_2) )
+        );
 }
 
 } // namespace ASIOStreamBuilder

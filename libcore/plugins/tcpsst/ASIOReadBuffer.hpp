@@ -31,6 +31,7 @@
  */
 
 #include "MultiplexedSocket.hpp"
+#include <sirikata/core/network/IOStrand.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -88,7 +89,7 @@ private:
     std::tr1::function<void(const ErrorCode&,std::size_t)> mAsioReadIntoFixedBuffer;
     std::tr1::function<void(const ErrorCode&,std::size_t)> mAsioReadIntoChunk;
     std::tr1::function<void(const ErrorCode&,std::size_t)> mAsioReadIntoZeroDelimChunk;
-    void bindFunctions();
+    void bindFunctions(IOStrand* strand);
     /**
      * This forwards the error message to the MultiplexedSocket so the appropriate action may be taken
      * (including,possibly, disconnecting and shutting down the socket connections and all associated streams

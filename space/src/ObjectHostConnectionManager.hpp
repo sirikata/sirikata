@@ -95,12 +95,7 @@ public:
     }
 private:
     SpaceContext* mContext;
-
-    Network::IOService* mIOService; // FIXME we should be able to use main IOService, but need underlying connections to be stranded
     Network::IOStrand* mIOStrand;
-    Network::IOWork* mIOWork;
-    Thread* mIOThread;
-
     Sirikata::Network::StreamListener* mAcceptor;
 
     struct ObjectHostConnection {

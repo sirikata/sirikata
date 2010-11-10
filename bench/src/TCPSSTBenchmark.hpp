@@ -84,6 +84,7 @@ class SSTBenchmark : public Benchmark {
     String mHost;
 
     Sirikata::Network::IOService*mIOService;
+    Sirikata::Network::IOStrand* mIOStrand;
     Sirikata::Network::Stream *mStream;
     Sirikata::Network::StreamListener *mListener;
 

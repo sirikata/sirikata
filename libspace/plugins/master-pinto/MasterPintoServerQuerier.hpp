@@ -34,8 +34,7 @@
 #define _SIRIKATA_LIBSPACE_MASTER_PINTO_SERVER_QUERIER_HPP_
 
 #include <sirikata/space/PintoServerQuerier.hpp>
-#include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOWork.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 
@@ -75,12 +74,7 @@ private:
 
     SpaceContext* mContext;
 
-    // FIXME we should be able to use main IOService, but need underlying connections to be stranded
-    // This is getting absurd. We have extra threads all over the place because
-    // tcpsst isn't thread safe and doesn't use strands
-    Network::IOService* mIOService;
-    Network::IOWork* mIOWork;
-    Thread* mIOThread;
+    Network::IOStrand* mIOStrand;
 
     Network::Stream* mServerStream;
 

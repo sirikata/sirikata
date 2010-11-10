@@ -67,8 +67,8 @@ private:
 
 //Begin Members//
 
-    ///ASIO io service running in a single thread we can expect callbacks from
-    IOService*mIO;
+    ///ASIO strand which guarantees serialized callbacks
+    IOStrand* mIO;
     ///a vector of ASIO sockets (wrapped in with a simple send-full-packet abstraction)
     std::vector<ASIOSocketWrapper> mSockets;
     ///This callback is called whenever a newly encountered StreamID is picked up
@@ -149,7 +149,7 @@ public:
         return mZeroDelim;
     }
     ///public io service accessor for new stream construction
-    IOService&getASIOService(){return *mIO;}
+    IOStrand* getStrand() {return mIO;}
 
     /**
      * Sends a packet telling the other side that this stream is closed (or alternatively if its a closeAck that the close request was received and no further packets for that
@@ -174,9 +174,9 @@ public:
     ///function that searches mFreeStreamIDs or uses the mHighestStreamID to find the next unused free stream ID
     Stream::StreamID getNewID();
     ///Constructor for a connecting stream
-    MultiplexedSocket(IOService*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelimitedStream);
+    MultiplexedSocket(IOStrand*io, const Stream::SubstreamCallback&substreamCallback, bool zeroDelimitedStream);
     ///Constructor for a listening stream with a prebuilt connection of ASIO sockets
-    MultiplexedSocket(IOService*io, const UUID&uuid, const Stream::SubstreamCallback &substreamCallback, bool zeroDelimitedStream);
+    MultiplexedSocket(IOStrand*io, const UUID&uuid, const Stream::SubstreamCallback &substreamCallback, bool zeroDelimitedStream);
     ///call after construction to setup mSockets
     void initFromSockets(const std::vector<TCPSocket*>&sockets, size_t max_send_buffer_size);
     ///Sends the protocol headers to all ASIO socket wrappers when a known fully open connection has been listened for
