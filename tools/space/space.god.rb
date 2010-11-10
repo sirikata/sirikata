@@ -11,6 +11,8 @@
 #SIRIKATA_ROOT = "/path/to/sirikata"
 #SPACE_PORT = 7777
 #SIRIKATA_UID = 'my_username'
+## Optional: You can specify the binary to use. By default, space
+#SIRIKATA_SPACE_BINARY = space_d
 ## Optional: If you want emails, fill this in
 #SIRIKATA_OWNER = 'myname'
 #SIRIKATA_OWNER_EMAIL = 'me@example.com'
@@ -23,7 +25,11 @@ SIRIKATA_CONFIG = '/path/to/user/config.god.rb'
 God.load(SIRIKATA_CONFIG)
 
 SIRIKATA_BIN_DIR = File.join(SIRIKATA_ROOT, "build/cmake")
-SIRIKATA_SPACE_BIN = File.join(SIRIKATA_BIN_DIR, "space_d")
+if defined? SIRIKATA_SPACE_BINARY
+  SIRIKATA_SPACE_BIN = File.join(SIRIKATA_BIN_DIR, SIRIKATA_SPACE_BINARY)
+else
+  SIRIKATA_SPACE_BIN = File.join(SIRIKATA_BIN_DIR, "space")
+end
 
 # God automatically daemonizes Sirikata for us. This just keeps the pid files in
 # the code directory so we can clean up easily.
