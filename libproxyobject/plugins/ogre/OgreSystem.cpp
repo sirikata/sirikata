@@ -429,7 +429,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
             new SequentialWorkQueue(mWorkQueue);
             new ResourceManager();
-            new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
+            new GraphicsResourceManager();
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);

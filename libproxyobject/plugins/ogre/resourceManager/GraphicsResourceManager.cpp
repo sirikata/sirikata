@@ -29,7 +29,6 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "../meruCompat/DependencyManager.hpp"
 #include "GraphicsResourceManager.hpp"
 #include "ResourceManager.hpp"
 #include "../meruCompat/Event.hpp"
@@ -69,7 +68,7 @@ TransferPoolPtr GraphicsResourceManager::transferPool()
     return mTransferPool;
 }
 
-GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue)
+GraphicsResourceManager::GraphicsResourceManager()
 : mEpoch(0), mEnabled(true)
 {
   initializeMediator();
@@ -80,15 +79,12 @@ GraphicsResourceManager::GraphicsResourceManager(Sirikata::Task::WorkQueue *depe
       EVENT_CALLBACK(GraphicsResourceManager, tick, this)
   );
 
-  mDependencyManager = new DependencyManager(dependencyQueue);
   mBudget = OPTION_VIDEO_MEMORY_RESOURCE_CACHE_SIZE->as<int>() * 1024 * 1024;
 }
 
 GraphicsResourceManager::~GraphicsResourceManager()
 {
   EventSource::getSingleton().unsubscribe(this->mTickListener,false);
-
-  delete mDependencyManager;
 }
 
 WeakResourcePtr GraphicsResourceManager::getResource(const String &id)

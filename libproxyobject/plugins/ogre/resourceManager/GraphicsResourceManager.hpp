@@ -49,8 +49,6 @@ class WorkQueue;
 
 namespace Meru {
 
-class DependencyManager;
-
 class GraphicsResourceManager : public ManualSingleton<GraphicsResourceManager>
 {
 
@@ -68,7 +66,7 @@ protected:
 
 public:
 
-  GraphicsResourceManager(Sirikata::Task::WorkQueue *dependencyQueue);
+  GraphicsResourceManager();
   virtual ~GraphicsResourceManager();
 
   //virtual void loadMesh(WeakProxyPtr proxy, const String &meshName);
@@ -77,10 +75,6 @@ public:
 
     SharedResourcePtr getResourceAsset(const URI &id, GraphicsResource::Type resourceType, Sirikata::ProxyObjectPtr proxy);
   SharedResourcePtr getResourceAssetByHash(const ResourceHash &id, GraphicsResource::Type resourceType);
-
-  DependencyManager* getDependencyManager() {
-    return mDependencyManager;
-  }
 
   void unregisterResource(GraphicsResource* resource);
 
@@ -118,7 +112,6 @@ protected:
   ResourcePriorityQueue mQueue;
 
   unsigned int mEpoch;
-  DependencyManager *mDependencyManager;
   float mBudget;
   SubscriptionId mTickListener;
   bool mEnabled;
