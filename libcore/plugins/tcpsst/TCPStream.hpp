@@ -40,7 +40,7 @@ namespace Sirikata {
 namespace Network {
 
 class TCPSetCallbacks;
-class IOService;
+class IOStrand;
 
 /**
  * This is a particular example implementation of the Stream interface sitting atop TCP.
@@ -109,7 +109,7 @@ private:
     friend class MultiplexedSocket;
     friend class TCPSetCallbacks;
     ///The low level boost::asio io service handle
-    IOService* mIO;
+    IOStrand* mIOStrand;
     ///the shared pointer to the communal sending connection
     MultiplexedSocketPtr mSocket;
     ///A function to add callbacks to this particular stream, called by the relevant TCPSetCallbacks function inheriting from SetCallbacks
@@ -130,7 +130,7 @@ private:
     unsigned int mKernelReceiveBufferSize;
 
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone() called internally from factory
-    TCPStream(IOService&,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, bool zeroDelim, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
+    TCPStream(IOStrand*,unsigned char mNumSimultaneousSockets, unsigned int mSendBufferSize, bool noDelay, bool zeroDelim, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize);
 
 
 public:
@@ -159,7 +159,7 @@ public:
         }
     };
     ///Constructor which leaves socket in a disconnection state, prepared for a connect() or a clone()
-    TCPStream(IOService&, OptionSet*);
+    TCPStream(IOStrand*, OptionSet*);
     ///Constructor which brings the socket up to speed in a completely connected state, prepped with a StreamID and communal link pointer
     TCPStream(const MultiplexedSocketPtr &shared_socket, const Stream::StreamID&);
     virtual Stream*factory();
@@ -185,8 +185,8 @@ public:
         const ReceivedCallback&chunkReceivedCallback,
         const ReadySendCallback&readySend);
 
-    static TCPStream* construct(Network::IOService*io, OptionSet*options) {
-        return new TCPStream(*io,options);
+    static TCPStream* construct(Network::IOStrand*io, OptionSet*options) {
+        return new TCPStream(io,options);
     }
     ///Creates a new substream on this connection
     virtual Stream* clone(const SubstreamCallback&cb);

@@ -33,8 +33,6 @@
 #include <sirikata/oh/SessionManager.hpp>
 #include <sirikata/core/network/ServerIDMap.hpp>
 
-#include <sirikata/core/network/IOServiceFactory.hpp>
-#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 #include <sirikata/core/network/StreamFactory.hpp>
@@ -224,10 +222,7 @@ SessionManager::SessionManager(ObjectHostContext* ctx, const SpaceID& space, Ser
  : ODP::DelegateService( std::tr1::bind(&SessionManager::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2,  std::tr1::placeholders::_3) ),
    mContext( ctx ),
    mSpace(space),
-   mIOService( Network::IOServiceFactory::makeIOService() ),
-   mIOStrand( mIOService->createStrand() ),
-   mIOWork(NULL),
-   mIOThread(NULL),
+   mIOStrand( ctx->ioService->createStrand() ),
    mServerIDMap(sidmap),
    mObjectConnectedCallback(conn_cb),
    mObjectMigratedCallback(mig_cb),
@@ -257,27 +252,19 @@ SessionManager::~SessionManager() {
     delete mHandleMessageProfiler;
 
     delete mIOStrand;
-    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 void SessionManager::start() {
-    mIOWork = new Network::IOWork( mIOService, "ObjectHost Work" );
-    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
 }
 
 void SessionManager::stop() {
     mShuttingDown = true;
 
-    delete mIOWork;
-    mIOWork = NULL;
     // Stop processing of all connections
     for (ServerConnectionMap::iterator it = mConnections.begin(); it != mConnections.end(); it++) {
         SpaceNodeConnection* conn = it->second;
         conn->shutdown();
     }
-    mIOThread->join();
-    delete mIOThread;
-    mIOThread = NULL;
 }
 
 void SessionManager::connect(
@@ -748,7 +735,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             if(conn_resp.has_mesh())
 	    {
                mesh = conn_resp.mesh();
-            } 
+            }
             // If we've got proper time syncing setup, we can dispatch the callback
             // immediately.  Otherwise, we need to delay the callback
             assert(mTimeSyncClient != NULL);
@@ -797,9 +784,9 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb) {
     SpaceObjectReference spaceobj(space, obj);
-    
+
 		std::cout << "\n\n\n MESH MESH MESH " << mesh << " \n\n\n";
-		
+
     real_cb(space, obj, server, loc, orient, bnds, mesh);
 
     SSTStream::connectStream(

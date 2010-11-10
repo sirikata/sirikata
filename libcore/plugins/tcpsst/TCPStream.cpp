@@ -39,8 +39,7 @@
 #include "ASIOSocketWrapper.hpp"
 #include "MultiplexedSocket.hpp"
 #include "TCPSetCallbacks.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
-#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "VariableLength.hpp"
 #include <boost/thread.hpp>
@@ -79,7 +78,7 @@ void TCPStream::readyRead() {
     }
 
     MultiplexedSocketWPtr mpsocket(socket_copy);
-    socket_copy->getASIOService().post(
+    socket_copy->getStrand()->post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadResumeRead,
                                               mpsocket,
                                               mID));
@@ -93,7 +92,7 @@ void TCPStream::requestReadySendCallback() {
     }
 
     MultiplexedSocketWPtr mpsocket(socket_copy);
-    socket_copy->getASIOService().post(
+    socket_copy->getStrand()->post(
                                std::tr1::bind(&MultiplexedSocket::ioReactorThreadPauseSend,
                                               mpsocket,
                                               mID));
@@ -240,8 +239,8 @@ void TCPStream::close() {
 TCPStream::~TCPStream() {
     close();
 }
-TCPStream::TCPStream(IOService&io,OptionSet*options):mSendStatus(new AtomicValue<int>(0)) {
-    mIO=&io;
+TCPStream::TCPStream(IOStrand* io,OptionSet*options):mSendStatus(new AtomicValue<int>(0)) {
+    mIOStrand = io;
     OptionValue *numSimultSockets=options->referenceOption("parallel-sockets");
     OptionValue *sendBufferSize=options->referenceOption("send-buffer-size");
     OptionValue *kernelSendBufferSize=options->referenceOption("ksend-buffer-size");
@@ -258,8 +257,8 @@ TCPStream::TCPStream(IOService&io,OptionSet*options):mSendStatus(new AtomicValue
     mZeroDelim=zeroDelim->as<bool>();
 }
 
-TCPStream::TCPStream(IOService&io,unsigned char numSimultSockets,unsigned int sendBufferSize,bool noDelay, bool zeroDelim, unsigned int kernelSendBufferSize,unsigned int kernelReceiveBufferSize):mSendStatus(new AtomicValue<int>(0)) {
-    mIO=&io;
+TCPStream::TCPStream(IOStrand* io,unsigned char numSimultSockets,unsigned int sendBufferSize,bool noDelay, bool zeroDelim, unsigned int kernelSendBufferSize,unsigned int kernelReceiveBufferSize):mSendStatus(new AtomicValue<int>(0)) {
+    mIOStrand = io;
     mNumSimultaneousSockets=(unsigned char)numSimultSockets;
     assert(mNumSimultaneousSockets);
     mSendBufferSize=sendBufferSize;
@@ -274,7 +273,7 @@ void TCPStream::connect(const Address&addy,
                         const ConnectionCallback &connectionCallback,
                         const ReceivedCallback&bytesReceivedCallback,
                         const ReadySendCallback&readySendCallback) {
-    MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIO,substreamCallback,mZeroDelim);
+    MultiplexedSocketPtr socket = MultiplexedSocket::construct<MultiplexedSocket>(mIOStrand,substreamCallback,mZeroDelim);
     mSocket = socket;
     *mSendStatus=0;
     mID=StreamID(1);
@@ -286,7 +285,7 @@ void TCPStream::connect(const Address&addy,
 }
 
 Stream*TCPStream::factory(){
-    return new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mZeroDelim,mKernelSendBufferSize,mKernelReceiveBufferSize);
+    return new TCPStream(mIOStrand,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mZeroDelim,mKernelSendBufferSize,mKernelReceiveBufferSize);
 }
 Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
     MultiplexedSocketPtr socket_copy = mSocket;
@@ -294,7 +293,7 @@ Stream* TCPStream::clone(const SubstreamCallback &cloneCallback) {
         return NULL;
     }
 
-    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mZeroDelim, mKernelSendBufferSize,mKernelReceiveBufferSize);
+    TCPStream *retval=new TCPStream(mIOStrand,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mZeroDelim, mKernelSendBufferSize,mKernelReceiveBufferSize);
     retval->mSocket = socket_copy;
 
     StreamID newID = socket_copy->getNewID();
@@ -312,7 +311,7 @@ Stream* TCPStream::clone(const ConnectionCallback &connectionCallback,
         return NULL;
     }
 
-    TCPStream *retval=new TCPStream(*mIO,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mZeroDelim, mKernelSendBufferSize,mKernelReceiveBufferSize);
+    TCPStream *retval=new TCPStream(mIOStrand,mNumSimultaneousSockets,mSendBufferSize,mNoDelay,mZeroDelim, mKernelSendBufferSize,mKernelReceiveBufferSize);
     retval->mSocket = socket_copy;
 
     StreamID newID = socket_copy->getNewID();

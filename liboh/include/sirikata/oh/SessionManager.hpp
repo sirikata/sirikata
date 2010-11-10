@@ -213,10 +213,7 @@ private:
     ObjectHostContext* mContext;
     SpaceID mSpace;
 
-    Network::IOService* mIOService;
     Network::IOStrand* mIOStrand;
-    Network::IOWork* mIOWork;
-    Thread* mIOThread;
 
     ServerIDMap* mServerIDMap;
 

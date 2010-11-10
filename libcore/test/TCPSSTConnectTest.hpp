@@ -37,6 +37,7 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/util/DynamicLibrary.hpp>
@@ -161,6 +162,7 @@ public:
     }
     std::string mPort;
     IOServicePool* mServicePool;
+    IOStrand* mServiceStrand;
     StreamListener* mListener;
     std::vector<Stream*> mStreams;
     std::vector<Chunk> mMessagesToSend;
@@ -270,9 +272,10 @@ public:
         uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
         mPort = boost::lexical_cast<std::string>(randport);
 
-        mServicePool = new IOServicePool(1);
+        mServicePool = new IOServicePool(4);
+        mServiceStrand = mServicePool->service()->createStrand();
 
-        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServicePool->service(),StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
+        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstTest::listenerNewStreamCallback,this,0,_1,_2));
@@ -416,6 +419,7 @@ public:
 
         // The other thread should finish up any outstanding handlers and stop
         mServicePool->join();
+        delete mServiceStrand;
         delete mServicePool;
     }
     void simpleConnect(Stream*s, const Address&addy) {
@@ -519,7 +523,7 @@ public:
         Stream*z=NULL;
         bool doSubstreams=true;
         {
-            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServicePool->service(),StreamFactory::getSingleton().getDefaultOptionParser()(String()));
+            Stream *r=StreamFactory::getSingleton().getDefaultConstructor()(mServiceStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String()));
             simpleConnect(r,Address("127.0.0.1",mPort));
             runRoutine(r);
             if (doSubstreams) {
