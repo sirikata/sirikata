@@ -1305,8 +1305,6 @@ ${GFX}/meruCompat/SequentialWorkQueue.cpp
 ${GFX}/resourceManager/CDNArchive.cpp
 ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
-${GFX}/resourceManager/GraphicsResource.cpp
-${GFX}/resourceManager/GraphicsResourceManager.cpp
 ${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
