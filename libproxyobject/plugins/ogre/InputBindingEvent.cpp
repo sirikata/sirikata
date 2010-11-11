@@ -220,6 +220,46 @@ String InputBindingEvent::toString() const {
     }
 }
 
+InputBindingEvent InputBindingEvent::fromString(const String& asString) {
+    // First, split into sections by -'s
+    std::vector<String> parts;
+    int32 last_idx = -1, next_idx = 0;
+    while(next_idx != String::npos) {
+        next_idx = asString.find('-', last_idx+1);
+        String part = asString.substr(last_idx+1, (next_idx == String::npos ? String::npos : next_idx-last_idx-1));
+        parts.push_back(part);
+        last_idx = next_idx;
+    }
+
+    if (parts.empty()) return InputBindingEvent();
+    String major = *parts.begin();
+    parts.erase(parts.begin());
+    if (major == "key") {
+        Input::Modifier mod = keyModifiersFromStrings(parts);
+        Input::KeyButton but = keyButtonFromStrings(parts);
+        return InputBindingEvent::Key(but, mod);
+    }
+    else if (major == "click") {
+        Input::MouseButton but = mouseButtonFromStrings(parts);
+        return InputBindingEvent::MouseClick(but);
+    }
+    else if (major == "drag") {
+        Input::MouseButton but = mouseButtonFromStrings(parts);
+        return InputBindingEvent::MouseDrag(but);
+    }
+    else if (major == "axis") {
+        Input::AxisIndex idx = axisFromStrings(parts);
+        return InputBindingEvent::Axis(idx);
+    }
+    else if (major == "web") {
+        assert(parts.size() == 2);
+        return InputBindingEvent::Web(parts[0], parts[1]);
+    }
+    else {
+        return InputBindingEvent();
+    }
+}
+
 static std::map<Input::KeyButton, String> ScancodesToStrings;
 static std::map<String, Input::KeyButton> StringsToScancodes;
 
@@ -337,6 +377,52 @@ String InputBindingEvent::mouseButtonString(Input::MouseButton b) const {
 
 String InputBindingEvent::axisString(Input::AxisIndex i) const {
     return boost::lexical_cast<String>(i);
+}
+
+Input::KeyButton InputBindingEvent::keyButtonFromStrings(std::vector<String>& parts) {
+    assert(!parts.empty());
+    const String& part = *parts.begin();
+    Input::KeyButton result = 0;
+    if (StringsToScancodes.find(part) != StringsToScancodes.end()) {
+        result = StringsToScancodes[part];
+        parts.erase(parts.begin());
+    }
+    return result;
+}
+
+Input::Modifier InputBindingEvent::keyModifiersFromStrings(std::vector<String>& parts) {
+    bool more = true;
+    Input::Modifier result = Input::MOD_NONE;
+    while(more && !parts.empty()) {
+        const String& val = *parts.begin();
+        if (val == "shift")
+            result |= Input::MOD_SHIFT;
+        else if (val == "ctrl")
+            result |= Input::MOD_CTRL;
+        else if (val == "alt")
+            result |= Input::MOD_ALT;
+        else if (val == "super")
+            result |= Input::MOD_GUI;
+        else
+            more = false;
+        if (more) // We got something, so we need to remove it
+            parts.erase(parts.begin());
+    }
+    return result;
+}
+
+Input::MouseButton InputBindingEvent::mouseButtonFromStrings(std::vector<String>& parts) {
+    assert(!parts.empty());
+    Input::MouseButton result = boost::lexical_cast<Input::MouseButton>(*parts.begin());
+    parts.erase( parts.begin() );
+    return result;
+}
+
+Input::AxisIndex InputBindingEvent::axisFromStrings(std::vector<String>& parts) {
+    assert(!parts.empty());
+    Input::AxisIndex result = boost::lexical_cast<Input::AxisIndex>(*parts.begin());
+    parts.erase( parts.begin() );
+    return result;
 }
 
 } // namespace Graphics
