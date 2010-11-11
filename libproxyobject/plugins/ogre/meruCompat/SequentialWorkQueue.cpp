@@ -32,7 +32,6 @@
 
 #include "SequentialWorkQueue.hpp"
 #include <sirikata/core/util/Time.hpp>
-#include "EventSource.hpp"
 namespace Meru {
 
 MANUAL_SINGLETON_STORAGE(SequentialWorkQueue);

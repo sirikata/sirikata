@@ -1298,8 +1298,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/CameraEntity.cpp
   ${GFX}/OgrePlugin.cpp
   ${GFX}/CameraPath.cpp
-${GFX}/meruCompat/Event.cpp
-${GFX}/meruCompat/EventSource.cpp
 ${GFX}/meruCompat/MeruDefs.cpp
 ${GFX}/meruCompat/SequentialWorkQueue.cpp
 ${GFX}/resourceManager/CDNArchive.cpp

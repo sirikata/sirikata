@@ -43,7 +43,6 @@
 
 #include <sirikata/core/util/Logging.hpp>
 
-//#include <sirikata/core/task/Event.hpp>
 #include <sirikata/core/util/BoundingBox.hpp>
 #include <sirikata/core/util/BoundingInfo.hpp>
 #include <sirikata/core/util/BoundingSphere.hpp>

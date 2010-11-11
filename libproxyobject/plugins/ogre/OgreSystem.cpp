@@ -50,7 +50,6 @@
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
-#include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 
 using Meru::CDNArchivePlugin;
@@ -425,8 +424,6 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             mWorkQueue = new Task::LockFreeWorkQueue;
-            Meru::EventSource::InitializeEventTypes();
-            Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
             new SequentialWorkQueue(mWorkQueue);
             mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
