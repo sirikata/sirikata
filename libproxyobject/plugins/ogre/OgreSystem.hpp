@@ -114,6 +114,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     // FIXME need to support multiple parsers, see #124
     ModelsSystem* mModelParser;
 
+    Transfer::TransferPoolPtr mTransferPool;
+
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,

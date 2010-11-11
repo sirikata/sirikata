@@ -49,12 +49,10 @@
 #include "input/InputEvents.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
-#include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 
-using Meru::GraphicsResourceManager;
 using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
 
@@ -241,7 +239,7 @@ Time OgreSystem::simTime() {
 }
 
 Transfer::TransferPoolPtr OgreSystem::transferPool() {
-    return GraphicsResourceManager::getSingleton().transferPool();
+    return mTransferPool;
 }
 
 void OgreSystem::suspend() {
@@ -430,7 +428,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             Meru::EventSource::InitializeEventTypes();
             Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
             new SequentialWorkQueue(mWorkQueue);
-            new GraphicsResourceManager();
+            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
@@ -929,7 +927,6 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
 }
 //static Task::LocalTime debugStartTime = Task::LocalTime::now();
 void OgreSystem::poll(){
-    GraphicsResourceManager::getSingleton().computeLoadedSet();
     Task::LocalTime curFrameTime(Task::LocalTime::now());
     Task::LocalTime finishTime(curFrameTime + desiredTickRate()); // arbitrary
 
