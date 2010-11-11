@@ -57,7 +57,8 @@ void DiskManager::ScanRequest::execute() {
     }
 
     for(fs::directory_iterator it(mPath); it != fs::directory_iterator(); it++) {
-        dirListing->push_back(it->path());
+        Filesystem::PathInfo pi(it->path(), it->status());
+        dirListing->push_back(pi);
     }
 
     mCb(dirListing);

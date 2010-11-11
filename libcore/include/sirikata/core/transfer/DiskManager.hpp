@@ -45,6 +45,15 @@ namespace fs = boost::filesystem;
 
 namespace Filesystem {
     typedef boost::filesystem::path Path;
+    typedef boost::filesystem::file_status FileStatus;
+    typedef boost::filesystem::file_type FileType;
+    namespace boost_fs = boost::filesystem;
+    class PathInfo {
+    public:
+        Path mPath;
+        FileStatus mFileStatus;
+        PathInfo(Path p, FileStatus f) : mPath(p), mFileStatus(f) {}
+    };
 }
 
 class SIRIKATA_EXPORT DiskManager
@@ -61,7 +70,7 @@ public:
 
     class ScanRequest : public DiskRequest {
     public:
-        typedef std::vector<Filesystem::Path> DirectoryListing;
+        typedef std::vector<Filesystem::PathInfo> DirectoryListing;
         typedef std::tr1::function<void(
                     std::tr1::shared_ptr<DirectoryListing> dirListing
                 )> ScanRequestCallback;

@@ -649,19 +649,19 @@ public:
     }
 
     void callback(std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
-        SILOG(transfer, debug, "Callbackomg!");
+        SILOG(transfer, debug, "Got directory scan callback!");
 
-        typedef Transfer::DiskManager::ScanRequest::DirectoryListing DirectoryListing;
-        for(DirectoryListing::iterator it = dirListing->begin(); it != dirListing->end(); it++) {
-            SILOG(transfer, debug, it->filename());
+        TS_ASSERT(dirListing);
+        if(dirListing) {
+            TS_ASSERT(dirListing->size() > 0);
         }
 
         boost::unique_lock<boost::mutex> lock(mut);
         done.notify_all();
     }
 
-    void testDiskCache_extraFuncs( void ) {
-        SILOG(transfer,debug,"Testing reading root dir...");
+    void testDirectoryScan( void ) {
+        SILOG(transfer, debug, "Testing reading root dir...");
 
         std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req(
                 new Transfer::DiskManager::ScanRequest("/",

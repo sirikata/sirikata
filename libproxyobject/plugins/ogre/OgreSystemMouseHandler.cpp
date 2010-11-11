@@ -51,6 +51,7 @@
 #include <sirikata/core/task/Time.hpp>
 #include <SDL_keysym.h>
 #include <set>
+#include <sirikata/core/transfer/DiskManager.hpp>
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
@@ -1993,11 +1994,33 @@ public:
         mSelectedObjects.insert(obj);
     }
 
+    void onUIDirectoryListingFinished(String initial_path,
+            std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
+        std::ostringstream os;
+        os << "directory_list_request({path:'" << initial_path << "', results:[";
+        if(dirListing) {
+            bool needComma = false;
+            for(Transfer::DiskManager::ScanRequest::DirectoryListing::iterator it =
+                    dirListing->begin(); it != dirListing->end(); it++) {
+                if(needComma) {
+                    os << ",";
+                } else {
+                    needComma = true;
+                }
+                os << "{path:'" << it->mPath.filename() << "', directory:" <<
+                        (it->mFileStatus.type() == Transfer::Filesystem::boost_fs::directory_file ?
+                        "true" : "false") << "}";
+            }
+        }
+        os << "]});";
+        printf("Calling to JS: %s\n", os.str().c_str());
+        mUIWidgetView->evaluateJS(os.str());
+    }
     
     void onUIAction(WebView* webview, const JSArguments& args) {
         printf("ui action event fired arg length = %d\n", (int)args.size());
-        if (args.size() != 1) {
-            printf("expected 1 argument, returning.\n");
+        if (args.size() < 1) {
+            printf("expected at least 1 argument, returning.\n");
             return;
         }
 
@@ -2007,6 +2030,16 @@ public:
 
         if(action_triggered == "action_exit") {
             quitAction();
+        } else if(action_triggered == "action_directory_list_request") {
+            if(args.size() != 2) {
+                printf("expected 2 arguments, returning.\n");
+                return;
+            }
+            String pathRequested(args[1].data());
+            std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> scan_req(
+                    new Transfer::DiskManager::ScanRequest(pathRequested,
+                    std::tr1::bind(&MouseHandler::onUIDirectoryListingFinished, this, pathRequested, _1)));
+            Transfer::DiskManager::getSingleton().addRequest(scan_req);
         }
     }
 
