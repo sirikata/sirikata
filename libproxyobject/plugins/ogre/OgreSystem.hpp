@@ -114,6 +114,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     // FIXME need to support multiple parsers, see #124
     ModelsSystem* mModelParser;
 
+    Transfer::TransferPoolPtr mTransferPool;
+
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(Provider<ProxyCreationListener*>*proxyManager,
@@ -159,6 +161,8 @@ public:
 
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();
+
+    Transfer::TransferPoolPtr transferPool();
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     std::list<CameraEntity*>::iterator attachCamera(const String&renderTargetName,CameraEntity*);
