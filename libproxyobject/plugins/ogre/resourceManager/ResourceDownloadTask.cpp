@@ -34,15 +34,14 @@
 
 #include "ResourceDownloadTask.hpp"
 #include <stdio.h>
-#include "GraphicsResourceManager.hpp"
 
 using namespace std;
 using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 
-ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, double priority, DownloadCallback cb)
- : mURI(uri), mRange(true),
+ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb)
+ : mURI(uri), mTransferPool(transfer_pool), mRange(true),
    mPriority(priority), cb(cb)
 {
   mStarted = false;
@@ -86,8 +85,7 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
             std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1,
                 std::tr1::placeholders::_2)));
 
-    TransferPoolPtr pool = (Meru::GraphicsResourceManager::getSingleton()).transferPool();
-    pool->addRequest(req);
+    mTransferPool->addRequest(req);
   }
   else {
     cout<<"Failed metadata download"<<endl;
@@ -103,8 +101,7 @@ void ResourceDownloadTask::operator()()
      new MetadataRequest(mURI, mPriority, std::tr1::bind(
              &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
- TransferPoolPtr pool = (Meru::GraphicsResourceManager::getSingleton()).transferPool();
-   pool->addRequest(req);
+ mTransferPool->addRequest(req);
 }
 
 } // namespace Sirikata

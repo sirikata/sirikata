@@ -240,6 +240,10 @@ Time OgreSystem::simTime() {
     return mContext->simTime();
 }
 
+Transfer::TransferPoolPtr OgreSystem::transferPool() {
+    return GraphicsResourceManager::getSingleton().transferPool();
+}
+
 void OgreSystem::suspend() {
   mSuspended = !mSuspended;
 }

@@ -303,7 +303,10 @@ void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::
 
 void MeshEntity::downloadMeshFile(URI const& uri)
 {
-    ResourceDownloadTask *dl = new ResourceDownloadTask(uri, mProxy->priority, std::tr1::bind(&MeshEntity::MeshDownloaded,
+    ResourceDownloadTask *dl = new ResourceDownloadTask(
+        uri, getScene()->transferPool(),
+        mProxy->priority,
+        std::tr1::bind(&MeshEntity::MeshDownloaded,
             this, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
     (*dl)();
 }
@@ -1069,7 +1072,9 @@ void MeshEntity::handleMeshParsed(MeshdataPtr md) {
     for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
       String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
 
-        ResourceDownloadTask *dl = new ResourceDownloadTask(Transfer::URI(texURI), mProxy->priority,
+        ResourceDownloadTask *dl = new ResourceDownloadTask(
+            Transfer::URI(texURI), getScene()->transferPool(),
+            mProxy->priority,
            std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));
         (*dl)();
     }
