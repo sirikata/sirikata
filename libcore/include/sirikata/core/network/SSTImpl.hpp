@@ -1349,14 +1349,14 @@ class StreamBuffer{
 public:
 
   uint8* mBuffer;
-  uint16 mBufferLength;
-  uint32 mOffset;
+  uint32 mBufferLength;
+  uint64 mOffset;
 
   Time mTransmitTime;
   Time mAckTime;
 
 
-  StreamBuffer(const uint8* data, int len, int offset) :
+  StreamBuffer(const uint8* data, uint32 len, uint64 offset) :
     mTransmitTime(Time::null()), mAckTime(Time::null())
   {
     assert(len > 0);
@@ -2064,7 +2064,7 @@ private:
     }
     else {
       // ACK received but not found in mChannelToBufferMap
-      if (mChannelToStreamOffsetMap.find(offset) == mChannelToStreamOffsetMap.end()) {
+      if (mChannelToStreamOffsetMap.find(offset) != mChannelToStreamOffsetMap.end()) {
         uint64 dataOffset = mChannelToStreamOffsetMap[offset];
         mChannelToStreamOffsetMap.erase(offset);
 
@@ -2155,7 +2155,7 @@ private:
     conn->sendData(  buffer.data(), buffer.size(), true);
   }
 
-  uint64 sendDataPacket(const void* data, uint32 len, uint32 offset) {
+  uint64 sendDataPacket(const void* data, uint32 len, uint64 offset) {
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.DATA);
@@ -2200,7 +2200,7 @@ private:
   uint16 mLocalPort;
   uint16 mRemotePort;
 
-  uint32 mNumBytesSent;
+  uint64 mNumBytesSent;
 
   LSID mParentLSID;
 

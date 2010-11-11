@@ -49,18 +49,11 @@
 #include "input/InputEvents.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
-#include "resourceManager/ResourceManager.hpp"
-#include "resourceManager/GraphicsResourceManager.hpp"
-#include "resourceManager/ManualMaterialLoader.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
-#include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 
-using Meru::GraphicsResourceManager;
-using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
-using Meru::MaterialScriptManager;
 
 #include <boost/filesystem.hpp>
 #include <stdio.h>
@@ -244,6 +237,10 @@ Time OgreSystem::simTime() {
     return mContext->simTime();
 }
 
+Transfer::TransferPoolPtr OgreSystem::transferPool() {
+    return mTransferPool;
+}
+
 void OgreSystem::suspend() {
   mSuspended = !mSuspended;
 }
@@ -365,12 +362,12 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
 bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
     ++sNumOgreSystems;
     proxyManager->addListener(this);
-    
-    
+
+
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
 
-    
+
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -427,12 +424,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             mWorkQueue = new Task::LockFreeWorkQueue;
-            Meru::EventSource::InitializeEventTypes();
-            Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
             new SequentialWorkQueue(mWorkQueue);
-            new ResourceManager();
-            new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
-            new MaterialScriptManager;
+            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
@@ -716,7 +709,7 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
-    
+
     bool created = false;
     {
         std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
@@ -931,7 +924,6 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
 }
 //static Task::LocalTime debugStartTime = Task::LocalTime::now();
 void OgreSystem::poll(){
-    GraphicsResourceManager::getSingleton().computeLoadedSet();
     Task::LocalTime curFrameTime(Task::LocalTime::now());
     Task::LocalTime finishTime(curFrameTime + desiredTickRate()); // arbitrary
 

@@ -37,13 +37,11 @@
 #include <OgreResourceGroupManager.h>
 #include <OgreSubEntity.h>
 #include <OgreEntity.h>
-#include "resourceManager/GraphicsResourceManager.hpp"
 #include "WebViewManager.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"
-#include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "Lights.hpp"
 #include <boost/lexical_cast.hpp>
@@ -72,9 +70,6 @@ MeshEntity::MeshEntity(OgreSystem *scene,
     mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
-    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr();
-    mResource = std::tr1::dynamic_pointer_cast<Meru::GraphicsResourceEntity>
-        (grm->getResourceEntity(pmo->getObjectReference(), this, pmo));
     unloadMesh();
 }
 
@@ -85,7 +80,6 @@ std::string MeshEntity::ogreMovableName()const{
     return ogreMeshName(id());
 }
 MeshEntity::~MeshEntity() {
-    mResource->entityDestroyed();
     Ogre::Entity * toDestroy=getOgreEntity();
     init(NULL);
     if (toDestroy) {
@@ -309,7 +303,10 @@ void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::
 
 void MeshEntity::downloadMeshFile(URI const& uri)
 {
-    ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, uri, NULL, mProxy->priority, std::tr1::bind(&MeshEntity::MeshDownloaded,
+    ResourceDownloadTask *dl = new ResourceDownloadTask(
+        uri, getScene()->transferPool(),
+        mProxy->priority,
+        std::tr1::bind(&MeshEntity::MeshDownloaded,
             this, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
     (*dl)();
 }
@@ -343,14 +340,6 @@ void MeshEntity::processMesh(URI const& meshFile)
     mURIString = meshFile.toString();
 
     downloadMeshFile(meshFile);
-
-    // MCB: responsibility to load model meshes must move to MeshObject plugin
-    /// hack to support collada mesh -- eventually this should be smarter
-    String fn = meshFile.filename();
-
-    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
-    Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MODEL, mProxy);
-    mResource->setMeshResource ( newModelPtr );
 }
 
 bool MeshEntity::createMeshWork(MeshdataPtr md) {
@@ -897,7 +886,7 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, D
             SILOG(ogre,error,"Failed to parse mesh " << mURI.toString() << " --> " << request->getMetadata().getFingerprint().toString());
             return true;
         }
-        
+
 
         handleMeshParsed(mesh_data);
     }
@@ -1015,9 +1004,7 @@ void MeshEntity::createMesh(MeshdataPtr mdptr) {
 
         bool check = mm.resourceExists(hash);
 
-        loadMesh(hash);                     /// this is here because we removed
-                                            /// mResource->loaded(true, mEpoch) in
-                                            /// ModelLoadTask::doRun
+        loadMesh(hash);
     }
     // Lights
     int light_idx = 0;
@@ -1085,7 +1072,9 @@ void MeshEntity::handleMeshParsed(MeshdataPtr md) {
     for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
       String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
 
-        ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL, mProxy->priority,
+        ResourceDownloadTask *dl = new ResourceDownloadTask(
+            Transfer::URI(texURI), getScene()->transferPool(),
+            mProxy->priority,
            std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));
         (*dl)();
     }
