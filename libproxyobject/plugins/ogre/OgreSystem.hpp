@@ -222,12 +222,12 @@ public:
      *            through to the resulting mesh data
      *  \param data the contents of the
      */
-    MeshdataPtr parseMesh(const URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,
-                  ProxyMeshObjectPtr ignore,
+                  ProxyObjectPtr ignore,
                   double &returnDistance,
                   Vector3f &returnNormal,
                   SpaceObjectReference &returnName);

@@ -38,8 +38,7 @@
 #include "OgrePlugin.hpp"
 #include "task/Event.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/ProxyCameraObject.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "CameraEntity.hpp"
 #include "MeshEntity.hpp"
 #include <Ogre.h>
@@ -713,38 +712,24 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 void OgreSystem::onCreateProxy(ProxyObjectPtr p){
 
     bool created = false;
+
+    if (p->isCamera())
     {
-        std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
-        if (camera) {
-            CameraEntity *cam=new CameraEntity(this,camera);
-            created = true;
-        }
-     }
+        CameraEntity* cam = new CameraEntity(this,p);
+    }
+    else
     {
-        std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
-        if (meshpxy) {
-            MeshEntity *mesh=new MeshEntity(this,meshpxy);
-            created = true;
-            dlPlanner->addNewObject(p, mesh);
-        }
+        MeshEntity* mesh = new MeshEntity(this,p);
+        dlPlanner->addNewObject(p,mesh);
+            
     }
-    if (!created) {
-        std::tr1::shared_ptr<ProxyObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyObject>(p);
-        if (pospxy) {
-            Entity *ent=new Entity(
-                this,
-                pospxy,
-                pospxy->getObjectReference().toString(),
-                NULL);
-            created = true;
-        }
-    }
+
 }
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
 
 }
 
-MeshdataPtr OgreSystem::parseMesh(const URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
     return mModelParser->load(orig_uri, fp, data);
 }
 
@@ -793,7 +778,7 @@ Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
                           const double maxDistance,
-                          ProxyMeshObjectPtr ignore,
+                          ProxyObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName) {

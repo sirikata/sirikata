@@ -39,7 +39,6 @@
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
@@ -84,29 +83,44 @@ using namespace std;
 #define SDL_SCANCODE_PAGEDOWN 0x5b
 #endif
 
-bool compareEntity (const Entity* one, const Entity* two) {
-
+bool compareEntity (const Entity* one, const Entity* two)
+{
     ProxyObject *pp = one->getProxyPtr().get();
 
-    ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
+    // ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
+    // ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
+
+
     Time now = one->getScene()->simTime();
     Location loc1 = pp->globalLocation(now);
-    pp = two->getProxyPtr().get();
+
+    ProxyObject* pp2;
+    pp2 = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
-    ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
-    if (camera1 && !camera2) return true;
-    if (camera2 && !camera1) return false;
-    if (camera1 && camera2) {
+
+    // ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
+    // ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
+
+    // if (camera1 && !camera2) return true;
+    // if (camera2 && !camera1) return false;
+
+    if (pp->isCamera() && !pp2->isCamera()) return true;
+    if (pp2->isCamera() && !pp->isCamera()) return false;
+
+    
+    if (pp->isCamera() && pp2->isCamera())
+    {
         return loc1.getPosition().x < loc2.getPosition().x;
     }
 
-    if (mesh1 && mesh2) {
-        return mesh1->getPhysical().name < mesh2->getPhysical().name;
+    if (!pp->isCamera() &&  !pp2->isCamera())
+    {
+        return pp->getPhysical().name < pp2->getPhysical().name;
     }
+    
     return one<two;
 }
+
 
 // Defined in DragActions.cpp.
 
@@ -1261,7 +1275,8 @@ private:
         return true;
     }
 
-    string physicalName(ProxyMeshObject *obj, std::set<std::string> &saveSceneNames) {
+    string physicalName(ProxyObject *obj, std::set<std::string> &saveSceneNames)
+    {
         std::string name = obj->getPhysical().name;
         if (name.empty()) {
             name = obj->getMesh().filename();
@@ -1283,12 +1298,14 @@ private:
         saveSceneNames.insert(name);
         return name;
     }
-    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames) {
+
+    
+    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames)
+    {
         ProxyObject *pp = e->getProxyPtr().get();
         Time now = mParent->simTime();
         Location loc = pp->globalLocation(now);
-        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
+
 
         double x,y,z;
         std::string w("");
@@ -1307,19 +1324,24 @@ private:
 
         string parent;
         ProxyObjectPtr parentObj = pp->getParentProxy();
-        if (parentObj) {
-            ProxyMeshObject *parentMesh = dynamic_cast<ProxyMeshObject*>(parentObj.get());
+        
+        if (parentObj)
+        {
+            ProxyObject *parentMesh = dynamic_cast<ProxyObject*>(parentObj.get());
             if (parentMesh) {
                 parent = physicalName(parentMesh, saveSceneNames);
             }
         }
-        else if (mesh) {
-            URI uri = mesh->getMesh();
+        else
+        {
+            Transfer::URI uri = pp->getMesh();
             std::string uristr = uri.toString();
-            if (uri.proto().empty()) {
+            if (uri.proto().empty())
+            {
                 uristr = "";
             }
-            const PhysicalParameters &phys = mesh->getPhysical();
+            
+            const PhysicalParameters &phys = pp->getPhysical();
             std::string subtype;
             switch (phys.mode) {
             case PhysicalParameters::Disabled:
@@ -1343,27 +1365,31 @@ private:
             default:
                 std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
             }
-            std::string name = physicalName(mesh, saveSceneNames);
-            fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
+            std::string name = physicalName(pp, saveSceneNames);
+            if (pp->isCamera())
+            {
+                fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
                     loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
+            }
+            else
+            {
+                fprintf(fp, "camera,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
+                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
+            }
 
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
-                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z,
+                    pp->getScale().x,pp->getScale().y,pp->getScale().z,
                     phys.hull.x, phys.hull.y, phys.hull.z,
                     phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
-        else if (camera) {
-            fprintf(fp, "camera,,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f\n",parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-        }
-        else {
-            fprintf(fp, "#unknown object type in dumpObject\n");
-        }
     }
 
-    void zoomAction(float value, Vector2f axes) {
+
+    
+    void zoomAction(float value, Vector2f axes)
+    {
         if (!mParent||!mParent->mPrimaryCamera) return;
         zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
     }

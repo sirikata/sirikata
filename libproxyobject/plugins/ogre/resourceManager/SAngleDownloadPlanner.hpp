@@ -39,7 +39,7 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/proxyobject/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "DistanceDownloadPlanner.hpp"
 #include "../CameraEntity.hpp"
 #include <vector>

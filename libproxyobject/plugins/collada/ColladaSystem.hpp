@@ -37,7 +37,6 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ModelsSystem.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>

@@ -97,7 +97,7 @@ const SpaceID&BulletObj::getSpaceID()const {
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 
-void BulletObj::onSetMesh (ProxyObjectPtr proxy, const URI &newMesh) {
+void BulletObj::onSetMesh (ProxyObjectPtr proxy, const Transfer::URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    onSetMesh: " << newMesh << endl;)
     mMeshname = newMesh;
 }
@@ -795,21 +795,16 @@ BulletSystem::~BulletSystem() {
 }
 
 void BulletSystem::onCreateProxy(ProxyObjectPtr p) {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) {
-        DEBUG_OUTPUT(cout << "dbm: onCreateProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
-        objects.push_back(new BulletObj(this));     /// clean up memory!!!
-        objects.back()->mMeshptr = meshptr;
-        meshptr->MeshProvider::addListener(objects.back());
-    }
+    p->MeshProvider::addListener(objects.back());
 }
 
-void BulletSystem::onDestroyProxy(ProxyObjectPtr p) {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    for (unsigned int i=0; i<objects.size(); i++) {
-        if (objects[i]->mMeshptr==meshptr) {
+void BulletSystem::onDestroyProxy(ProxyObjectPtr p)
+{
+    for (unsigned int i=0; i<objects.size(); i++)
+    {
+        if (objects[i]->mMeshptr==p) {
             DEBUG_OUTPUT(cout << "dbm: onDestroyProxy, object=" << objects[i] << endl);
-            meshptr->MeshProvider::removeListener(objects[i]);
+            p->MeshProvider::removeListener(objects[i]);
             removePhysicalObject(objects[i]);
             objects.erase(objects.begin()+i);
             break;
@@ -859,7 +854,7 @@ void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference m
 bool BulletSystem::queryRay(const Vector3d& position,
                             const Vector3f& direction,
                             const double maxDistance,
-                            ProxyMeshObjectPtr ignore,
+                            ProxyObjectPtr ignore,
                             double &returnDistance,
                             Vector3f &returnNormal,
                             SpaceObjectReference &returnName) {

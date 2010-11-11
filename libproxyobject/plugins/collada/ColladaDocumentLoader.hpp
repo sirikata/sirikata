@@ -33,8 +33,8 @@
 #ifndef _SIRIKATA_COLLADA_DOCUMENT_LOADER_
 #define _SIRIKATA_COLLADA_DOCUMENT_LOADER_
 
+#include <sirikata/proxyobject/Meshdata.hpp>
 #include "ColladaDocument.hpp"
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 
 
 /////////////////////////////////////////////////////////////////////
@@ -74,6 +74,7 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
 
         std::tr1::shared_ptr<Meshdata> getMeshdata() const;
 
+        
     protected:
 
     private:

@@ -37,7 +37,7 @@
 namespace Sirikata {
 namespace Graphics {
 CameraEntity::CameraEntity(OgreSystem *scene,
-                           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
+                           const std::tr1::shared_ptr<ProxyObject> &pco,
                            std::string ogreName)
     : Entity(scene,
              pco,

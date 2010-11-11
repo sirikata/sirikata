@@ -32,7 +32,6 @@
 
 
 #include "DistanceDownloadPlanner.hpp"
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "../MeshEntity.hpp"
 #include "SAngleDownloadPlanner.hpp"
 #include <stdlib.h>
@@ -72,35 +71,28 @@ vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::fin
 
 void DistanceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
 {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) {
-        meshptr->MeshProvider::removeListener(this);
-        vector<Resource>::iterator it = findResource(p);
-        resources.erase(it);
-    }
+    p->MeshProvider::removeListener(this);
+    vector<Resource>::iterator it = findResource(p);
+    resources.erase(it);
+
 }
 
 void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
+    p->MeshProvider::addListener(this);
+    Resource r(mesh, p);
+    resources.push_back(r);
 
-    if (meshptr) {
-        meshptr->MeshProvider::addListener(this);
-        Resource r(mesh, p);
-        resources.push_back(r);
-    }
 }
 
 void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
 {
-   ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(proxy));
-   if (meshptr) {
-       vector<Resource>::iterator it = findResource(proxy);
-       it->file = &(URI&)meshFile;
-       it->ready = true;
-       proxy->priority = calculatePriority(proxy);
-       it->mesh->processMesh(meshFile);
-   }
+    vector<Resource>::iterator it = findResource(proxy);
+    it->file = &(URI&)meshFile;
+    it->ready = true;
+    proxy->priority = calculatePriority(proxy);
+    it->mesh->processMesh(meshFile);
+
 }
 
 double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)

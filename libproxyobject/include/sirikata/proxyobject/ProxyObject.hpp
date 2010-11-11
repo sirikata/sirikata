@@ -45,7 +45,18 @@
 
 #include "VWObject.hpp"
 
+#include "CameraListener.hpp"
+
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
+#include "MeshListener.hpp"
+#include "PhysicalParameters.hpp"
+
+
 namespace Sirikata {
+
 
 class ProxyObject;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
@@ -58,6 +69,11 @@ typedef double AbsTime;
 
 typedef Provider<PositionListener*> PositionProvider;
 
+class MeshListener;
+class PhysicalParameters;
+typedef Provider<CameraListener*> CameraProvider;
+typedef Provider< MeshListener* > MeshProvider;
+
 /**
  * This class represents a generic object on a remote server
  * Every object has a SpaceObjectReference that allows one to communicate
@@ -68,7 +84,9 @@ typedef Provider<PositionListener*> PositionProvider;
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
       public ProxyObjectProvider,
-      public PositionProvider
+      public PositionProvider,
+      public MeshProvider,
+      public CameraProvider
 {
 
 public:
@@ -91,6 +109,14 @@ private:
     VWObjectPtr mParent;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
                              // this ProxyObject represents
+
+    //added private members to proxy object from mesh object
+    Transfer::URI mMeshURI;
+    Vector3f mScale;
+    PhysicalParameters mPhysical;
+    bool mCamera;
+
+    
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -202,6 +228,24 @@ public:
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
 
+
+    // interface from MeshObject
+    virtual void setMesh ( Transfer::URI const& rhs );
+    virtual Transfer::URI const& getMesh () const;
+    virtual void setScale ( Vector3f const& rhs );
+    virtual Vector3f const& getScale () const;
+    virtual void setPhysical ( PhysicalParameters const& rhs );
+    virtual PhysicalParameters const& getPhysical () const;
+
+    //interface from camera object
+    void attach(const String&renderTargetName,
+                uint32 width,
+                uint32 height);
+    void detach();
+
+    bool isCamera();
+    void setCamera(bool onOff);
+    
 };
 }
 #endif

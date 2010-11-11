@@ -31,8 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
@@ -106,6 +104,7 @@ void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String&
     }
     
     PerPresenceData& pd =  psd_it->second;
+    pd.mProxyObject->setCamera(true);
     addSimListeners(pd,simName,sim);
 
 
@@ -351,10 +350,8 @@ void HostedObject::connect(
 void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
 {
     SpaceID space = mObjectHost->getDefaultSpace();
-    
 
     SILOG(cppoh,error,simName);
-
 
     ObjectHostProxyManagerPtr proxyManPtr = pd.getProxyManager();
 
@@ -455,8 +452,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
-    std::cout << "\n\n\n Creating proxy with mesh = "  << mesh << "\n\n\n";
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, URI(mesh), mIsCamera, local_loc, local_orient, bnds);
+    std::cout << "\nCreating proxy with mesh = "  << mesh << "\n";
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(mesh), mIsCamera, local_loc, local_orient, bnds);
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
@@ -464,9 +461,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     initializePerSpaceData(psd, self_proxy);
 
     // Special case for camera
-    ProxyCameraObjectPtr cam = std::tr1::dynamic_pointer_cast<ProxyCameraObject, ProxyObject>(self_proxy);
-    if (cam)
-        cam->attach(String(), 0, 0);
+    if (self_proxy->isCamera())
+        self_proxy->attach(String(), 0, 0);
 
 
     //bind an odp port to listen for the begin scripting signal.  if have
@@ -743,17 +739,11 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
             proxy_obj->setOrientation(orient);
         }
 
-        if (update.has_mesh()) {
+        if (update.has_mesh())
+        {
           std::string mesh = update.mesh();
-          ProxyMeshObject *meshObj = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
-
-          if (meshObj && mesh != "") {
-            //std::cout << "MESH UPDATE: " << mesh  << "!!!\n";
-            meshObj->setMesh(Transfer::URI(mesh));
-          }
-          else if (mesh != ""){
-            //std::cout << "MESH UPDATE but no proxy object!\n";
-          }
+          if (mesh != "")
+              proxy_obj->setMesh(Transfer::URI(mesh));
         }
     }
 
@@ -795,25 +785,24 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (!getProxyManager(spaceobj.space(),spaceobj.object())->getProxyObject(proximateID)) {
                 TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
-                URI meshuri;
-                if (addition.has_mesh()) meshuri = URI(addition.mesh());
+                Transfer::URI meshuri;
+                if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
             }
-            else {
+            else
+            {
 
                 ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                         ObjectReference(addition.object())));
 
-                if (!proxy_obj) continue;
-
-              ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
-              if (mesh) {
-                mesh->setMesh( Transfer::URI(addition.mesh()));
-              }
+                if (!proxy_obj)
+                    continue;
+                
+                proxy_obj->setMesh(Transfer::URI(addition.mesh()));
             }
         }
 
@@ -826,11 +815,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;
 
-            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(proxy_obj.get());
-            if (mesh) {
-              mesh->setMesh( Transfer::URI(""));
-            }
-            else continue;
+            proxy_obj->setMesh(Transfer::URI(""));
 
 
             CONTEXT_OHTRACE(prox,
@@ -846,7 +831,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,is_camera);
     returner->setLocation(tmv);
@@ -858,20 +843,15 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     {
         if(meshuri)
         {
-            ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
-            if (mesh)
-                mesh->setMesh(meshuri);
+            returner->setMesh(meshuri);
         }
     }
-
-
-
     return returner;
 }
 
 //should only be called from within createProxy functions.  Otherwise, will not
 //initilize position and quaternion correctly
-ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera)
+ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera)
 {
     //ProxyManagerPtr proxy_manager = getProxyManager(objref.space(),
     //objref.object());
@@ -886,11 +866,14 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     }
 
     
-    ProxyObjectPtr proxy_obj;
+    ProxyObjectPtr proxy_obj(new ProxyObject (proxy_manager.get(),objref,getSharedPtr(),owner_objref));// = ProxyObject::construct(proxy_manager.get(),objref,getSharedPtr(),owner_objref);
+    proxy_obj->setCamera(is_camera);
 
-    if (is_camera) proxy_obj = ProxyObject::construct<ProxyCameraObject>
-                       (proxy_manager.get(), objref, getSharedPtr(), owner_objref);
-    else proxy_obj = ProxyObject::construct<ProxyMeshObject>(proxy_manager.get(), objref, getSharedPtr(), owner_objref);
+    
+    // if (is_camera) proxy_obj = ProxyObject::construct<ProxyCameraObject>
+    //                    (proxy_manager.get(), objref, getSharedPtr(), owner_objref);
+    
+    // else proxy_obj = ProxyObject::construct<ProxyMeshObject>(proxy_manager.get(), objref, getSharedPtr(), owner_objref);
 
 // The call to createObject must occur before trying to do any other
 // operations so that any listeners will be set up.
@@ -1041,21 +1024,14 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
 }
 
 
+//apparently, will always return true now.  even if camera.
 bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri)
 {
     
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
-
-    //this cast does not work.
-    ProxyMeshObjectPtr proxy_mesh_obj = std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (proxy_obj);
-
-    
-    if (proxy_mesh_obj )
-        return false;
-
-    tUri =  proxy_mesh_obj->getMesh();
+    tUri = proxy_obj->getMesh();
     return true;
 }
 
@@ -1214,39 +1190,35 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, const ObjectReference& oref)
 {
 
-  HostedObject::EntityState* es = new HostedObject::EntityState();
-	ProxyObjectPtr poptr = getProxy(space, oref);
-  Location loc = getLocation(space, oref);
-  es->objType = "mesh";
-	es->subType = "graphiconly";
+    HostedObject::EntityState* es = new HostedObject::EntityState();
+    ProxyObjectPtr poptr = getProxy(space, oref);
+    Location loc = getLocation(space, oref);
+    es->objType = "mesh";
+    es->subType = "graphiconly";
   
-	// FIXME : HostedObject does not take the name of the entity into account right now after reading from the scene file.
-	es->name = "unknown";
-	es->pos = loc.getPosition();
-	es->orient = loc.getOrientation();
-  es->vel = loc.getVelocity();
-  es->rot = loc.getAxisOfRotation();	
-	es->angular_speed = loc.getAngularSpeed(); 
-  
-	ProxyMeshObjectPtr proxyMeshObject = (std::tr1::dynamic_pointer_cast<ProxyMeshObject,ProxyObject> (poptr));
-	
-	if(proxyMeshObject)
-	{
-	  cout << "\n\n Setting the mesh object here\n\n";
-	  es->mesh = proxyMeshObject->getMesh().toString();    
-	}
+    // FIXME : HostedObject does not take the name of the entity into account right now after reading from the scene file.
+    es->name = "unknown";
+    es->pos = loc.getPosition();
+    es->orient = loc.getOrientation();
+    es->vel = loc.getVelocity();
+    es->rot = loc.getAxisOfRotation();	
+    es->angular_speed = loc.getAngularSpeed(); 
+
+    es->mesh = poptr->getMesh().toString();
 
 
-	/* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
-	es->scale = poptr->getBounds().radius(); 
-  es->objectID = oref.toString(); 
+
+    /* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
+    es->scale = poptr->getBounds().radius(); 
+    es->objectID = oref.toString(); 
   	
-	if(mObjectScript)
-	{
-	  es->script_type = mObjectScript->scriptType();
-		es->script_file = mObjectScript->scriptFile();
-	}
-	return es;
+    if(mObjectScript)
+    {
+        es->script_type = mObjectScript->scriptType();
+        es->script_file = mObjectScript->scriptFile();
+    }
+    return es;
+
 }
 
 

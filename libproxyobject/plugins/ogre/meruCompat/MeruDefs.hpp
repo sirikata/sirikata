@@ -64,8 +64,6 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include <sirikata/proxyobject/ProxyCameraObject.hpp>
 #include <sirikata/proxyobject/LightInfo.hpp>
 
 /*
@@ -127,8 +125,7 @@ using ::Sirikata::LightInfo;
 using ::Sirikata::Location;
 using ::Sirikata::Time;
 using ::Sirikata::Duration;
-using ::Sirikata::ProxyCameraObject;
-using ::Sirikata::ProxyMeshObject;
+using ::Sirikata::ProxyObject;
 using ::Sirikata::BoundingBox;
 using ::Sirikata::BoundingSphere;
 using ::Sirikata::BoundingInfo;
@@ -152,7 +149,7 @@ typedef MeshEntity GraphicsEntity;
 
 
 using ::Sirikata::UUID;
-using ::Sirikata::URI;
+using ::Sirikata::Transfer::URI;
 using ::Sirikata::SHA256;
 using ::Sirikata::Transfer::DenseData;
 using ::Sirikata::Transfer::SparseData;
