@@ -70,7 +70,15 @@ public:
     const String& webName() const;
 
     InputBindingEvent& operator=(const InputBindingEvent& rhs);
+
+    String toString() const;
+
 private:
+    String keyButtonString(Input::KeyButton) const;
+    String keyModifiersString(Input::Modifier) const;
+    String mouseButtonString(Input::MouseButton) const;
+    String axisString(Input::AxisIndex) const;
+
     Input::EventTypeTag mTag;
 
     union {
