@@ -96,6 +96,8 @@ void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String&
 {
     TimeSteppedSimulation* sim = NULL;
 
+    std::cout<<"\n\n\nATTEMPTING to run graphics\n\n";
+    
     SpaceDataMap::iterator psd_it = mSpaceData->find(sporef);
     if (psd_it == mSpaceData->end())
     {

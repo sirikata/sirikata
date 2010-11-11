@@ -96,7 +96,6 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
-    std::cout << "\n\n Here Here Here \n\n";
     NOT_IMPLEMENTED(oh);
 }
 

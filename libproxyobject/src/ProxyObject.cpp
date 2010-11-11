@@ -121,7 +121,7 @@ bool ProxyObject::isCamera()
 void ProxyObject::setMesh ( Transfer::URI const& mesh )
 {
     mMeshURI = mesh;
-    ProxyObjectPtr ptr = getSharedPtr();
+    ProxyObjectPtr ptr(this);
     if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
 }
 
@@ -134,7 +134,7 @@ Transfer::URI const& ProxyObject::getMesh () const
 void ProxyObject::setScale ( Vector3f const& scale )
 {
     mScale = scale;
-    ProxyObjectPtr ptr = getSharedPtr();
+    ProxyObjectPtr ptr (this);
     if (ptr) MeshProvider::notify (&MeshListener::onSetScale, ptr, scale );
 }
 
@@ -146,8 +146,10 @@ Vector3f const& ProxyObject::getScale () const
 void ProxyObject::setPhysical ( PhysicalParameters const& pp )
 {
     mPhysical = pp;
-    ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify (&MeshListener::onSetPhysical, ptr, pp );
+    //ProxyObjectPtr ptr = getSharedPtr();
+    ProxyObjectPtr ptr (this);
+    if (ptr)
+        MeshProvider::notify (&MeshListener::onSetPhysical, ptr, pp );
 }
 
 PhysicalParameters const& ProxyObject::getPhysical () const
