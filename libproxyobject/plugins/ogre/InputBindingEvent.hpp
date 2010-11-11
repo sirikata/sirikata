@@ -111,6 +111,9 @@ private:
     } mDescriptor;
 };
 
+std::istream& operator>>(std::istream& is, Sirikata::Graphics::InputBindingEvent& ibe);
+std::ostream& operator<<(std::ostream& os, const Sirikata::Graphics::InputBindingEvent& ibe);
+
 } // namespace Graphics
 } // namespace Sirikata
 

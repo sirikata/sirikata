@@ -425,5 +425,23 @@ Input::AxisIndex InputBindingEvent::axisFromStrings(std::vector<String>& parts) 
     return result;
 }
 
+
+std::ostream& operator<<(std::ostream& os, const Sirikata::Graphics::InputBindingEvent& ibe) {
+    os << ibe.toString();
+    return os;
+}
+
+std::istream& operator>>(std::istream& is, Sirikata::Graphics::InputBindingEvent& ibe) {
+    // We're assuming that these are separated as strings are. We could use a
+    // more complicated approach that takes in more -xyz- sections and tries to
+    // parse them to allow these to be used inline with other items, but we'd
+    // need some sort of delimiter or two of these next to each other wouldn't
+    // parse.
+    Sirikata::String internal;
+    is >> internal;
+    ibe = Sirikata::Graphics::InputBindingEvent::fromString(internal);
+    return is;
+}
+
 } // namespace Graphics
 } // namespace Sirikata
