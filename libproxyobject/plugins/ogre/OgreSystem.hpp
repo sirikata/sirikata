@@ -111,6 +111,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     static Ogre::Root *sRoot;
     static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
 
+    String mResourcesDir;
+
     // FIXME need to support multiple parsers, see #124
     ModelsSystem* mModelParser;
 
@@ -163,6 +165,8 @@ public:
     Time simTime();
 
     Transfer::TransferPoolPtr transferPool();
+
+    String getResourcesDir() const { return mResourcesDir; }
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     std::list<CameraEntity*>::iterator attachCamera(const String&renderTargetName,CameraEntity*);

@@ -59,6 +59,7 @@
 #include <sirikata/core/util/KnownScriptTypes.hpp>
 #include "Protocol_JSMessage.pbj.hpp"
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -944,7 +945,7 @@ private:
     }
 
 
-    
+
     void executeScript(WebView* wv, const JSArguments& args)
     {
         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
@@ -953,7 +954,7 @@ private:
         ProxyObjectPtr target_obj(objit->second.lock());
 
         if (!target_obj) return;
-        
+
 
         JSIter command_it;
         for (command_it = args.begin(); command_it != args.end(); ++command_it)
@@ -1001,7 +1002,7 @@ private:
             init_script.SerializeToString(&serializedInitScript);
             //std::string serialized;
             //init_script.SerializeToString(&serialized);
-            
+
             obj->sendMessage(
                 Services::LISTEN_FOR_SCRIPT_BEGIN,
                 MemoryReference(serializedInitScript.data(), serializedInitScript.length())
@@ -1009,7 +1010,7 @@ private:
             );
         }
     }
-    
+
 
 //     void initScriptOnSelectedObjects() {
 //         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
@@ -1031,7 +1032,7 @@ private:
 //             body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
 //             std::string serialized;
 //             body.SerializeToString(&serialized);
-            
+
 //             obj->sendMessage(
 //                 Services::LISTEN_FOR_SCRIPT_BEGIN,
 //                 MemoryReference(serialized.data(), serialized.length())
@@ -1039,7 +1040,7 @@ private:
 //         }
 //     }
 
-    
+
 
     ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy)
     {
@@ -1058,7 +1059,7 @@ private:
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
+
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1089,7 +1090,7 @@ private:
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
+
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1098,7 +1099,7 @@ private:
         //FIXME: these checks do not make sense any more for multi-presenced objects.
         //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
         //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
-        
+
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1120,7 +1121,7 @@ private:
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
+
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1129,7 +1130,7 @@ private:
         //FIXME: these checks do not make sense any more for multi-presenced objects.
         //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
         //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
-        
+
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1479,7 +1480,7 @@ private:
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
-        
+
         return EventResponse::nop();
     }
 
@@ -1870,73 +1871,9 @@ public:
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
         mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
 
-
-        // Session
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["suspend"]);
-
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
-
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I, Input::MOD_CTRL), mInputResponses["togglePeriodicScreenshot"]);
-
-        // Movement
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S), mInputResponses["moveBackward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D), mInputResponses["moveRight"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A), mInputResponses["moveLeft"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP, Input::MOD_SHIFT), mInputResponses["rotateXPos"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN, Input::MOD_SHIFT), mInputResponses["rotateXNeg"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["moveBackward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["moveUp"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Z), mInputResponses["moveDown"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RIGHT), mInputResponses["stableRotateNeg"]);
-
-        // Various other actions
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_ALT), mInputResponses["openScriptingUI"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
-        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G), mInputResponses["groupObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, Input::MOD_ALT), mInputResponses["ungroupObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, Input::MOD_CTRL), mInputResponses["cloneObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
-
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
-
-
-        // Drag modes
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, Input::MOD_CTRL), mInputResponses["setDragModeMoveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_E, Input::MOD_CTRL), mInputResponses["setDragModeRotateObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_R, Input::MOD_CTRL), mInputResponses["setDragModeScaleObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_T, Input::MOD_CTRL), mInputResponses["setDragModeRotateCamera"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Y, Input::MOD_CTRL), mInputResponses["setDragModePanCamera"]);
-
-        // Mouse Zooming
-        mInputBinding.add(InputBindingEvent::Axis(SDLMouse::WHEELY), mInputResponses["zoom"]);
-
-        // Selection
-        mInputBinding.add(InputBindingEvent::MouseClick(1), mInputResponses["selectObject"]);
-        mInputBinding.add(InputBindingEvent::MouseClick(3), mInputResponses["selectObjectReverse"]);
-
-        // Camera Path
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_1), mInputResponses["cameraPathLoad"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_2), mInputResponses["cameraPathSave"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_3), mInputResponses["cameraPathNextKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_4), mInputResponses["cameraPathPreviousKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_5), mInputResponses["cameraPathInsertKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_6), mInputResponses["cameraPathDeleteKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_7), mInputResponses["cameraPathRun"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_8), mInputResponses["cameraPathSpeedUp"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_9), mInputResponses["cameraPathSlowDown"]);
+        boost::filesystem::path resources_dir = mParent->getResourcesDir();
+        String keybinding_file = (resources_dir / "keybinding.default").string();
+        mInputBinding.addFromFile(keybinding_file, mInputResponses);
 
         // WebView Chrome
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navnewtab"), mInputResponses["webNewTab"]);
@@ -1992,7 +1929,7 @@ public:
         mSelectedObjects.insert(obj);
     }
 
-    
+
     void onUIAction(WebView* webview, const JSArguments& args) {
         printf("ui action event fired arg length = %d\n", (int)args.size());
         if (args.size() != 1) {
