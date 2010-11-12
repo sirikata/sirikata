@@ -45,10 +45,19 @@ namespace Graphics {
 class InputBinding {
     typedef std::map<Input::EventDescriptor, InputResponse*> Binding;
 public:
+    typedef std::map<String, InputResponse*> InputResponseMap;
+
     InputBinding();
     ~InputBinding();
 
     void add(const InputBindingEvent& evt, InputResponse* response);
+    /** Add bindings by loading them from an options file.
+     *  \param filename name of file to load from.
+     *  \param responses map from strings, which are specified in the
+     *         configuration file, to InputResponses.
+     */
+    void addFromFile(const String& filename, InputResponseMap responses);
+
     void handle(Input::InputEventPtr& evt);
 private:
     Binding mResponses;

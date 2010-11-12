@@ -75,7 +75,7 @@ namespace Graphics {
 namespace {
 
 // FIXME we really need a better way to figure out where our data is
-std::string getResourcesDir() {
+std::string getOgreResourcesDir() {
     using namespace boost::filesystem;
 
     // FIXME there probably need to be more of these, including
@@ -116,7 +116,7 @@ std::string getResourcesDir() {
 std::string getChromeResourcesDir() {
     using namespace boost::filesystem;
 
-    return (path(getResourcesDir()) / "chrome").string();
+    return (path(getOgreResourcesDir()) / "chrome").string();
 }
 
 }
@@ -132,7 +132,7 @@ OgreSystem::OgreSystem(Context* ctx)
  : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
    mContext(ctx),
    mLastFrameTime(Task::LocalTime::now()),
-    // FIXME need to support multiple parsers, see #124
+   mResourcesDir(getOgreResourcesDir()),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
      mQuitRequested(false),
      mQuitRequestHandled(false),
@@ -373,6 +373,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*configFile;
     OptionValue*ogreLogFile;
     OptionValue*purgeConfig;
+    OptionValue* keybindingFile;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*windowTitle;
@@ -385,6 +386,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
                            purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
+                           keybindingFile=new OptionValue("keybinding","keybinding.default",OptionValueType<String>(),"File to load key bindings from"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
@@ -430,7 +432,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
-            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getResourcesDir(), "FileSystem", "General");
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getOgreResourcesDir(), "FileSystem", "General");
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");//FIXME get rid of this line of code: we don't want to load resources from $PWD
 
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==>
@@ -535,8 +537,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
-    allocMouseHandler();
-    new WebViewManager(0, mInputManager, getResourcesDir()); ///// FIXME: Initializing singleton class
+    allocMouseHandler(keybindingFile->as<String>());
+    new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
 /*  // Test web view
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());
