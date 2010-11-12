@@ -44,7 +44,8 @@ CameraEntity::CameraEntity(OgreSystem *scene,
              ogreName.length()?ogreName:ogreName=ogreCameraName(pco->getObjectReference()),
              NULL),
       mRenderTarget(NULL),
-      mViewport(NULL) {
+      mViewport(NULL)
+{
     mAttachedIter=scene->mAttachedCameras.end();
     getProxy().CameraProvider::addListener(this);
     String cameraName = ogreName;

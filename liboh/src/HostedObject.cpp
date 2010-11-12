@@ -95,8 +95,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
-
-    std::cout<<"\n\n\nATTEMPTING to run graphics\n\n";
     
     SpaceDataMap::iterator psd_it = mSpaceData->find(sporef);
     if (psd_it == mSpaceData->end())
@@ -109,12 +107,17 @@ void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String&
     pd.mProxyObject->setCamera(true);
     addSimListeners(pd,simName,sim);
 
-
     if (sim != NULL)
     {
         HO_LOG(info, "Adding simulation to context");
         mContext->add(sim);
     }
+
+    // Special case for camera
+    //if (self_proxy->isCamera())
+    pd.mProxyObject->attach(String(), 0, 0);
+
+    
 }
 
 
@@ -231,9 +234,13 @@ const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const Ob
     return iter->second.mProxyObject;
 }
 
+static ProxyManagerPtr nullManPtr;
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
+    if (proxy_manager == nullManPtr)
+        return nullPtr;
+    
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj;
 }
@@ -375,37 +382,6 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-// void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims)
-// {
-//     SpaceID space = mObjectHost->getDefaultSpace();
-    
-//     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
-//         SILOG(cppoh,error,*it);
-
-//     pd = new PerPresenceData (this,space);
-
-//     ObjectHostProxyManagerPtr proxyManPtr = pd->getProxyManager();
-    
-//     for(std::list<String>::const_iterator it = oh_sims.begin(); it != oh_sims.end(); it++)
-//     {
-//         String simName = *it;
-//         HO_LOG(info,String("[OH] Initializing ") + simName);
-        
-//         TimeSteppedSimulation *sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
-//         if (!sim) {
-//             HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
-//             std::cerr << "Press enter to continue" << std::endl;
-//             fgetc(stdin);
-//             exit(0);
-//         }
-//         else {
-//             mObjectHost->addListener(sim);
-//             HO_LOG(info,String("Successfully initialized ") + simName);
-//             sims.push_back(sim);
-//         }
-//     }
-// }
-
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
@@ -454,17 +430,12 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
     TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
-    std::cout << "\nCreating proxy with mesh = "  << mesh << "\n";
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(mesh), mIsCamera, local_loc, local_orient, bnds);
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
     initializePerSpaceData(psd, self_proxy);
-
-    // Special case for camera
-    if (self_proxy->isCamera())
-        self_proxy->attach(String(), 0, 0);
 
 
     //bind an odp port to listen for the begin scripting signal.  if have
@@ -1129,15 +1100,15 @@ void HostedObject::persistToFile(std::ofstream& fp)
 {
   SpaceObjRefSet ss;
 
-	getSpaceObjRefs(ss);
+  getSpaceObjRefs(ss);
 
-	SpaceObjRefSet::iterator it = ss.begin();
+  SpaceObjRefSet::iterator it = ss.begin();
 
-	for(; it != ss.end(); it++)
-	{
-	  HostedObject::EntityState* es = getEntityState((*it).space(), (*it).object()); 
-    es->persistToFile(fp);
-	}
+  for(; it != ss.end(); it++)
+  {
+      HostedObject::EntityState* es = getEntityState((*it).space(), (*it).object()); 
+      es->persistToFile(fp);
+  }
 }
 
 
@@ -1194,6 +1165,9 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
 
     HostedObject::EntityState* es = new HostedObject::EntityState();
     ProxyObjectPtr poptr = getProxy(space, oref);
+
+
+    
     Location loc = getLocation(space, oref);
     es->objType = "mesh";
     es->subType = "graphiconly";
@@ -1206,6 +1180,15 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
     es->rot = loc.getAxisOfRotation();	
     es->angular_speed = loc.getAngularSpeed(); 
 
+
+    if (poptr == nullPtr)
+        assert (false);
+
+    std::cout<<"\n\n";
+    std::cout<<poptr->getMesh();
+    std::cout<<"\n\n";
+    std::cout.flush();
+    
     es->mesh = poptr->getMesh().toString();
 
 

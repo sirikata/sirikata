@@ -141,8 +141,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         //shouldn't need to receive on this port
     }
 
+    
+    mParent->getObjectHost()->persistEntityState(String("scene.db"));
 
-		mParent->getObjectHost()->persistEntityState(String("scene.db"));
 }
 
 void JSObjectScript::runGraphics(const SpaceObjectReference& sporef, const String& simname)
@@ -392,7 +393,6 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
         proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
     }
 
-    std::cout<<"\n\nBFTM:  this is the number of objects that are messageable:  "<<allAvailableObjectReferences.size()<<"\n\n";
 
     if (allAvailableObjectReferences.empty())
         printf("\n\nBFTM: No object references available for sending messages");
