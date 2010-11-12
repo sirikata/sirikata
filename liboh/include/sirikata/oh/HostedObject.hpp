@@ -93,6 +93,8 @@ protected:
         String mesh;
 			  float scale;
         String objectID; 
+				String script_type;
+				String script_file;
 		    void persistToFile(std::ofstream&);
       
 	    };

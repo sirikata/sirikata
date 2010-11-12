@@ -78,6 +78,7 @@ void CSVObjectFactory::generate()
 
     int quat_vel_idx = -1;
     int script_file_idx = -1;
+    int script_type_idx = -1;
     int scale_idx = -1;
 		int objid_idx = -1;
 
@@ -105,9 +106,12 @@ void CSVObjectFactory::generate()
             else
                 next_val = line.substr(last_comma + 1, next_comma - (last_comma+1));
 
+            std::cout << "\n next_val = " << next_val << "\n";
             // Remove quotes from beginning and end
             if (next_val.size() > 2 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
                 next_val = next_val.substr(1, next_val.size() - 2);
+    
+            std::cout << "\n next_val_1 = " << next_val << "\n";
 
             line_parts.push_back(next_val);
 
@@ -118,6 +122,7 @@ void CSVObjectFactory::generate()
 
         if (is_first) {
             for(uint32 idx = 0; idx < line_parts.size(); idx++) {
+						    std::cout << "\n  line_parts[" << idx << "] = " << line_parts[idx] << "\n"; 
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
                 if (line_parts[idx] == "pos_x") pos_idx = idx;
                 if (line_parts[idx] == "orient_x") orient_idx = idx;
@@ -125,6 +130,7 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
                 if (line_parts[idx] == "script_file") script_file_idx = idx;
+                if (line_parts[idx] == "script_type") script_type_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
 								if(line_parts[idx] == "objid") 
 								{
@@ -183,6 +189,18 @@ void CSVObjectFactory::generate()
 
                 String scriptFile = "";
                 String scriptType = "";
+								/* 
+								 FIX for 156: http://www.sirikata.com/trac/ticket/156
+								*/
+								if(script_file_idx != -1)
+								{
+								  scriptFile = line_parts[script_file_idx];
+								}
+              	if(script_type_idx != -1)
+								{
+								  scriptType = line_parts[script_type_idx];
+								}
+                /*
                 if(script_file_idx != -1)
                 {
                     if(script_file_idx < (int)line_parts.size())
@@ -191,6 +209,7 @@ void CSVObjectFactory::generate()
                         scriptType = line_parts[script_file_idx + 1];
                     }
                 }
+								*/
 
                 float scale =
                     scale_idx == -1 ?

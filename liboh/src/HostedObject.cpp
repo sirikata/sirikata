@@ -264,6 +264,8 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
     if (mgr) {
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
+				mObjectScript->scriptTypeIs(script);
+				mObjectScript->scriptFileIs(fileScriptToAttach);
         if (fileScriptToAttach != "")
         {
             mObjectScript->attachScript(fileScriptToAttach);
@@ -1185,7 +1187,13 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 
 	 /* persist the object id */
 
-	 fp << objectID << std:: endl;
+	 fp << objectID << ",";
+	 
+	 
+	 fp << script_type << ",";
+
+
+   fp << script_file << std::endl;
 }
 
 
@@ -1218,6 +1226,12 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
 	/* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
 	es->scale = poptr->getBounds().radius(); 
   es->objectID = oref.toString(); 
+  	
+	if(mObjectScript)
+	{
+	  es->script_type = mObjectScript->scriptType();
+		es->script_file = mObjectScript->scriptFile();
+	}
 	return es;
 }
 
