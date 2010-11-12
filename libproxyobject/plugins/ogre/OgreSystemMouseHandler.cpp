@@ -1736,7 +1736,7 @@ private:
     }
 
 public:
-    MouseHandler(OgreSystem *parent)
+    MouseHandler(OgreSystem *parent, const String& bindings_file)
      : mParent(parent),
        mScreenshotID(0),
        mPeriodicScreenshot(false),
@@ -1872,7 +1872,7 @@ public:
         mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
 
         boost::filesystem::path resources_dir = mParent->getResourcesDir();
-        String keybinding_file = (resources_dir / "keybinding.default").string();
+        String keybinding_file = (resources_dir / bindings_file).string();
         mInputBinding.addFromFile(keybinding_file, mInputResponses);
 
         // WebView Chrome
@@ -1962,8 +1962,8 @@ public:
     }
 };
 
-void OgreSystem::allocMouseHandler() {
-    mMouseHandler = new MouseHandler(this);
+void OgreSystem::allocMouseHandler(const String& keybindings_file) {
+    mMouseHandler = new MouseHandler(this, keybindings_file);
 }
 void OgreSystem::destroyMouseHandler() {
     if (mMouseHandler) {

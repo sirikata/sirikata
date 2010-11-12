@@ -373,6 +373,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     OptionValue*configFile;
     OptionValue*ogreLogFile;
     OptionValue*purgeConfig;
+    OptionValue* keybindingFile;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*windowTitle;
@@ -385,6 +386,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
                            purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
+                           keybindingFile=new OptionValue("keybinding","keybinding.default",OptionValueType<String>(),"File to load key bindings from"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
@@ -535,7 +537,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
-    allocMouseHandler();
+    allocMouseHandler(keybindingFile->as<String>());
     new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
 /*  // Test web view
