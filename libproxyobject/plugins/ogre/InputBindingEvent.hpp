@@ -52,6 +52,8 @@ public:
     InputBindingEvent(const InputBindingEvent& rhs);
     ~InputBindingEvent();
 
+    bool valid() const;
+
     bool isKey() const;
     Input::KeyButton keyButton() const;
     Input::Modifier keyModifiers() const;

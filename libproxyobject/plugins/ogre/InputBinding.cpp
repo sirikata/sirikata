@@ -61,10 +61,17 @@ void InputBinding::addFromFile(const String& filename, InputResponseMap response
         boost::program_options::parse_config_file(fp, opts_desc, true);
     for(int i = 0; i < parsed_opts.options.size(); i++) {
         assert(parsed_opts.options[i].value.size() == 1);
-        add(
-            InputBindingEvent::fromString(parsed_opts.options[i].string_key),
-            responses[parsed_opts.options[i].value[0]]
-        );
+        InputBindingEvent ibe = InputBindingEvent::fromString(parsed_opts.options[i].string_key);
+        if (!ibe.valid()) {
+            SILOG(ogre,error,"[OGRE] Invalid input binding input: " << parsed_opts.options[i].string_key);
+            continue;
+        }
+        InputResponseMap::const_iterator resp_it = responses.find(parsed_opts.options[i].value[0]);
+        if (resp_it == responses.end()) {
+            SILOG(ogre,error,"[OGRE] Invalid input binding response: " << parsed_opts.options[i].value[0]);
+            continue;
+        }
+        add(ibe, resp_it->second);
     }
 }
 

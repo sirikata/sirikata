@@ -105,6 +105,10 @@ InputBindingEvent::~InputBindingEvent() {
 }
 
 
+bool InputBindingEvent::valid() const {
+    return mTag != Bogus;
+}
+
 bool InputBindingEvent::isKey() const {
     return mTag == KeyEventTag;
 }
