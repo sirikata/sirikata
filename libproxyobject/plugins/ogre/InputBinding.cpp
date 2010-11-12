@@ -32,6 +32,8 @@
 
 #include "InputBinding.hpp"
 
+#include <boost/program_options.hpp>
+
 namespace Sirikata {
 namespace Graphics {
 
@@ -48,6 +50,22 @@ void InputBinding::add(const InputBindingEvent& evt, InputResponse* response) {
 
     for(InputResponse::InputEventDescriptorList::iterator it = evts.begin(); it != evts.end(); it++)
         mResponses[*it] = response;
+}
+
+void InputBinding::addFromFile(const String& filename, InputResponseMap responses) {
+    // Empty options, all the options will be generated automatically
+    boost::program_options::options_description opts_desc;
+    // Parse the file, allowing unknown options
+    std::ifstream fp(filename.c_str());
+    boost::program_options::parsed_options parsed_opts =
+        boost::program_options::parse_config_file(fp, opts_desc, true);
+    for(int i = 0; i < parsed_opts.options.size(); i++) {
+        assert(parsed_opts.options[i].value.size() == 1);
+        add(
+            InputBindingEvent::fromString(parsed_opts.options[i].string_key),
+            responses[parsed_opts.options[i].value[0]]
+        );
+    }
 }
 
 void InputBinding::handle(Input::InputEventPtr& evt) {

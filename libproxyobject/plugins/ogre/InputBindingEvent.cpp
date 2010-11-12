@@ -78,15 +78,17 @@ InputBindingEvent InputBindingEvent::Web(const String& wvname, const String& nam
     return result;
 }
 
-
-InputBindingEvent::InputBindingEvent()
- : mTag(Bogus)
-{
+void ensure_initialized() {
     static bool initialized = false;
     if (!initialized) {
         initialized = true;
         init_button_conversion_maps();
     }
+}
+
+InputBindingEvent::InputBindingEvent()
+ : mTag(Bogus)
+{
 }
 
 InputBindingEvent::InputBindingEvent(const InputBindingEvent& other) {
@@ -344,6 +346,7 @@ static void init_button_conversion_maps() {
 
 
 String InputBindingEvent::keyButtonString(Input::KeyButton b) const {
+    ensure_initialized();
     if (ScancodesToStrings.find(b) != ScancodesToStrings.end())
         return ScancodesToStrings[b];
     return "";
@@ -380,6 +383,8 @@ String InputBindingEvent::axisString(Input::AxisIndex i) const {
 }
 
 Input::KeyButton InputBindingEvent::keyButtonFromStrings(std::vector<String>& parts) {
+    ensure_initialized();
+
     assert(!parts.empty());
     const String& part = *parts.begin();
     Input::KeyButton result = 0;

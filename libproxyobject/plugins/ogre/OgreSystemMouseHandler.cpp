@@ -164,8 +164,7 @@ class OgreSystem::MouseHandler {
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;
 
-    typedef std::map<String, InputResponse*> InputResponseMap;
-    InputResponseMap mInputResponses;
+    InputBinding::InputResponseMap mInputResponses;
 
     InputBinding mInputBinding;
 
@@ -695,7 +694,7 @@ private:
 
     /** Create a UI element for interactively scripting an object.
         Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
-        HostedObject. 
+        HostedObject.
      */
     void createScriptingUIAction() {
 
@@ -1974,7 +1973,7 @@ public:
              ++iter) {
             mParent->mInputManager->unsubscribe(*iter);
         }
-        for (InputResponseMap::iterator iter=mInputResponses.begin(),iterend=mInputResponses.end();iter!=iterend;++iter) {
+        for (InputBinding::InputResponseMap::iterator iter=mInputResponses.begin(),iterend=mInputResponses.end();iter!=iterend;++iter) {
             delete iter->second;
         }
         for (std::map<int, ActiveDrag*>::iterator iter=mActiveDrag.begin(),iterend=mActiveDrag.end();iter!=iterend;++iter) {
