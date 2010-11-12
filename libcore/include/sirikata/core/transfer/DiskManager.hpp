@@ -36,6 +36,7 @@
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
 #include <sirikata/core/util/Singleton.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
 #include <boost/filesystem.hpp>
 
 namespace Sirikata {
@@ -62,10 +63,11 @@ class SIRIKATA_EXPORT DiskManager
 public:
 
     class DiskRequest {
-    public:
+    protected:
         virtual void execute() = 0;
 
         virtual ~DiskRequest() {}
+    friend class DiskManager;
     };
 
     class ScanRequest : public DiskRequest {
@@ -76,10 +78,40 @@ public:
                 )> ScanRequestCallback;
 
         ScanRequest(Filesystem::Path path, ScanRequestCallback cb);
-        void execute();
     private:
         ScanRequestCallback mCb;
         Filesystem::Path mPath;
+    protected:
+        void execute();
+    };
+
+    class ReadRequest : public DiskRequest {
+    public:
+        typedef std::tr1::function<void(
+                    std::tr1::shared_ptr<DenseData> fileContents
+                )> ReadRequestCallback;
+
+        ReadRequest(Filesystem::Path path, ReadRequestCallback cb);
+    private:
+        ReadRequestCallback mCb;
+        Filesystem::Path mPath;
+    protected:
+        void execute();
+    };
+
+    class WriteRequest : public DiskRequest {
+    public:
+        typedef std::tr1::function<void(
+                    bool status
+                )> WriteRequestCallback;
+
+        WriteRequest(Filesystem::Path path, std::tr1::shared_ptr<DenseData> fileContents, WriteRequestCallback cb);
+    private:
+        WriteRequestCallback mCb;
+        Filesystem::Path mPath;
+        std::tr1::shared_ptr<DenseData> mFileContents;
+    protected:
+        void execute();
     };
 
     DiskManager();

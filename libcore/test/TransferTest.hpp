@@ -51,6 +51,10 @@
 
 #include <string>
 
+namespace Sirikata {
+    static const char * argvzero;
+}
+
 using namespace Sirikata;
 using boost::asio::ip::tcp;
 
@@ -636,8 +640,12 @@ class DiskManagerTest : public CxxTest::TestSuite {
 
 public:
 
+    std::string testData;
+    std::tr1::shared_ptr<Transfer::DenseData> mData;
+
     DiskManagerTest()
-         : CxxTest::TestSuite() {
+         : CxxTest::TestSuite(),
+           testData("BlahBlahMessage\r\nTestline2\nLineEndingsAreCool\n\n\n") {
     }
 
     void setUp() {
@@ -648,7 +656,7 @@ public:
 
     }
 
-    void callback(std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
+    void scanCallback(std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
         SILOG(transfer, debug, "Got directory scan callback!");
 
         TS_ASSERT(dirListing);
@@ -660,17 +668,83 @@ public:
         done.notify_all();
     }
 
-    void testDirectoryScan( void ) {
+    void testDirectoryScan() {
         SILOG(transfer, debug, "Testing reading root dir...");
 
         std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req(
                 new Transfer::DiskManager::ScanRequest("/",
-                std::tr1::bind(&DiskManagerTest::callback, this, std::tr1::placeholders::_1)));
+                std::tr1::bind(&DiskManagerTest::scanCallback, this, std::tr1::placeholders::_1)));
 
         Transfer::DiskManager::getSingleton().addRequest(req);
 
         boost::unique_lock<boost::mutex> lock(mut);
         done.wait(lock);
+    }
+
+    void writeCallback(bool status) {
+        SILOG(transfer, debug, "Got file write callback!");
+
+        TS_ASSERT(status);
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.notify_all();
+    }
+
+    void readCallback(std::tr1::shared_ptr<Transfer::DenseData> fileContents) {
+        SILOG(transfer, debug, "Got file read callback!");
+
+        TS_ASSERT(fileContents);
+        if(fileContents) {
+            std::string s = fileContents->asString();
+            TS_ASSERT(s == testData);
+        }
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.notify_all();
+    }
+
+    void writeThenRead() {
+        std::tr1::shared_ptr<Transfer::DenseData> toWrite(new Transfer::DenseData(testData));
+        mData = toWrite;
+
+        std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req(
+                new Transfer::DiskManager::WriteRequest("testFileWrite_TESTFILE.txt", mData,
+                std::tr1::bind(&DiskManagerTest::writeCallback, this, std::tr1::placeholders::_1)));
+
+        Transfer::DiskManager::getSingleton().addRequest(req);
+
+        {
+            boost::unique_lock<boost::mutex> lock(mut);
+            done.wait(lock);
+        }
+
+
+        SILOG(transfer, debug, "Testing file read...");
+        std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req2(
+                new Transfer::DiskManager::ReadRequest("testFileWrite_TESTFILE.txt",
+                std::tr1::bind(&DiskManagerTest::readCallback, this, std::tr1::placeholders::_1)));
+
+        Transfer::DiskManager::getSingleton().addRequest(req2);
+
+        {
+            boost::unique_lock<boost::mutex> lock(mut);
+            done.wait(lock);
+        }
+    }
+
+    void testFileWriteThenRead() {
+        SILOG(transfer, debug, "Testing file write...");
+
+        writeThenRead();
+
+        SILOG(transfer, debug, "Increasing the size of test file from " << testData.length() << " bytes");
+        for(int i=0; i<12; i++) {
+            testData = testData + testData;
+        }
+        SILOG(transfer, debug, "New size of test file = " << testData.length());
+
+        SILOG(transfer, debug, "Repeating write and read calls...");
+        writeThenRead();
     }
 
 };

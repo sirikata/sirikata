@@ -31,6 +31,7 @@
  */
 
 #include <sirikata/core/transfer/DiskManager.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::DiskManager);
 
@@ -54,6 +55,7 @@ void DiskManager::ScanRequest::execute() {
 
     if(!fs::exists(mPath)) {
         mCb(badResult);
+        return;
     }
 
     for(fs::directory_iterator it(mPath); it != fs::directory_iterator(); it++) {
@@ -63,6 +65,87 @@ void DiskManager::ScanRequest::execute() {
 
     mCb(dirListing);
 }
+
+DiskManager::ReadRequest::ReadRequest(Filesystem::Path path, DiskManager::ReadRequest::ReadRequestCallback cb)
+    : mCb(cb), mPath(path) {
+}
+
+void DiskManager::ReadRequest::execute() {
+    std::tr1::shared_ptr<DenseData> badResult;
+
+    if(!fs::exists(mPath)) {
+        SILOG(transfer, warn, "File '" << mPath.file_string() << "' didn't exist in ReadRequest.");
+        mCb(badResult);
+        return;
+    }
+
+    if(!fs::is_regular_file(mPath)) {
+        SILOG(transfer, warn, "File '" << mPath.file_string() << "' was not a regular file in ReadRequest.");
+        mCb(badResult);
+        return;
+    }
+
+    fs::ifstream file(mPath, fs::ifstream::in | fs::ifstream::binary);
+    if(!file.is_open()) {
+        SILOG(transfer, warn, "File '" << mPath.file_string() << "' was not open in ReadRequest.");
+        mCb(badResult);
+        return;
+    }
+
+    std::tr1::shared_ptr<DenseData> fileContents(new DenseData(Range(true)));
+    char buff[5000];
+    while(file.good()) {
+        file.read(buff, 5000);
+        if(file.fail() && file.eof() && !file.bad()) {
+            //Read past EoF, so clear the fail bit
+            file.clear(std::ios::goodbit | std::ios::eofbit);
+        }
+        if(file.gcount() > 0) {
+            fileContents->append(buff, file.gcount(), true);
+        }
+    }
+
+    if(file.bad() || file.fail()) {
+        SILOG(transfer, warn, "File '" << mPath.file_string() << "' got error while reading in ReadRequest.");
+        mCb(badResult);
+        return;
+    }
+
+    file.close();
+
+    mCb(fileContents);
+}
+
+DiskManager::WriteRequest::WriteRequest(Filesystem::Path path,
+        std::tr1::shared_ptr<DenseData> fileContents,
+        DiskManager::WriteRequest::WriteRequestCallback cb)
+    : mCb(cb), mPath(path), mFileContents(fileContents) {
+}
+
+void DiskManager::WriteRequest::execute() {
+    if(!mFileContents) {
+        mCb(false);
+        return;
+    }
+
+    fs::ofstream file(mPath, fs::ofstream::out | fs::ofstream::binary);
+    if(!file.is_open() || !file.good()) {
+        mCb(false);
+        return;
+    }
+
+    file.write((const char *)mFileContents->data(), mFileContents->length());
+
+    if(file.bad() || file.fail()) {
+        mCb(false);
+        return;
+    }
+
+    file.close();
+
+    mCb(true);
+}
+
 
 DiskManager::DiskManager() {
     mWorkerThread = new Thread(std::tr1::bind(&DiskManager::workerThread, this));
