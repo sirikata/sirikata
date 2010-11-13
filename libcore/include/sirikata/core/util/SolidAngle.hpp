@@ -68,6 +68,10 @@ public:
     bool operator!=(const SolidAngle& rhs) const;
 
     float asFloat() const;
+
+    /// Get the maximum distance from an object of the given radius that could
+    /// result in this solid angle.  Effectively the inverse of fromCenterRadius.
+    float maxDistance(float obj_radius) const;
 protected:
     static const float MinVal;
     static const float MaxVal;
