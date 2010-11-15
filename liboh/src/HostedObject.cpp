@@ -301,6 +301,8 @@ void HostedObject::connect(
         return;
 
 
+
+
     // Note: we always use Time::null() here.  The server will fill in the
     // appropriate value.  When we get the callback, we can fix this up.
     Time approx_server_time = Time::null();
@@ -355,7 +357,6 @@ void HostedObject::addSimListeners(PerPresenceData*& pd, const std::list<String>
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
-    std::cout << "\n\n\n handleConnected: MESH MESH MESH " << mesh << "\n\n\n";
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
         BaseDatagramLayerType::createDatagramLayer(
@@ -823,7 +824,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
-    std::cout << "\n\n\n HostedObject::createProxy has mesh uri = " << meshuri.toString() << "\n\n\n" ;
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,is_camera);
     returner->setLocation(tmv);
     returner->setOrientation(tmq);
@@ -833,20 +833,17 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     if (!is_camera)
     {
 		   
-		    std::cout << "\n\n\n NOT A CAMERA \n\n\n";
 
 				if(meshuri)
 				{
           ProxyMeshObject *mesh = dynamic_cast<ProxyMeshObject*>(returner.get());
           if (mesh)
           {
-				     std::cout << "\n\n\n Setting the mesh on the proxy object \n\n\n";
              mesh->setMesh(meshuri);
           }
 			  }
 				else
 				{
-				  std::cout << "\n\n With no camera and no mesh \n\n\n";
 				}
     }
 
