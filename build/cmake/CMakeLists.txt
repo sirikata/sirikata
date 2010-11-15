@@ -652,6 +652,20 @@ ELSE()
   ENDIF()
 ENDIF()
 
+
+# NVTT for texture compression.
+IF(NOT NVTT_ROOT)
+  IF(WIN32)
+    SET(NVTT_ROOT ${PLATFORM_LIBS}/nvtt)
+  ELSEIF(APPLE)
+    SET(NVTT_ROOT ${PLATFORM_LIBS}/installed-nvtt)
+  ELSE()
+    SET(NVTT_ROOT ${PLATFORM_LIBS}/installed-nvtt)
+  ENDIF()
+ENDIF()
+FIND_PACKAGE(NVTT)
+
+
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 

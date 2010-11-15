@@ -1,0 +1,103 @@
+# Find the Nvidia Texture Tools library.
+#
+# This module defines
+#  NVTT_FOUND             - True if NVTT was found.
+#  NVTT_INCLUDE_DIRS      - Include directories for NVTT headers.
+#  NVTT_LIBRARIES         - Libraries for NVTT.
+#
+# To specify an additional directory to search, set NVTT_ROOT.
+#
+# Copyright (c) 2010, Ewen Cheslack-Postava
+# Based on FindSQLite3.cmake by:
+#  Copyright (c) 2006, Jaroslaw Staniek, <js@iidea.pl>
+#  Extended by Siddhartha Chaudhuri, 2008.
+#
+# Redistribution and use is allowed according to the terms of the BSD license.
+#
+
+SET(NVTT_FOUND FALSE)
+SET(NVTT_INCLUDE_DIRS)
+SET(NVTT_LIBRARIES)
+
+SET(SEARCH_PATHS
+  $ENV{ProgramFiles}/nvtt/include
+  $ENV{SystemDrive}/nvtt/include
+  $ENV{ProgramFiles}/nvtt
+  $ENV{SystemDrive}/nvtt
+  )
+IF(NVTT_ROOT)
+  SET(SEARCH_PATHS
+    ${NVTT_ROOT}
+    ${NVTT_ROOT}/include
+    ${SEARCH_PATHS}
+    )
+ENDIF()
+
+FIND_PATH(NVTT_INCLUDE_DIRS
+  NAMES nvtt/nvtt.h
+  PATHS ${SEARCH_PATHS}
+  NO_DEFAULT_PATH)
+IF(NOT NVTT_INCLUDE_DIRS)  # now look in system locations
+  FIND_PATH(NVTT_INCLUDE_DIRS NAMES nvtt/nvtt.h)
+ENDIF(NOT NVTT_INCLUDE_DIRS)
+
+SET(NVTT_LIBRARY_DIRS)
+IF(NVTT_ROOT)
+  SET(NVTT_LIBRARY_DIRS ${NVTT_ROOT})
+  IF(EXISTS "${NVTT_ROOT}/lib/static")
+    SET(NVTT_LIBRARY_DIRS ${NVTT_LIBRARY_DIRS} ${NVTT_ROOT}/lib/static)
+  ENDIF()
+ENDIF()
+
+# NVCORE
+# Without system dirs
+FIND_LIBRARY(NVTT_NVCORE_LIBRARY
+  NAMES nvcore
+  PATHS ${NVTT_LIBRARY_DIRS}
+  NO_DEFAULT_PATH
+  )
+IF(NOT NVTT_NVCORE_LIBRARY)  # now look in system locations
+  FIND_LIBRARY(NVTT_NVCORE_LIBRARY NAMES nvcore)
+ENDIF(NOT NVTT_NVCORE_LIBRARY)
+# NVMATH
+# Without system dirs
+FIND_LIBRARY(NVTT_NVMATH_LIBRARY
+  NAMES nvmath
+  PATHS ${NVTT_LIBRARY_DIRS}
+  NO_DEFAULT_PATH
+  )
+IF(NOT NVTT_NVMATH_LIBRARY)  # now look in system locations
+  FIND_LIBRARY(NVTT_NVMATH_LIBRARY NAMES nvmath)
+ENDIF(NOT NVTT_NVMATH_LIBRARY)
+# NVTT
+# Without system dirs
+FIND_LIBRARY(NVTT_NVTT_LIBRARY
+  NAMES nvtt
+  PATHS ${NVTT_LIBRARY_DIRS}
+  NO_DEFAULT_PATH
+  )
+IF(NOT NVTT_NVTT_LIBRARY)  # now look in system locations
+  FIND_LIBRARY(NVTT_NVTT_LIBRARY NAMES nvtt)
+ENDIF(NOT NVTT_NVTT_LIBRARY)
+
+SET(NVTT_LIBRARIES)
+IF(NVTT_NVCORE_LIBRARY AND NVTT_NVMATH_LIBRARY AND NVTT_NVTT_LIBRARY)
+  SET(NVTT_LIBRARIES ${NVTT_NVCORE_LIBRARY} ${NVTT_NVMATH_LIBRARY} ${NVTT_NVTT_LIBRARY})
+ENDIF()
+
+IF(NVTT_INCLUDE_DIRS AND NVTT_LIBRARIES)
+  SET(NVTT_FOUND TRUE)
+  IF(WIN32)
+   SET(NVTT_LIBRARIES debug ${NVTT_ROOT}/lib/static/nvtt.lib optimized ${NVTT_ROOT}/lib/static/nvtt.lib)
+  ENDIF()
+  IF(NOT NVTT_FIND_QUIETLY)
+    MESSAGE(STATUS "Found NVTT: headers at ${NVTT_INCLUDE_DIRS}, libraries at ${NVTT_LIBRARY_DIRS} :: ${NVTT_LIBRARIES}")
+  ENDIF(NOT NVTT_FIND_QUIETLY)
+ELSE(NVTT_INCLUDE_DIRS AND NVTT_LIBRARIES)
+  SET(NVTT_FOUND FALSE)
+  IF(NVTT_FIND_REQUIRED)
+    MESSAGE(STATUS "NVTT not found")
+  ENDIF(NVTT_FIND_REQUIRED)
+ENDIF(NVTT_INCLUDE_DIRS AND NVTT_LIBRARIES)
+
+MARK_AS_ADVANCED(NVTT_INCLUDE_DIRS NVTT_LIBRARIES)
