@@ -32,7 +32,7 @@
 
 #include "SaveFilter.hpp"
 #include <sirikata/core/options/Options.hpp>
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 namespace Sirikata {
 namespace MeshTool {

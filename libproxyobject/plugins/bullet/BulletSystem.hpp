@@ -45,7 +45,7 @@
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "btBulletDynamicsCommon.h"
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 #define GRAVITY (-9.8f)
 

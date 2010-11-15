@@ -47,7 +47,7 @@
 #include "task/EventManager.hpp"
 #include <sirikata/core/task/WorkQueue.hpp>
 
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h

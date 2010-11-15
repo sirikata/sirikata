@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
-#define _SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
+#ifndef _SIRIKATA_MESH_MESHDATA_HPP_
+#define _SIRIKATA_MESH_MESHDATA_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Sha256.hpp>
@@ -207,4 +207,4 @@ typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
 
 } // namespace Sirikata
 
-#endif //_SIRIKATA_PROXYOBJECT_MESHDATA_HPP_
+#endif //_SIRIKATA_MESH_MESHDATA_HPP_

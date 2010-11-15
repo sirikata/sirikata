@@ -44,8 +44,8 @@
 #include <sirikata/space/LocationService.hpp>
 
 
-#include <sirikata/proxyobject/Meshdata.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 
 #include <sirikata/core/util/MeshSimplifier.hpp>
 
@@ -76,11 +76,11 @@ private:
       mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
       mTreeLevel(0)
     {
-      mMeshdata = std::tr1::shared_ptr<Meshdata>();      
-    }    
-    
+      mMeshdata = std::tr1::shared_ptr<Meshdata>();
+    }
+
     uint16 mTreeLevel;
-    
+
   } AggregateObject;
 
 
@@ -88,7 +88,7 @@ private:
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher > mAggregateObjects;
 
   boost::mutex mMeshStoreMutex;
-  std::tr1::unordered_map<String, MeshdataPtr> mMeshStore; 
+  std::tr1::unordered_map<String, MeshdataPtr> mMeshStore;
 
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
@@ -112,7 +112,7 @@ private:
   void generateMeshesFromQueue(Time postTime);
 
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
-  
+
   void generateAggregateMeshAsync(const UUID uuid, Time postTime);
 
   void uploadQueueServiceThread();

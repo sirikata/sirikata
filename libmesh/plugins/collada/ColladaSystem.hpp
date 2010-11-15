@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Collada Models System
+/*  Sirikata
  *  ColladaSystem.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
@@ -35,9 +35,8 @@
 
 #include "ColladaDocument.hpp"
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/mesh/Platform.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>

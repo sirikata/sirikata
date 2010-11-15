@@ -1,7 +1,7 @@
-/*  Sirikata libproxyboject -- Object Host Plugin for COLLADA
- *  ColladaPlugin.cpp
+/*  Sirikata Object Host -- Platform Dependent Definitions
+ *  Platform.hpp
  *
- *  Copyright (c) 2009, Mark C. Barnes
+ *  Copyright (c) 2009, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,56 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ColladaPlugin.hpp"
+#ifndef _SIRIKATA_MESH_PLATFORM_HPP_
+#define _SIRIKATA_MESH_PLATFORM_HPP_
 
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/core/util/Platform.hpp>
 
-#include "ColladaSystem.hpp"
+#ifndef SIRIKATA_MESH_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_MESH_EXPORT
+#   else
+#     if defined(SIRIKATA_MESH_BUILD)
+#       define SIRIKATA_MESH_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_MESH_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_MESH_PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_MESH_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_MESH_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_MESH_EXPORT
+#     define SIRIKATA_MESH_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
 
-static int core_plugin_refcount = 0;
+#ifndef SIRIKATA_MESH_EXPORT_C
+# define SIRIKATA_MESH_EXPORT_C extern "C" SIRIKATA_MESH_EXPORT
+#endif
 
-SIRIKATA_PLUGIN_EXPORT_C void init ()
-{
-    using namespace Sirikata;
-    if ( core_plugin_refcount == 0 )
-        ModelsSystemFactory::getSingleton ().registerConstructor
-            ( "colladamodels" , &Models::ColladaSystem::create, true );
+#ifndef SIRIKATA_MESH_PLUGIN_EXPORT_C
+# define SIRIKATA_MESH_PLUGIN_EXPORT_C extern "C" SIRIKATA_MESH_PLUGIN_EXPORT
+#endif
 
-    ++core_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
-{
-    return ++core_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
-{
-    assert ( core_plugin_refcount > 0 );
-    return --core_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C void destroy ()
-{
-    using namespace Sirikata;
-
-    if ( core_plugin_refcount > 0 )
-    {
-        --core_plugin_refcount;
-
-        assert ( core_plugin_refcount == 0 );
-
-        if ( core_plugin_refcount == 0 )
-            ModelsSystemFactory::getSingleton ().unregisterConstructor ( "colladamodels" );
-    }
-}
-
-SIRIKATA_PLUGIN_EXPORT_C char const* name ()
-{
-    return "colladamodels";
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int refcount ()
-{
-    return core_plugin_refcount;
-}
+#endif //_SIRIKATA_MESH_PLATFORM_HPP_

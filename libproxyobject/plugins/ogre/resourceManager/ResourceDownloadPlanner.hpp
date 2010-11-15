@@ -37,7 +37,7 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
@@ -66,7 +66,7 @@ public:
     virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
     virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
-    
+
     //PollingService interface
     virtual void poll();
     virtual void stop();

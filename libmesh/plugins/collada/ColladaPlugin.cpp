@@ -1,5 +1,5 @@
-/*  Sirikata Object Host -- Models System Factory Interface
- *  ModelsSystemFactory.hpp
+/*  Sirikata libproxyboject -- Object Host Plugin for COLLADA
+ *  ColladaPlugin.cpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,28 +30,56 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
-#define _SIRIKATA_MODELS_SYSTEM_FACTORY_
+#include "ColladaPlugin.hpp"
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
-namespace Sirikata {
+#include "ColladaSystem.hpp"
 
-/** Class to create models subsystems.
- *
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystemFactory
-    : public AutoSingleton< ModelsSystemFactory >,
-      public Factory1<  ModelsSystem*,
-                        String const& >                         // option string
+static int core_plugin_refcount = 0;
+
+SIRIKATA_PLUGIN_EXPORT_C void init ()
 {
-    public:
-        static ModelsSystemFactory& getSingleton ();
-        static void destroy ();
-};
+    using namespace Sirikata;
+    if ( core_plugin_refcount == 0 )
+        ModelsSystemFactory::getSingleton ().registerConstructor
+            ( "colladamodels" , &Models::ColladaSystem::create, true );
 
-} // namespace Sirikata
+    ++core_plugin_refcount;
+}
 
-#endif // _SIRIKATA_MODELS_SYSTEM_FACTORY_
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
+{
+    return ++core_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
+{
+    assert ( core_plugin_refcount > 0 );
+    return --core_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy ()
+{
+    using namespace Sirikata;
+
+    if ( core_plugin_refcount > 0 )
+    {
+        --core_plugin_refcount;
+
+        assert ( core_plugin_refcount == 0 );
+
+        if ( core_plugin_refcount == 0 )
+            ModelsSystemFactory::getSingleton ().unregisterConstructor ( "colladamodels" );
+    }
+}
+
+SIRIKATA_PLUGIN_EXPORT_C char const* name ()
+{
+    return "colladamodels";
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int refcount ()
+{
+    return core_plugin_refcount;
+}

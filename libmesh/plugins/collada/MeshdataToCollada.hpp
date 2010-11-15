@@ -3,7 +3,7 @@
 
 #include "ColladaDocument.hpp"
 
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 int meshdataToCollada(const Meshdata& meshdata, const std::string& fileName);

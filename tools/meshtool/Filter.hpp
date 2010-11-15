@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_TOOLS_MESHTOOL_FILTER_HPP_
 #define _SIRIKATA_TOOLS_MESHTOOL_FILTER_HPP_
 
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/core/util/Factory.hpp>
 
 namespace Sirikata {

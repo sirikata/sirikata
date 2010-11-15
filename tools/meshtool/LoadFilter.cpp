@@ -31,7 +31,7 @@
  */
 
 #include "LoadFilter.hpp"
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 namespace Sirikata {
 namespace MeshTool {

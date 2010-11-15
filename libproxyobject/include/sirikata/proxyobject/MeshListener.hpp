@@ -33,7 +33,7 @@
 #define _SIRIKATA_MESH_LISTENER_HPP_
 
 #include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata {

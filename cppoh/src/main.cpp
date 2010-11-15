@@ -35,7 +35,7 @@
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
 #include <sirikata/oh/ObjectHost.hpp>
-#include <sirikata/proxyobject/LightInfo.hpp>
+#include <sirikata/mesh/LightInfo.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/SpaceIDMap.hpp>

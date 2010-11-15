@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/proxyobject/AnyModelsSystem.hpp>
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/AnyModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 namespace Sirikata {
 
