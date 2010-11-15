@@ -74,7 +74,7 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
     AggregateListByID& idIndex = mAggregateList.get<tagID>();
     AggregateListByID::iterator findID = idIndex.find(id);
     if(findID == idIndex.end()) {
-        SILOG(transfer, error, "Got a callback in TransferMediator from a TransferRequest with no associated ID");
+        //This can happen now if a request was canceled but it was already outstanding
         mNumOutstanding--;
         lock.unlock();
         checkQueue();
