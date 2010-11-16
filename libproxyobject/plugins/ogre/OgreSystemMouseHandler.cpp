@@ -979,8 +979,6 @@ private:
             {
                 Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
                 Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
-//                Protocol::ScriptingMessage  scripting_msg;
-//                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
                 scripting_req.set_id(0);
                 //scripting_req.set_body(String(command_it->second));
                 JSIter nexter = command_it + 1;
@@ -1068,31 +1066,18 @@ private:
 
     void moveAction(Vector3f dir, float amount) {
 
-        std::cout<<"\n\n\nGot into moveAction of OgreSystemMouseHandler.cpp\n\n";
         
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        if (! mParent)
-        {
-            std::cout<<"\n\nNo parent!\n\n";
-            return;
-        }
-
-        if (! mParent->mPrimaryCamera)
-        {
-            std::cout<<"\n\nnot primary camera\n\n";
-        }
         
         if (!mParent||!mParent->mPrimaryCamera)
         {
-            std::cout<<"\n\nNo parent.  Or parent is not primary camera\n\n";
             return;
         }
         
         ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
         if (!cam)
         {
-            std::cout<<"\n\nSecond not primary camera\n\n";
             return;
         }
 

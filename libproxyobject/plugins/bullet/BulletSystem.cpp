@@ -44,6 +44,7 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
+
 //#define DEBUG_OUTPUT(x) x
 #define DEBUG_OUTPUT(x)
 
@@ -53,9 +54,11 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     DEBUG_OUTPUT(cout << "dbm: plugin init" << endl;)
     if (core_plugin_refcount==0)
+    {
         SimulationFactory::getSingleton().registerConstructor("bulletphysics",
                 &BulletSystem::create,
                 true);
+    }
     core_plugin_refcount++;
     DEBUG_OUTPUT(cout << "dbm: plugin init return" << endl;)
 }

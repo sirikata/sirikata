@@ -488,6 +488,7 @@ public:
 
     static TimeSteppedQueryableSimulation* create(Context* ctx,
         Provider<ProxyCreationListener*>*proxyManager,
+        ProxyObjectPtr pop,
             const String&options) {
         BulletSystem*os= new BulletSystem(ctx);
         if (os->initialize(proxyManager,options))

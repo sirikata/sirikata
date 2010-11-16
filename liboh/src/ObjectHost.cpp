@@ -140,7 +140,8 @@ void ObjectHost::connect(
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
 {
-    bool with_query = init_sa != SolidAngle::Max;
+    //bool with_query = init_sa != SolidAngle::Max;
+    bool with_query = true;  //FIXME: defaulting most objects to receive queries
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     mSessionManagers[space]->connect(obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh, connected_cb, migrated_cb, stream_created_cb);
 }
@@ -197,7 +198,8 @@ ObjectHost::SSTStreamPtr ObjectHost::getSpaceStream(const SpaceID& space, const 
 }
 
 
-void ObjectHost::start() {
+void ObjectHost::start()
+{
 }
 
 void ObjectHost::stop() {
@@ -207,11 +209,14 @@ void ObjectHost::stop() {
     }
 }
 
-ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
+ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
+{
     DEPRECATED();
     NOT_IMPLEMENTED(oh);
     return NULL;
 }
+
+
 
 /**
   This method should update the addressable list of all
@@ -221,11 +226,9 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
   entity so that the new entity is addressable by the neighboring 
   entities.
 */
-
 void ObjectHost::updateAddressable() const
 {
    // Pull out the list of all the entitites
-    
     HostedObjectMap::const_iterator it = mHostedObjects.begin();
     for(  ; it != mHostedObjects.end(); it++)
     {
@@ -237,21 +240,25 @@ void ObjectHost::updateAddressable() const
 
 void ObjectHost::persistEntityState( const String& filename)
 {
-  
-   
-	std::ofstream fp(filename.c_str());
+    std::ofstream fp(filename.c_str());
 	
 
-  fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\",\"objid\",\"script_file\",\"script_type\"" << std::endl;
+    fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\",\"objid\",\"script_file\",\"script_type\"" << std::endl;
 
-	HostedObjectMap::iterator it = mHostedObjects.begin();
-	for( ; it != mHostedObjects.end(); it++)
-	{
-	  HostedObjectPtr objPtr = (*it).second;
-    objPtr->persistToFile(fp);
-	}
+    HostedObjectMap::iterator it = mHostedObjects.begin();
+    for( ; it != mHostedObjects.end(); it++)
+    {
+        HostedObjectPtr objPtr = (*it).second;
+        objPtr->persistToFile(fp);
+    }
 
 
+    HostedObjectMap::iterator it = mHostedObjects.begin();
+    for( ; it != mHostedObjects.end(); it++)
+    {
+        HostedObjectPtr objPtr = (*it).second;
+        objPtr->persistToFile(fp);
+    }
 }
 
 

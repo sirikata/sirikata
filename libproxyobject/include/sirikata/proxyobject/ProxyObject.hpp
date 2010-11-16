@@ -58,21 +58,36 @@
 namespace Sirikata {
 
 
+//forward declares
 class ProxyObject;
-typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-typedef std::tr1::weak_ptr<ProxyObject> ProxyObjectWPtr;
-
-typedef Provider<ProxyObjectListener*> ProxyObjectProvider;
 class ProxyManager;
-
-typedef double AbsTime;
-
-typedef Provider<PositionListener*> PositionProvider;
-
 class MeshListener;
 class PhysicalParameters;
+class ProxyObjectListener;
+
+
+//typedefs
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
+typedef std::tr1::weak_ptr<ProxyObject> ProxyObjectWPtr;
+typedef double AbsTime;
+typedef Provider<PositionListener*> PositionProvider;
+typedef Provider<ProxyObjectListener*> ProxyObjectProvider;
 typedef Provider<CameraListener*> CameraProvider;
 typedef Provider< MeshListener* > MeshProvider;
+
+
+
+
+/** Interface to listen for the destruction of a ProxyObject so one can discard any shared references to it. */
+class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
+public:
+    virtual ~ProxyObjectListener(){}
+    virtual void destroyed() = 0;
+    virtual void becomeCamera(ProxyObjectPtr p)=0;
+};
+
+
+
 
 /**
  * This class represents a generic object on a remote server
@@ -229,6 +244,8 @@ public:
     }
 
 
+    void notifyBecomeCamera();
+    
     // interface from MeshObject
     virtual void setMesh ( Transfer::URI const& rhs );
     virtual Transfer::URI const& getMesh () const;

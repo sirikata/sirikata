@@ -373,8 +373,14 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     orient.set_position( ci.orient.position() );
     orient.set_velocity( ci.orient.velocity() );
     connect_msg.set_bounds( ci.bounds );
-    if (ci.regQuery)
-        connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+
+    
+   if (ci.regQuery)
+       connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+
+
+
+
     if (ci.mesh.size() > 0)
         connect_msg.set_mesh( ci.mesh );
 

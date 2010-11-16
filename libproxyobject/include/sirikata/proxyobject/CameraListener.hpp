@@ -36,9 +36,7 @@ namespace Sirikata {
 class SIRIKATA_PROXYOBJECT_EXPORT CameraListener {
 public:
     virtual ~CameraListener() {}
-    virtual void attach (const String&renderTargetName,
-                         uint32 width,
-                         uint32 height) =0;
+    virtual void attach (const String&renderTargetName,uint32 width,uint32 height) =0;
     virtual void detach()=0;
 };
 }

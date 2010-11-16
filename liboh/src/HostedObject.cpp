@@ -92,6 +92,8 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mHasScript = false;
 }
 
+
+
 void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
@@ -112,12 +114,11 @@ void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String&
         HO_LOG(info, "Adding simulation to context");
         mContext->add(sim);
     }
-
+    
     // Special case for camera
-    //if (self_proxy->isCamera())
+    pd.mProxyObject->notifyBecomeCamera();
     pd.mProxyObject->attach(String(), 0, 0);
 
-    
 }
 
 
@@ -345,9 +346,7 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         queryAngle,
-
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, _7, scriptFile,scriptType,ppd),
-
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1) 
     );
@@ -365,7 +364,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     ObjectHostProxyManagerPtr proxyManPtr = pd.getProxyManager();
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim =SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(), "" );
+    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(),pd.mProxyObject,  "" );
     if (!sim)
     {
         HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -486,52 +485,6 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 }
 
 
-// //returns true if this is a script init message.  returns false otherwise
-// bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
-// {
-//     if (dst.port() != Services::LISTEN_FOR_SCRIPT_BEGIN)
-//         return false;
-
-//     //I don't really know what this segment of code does.  I copied it from processRPC
-//     RoutableMessageBody msg;
-//     RoutableMessageBody outer_msg;
-//     outer_msg.ParseFromArray(bodyData.data(), bodyData.length());
-//     if (outer_msg.has_payload())
-//     {
-//         assert( outer_msg.message_size() == 0 );
-//         msg.ParseFromString(outer_msg.payload());
-//     }
-//     else
-//         msg = outer_msg;
-
-
-//     int numNames = msg.message_size();
-//     if (numNames <= 0)
-//     {
-//         // Invalid message!
-//         //was a poorly formatted message to the listen_for_script_begin port.
-//         //send back a protocol error.
-//         RoutableMessageHeader replyHeader;
-//         replyHeader.set_return_status(RoutableMessageHeader::PROTOCOL_ERROR);
-//         sendViaSpace(replyHeader, MemoryReference::null());
-//         return true;
-//     }
-
-//     //if any of the names match, then we're going to go ahead an create a script
-//     //for it.
-//     for (int i = 0; i < numNames; ++i)
-//     {
-//         std::string name = msg.message_names(i);
-//         MemoryReference body(msg.message_arguments(i));
-        
-//         //means that we are supposed to create a new scripted object
-//         if (name == KnownMessages::INIT_SCRIPT)
-//             processInitScriptMessage(body);
-//     }
-
-//     //it was on the script init port, so it was a scripting init message
-//     return true;
-// }
 
 
 
@@ -723,8 +676,8 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     return true;
 }
 
-bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
-    
+bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload)
+{
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
@@ -819,37 +772,30 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
             returner->setMesh(meshuri);
         }
     }
+
+    
     return returner;
 }
+
 
 //should only be called from within createProxy functions.  Otherwise, will not
 //initilize position and quaternion correctly
 ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera)
 {
-    //ProxyManagerPtr proxy_manager = getProxyManager(objref.space(),
-    //objref.object());
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
     if (!proxy_manager)
     {
-        //mSpaceData->insert(SpaceDataMap::value_type( objref, PerPresenceData(this, objref.space(),objref.object()) ));
-        //proxy_manager = getProxyManager(objref.space(), objref.object());
         mSpaceData->insert(SpaceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object()) ));
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
-    
-    ProxyObjectPtr proxy_obj(new ProxyObject (proxy_manager.get(),objref,getSharedPtr(),owner_objref));// = ProxyObject::construct(proxy_manager.get(),objref,getSharedPtr(),owner_objref);
+    ProxyObjectPtr proxy_obj = ProxyObject::construct<ProxyObject> (proxy_manager.get(),objref,getSharedPtr(),owner_objref);
     proxy_obj->setCamera(is_camera);
 
     
-    // if (is_camera) proxy_obj = ProxyObject::construct<ProxyCameraObject>
-    //                    (proxy_manager.get(), objref, getSharedPtr(), owner_objref);
-    
-    // else proxy_obj = ProxyObject::construct<ProxyMeshObject>(proxy_manager.get(), objref, getSharedPtr(), owner_objref);
-
-// The call to createObject must occur before trying to do any other
-// operations so that any listeners will be set up.
+    // The call to createObject must occur before trying to do any other
+    // operations so that any listeners will be set up.
     proxy_manager->createObject(proxy_obj);
     return proxy_obj;
 }

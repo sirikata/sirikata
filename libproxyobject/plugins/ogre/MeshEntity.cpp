@@ -873,6 +873,15 @@ public:
 
 
 
+
+void MeshEntity::becomeCamera(ProxyObject* p)
+{
+    //delete this;
+}
+
+
+
+
 bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
     SHA256 sha = request->getMetadata().getFingerprint();
     String hash = sha.convertToHexString();

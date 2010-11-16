@@ -77,7 +77,9 @@ class CameraEntity;
 class CubeMap;
 struct IntersectResult;
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation {
+class OgreSystem: public TimeSteppedQueryableSimulation
+
+{
     Context* mContext;
 
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
@@ -120,8 +122,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
 
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
-                    const String&options);
+    bool initialize(Provider<ProxyCreationListener*>*proxyManager,ProxyObjectPtr pop,const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Task::LocalTime, Duration);
@@ -189,13 +190,15 @@ public:
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
+
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
         Provider<ProxyCreationListener*>*proxyManager,
+        ProxyObjectPtr pop,
         const String&options)
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(proxyManager,options))
+        if (os->initialize(proxyManager,pop,options))
             return os;
         delete os;
         return NULL;
@@ -224,6 +227,8 @@ public:
      */
     MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
+    void becomeCamera(ProxyObjectPtr p);
+    
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,
@@ -262,6 +267,7 @@ public:
 
 private:
     ResourceDownloadPlanner *dlPlanner;
+    void instantiateAllObjects(ProxyObjectPtr pop);
 
 };
 

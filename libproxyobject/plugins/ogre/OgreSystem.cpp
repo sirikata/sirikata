@@ -358,15 +358,31 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     }
     return mAttachedCameras.end();
 }
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+
+void OgreSystem::instantiateAllObjects(ProxyObjectPtr pop)
+{
+    ProxyManager* pman = pop->getProxyManager();
+
+    std::vector<SpaceObjectReference> allORefs;
+    pman->getAllObjectReferences(allORefs);
+
+    for (std::vector<SpaceObjectReference>::iterator iter = allORefs.begin(); iter != allORefs.end(); ++iter)
+    {
+        //instantiate each object in graphics system separately.
+        ProxyObjectPtr toAdd = pman->getProxyObject(*iter);
+        onCreateProxy(toAdd);
+    }
+}
+
+
+
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, ProxyObjectPtr pop,const String&options) {
     ++sNumOgreSystems;
     proxyManager->addListener(this);
-
-
+    
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
-
-
+    
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -539,11 +555,8 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     allocMouseHandler(keybindingFile->as<String>());
     new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
-/*  // Test web view
-    WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());
-    //view->setProxyObject(webviewpxy);
-    view->loadURL("http://www.google.com");
-*/
+    //finish instantiation here
+    instantiateAllObjects(pop);
 
     return true;
 }
@@ -709,10 +722,11 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 }
 
 
-void OgreSystem::onCreateProxy(ProxyObjectPtr p){
 
+void OgreSystem::onCreateProxy(ProxyObjectPtr p)
+{
     bool created = false;
-
+    
     if (p->isCamera())
     {
         CameraEntity* cam = new CameraEntity(this,p);
@@ -721,12 +735,20 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p){
     {
         MeshEntity* mesh = new MeshEntity(this,p);
         dlPlanner->addNewObject(p,mesh);
-            
     }
-
 }
-void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
 
+
+void OgreSystem::becomeCamera(ProxyObjectPtr p)
+{
+    //FIXME: May be leaking memory if already were a camera.
+    //check if we already have camera.
+    CameraEntity* cam = new CameraEntity(this, p);
+}
+
+
+void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
+{
 }
 
 MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {

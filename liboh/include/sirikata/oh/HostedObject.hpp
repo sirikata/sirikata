@@ -79,26 +79,26 @@ protected:
 
   public:
      struct EntityState
-	   {
-		  public:
-
-		    String objType;
-			  String subType;
-			  String name;
-			  Vector3d pos;
-			  Quaternion orient;
-		    Vector3f vel;	
-        Vector3f rot;
-        float angular_speed;
-        String mesh;
-			  float scale;
-        String objectID; 
-				String script_type;
-				String script_file;
-		    void persistToFile(std::ofstream&);
-      
-	    };
-		typedef struct EntityState EntityState;
+     {
+       public:
+         
+         String objType;
+         String subType;
+         String name;
+         Vector3d pos;
+         Quaternion orient;
+         Vector3f vel;	
+         Vector3f rot;
+         float angular_speed;
+         String mesh;
+         float scale;
+         String objectID; 
+         String script_type;
+         String script_file;
+         void persistToFile(std::ofstream&);
+         
+     };
+     typedef struct EntityState EntityState;
 	  
   private:
     //SpaceSet mSpaces;

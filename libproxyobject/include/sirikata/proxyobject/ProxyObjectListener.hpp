@@ -31,15 +31,19 @@
  */
 #ifndef _SIRIKATA_PROXY_OBJECT_LISTENER_HPP_
 #define _SIRIKATA_PROXY_OBJECT_LISTENER_HPP_
-namespace Sirikata {
-class ProxyObject;
 
-/** Interface to listen for the destruction of a ProxyObject so one can discard any shared references to it. */
-class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
-public:
-    virtual ~ProxyObjectListener(){}
 
-    virtual void destroyed() = 0;
-};
-}
+
+// namespace Sirikata {
+// class ProxyObjectPtr;
+
+
+// /** Interface to listen for the destruction of a ProxyObject so one can discard any shared references to it. */
+// class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
+// public:
+//     virtual ~ProxyObjectListener(){}
+//     virtual void destroyed() = 0;
+//     virtual void becomeCamera(ProxyObjectPtr p)=0;
+// };
+// }
 #endif
