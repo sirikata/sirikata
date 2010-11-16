@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ComputeBoundsFilter.cpp
+ *  PluginInterface.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,32 +30,64 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "PluginInterface.hpp"
+
+#include <sirikata/mesh/Filter.hpp>
+#include "LoadFilter.hpp"
+#include "SaveFilter.hpp"
 #include "ComputeBoundsFilter.hpp"
 
-namespace Sirikata {
-namespace MeshTool {
+static int common_filters_plugin_refcount = 0;
 
-ComputeBoundsFilter::ComputeBoundsFilter(const String& args) {
+SIRIKATA_PLUGIN_EXPORT_C void init ()
+{
+    using namespace Sirikata;
+    using namespace Sirikata::Mesh;
+    if ( common_filters_plugin_refcount == 0 ) {
+        FilterFactory::getSingleton().registerConstructor("load", LoadFilter::create);
+        FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
+        FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
+    }
+
+    ++common_filters_plugin_refcount;
 }
 
-FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
-    // The bounding box is just the bounding box of all the component geometry
-    // instances.  These were already computed, post-transform, for each
-    // instance, so this is a simple computation.
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
+{
+    return ++common_filters_plugin_refcount;
+}
 
-    BoundingBox3f3f bbox = BoundingBox3f3f::null();
-    for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
-        MeshdataPtr mesh = *mesh_it;
-        for(Meshdata::GeometryInstanceList::iterator it = mesh->instances.begin(); it != mesh->instances.end(); it++) {
-            if (bbox.degenerate())
-                bbox = it->aabb;
-            else
-                bbox.mergeIn(it->aabb);
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
+{
+    assert ( common_filters_plugin_refcount > 0 );
+    return --common_filters_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy ()
+{
+    using namespace Sirikata;
+    using namespace Sirikata::Mesh;
+
+    if ( common_filters_plugin_refcount > 0 )
+    {
+        --common_filters_plugin_refcount;
+
+        assert ( common_filters_plugin_refcount == 0 );
+
+        if ( common_filters_plugin_refcount == 0 ) {
+            FilterFactory::getSingleton().unregisterConstructor("load");
+            FilterFactory::getSingleton().unregisterConstructor("save");
+            FilterFactory::getSingleton().unregisterConstructor("compute-bounds");
         }
     }
-    std::cout << bbox << std::endl;
-    return input;
 }
 
-} // namespace MeshTool
-} // namespace Sirikata
+SIRIKATA_PLUGIN_EXPORT_C char const* name ()
+{
+    return "common-filters";
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int refcount ()
+{
+    return common_filters_plugin_refcount;
+}

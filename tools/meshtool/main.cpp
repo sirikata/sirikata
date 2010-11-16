@@ -31,10 +31,7 @@
  */
 
 #include <sirikata/core/util/PluginManager.hpp>
-#include "Filter.hpp"
-#include "LoadFilter.hpp"
-#include "SaveFilter.hpp"
-#include "ComputeBoundsFilter.hpp"
+#include <sirikata/mesh/Filter.hpp>
 
 void usage() {
     printf("Usage: meshtool --filter1 --filter2=filter,options\n");
@@ -42,7 +39,7 @@ void usage() {
 
 int main(int argc, char** argv) {
     using namespace Sirikata;
-    using namespace Sirikata::MeshTool;
+    using namespace Sirikata::Mesh;
 
     // Check for help request
     for(int argi = 1; argi < argc; argi++) {
@@ -55,11 +52,7 @@ int main(int argc, char** argv) {
 
     PluginManager plugins;
     plugins.loadList("colladamodels");
-
-    // Register filters
-    FilterFactory::getSingleton().registerConstructor("load", LoadFilter::create);
-    FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
-    FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
+    plugins.loadList("common-filters");
 
     FilterDataPtr current_data(new FilterData);
     for(int argi = 1; argi < argc; argi++) {

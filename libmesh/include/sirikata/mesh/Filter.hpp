@@ -1,5 +1,5 @@
 /*  Sirikata
- *  LoadFilter.hpp
+ *  Filter.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,22 +30,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Filter.hpp"
+#ifndef _SIRIKATA_LIBMESH_FILTER_HPP_
+#define _SIRIKATA_LIBMESH_FILTER_HPP_
+
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/core/util/Factory.hpp>
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
-class LoadFilter : public Filter {
+/** FilterData is the input and output of a Filter. In order to support filters
+ *  with multiple inputs (e.g. simplification of multiple meshes), FilterData is
+ *  a list of MeshdataPtrs.
+ */
+class SIRIKATA_MESH_EXPORT FilterData : public std::vector<MeshdataPtr> {
 public:
-    static Filter* create(const String& args) { return new LoadFilter(args); }
+    bool single() const { return this->size() == 1; }
+    MeshdataPtr get() const { assert(single()); return at(0); }
+}; // class FilterData
+typedef std::tr1::shared_ptr<const FilterData> FilterDataPtr;
+typedef std::tr1::shared_ptr<FilterData> MutableFilterDataPtr;
 
-    LoadFilter(const String& args);
-    virtual ~LoadFilter() {}
+class SIRIKATA_MESH_EXPORT Filter {
+public:
+    virtual ~Filter() {}
 
-    virtual FilterDataPtr apply(FilterDataPtr input);
-private:
-    std::string mFilename;
+    virtual FilterDataPtr apply(FilterDataPtr input) = 0;
 }; // class Filter
 
-} // namespace MeshTool
+class SIRIKATA_MESH_EXPORT FilterFactory :
+        public AutoSingleton<FilterFactory>,
+        public Factory1<Filter*, const String&>
+{
+public:
+    static FilterFactory& getSingleton();
+    static void destroy();
+}; // class FilterFactory
+
+} // namespace Mesh
 } // namespace Sirikata
+
+#endif //_SIRIKATA_LIBMESH_FILTER_HPP_

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  SaveFilter.hpp
+ *  LoadFilter.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,38 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "SaveFilter.hpp"
-#include <sirikata/core/options/Options.hpp>
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Filter.hpp>
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
-SaveFilter::SaveFilter(const String& args) {
-    Sirikata::InitializeClassOptions ico("save_filter", NULL,
-        new OptionValue("filename","",Sirikata::OptionValueType<String>(),"Name of file to save to."),
-        new OptionValue("format","colladamodels",Sirikata::OptionValueType<String>(),"Format to save to."),
-        NULL);
+class LoadFilter : public Filter {
+public:
+    static Filter* create(const String& args) { return new LoadFilter(args); }
 
-    OptionSet* optionSet = OptionSet::getOptions("save_filter",NULL);
-    optionSet->parse(args);
+    LoadFilter(const String& args);
+    virtual ~LoadFilter() {}
 
-    mFilename = optionSet->referenceOption("filename")->as<String>();
-    mFormat = optionSet->referenceOption("format")->as<String>();
-}
+    virtual FilterDataPtr apply(FilterDataPtr input);
+private:
+    std::string mFilename;
+}; // class Filter
 
-FilterDataPtr SaveFilter::apply(FilterDataPtr input) {
-    assert(input->single());
-
-    ModelsSystem* parser = ModelsSystemFactory::getSingleton().getConstructor("any")("");
-    MeshdataPtr md = input->get();
-    bool success = parser->convertMeshdata(*md.get(), mFormat, mFilename);
-    if (!success) {
-        std::cout << "Error saving mesh." << std::endl;
-        return FilterDataPtr();
-    }
-    return input;
-}
-
-} // namespace MeshTool
+} // namespace Mesh
 } // namespace Sirikata

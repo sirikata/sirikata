@@ -1,5 +1,5 @@
 /*  Sirikata
- *  SaveFilter.hpp
+ *  ComputeBoundsFilter.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,23 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Filter.hpp"
+#include "ComputeBoundsFilter.hpp"
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
-class SaveFilter : public Filter {
-public:
-    static Filter* create(const String& args) { return new SaveFilter(args); }
+ComputeBoundsFilter::ComputeBoundsFilter(const String& args) {
+}
 
-    SaveFilter(const String& args);
-    virtual ~SaveFilter() {}
+FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
+    // The bounding box is just the bounding box of all the component geometry
+    // instances.  These were already computed, post-transform, for each
+    // instance, so this is a simple computation.
 
-    virtual FilterDataPtr apply(FilterDataPtr input);
-private:
-    String mFormat;
-    String mFilename;
-}; // class Filter
+    BoundingBox3f3f bbox = BoundingBox3f3f::null();
+    for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
+        MeshdataPtr mesh = *mesh_it;
+        for(Meshdata::GeometryInstanceList::iterator it = mesh->instances.begin(); it != mesh->instances.end(); it++) {
+            if (bbox.degenerate())
+                bbox = it->aabb;
+            else
+                bbox.mergeIn(it->aabb);
+        }
+    }
+    std::cout << bbox << std::endl;
+    return input;
+}
 
-} // namespace MeshTool
+} // namespace Mesh
 } // namespace Sirikata

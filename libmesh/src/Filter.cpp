@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Filter.hpp"
+#include <sirikata/mesh/Filter.hpp>
 
-AUTO_SINGLETON_INSTANCE(Sirikata::MeshTool::FilterFactory);
+AUTO_SINGLETON_INSTANCE(Sirikata::Mesh::FilterFactory);
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
 FilterFactory& FilterFactory::getSingleton() {
     return AutoSingleton<FilterFactory>::getSingleton();
@@ -45,5 +45,5 @@ void FilterFactory::destroy() {
     return AutoSingleton<FilterFactory>::destroy();
 }
 
-} // namespace MeshTool
+} // namespace Mesh
 } // namespace Sirikata

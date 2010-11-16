@@ -1,5 +1,5 @@
 /*  Sirikata
- *  LoadFilter.cpp
+ *  SaveFilter.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,65 +30,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "LoadFilter.hpp"
+#include "SaveFilter.hpp"
+#include <sirikata/core/options/Options.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
-LoadFilter::LoadFilter(const String& args) {
-    mFilename = args;
+SaveFilter::SaveFilter(const String& args) {
+    Sirikata::InitializeClassOptions ico("save_filter", NULL,
+        new OptionValue("filename","",Sirikata::OptionValueType<String>(),"Name of file to save to."),
+        new OptionValue("format","colladamodels",Sirikata::OptionValueType<String>(),"Format to save to."),
+        NULL);
+
+    OptionSet* optionSet = OptionSet::getOptions("save_filter",NULL);
+    optionSet->parse(args);
+
+    mFilename = optionSet->referenceOption("filename")->as<String>();
+    mFormat = optionSet->referenceOption("format")->as<String>();
 }
 
-FilterDataPtr LoadFilter::apply(FilterDataPtr input) {
-    using namespace Sirikata::Transfer;
-
-    typedef std::tr1::shared_ptr<SparseData> SparseDataPtr;
+FilterDataPtr SaveFilter::apply(FilterDataPtr input) {
+    assert(input->single());
 
     ModelsSystem* parser = ModelsSystemFactory::getSingleton().getConstructor("any")("");
-
-    // Load the file into a DenseData
-    DenseDataPtr filedata;
-    if (mFilename.empty()) { // use stdin
-        SparseDataPtr sparse_data(new SparseData());
-        FILE* fp = stdin;
-        int offset = 0;
-        while(!feof(fp)) {
-            char buf[256];
-            int nread = fread(&buf, 1, 256, fp);
-            if (nread > 0) {
-                MutableDenseDataPtr data_seg(new DenseData(Range(offset, nread, Transfer::LENGTH, false)));
-                memcpy(data_seg->writableData(), buf, nread);
-                offset += nread;
-                sparse_data->addValidData(data_seg);
-            }
-        }
-        filedata = sparse_data->flatten();
-    }
-    else {
-        FILE* fp = fopen(mFilename.c_str(), "rb");
-        fseek(fp, 0, SEEK_END);
-        int fp_len = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        MutableDenseDataPtr mutable_filedata(new DenseData(Range(0, fp_len, Transfer::LENGTH, true)));
-        fread(mutable_filedata->writableData(), 1, fp_len, fp);
-        fclose(fp);
-        filedata = mutable_filedata;
-    }
-
-    URI fileuri(std::string("file://") + mFilename);
-    Fingerprint hash = Fingerprint::computeDigest(filedata->data(), filedata->size());
-    MeshdataPtr md = parser->load(fileuri, hash, filedata);
-
-    if (!md) {
-        std::cout << "Error applying LoadFilter: " << mFilename << std::endl;
+    MeshdataPtr md = input->get();
+    bool success = parser->convertMeshdata(*md.get(), mFormat, mFilename);
+    if (!success) {
+        std::cout << "Error saving mesh." << std::endl;
         return FilterDataPtr();
     }
-
-    MutableFilterDataPtr output(new FilterData(*input.get()));
-    output->push_back(md);
-    return output;
+    return input;
 }
 
-} // namespace MeshTool
+} // namespace Mesh
 } // namespace Sirikata
