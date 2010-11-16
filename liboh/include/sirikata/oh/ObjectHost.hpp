@@ -172,7 +172,7 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 
-    void updateAddressable() const;
+    //void updateAddressable() const;
 
 
     /** Attach and run this script after the entity is initialized */

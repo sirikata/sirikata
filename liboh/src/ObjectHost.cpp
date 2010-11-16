@@ -233,24 +233,6 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
 
 
 
-/**
-  This method should update the addressable list of all
-  the entities on the object host.
-  This would happen because of Pinto updates.
-  Right now, this is being called after the creation of a new
-  entity so that the new entity is addressable by the neighboring
-  entities.
-*/
-void ObjectHost::updateAddressable() const
-{
-   // Pull out the list of all the entitites
-    HostedObjectMap::const_iterator it = mHostedObjects.begin();
-    for(  ; it != mHostedObjects.end(); it++)
-    {
-        HostedObjectPtr objPtr = (*it).second;
-        objPtr->updateAddressable();
-    }
-}
 
 
 void ObjectHost::persistEntityState( const String& filename)

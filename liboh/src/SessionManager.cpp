@@ -292,7 +292,6 @@ void SessionManager::connect(
     ci.mesh = init_mesh;
 
 
-
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
     mObjectConnections.add(

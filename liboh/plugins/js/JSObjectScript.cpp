@@ -247,6 +247,7 @@ void JSObjectScript::test() const
 //populates the internal addressable object references vector
 void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 {
+   
     //loading the vector
     mAddressableList.clear();
     getAllMessageable(mAddressableList);

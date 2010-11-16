@@ -750,6 +750,11 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
         }
     }
 
+
+    //UPdate teh addressable for this Entity
+    
+    updateAddressable();
+
     return true;
 }
 
