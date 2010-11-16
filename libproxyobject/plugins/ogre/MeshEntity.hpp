@@ -120,7 +120,7 @@ public:
     virtual void setSelected(bool selected);
 
 
-    void downloadMeshFile(URI const& uri);
+    void downloadMeshFile(Transfer::URI const& uri);
 
     // interface from MeshListener
     public:

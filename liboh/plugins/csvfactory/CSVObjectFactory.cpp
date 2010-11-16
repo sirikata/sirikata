@@ -110,13 +110,10 @@ void CSVObjectFactory::generate()
             else
                 next_val = line.substr(last_comma + 1, next_comma - (last_comma+1));
 
-            std::cout << "\n next_val = " << next_val << "\n";
             // Remove quotes from beginning and end
             if (next_val.size() > 2 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
                 next_val = next_val.substr(1, next_val.size() - 2);
     
-            std::cout << "\n next_val_1 = " << next_val << "\n";
-
             line_parts.push_back(next_val);
 
             last_comma = next_comma;
@@ -124,8 +121,9 @@ void CSVObjectFactory::generate()
 
 
         if (is_first) {
-            for(uint32 idx = 0; idx < line_parts.size(); idx++) {
-						    std::cout << "\n  line_parts[" << idx << "] = " << line_parts[idx] << "\n"; 
+            for(uint32 idx = 0; idx < line_parts.size(); idx++)
+            {
+
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
                 if (line_parts[idx] == "pos_x") pos_idx = idx;
                 if (line_parts[idx] == "orient_x") orient_idx = idx;
@@ -135,11 +133,10 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "script_file") script_file_idx = idx;
                 if (line_parts[idx] == "script_type") script_type_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
-								if(line_parts[idx] == "objid") 
-								{
-								   std::cout << "\n\n Setting the object id \n\n";
-								   objid_idx = idx;
-								}
+                if(line_parts[idx] == "objid") 
+                {
+                    objid_idx = idx;
+                }
             }
 
             is_first = false;
@@ -192,33 +189,17 @@ void CSVObjectFactory::generate()
 
                 String scriptFile = "";
                 String scriptType = "";
-								/* 
-								 FIX for 156: http://www.sirikata.com/trac/ticket/156
-								*/
-								if(script_file_idx != -1)
-								{
-								  scriptFile = line_parts[script_file_idx];
-								}
-              	if(script_type_idx != -1)
-								{
-								  scriptType = line_parts[script_type_idx];
-								}
-                /*
+                /* 
+                   FIX for 156: http://www.sirikata.com/trac/ticket/156
+                */
                 if(script_file_idx != -1)
                 {
-                    if(script_file_idx < (int)line_parts.size())
-                    {
-                        scriptFile = line_parts[script_file_idx];
-                        scriptType = line_parts[script_file_idx + 1];
-                    }
+                    scriptFile = line_parts[script_file_idx];
                 }
-								*/
-
-
-
-                std::cout<<"\n\nThis is scriptFile:  "<<scriptFile<<"\n\n";
-                std::cout<<"\n\nThis is scriptType:  "<<scriptType<<"\n\n";
-                std::cout.flush();
+              	if(script_type_idx != -1)
+                {
+                    scriptType = line_parts[script_type_idx];
+                }
                 
                 float scale =
                     scale_idx == -1 ?
@@ -227,29 +208,26 @@ void CSVObjectFactory::generate()
 
                 /*
 								
-								  Ticket #134 
-
-								*/
-								String objid = "";
-								if(objid_idx != -1)
-								{
-								  objid = line_parts[objid_idx];
-								}
-
+                  Ticket #134 
+                  
+                */
+                String objid = "";
+                if(objid_idx != -1)
+                {
+                    objid = line_parts[objid_idx];
+                }
+                
                 HostedObjectPtr obj;
-
-								if(objid_idx == -1)
-								{
-								  std::cout << "\n\n DID NOT  get any existing object id \n\n";
-								  obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
-
-								}
-								else
-								{
-								  std::cout << "\n\n GOT existing object id as " << objid << "\n\n";
-								  
-								  obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
-								}
+                
+                if(objid_idx == -1)
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+                    
+                }
+                else
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
+                }
 
 
                 obj->init();
@@ -281,7 +259,6 @@ void CSVObjectFactory::generate()
 
 void CSVObjectFactory::connectObjects()
 {
-    std::cout<<"\n\nGot into connectObjects\n\n";
     
     if (mContext->stopped())
     {
