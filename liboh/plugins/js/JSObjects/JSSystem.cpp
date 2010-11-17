@@ -29,12 +29,12 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 
   v8::String::Utf8Value str(args[0]);
   const char* cstr = ToCString(str);
-  const String s(cstr); 
+  const String s(cstr);
   const SpaceID new_space(s);
-  target_script->create_presence(new_space); 
+  target_script->create_presence(new_space);
 
   return v8::Undefined();
-  
+
 }
 
 //instructs the JSObjectScript to update its addressable array.
@@ -52,7 +52,7 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 {
     if (args.Length() != 3)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>, <script filename>, <mesh uri> arguments")) );
- 
+
   JSObjectScript* target_script = GetTargetJSObjectScript(args);
   // get the location from the args
 
@@ -61,7 +61,7 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
       return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
 
   Vector3d pos(Vec3Extract(val_obj));
-  
+
   // get the script to attach from the args
   //script is a string args
   v8::String::Utf8Value str(args[1]);
@@ -73,10 +73,10 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
   const char* mesh_cstr = ToCString(mesh_str);
   String mesh(cstr);
 
-  
+
   target_script->create_entity(pos, script,mesh);
 
-  
+
   return v8::Undefined();
 }
 
@@ -128,7 +128,7 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     target_script->timeout(Duration::seconds(native_dur), target_persist, cb_persist);
 
-    
+
     return v8::Undefined();
 }
 
@@ -184,7 +184,7 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
-    
+
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {
         v8::HandleScope handle_scope;
@@ -222,46 +222,13 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
     std::string serialized_message = JSSerializer::serializeObject(v8Object);
 
-        
+
     //sender
     JSObjectScript* target = GetTargetJSObjectScript(args);
     target->bftm_testSendMessageBroadcast(serialized_message);
 
     return v8::Undefined();
 }
-
-
-
-
-// AxisOfRotation
-
-v8::Handle<v8::Value> ScriptGetAxisOfRotation(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    return target_script->getAxisOfRotation();
-}
-
-void ScriptSetAxisOfRotation(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    target_script->setAxisOfRotation(value);
-}
-
-
-// AngularSpeed
-
-v8::Handle<v8::Value> ScriptGetAngularSpeed(v8::Local<v8::String> property, const v8::AccessorInfo &info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    return target_script->getAngularSpeed();
-}
-
-void ScriptSetAngularSpeed(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(info);
-    target_script->setAngularSpeed(value);
-}
-
 
 
 /** Registers a handler to be invoked for events that match the
@@ -277,7 +244,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
 {
     if (args.Length() != 4)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().")) );
-    
+
     // Changing the sequence of the arguments so as to get the same
     // as is generated in emerson
 
@@ -320,7 +287,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     else
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern argument must be pattern or array of patterns.")) );
 
-    
+
     // Target
     if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
@@ -339,12 +306,12 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Not a valid sender.")) );
         }
     }
-        
-    v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);    
+
+    v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
     v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
 
     //originally
-    //v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);    
+    //v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
     //v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
 
 
@@ -352,13 +319,13 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     if (!cb_val->IsFunction())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Must contain callback function.")) );
 
-    
+
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
-    
+
     return target_script->makeEventHandlerObject(evHand);
 }
 
