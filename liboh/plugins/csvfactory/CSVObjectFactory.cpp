@@ -63,12 +63,14 @@ T safeLexicalCast(const String& orig) {
 
 void CSVObjectFactory::generate()
 {
-    int count = 0;
+
+    int count =0;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
     if (!fp) return;
 
+    
     bool is_first = true;
     int objtype_idx = -1;
     int pos_idx = -1;
@@ -91,8 +93,10 @@ void CSVObjectFactory::generate()
 	// then this is a comment
         if(line.length() > 0 && line.at(0) == '#')
        {
-         continue;
+         continue;   
        }
+        
+
         // Split into parts
         StringList line_parts;
         int last_comma = -1;
@@ -106,23 +110,20 @@ void CSVObjectFactory::generate()
             else
                 next_val = line.substr(last_comma + 1, next_comma - (last_comma+1));
 
-            std::cout << "\n next_val = " << next_val << "\n";
             // Remove quotes from beginning and end
             if (next_val.size() > 2 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
                 next_val = next_val.substr(1, next_val.size() - 2);
     
-            std::cout << "\n next_val_1 = " << next_val << "\n";
-
             line_parts.push_back(next_val);
 
             last_comma = next_comma;
         }
 
 
-
         if (is_first) {
-            for(uint32 idx = 0; idx < line_parts.size(); idx++) {
-						    std::cout << "\n  line_parts[" << idx << "] = " << line_parts[idx] << "\n"; 
+            for(uint32 idx = 0; idx < line_parts.size(); idx++)
+            {
+
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
                 if (line_parts[idx] == "pos_x") pos_idx = idx;
                 if (line_parts[idx] == "orient_x") orient_idx = idx;
@@ -132,17 +133,16 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "script_file") script_file_idx = idx;
                 if (line_parts[idx] == "script_type") script_type_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
-								if(line_parts[idx] == "objid") 
-								{
-								   std::cout << "\n\n Setting the object id \n\n";
-								   objid_idx = idx;
-								}
+                if(line_parts[idx] == "objid") 
+                {
+                    objid_idx = idx;
+                }
             }
 
             is_first = false;
         }
         else {
-            //note: script_file is not required, so not checking it witht he assert
+            //note: script_file is not required, so not checking it with the assert
             assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
             //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
@@ -189,28 +189,18 @@ void CSVObjectFactory::generate()
 
                 String scriptFile = "";
                 String scriptType = "";
-								/* 
-								 FIX for 156: http://www.sirikata.com/trac/ticket/156
-								*/
-								if(script_file_idx != -1)
-								{
-								  scriptFile = line_parts[script_file_idx];
-								}
-              	if(script_type_idx != -1)
-								{
-								  scriptType = line_parts[script_type_idx];
-								}
-                /*
+                /* 
+                   FIX for 156: http://www.sirikata.com/trac/ticket/156
+                */
                 if(script_file_idx != -1)
                 {
-                    if(script_file_idx < (int)line_parts.size())
-                    {
-                        scriptFile = line_parts[script_file_idx];
-                        scriptType = line_parts[script_file_idx + 1];
-                    }
+                    scriptFile = line_parts[script_file_idx];
                 }
-								*/
-
+              	if(script_type_idx != -1)
+                {
+                    scriptType = line_parts[script_type_idx];
+                }
+                
                 float scale =
                     scale_idx == -1 ?
                     1.f :
@@ -218,29 +208,26 @@ void CSVObjectFactory::generate()
 
                 /*
 								
-								  Ticket #134 
-
-								*/
-								String objid = "";
-								if(objid_idx != -1)
-								{
-								  objid = line_parts[objid_idx];
-								}
-
+                  Ticket #134 
+                  
+                */
+                String objid = "";
+                if(objid_idx != -1)
+                {
+                    objid = line_parts[objid_idx];
+                }
+                
                 HostedObjectPtr obj;
-
-								if(objid_idx == -1)
-								{
-								  std::cout << "\n\n DID NOT  get any existing object id \n\n";
-								  obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
-
-								}
-								else
-								{
-								  std::cout << "\n\n GOT existing object id as " << objid << "\n\n";
-								  
-								  obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
-								}
+                
+                if(objid_idx == -1)
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+                    
+                }
+                else
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
+                }
 
 
                 obj->init();
@@ -261,6 +248,7 @@ void CSVObjectFactory::generate()
         }
     }
 
+    
     fp.close();
 
     connectObjects();
@@ -271,8 +259,12 @@ void CSVObjectFactory::generate()
 
 void CSVObjectFactory::connectObjects()
 {
+    
     if (mContext->stopped())
+    {
+        std::cout<<"\n\nContext stopped.  Will not get anywhere\n\n";
         return;
+    }
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();

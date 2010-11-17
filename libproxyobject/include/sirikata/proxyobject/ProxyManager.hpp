@@ -57,7 +57,6 @@ public:
     /// Ask for a proxy object by ID. Returns ProxyObjectPtr() if it doesn't exist.
     virtual ProxyObjectPtr getProxyObject(const SpaceObjectReference &id) const=0;
 
-    //bftm
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const = 0;
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const = 0;
 };

@@ -181,5 +181,11 @@ Quaternion Entity::getOgreOrientation() {
     return fromOgre(mSceneNode->getOrientation());
 }
 
+void Entity::becomeCamera(ProxyObjectPtr p)
+{
+
+}
+
+
 }
 }

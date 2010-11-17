@@ -39,10 +39,10 @@
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "../CameraEntity.hpp"
 #include <vector>
+#include <sirikata/core/transfer/URI.hpp>
 
 namespace Sirikata {
 namespace Graphics{
@@ -63,7 +63,7 @@ public:
     virtual void onDestroyProxy ( ProxyObjectPtr object );
 
     //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
     virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 

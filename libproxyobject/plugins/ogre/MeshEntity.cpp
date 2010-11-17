@@ -46,6 +46,8 @@
 #include "Lights.hpp"
 #include <boost/lexical_cast.hpp>
 #include "resourceManager/CDNArchive.hpp"
+#include <sirikata/core/transfer/URI.hpp>
+
 
 using namespace std;
 using namespace Sirikata::Transfer;
@@ -59,7 +61,7 @@ void fixOgreURI(String &uri) {
     }
 }
 MeshEntity::MeshEntity(OgreSystem *scene,
-                       const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
+                       const std::tr1::shared_ptr<ProxyObject> &pmo,
                        const std::string &id)
         : Entity(scene,
                  pmo,
@@ -301,7 +303,7 @@ void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::
     Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::tryInstantiateExistingMesh, this, request, response));
 }
 
-void MeshEntity::downloadMeshFile(URI const& uri)
+void MeshEntity::downloadMeshFile(Transfer::URI const& uri)
 {
     ResourceDownloadTask *dl = new ResourceDownloadTask(
         uri, getScene()->transferPool(),
@@ -316,12 +318,12 @@ void MeshEntity::downloadMeshFile(URI const& uri)
 // overrides from MeshListener
 // MCB: integrate these with the MeshObject model class
 
-void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
+void MeshEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
 {
 
 }
 
-void MeshEntity::processMesh(URI const& meshFile)
+void MeshEntity::processMesh(Transfer::URI const& meshFile)
 {
     Ogre::Entity * meshObj=getOgreEntity();
 
@@ -868,6 +870,15 @@ public:
         mesh->load();
     }
 };
+
+
+
+
+void MeshEntity::becomeCamera(ProxyObject* p)
+{
+    //delete this;
+}
+
 
 
 

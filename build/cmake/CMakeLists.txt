@@ -1229,8 +1229,6 @@ SET(LIBPROXYOBJECT_SOURCES
   ${Bullet_PBJ_CPP_FILES}
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyMeshObject.cpp
-                  ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyCameraObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
     )
 SET(LIBOH_SOURCES

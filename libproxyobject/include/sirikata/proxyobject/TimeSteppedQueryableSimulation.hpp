@@ -34,10 +34,10 @@
 #define _SIRIKATA_TIME_STEPPED_QUERYABLE_SIMULATION_HPP_
 #include "TimeSteppedSimulation.hpp"
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+
 
 namespace Sirikata {
-typedef std::tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 class SpaceObjectReference;
 
 
@@ -63,7 +63,7 @@ public:
     virtual bool queryRay(const Vector3d& position,
                           const Vector3f& direction,
                           const double maxDistance,
-                          ProxyMeshObjectPtr ignore,
+                          ProxyObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName)=0;

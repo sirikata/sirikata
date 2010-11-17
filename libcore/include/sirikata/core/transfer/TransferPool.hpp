@@ -63,6 +63,11 @@ public:
 		return mPriority;
 	}
 
+	//Returns true if this request is for deletion
+	inline bool isDeletionRequest() const {
+	    return mDeletionRequest;
+	}
+
 	//Return a unique identifier for the request
 	virtual const std::string& getIdentifier() const = 0;
 
@@ -83,8 +88,19 @@ protected:
 		mClientID = clientID;
 	}
 
+    //Change the priority of the request
+    inline void setPriority(PriorityType p) {
+        mPriority = p;
+    }
+
+    //Change the priority of the request
+    inline void setDeletion() {
+        mDeletionRequest = true;
+    }
+
 	PriorityType mPriority;
 	std::string mClientID;
+	bool mDeletionRequest;
 
 };
 
@@ -104,6 +120,7 @@ public:
     MetadataRequest(const URI &uri, PriorityType priority, MetadataCallback cb) :
      mURI(uri), mCallback(cb) {
         mPriority = priority;
+        mDeletionRequest = false;
 
         const time_t seconds = time(NULL);
         int random = rand();
@@ -151,6 +168,7 @@ protected:
     MetadataRequest(const URI &uri, PriorityType priority) :
         mURI(uri) {
         mPriority = priority;
+        mDeletionRequest = false;
         const time_t seconds = time(NULL);
         int random = rand();
 
@@ -188,6 +206,7 @@ public:
 		  mChunk(std::tr1::shared_ptr<Chunk>(new Chunk(chunk))),
 		  mCallback(cb) {
 
+	        mDeletionRequest = false;
             const time_t seconds = time(NULL);
             int random = rand();
 
@@ -290,6 +309,18 @@ public:
 		if(req != NULL) req->setClientID(mClientID);
 		mDeltaQueue.push(req);
 	}
+
+    //Updates priority of a request in the pool
+    inline void updatePriority(std::tr1::shared_ptr<TransferRequest> req, TransferRequest::PriorityType p) {
+        req->setPriority(p);
+        mDeltaQueue.push(req);
+    }
+
+    //Updates priority of a request in the pool
+    inline void deleteRequest(std::tr1::shared_ptr<TransferRequest> req) {
+        req->setDeletion();
+        mDeltaQueue.push(req);
+    }
 
 };
 

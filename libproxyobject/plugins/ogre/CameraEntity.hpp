@@ -37,7 +37,7 @@
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreRenderTarget.h>
-#include <sirikata/proxyobject/ProxyCameraObject.hpp>
+
 
 namespace Sirikata {
 namespace Graphics {
@@ -52,15 +52,16 @@ public:
         return static_cast<Ogre::Camera*const>(mOgreObject);
     }
 
-    ProxyCameraObject &getProxy() const {
-        return *std::tr1::static_pointer_cast<ProxyCameraObject>(mProxy);
+    ProxyObject &getProxy() const {
+        return *std::tr1::static_pointer_cast<ProxyObject>(mProxy);
     }
+    
     virtual void attach (const String&renderTargetName,
                          uint32 width,
                          uint32 height);
     virtual void detach();
     CameraEntity(OgreSystem *scene,
-                 const std::tr1::shared_ptr<ProxyCameraObject> &pco,
+                 const std::tr1::shared_ptr<ProxyObject> &pco,
                  std::string id=std::string());
 
     virtual ~CameraEntity();

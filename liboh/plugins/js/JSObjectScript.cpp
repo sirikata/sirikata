@@ -141,11 +141,17 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Ar
         //shouldn't need to receive on this port
     }
 
+    
 
-		mParent->getObjectHost()->persistEntityState(String("scene.db"));
+    mParent->getObjectHost()->persistEntityState(String("scene.persist"));
+
+
 }
 
-
+void JSObjectScript::runGraphics(const SpaceObjectReference& sporef, const String& simname)
+{
+    mParent->runGraphics(sporef,simname);
+}
 
 void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& mesh_name)
 {
@@ -389,7 +395,6 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
         proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
     }
 
-    std::cout<<"\n\nBFTM:  this is the number of objects that are messageable:  "<<allAvailableObjectReferences.size()<<"\n\n";
 
     if (allAvailableObjectReferences.empty())
         printf("\n\nBFTM: No object references available for sending messages");

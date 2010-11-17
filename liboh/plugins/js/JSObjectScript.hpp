@@ -117,12 +117,7 @@ public:
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
 
 
-    v8::Handle<v8::Value> getAxisOfRotation();
-    void setAxisOfRotation(v8::Local<v8::Value>& newval);
-    v8::Handle<v8::Value> getAngularSpeed();
-    void setAngularSpeed(v8::Local<v8::Value>& newval);
-
-
+    void runGraphics(const SpaceObjectReference& sporef, const String& simname);
 
 
     /** Register an event pattern matcher and handler. */

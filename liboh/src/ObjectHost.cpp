@@ -96,7 +96,6 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
-    std::cout << "\n\n Here Here Here \n\n";
     NOT_IMPLEMENTED(oh);
 }
 
@@ -141,9 +140,25 @@ void ObjectHost::connect(
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
 {
-    bool with_query = init_sa != SolidAngle::Max;
+    //bool with_query = init_sa != SolidAngle::Max;
+    bool with_query = true;  //FIXME: defaulting most objects to receive queries
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-    mSessionManagers[space]->connect(obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh, connected_cb, migrated_cb, stream_created_cb);
+    mSessionManagers[space]->connect(
+        obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,
+        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, connected_cb),
+        migrated_cb,
+        stream_created_cb
+    );
+}
+
+void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb) {
+    ConnectionInfo info;
+    info.server = server;
+    info.loc = loc;
+    info.orient = orient;
+    info.bnds = bnds;
+    info.mesh = mesh;
+    cb(space, obj, info);
 }
 
 void ObjectHost::disconnect(HostedObjectPtr obj, const SpaceID& space) {
@@ -198,7 +213,8 @@ ObjectHost::SSTStreamPtr ObjectHost::getSpaceStream(const SpaceID& space, const 
 }
 
 
-void ObjectHost::start() {
+void ObjectHost::start()
+{
 }
 
 void ObjectHost::stop() {
@@ -208,25 +224,26 @@ void ObjectHost::stop() {
     }
 }
 
-ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
+ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
+{
     DEPRECATED();
     NOT_IMPLEMENTED(oh);
     return NULL;
 }
 
+
+
 /**
   This method should update the addressable list of all
   the entities on the object host.
-  This would happen because of Pinto updates. 
+  This would happen because of Pinto updates.
   Right now, this is being called after the creation of a new
-  entity so that the new entity is addressable by the neighboring 
+  entity so that the new entity is addressable by the neighboring
   entities.
 */
-
 void ObjectHost::updateAddressable() const
 {
    // Pull out the list of all the entitites
-    
     HostedObjectMap::const_iterator it = mHostedObjects.begin();
     for(  ; it != mHostedObjects.end(); it++)
     {
@@ -238,21 +255,19 @@ void ObjectHost::updateAddressable() const
 
 void ObjectHost::persistEntityState( const String& filename)
 {
-  
-   
-	std::ofstream fp(filename.c_str());
-	
-
-  fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\",\"objid\",\"script_file\",\"script_type\"" << std::endl;
-
-	HostedObjectMap::iterator it = mHostedObjects.begin();
-	for( ; it != mHostedObjects.end(); it++)
-	{
-	  HostedObjectPtr objPtr = (*it).second;
-    objPtr->persistToFile(fp);
-	}
+    std::ofstream fp(filename.c_str());
 
 
+    fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\",\"objid\",\"script_file\",\"script_type\"" << std::endl;
+
+
+
+    HostedObjectMap::iterator it = mHostedObjects.begin();
+    for( ; it != mHostedObjects.end(); it++)
+    {
+        HostedObjectPtr objPtr = (*it).second;
+        objPtr->persistToFile(fp);
+    }
 }
 
 
