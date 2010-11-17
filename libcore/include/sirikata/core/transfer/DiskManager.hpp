@@ -70,7 +70,7 @@ public:
     friend class DiskManager;
     };
 
-    class ScanRequest : public DiskRequest {
+    class SIRIKATA_EXPORT ScanRequest : public DiskRequest {
     public:
         typedef std::vector<Filesystem::PathInfo> DirectoryListing;
         typedef std::tr1::function<void(
@@ -85,7 +85,7 @@ public:
         void execute();
     };
 
-    class ReadRequest : public DiskRequest {
+    class SIRIKATA_EXPORT ReadRequest : public DiskRequest {
     public:
         typedef std::tr1::function<void(
                     std::tr1::shared_ptr<DenseData> fileContents
@@ -99,7 +99,7 @@ public:
         void execute();
     };
 
-    class WriteRequest : public DiskRequest {
+    class SIRIKATA_EXPORT WriteRequest : public DiskRequest {
     public:
         typedef std::tr1::function<void(
                     bool status
