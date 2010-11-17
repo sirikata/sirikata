@@ -234,7 +234,6 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
 
 
 
-
 void ObjectHost::persistEntityState( const String& filename)
 {
     std::ofstream fp(filename.c_str());

@@ -82,7 +82,8 @@ void CSVObjectFactory::generate()
     int script_file_idx = -1;
     int script_type_idx = -1;
     int scale_idx = -1;
-		int objid_idx = -1;
+    int objid_idx = -1;
+    int solid_angle_idx = -1;
 
     // For each line
     while(fp && (count < mMaxObjects))
@@ -137,6 +138,12 @@ void CSVObjectFactory::generate()
                 {
                     objid_idx = idx;
                 }
+                if(line_parts[idx] == "solid_angle") 
+                {
+                    solid_angle_idx = idx;
+                }
+
+                
             }
 
             is_first = false;
@@ -205,6 +212,16 @@ void CSVObjectFactory::generate()
                     scale_idx == -1 ?
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
+                
+                String solid_angle = "";
+                SolidAngle query_angle(SolidAngle::Max);
+
+                if(solid_angle_idx != -1)
+                {
+                  solid_angle = line_parts[solid_angle_idx];  
+                  query_angle = SolidAngle(atof(solid_angle.c_str())); 
+                }
+                
 
                 /*
 								
@@ -229,7 +246,7 @@ void CSVObjectFactory::generate()
                     obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
                 }
 
-
+                
                 obj->init();
 
                 ObjectConnectInfo oci;
@@ -239,6 +256,7 @@ void CSVObjectFactory::generate()
                 oci.mesh = mesh;
                 oci.scriptType = scriptType;
                 oci.scriptFile = scriptFile;
+                oci.query_angle = query_angle;
                 mIncompleteObjects.push(oci);
 
                 count++;
@@ -273,6 +291,7 @@ void CSVObjectFactory::connectObjects()
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
+            const_cast<SolidAngle&>(oci.query_angle),
             UUID::null(), NULL,
             oci.scriptFile,
             oci.scriptType
