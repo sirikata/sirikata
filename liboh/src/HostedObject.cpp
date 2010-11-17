@@ -81,7 +81,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
     mObjectHost=parent;
     mObjectScript=NULL;
 
-    
+
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
             &HostedObject::createDelegateODPPort, this,
@@ -97,14 +97,14 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
-    
+
     SpaceDataMap::iterator psd_it = mSpaceData->find(sporef);
     if (psd_it == mSpaceData->end())
     {
         std::cout<<"\n\nERROR: should have an entry for this space object reference in spacedatamap.  Aborting.\n\n";
         assert(false);
     }
-    
+
     PerPresenceData& pd =  psd_it->second;
     pd.mProxyObject->setCamera(true);
     addSimListeners(pd,simName,sim);
@@ -114,7 +114,7 @@ void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String&
         HO_LOG(info, "Adding simulation to context");
         mContext->add(sim);
     }
-    
+
     // Special case for camera
     pd.mProxyObject->notifyBecomeCamera();
     pd.mProxyObject->attach(String(), 0, 0);
@@ -148,7 +148,7 @@ struct HostedObject::PrivateCallbacks {
         if (thus) {
             //FIXME: need to pass object reference here as well.
             assert(false);
-            
+
             // SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
             // if (where!=thus->mSpaceData->end()) {
             //     where->second.destroy(thus->getTracker(sid));
@@ -161,7 +161,7 @@ struct HostedObject::PrivateCallbacks {
                                 const SpaceID&sid,
                                 Network::Stream::ConnectionStatus ce,
                                 const String&reason) {
-        
+
         if (ce!=Network::Stream::Connected) {
             disconnectionEvent(thus,sid,reason);
         }
@@ -201,7 +201,7 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
         // ).first;
         ProxyManagerPtr returner;
         return returner;
-        
+
     }
     return it->second.proxyManager;
 }
@@ -241,7 +241,7 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     if (proxy_manager == nullManPtr)
         return nullPtr;
-    
+
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj;
 }
@@ -256,7 +256,7 @@ bool myisalphanum(char c) {
 }
 
 
-// attaches a script to the entity. This is like running 
+// attaches a script to the entity. This is like running
 // the script after the entity is initialized
 // the entity should have been intialized
 void HostedObject::attachScript(const String& script_name)
@@ -277,7 +277,7 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     }
 
     SILOG(oh,debug,"[OH] Creating a script object for " << getUUID().toString() << "(internal id)");
-    
+
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
     if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script)) {
@@ -333,9 +333,6 @@ void HostedObject::connect(
     if (spaceID == SpaceID::null())
         return;
 
-
-
-
     // Note: we always use Time::null() here.  The server will fill in the
     // appropriate value.  When we get the callback, we can fix this up.
     Time approx_server_time = Time::null();
@@ -346,9 +343,9 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, _4, _5, _6, _7, scriptFile,scriptType,ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, scriptFile, scriptType, ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1) 
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1)
     );
 
 }
@@ -382,7 +379,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -395,14 +392,14 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, server, loc, orient, bnds,mesh,scriptFile,scriptType, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, scriptFile, scriptType, ppd)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
 {
-    if (server == NullServerID) {
+    if (info.server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
         return;
     }
@@ -425,11 +422,11 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
             );
         }
     }
-    
+
     // Convert back to local time
-    TimedMotionVector3f local_loc(localTime(space, loc.updateTime()), loc.value());
-    TimedMotionQuaternion local_orient(localTime(space, orient.updateTime()), orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(mesh), mIsCamera, local_loc, local_orient, bnds);
+    TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
+    TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), mIsCamera, local_loc, local_orient, info.bnds);
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
@@ -448,7 +445,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
         ObjectScriptManager::Arguments script_args;  //these can just be empty;
         this->initializeScript(scriptType,script_args,scriptFile);
     }
-    
+
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -500,7 +497,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
 
     bool parsed = sMessage.ParseFromArray(bodyData.data(),bodyData.size());
-    
+
     if (! parsed)
         return false;
 
@@ -514,7 +511,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
     if (messager != KnownMessages::INIT_SCRIPT)
         return false;
-    
+
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
     {
         mHasScript = true;
@@ -550,7 +547,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
-        
+
         delete msg;
     }
     else if (handleScriptInitMessage(src_ep,dst_ep,MemoryReference(msg->payload())))
@@ -634,7 +631,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     {
         return true;
     }
-    
+
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
@@ -707,7 +704,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             }
 
 
-            
+
             if (!getProxyManager(spaceobj.space(),spaceobj.object())->getProxyObject(proximateID)) {
                 TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
@@ -727,7 +724,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
                 if (!proxy_obj)
                     continue;
-                
+
                 proxy_obj->setMesh(Transfer::URI(addition.mesh()));
             }
         }
@@ -764,7 +761,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     returner->setOrientation(tmq);
     returner->setBounds(bs);
 
-    
+
     if (!is_camera)
     {
         if(meshuri)
@@ -773,7 +770,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
         }
     }
 
-    
+
     return returner;
 }
 
@@ -793,7 +790,7 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     ProxyObjectPtr proxy_obj = ProxyObject::construct<ProxyObject> (proxy_manager.get(),objref,getSharedPtr(),owner_objref);
     proxy_obj->setCamera(is_camera);
 
-    
+
     // The call to createObject must occur before trying to do any other
     // operations so that any listeners will be set up.
     proxy_manager->createObject(proxy_obj);
@@ -946,7 +943,7 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
 //apparently, will always return true now.  even if camera.
 bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri)
 {
-    
+
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
@@ -1052,7 +1049,7 @@ void HostedObject::persistToFile(std::ofstream& fp)
 
   for(; it != ss.end(); it++)
   {
-      HostedObject::EntityState* es = getEntityState((*it).space(), (*it).object()); 
+      HostedObject::EntityState* es = getEntityState((*it).space(), (*it).object());
       es->persistToFile(fp);
   }
 }
@@ -1073,7 +1070,7 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 	 fp << orient.x << "," << orient.y << "," << orient.z << "," << orient.w << "," ;
 
 	 /* persist the velocity */
-	 
+
 	 fp << vel.x << "," << vel.y << "," << vel.z << "," ;
 
 	 /* persist the rotation */
@@ -1087,8 +1084,8 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 	 /*  persist the mesh url*/
 
 	 fp << "\"" << mesh << "\""  << "," ;
-   
-	 
+
+
 	 /* persist the scale */
 
 	 fp << scale << ",";
@@ -1097,8 +1094,8 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 	 /* persist the object id */
 
 	 fp << objectID << ",";
-	 
-	 
+
+
 	 fp << script_type << ",";
 
 
@@ -1113,18 +1110,18 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
     ProxyObjectPtr poptr = getProxy(space, oref);
 
 
-    
+
     Location loc = getLocation(space, oref);
     es->objType = "mesh";
     es->subType = "graphiconly";
-  
+
     // FIXME : HostedObject does not take the name of the entity into account right now after reading from the scene file.
     es->name = "unknown";
     es->pos = loc.getPosition();
     es->orient = loc.getOrientation();
     es->vel = loc.getVelocity();
-    es->rot = loc.getAxisOfRotation();	
-    es->angular_speed = loc.getAngularSpeed(); 
+    es->rot = loc.getAxisOfRotation();
+    es->angular_speed = loc.getAngularSpeed();
 
 
     if (poptr == nullPtr)
@@ -1134,15 +1131,15 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
     std::cout<<poptr->getMesh();
     std::cout<<"\n\n";
     std::cout.flush();
-    
+
     es->mesh = poptr->getMesh().toString();
 
 
 
     /* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
-    es->scale = poptr->getBounds().radius(); 
-    es->objectID = oref.toString(); 
-  	
+    es->scale = poptr->getBounds().radius();
+    es->objectID = oref.toString();
+
     if(mObjectScript)
     {
         es->script_type = mObjectScript->scriptType();
