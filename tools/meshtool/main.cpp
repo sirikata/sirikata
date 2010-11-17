@@ -53,6 +53,7 @@ int main(int argc, char** argv) {
     PluginManager plugins;
     plugins.loadList("colladamodels");
     plugins.loadList("common-filters");
+    plugins.loadList("nvtt");
 
     FilterDataPtr current_data(new FilterData);
     for(int argi = 1; argi < argc; argi++) {
