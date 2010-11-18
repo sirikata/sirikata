@@ -117,7 +117,7 @@ public:
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
 
 
-    void runGraphics(const SpaceObjectReference& sporef, const String& simname);
+    void runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
     /** Register an event pattern matcher and handler. */

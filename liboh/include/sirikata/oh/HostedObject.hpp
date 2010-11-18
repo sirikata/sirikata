@@ -249,7 +249,7 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
-    void runGraphics(const SpaceObjectReference& sporef, const String& simName);
+    void runSimulation(const SpaceObjectReference& sporef, const String& simName);
 
 
 

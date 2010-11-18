@@ -6,9 +6,9 @@
 #include <sirikata/core/transfer/URI.hpp>
 
 using namespace v8;
-namespace Sirikata 
+namespace Sirikata
 {
-  namespace JS 
+  namespace JS
   {
     namespace JSPresence
 	{
@@ -31,7 +31,7 @@ namespace Sirikata
             return static_cast<JSPresenceStruct*>(ptr);
         }
 
-        
+
 
         //changine this function to actually do something
         //args should contain a string that can be converted to a uri
@@ -40,12 +40,12 @@ namespace Sirikata
         {
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setMesh function.")) );
-            
+
             //get the jspresencestruct object from arguments
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setMesh function.  Invalid presence struct.")) );
-            
+
             //get the uri object from args
             std::string uriLocation;
             bool uriArgValid = getURI(args,uriLocation);
@@ -57,26 +57,24 @@ namespace Sirikata
 	    return v8::Undefined();
         }
 
-        v8::Handle<v8::Value>runGraphics(const v8::Arguments& args)
+        v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
         {
-            std::cout<<"\n\nGot into runGraphics!!!!\n\n";
-            
             if (args.Length() != 1)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runGraphics function. (It should probably be 'ogregraphics'.)\n\n")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runSimulation function. (It should probably be 'ogregraphics'.)\n\n")) );
 
-            
+
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in runGraphics function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in runSimulation function.  Invalid presence struct.")) );
 
             v8::String::Utf8Value str(args[0]);
             const char* cstr = ToCString(str);
             String simname(cstr);
 
-            mStruct->jsObjScript->runGraphics(*(mStruct->sporef),simname);
+            mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
             return v8::Undefined();
         }
-        
+
 
         //changine this function to actually do something
         //args should contain a string that can be converted to a uri
@@ -85,10 +83,10 @@ namespace Sirikata
         {
             //get the jspresencestruct object from arguments
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getMesh function.  Invalid presence struct.")) );
-                    
+
             return mStruct->jsObjScript->getVisualFunction(mStruct->sporef);
         }
 
@@ -108,15 +106,15 @@ namespace Sirikata
             if ( ! Vec3Validate(posArg))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Wrong argument: require a vector for new positions.")) );
 
-            
+
             Vector3f newPos (Vec3Extract(posArg));
 
             mStruct->jsObjScript->setPositionFunction(mStruct->sporef, newPos);
             return v8::Undefined();
-            
+
         }
-        
-        
+
+
         Handle<v8::Value>      getPosition(const v8::Arguments& args)
         {
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
@@ -143,14 +141,14 @@ namespace Sirikata
             if ( ! Vec3Validate(velArg))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setVelocity function.  Wrong argument: require a vector for new positions.")) );
 
-            
+
             Vector3f newVel (Vec3Extract(velArg));
 
             mStruct->jsObjScript->setVelocityFunction(mStruct->sporef,newVel);
             return v8::Undefined();
         }
-        
-        
+
+
         Handle<v8::Value>      getVelocity(const v8::Arguments& args)
         {
             JSPresenceStruct* mStruct = getPresStructFromArgs(args);
@@ -160,7 +158,7 @@ namespace Sirikata
             return mStruct->jsObjScript->getVelocityFunction(mStruct->sporef);
         }
 
-        
+
 
         Handle<v8::Value>      getOrientation(const v8::Arguments& args)
         {
@@ -170,7 +168,7 @@ namespace Sirikata
 
             return mStruct->jsObjScript->getOrientationFunction(mStruct->sporef);
         }
-        
+
         v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -186,7 +184,7 @@ namespace Sirikata
             if ( ! QuaternionValidate(orientationArg))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
 
-            
+
             Quaternion newOrientation (QuaternionExtract(orientationArg));
 
             mStruct->jsObjScript->setOrientationFunction(mStruct->sporef,newOrientation);
@@ -204,7 +202,7 @@ namespace Sirikata
 
             return mStruct->jsObjScript->getOrientationVelFunction(mStruct->sporef);
         }
-        
+
         v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -219,15 +217,15 @@ namespace Sirikata
 
             if ( ! QuaternionValidate(orientationVelArg))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
-            
+
             Quaternion newOrientationVel (QuaternionExtract(orientationVelArg));
 
             mStruct->jsObjScript->setOrientationVelFunction(mStruct->sporef,newOrientationVel);
             return v8::Undefined();
         }
 
-        
-        
+
+
         //Takes in args, tries to get out the first argument, which should be a
         //string that we convert to a TransferURI object.  If anything fails,
         //then we just return null
@@ -238,7 +236,7 @@ namespace Sirikata
 
             //means that the argument passed was not a string identifying where
             //we could get the uri
-            if (!newVis->IsString()) 
+            if (!newVis->IsString())
                 return false;
 
             v8::String::Utf8Value newvis_str(newVis);
@@ -248,9 +246,9 @@ namespace Sirikata
             returner= std::string(*newvis_str);
             return true;
         }
-        
 
-        
+
+
         JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
         {
             HandleScope handle_scope;
@@ -265,34 +263,34 @@ namespace Sirikata
             {
                 wrapJSPresStructObj = v8::Local<v8::External>::Cast(
                     v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
-            }			  
+            }
             void* ptr = wrapJSPresStructObj->Value();
             JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);
 
             if (jspres_struct == NULL)
                 assert(false);
-            
+
             return jspres_struct;
         }
 
-        
+
         Handle<v8::Value> toString(const v8::Arguments& args)
         {
-            
+
             JSPresenceStruct* jspres_struct = getPresStructFromArgs(args);
 
             if (jspres_struct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in toString of presence function.  Invalid presence struct.")) );
 
-            
+
             // Look up for the per space data
             //for now just print the space id
-            String s = jspres_struct->sporef->toString();   
+            String s = jspres_struct->sporef->toString();
             return v8::String::New(s.c_str(), s.length());
-              
+
         }
-        
-        
+
+
     }
   }
-}  
+}

@@ -221,7 +221,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
 
   //set up graphics
-  mPresenceTemplate->Set(v8::String::New("runGraphics"),v8::FunctionTemplate::New(JSPresence::runGraphics));
+  mPresenceTemplate->Set(v8::String::New("runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
 
   //FIXME:

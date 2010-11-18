@@ -93,7 +93,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 
 
 
-void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String& simName)
+void HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
 
