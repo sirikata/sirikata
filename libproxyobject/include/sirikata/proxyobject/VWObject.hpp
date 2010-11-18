@@ -38,7 +38,7 @@
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
-
+#include <sirikata/proxyobject/SessionEventListener.hpp>
 
 namespace Sirikata {
 
@@ -48,7 +48,11 @@ namespace Sirikata {
  *  access to the functionality of their parent virtual world object, such as
  *  movement and messaging.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT VWObject : public SelfWeakPtr<VWObject>, public ODP::Service {
+class SIRIKATA_PROXYOBJECT_EXPORT VWObject :
+        public SelfWeakPtr<VWObject>,
+        public ODP::Service,
+        public SessionEventProvider
+{
 public:
     VWObject();
     virtual ~VWObject();
@@ -81,7 +85,7 @@ public:
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& loc) = 0;
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) = 0;
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
-    
+
 }; // class VWObject
 
 typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
