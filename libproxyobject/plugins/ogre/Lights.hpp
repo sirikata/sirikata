@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OGRE_LIGHTS_HPP_
 #define _SIRIKATA_OGRE_LIGHTS_HPP_
 
-#include <sirikata/proxyobject/LightInfo.hpp>
+#include <sirikata/mesh/LightInfo.hpp>
 
 #include "OgreHeaders.hpp"
 #include <OgreLight.h>

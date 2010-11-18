@@ -37,7 +37,7 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "DistanceDownloadPlanner.hpp"

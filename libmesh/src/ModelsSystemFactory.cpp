@@ -1,7 +1,7 @@
-/*  Sirikata
- *  ComputeBoundsFilter.cpp
+/*  Sirikata Object Host -- Models System Factory
+ *  ModelsSystemFactory.cpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,32 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ComputeBoundsFilter.hpp"
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
+
+AUTO_SINGLETON_INSTANCE(Sirikata::ModelsSystemFactory);
 
 namespace Sirikata {
-namespace MeshTool {
 
-ComputeBoundsFilter::ComputeBoundsFilter(const String& args) {
+ModelsSystemFactory& ModelsSystemFactory::getSingleton ()
+{
+    return AutoSingleton< ModelsSystemFactory >::getSingleton ();
 }
 
-FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
-    // The bounding box is just the bounding box of all the component geometry
-    // instances.  These were already computed, post-transform, for each
-    // instance, so this is a simple computation.
-
-    BoundingBox3f3f bbox = BoundingBox3f3f::null();
-    for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
-        MeshdataPtr mesh = *mesh_it;
-        for(Meshdata::GeometryInstanceList::iterator it = mesh->instances.begin(); it != mesh->instances.end(); it++) {
-            if (bbox.degenerate())
-                bbox = it->aabb;
-            else
-                bbox.mergeIn(it->aabb);
-        }
-    }
-    std::cout << bbox << std::endl;
-    return input;
+void ModelsSystemFactory::destroy ()
+{
+	AutoSingleton< ModelsSystemFactory >::destroy ();
 }
 
-} // namespace MeshTool
 } // namespace Sirikata

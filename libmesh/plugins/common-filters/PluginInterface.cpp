@@ -1,5 +1,5 @@
 /*  Sirikata
- *  main.cpp
+ *  PluginInterface.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,60 +30,64 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/PluginManager.hpp>
-#include <sirikata/mesh/Filter.hpp>
+#include "PluginInterface.hpp"
 
-void usage() {
-    printf("Usage: meshtool --filter1 --filter2=filter,options\n");
+#include <sirikata/mesh/Filter.hpp>
+#include "LoadFilter.hpp"
+#include "SaveFilter.hpp"
+#include "ComputeBoundsFilter.hpp"
+
+static int common_filters_plugin_refcount = 0;
+
+SIRIKATA_PLUGIN_EXPORT_C void init ()
+{
+    using namespace Sirikata;
+    using namespace Sirikata::Mesh;
+    if ( common_filters_plugin_refcount == 0 ) {
+        FilterFactory::getSingleton().registerConstructor("load", LoadFilter::create);
+        FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
+        FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
+    }
+
+    ++common_filters_plugin_refcount;
 }
 
-int main(int argc, char** argv) {
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
+{
+    return ++common_filters_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
+{
+    assert ( common_filters_plugin_refcount > 0 );
+    return --common_filters_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy ()
+{
     using namespace Sirikata;
     using namespace Sirikata::Mesh;
 
-    // Check for help request
-    for(int argi = 1; argi < argc; argi++) {
-        std::string arg_str(argv[argi]);
-        if (arg_str == "-h" || arg_str == "--help") {
-            usage();
-            return 0;
+    if ( common_filters_plugin_refcount > 0 )
+    {
+        --common_filters_plugin_refcount;
+
+        assert ( common_filters_plugin_refcount == 0 );
+
+        if ( common_filters_plugin_refcount == 0 ) {
+            FilterFactory::getSingleton().unregisterConstructor("load");
+            FilterFactory::getSingleton().unregisterConstructor("save");
+            FilterFactory::getSingleton().unregisterConstructor("compute-bounds");
         }
     }
+}
 
-    PluginManager plugins;
-    plugins.loadList("colladamodels");
-    plugins.loadList("common-filters");
-    plugins.loadList("nvtt");
+SIRIKATA_PLUGIN_EXPORT_C char const* name ()
+{
+    return "common-filters";
+}
 
-    FilterDataPtr current_data(new FilterData);
-    for(int argi = 1; argi < argc; argi++) {
-        std::string arg_str(argv[argi]);
-        if (arg_str.substr(0, 2) != "--") {
-            std::cout << "Couldn't parse argument: " << arg_str << std::endl;
-            exit(-1);
-        }
-        arg_str = arg_str.substr(2);
-        // Split filter name and args
-        std::string filter_name, filter_args;
-        int equal_idx = arg_str.find('=');
-        if (equal_idx != std::string::npos) {
-            filter_name = arg_str.substr(0, equal_idx);
-            filter_args = arg_str.substr(equal_idx+1);
-        }
-        else {
-            filter_name = arg_str;
-            filter_args = "";
-        }
-        // Verify
-        if (!FilterFactory::getSingleton().hasConstructor(filter_name)) {
-            std::cout << "Couldn't find filter: " << filter_name << std::endl;
-            exit(-1);
-        }
-        // And apply
-        Filter* filter = FilterFactory::getSingleton().getConstructor(filter_name)(filter_args);
-        current_data = filter->apply(current_data);
-        delete filter;
-    }
-
-    return 0;
+SIRIKATA_PLUGIN_EXPORT_C int refcount ()
+{
+    return common_filters_plugin_refcount;
 }

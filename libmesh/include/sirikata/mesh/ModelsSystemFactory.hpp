@@ -1,7 +1,7 @@
-/*  Sirikata
- *  LoadFilter.hpp
+/*  Sirikata Object Host -- Models System Factory Interface
+ *  ModelsSystemFactory.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,22 +30,28 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Filter.hpp"
+#ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
+#define _SIRIKATA_MODELS_SYSTEM_FACTORY_
+
+#include <sirikata/mesh/Platform.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 
 namespace Sirikata {
-namespace MeshTool {
 
-class LoadFilter : public Filter {
-public:
-    static Filter* create(const String& args) { return new LoadFilter(args); }
+/** Class to create models subsystems.
+ *
+ */
+class SIRIKATA_MESH_EXPORT ModelsSystemFactory
+    : public AutoSingleton< ModelsSystemFactory >,
+      public Factory1<  ModelsSystem*,
+                        String const& >                         // option string
+{
+    public:
+        static ModelsSystemFactory& getSingleton ();
+        static void destroy ();
+};
 
-    LoadFilter(const String& args);
-    virtual ~LoadFilter() {}
-
-    virtual FilterDataPtr apply(FilterDataPtr input);
-private:
-    std::string mFilename;
-}; // class Filter
-
-} // namespace MeshTool
 } // namespace Sirikata
+
+#endif // _SIRIKATA_MODELS_SYSTEM_FACTORY_

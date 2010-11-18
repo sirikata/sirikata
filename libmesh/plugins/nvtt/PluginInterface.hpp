@@ -1,5 +1,5 @@
 /*  Sirikata
- *  ComputeBoundsFilter.hpp
+ *  PluginInterface.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,22 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Filter.hpp"
+#ifndef _SIRIKATA_MESH_NVTT_PLUGIN_
+#define _SIRIKATA_MESH_NVTT_PLUGIN_
 
-namespace Sirikata {
-namespace MeshTool {
+#include <sirikata/mesh/Platform.hpp>
 
-class ComputeBoundsFilter : public Filter {
-public:
-    static Filter* create(const String& args) { return new ComputeBoundsFilter(args); }
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ();
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ();
 
-    ComputeBoundsFilter(const String& args);
-    virtual ~ComputeBoundsFilter() {}
+SIRIKATA_PLUGIN_EXPORT_C void init ();
+SIRIKATA_PLUGIN_EXPORT_C void destroy ();
+SIRIKATA_PLUGIN_EXPORT_C char const* name ();
+SIRIKATA_PLUGIN_EXPORT_C int refcount ();
 
-    virtual FilterDataPtr apply(FilterDataPtr input);
-private:
-    std::string mFilename;
-};
-
-} // namespace MeshTool
-} // namespace Sirikata
+#endif // _SIRIKATA_COLLADA_PLUGIN_

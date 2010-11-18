@@ -1,5 +1,5 @@
 /*  Sirikata
- *  SaveFilter.hpp
+ *  ComputeBoundsFilter.cpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,38 +30,32 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "SaveFilter.hpp"
-#include <sirikata/core/options/Options.hpp>
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include "ComputeBoundsFilter.hpp"
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
-SaveFilter::SaveFilter(const String& args) {
-    Sirikata::InitializeClassOptions ico("save_filter", NULL,
-        new OptionValue("filename","",Sirikata::OptionValueType<String>(),"Name of file to save to."),
-        new OptionValue("format","colladamodels",Sirikata::OptionValueType<String>(),"Format to save to."),
-        NULL);
-
-    OptionSet* optionSet = OptionSet::getOptions("save_filter",NULL);
-    optionSet->parse(args);
-
-    mFilename = optionSet->referenceOption("filename")->as<String>();
-    mFormat = optionSet->referenceOption("format")->as<String>();
+ComputeBoundsFilter::ComputeBoundsFilter(const String& args) {
 }
 
-FilterDataPtr SaveFilter::apply(FilterDataPtr input) {
-    assert(input->single());
+FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
+    // The bounding box is just the bounding box of all the component geometry
+    // instances.  These were already computed, post-transform, for each
+    // instance, so this is a simple computation.
 
-    ModelsSystem* parser = ModelsSystemFactory::getSingleton().getConstructor("any")("");
-    MeshdataPtr md = input->get();
-    bool success = parser->convertMeshdata(*md.get(), mFormat, mFilename);
-    if (!success) {
-        std::cout << "Error saving mesh." << std::endl;
-        return FilterDataPtr();
+    BoundingBox3f3f bbox = BoundingBox3f3f::null();
+    for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
+        MeshdataPtr mesh = *mesh_it;
+        for(Meshdata::GeometryInstanceList::iterator it = mesh->instances.begin(); it != mesh->instances.end(); it++) {
+            if (bbox.degenerate())
+                bbox = it->aabb;
+            else
+                bbox.mergeIn(it->aabb);
+        }
     }
+    std::cout << bbox << std::endl;
     return input;
 }
 
-} // namespace MeshTool
+} // namespace Mesh
 } // namespace Sirikata

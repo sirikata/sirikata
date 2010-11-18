@@ -31,7 +31,6 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
-#include <sirikata/proxyobject/LightInfo.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 #include <sirikata/core/network/Stream.hpp>
@@ -484,7 +483,6 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 
 
 
-
 //returns true if this is a script init message.  returns false otherwise
 bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
 {
@@ -523,8 +521,6 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
     return true;
 }
-
-
 
 
 bool HostedObject::handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
@@ -794,7 +790,6 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
     ProxyObjectPtr proxy_obj = ProxyObject::construct<ProxyObject> (proxy_manager.get(),objref,getSharedPtr(),owner_objref);
     proxy_obj->setCamera(is_camera);
-
 
     // The call to createObject must occur before trying to do any other
     // operations so that any listeners will be set up.

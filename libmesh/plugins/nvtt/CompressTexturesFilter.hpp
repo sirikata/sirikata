@@ -1,5 +1,5 @@
 /*  Sirikata
- *  AnyModelsSystem.hpp
+ *  CompressTexturesFilter.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,46 +30,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_ANY_MODELS_SYSTEM_
-#define _SIRIKATA_ANY_MODELS_SYSTEM_
-
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/Filter.hpp>
 
 namespace Sirikata {
+namespace Mesh {
 
-/** AnyModelsSystem is an implementation of ModelsSystem which uses all other
- *  available implementations to handle as wide a variety of meshes as
- *  possible.  It uses all
- */
-class SIRIKATA_PROXYOBJECT_EXPORT AnyModelsSystem : public ModelsSystem
-{
-  public:
-    virtual ~AnyModelsSystem();
+class CompressTexturesFilter : public Filter {
+public:
+    static Filter* create(const String& args) { return new CompressTexturesFilter(args); }
 
-    /** Check if this ModelsSystem will be able to parse the
-     *  data.  This doesn't guarantee successful parsing:
-     *  generally it only checks for magic numbers to see if it is
-     *  likely a supported format.
-     */
-    virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data);
+    CompressTexturesFilter(const String& args);
+    virtual ~CompressTexturesFilter() {}
 
-    /** Load a mesh into a Meshdata object. */
-    virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
-        std::tr1::shared_ptr<const Transfer::DenseData> data);
+    virtual FilterDataPtr apply(FilterDataPtr input);
+private:
+}; // class Filter
 
-    /** Convert a Meshdata to the format for this ModelsSystem. */
-    virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename);
-
-    static ModelsSystem* create(const String& args);
-  private:
-    AnyModelsSystem();
-    AnyModelsSystem(const AnyModelsSystem& rhs); // Not implemented
-    AnyModelsSystem& operator=(const AnyModelsSystem& rhs); // Not implemented
-
-    typedef std::map<String, ModelsSystem*> SystemsMap;
-    SystemsMap mModelsSystems;
-};
-
+} // namespace Mesh
 } // namespace Sirikata
-
-#endif // _SIRIKATA_ANY_MODELS_SYSTEM_

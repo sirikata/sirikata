@@ -31,10 +31,10 @@
  */
 
 #include "LoadFilter.hpp"
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 namespace Sirikata {
-namespace MeshTool {
+namespace Mesh {
 
 LoadFilter::LoadFilter(const String& args) {
     mFilename = args;
@@ -90,5 +90,5 @@ FilterDataPtr LoadFilter::apply(FilterDataPtr input) {
     return output;
 }
 
-} // namespace MeshTool
+} // namespace Mesh
 } // namespace Sirikata

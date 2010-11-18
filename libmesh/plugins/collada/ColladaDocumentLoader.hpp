@@ -1,5 +1,5 @@
-/*  Sirikata libproxyobject -- Collada Models System
- *  ColladaSystem.hpp
+/*  Sirikata libproxyobject -- Collada Models Document Loader
+ *  ColladaDocumentLoader.hpp
  *
  *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
@@ -30,61 +30,66 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_COLLADA_SYSTEM_
-#define _SIRIKATA_COLLADA_SYSTEM_
+#ifndef _SIRIKATA_COLLADA_DOCUMENT_LOADER_
+#define _SIRIKATA_COLLADA_DOCUMENT_LOADER_
 
+#include <sirikata/mesh/Meshdata.hpp>
 #include "ColladaDocument.hpp"
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/Range.hpp>
-#include <set>
 
 /////////////////////////////////////////////////////////////////////
 
-namespace Sirikata {
+namespace COLLADAFW {
 
-class OptionValue;
+class Root;
 
-namespace Models {
+}
+
+namespace COLLADASaxFWL {
+
+class Loader;
+
+}
 
 /////////////////////////////////////////////////////////////////////
 
-class SIRIKATA_PLUGIN_EXPORT ColladaSystem
-    :   public ModelsSystem
+namespace Sirikata { namespace Models {
+
+class ColladaDocumentImporter;
+class ColladaErrorHandler;
+
+/////////////////////////////////////////////////////////////////////
+
+/**
+ * A class designed to (one-shot) load a single COLLADA document using OpenCOLLADA.
+ */
+class SIRIKATA_PLUGIN_EXPORT ColladaDocumentLoader
 {
-  public:
-    virtual ~ColladaSystem ();
+    public:
+    explicit ColladaDocumentLoader ( Transfer::URI const& uri, const SHA256& hash);
+        ~ColladaDocumentLoader ();
 
-    static ColladaSystem* create(String const& options);
+        bool load ( char const* buffer, size_t bufferLength );
+        ColladaDocumentPtr getDocument () const;
 
-    // ModelsSystem Interface
-    virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data);
-    virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
-        std::tr1::shared_ptr<const Transfer::DenseData> data);
-    virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename);
+        std::tr1::shared_ptr<Meshdata> getMeshdata() const;
 
 
-  private:
-    ColladaSystem (); // called by create()
-    ColladaSystem ( ColladaSystem const& ); // not implemented
-    ColladaSystem& operator = ( ColladaSystem const & ); // not implemented
+    protected:
 
-    bool initialize(String const& options);
+    private:
+        ColladaDocumentLoader ( ColladaDocumentLoader const& ); // not implemented
+        ColladaDocumentLoader& operator = ( ColladaDocumentLoader const & ); // not implemented
 
-    // documents that have been transfered, parsed, and loaded.
-    // MCB: make this a map when/if a key becomes useful
-
-    typedef std::set< ColladaDocumentPtr > DocumentSet;
-    DocumentSet mDocuments;
-
+        // things we need to integrate with OpenCollada (declared in order of initialization, do not change)
+        ColladaErrorHandler* mErrorHandler; // 1st
+        COLLADASaxFWL::Loader* mSaxLoader; // next
+        ColladaDocumentImporter* mDocumentImporter; // next
+        COLLADAFW::Root* mFramework; // last
 };
+
 
 } // namespace Models
 } // namespace Sirikata
 
-#endif // _SIRIKATA_COLLADA_SYSTEM_
+#endif // _SIRIKATA_COLLADA_DOCUMENT_LOADER_

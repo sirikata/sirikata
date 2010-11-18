@@ -40,14 +40,14 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 
 /**
  * An interface for a class that is responsible for data model objects.
  */
-class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystem
+class SIRIKATA_MESH_EXPORT ModelsSystem
 {
     public:
 

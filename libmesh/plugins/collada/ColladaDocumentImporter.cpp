@@ -35,7 +35,7 @@
 #include <cassert>
 #include <iostream>
 #include <stack>
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 #include "COLLADAFWScene.h"
 #include "COLLADAFWVisualScene.h"

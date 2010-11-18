@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  MeshListener.hpp
+/*  Sirikata
+ *  Filter.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,27 +29,21 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_MESH_LISTENER_HPP_
-#define _SIRIKATA_MESH_LISTENER_HPP_
 
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/mesh/Meshdata.hpp>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include "PhysicalParameters.hpp"
+#include <sirikata/mesh/Filter.hpp>
+
+AUTO_SINGLETON_INSTANCE(Sirikata::Mesh::FilterFactory);
 
 namespace Sirikata {
+namespace Mesh {
 
+FilterFactory& FilterFactory::getSingleton() {
+    return AutoSingleton<FilterFactory>::getSingleton();
+}
 
-class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
-{
-    public:
-        virtual ~MeshListener() {}
+void FilterFactory::destroy() {
+    return AutoSingleton<FilterFactory>::destroy();
+}
 
-        virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh) = 0;
-        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale ) = 0;
-        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp ) = 0;
-};
-
+} // namespace Mesh
 } // namespace Sirikata
-
-#endif

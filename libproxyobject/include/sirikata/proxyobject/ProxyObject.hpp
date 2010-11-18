@@ -49,7 +49,6 @@
 
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/proxyobject/Meshdata.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
 #include "PhysicalParameters.hpp"
@@ -131,7 +130,7 @@ private:
     PhysicalParameters mPhysical;
     bool mCamera;
 
-    
+
 
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -176,7 +175,7 @@ public:
     {
         return Vector3d(mLoc.velocity());
     }
-    
+
     /// Returns the last updated Quaternion for this object.
     inline const Quaternion& getOrientation() const{
         return mOrientation.position();
@@ -187,7 +186,7 @@ public:
     inline const Quaternion& getOrientationSpeed() const{
         return mOrientation.velocity();
     }
-    
+
 
     inline const BoundingSphere3f& getBounds() const {
         return mBounds;
@@ -195,7 +194,7 @@ public:
 
 
     ~ProxyObject();
-    
+
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -233,7 +232,7 @@ public:
     }
 
     bool sendMessage(const ODP::PortID& dest_port, MemoryReference message) const;
-    
+
     /** Retuns the local location of this object at the current timestamp. */
     Location extrapolateLocation(TemporalValue<Location>::Time current) const {
         Vector3f angaxis;
@@ -245,7 +244,7 @@ public:
 
 
     void notifyBecomeCamera();
-    
+
     // interface from MeshObject
     virtual void setMesh ( Transfer::URI const& rhs );
     virtual Transfer::URI const& getMesh () const;
@@ -262,7 +261,7 @@ public:
 
     bool isCamera();
     void setCamera(bool onOff);
-    
+
 };
 }
 #endif

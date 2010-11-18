@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Filter.hpp
+ *  PluginInterface.hpp
  *
  *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,44 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_TOOLS_MESHTOOL_FILTER_HPP_
-#define _SIRIKATA_TOOLS_MESHTOOL_FILTER_HPP_
+#ifndef _SIRIKATA_MESH_COMMON_FILTERS_PLUGIN_
+#define _SIRIKATA_MESH_COMMON_FILTERS_PLUGIN_
 
-#include <sirikata/proxyobject/Meshdata.hpp>
-#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/mesh/Platform.hpp>
 
-namespace Sirikata {
-namespace MeshTool {
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ();
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ();
 
-/** FilterData is the input and output of a Filter. In order to support filters
- *  with multiple inputs (e.g. simplification of multiple meshes), FilterData is
- *  a list of MeshdataPtrs.
- */
-class FilterData : public std::vector<MeshdataPtr> {
-public:
-    bool single() const { return this->size() == 1; }
-    MeshdataPtr get() const { assert(single()); return at(0); }
-}; // class FilterData
-typedef std::tr1::shared_ptr<const FilterData> FilterDataPtr;
-typedef std::tr1::shared_ptr<FilterData> MutableFilterDataPtr;
+SIRIKATA_PLUGIN_EXPORT_C void init ();
+SIRIKATA_PLUGIN_EXPORT_C void destroy ();
+SIRIKATA_PLUGIN_EXPORT_C char const* name ();
+SIRIKATA_PLUGIN_EXPORT_C int refcount ();
 
-class Filter {
-public:
-    virtual ~Filter() {}
-
-    virtual FilterDataPtr apply(FilterDataPtr input) = 0;
-}; // class Filter
-
-class FilterFactory :
-        public AutoSingleton<FilterFactory>,
-        public Factory1<Filter*, const String&>
-{
-public:
-    static FilterFactory& getSingleton();
-    static void destroy();
-}; // class FilterFactory
-
-} // namespace MeshTool
-} // namespace Sirikata
-
-#endif //_SIRIKATA_TOOLS_MESHTOOL_FILTER_HPP_
+#endif // _SIRIKATA_COLLADA_PLUGIN_

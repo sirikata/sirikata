@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Models System Factory Interface
- *  ModelsSystemFactory.hpp
+/*  Sirikata
+ *  LoadFilter.hpp
  *
- *  Copyright (c) 2009, Mark C. Barnes
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,28 +30,22 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_MODELS_SYSTEM_FACTORY_
-#define _SIRIKATA_MODELS_SYSTEM_FACTORY_
-
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/Filter.hpp>
 
 namespace Sirikata {
+namespace Mesh {
 
-/** Class to create models subsystems.
- *
- */
-class SIRIKATA_PROXYOBJECT_EXPORT ModelsSystemFactory
-    : public AutoSingleton< ModelsSystemFactory >,
-      public Factory1<  ModelsSystem*,
-                        String const& >                         // option string
-{
-    public:
-        static ModelsSystemFactory& getSingleton ();
-        static void destroy ();
-};
+class LoadFilter : public Filter {
+public:
+    static Filter* create(const String& args) { return new LoadFilter(args); }
 
+    LoadFilter(const String& args);
+    virtual ~LoadFilter() {}
+
+    virtual FilterDataPtr apply(FilterDataPtr input);
+private:
+    std::string mFilename;
+}; // class Filter
+
+} // namespace Mesh
 } // namespace Sirikata
-
-#endif // _SIRIKATA_MODELS_SYSTEM_FACTORY_

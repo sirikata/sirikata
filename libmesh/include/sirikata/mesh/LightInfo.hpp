@@ -33,12 +33,12 @@
 #ifndef _SIRIKATA_LIGHT_INFO_HPP_
 #define _SIRIKATA_LIGHT_INFO_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/mesh/Platform.hpp>
 
 namespace Sirikata {
 typedef Vector3f Color;
 
-struct SIRIKATA_PROXYOBJECT_EXPORT LightInfo {
+struct SIRIKATA_MESH_EXPORT LightInfo {
     enum LightTypes {
         POINT,SPOTLIGHT,DIRECTIONAL,NUM_TYPES//defaults to point=0?
     };

@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  MeshListener.hpp
+/*  Sirikata
+ *  PluginInterface.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,27 +29,59 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _SIRIKATA_MESH_LISTENER_HPP_
-#define _SIRIKATA_MESH_LISTENER_HPP_
 
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/mesh/Meshdata.hpp>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include "PhysicalParameters.hpp"
+#include "PluginInterface.hpp"
 
-namespace Sirikata {
+#include <sirikata/mesh/Filter.hpp>
+#include "CompressTexturesFilter.hpp"
 
+static int nvtt_filters_plugin_refcount = 0;
 
-class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
+SIRIKATA_PLUGIN_EXPORT_C void init ()
 {
-    public:
-        virtual ~MeshListener() {}
+    using namespace Sirikata;
+    using namespace Sirikata::Mesh;
+    if ( nvtt_filters_plugin_refcount == 0 ) {
+        FilterFactory::getSingleton().registerConstructor("compress-textures", CompressTexturesFilter::create);
+    }
 
-        virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh) = 0;
-        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale ) = 0;
-        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp ) = 0;
-};
+    ++nvtt_filters_plugin_refcount;
+}
 
-} // namespace Sirikata
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
+{
+    return ++nvtt_filters_plugin_refcount;
+}
 
-#endif
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
+{
+    assert ( nvtt_filters_plugin_refcount > 0 );
+    return --nvtt_filters_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy ()
+{
+    using namespace Sirikata;
+    using namespace Sirikata::Mesh;
+
+    if ( nvtt_filters_plugin_refcount > 0 )
+    {
+        --nvtt_filters_plugin_refcount;
+
+        assert ( nvtt_filters_plugin_refcount == 0 );
+
+        if ( nvtt_filters_plugin_refcount == 0 ) {
+            FilterFactory::getSingleton().unregisterConstructor("compress-textures");
+        }
+    }
+}
+
+SIRIKATA_PLUGIN_EXPORT_C char const* name ()
+{
+    return "nvtt";
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int refcount ()
+{
+    return nvtt_filters_plugin_refcount;
+}

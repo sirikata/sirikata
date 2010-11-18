@@ -64,7 +64,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/LightInfo.hpp>
+#include <sirikata/mesh/LightInfo.hpp>
 
 /*
 #include <tr1/shared_ptr>

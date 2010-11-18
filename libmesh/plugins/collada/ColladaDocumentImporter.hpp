@@ -49,7 +49,7 @@
 #include "COLLADAFWEffectCommon.h"
 #include "COLLADAFWSkinControllerData.h"
 #include "COLLADAFWSkinController.h"
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 /////////////////////////////////////////////////////////////////////
 

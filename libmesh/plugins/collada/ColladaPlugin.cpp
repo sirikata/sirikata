@@ -1,7 +1,7 @@
-/*  Sirikata
- *  SaveFilter.hpp
+/*  Sirikata libproxyboject -- Object Host Plugin for COLLADA
+ *  ColladaPlugin.cpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Mark C. Barnes
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,23 +30,56 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Filter.hpp"
+#include "ColladaPlugin.hpp"
 
-namespace Sirikata {
-namespace MeshTool {
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
-class SaveFilter : public Filter {
-public:
-    static Filter* create(const String& args) { return new SaveFilter(args); }
+#include "ColladaSystem.hpp"
 
-    SaveFilter(const String& args);
-    virtual ~SaveFilter() {}
+static int core_plugin_refcount = 0;
 
-    virtual FilterDataPtr apply(FilterDataPtr input);
-private:
-    String mFormat;
-    String mFilename;
-}; // class Filter
+SIRIKATA_PLUGIN_EXPORT_C void init ()
+{
+    using namespace Sirikata;
+    if ( core_plugin_refcount == 0 )
+        ModelsSystemFactory::getSingleton ().registerConstructor
+            ( "colladamodels" , &Models::ColladaSystem::create, true );
 
-} // namespace MeshTool
-} // namespace Sirikata
+    ++core_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
+{
+    return ++core_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
+{
+    assert ( core_plugin_refcount > 0 );
+    return --core_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy ()
+{
+    using namespace Sirikata;
+
+    if ( core_plugin_refcount > 0 )
+    {
+        --core_plugin_refcount;
+
+        assert ( core_plugin_refcount == 0 );
+
+        if ( core_plugin_refcount == 0 )
+            ModelsSystemFactory::getSingleton ().unregisterConstructor ( "colladamodels" );
+    }
+}
+
+SIRIKATA_PLUGIN_EXPORT_C char const* name ()
+{
+    return "colladamodels";
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int refcount ()
+{
+    return core_plugin_refcount;
+}

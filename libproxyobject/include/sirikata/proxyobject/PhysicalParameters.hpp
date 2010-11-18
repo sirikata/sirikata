@@ -2,7 +2,6 @@
 #define _SIRIKATA_PHYSICAL_PARAMETERS_HPP_
 
 #include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/proxyobject/Meshdata.hpp>
 
 namespace Sirikata {
 
