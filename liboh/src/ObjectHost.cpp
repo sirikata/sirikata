@@ -140,8 +140,7 @@ void ObjectHost::connect(
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
 {
-    //bool with_query = init_sa != SolidAngle::Max;
-    bool with_query = true;  //FIXME: defaulting most objects to receive queries
+    bool with_query = init_sa != SolidAngle::Max;
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     mSessionManagers[space]->connect(
         obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,
