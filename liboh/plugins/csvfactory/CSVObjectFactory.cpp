@@ -219,7 +219,11 @@ void CSVObjectFactory::generate()
                 if(solid_angle_idx != -1)
                 {
                   solid_angle = line_parts[solid_angle_idx];  
-                  query_angle = SolidAngle(atof(solid_angle.c_str())); 
+                  if(solid_angle != "")
+                  {
+                    
+                    query_angle = SolidAngle(atof(solid_angle.c_str())); 
+                  }
                 }
                 
 
