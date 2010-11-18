@@ -33,52 +33,19 @@
 #define _SIRIKATA_MESH_LISTENER_HPP_
 
 #include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include "PhysicalParameters.hpp"
 
 namespace Sirikata {
 
-using Transfer::URI;
-
-// FIX ME: this definition probably doesn't belong here
-class PhysicalParameters {
-public:
-    enum PhysicalMode {
-        Disabled = 0,               /// non-active, remove from physics
-        Static,                 /// collisions, no dynamic movement (bullet mass==0)
-        DynamicBox,                 /// fully physical -- collision & dynamics
-        DynamicSphere,
-        DynamicCylinder,
-        Character
-    };
-
-    std::string name;
-    PhysicalMode mode;
-    float density;
-    float friction;
-    float bounce;
-    float gravity;
-    int colMask;
-    int colMsg;
-    Vector3f hull;
-    PhysicalParameters() :
-        mode(Disabled),
-        density(0),
-        friction(0),
-        bounce(0),
-        gravity(0),
-        colMask(0),
-        colMsg(0),
-        hull() {
-    }
-};
 
 class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
 {
     public:
         virtual ~MeshListener() {}
 
-        virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh) = 0;
+        virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh) = 0;
         virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale ) = 0;
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp ) = 0;
 };

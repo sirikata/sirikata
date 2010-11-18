@@ -45,7 +45,8 @@ namespace Sirikata
     //Transfer::URI* getURI(const v8::Arguments& args);
     bool getURI(const v8::Arguments& args,std::string& returner);
 
-    
+    v8::Handle<v8::Value>runGraphics(const v8::Arguments& args);
+
 
     }
   }

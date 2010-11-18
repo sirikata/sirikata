@@ -75,9 +75,20 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     HostedObjectMap mHostedObjects;
     PluginManager *mScriptPlugins;
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
+
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> SessionConnectedCallback;
 public:
+    struct ConnectionInfo {
+        ServerID server;
+        TimedMotionVector3f loc;
+        TimedMotionQuaternion orient;
+        BoundingSphere3f bnds;
+        String mesh;
+    };
+
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> ConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ConnectionInfo)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
@@ -164,7 +175,7 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 
-    void updateAddressable() const;
+    //void updateAddressable() const;
 
 
     /** Attach and run this script after the entity is initialized */
@@ -178,6 +189,9 @@ public:
     void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
     void handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
     void handleObjectDisconnected(const UUID& internalID, Disconnect::Code);
+
+    // Wrapper to convert callback to use ConnectionInfo
+    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;

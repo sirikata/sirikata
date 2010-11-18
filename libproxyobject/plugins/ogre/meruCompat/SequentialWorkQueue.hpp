@@ -32,7 +32,6 @@
 #include "Schedulable.hpp"
 #include "MeruDefs.hpp"
 #include "Singleton.hpp"
-#include "Event.hpp"
 #include <sirikata/core/queue/LockFreeQueue.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <stdio.h>

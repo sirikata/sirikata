@@ -69,6 +69,7 @@ private:
         String mesh;
         String scriptFile;
         String scriptType;
+        SolidAngle query_angle;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;
     int32 mConnectRate;

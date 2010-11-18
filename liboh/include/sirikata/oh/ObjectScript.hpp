@@ -55,7 +55,16 @@ class SIRIKATA_OH_EXPORT ObjectScript {
      //virtual void attachScript(const String& ) {
      //NOT_IMPLEMENTED(ObjectScript);}
      virtual void attachScript(const String& ){NOT_IMPLEMENTED(ObjectScript);}
+     
+		 virtual String scriptType() const { return scriptType_;}
+		 virtual String scriptFile() const {return scriptFile_;}
+		 virtual void scriptTypeIs(String _scriptType) { scriptType_ = _scriptType;}
+		 virtual void scriptFileIs(String _scriptFile) {scriptFile_ = _scriptFile;}
 
+	protected:
+		String scriptType_;
+    String scriptFile_;
+	   
 };
 
 }

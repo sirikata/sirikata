@@ -37,14 +37,15 @@
 namespace Sirikata {
 namespace Graphics {
 CameraEntity::CameraEntity(OgreSystem *scene,
-                           const std::tr1::shared_ptr<ProxyCameraObject> &pco,
+                           const std::tr1::shared_ptr<ProxyObject> &pco,
                            std::string ogreName)
     : Entity(scene,
              pco,
              ogreName.length()?ogreName:ogreName=ogreCameraName(pco->getObjectReference()),
              NULL),
-      mRenderTarget(NULL),
-      mViewport(NULL) {
+             mRenderTarget(NULL),
+             mViewport(NULL)
+{
     mAttachedIter=scene->mAttachedCameras.end();
     getProxy().CameraProvider::addListener(this);
     String cameraName = ogreName;
@@ -57,9 +58,8 @@ CameraEntity::CameraEntity(OgreSystem *scene,
     getOgreCamera()->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
 }
 
-void CameraEntity::attach (const String&renderTargetName,
-                     uint32 width,
-                     uint32 height){
+void CameraEntity::attach (const String&renderTargetName,uint32 width,uint32 height)
+{
     this->detach();
     mRenderTarget = mScene->createRenderTarget(renderTargetName,
                                                width,
@@ -69,6 +69,8 @@ void CameraEntity::attach (const String&renderTargetName,
     getOgreCamera()->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
     mAttachedIter = mScene->attachCamera(renderTargetName,this);
 }
+
+
 void CameraEntity::detach() {
     if (mViewport&&mRenderTarget) {
         mRenderTarget->removeViewport(mViewport->getZOrder());

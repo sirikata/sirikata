@@ -37,17 +37,17 @@
 #include <OgreResourceGroupManager.h>
 #include <OgreSubEntity.h>
 #include <OgreEntity.h>
-#include "resourceManager/GraphicsResourceManager.hpp"
 #include "WebViewManager.hpp"
 #include <sirikata/core/util/Sha256.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <stdio.h>
 #include "meruCompat/SequentialWorkQueue.hpp"
-#include "resourceManager/GraphicsResourceManager.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "Lights.hpp"
 #include <boost/lexical_cast.hpp>
 #include "resourceManager/CDNArchive.hpp"
+#include <sirikata/core/transfer/URI.hpp>
+
 
 using namespace std;
 using namespace Sirikata::Transfer;
@@ -61,7 +61,7 @@ void fixOgreURI(String &uri) {
     }
 }
 MeshEntity::MeshEntity(OgreSystem *scene,
-                       const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
+                       const std::tr1::shared_ptr<ProxyObject> &pmo,
                        const std::string &id)
         : Entity(scene,
                  pmo,
@@ -72,9 +72,6 @@ MeshEntity::MeshEntity(OgreSystem *scene,
     mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
-    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr();
-    mResource = std::tr1::dynamic_pointer_cast<Meru::GraphicsResourceEntity>
-        (grm->getResourceEntity(pmo->getObjectReference(), this, pmo));
     unloadMesh();
 }
 
@@ -85,7 +82,6 @@ std::string MeshEntity::ogreMovableName()const{
     return ogreMeshName(id());
 }
 MeshEntity::~MeshEntity() {
-    mResource->entityDestroyed();
     Ogre::Entity * toDestroy=getOgreEntity();
     init(NULL);
     if (toDestroy) {
@@ -307,9 +303,12 @@ void MeshEntity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::
     Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&MeshEntity::tryInstantiateExistingMesh, this, request, response));
 }
 
-void MeshEntity::downloadMeshFile(URI const& uri)
+void MeshEntity::downloadMeshFile(Transfer::URI const& uri)
 {
-    ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, uri, NULL, mProxy->priority, std::tr1::bind(&MeshEntity::MeshDownloaded,
+    ResourceDownloadTask *dl = new ResourceDownloadTask(
+        uri, getScene()->transferPool(),
+        mProxy->priority,
+        std::tr1::bind(&MeshEntity::MeshDownloaded,
             this, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
     (*dl)();
 }
@@ -319,12 +318,12 @@ void MeshEntity::downloadMeshFile(URI const& uri)
 // overrides from MeshListener
 // MCB: integrate these with the MeshObject model class
 
-void MeshEntity::onSetMesh (ProxyObjectPtr proxy, URI const& meshFile )
+void MeshEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
 {
 
 }
 
-void MeshEntity::processMesh(URI const& meshFile)
+void MeshEntity::processMesh(Transfer::URI const& meshFile)
 {
     Ogre::Entity * meshObj=getOgreEntity();
 
@@ -343,14 +342,6 @@ void MeshEntity::processMesh(URI const& meshFile)
     mURIString = meshFile.toString();
 
     downloadMeshFile(meshFile);
-
-    // MCB: responsibility to load model meshes must move to MeshObject plugin
-    /// hack to support collada mesh -- eventually this should be smarter
-    String fn = meshFile.filename();
-
-    Meru::GraphicsResourceManager* grm = Meru::GraphicsResourceManager::getSingletonPtr ();
-    Meru::SharedResourcePtr newModelPtr = grm->getResourceAsset (meshFile, Meru::GraphicsResource::MODEL, mProxy);
-    mResource->setMeshResource ( newModelPtr );
 }
 
 bool MeshEntity::createMeshWork(MeshdataPtr md) {
@@ -882,6 +873,15 @@ public:
 
 
 
+
+void MeshEntity::becomeCamera(ProxyObject* p)
+{
+    //delete this;
+}
+
+
+
+
 bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
     SHA256 sha = request->getMetadata().getFingerprint();
     String hash = sha.convertToHexString();
@@ -897,7 +897,7 @@ bool MeshEntity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, D
             SILOG(ogre,error,"Failed to parse mesh " << mURI.toString() << " --> " << request->getMetadata().getFingerprint().toString());
             return true;
         }
-        
+
 
         handleMeshParsed(mesh_data);
     }
@@ -1015,9 +1015,7 @@ void MeshEntity::createMesh(MeshdataPtr mdptr) {
 
         bool check = mm.resourceExists(hash);
 
-        loadMesh(hash);                     /// this is here because we removed
-                                            /// mResource->loaded(true, mEpoch) in
-                                            /// ModelLoadTask::doRun
+        loadMesh(hash);
     }
     // Lights
     int light_idx = 0;
@@ -1038,19 +1036,15 @@ void MeshEntity::createMesh(MeshdataPtr mdptr) {
         if (!light->isAttached()) {
             mLights.push_back(light);
 
+            // Lights just assume local position at the origin. We just need to
+            // transform appropriately.
+            Vector4f v_xform = pos_xform * Vector4f(0.f, 0.f, 0.f, 1.f);
             // The light has an extra scene node to handle the specific transformation
             Ogre::SceneNode* xformnode = mScene->getSceneManager()->createSceneNode();
-            // FIXME Our current approach to this is problematic. Ogre doesn't
-            // want a full transformation, but we want to flatten
-            // transformations in the loader so we don't have to replicate
-            // entire scene graphs from, e.g., collada. We really need a more
-            // generic interface for transformations that can extract the
-            // components.
-            //
-            // Currently, just extract the rotation and apply that.
+            xformnode->translate(v_xform[0], v_xform[1], v_xform[2]);
+            // Rotation needs to b handled by extracting rotation information.
             Quaternion qrot(pos_xform.extract3x3());
             xformnode->rotate(toOgre(qrot));
-
             xformnode->attachObject(light);
 
             mSceneNode->addChild(xformnode);
@@ -1085,7 +1079,9 @@ void MeshEntity::handleMeshParsed(MeshdataPtr md) {
     for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
       String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
 
-        ResourceDownloadTask *dl = new ResourceDownloadTask(NULL, Transfer::URI(texURI), NULL, mProxy->priority,
+        ResourceDownloadTask *dl = new ResourceDownloadTask(
+            Transfer::URI(texURI), getScene()->transferPool(),
+            mProxy->priority,
            std::tr1::bind(&MeshEntity::downloadFinished, this, _1, _2, md));
         (*dl)();
     }

@@ -22,7 +22,6 @@ struct JSPresenceStruct
 
     SpaceObjectReference* sporef;
     
-    
     //likely that the jsObjScript won't be owned by JSPresence (don't delete it myself).
     JSObjectScript*        jsObjScript;
 

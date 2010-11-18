@@ -63,12 +63,14 @@ T safeLexicalCast(const String& orig) {
 
 void CSVObjectFactory::generate()
 {
-    int count = 0;
+
+    int count =0;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
     if (!fp) return;
 
+    
     bool is_first = true;
     int objtype_idx = -1;
     int pos_idx = -1;
@@ -78,7 +80,10 @@ void CSVObjectFactory::generate()
 
     int quat_vel_idx = -1;
     int script_file_idx = -1;
+    int script_type_idx = -1;
     int scale_idx = -1;
+    int objid_idx = -1;
+    int solid_angle_idx = -1;
 
     // For each line
     while(fp && (count < mMaxObjects))
@@ -89,8 +94,10 @@ void CSVObjectFactory::generate()
 	// then this is a comment
         if(line.length() > 0 && line.at(0) == '#')
        {
-         continue;
+         continue;   
        }
+        
+
         // Split into parts
         StringList line_parts;
         int last_comma = -1;
@@ -107,16 +114,17 @@ void CSVObjectFactory::generate()
             // Remove quotes from beginning and end
             if (next_val.size() > 2 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
                 next_val = next_val.substr(1, next_val.size() - 2);
-
+    
             line_parts.push_back(next_val);
 
             last_comma = next_comma;
         }
 
 
-
         if (is_first) {
-            for(uint32 idx = 0; idx < line_parts.size(); idx++) {
+            for(uint32 idx = 0; idx < line_parts.size(); idx++)
+            {
+
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
                 if (line_parts[idx] == "pos_x") pos_idx = idx;
                 if (line_parts[idx] == "orient_x") orient_idx = idx;
@@ -124,13 +132,24 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
                 if (line_parts[idx] == "script_file") script_file_idx = idx;
+                if (line_parts[idx] == "script_type") script_type_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
+                if(line_parts[idx] == "objid") 
+                {
+                    objid_idx = idx;
+                }
+                if(line_parts[idx] == "solid_angle") 
+                {
+                    solid_angle_idx = idx;
+                }
+
+                
             }
 
             is_first = false;
         }
         else {
-            //note: script_file is not required, so not checking it witht he assert
+            //note: script_file is not required, so not checking it with the assert
             assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
             //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
@@ -177,22 +196,61 @@ void CSVObjectFactory::generate()
 
                 String scriptFile = "";
                 String scriptType = "";
+                /* 
+                   FIX for 156: http://www.sirikata.com/trac/ticket/156
+                */
                 if(script_file_idx != -1)
                 {
-                    if(script_file_idx < (int)line_parts.size())
-                    {
-                        scriptFile = line_parts[script_file_idx];
-                        scriptType = line_parts[script_file_idx + 1];
-                    }
+                    scriptFile = line_parts[script_file_idx];
                 }
-
+              	if(script_type_idx != -1)
+                {
+                    scriptType = line_parts[script_type_idx];
+                }
+                
                 float scale =
                     scale_idx == -1 ?
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
+                
+                String solid_angle = "";
+                SolidAngle query_angle(SolidAngle::Max);
 
+                if(solid_angle_idx != -1)
+                {
+                  solid_angle = line_parts[solid_angle_idx];  
+                  if(solid_angle != "")
+                  {
+                    
+                    query_angle = SolidAngle(atof(solid_angle.c_str())); 
+                  }
+                }
+                
 
-                HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+                /*
+								
+                  Ticket #134 
+                  
+                */
+                String objid = "";
+                if(objid_idx != -1)
+                {
+                    objid = line_parts[objid_idx];
+                }
+                
+                HostedObjectPtr obj;
+                
+                if(objid_idx == -1)
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+                    
+                }
+                else
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
+                }
+
+                
                 obj->init();
 
                 ObjectConnectInfo oci;
@@ -202,6 +260,7 @@ void CSVObjectFactory::generate()
                 oci.mesh = mesh;
                 oci.scriptType = scriptType;
                 oci.scriptFile = scriptFile;
+                oci.query_angle = query_angle;
                 mIncompleteObjects.push(oci);
 
                 count++;
@@ -211,6 +270,7 @@ void CSVObjectFactory::generate()
         }
     }
 
+    
     fp.close();
 
     connectObjects();
@@ -221,8 +281,12 @@ void CSVObjectFactory::generate()
 
 void CSVObjectFactory::connectObjects()
 {
+    
     if (mContext->stopped())
+    {
+        std::cout<<"\n\nContext stopped.  Will not get anywhere\n\n";
         return;
+    }
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();
@@ -231,6 +295,7 @@ void CSVObjectFactory::connectObjects()
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
+            const_cast<SolidAngle&>(oci.query_angle),
             UUID::null(), NULL,
             oci.scriptFile,
             oci.scriptType

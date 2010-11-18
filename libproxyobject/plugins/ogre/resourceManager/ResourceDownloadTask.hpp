@@ -32,31 +32,22 @@
 #ifndef _RESOURCE_DOWNLOAD_TASK_HPP
 #define _RESOURCE_DOWNLOAD_TASK_HPP
 
-#include "../meruCompat/MeruDefs.hpp"
-#include "../meruCompat/DependencyTask.hpp"
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 
-namespace Meru {
+namespace Sirikata {
 
-class ResourceRequestor {
-public:
-    virtual ~ResourceRequestor();
-
-  virtual void setResourceBuffer(const SparseData& buffer) = 0;
-};
-
-class ResourceDownloadTask : public DependencyTask
+class ResourceDownloadTask
 {
 public:
     typedef std::tr1::function<void(
         std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<const Transfer::DenseData> response)> DownloadCallback;
 
-    ResourceDownloadTask(DependencyManager* mgr, const URI& uri, ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb);
+    ResourceDownloadTask(const Transfer::URI& uri, Transfer::TransferPoolPtr transfer_pool, double priority, DownloadCallback cb);
   virtual ~ResourceDownloadTask();
 
   void setRange(const Transfer::Range &r) {
@@ -81,16 +72,14 @@ protected:
 
 
   bool mStarted;
-  bool customCb;
-  const URI mURI;
-  SubscriptionId mCurrentDownload;
+    const Transfer::URI mURI;
+    Transfer::TransferPoolPtr mTransferPool;
   Transfer::Range mRange;
-  ResourceRequestor* mResourceRequestor;
   Transfer::SparseData mMergeData;
   double mPriority;
   DownloadCallback cb;
 };
 
-}
+} // namespace Sirikata
 
 #endif

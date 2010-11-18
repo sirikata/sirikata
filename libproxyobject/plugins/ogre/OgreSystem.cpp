@@ -38,8 +38,7 @@
 #include "OgrePlugin.hpp"
 #include "task/Event.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/ProxyCameraObject.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "CameraEntity.hpp"
 #include "MeshEntity.hpp"
 #include <Ogre.h>
@@ -49,18 +48,11 @@
 #include "input/InputEvents.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
-#include "resourceManager/ResourceManager.hpp"
-#include "resourceManager/GraphicsResourceManager.hpp"
-#include "resourceManager/ManualMaterialLoader.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
-#include "meruCompat/EventSource.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 
-using Meru::GraphicsResourceManager;
-using Meru::ResourceManager;
 using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
-using Meru::MaterialScriptManager;
 
 #include <boost/filesystem.hpp>
 #include <stdio.h>
@@ -82,7 +74,7 @@ namespace Graphics {
 namespace {
 
 // FIXME we really need a better way to figure out where our data is
-std::string getResourcesDir() {
+std::string getOgreResourcesDir() {
     using namespace boost::filesystem;
 
     // FIXME there probably need to be more of these, including
@@ -123,7 +115,7 @@ std::string getResourcesDir() {
 std::string getChromeResourcesDir() {
     using namespace boost::filesystem;
 
-    return (path(getResourcesDir()) / "chrome").string();
+    return (path(getOgreResourcesDir()) / "chrome").string();
 }
 
 }
@@ -139,7 +131,7 @@ OgreSystem::OgreSystem(Context* ctx)
  : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
    mContext(ctx),
    mLastFrameTime(Task::LocalTime::now()),
-    // FIXME need to support multiple parsers, see #124
+   mResourcesDir(getOgreResourcesDir()),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
      mQuitRequested(false),
      mQuitRequestHandled(false),
@@ -242,6 +234,10 @@ void OgreSystem::destroyRenderTarget(const String&name) {
 
 Time OgreSystem::simTime() {
     return mContext->simTime();
+}
+
+Transfer::TransferPoolPtr OgreSystem::transferPool() {
+    return mTransferPool;
 }
 
 void OgreSystem::suspend() {
@@ -362,20 +358,37 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     }
     return mAttachedCameras.end();
 }
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+
+void OgreSystem::instantiateAllObjects(ProxyObjectPtr pop)
+{
+    ProxyManager* pman = pop->getProxyManager();
+
+    std::vector<SpaceObjectReference> allORefs;
+    pman->getAllObjectReferences(allORefs);
+
+    for (std::vector<SpaceObjectReference>::iterator iter = allORefs.begin(); iter != allORefs.end(); ++iter)
+    {
+        //instantiate each object in graphics system separately.
+        ProxyObjectPtr toAdd = pman->getProxyObject(*iter);
+        onCreateProxy(toAdd);
+    }
+}
+
+
+
+bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, ProxyObjectPtr pop,const String&options) {
     ++sNumOgreSystems;
     proxyManager->addListener(this);
 
-
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
-
 
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
     OptionValue*ogreLogFile;
     OptionValue*purgeConfig;
+    OptionValue* keybindingFile;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*windowTitle;
@@ -388,6 +401,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
                            purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
+                           keybindingFile=new OptionValue("keybinding","keybinding.default",OptionValueType<String>(),"File to load key bindings from"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
@@ -427,17 +441,13 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             mWorkQueue = new Task::LockFreeWorkQueue;
-            Meru::EventSource::InitializeEventTypes();
-            Meru::EventSource::sSingleton = new Task::GenEventManager(mWorkQueue);
             new SequentialWorkQueue(mWorkQueue);
-            new ResourceManager();
-            new GraphicsResourceManager(SequentialWorkQueue::getSingleton().getWorkQueue());
-            new MaterialScriptManager;
+            mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
-            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getResourcesDir(), "FileSystem", "General");
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getOgreResourcesDir(), "FileSystem", "General");
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");//FIXME get rid of this line of code: we don't want to load resources from $PWD
 
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==>
@@ -542,14 +552,11 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
-    allocMouseHandler();
-    new WebViewManager(0, mInputManager, getResourcesDir()); ///// FIXME: Initializing singleton class
+    allocMouseHandler(keybindingFile->as<String>());
+    new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
-/*  // Test web view
-    WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());
-    //view->setProxyObject(webviewpxy);
-    view->loadURL("http://www.google.com");
-*/
+    //finish instantiation here
+    instantiateAllObjects(pop);
 
     return true;
 }
@@ -715,44 +722,36 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 }
 
 
-void OgreSystem::onCreateProxy(ProxyObjectPtr p){
 
+void OgreSystem::onCreateProxy(ProxyObjectPtr p)
+{
     bool created = false;
+
+    if (p->isCamera())
     {
-        std::tr1::shared_ptr<ProxyCameraObject> camera=std::tr1::dynamic_pointer_cast<ProxyCameraObject>(p);
-        if (camera) {
-            CameraEntity *cam=new CameraEntity(this,camera);
-            created = true;
-        }
-     }
-    {
-        std::tr1::shared_ptr<ProxyMeshObject> meshpxy=std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
-        if (meshpxy) {
-            MeshEntity *mesh=new MeshEntity(this,meshpxy);
-            created = true;
-            dlPlanner->addNewObject(p, mesh);
-        }
+        CameraEntity* cam = new CameraEntity(this,p);
     }
-    if (!created) {
-        std::tr1::shared_ptr<ProxyObject> pospxy=std::tr1::dynamic_pointer_cast<ProxyObject>(p);
-        if (pospxy) {
-            Entity *ent=new Entity(
-                this,
-                pospxy,
-                pospxy->getObjectReference().toString(),
-                NULL);
-            created = true;
-        }
-    }
-}
-void OgreSystem::onDestroyProxy(ProxyObjectPtr p){
+    else
     {
-        std::tr1::shared_ptr<ProxyMeshObject> meshpxy = std::tr1::dynamic_pointer_cast<ProxyMeshObject>(p);
-        dlPlanner->removeObject(meshpxy);
+        MeshEntity* mesh = new MeshEntity(this,p);
+        dlPlanner->addNewObject(p,mesh);
     }
 }
 
-MeshdataPtr OgreSystem::parseMesh(const URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+void OgreSystem::becomeCamera(ProxyObjectPtr p)
+{
+    //FIXME: May be leaking memory if already were a camera.
+    //check if we already have camera.
+    CameraEntity* cam = new CameraEntity(this, p);
+}
+
+
+void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
+{
+    dlPlanner->removeObject(p);
+}
+
+MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
     return mModelParser->load(orig_uri, fp, data);
 }
 
@@ -801,7 +800,7 @@ Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
                           const double maxDistance,
-                          ProxyMeshObjectPtr ignore,
+                          ProxyObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName) {
@@ -934,7 +933,6 @@ bool OgreSystem::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTime
 }
 //static Task::LocalTime debugStartTime = Task::LocalTime::now();
 void OgreSystem::poll(){
-    GraphicsResourceManager::getSingleton().computeLoadedSet();
     Task::LocalTime curFrameTime(Task::LocalTime::now());
     Task::LocalTime finishTime(curFrameTime + desiredTickRate()); // arbitrary
 

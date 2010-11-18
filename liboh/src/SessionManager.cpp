@@ -313,7 +313,6 @@ void SessionManager::connect(
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
 
-		std::cout << "\n\n\n connect :  MESH MESH MESH " << ci.mesh << " \n\n\n";
 
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
@@ -395,8 +394,14 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     orient.set_position( ci.orient.position() );
     orient.set_velocity( ci.orient.velocity() );
     connect_msg.set_bounds( ci.bounds );
-    if (ci.regQuery)
-        connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+
+    
+   if (ci.regQuery)
+       connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+
+
+
+
     if (ci.mesh.size() > 0)
         connect_msg.set_mesh( ci.mesh );
 
@@ -822,8 +827,6 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
 void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb) {
     SpaceObjectReference spaceobj(space, obj);
-
-		std::cout << "\n\n\n MESH MESH MESH " << mesh << " \n\n\n";
 
     real_cb(space, obj, server, loc, orient, bnds, mesh);
 

@@ -378,11 +378,8 @@ public:
                 loc.setPosition(avgPos + localTrans*mTotalScale);
                 std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
                 //ent->resetLocation(now, loc);
-                std::tr1::shared_ptr<ProxyMeshObject> meshptr (
-                    std::tr1::dynamic_pointer_cast<ProxyMeshObject>(ent));
-                if (meshptr) {
-                    meshptr->setScale(meshptr->getScale() * scaleamt);
-                }
+
+                ent->setScale(ent->getScale()*scaleamt);
             }
         }
         if (ev->deltaLastX() != 0) {

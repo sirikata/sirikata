@@ -32,40 +32,24 @@
 
 #include <sirikata/core/util/Thread.hpp>
 
-#include "../meruCompat/EventSource.hpp"
-#include "../meruCompat/Event.hpp"
 #include "ResourceDownloadTask.hpp"
-#include "../meruCompat/DependencyManager.hpp"
 #include <stdio.h>
-#include "GraphicsResourceManager.hpp"
 
 using namespace std;
-using namespace Sirikata;
 using namespace Sirikata::Transfer;
 
+namespace Sirikata {
 
-namespace Meru {
-
-ResourceRequestor::~ResourceRequestor() {
-}
-
-ResourceDownloadTask::ResourceDownloadTask(DependencyManager *mgr, const URI &uri,
-        ResourceRequestor* resourceRequestor, double priority, DownloadCallback cb)
- : DependencyTask(mgr == NULL ? NULL : mgr->getQueue()), mURI(uri), mRange(true),
-   mResourceRequestor(resourceRequestor), mPriority(priority), cb(cb)
+ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb)
+ : mURI(uri), mTransferPool(transfer_pool), mRange(true),
+   mPriority(priority), cb(cb)
 {
   mStarted = false;
-  if (mgr == NULL) {
-      customCb = true;
-  }
-   else customCb = false;
 }
 
 ResourceDownloadTask::~ResourceDownloadTask()
 {
 //FIXME: How do we unsubscribe from an active download?!?!?!
-
-  //EventSource::getSingleton().unsubscribe(mCurrentDownload);
 }
 
 void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
@@ -82,20 +66,11 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> requ
             std::tr1::shared_ptr<const DenseData> response)
 {
     if (response != NULL) {
-      if (customCb == false) {
-          SparseData data = SparseData();
-          data.addValidData(response);
-
-          mResourceRequestor->setResourceBuffer(data);
-      } else {
-          cb(request, response);
-      }
-      finish(true);
-  }
-  else {
-    finish(false);
-    cout<<"Failed chunk download"<<endl;
-  }
+        cb(request, response);
+    }
+    else {
+        cout<<"Failed chunk download"<<endl;
+    }
 }
 
 void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
@@ -110,12 +85,9 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
             std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1,
                 std::tr1::placeholders::_2)));
 
-    TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
-    pool->addRequest(req);
-
+    mTransferPool->addRequest(req);
   }
   else {
-    finish(false);
     cout<<"Failed metadata download"<<endl;
   }
  }
@@ -129,7 +101,7 @@ void ResourceDownloadTask::operator()()
      new MetadataRequest(mURI, mPriority, std::tr1::bind(
              &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
-  TransferPoolPtr pool = (GraphicsResourceManager::getSingleton()).transferPool();
-   pool->addRequest(req);
+ mTransferPool->addRequest(req);
 }
-}
+
+} // namespace Sirikata

@@ -39,7 +39,6 @@
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "input/InputEvents.hpp"
 #include "input/SDLInputDevice.hpp"
 #include "DragActions.hpp"
@@ -51,6 +50,7 @@
 #include <sirikata/core/task/Time.hpp>
 #include <SDL_keysym.h>
 #include <set>
+#include <sirikata/core/transfer/DiskManager.hpp>
 
 #include "WebViewManager.hpp"
 #include "CameraPath.hpp"
@@ -59,6 +59,7 @@
 #include <sirikata/core/util/KnownScriptTypes.hpp>
 #include "Protocol_JSMessage.pbj.hpp"
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -82,29 +83,44 @@ using namespace std;
 #define SDL_SCANCODE_PAGEDOWN 0x5b
 #endif
 
-bool compareEntity (const Entity* one, const Entity* two) {
-
+bool compareEntity (const Entity* one, const Entity* two)
+{
     ProxyObject *pp = one->getProxyPtr().get();
 
-    ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
+    // ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
+    // ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
+
+
     Time now = one->getScene()->simTime();
     Location loc1 = pp->globalLocation(now);
-    pp = two->getProxyPtr().get();
+
+    ProxyObject* pp2;
+    pp2 = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
-    ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
-    ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
-    if (camera1 && !camera2) return true;
-    if (camera2 && !camera1) return false;
-    if (camera1 && camera2) {
+
+    // ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
+    // ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
+
+    // if (camera1 && !camera2) return true;
+    // if (camera2 && !camera1) return false;
+
+    if (pp->isCamera() && !pp2->isCamera()) return true;
+    if (pp2->isCamera() && !pp->isCamera()) return false;
+
+    
+    if (pp->isCamera() && pp2->isCamera())
+    {
         return loc1.getPosition().x < loc2.getPosition().x;
     }
 
-    if (mesh1 && mesh2) {
-        return mesh1->getPhysical().name < mesh2->getPhysical().name;
+    if (!pp->isCamera() &&  !pp2->isCamera())
+    {
+        return pp->getPhysical().name < pp2->getPhysical().name;
     }
+    
     return one<two;
 }
+
 
 // Defined in DragActions.cpp.
 
@@ -164,8 +180,7 @@ class OgreSystem::MouseHandler {
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;
 
-    typedef std::map<String, InputResponse*> InputResponseMap;
-    InputResponseMap mInputResponses;
+    InputBinding::InputResponseMap mInputResponses;
 
     InputBinding mInputBinding;
 
@@ -695,7 +710,7 @@ private:
 
     /** Create a UI element for interactively scripting an object.
         Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
-        HostedObject. 
+        HostedObject.
      */
     void createScriptingUIAction() {
 
@@ -945,7 +960,7 @@ private:
     }
 
 
-    
+
     void executeScript(WebView* wv, const JSArguments& args)
     {
         ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
@@ -954,7 +969,7 @@ private:
         ProxyObjectPtr target_obj(objit->second.lock());
 
         if (!target_obj) return;
-        
+
 
         JSIter command_it;
         for (command_it = args.begin(); command_it != args.end(); ++command_it)
@@ -964,8 +979,6 @@ private:
             {
                 Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
                 Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
-//                Protocol::ScriptingMessage  scripting_msg;
-//                Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
                 scripting_req.set_id(0);
                 //scripting_req.set_body(String(command_it->second));
                 JSIter nexter = command_it + 1;
@@ -1002,7 +1015,7 @@ private:
             init_script.SerializeToString(&serializedInitScript);
             //std::string serialized;
             //init_script.SerializeToString(&serialized);
-            
+
             obj->sendMessage(
                 Services::LISTEN_FOR_SCRIPT_BEGIN,
                 MemoryReference(serializedInitScript.data(), serializedInitScript.length())
@@ -1010,7 +1023,7 @@ private:
             );
         }
     }
-    
+
 
 //     void initScriptOnSelectedObjects() {
 //         for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
@@ -1032,7 +1045,7 @@ private:
 //             body.add_message(KnownMessages::INIT_SCRIPT, serializedInitScript);
 //             std::string serialized;
 //             body.SerializeToString(&serialized);
-            
+
 //             obj->sendMessage(
 //                 Services::LISTEN_FOR_SCRIPT_BEGIN,
 //                 MemoryReference(serialized.data(), serialized.length())
@@ -1040,7 +1053,7 @@ private:
 //         }
 //     }
 
-    
+
 
     ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy)
     {
@@ -1052,14 +1065,25 @@ private:
     }
 
     void moveAction(Vector3f dir, float amount) {
+
+        
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-        if (!mParent||!mParent->mPrimaryCamera) return;
+
+        
+        if (!mParent||!mParent->mPrimaryCamera)
+        {
+            return;
+        }
+        
         ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
-        if (!cam) return;
+        if (!cam)
+        {
+            return;
+        }
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
+
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1090,7 +1114,7 @@ private:
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
+
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1099,7 +1123,7 @@ private:
         //FIXME: these checks do not make sense any more for multi-presenced objects.
         //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
         //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
-        
+
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1121,7 +1145,7 @@ private:
 
         SpaceID space = cam->getObjectReference().space();
         ObjectReference oref = cam->getObjectReference().object();
-        
+
         // Make sure the thing we're trying to move really is the thing
         // connected to the world.
         // FIXME We should have a real "owner" VWObject, even if it is possible
@@ -1130,7 +1154,7 @@ private:
         //FIXME: these checks do not make sense any more for multi-presenced objects.
         //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
         //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
-        
+
         // Get the updated position
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1236,7 +1260,8 @@ private:
         return true;
     }
 
-    string physicalName(ProxyMeshObject *obj, std::set<std::string> &saveSceneNames) {
+    string physicalName(ProxyObject *obj, std::set<std::string> &saveSceneNames)
+    {
         std::string name = obj->getPhysical().name;
         if (name.empty()) {
             name = obj->getMesh().filename();
@@ -1258,12 +1283,14 @@ private:
         saveSceneNames.insert(name);
         return name;
     }
-    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames) {
+
+    
+    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames)
+    {
         ProxyObject *pp = e->getProxyPtr().get();
         Time now = mParent->simTime();
         Location loc = pp->globalLocation(now);
-        ProxyCameraObject* camera = dynamic_cast<ProxyCameraObject*>(pp);
-        ProxyMeshObject* mesh = dynamic_cast<ProxyMeshObject*>(pp);
+
 
         double x,y,z;
         std::string w("");
@@ -1282,19 +1309,24 @@ private:
 
         string parent;
         ProxyObjectPtr parentObj = pp->getParentProxy();
-        if (parentObj) {
-            ProxyMeshObject *parentMesh = dynamic_cast<ProxyMeshObject*>(parentObj.get());
+        
+        if (parentObj)
+        {
+            ProxyObject *parentMesh = dynamic_cast<ProxyObject*>(parentObj.get());
             if (parentMesh) {
                 parent = physicalName(parentMesh, saveSceneNames);
             }
         }
-        else if (mesh) {
-            URI uri = mesh->getMesh();
+        else
+        {
+            Transfer::URI uri = pp->getMesh();
             std::string uristr = uri.toString();
-            if (uri.proto().empty()) {
+            if (uri.proto().empty())
+            {
                 uristr = "";
             }
-            const PhysicalParameters &phys = mesh->getPhysical();
+            
+            const PhysicalParameters &phys = pp->getPhysical();
             std::string subtype;
             switch (phys.mode) {
             case PhysicalParameters::Disabled:
@@ -1318,27 +1350,31 @@ private:
             default:
                 std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
             }
-            std::string name = physicalName(mesh, saveSceneNames);
-            fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
+            std::string name = physicalName(pp, saveSceneNames);
+            if (pp->isCamera())
+            {
+                fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
                     loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
                     loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
+            }
+            else
+            {
+                fprintf(fp, "camera,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
+                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
+                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
+            }
 
             fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
-                    mesh->getScale().x,mesh->getScale().y,mesh->getScale().z,
+                    pp->getScale().x,pp->getScale().y,pp->getScale().z,
                     phys.hull.x, phys.hull.y, phys.hull.z,
                     phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
         }
-        else if (camera) {
-            fprintf(fp, "camera,,,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f\n",parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-        }
-        else {
-            fprintf(fp, "#unknown object type in dumpObject\n");
-        }
     }
 
-    void zoomAction(float value, Vector2f axes) {
+
+    
+    void zoomAction(float value, Vector2f axes)
+    {
         if (!mParent||!mParent->mPrimaryCamera) return;
         zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
     }
@@ -1480,7 +1516,7 @@ private:
 
         InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
         mInputBinding.handle(inputev);
-        
+
         return EventResponse::nop();
     }
 
@@ -1736,7 +1772,7 @@ private:
     }
 
 public:
-    MouseHandler(OgreSystem *parent)
+    MouseHandler(OgreSystem *parent, const String& bindings_file)
      : mParent(parent),
        mScreenshotID(0),
        mPeriodicScreenshot(false),
@@ -1871,73 +1907,9 @@ public:
         mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::startUploadObject, this));
         mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::handleQueryAngleWidget, this));
 
-
-        // Session
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_M), mInputResponses["suspend"]);
-
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["quit"]);
-
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I), mInputResponses["screenshot"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_I, Input::MOD_CTRL), mInputResponses["togglePeriodicScreenshot"]);
-
-        // Movement
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S), mInputResponses["moveBackward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_D), mInputResponses["moveRight"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A), mInputResponses["moveLeft"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP, Input::MOD_SHIFT), mInputResponses["rotateXPos"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN, Input::MOD_SHIFT), mInputResponses["rotateXNeg"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_UP), mInputResponses["moveForward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DOWN), mInputResponses["moveBackward"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q), mInputResponses["moveUp"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Z), mInputResponses["moveDown"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_LEFT), mInputResponses["stableRotatePos"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RIGHT), mInputResponses["stableRotateNeg"]);
-
-        // Various other actions
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_CTRL), mInputResponses["createWebview"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_N, Input::MOD_ALT), mInputResponses["openObjectUI"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_ALT), mInputResponses["openScriptingUI"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_ENTER), mInputResponses["enterObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_RETURN), mInputResponses["enterObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_KP_0), mInputResponses["leaveObject"]);
-        //mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_ESCAPE), mInputResponses["leaveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G), mInputResponses["groupObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_G, Input::MOD_ALT), mInputResponses["ungroupObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_DELETE), mInputResponses["deleteObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_V, Input::MOD_CTRL), mInputResponses["cloneObjects"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_O, Input::MOD_CTRL), mInputResponses["import"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_S, Input::MOD_CTRL), mInputResponses["saveScene"]);
-
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_U, Input::MOD_CTRL), mInputResponses["startUploadObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_A, Input::MOD_CTRL), mInputResponses["handleQueryAngleWidget"]);
-
-
-        // Drag modes
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Q, Input::MOD_CTRL), mInputResponses["setDragModeNone"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_W, Input::MOD_CTRL), mInputResponses["setDragModeMoveObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_E, Input::MOD_CTRL), mInputResponses["setDragModeRotateObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_R, Input::MOD_CTRL), mInputResponses["setDragModeScaleObject"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_T, Input::MOD_CTRL), mInputResponses["setDragModeRotateCamera"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_Y, Input::MOD_CTRL), mInputResponses["setDragModePanCamera"]);
-
-        // Mouse Zooming
-        mInputBinding.add(InputBindingEvent::Axis(SDLMouse::WHEELY), mInputResponses["zoom"]);
-
-        // Selection
-        mInputBinding.add(InputBindingEvent::MouseClick(1), mInputResponses["selectObject"]);
-        mInputBinding.add(InputBindingEvent::MouseClick(3), mInputResponses["selectObjectReverse"]);
-
-        // Camera Path
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_1), mInputResponses["cameraPathLoad"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_2), mInputResponses["cameraPathSave"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_3), mInputResponses["cameraPathNextKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_4), mInputResponses["cameraPathPreviousKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_5), mInputResponses["cameraPathInsertKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_6), mInputResponses["cameraPathDeleteKeyFrame"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_7), mInputResponses["cameraPathRun"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_8), mInputResponses["cameraPathSpeedUp"]);
-        mInputBinding.add(InputBindingEvent::Key(SDL_SCANCODE_9), mInputResponses["cameraPathSlowDown"]);
+        boost::filesystem::path resources_dir = mParent->getResourcesDir();
+        String keybinding_file = (resources_dir / bindings_file).string();
+        mInputBinding.addFromFile(keybinding_file, mInputResponses);
 
         // WebView Chrome
         mInputBinding.add(InputBindingEvent::Web("__chrome", "navnewtab"), mInputResponses["webNewTab"]);
@@ -1974,7 +1946,7 @@ public:
              ++iter) {
             mParent->mInputManager->unsubscribe(*iter);
         }
-        for (InputResponseMap::iterator iter=mInputResponses.begin(),iterend=mInputResponses.end();iter!=iterend;++iter) {
+        for (InputBinding::InputResponseMap::iterator iter=mInputResponses.begin(),iterend=mInputResponses.end();iter!=iterend;++iter) {
             delete iter->second;
         }
         for (std::map<int, ActiveDrag*>::iterator iter=mActiveDrag.begin(),iterend=mActiveDrag.end();iter!=iterend;++iter) {
@@ -1993,11 +1965,33 @@ public:
         mSelectedObjects.insert(obj);
     }
 
-    
+    void onUIDirectoryListingFinished(String initial_path,
+            std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
+        std::ostringstream os;
+        os << "directory_list_request({path:'" << initial_path << "', results:[";
+        if(dirListing) {
+            bool needComma = false;
+            for(Transfer::DiskManager::ScanRequest::DirectoryListing::iterator it =
+                    dirListing->begin(); it != dirListing->end(); it++) {
+                if(needComma) {
+                    os << ",";
+                } else {
+                    needComma = true;
+                }
+                os << "{path:'" << it->mPath.filename() << "', directory:" <<
+                        (it->mFileStatus.type() == Transfer::Filesystem::boost_fs::directory_file ?
+                        "true" : "false") << "}";
+            }
+        }
+        os << "]});";
+        printf("Calling to JS: %s\n", os.str().c_str());
+        mUIWidgetView->evaluateJS(os.str());
+    }
+
     void onUIAction(WebView* webview, const JSArguments& args) {
         printf("ui action event fired arg length = %d\n", (int)args.size());
-        if (args.size() != 1) {
-            printf("expected 1 argument, returning.\n");
+        if (args.size() < 1) {
+            printf("expected at least 1 argument, returning.\n");
             return;
         }
 
@@ -2007,6 +2001,16 @@ public:
 
         if(action_triggered == "action_exit") {
             quitAction();
+        } else if(action_triggered == "action_directory_list_request") {
+            if(args.size() != 2) {
+                printf("expected 2 arguments, returning.\n");
+                return;
+            }
+            String pathRequested(args[1].data());
+            std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> scan_req(
+                    new Transfer::DiskManager::ScanRequest(pathRequested,
+                    std::tr1::bind(&MouseHandler::onUIDirectoryListingFinished, this, pathRequested, _1)));
+            Transfer::DiskManager::getSingleton().addRequest(scan_req);
         }
     }
 
@@ -2026,8 +2030,8 @@ public:
     }
 };
 
-void OgreSystem::allocMouseHandler() {
-    mMouseHandler = new MouseHandler(this);
+void OgreSystem::allocMouseHandler(const String& keybindings_file) {
+    mMouseHandler = new MouseHandler(this, keybindings_file);
 }
 void OgreSystem::destroyMouseHandler() {
     if (mMouseHandler) {

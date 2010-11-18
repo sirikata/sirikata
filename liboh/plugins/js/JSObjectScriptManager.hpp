@@ -61,23 +61,22 @@ public:
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
     v8::Persistent<v8::ObjectTemplate> mMathTemplate;
     void testPrint();
-    
+
 private:
 
     void createAddressableTemplate();
     void createSystemTemplate();
-    void createSystemTemplate_old();
     void createHandlerTemplate();
     void createPresenceTemplate();
     void createContextTemplate();
     void createMathTemplate();
-    
+
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
     v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
-    
+
 };
 
 } // namespace JS

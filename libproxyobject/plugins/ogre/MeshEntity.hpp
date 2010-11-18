@@ -41,13 +41,10 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/Range.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "Entity.hpp"
 #include <OgreEntity.h>
-
-#include "resourceManager/GraphicsResourceEntity.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -59,13 +56,9 @@ class MeshEntity
         public MeshListener
 {
 public:
-    typedef std::tr1::shared_ptr<Meru::GraphicsResourceEntity> SharedResourcePtr;
     typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
     typedef std::map<String, String > TextureBindingsMap;
 private:
-    SharedResourcePtr mResource;
-    BoundingInfo mBoundingInfo;
-
     ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
@@ -91,11 +84,13 @@ private:
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
 public:
-    ProxyMeshObject &getProxy() const {
-        return *std::tr1::static_pointer_cast<ProxyMeshObject>(mProxy);
+    ProxyObject &getProxy() const
+    {
+        return *std::tr1::static_pointer_cast<ProxyObject>(mProxy);
     }
+    
     MeshEntity(OgreSystem *scene,
-               const std::tr1::shared_ptr<ProxyMeshObject> &pmo,
+               const std::tr1::shared_ptr<ProxyObject> &pmo,
                const std::string&ogre_id=std::string());
 
     virtual ~MeshEntity();
@@ -108,7 +103,7 @@ public:
 
     WebView *getWebView(int whichSubEnt);
 
-    void processMesh(URI const& newMesh);
+    void processMesh(Transfer::URI const& newMesh);
 
     static std::string ogreMeshName(const SpaceObjectReference&ref);
     virtual std::string ogreMovableName()const;
@@ -124,24 +119,16 @@ public:
 
     virtual void setSelected(bool selected);
 
-    ///Returns the scaled bounding info
-    const BoundingInfo& getBoundingInfo()const{
-        return mBoundingInfo;
-    }
-    const SharedResourcePtr &getResource() const {
-        return mResource;
-    }
-    void setResource(const SharedResourcePtr &resourcePtr) {
-        mResource = resourcePtr;
-    }
 
-    void downloadMeshFile(URI const& uri);
+    void downloadMeshFile(Transfer::URI const& uri);
 
     // interface from MeshListener
     public:
-        virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+        virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
         virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
+        virtual void becomeCamera(ProxyObject* p);
+
 
     protected:
 

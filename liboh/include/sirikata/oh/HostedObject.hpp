@@ -55,7 +55,6 @@
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
 namespace Sirikata {
-class ObjectHostContext;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
@@ -79,24 +78,26 @@ protected:
 
   public:
      struct EntityState
-	   {
-		  public:
+     {
+       public:
 
-		    String objType;
-			  String subType;
-			  String name;
-			  Vector3d pos;
-			  Quaternion orient;
-		    Vector3f vel;
-        Vector3f rot;
-        float angular_speed;
-        String mesh;
-			  float scale;
+         String objType;
+         String subType;
+         String name;
+         Vector3d pos;
+         Quaternion orient;
+         Vector3f vel;
+         Vector3f rot;
+         float angular_speed;
+         String mesh;
+         float scale;
+         String objectID;
+         String script_type;
+         String script_file;
+         void persistToFile(std::ofstream&);
 
-		    void persistToFile(std::ofstream&);
-
-	    };
-		typedef struct EntityState EntityState;
+     };
+     typedef struct EntityState EntityState;
 
   private:
     //SpaceSet mSpaces;
@@ -181,8 +182,7 @@ public:
      *  underlying ObjectHost.
      */
     void init();
-
-    void addSimListeners(PerPresenceData*& pd, const std::list<String>& oh_sims,    std::vector<TimeSteppedSimulation*>& sims);
+    void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
 
 
@@ -249,6 +249,9 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
+    void runGraphics(const SpaceObjectReference& sporef, const String& simName);
+
+
 
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
@@ -309,9 +312,8 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info,  const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 

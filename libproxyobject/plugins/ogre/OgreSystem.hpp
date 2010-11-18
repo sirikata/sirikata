@@ -47,7 +47,7 @@
 #include "task/EventManager.hpp"
 #include <sirikata/core/task/WorkQueue.hpp>
 
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -77,13 +77,15 @@ class CameraEntity;
 class CubeMap;
 struct IntersectResult;
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation {
+class OgreSystem: public TimeSteppedQueryableSimulation
+
+{
     Context* mContext;
 
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
     MouseHandler *mMouseHandler;
-    void allocMouseHandler();
+    void allocMouseHandler(const String& keybinding_file);
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
@@ -111,13 +113,16 @@ class OgreSystem: public TimeSteppedQueryableSimulation {
     static Ogre::Root *sRoot;
     static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
 
+    String mResourcesDir;
+
     // FIXME need to support multiple parsers, see #124
     ModelsSystem* mModelParser;
 
+    Transfer::TransferPoolPtr mTransferPool;
+
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
-                    const String&options);
+    bool initialize(Provider<ProxyCreationListener*>*proxyManager,ProxyObjectPtr pop,const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Task::LocalTime, Duration);
@@ -160,6 +165,10 @@ public:
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();
 
+    Transfer::TransferPoolPtr transferPool();
+
+    String getResourcesDir() const { return mResourcesDir; }
+
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     std::list<CameraEntity*>::iterator attachCamera(const String&renderTargetName,CameraEntity*);
     ///removes the camera from the list of attached cameras.
@@ -181,13 +190,15 @@ public:
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
+
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
         Provider<ProxyCreationListener*>*proxyManager,
+        ProxyObjectPtr pop,
         const String&options)
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(proxyManager,options))
+        if (os->initialize(proxyManager,pop,options))
             return os;
         delete os;
         return NULL;
@@ -214,12 +225,14 @@ public:
      *            through to the resulting mesh data
      *  \param data the contents of the
      */
-    MeshdataPtr parseMesh(const URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
+    void becomeCamera(ProxyObjectPtr p);
+    
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,
-                  ProxyMeshObjectPtr ignore,
+                  ProxyObjectPtr ignore,
                   double &returnDistance,
                   Vector3f &returnNormal,
                   SpaceObjectReference &returnName);
@@ -254,6 +267,7 @@ public:
 
 private:
     ResourceDownloadPlanner *dlPlanner;
+    void instantiateAllObjects(ProxyObjectPtr pop);
 
 };
 

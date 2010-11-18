@@ -31,10 +31,11 @@
  */
 
 #include "ResourceDownloadPlanner.hpp"
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "../MeshEntity.hpp"
 #include <stdlib.h>
 #include <algorithm>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
 
 using namespace std;
 using namespace Sirikata;

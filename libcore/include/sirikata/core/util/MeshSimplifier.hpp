@@ -41,7 +41,7 @@
 #include <sirikata/space/LocationService.hpp>
 
 
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 
@@ -54,11 +54,11 @@ private:
     float mCost;
     int mGeomIdx, mPrimitiveIdx, mPrimitiveIndicesIdx;
     enum VectorCombination {ONE_TWO, TWO_THREE, ONE_THREE} ;
-    
+
     VectorCombination mCombination;
-    
+
     Vector3f mReplacementVector;
-    
+
     QSlimStruct(float cost, int i, int j, int k, VectorCombination c, Vector3f v) {
       mCost = cost;
       mGeomIdx = i;
@@ -67,15 +67,15 @@ private:
       mCombination = c;
       mReplacementVector = v;
     }
-    
+
     bool operator < (const QSlimStruct& qs) const {
       return mCost < qs.mCost;
     }
-    
+
   } QSlimStruct;
 
-  
-public: 
+
+public:
   void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint32 numVerticesLeft);
 
 };

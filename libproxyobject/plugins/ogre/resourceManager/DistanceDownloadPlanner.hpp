@@ -37,9 +37,8 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "ResourceDownloadPlanner.hpp"
 #include "../CameraEntity.hpp"
 #include <vector>
@@ -63,7 +62,7 @@ public:
     virtual void onDestroyProxy ( ProxyObjectPtr object );
 
     //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
 
     //PollingService interface
     virtual void poll();
@@ -75,7 +74,7 @@ public:
             file = NULL;
         }        virtual ~Resource(){}
 
-        URI *file;
+        Transfer::URI *file;
         Graphics::MeshEntity *mesh;
         ProxyObjectPtr proxy;
         bool ready;

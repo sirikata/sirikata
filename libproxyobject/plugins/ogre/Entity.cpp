@@ -97,9 +97,12 @@ void Entity::init(Ogre::MovableObject *obj) {
     if (obj) {
         mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
+        mSceneNode->setScale( 1.f, 1.f, 1.f );
         float rad = mOgreObject->getBoundingRadius();
         BoundingSphere3f bnds = getProxy().getBounds();
         float rad_factor = bnds.radius() / rad;
+        if (bnds.radius() > 50.f)
+            printf("SCALE %f %f %f\n", bnds.radius(), rad, rad_factor);
         mSceneNode->setScale( rad_factor, rad_factor, rad_factor );
     }
 }
@@ -177,6 +180,12 @@ Vector3d Entity::getOgrePosition() {
 Quaternion Entity::getOgreOrientation() {
     return fromOgre(mSceneNode->getOrientation());
 }
+
+void Entity::becomeCamera(ProxyObjectPtr p)
+{
+
+}
+
 
 }
 }

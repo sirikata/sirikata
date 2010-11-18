@@ -110,6 +110,11 @@ public:
     const SpaceObjectReference&id()const{
         return mProxy->getObjectReference();
     }
+
+    virtual void becomeCamera(ProxyObjectPtr p);
+
+
+    
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

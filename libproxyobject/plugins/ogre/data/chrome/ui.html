@@ -6,6 +6,7 @@
 <script type="text/javascript" src="../jquery_plugins/jquery.dimensions.js"></script>
 <script type="text/javascript" src="../jquery/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script type="text/javascript" src="../jquery_plugins/jquery.menu.js"></script>
+<script type="text/javascript" src="../jquery_plugins/jquery.jstree.js"></script>
 
 <link href="css/jquery.menu.css" rel="stylesheet" type="text/css" />
 <link href="../jquery_themes/redmond/jquery-ui-1.8.6.custom.css" rel="stylesheet" type="text/css" />
@@ -50,6 +51,8 @@
 		padding-left: 5px;
 		border-left: 1px solid #004db8;
 	}
+	label, input { display:block; }
+	.inline { display: inline; }
 </style>
 <script type="text/javascript">
 
@@ -77,6 +80,27 @@ var fpsDisplayEnabled = true;
 function update_fps(num) {
 	var formatted = (Math.round(num*10)/10).toFixed(1);
 	$("#fps-num").html(formatted);
+}
+
+directory_list_callback_store = {};
+function directory_list_request(result) {
+	var path_requested = result.path;
+	initial_ajax_settings = directory_list_callback_store[path_requested];
+	delete directory_list_callback_store[path_requested];
+	
+	var json_result = [];
+	for(var i in result.results) {
+		var to_add = {
+			data: result.results[i].path,
+			attr: {id: path_requested + (path_requested == '/' ? '' : '/') + result.results[i].path},
+		}
+		if(result.results[i].directory) {
+			to_add.state = 'closed';
+		}
+		json_result.push(to_add);
+	}
+	
+	initial_ajax_settings.success.call(initial_ajax_settings.context,json_result,"", null);	
 }
 
 $(document).ready(function() {
@@ -113,12 +137,146 @@ $(document).ready(function() {
 				$('#fps-display').show();
 			}
 		}
+		
+		if(action_clicked == 'action_cdn_upload') {
+			$( "#cdn-upload-dialog" ).dialog( "open" );
+		}
 
 	}};  
 	$('#menuone').menu(options);
 
 	timeClock();
+	
+	$(function() {
+	
+		var eTitle = $("#resource-title");
+		var ePath = $("#resource-file-path");
+		var eDescription = $("#resource-description");
+		var allFields = $([]).add(eTitle).add(ePath).add(eDescription);
+		var tips = $("#cdn-upload-tips");
+
+		function updateTips( t ) {
+			tips
+				.text( t )
+				.addClass( "ui-state-highlight" );
+			setTimeout(function() {
+				tips.removeClass( "ui-state-highlight", 1500 );
+			}, 500 );
+		}
+	
+		function checkLength( o, n, min, max ) {
+			if ( o.val().length > max || o.val().length < min ) {
+				o.addClass( "ui-state-error" );
+				updateTips( "Length of " + n + " must be between " +
+					min + " and " + max + "." );
+				return false;
+			} else {
+				return true;
+			}
+		}
+		
+		function checkRegexp( o, regexp, n ) {
+			if ( !( regexp.test( o.val() ) ) ) {
+				o.addClass( "ui-state-error" );
+				updateTips( n );
+				return false;
+			} else {
+				return true;
+			}
+		}
+		
+		$( "#cdn-upload-dialog" ).dialog({
+			autoOpen: false,
+			height: 'auto',
+			width: 450,
+			modal: true,
+			buttons: {
+				"Upload": function() {
+					var bValid = true;
+					allFields.removeClass( "ui-state-error" );
+	
+					bValid = bValid && checkLength( eTitle, "Title", 1, 100 );
+					bValid = bValid && checkLength( eDescription, "Description", 1, 1000 );
+					bValid = bValid && checkLength( ePath, "File Path", 1, 200 );
+	
+					//bValid = bValid && checkRegexp( name, /^[a-z]([0-9a-z_])+$/i, "Username may consist of a-z, 0-9, underscores, begin with a letter." );
+	
+					if ( bValid ) {
+						$( this ).dialog( "close" );
+					}
+				},
+				Cancel: function() {
+					$( this ).dialog( "close" );
+				}
+			},
+			close: function() {
+				allFields.val("").removeClass( "ui-state-error" );
+			}
+		});
+	
+	});
+
+	$( "#open-file-dialog" ).dialog({
+		autoOpen: false,
+		height: 300,
+		width: 350,
+		modal: true,
+		buttons: {
+			"Open": function() {
+				var selected_id = $("#jstree").jstree("get_selected").attr("id");
+				if(selected_id) {
+					$(this).dialog("close");
+				}
+			},
+			Cancel: function() {
+				$( this ).dialog( "close" );
+			}
+		},
+		close: function() {
+
+		},
+		open: function(event, ui) {
+			$("#jstree")
+			.bind("loaded.jstree", function (event, data) {
+				
+			})
+			.jstree({
+				core : {  },
+				"json_data" : {
+					"data" : [{data:'/', attr:{id:'/'}, state:'closed'}],
+					"ajax" : {
+						"url" : "/",
+						"data" : function(n) {
+							return n.attr("id");
+						}
+					},
+					"ui" : {
+						"select_limit" : 1
+					}
+				},
+				plugins : [ "json_data", "ui", "themeroller", "sort" ]
+			});
+		}
+	});
+	
+	$("#resource-file-browse").click(function() {
+		$("#open-file-dialog").bind("dialogclose",function(event, ui) {
+			var selected_id = $("#jstree").jstree("get_selected").attr("id");
+			if(selected_id) {
+				$("#resource-file-path").val(selected_id);
+			}
+			$(this).unbind(event);
+		});
+		$("#open-file-dialog").dialog("open");
+	});
+	
+	jQuery.ajax = function(ajax_settings) {
+		directory_list_callback_store[ajax_settings.data] = ajax_settings;
+		chrome.send("ui-action", ['action_directory_list_request', ajax_settings.data]);
+	};
+	
 });
+
 
 function alert_permanent(title, text) {
 	var $dialog = $('<div></div>')
@@ -147,9 +305,9 @@ function alert_permanent(title, text) {
 			<li class='action_exit'>Exit</li>
 		</ul>
 	</li>
-	<li class="menumain">CDN
+	<li class="menumain">Actions
 		<ul>
-			<li class='action_cdn_upload'>Upload Tool</li>
+			<li class='action_cdn_upload'>CDN Upload Tool</li>
 		</ul>
 	</li>
 	<li class="menumain">Options
@@ -165,6 +323,30 @@ function alert_permanent(title, text) {
 <div class='flush-right' id='time-clock'>&nbsp;</div>
 <div class='flush-right' id='fps-display'>Average FPS: <span id='fps-num'>0</span></div>
 
+</div>
+
+<div id="open-file-dialog" title="Open File">
+	<p id="open-file-tips" class="validateTips">Select a file or directory.</p>
+
+	<div id="jstree"></div>
+</div>
+
+<div id="cdn-upload-dialog" title="CDN Upload Tool">
+	<p id="cdn-upload-tips" class="validateTips">All form fields are required.</p>
+
+	<form class="ui-widget">
+	<fieldset class="ui-corner-all ui-widget ui-widget-content">
+		<label for="resource-title">Title</label>
+		<input type="text" name="resource-title" id="resource-title" value="" class="text ui-widget-content ui-corner-all" />
+		
+		<label for="resource-file-path">File Path</label>
+		<input type="text" name="resource-file-path" id="resource-file-path" class="text ui-widget-content ui-corner-all inline" />
+		<input type="button" name="resource-file-browse" id="resource-file-browse" class="ui-widget-content ui-corner-all inline" value="Browse..." />
+		
+		<label for="resource-description">Description:</label>
+		<textarea id="resource-description" name="resource-description" rows="2" cols="20" class="text ui-widget-content ui-corner-all"></textarea>
+	</fieldset>
+	</form>
 </div>
 
 </div>
