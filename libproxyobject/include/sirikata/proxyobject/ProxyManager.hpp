@@ -29,16 +29,19 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifndef _SIRIKATA_PROXY_MANAGER_HPP_
+#define _SIRIKATA_PROXY_MANAGER_HPP_
+
 #include <sirikata/core/util/ListenerProvider.hpp>
 
-#include "ProxyObject.hpp"
+#include <sirikata/proxyobject/Defs.hpp>
 #include "ProxyCreationListener.hpp"
 
 namespace Sirikata {
 
 /** An interface for a class that keeps track of proxy object references. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyManager :
-//        public MessageService,
         public Provider<ProxyCreationListener*> {
 public:
     ProxyManager() {}
@@ -61,7 +64,6 @@ public:
     virtual void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const = 0;
 };
 
-typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;
-typedef std::tr1::weak_ptr<ProxyManager> ProxyManagerWPtr;
-
 }
+
+#endif //_SIRIKATA_PROXY_MANAGER_HPP_

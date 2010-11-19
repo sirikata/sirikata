@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadPlanner.hpp
+/*  Sirikata
+ *  Defs.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,48 +30,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
+#ifndef _SIRIKATA_PROXYOBJECT_DEFS_HPP_
+#define _SIRIKATA_PROXYOBJECT_DEFS_HPP_
 
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../CameraEntity.hpp"
-#include <vector>
-#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 
 namespace Sirikata {
-namespace Graphics{
-class MeshEntity;
-}
 
-class ResourceDownloadPlanner : public MeshListener, public PollingService
-{
-public:
-    ResourceDownloadPlanner(Context* c);
-    ~ResourceDownloadPlanner();
+// Because we use shared pointers for many of these classes and their headers
+// frequently need to refer to shared pointers of the other classes, we
+// centralize some very important type declarations to avoid needless repetitive
+// forward declarations.
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::CameraEntity *entity);
+class VWObject;
+typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
+typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
 
-    //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-    virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
-    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
+class ProxyObject;
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
+typedef std::tr1::weak_ptr<ProxyObject> ProxyObjectWPtr;
 
-    //PollingService interface
-    virtual void poll();
-    virtual void stop();
+class ProxyManager;
+typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;
+typedef std::tr1::weak_ptr<ProxyManager> ProxyManagerWPtr;
 
-protected:
-    Graphics::CameraEntity *camera;
+} // namespace Sirikata
 
-};
-}
-
-#endif
+#endif //_SIRIKATA_PROXYOBJECT_DEFS_HPP_

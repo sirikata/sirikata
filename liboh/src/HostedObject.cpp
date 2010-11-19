@@ -93,7 +93,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 
 
 
-void HostedObject::runGraphics(const SpaceObjectReference& sporef, const String& simName)
+void HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
 
@@ -344,7 +344,8 @@ void HostedObject::connect(
         queryAngle,
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, scriptFile, scriptType, ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1)
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1),
+        std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
     );
 
 }
@@ -357,10 +358,8 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
     SILOG(cppoh,error,simName);
 
-    ObjectHostProxyManagerPtr proxyManPtr = pd.getProxyManager();
-
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(),pd.mProxyObject,  "" );
+    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), "");
     if (!sim)
     {
         HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -430,7 +429,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
-    initializePerSpaceData(psd, self_proxy);
+    initializePerPresenceData(psd, self_proxy);
 
 
     //bind an odp port to listen for the begin scripting signal.  if have
@@ -445,6 +444,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
         this->initializeScript(scriptType,script_args,scriptFile);
     }
 
+    notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref);
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -465,7 +465,7 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
     }
 }
 
-void HostedObject::initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
+void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
 }
 
@@ -480,6 +480,10 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     }
 }
 
+void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+    notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
+    disconnectFromSpace(spaceobj.space(), spaceobj.object());
+}
 
 
 
@@ -748,7 +752,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 
     //UPdate teh addressable for this Entity
-    
+
     updateAddressable();
 
     return true;
@@ -811,6 +815,18 @@ ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
     return  getProxy(space, oref);
 }
 
+
+ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor) {
+    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(), sor.object());
+    return proxyManPtr;
+}
+
+ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor) {
+    ProxyManagerPtr proxy_man = presence(sor);
+    if (!proxy_man) return ProxyObjectPtr();
+    ProxyObjectPtr proxy_obj = proxy_man->getProxyObject(sor);
+    return proxy_obj;
+}
 
 
 // ODP::Service Interface

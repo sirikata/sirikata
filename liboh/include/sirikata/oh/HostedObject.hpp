@@ -145,7 +145,7 @@ public:
 private:
 //------- Private member functions:
     // When a connection to a space is setup, initialize it to handle default behaviors
-    void initializePerSpaceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
+    void initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
 public:
 
     /** Get a set of spaces the object is currently connected to. */
@@ -249,7 +249,7 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
-    void runGraphics(const SpaceObjectReference& sporef, const String& simName);
+    void runSimulation(const SpaceObjectReference& sporef, const String& simName);
 
 
 
@@ -319,6 +319,7 @@ public:
 
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
+    void handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc);
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
@@ -345,6 +346,9 @@ public:
   public:
     // Identification
     // virtual SpaceObjectReference id(const SpaceID& space) const;
+
+    virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
+    virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
 
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);

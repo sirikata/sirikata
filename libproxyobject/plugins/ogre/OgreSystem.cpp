@@ -359,10 +359,8 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     return mAttachedCameras.end();
 }
 
-void OgreSystem::instantiateAllObjects(ProxyObjectPtr pop)
+void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
 {
-    ProxyManager* pman = pop->getProxyManager();
-
     std::vector<SpaceObjectReference> allORefs;
     pman->getAllObjectReferences(allORefs);
 
@@ -376,13 +374,18 @@ void OgreSystem::instantiateAllObjects(ProxyObjectPtr pop)
 
 
 
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, ProxyObjectPtr pop,const String&options) {
+bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
+    mViewer = viewer;
+
+    ProxyManagerPtr proxyManager = mViewer->presence(presenceid);
+    mViewer->addListener((SessionEventListener*)this);
+
     ++sNumOgreSystems;
     proxyManager->addListener(this);
-    
+
     //initialize the Resource Download Planner
-    dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
-    
+    dlPlanner = new DistanceDownloadPlanner(mContext);
+
     //add ogre system options here
     OptionValue*pluginFile;
     OptionValue*configFile;
@@ -556,7 +559,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, Proxy
     new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
     //finish instantiation here
-    instantiateAllObjects(pop);
+    instantiateAllObjects(proxyManager);
 
     return true;
 }
@@ -726,7 +729,7 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;
-    
+
     if (p->isCamera())
     {
         CameraEntity* cam = new CameraEntity(this,p);
@@ -738,7 +741,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     }
 }
 
-
 void OgreSystem::becomeCamera(ProxyObjectPtr p)
 {
     //FIXME: May be leaking memory if already were a camera.
@@ -749,6 +751,8 @@ void OgreSystem::becomeCamera(ProxyObjectPtr p)
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
+    if (! p->isCamera())
+        dlPlanner->removeObject(p);
 }
 
 MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
@@ -994,6 +998,12 @@ void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, co
     }
     else
         SILOG(ogre,warn,"Disconnected from space server.");
+}
+
+void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    mViewer->removeListener((SessionEventListener*)this);
+    SILOG(ogre,info,"Got disconnected from space server.");
+    mMouseHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
 }

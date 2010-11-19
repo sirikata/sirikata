@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadPlanner.hpp
+/*  Sirikata Object Host
+ *  SessionEventListener.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,48 +30,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
+#ifndef _SIRIKATA_SESSION_EVENT_LISTENER_HPP_
+#define _SIRIKATA_SESSION_EVENT_LISTENER_HPP_
 
-#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../CameraEntity.hpp"
-#include <vector>
-#include <sirikata/core/transfer/URI.hpp>
 
 namespace Sirikata {
-namespace Graphics{
-class MeshEntity;
-}
 
-class ResourceDownloadPlanner : public MeshListener, public PollingService
-{
+class SessionEventListener;
+typedef Provider<SessionEventListener*> SessionEventProvider;
+typedef std::tr1::shared_ptr<SessionEventProvider> SessionEventProviderPtr;
+
+/** SessionEventListener listens for session events -- connections and
+ *  disconnections -- for objects.
+ */
+class SIRIKATA_PROXYOBJECT_EXPORT SessionEventListener {
 public:
-    ResourceDownloadPlanner(Context* c);
-    ~ResourceDownloadPlanner();
+    virtual ~SessionEventListener() {}
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::CameraEntity *entity);
+    /** Invoked upon connection.
+     *  \param from the SessionEventProvider the event originates from
+     *  \param name the name of the object in the space
+     */
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {};
 
-    //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-    virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
-    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
-
-    //PollingService interface
-    virtual void poll();
-    virtual void stop();
-
-protected:
-    Graphics::CameraEntity *camera;
-
+    /** Invoked upon disconnection.
+     *  \param from the SessionEventProvider the event originates from
+     *  \param name the name of the object in the space
+     */
+    virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {};
 };
-}
 
-#endif
+} // namespace Sirikata
+
+#endif //_SIRIKATA_SESSION_EVENT_LISTENER_HPP_

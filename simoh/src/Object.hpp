@@ -48,6 +48,8 @@
 
 #include <boost/thread/shared_mutex.hpp>
 
+#include <sirikata/oh/DisconnectCodes.hpp>
+
 namespace Sirikata {
 
 /** A property shared between multiple threads. Guarantees thread safety
@@ -159,6 +161,8 @@ private:
     // Handle a migration to a new space server
     void handleSpaceMigration(const SpaceID& space, const ObjectReference&, ServerID sid);
     void handleSpaceStreamCreated();
+    // Handle a disconnection from the space
+    void handleSpaceDisconnection(const SpaceObjectReference& spaceobj, Disconnect::Code);
 
     void sendNoReturn(uint16 src_port, UUID dest, uint16 dest_port, std::string payload);
 

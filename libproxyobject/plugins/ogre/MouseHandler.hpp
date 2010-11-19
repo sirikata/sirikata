@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadPlanner.hpp
+/*  Sirikata
+ *  MouseHandler.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,48 +30,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
-
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../CameraEntity.hpp"
-#include <vector>
-#include <sirikata/core/transfer/URI.hpp>
+#ifndef _SIRIKATA_OGRE_MOUSE_HANDLER_HPP_
+#define _SIRIKATA_OGRE_MOUSE_HANDLER_HPP_
 
 namespace Sirikata {
-namespace Graphics{
-class MeshEntity;
-}
+namespace Graphics {
 
-class ResourceDownloadPlanner : public MeshListener, public PollingService
-{
+class MouseHandler {
 public:
-    ResourceDownloadPlanner(Context* c);
-    ~ResourceDownloadPlanner();
+    virtual ~MouseHandler() {}
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::CameraEntity *entity);
+    virtual void alert(const String& title, const String& text) = 0;
 
-    //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-    virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
-    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
+    virtual void setParentGroupAndClear(const SpaceObjectReference &id) = 0;
+    virtual const SpaceObjectReference &getParentGroup() const = 0;
+    virtual void addToSelection(const ProxyObjectPtr &obj) = 0;
 
-    //PollingService interface
-    virtual void poll();
-    virtual void stop();
-
-protected:
-    Graphics::CameraEntity *camera;
-
+    virtual void tick(const Task::LocalTime& t) = 0;
 };
-}
 
-#endif
+} // namespace Graphics
+} // namespace Sirikata
+
+#endif //_SIRIKATA_OGRE_MOUSE_HANDLER_HPP_

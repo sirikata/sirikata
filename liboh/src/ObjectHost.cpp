@@ -89,18 +89,19 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2)
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
     );
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
-    NOT_IMPLEMENTED(oh);
+    // ignored
 }
 
 void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
-    NOT_IMPLEMENTED(oh);
+    // ignored
 }
 
 void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
@@ -113,6 +114,10 @@ void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& spac
         OH_LOG(warn, "Got message for " << internalID.toString() << " but no such object exists.");
         delete msg;
     }
+}
+
+void ObjectHost::handleObjectDisconnected(const UUID& internalID, Disconnect::Code) {
+    // ignored
 }
 
 //This function just returns the first space id in the unordered map
@@ -138,7 +143,9 @@ void ObjectHost::connect(
     const String& mesh,
     const SolidAngle& init_sa,
     ConnectedCallback connected_cb,
-    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
+    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+    DisconnectedCallback disconnected_cb
+)
 {
     bool with_query = init_sa != SolidAngle::Max;
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
@@ -146,7 +153,8 @@ void ObjectHost::connect(
         obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, connected_cb),
         migrated_cb,
-        stream_created_cb
+        stream_created_cb,
+        disconnected_cb
     );
 }
 
@@ -229,8 +237,6 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
     NOT_IMPLEMENTED(oh);
     return NULL;
 }
-
-
 
 
 void ObjectHost::persistEntityState( const String& filename)

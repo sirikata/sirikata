@@ -9,13 +9,13 @@
 
 
 
-namespace Sirikata 
+namespace Sirikata
 {
-  namespace JS 
+  namespace JS
   {
     namespace JSPresence
     {
-	  
+
     v8::Handle<v8::Value>  setMesh(const v8::Arguments& args);
     Handle<v8::Value>      getMesh(const v8::Arguments& args);
 
@@ -32,23 +32,23 @@ namespace Sirikata
 
     v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args);
     Handle<v8::Value>      getOrientationVel(const v8::Arguments& args);
-    
-        
-    v8::Handle<v8::Value> toString(const v8::Arguments& args);   
+
+
+    v8::Handle<v8::Value> toString(const v8::Arguments& args);
     v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);
     void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 
     template<typename WithHolderType>
     JSPresenceStruct* GetTargetPresenceStruct(const WithHolderType&);
-    
+
     JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args);
     //Transfer::URI* getURI(const v8::Arguments& args);
     bool getURI(const v8::Arguments& args,std::string& returner);
 
-    v8::Handle<v8::Value>runGraphics(const v8::Arguments& args);
+    v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);
 
 
     }
   }
-}  
-#endif   
+}
+#endif

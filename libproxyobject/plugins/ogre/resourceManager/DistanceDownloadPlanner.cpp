@@ -45,17 +45,12 @@ using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
-DistanceDownloadPlanner::DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
- : ResourceDownloadPlanner(proxyManager, c)
+DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c)
+ : ResourceDownloadPlanner(c)
 {
 }
 
 DistanceDownloadPlanner::~DistanceDownloadPlanner()
-{
-
-}
-
-void DistanceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
 {
 
 }
@@ -69,20 +64,17 @@ vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::fin
     return resources.end();
 }
 
-void DistanceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
-{
-    p->MeshProvider::removeListener(this);
-    vector<Resource>::iterator it = findResource(p);
-    resources.erase(it);
-
-}
-
 void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
     p->MeshProvider::addListener(this);
     Resource r(mesh, p);
     resources.push_back(r);
+}
 
+void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
+    p->MeshProvider::removeListener(this);
+    vector<Resource>::iterator it = findResource(p);
+    if (it != resources.end()) resources.erase(it);
 }
 
 void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)

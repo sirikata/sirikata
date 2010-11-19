@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadPlanner.hpp
+/*  Sirikata liboh -- Object Host
+ *  HostedObject.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,48 +30,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
-
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../CameraEntity.hpp"
-#include <vector>
-#include <sirikata/core/transfer/URI.hpp>
+#ifndef _SIRIKATA_OH_DISCONNECT_CODES_HPP_
+#define _SIRIKATA_OH_DISCONNECT_CODES_HPP_
 
 namespace Sirikata {
-namespace Graphics{
-class MeshEntity;
-}
+namespace Disconnect {
 
-class ResourceDownloadPlanner : public MeshListener, public PollingService
-{
-public:
-    ResourceDownloadPlanner(Context* c);
-    ~ResourceDownloadPlanner();
-
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::CameraEntity *entity);
-
-    //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-    virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
-    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
-
-    //PollingService interface
-    virtual void poll();
-    virtual void stop();
-
-protected:
-    Graphics::CameraEntity *camera;
-
+enum Code {
+    Requested,
+    Forced
 };
-}
 
-#endif
+} // namespace Disconnect
+} // namespace Sirikata
+
+#endif //_SIRIKATA_OH_DISCONNECT_CODES_HPP_

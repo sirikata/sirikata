@@ -44,8 +44,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
       public Factory4<TimeSteppedQueryableSimulation*,
                       Context*,
-                      Provider<ProxyCreationListener*>*,//the ProxyManager
-                      ProxyObjectPtr,
+                      VWObjectPtr, // Object simulation is working within
+                      const SpaceObjectReference&, // Presence the simulation is working within
                       const String&> //options string for the graphics system
 {
 public:

@@ -39,6 +39,7 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 #include <fstream>
 #include <vector>
 #include <string>
@@ -459,7 +460,7 @@ public:
 };
 
 class BulletSystem: public TimeSteppedQueryableSimulation {
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
+    bool initialize(ProxyCreationProviderPtr proxyManager,
                     const String&options);
     Context* mContext;
     Vector3f mGravity;
@@ -486,13 +487,18 @@ public:
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(BulletObj*);
 
-    static TimeSteppedQueryableSimulation* create(Context* ctx,
-        Provider<ProxyCreationListener*>*proxyManager,
-        ProxyObjectPtr pop,
-            const String&options) {
+    static TimeSteppedQueryableSimulation* create(
+        Context* ctx,
+        VWObjectPtr obj,
+        const SpaceObjectReference& presenceid,
+        const String& options
+    ) {
         BulletSystem*os= new BulletSystem(ctx);
-        if (os->initialize(proxyManager,options))
-            return os;
+        ProxyManagerPtr proxyMgr = obj->presence(presenceid);
+        if (proxyMgr) {
+            if (os->initialize(proxyMgr,options))
+                return os;
+        }
         delete os;
         return NULL;
     }

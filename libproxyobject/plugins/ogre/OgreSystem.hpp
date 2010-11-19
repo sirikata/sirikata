@@ -34,7 +34,6 @@
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "OgreHeaders.hpp"
@@ -48,6 +47,7 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include "MouseHandler.hpp"
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -77,13 +77,14 @@ class CameraEntity;
 class CubeMap;
 struct IntersectResult;
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation
+class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener
 
 {
     Context* mContext;
+    VWObjectPtr mViewer;
 
-    class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
-    friend class MouseHandler;
+    class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
+    friend class OgreSystemMouseHandler;
     MouseHandler *mMouseHandler;
     void allocMouseHandler(const String& keybinding_file);
     void destroyMouseHandler();
@@ -122,7 +123,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation
 
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,ProxyObjectPtr pop,const String&options);
+    bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Task::LocalTime, Duration);
@@ -193,12 +194,13 @@ public:
 
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
-        Provider<ProxyCreationListener*>*proxyManager,
-        ProxyObjectPtr pop,
-        const String&options)
+        VWObjectPtr obj,
+        const SpaceObjectReference& presenceid,
+        const String& options
+    )
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(proxyManager,pop,options))
+        if (os->initialize(obj, presenceid, options))
             return os;
         delete os;
         return NULL;
@@ -228,7 +230,7 @@ public:
     MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
     void becomeCamera(ProxyObjectPtr p);
-    
+
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,
@@ -263,11 +265,15 @@ public:
     virtual void onConnected(const Network::Address& addr);
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);
 
+    // SessionEventListener Interface
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {};
+    virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+
     ~OgreSystem();
 
 private:
     ResourceDownloadPlanner *dlPlanner;
-    void instantiateAllObjects(ProxyObjectPtr pop);
+    void instantiateAllObjects(ProxyManagerPtr pop);
 
 };
 

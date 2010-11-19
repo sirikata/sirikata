@@ -136,13 +136,19 @@ void TimeProfiler::remove(Stage* stage) {
     // stages looking for the one we're removing.
     for(GroupMap::iterator git = mGroups.begin(); git != mGroups.end(); git++) {
         StageList& stages = git->second;
-        for(StageList::iterator it = stages.begin(); it != stages.end(); it++)
-            if (*it == stage)
+        for(StageList::iterator it = stages.begin(); it != stages.end(); it++) {
+            if (*it == stage) {
                 stages.erase(it);
+                break;
+            }
+        }
     }
-    for(StageList::iterator it = mFreeStages.begin(); it != mFreeStages.end(); it++)
-        if (*it == stage)
+    for(StageList::iterator it = mFreeStages.begin(); it != mFreeStages.end(); it++) {
+        if (*it == stage) {
             mFreeStages.erase(it);
+            break;
+        }
+    }
 }
 
 void TimeProfiler::report() const {

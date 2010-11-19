@@ -47,7 +47,7 @@ public:
 
     virtual void objectHostConnectedObject(ObjectHost* oh, Object* obj, const ServerID& server) {}
     virtual void objectHostMigratedObject(ObjectHost* oh, const UUID& objid, const ServerID& from_server, const ServerID& to_server) {}
-    virtual void objectHostDisconnectedObject(ObjectHost* oh, const UUID& objid, const ServerID& server) {}
+    virtual void objectHostDisconnectedObject(ObjectHost* oh, Object* obj) {}
 };
 
 } // namespace Sirikata
