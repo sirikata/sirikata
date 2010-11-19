@@ -33,6 +33,7 @@ namespace Sirikata
     v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args);
     Handle<v8::Value>      getOrientationVel(const v8::Arguments& args);
 
+    v8::Handle<v8::Value> setQueryAngle(const v8::Arguments& args);
 
     v8::Handle<v8::Value> toString(const v8::Arguments& args);
     v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);

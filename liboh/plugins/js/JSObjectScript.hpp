@@ -116,6 +116,7 @@ public:
     v8::Handle<v8::Value> getOrientationVelFunction(const SpaceObjectReference* sporef);
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
 
+    void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
 
     void runSimulation(const SpaceObjectReference& sporef, const String& simname);
 

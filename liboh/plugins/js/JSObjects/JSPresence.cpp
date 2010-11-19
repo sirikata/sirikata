@@ -224,7 +224,25 @@ namespace Sirikata
             return v8::Undefined();
         }
 
+        v8::Handle<v8::Value> setQueryAngle(const v8::Arguments& args)
+        {
+            if (args.Length() != 1)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setQueryAngle.")) );
 
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryAngle function. Invalid presence struct.")) );
+
+            Handle<Object> qa_arg = ObjectCast(args[0]);
+            if (!NumericValidate(qa_arg))
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryAngle function. Wrong argument: require a number for query angle.")) );
+
+            SolidAngle new_qa(NumericExtract(qa_arg));
+
+            mStruct->jsObjScript->setQueryAngleFunction(mStruct->sporef, new_qa);
+            return v8::Undefined();
+
+        }
 
         //Takes in args, tries to get out the first argument, which should be a
         //string that we convert to a TransferURI object.  If anything fails,
