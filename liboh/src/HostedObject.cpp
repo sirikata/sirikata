@@ -1001,6 +1001,28 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
     sendLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh);
 }
 
+void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {
+    Protocol::Prox::QueryRequest request;
+    request.set_query_angle(new_angle.asFloat());
+    std::string payload = serializePBJMessage(request);
+
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    if (spaceStream != SSTStreamPtr()) {
+        SSTConnectionPtr conn = spaceStream->connection().lock();
+        assert(conn);
+
+        conn->datagram(
+            (void*)payload.data(), payload.size(),
+            OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY,
+            NULL
+        );
+    }
+}
+
+void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReference& oref) {
+    requestQueryUpdate(space, oref, SolidAngle::Max);
+}
+
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh) {
     // Generate and send an update to Loc
     Protocol::Loc::Container container;

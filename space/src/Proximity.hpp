@@ -64,7 +64,8 @@ class Proximity :
         MigrationDataClient,
         public PollingService,
         PintoServerQuerierListener,
-        Prox::AggregateListener<ObjectProxSimulationTraits>
+        Prox::AggregateListener<ObjectProxSimulationTraits>,
+        public ObjectSessionListener
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
@@ -82,6 +83,9 @@ public:
 
     // Shutdown the proximity thread.
     void shutdown();
+
+    // ObjectSessionListener Interface
+    virtual void newSession(ObjectSession* session);
 
     // Objects
     void addQuery(UUID obj, SolidAngle sa);
@@ -154,6 +158,7 @@ private:
     };
 
 
+    void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
 
     void updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds);
 
