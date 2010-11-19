@@ -82,6 +82,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 {
     Context* mContext;
     VWObjectPtr mViewer;
+    SpaceObjectReference mPresenceID;
 
     class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class OgreSystemMouseHandler;
