@@ -359,10 +359,8 @@ std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEnti
     return mAttachedCameras.end();
 }
 
-void OgreSystem::instantiateAllObjects(ProxyObjectPtr pop)
+void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
 {
-    ProxyManager* pman = pop->getProxyManager();
-
     std::vector<SpaceObjectReference> allORefs;
     pman->getAllObjectReferences(allORefs);
 
@@ -376,7 +374,9 @@ void OgreSystem::instantiateAllObjects(ProxyObjectPtr pop)
 
 
 
-bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, ProxyObjectPtr pop,const String&options) {
+bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
+    ProxyManagerPtr proxyManager = viewer->presence(presenceid);
+
     ++sNumOgreSystems;
     proxyManager->addListener(this);
 
@@ -556,7 +556,7 @@ bool OgreSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, Proxy
     new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
     //finish instantiation here
-    instantiateAllObjects(pop);
+    instantiateAllObjects(proxyManager);
 
     return true;
 }

@@ -1,7 +1,7 @@
-/*  Sirikata Object Host -- Proxy Creation and Destruction manager
- *  SimulationFactory.hpp
+/*  Sirikata
+ *  Defs.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,29 +30,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_SIMULATION_FACTORY_
-#define _SIRIKATA_SIMULATION_FACTORY_
+#ifndef _SIRIKATA_PROXYOBJECT_DEFS_HPP_
+#define _SIRIKATA_PROXYOBJECT_DEFS_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 
-namespace Sirikata{
+namespace Sirikata {
 
-///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
-class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
-    : public AutoSingleton<SimulationFactory>,
-      public Factory4<TimeSteppedQueryableSimulation*,
-                      Context*,
-                      VWObjectPtr, // Object simulation is working within
-                      const SpaceObjectReference&, // Presence the simulation is working within
-                      const String&> //options string for the graphics system
-{
-public:
-    static SimulationFactory&getSingleton();
-    static void destroy();
-};
+// Because we use shared pointers for many of these classes and their headers
+// frequently need to refer to shared pointers of the other classes, we
+// centralize some very important type declarations to avoid needless repetitive
+// forward declarations.
 
+class VWObject;
+typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
+typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
 
-}
-#endif
+class ProxyObject;
+typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
+typedef std::tr1::weak_ptr<ProxyObject> ProxyObjectWPtr;
+
+class ProxyManager;
+typedef std::tr1::shared_ptr<ProxyManager> ProxyManagerPtr;
+typedef std::tr1::weak_ptr<ProxyManager> ProxyManagerWPtr;
+
+} // namespace Sirikata
+
+#endif //_SIRIKATA_PROXYOBJECT_DEFS_HPP_

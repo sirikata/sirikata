@@ -39,6 +39,7 @@
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/proxyobject/SessionEventListener.hpp>
+#include <sirikata/proxyobject/Defs.hpp>
 
 namespace Sirikata {
 
@@ -57,9 +58,13 @@ public:
     VWObject();
     virtual ~VWObject();
 
-
     // Identification
     //virtual SpaceObjectReference id(const SpaceID& space) const = 0;
+
+    /** Get the ProxyManager for the given presence. */
+    virtual ProxyManagerPtr presence(const SpaceObjectReference& sor) { return ProxyManagerPtr(); };
+    /** Get the proxy version of this object. */
+    virtual ProxyObjectPtr self(const SpaceObjectReference& sor) { return ProxyObjectPtr(); };
 
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) = 0;
@@ -76,20 +81,12 @@ public:
 
 
     // Movement Interface
-    // virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc) = 0;
-    // virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& loc) = 0;
-    // virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds) = 0;
-    // virtual void requestMeshUpdate(const SpaceID& space, const String& mesh) = 0;
-
     virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc) = 0;
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& loc) = 0;
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) = 0;
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
 
 }; // class VWObject
-
-typedef std::tr1::shared_ptr<VWObject> VWObjectPtr;
-typedef std::tr1::weak_ptr<VWObject> VWObjectWPtr;
 
 } // namespace Sirikata
 

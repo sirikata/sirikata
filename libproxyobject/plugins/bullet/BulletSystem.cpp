@@ -735,7 +735,7 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
     }
 }
 
-bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+bool BulletSystem::initialize(ProxyCreationProviderPtr proxyManager, const String&options) {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
     InitializeClassOptions("bulletphysics",this, NULL);
@@ -769,7 +769,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     groundBody = new btRigidBody(rbInfo);
     groundBody->setRestitution(0.5);                 /// bouncy for fun & profit
     dynamicsWorld->addRigidBody(groundBody);
-    proxyManager->addListener(this);
+    proxyManager->addListener((ProxyCreationListener*)this);
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
     /// we don't delete these, the ProxyManager does (I think -- someone does anyway)
     return true;

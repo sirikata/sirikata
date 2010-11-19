@@ -51,7 +51,7 @@ class MeshEntity;
 class DistanceDownloadPlanner : public ResourceDownloadPlanner
 {
 public:
-    DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    DistanceDownloadPlanner(ProxyCreationProviderPtr proxyManager, Context *c);
     ~DistanceDownloadPlanner();
 
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);

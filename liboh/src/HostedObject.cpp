@@ -358,10 +358,8 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
     SILOG(cppoh,error,simName);
 
-    ObjectHostProxyManagerPtr proxyManPtr = pd.getProxyManager();
-
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, proxyManPtr.get(),pd.mProxyObject,  "" );
+    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), "");
     if (!sim)
     {
         HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));
@@ -815,6 +813,18 @@ ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
     return  getProxy(space, oref);
 }
 
+
+ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor) {
+    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(), sor.object());
+    return proxyManPtr;
+}
+
+ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor) {
+    ProxyManagerPtr proxy_man = presence(sor);
+    if (!proxy_man) return ProxyObjectPtr();
+    ProxyObjectPtr proxy_obj = proxy_man->getProxyObject(sor);
+    return proxy_obj;
+}
 
 
 // ODP::Service Interface

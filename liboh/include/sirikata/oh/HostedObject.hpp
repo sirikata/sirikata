@@ -347,6 +347,9 @@ public:
     // Identification
     // virtual SpaceObjectReference id(const SpaceID& space) const;
 
+    virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
+    virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
+
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);

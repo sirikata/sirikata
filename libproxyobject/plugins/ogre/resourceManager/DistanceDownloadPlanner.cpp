@@ -45,7 +45,7 @@ using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
-DistanceDownloadPlanner::DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
+DistanceDownloadPlanner::DistanceDownloadPlanner(ProxyCreationProviderPtr proxyManager, Context *c)
  : ResourceDownloadPlanner(proxyManager, c)
 {
 }

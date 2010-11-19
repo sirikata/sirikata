@@ -33,11 +33,17 @@
 #define _SIRIKATA_PROXY_CREATION_LISTENER_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/core/util/ListenerProvider.hpp>
 
 namespace Sirikata {
-class ProxyObject;
 
+class ProxyObject;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
+
+class ProxyCreationListener;
+typedef Provider<ProxyCreationListener*> ProxyCreationProvider;
+typedef std::tr1::shared_ptr<ProxyCreationProvider> ProxyCreationProviderPtr;
+
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyCreationListener {
 public:
     virtual ~ProxyCreationListener(){}

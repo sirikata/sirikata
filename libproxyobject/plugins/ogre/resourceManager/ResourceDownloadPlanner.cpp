@@ -46,7 +46,7 @@ using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
+ResourceDownloadPlanner::ResourceDownloadPlanner(ProxyCreationProviderPtr proxyManager, Context *c)
  : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
 {
     c->add(this);

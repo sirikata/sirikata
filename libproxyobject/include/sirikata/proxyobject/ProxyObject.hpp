@@ -34,6 +34,9 @@
 #define _SIRIKATA_PROXY_OBJECT_HPP_
 
 #include <sirikata/proxyobject/Platform.hpp>
+
+#include <sirikata/proxyobject/Defs.hpp>
+
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "ProxyObjectListener.hpp"
@@ -58,16 +61,12 @@ namespace Sirikata {
 
 
 //forward declares
-class ProxyObject;
-class ProxyManager;
 class MeshListener;
 class PhysicalParameters;
 class ProxyObjectListener;
 
 
 //typedefs
-typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
-typedef std::tr1::weak_ptr<ProxyObject> ProxyObjectWPtr;
 typedef double AbsTime;
 typedef Provider<PositionListener*> PositionProvider;
 typedef Provider<ProxyObjectListener*> ProxyObjectProvider;

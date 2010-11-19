@@ -34,7 +34,6 @@
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "OgreHeaders.hpp"
@@ -122,7 +121,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation
 
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,ProxyObjectPtr pop,const String&options);
+    bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Task::LocalTime, Duration);
@@ -193,12 +192,13 @@ public:
 
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
-        Provider<ProxyCreationListener*>*proxyManager,
-        ProxyObjectPtr pop,
-        const String&options)
+        VWObjectPtr obj,
+        const SpaceObjectReference& presenceid,
+        const String& options
+    )
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(proxyManager,pop,options))
+        if (os->initialize(obj, presenceid, options))
             return os;
         delete os;
         return NULL;
@@ -228,7 +228,7 @@ public:
     MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
     void becomeCamera(ProxyObjectPtr p);
-    
+
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,
@@ -267,7 +267,7 @@ public:
 
 private:
     ResourceDownloadPlanner *dlPlanner;
-    void instantiateAllObjects(ProxyObjectPtr pop);
+    void instantiateAllObjects(ProxyManagerPtr pop);
 
 };
 

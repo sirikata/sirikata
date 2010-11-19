@@ -52,7 +52,7 @@ class MeshEntity;
 class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener, public PollingService
 {
 public:
-    ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    ResourceDownloadPlanner(ProxyCreationProviderPtr proxyManager, Context *c);
     ~ResourceDownloadPlanner();
 
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);

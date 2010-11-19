@@ -44,8 +44,8 @@ namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
  :   SelfWeakPtr<ProxyObject>(),
-     MeshProvider (),
      ProxyObjectProvider(),
+     MeshProvider (),
      mID(id),
      mManager(man),
      mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
@@ -183,7 +183,7 @@ void ProxyObject::notifyBecomeCamera()
 {
     //ProxyObjectPtr ptr (this);
     ProxyObjectPtr ptr = getSharedPtr();
-    
+
     if (ptr)
     {
         ProxyObjectProvider::notify(&ProxyObjectListener::becomeCamera ,ptr);
