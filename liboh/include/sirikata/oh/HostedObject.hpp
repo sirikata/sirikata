@@ -331,7 +331,6 @@ public:
 
 
   public:
-    //BFTM_FIXME: need to actually write this function.
     void updateAddressable();
 
 
@@ -342,7 +341,10 @@ public:
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
 
+    Network::IOService* getIOService();
+    //void registerTimeoutCallback(const Duration& dur, std::tr1::function<void( );
 
+    
   public:
     // Identification
     // virtual SpaceObjectReference id(const SpaceID& space) const;
@@ -357,6 +359,7 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
 
+    
     // Movement Interface
     //note: location update services both position and velocity
 

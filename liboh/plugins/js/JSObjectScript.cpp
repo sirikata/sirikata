@@ -443,18 +443,17 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
     // FIXME using the raw pointer isn't safe
     FIXME_GET_SPACE_OREF();
 
-    std::cout<<"\n\nFIXME: need to re-write timeout function in JSObjectScript.\n\n";
-    assert(false);
+    Network::IOService* ioserve = mParent->getIOService();
 
-//     mParent->getTracker(space,oref)->getIOService()->post(
-//         dur,
-//         std::tr1::bind(
-//             &JSObjectScript::handleTimeout,
-//             this,
-//             target,
-//             cb
-//         )
-//     );
+    ioserve->post(
+        dur,
+        std::tr1::bind(&JSObjectScript::handleTimeout,
+            this,
+            target,
+            cb
+        ));
+    
+
 }
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {

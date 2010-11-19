@@ -92,6 +92,12 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 }
 
 
+//Need to define this function so that can register timeouts in jscript
+Network::IOService* HostedObject::getIOService()
+{
+    return mContext->ioService;
+}
+
 
 void HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
