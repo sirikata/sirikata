@@ -902,7 +902,7 @@ private:
     }
 
     void handleSetQueryAngleTimeout() {
-        printf("New query angle: %f\n", mNewQueryAngle);
+        mParent->mViewer->requestQueryUpdate(mParent->mPresenceID.space(), mParent->mPresenceID.object(), SolidAngle(mNewQueryAngle));
     }
 
 

@@ -376,6 +376,7 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
 
 bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     mViewer = viewer;
+    mPresenceID = presenceid;
 
     ProxyManagerPtr proxyManager = mViewer->presence(presenceid);
     mViewer->addListener((SessionEventListener*)this);

@@ -78,6 +78,7 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
     mContext->mObjectSessionManager = this;
 
     this->addListener((ObjectSessionListener*)mLocationService);
+    this->addListener((ObjectSessionListener*)mProximity);
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 

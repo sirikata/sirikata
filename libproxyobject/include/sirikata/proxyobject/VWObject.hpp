@@ -86,6 +86,8 @@ public:
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) = 0;
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh) = 0;
 
+    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {};
+    virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref) {};
 }; // class VWObject
 
 } // namespace Sirikata

@@ -1045,7 +1045,10 @@ void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, cons
 }
 
 
-
+void JSObjectScript::setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa)
+{
+    mParent->requestQueryUpdate(sporef->space(), sporef->object(), sa);
+}
 
 
 
