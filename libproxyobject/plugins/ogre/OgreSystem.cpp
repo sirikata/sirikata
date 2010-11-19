@@ -1002,8 +1002,8 @@ void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, co
 
 void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
     mViewer->removeListener((SessionEventListener*)this);
-    SILOG(ogre,fatal,"Got disconnected from space server.");
-    quit(); // FIXME
+    SILOG(ogre,info,"Got disconnected from space server.");
+    mMouseHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
 }

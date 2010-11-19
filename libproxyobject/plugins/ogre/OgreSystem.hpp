@@ -47,6 +47,7 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include "MouseHandler.hpp"
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -82,8 +83,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Context* mContext;
     VWObjectPtr mViewer;
 
-    class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
-    friend class MouseHandler;
+    class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
+    friend class OgreSystemMouseHandler;
     MouseHandler *mMouseHandler;
     void allocMouseHandler(const String& keybinding_file);
     void destroyMouseHandler();
