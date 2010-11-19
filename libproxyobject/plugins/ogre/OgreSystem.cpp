@@ -375,13 +375,17 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
 
 
 bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
-    ProxyManagerPtr proxyManager = viewer->presence(presenceid);
+    mViewer = viewer;
+
+    ProxyManagerPtr proxyManager = mViewer->presence(presenceid);
+    mViewer->addListener((SessionEventListener*)this);
 
     ++sNumOgreSystems;
     proxyManager->addListener(this);
 
     //initialize the Resource Download Planner
-    dlPlanner = new DistanceDownloadPlanner(proxyManager, mContext);
+    dlPlanner = new DistanceDownloadPlanner(mContext);
+    dlPlanner->initialize(proxyManager);
 
     //add ogre system options here
     OptionValue*pluginFile;
@@ -748,7 +752,8 @@ void OgreSystem::becomeCamera(ProxyObjectPtr p)
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    dlPlanner->removeObject(p);
+    if (! p->isCamera())
+        dlPlanner->removeObject(p);
 }
 
 MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
@@ -994,6 +999,12 @@ void OgreSystem::onDisconnected(const Network::Address& addr, bool requested, co
     }
     else
         SILOG(ogre,warn,"Disconnected from space server.");
+}
+
+void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    mViewer->removeListener((SessionEventListener*)this);
+    SILOG(ogre,fatal,"Got disconnected from space server.");
+    quit(); // FIXME
 }
 
 }

@@ -444,6 +444,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
         this->initializeScript(scriptType,script_args,scriptFile);
     }
 
+    notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref);
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -480,6 +481,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 }
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+    notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
     disconnectFromSpace(spaceobj.space(), spaceobj.object());
 }
 

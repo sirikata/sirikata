@@ -35,8 +35,8 @@
 
 namespace Sirikata {
 
-SAngleDownloadPlanner::SAngleDownloadPlanner(ProxyCreationProviderPtr proxyManager, Context *c)
- : DistanceDownloadPlanner(proxyManager, c)
+SAngleDownloadPlanner::SAngleDownloadPlanner(Context* c)
+ : DistanceDownloadPlanner(c)
 {
 
 }

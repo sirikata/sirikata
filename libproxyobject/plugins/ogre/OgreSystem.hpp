@@ -76,10 +76,11 @@ class CameraEntity;
 class CubeMap;
 struct IntersectResult;
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation
+class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener
 
 {
     Context* mContext;
+    VWObjectPtr mViewer;
 
     class MouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class MouseHandler;
@@ -262,6 +263,10 @@ public:
     // ConnectionEventListener Interface
     virtual void onConnected(const Network::Address& addr);
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);
+
+    // SessionEventListener Interface
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {};
+    virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
     ~OgreSystem();
 

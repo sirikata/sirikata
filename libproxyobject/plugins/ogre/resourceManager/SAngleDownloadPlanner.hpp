@@ -52,7 +52,7 @@ class MeshEntity;
 class SAngleDownloadPlanner : public DistanceDownloadPlanner
 {
 public:
-    SAngleDownloadPlanner(ProxyCreationProviderPtr proxyManager, Context *c);
+    SAngleDownloadPlanner(Context *c);
     ~SAngleDownloadPlanner();
 
 protected:
