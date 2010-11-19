@@ -385,7 +385,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
     //initialize the Resource Download Planner
     dlPlanner = new DistanceDownloadPlanner(mContext);
-    dlPlanner->initialize(proxyManager);
 
     //add ogre system options here
     OptionValue*pluginFile;

@@ -49,21 +49,15 @@ namespace Graphics{
 class MeshEntity;
 }
 
-class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener, public PollingService
+class ResourceDownloadPlanner : public MeshListener, public PollingService
 {
 public:
     ResourceDownloadPlanner(Context* c);
     ~ResourceDownloadPlanner();
 
-    virtual void initialize(ProxyManagerPtr proxyManager);
-
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
     virtual void removeObject(ProxyObjectPtr p) = 0;
     virtual void setCamera(Graphics::CameraEntity *entity);
-
-    //ProxyCreationListener interface
-    virtual void onCreateProxy ( ProxyObjectPtr object );
-    virtual void onDestroyProxy ( ProxyObjectPtr object );
 
     //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);

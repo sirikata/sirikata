@@ -59,30 +59,6 @@ ResourceDownloadPlanner::~ResourceDownloadPlanner()
 
 }
 
-void ResourceDownloadPlanner::initialize(ProxyManagerPtr proxyManager) {
-    proxyManager->addListener(this);
-
-    std::vector<SpaceObjectReference> allORefs;
-    proxyManager->getAllObjectReferences(allORefs);
-
-    for (std::vector<SpaceObjectReference>::iterator iter = allORefs.begin(); iter != allORefs.end(); ++iter)
-    {
-        //instantiate each object in graphics system separately.
-        ProxyObjectPtr toAdd = proxyManager->getProxyObject(*iter);
-        onCreateProxy(toAdd);
-    }
-}
-
-void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
-{
-
-}
-
-void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
-{
-
-}
-
 void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
 

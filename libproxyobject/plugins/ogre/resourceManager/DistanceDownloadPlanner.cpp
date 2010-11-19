@@ -55,11 +55,6 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
 
 }
 
-void DistanceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
-{
-
-}
-
 vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::findResource(ProxyObjectPtr p)
 {
     vector<Resource>::iterator it;
@@ -69,16 +64,11 @@ vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::fin
     return resources.end();
 }
 
-void DistanceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
-{
-}
-
 void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 {
     p->MeshProvider::addListener(this);
     Resource r(mesh, p);
     resources.push_back(r);
-
 }
 
 void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {

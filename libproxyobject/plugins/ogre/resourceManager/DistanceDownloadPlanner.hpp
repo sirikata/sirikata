@@ -57,10 +57,6 @@ public:
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
     virtual void removeObject(ProxyObjectPtr p);
 
-    //ProxyCreationListener interface
-    virtual void onCreateProxy ( ProxyObjectPtr object );
-    virtual void onDestroyProxy ( ProxyObjectPtr object );
-
     //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
 
