@@ -62,7 +62,11 @@ class ColladaDirectory:
         self.cdir = cdir
 
     def find_daes(self):
-        return glob.glob( os.path.join(collada_dir, 'models', '*.dae') )
+        results = []
+        for root, dirs, files in os.walk(collada_dir):
+            results.extend( [os.path.join(root, name) for name in files] )
+        results = [x for x in results if x.endswith('.dae')]
+        return results
 
     def get_file(self, fname):
         return open(fname, 'r')
