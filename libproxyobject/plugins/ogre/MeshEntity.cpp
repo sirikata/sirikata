@@ -328,14 +328,12 @@ void MeshEntity::processMesh(Transfer::URI const& meshFile)
     Ogre::Entity * meshObj=getOgreEntity();
 
     if (meshObj && meshFile.filename() == "" ) {
-      meshObj->setVisible(false);
-
-      //std::cout << mURI  <<" : Mesh UNLOADED!!\n";
-      return;
+        setVisible(false);
+        return;
     }
     else if (meshObj) {
-      meshObj->setVisible(true);
-      return;
+        setVisible(true);
+        return;
     }
 
     mURI = meshFile;

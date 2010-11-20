@@ -123,6 +123,10 @@ void Entity::setStatic(bool isStatic) {
     }
 }
 
+void Entity::setVisible(bool vis) {
+    mSceneNode->setVisible(vis, true);
+}
+
 void Entity::removeFromScene() {
     Ogre::SceneNode *oldParent = mSceneNode->getParentSceneNode();
     if (oldParent) {

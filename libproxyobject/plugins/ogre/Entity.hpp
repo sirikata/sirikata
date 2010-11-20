@@ -113,8 +113,8 @@ public:
 
     virtual void becomeCamera(ProxyObjectPtr p);
 
+    void setVisible(bool vis);
 
-    
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 
