@@ -51,8 +51,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
      mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
      mParent(vwobj),
      mMeshURI(),
-     mScale(1.f, 1.f, 1.f),
-     mCamera(false)
+     mScale(1.f, 1.f, 1.f)
 {
     assert(mParent);
     mDefaultPort = mParent->bindODPPort(owner_sor);
@@ -109,13 +108,6 @@ ProxyObjectPtr ProxyObject::getParentProxy() const {
     return ProxyObjectPtr();
 }
 
-
-bool ProxyObject::isCamera()
-{
-    return mCamera;
-}
-
-
 //you can set a camera's mesh as of now.
 void ProxyObject::setMesh ( Transfer::URI const& mesh )
 {
@@ -154,12 +146,6 @@ void ProxyObject::setPhysical ( PhysicalParameters const& pp )
 PhysicalParameters const& ProxyObject::getPhysical () const
 {
     return mPhysical;
-}
-
-//may actually want to notify some listeners on this event.  maybe
-void ProxyObject::setCamera(bool onOff)
-{
-    mCamera = onOff;
 }
 
 }

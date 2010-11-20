@@ -121,10 +121,6 @@ private:
     Transfer::URI mMeshURI;
     Vector3f mScale;
     PhysicalParameters mPhysical;
-    bool mCamera;
-
-
-
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -243,9 +239,6 @@ public:
     virtual Vector3f const& getScale () const;
     virtual void setPhysical ( PhysicalParameters const& rhs );
     virtual PhysicalParameters const& getPhysical () const;
-
-    bool isCamera();
-    void setCamera(bool onOff);
 
 };
 }

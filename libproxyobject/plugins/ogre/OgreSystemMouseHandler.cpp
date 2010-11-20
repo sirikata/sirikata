@@ -83,13 +83,12 @@ using namespace std;
 #define SDL_SCANCODE_PAGEDOWN 0x5b
 #endif
 
+// FIXME this needs to be documented. this used to rely on whether entities were
+// cameras or not (using position instead of names). it is not clear at all how
+// or why this method is supposed to be the right way to compare entities.
 bool compareEntity (const Entity* one, const Entity* two)
 {
     ProxyObject *pp = one->getProxyPtr().get();
-
-    // ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
-    // ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
-
 
     Time now = one->getScene()->simTime();
     Location loc1 = pp->globalLocation(now);
@@ -98,25 +97,7 @@ bool compareEntity (const Entity* one, const Entity* two)
     pp2 = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
 
-    // ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
-    // ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
-
-    // if (camera1 && !camera2) return true;
-    // if (camera2 && !camera1) return false;
-
-    if (pp->isCamera() && !pp2->isCamera()) return true;
-    if (pp2->isCamera() && !pp->isCamera()) return false;
-
-
-    if (pp->isCamera() && pp2->isCamera())
-    {
-        return loc1.getPosition().x < loc2.getPosition().x;
-    }
-
-    if (!pp->isCamera() &&  !pp2->isCamera())
-    {
-        return pp->getPhysical().name < pp2->getPhysical().name;
-    }
+    return pp->getPhysical().name < pp2->getPhysical().name;
 
     return one<two;
 }
@@ -1213,33 +1194,6 @@ private:
         mParent->mInputManager->filesDropped(files);
     }
 
-    void saveSceneAction() {
-        std::set<std::string> saveSceneNames;
-        std::cout << "saving new scene as scene_new.csv: " << std::endl;
-        FILE *output = fopen("scene_new.csv", "wt");
-        if (!output) {
-            perror("Failed to open scene_new.csv");
-            return;
-        }
-        fprintf(output, "objtype,subtype,name,parent,script,scriptparams,");
-        fprintf(output, "pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,");
-        fprintf(output, "vel_x,vel_y,vel_z,rot_axis_x,rot_axis_y,rot_axis_z,rot_speed,");
-        fprintf(output, "scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
-        fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
-        fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
-        fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
-        OgreSystem::SceneEntitiesMap::const_iterator iter;
-        vector<Entity*> entlist;
-        entlist.clear();
-        for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
-            entlist.push_back(iter->second);
-        }
-        std::sort(entlist.begin(), entlist.end(), compareEntity);
-        for (unsigned int i=0; i<entlist.size(); i++)
-            dumpObject(output, entlist[i], saveSceneNames);
-        fclose(output);
-    }
-
     bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
         /// note that in the 'gymbal lock' situation, we will get nan's for pitch.
         /// for now, in that case we should revert to quaternion
@@ -1259,118 +1213,6 @@ private:
         }
         return true;
     }
-
-    string physicalName(ProxyObject *obj, std::set<std::string> &saveSceneNames)
-    {
-        std::string name = obj->getPhysical().name;
-        if (name.empty()) {
-            name = obj->getMesh().filename();
-            name.resize(name.size()-5);
-            //name += ".0";
-        }
-//        if (name.find(".") < name.size()) {             /// remove any enumeration
-//            name.resize(name.find("."));
-//        }
-        int basesize = name.size();
-        int count = 1;
-        while (saveSceneNames.count(name)) {
-            name.resize(basesize);
-            std::ostringstream os;
-            os << name << "." << count;
-            name = os.str();
-            count++;
-        }
-        saveSceneNames.insert(name);
-        return name;
-    }
-
-
-    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames)
-    {
-        ProxyObject *pp = e->getProxyPtr().get();
-        Time now = mParent->simTime();
-        Location loc = pp->globalLocation(now);
-
-
-        double x,y,z;
-        std::string w("");
-        /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
-        if (!quat2Euler(loc.getOrientation(), x, z, y)) {
-            x=loc.getOrientation().x;
-            y=loc.getOrientation().y;
-            z=loc.getOrientation().z;
-            std::stringstream temp;
-            temp << loc.getOrientation().w;
-            w = temp.str();
-        }
-
-        Vector3f angAxis(loc.getAxisOfRotation());
-        float angSpeed(loc.getAngularSpeed());
-
-        string parent;
-        ProxyObjectPtr parentObj = pp->getParentProxy();
-
-        if (parentObj)
-        {
-            ProxyObject *parentMesh = dynamic_cast<ProxyObject*>(parentObj.get());
-            if (parentMesh) {
-                parent = physicalName(parentMesh, saveSceneNames);
-            }
-        }
-        else
-        {
-            Transfer::URI uri = pp->getMesh();
-            std::string uristr = uri.toString();
-            if (uri.proto().empty())
-            {
-                uristr = "";
-            }
-
-            const PhysicalParameters &phys = pp->getPhysical();
-            std::string subtype;
-            switch (phys.mode) {
-            case PhysicalParameters::Disabled:
-                subtype="graphiconly";
-                break;
-            case PhysicalParameters::Static:
-                subtype="staticmesh";
-                break;
-            case PhysicalParameters::DynamicBox:
-                subtype="dynamicbox";
-                break;
-            case PhysicalParameters::DynamicSphere:
-                subtype="dynamicsphere";
-                break;
-            case PhysicalParameters::DynamicCylinder:
-                subtype="dynamiccylinder";
-                break;
-            case PhysicalParameters::Character:
-                subtype="character";
-                break;
-            default:
-                std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
-            }
-            std::string name = physicalName(pp, saveSceneNames);
-            if (pp->isCamera())
-            {
-                fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-            }
-            else
-            {
-                fprintf(fp, "camera,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-            }
-
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
-                    pp->getScale().x,pp->getScale().y,pp->getScale().z,
-                    phys.hull.x, phys.hull.y, phys.hull.z,
-                    phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
-        }
-    }
-
 
 
     void zoomAction(float value, Vector2f axes)
@@ -1869,7 +1711,6 @@ public:
         mInputResponses["deleteObjects"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::deleteObjectsAction, this));
         mInputResponses["cloneObjects"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::cloneObjectsAction, this));
         mInputResponses["import"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::importAction, this));
-        mInputResponses["saveScene"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::saveSceneAction, this));
 
         mInputResponses["selectObject"] = new Vector2fInputResponse(std::tr1::bind(&OgreSystemMouseHandler::selectObjectAction, this, _1, 1));
         mInputResponses["selectObjectReverse"] = new Vector2fInputResponse(std::tr1::bind(&OgreSystemMouseHandler::selectObjectAction, this, _1, -1));

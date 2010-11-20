@@ -70,10 +70,9 @@ namespace Sirikata {
 
 
 
-HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName, bool is_camera)
+HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName)
  : mContext(ctx),
-   mInternalObjectReference(objectName),
-   mIsCamera(is_camera)
+   mInternalObjectReference(objectName)
 {
     mSpaceData = new SpaceDataMap;
     mNextSubscriptionID = 0;
@@ -111,7 +110,6 @@ void HostedObject::runSimulation(const SpaceObjectReference& sporef, const Strin
     }
 
     PerPresenceData& pd =  psd_it->second;
-    pd.mProxyObject->setCamera(true);
     addSimListeners(pd,simName,sim);
 
     if (sim != NULL)
@@ -425,7 +423,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), mIsCamera, local_loc, local_orient, info.bnds);
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds);
 
     // Use to initialize PerSpaceData
     SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
@@ -714,7 +712,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
-                ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, false, loc, orient, bnds);
+                ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds);
             }
             else
             {
@@ -760,22 +758,15 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
-    ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,is_camera);
+    ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri);
     returner->setLocation(tmv);
     returner->setOrientation(tmq);
     returner->setBounds(bs);
 
-
-    if (!is_camera)
-    {
-        if(meshuri)
-        {
-            returner->setMesh(meshuri);
-        }
-    }
-
+    if(meshuri)
+        returner->setMesh(meshuri);
 
     return returner;
 }
@@ -783,7 +774,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
 //should only be called from within createProxy functions.  Otherwise, will not
 //initilize position and quaternion correctly
-ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera)
+ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
@@ -794,7 +785,6 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     }
 
     ProxyObjectPtr proxy_obj = ProxyObject::construct<ProxyObject> (proxy_manager.get(),objref,getSharedPtr(),owner_objref);
-    proxy_obj->setCamera(is_camera);
 
     // The call to createObject must occur before trying to do any other
     // operations so that any listeners will be set up.

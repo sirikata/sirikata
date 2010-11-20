@@ -731,7 +731,8 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;
 
-    if (p->isCamera())
+    bool is_camera = (p->getObjectReference() == mPresenceID);
+    if (is_camera)
     {
         CameraEntity* cam = new CameraEntity(this,p);
         cam->attach("", 0, 0);
@@ -746,7 +747,8 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    if (! p->isCamera())
+    bool is_camera = (p->getObjectReference() == mPresenceID);
+    if (!is_camera)
         dlPlanner->removeObject(p);
 }
 
