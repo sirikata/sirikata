@@ -188,7 +188,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
-
+    import("library.em");
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
@@ -269,8 +269,6 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         JSLOG(info,"Issuing user callback for proximate object.");
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
     }
-    
-
 }
 
 
@@ -451,8 +449,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     // Special casing emerson compilation
 
 
-    #ifdef __EMERSON_COMPILE_ON__
-
+    #ifdef EMERSON_COMPILE
+    
     String em_script_str_new = em_script_str;
 
     if(em_script_str.at(em_script_str.size() -1) != '\n')

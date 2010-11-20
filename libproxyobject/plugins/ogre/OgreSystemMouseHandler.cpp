@@ -122,10 +122,11 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
 
     struct UIInfo {
         UIInfo()
-         : scripting(NULL)
+         : scripting(NULL),chat(NULL)
         {}
 
         WebView* scripting;
+        WebView* chat;
     };
     typedef std::map<SpaceObjectReference, UIInfo> ObjectUIMap;
     ObjectUIMap mObjectUIs;
@@ -737,6 +738,113 @@ private:
 
             }
         }
+    }
+
+
+    void createChatUIAction()
+    {
+      static bool onceInitialized = false;
+      initScriptOnSelectedObjects(); 
+      for(SelectedObjectSet::iterator sel_it = mSelectedObjects.begin(); sel_it != mSelectedObjects.end(); sel_it++) {
+        ProxyObjectPtr obj(sel_it->lock());
+        if(!obj) continue;
+        
+         SpaceObjectReference objid = obj->getObjectReference();
+
+        ObjectUIMap::iterator ui_it = mObjectUIs.find(objid);
+        if (ui_it == mObjectUIs.end()) {
+          mObjectUIs.insert( ObjectUIMap::value_type(objid, UIInfo()) );
+          ui_it = mObjectUIs.find(objid);
+        }
+        UIInfo& ui_info = ui_it->second;
+        if(ui_info.chat != NULL)
+        {
+          ui_info.chat->show();
+        }
+        else
+        {
+          if(onceInitialized)
+          {
+             WebView* new_chat_ui =
+                        WebViewManager::getSingleton().createWebView(
+                            String("__chat") + objid.toString(), "__chat", 300, 300,
+                            OverlayPosition(RP_BOTTOMCENTER)
+                        );
+                    new_chat_ui->loadFile("chat/prompt.html");
+
+                    ui_info.chat = new_chat_ui;
+                    mScriptingUIObjects[new_chat_ui] = obj;
+                    new_chat_ui->bind("event", std::tr1::bind(&MouseHandler::processChatMessage, this, _1, _2));
+                    return;
+
+          }
+
+           WebView* new_chat_ui =
+                WebViewManager::getSingleton().createWebView(
+                        String("__chat") + objid.toString(), "__chat", 300, 300,
+                        OverlayPosition(RP_TOPLEFT)
+                );
+           new_chat_ui->loadFile("chat/prompt.html");
+           ui_info.chat = new_chat_ui;
+           mScriptingUIObjects[new_chat_ui] = obj;
+           new_chat_ui->bind("event", std::tr1::bind(&MouseHandler::processChatMessage, this, _1, _2));
+           onceInitialized = true;
+
+
+        }
+
+
+      }
+    }
+
+
+    void processChatMessage(WebView* wv, const JSArguments& args)
+    {
+
+      std::cout << "\n\n processing chat message\n\n";
+      ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
+        if (objit == mScriptingUIObjects.end())
+            return;
+        std::cout << "\n\nHERE 1\n\n";    
+            
+        ProxyObjectPtr target_obj(objit->second.lock());
+
+        if (!target_obj) return;
+
+        std::cout << "\n\nHERE 2\n\n";    
+
+        JSIter command_it;
+        for (command_it = args.begin(); command_it != args.end(); ++command_it)
+        {
+            
+            std::cout << "\n\n Inside for \n\n";    
+            std::string strcmp (command_it->begin());
+            if (strcmp == "Command")
+            {
+                
+                 std::cout << "\n\n got Command \n\n";    
+                //Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
+                //Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
+                //scripting_req.set_id(0);
+                //scripting_req.set_body(String(command_it->second));
+
+                JSIter nexter = command_it + 1;
+                String msgBody = String(nexter->begin());
+                
+                std::cout << "Chat Message: " << msgBody;
+                /*
+                scripting_req.set_body(msgBody);
+                std::string serialized_scripting_request;
+                scripting_msg.SerializeToString(&serialized_scripting_request);
+                target_obj->sendMessage(
+                    Services::SCRIPTING,
+                    MemoryReference(serialized_scripting_request)
+                );
+                */
+
+            }
+        }
+      
     }
 
     void LOCAL_createWebviewAction() {
@@ -1676,8 +1784,10 @@ public:
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createWebviewAction, this));
 
 
-        mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptingUIAction, this));
-        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createUIAction, this, "object/object.html"));
+        mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptingUIAction, this));
+        mInputResponses["openChatUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createChatUIAction, this));
+
+        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "object/object.html"));
 
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptedObjectAction, this, _1));
