@@ -34,7 +34,6 @@
 
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
@@ -110,8 +109,6 @@ public:
     const SpaceObjectReference&id()const{
         return mProxy->getObjectReference();
     }
-
-    virtual void becomeCamera(ProxyObjectPtr p);
 
     void setVisible(bool vis);
 

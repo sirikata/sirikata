@@ -32,7 +32,6 @@
 #ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
 #define SIRIKATA_GRAPHICS_CAMERA_HPP__
 #include "Entity.hpp"
-#include <sirikata/proxyobject/CameraListener.hpp>
 #include "OgreHeaders.hpp"
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
@@ -42,7 +41,7 @@
 namespace Sirikata {
 namespace Graphics {
 
-class CameraEntity : public Entity, public CameraListener {
+class CameraEntity : public Entity {
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
     std::list<CameraEntity*>::iterator mAttachedIter;
@@ -55,11 +54,15 @@ public:
     ProxyObject &getProxy() const {
         return *std::tr1::static_pointer_cast<ProxyObject>(mProxy);
     }
-    
+
     virtual void attach (const String&renderTargetName,
                          uint32 width,
                          uint32 height);
     virtual void detach();
+
+    // Override so we can detach
+    virtual void destroyed();
+
     CameraEntity(OgreSystem *scene,
                  const std::tr1::shared_ptr<ProxyObject> &pco,
                  std::string id=std::string());

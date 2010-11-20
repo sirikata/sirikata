@@ -734,6 +734,8 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     if (p->isCamera())
     {
         CameraEntity* cam = new CameraEntity(this,p);
+        cam->attach("", 0, 0);
+        attachCamera("", cam);
     }
     else
     {
@@ -741,14 +743,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
         dlPlanner->addNewObject(p,mesh);
     }
 }
-
-void OgreSystem::becomeCamera(ProxyObjectPtr p)
-{
-    //FIXME: May be leaking memory if already were a camera.
-    //check if we already have camera.
-    CameraEntity* cam = new CameraEntity(this, p);
-}
-
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {

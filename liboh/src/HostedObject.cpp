@@ -119,11 +119,6 @@ void HostedObject::runSimulation(const SpaceObjectReference& sporef, const Strin
         HO_LOG(info, "Adding simulation to context");
         mContext->add(sim);
     }
-
-    // Special case for camera
-    pd.mProxyObject->notifyBecomeCamera();
-    pd.mProxyObject->attach(String(), 0, 0);
-
 }
 
 

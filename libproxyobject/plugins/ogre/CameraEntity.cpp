@@ -47,7 +47,6 @@ CameraEntity::CameraEntity(OgreSystem *scene,
              mViewport(NULL)
 {
     mAttachedIter=scene->mAttachedCameras.end();
-    getProxy().CameraProvider::addListener(this);
     String cameraName = ogreName;
     if (scene->getSceneManager()->hasCamera(cameraName)) {
         init(scene->getSceneManager()->getCamera(cameraName));
@@ -94,6 +93,11 @@ void CameraEntity::detach() {
 
 }
 
+void CameraEntity::destroyed() {
+    detach();
+    Entity::destroyed();
+}
+
 CameraEntity::~CameraEntity() {
     if ((!mViewport) || (mViewport && mRenderTarget)) {
         detach();
@@ -104,7 +108,6 @@ CameraEntity::~CameraEntity() {
     Ogre::Camera*toDestroy=getOgreCamera();
     init(NULL);
     mScene->getSceneManager()->destroyCamera(toDestroy);
-    getProxy().CameraProvider::removeListener(this);
 }
 std::string CameraEntity::ogreCameraName(const SpaceObjectReference&ref) {
     return "Camera:"+ref.toString();

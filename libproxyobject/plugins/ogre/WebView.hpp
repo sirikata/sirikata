@@ -36,7 +36,6 @@
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
-#include <sirikata/proxyobject/ProxyObjectListener.hpp>
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"

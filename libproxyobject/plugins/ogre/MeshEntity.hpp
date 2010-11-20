@@ -88,7 +88,7 @@ public:
     {
         return *std::tr1::static_pointer_cast<ProxyObject>(mProxy);
     }
-    
+
     MeshEntity(OgreSystem *scene,
                const std::tr1::shared_ptr<ProxyObject> &pmo,
                const std::string&ogre_id=std::string());
@@ -127,8 +127,6 @@ public:
         virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
         virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
-        virtual void becomeCamera(ProxyObject* p);
-
 
     protected:
 

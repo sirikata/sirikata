@@ -230,8 +230,6 @@ public:
      */
     MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
-    void becomeCamera(ProxyObjectPtr p);
-
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
                   const double maxDistance,
