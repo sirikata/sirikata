@@ -49,12 +49,16 @@
 #include "JSEventHandler.hpp"
 #include "JSObjectScriptManager.hpp"
 #include "JSPresenceStruct.hpp"
+#include <sirikata/proxyobject/ProxyCreationListener.hpp>
 
 
 namespace Sirikata {
 namespace JS {
 
+
 class JSObjectScript : public ObjectScript, public SessionEventListener {
+{
+
 public:
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
@@ -67,6 +71,9 @@ public:
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     virtual void updateAddressable();
 
+    virtual void onCreateProxy(ProxyObjectPtr p);
+    virtual void onDestroyProxy(ProxyObjectPtr p);
+    
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
@@ -206,6 +213,7 @@ private:
     Handle<Object> getGlobalObject();
 
     void populateAddressable(Handle<Object>& system_obj );
+    void createMessageableArray();
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
@@ -222,8 +230,10 @@ private:
 
     JSObjectScriptManager* mManager;
 
+
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
     PresenceMap mPresences;
+
 };
 
 } // namespace JS
