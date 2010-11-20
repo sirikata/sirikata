@@ -34,7 +34,10 @@
 #include <sirikata/mesh/Filter.hpp>
 
 void usage() {
-    printf("Usage: meshtool --filter1 --filter2=filter,options\n");
+    printf("Usage: meshtool [-h, --help] [--list] --filter1 --filter2=filter,options\n");
+    printf("   --help will print this help message\n");
+    printf("   --list will print the list of filters\n");
+    printf(" Example: meshtool --load=/path/to/file.dae\n");
 }
 
 int main(int argc, char** argv) {
@@ -54,6 +57,19 @@ int main(int argc, char** argv) {
     plugins.loadList("colladamodels");
     plugins.loadList("common-filters");
     plugins.loadList("nvtt");
+
+    //Check for list request
+    for(int argi = 1; argi < argc; argi++) {
+        std::string arg_str(argv[argi]);
+        if (arg_str == "--list") {
+            std::list<std::string> filterList = FilterFactory::getSingleton().getNames();
+            printf("meshtool: printing filter list:\n");
+            for(std::list<std::string>::const_iterator it = filterList.begin(); it != filterList.end(); it++) {
+                printf("%s\n", it->c_str());
+            }
+            return 0;
+        }
+    }
 
     FilterDataPtr current_data(new FilterData);
     for(int argi = 1; argi < argc; argi++) {

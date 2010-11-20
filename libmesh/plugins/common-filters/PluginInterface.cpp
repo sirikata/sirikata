@@ -35,6 +35,7 @@
 #include <sirikata/mesh/Filter.hpp>
 #include "LoadFilter.hpp"
 #include "SaveFilter.hpp"
+#include "PrintFilter.hpp"
 #include "ComputeBoundsFilter.hpp"
 
 static int common_filters_plugin_refcount = 0;
@@ -46,6 +47,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
     if ( common_filters_plugin_refcount == 0 ) {
         FilterFactory::getSingleton().registerConstructor("load", LoadFilter::create);
         FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
+        FilterFactory::getSingleton().registerConstructor("print", PrintFilter::create);
         FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
     }
 
@@ -77,6 +79,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
         if ( common_filters_plugin_refcount == 0 ) {
             FilterFactory::getSingleton().unregisterConstructor("load");
             FilterFactory::getSingleton().unregisterConstructor("save");
+            FilterFactory::getSingleton().unregisterConstructor("print");
             FilterFactory::getSingleton().unregisterConstructor("compute-bounds");
         }
     }
