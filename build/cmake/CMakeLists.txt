@@ -1335,7 +1335,7 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${INPUT}/SDLInputDevice.cpp
   ${GFX}/Entity.cpp
   ${GFX}/MeshEntity.cpp
-  ${GFX}/CameraEntity.cpp
+  ${GFX}/Camera.cpp
   ${GFX}/OgrePlugin.cpp
   ${GFX}/CameraPath.cpp
 ${GFX}/meruCompat/MeruDefs.cpp

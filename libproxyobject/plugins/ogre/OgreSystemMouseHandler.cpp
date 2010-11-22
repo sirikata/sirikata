@@ -33,7 +33,7 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
-#include "CameraEntity.hpp"
+#include "Camera.hpp"
 #include "Lights.hpp"
 #include "MeshEntity.hpp"
 #include "input/SDLInputManager.hpp"
@@ -209,8 +209,8 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
 
     /////////////////// HELPER FUNCTIONS ///////////////
 
-    void mouseOverWebView(CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
-        Location location(cam->getProxy().globalLocation(time));
+    void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
+        Location location(cam->following()->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
         ProxyObjectPtr obj(mMouseDownObject.lock());
@@ -249,8 +249,8 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
         }
     }
 
-    Entity *hoverEntity (CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
-        Location location(cam->getProxy().globalLocation(time));
+    Entity *hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
+        Location location(cam->following()->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
@@ -349,7 +349,7 @@ private:
     int mWhichRayObject;
     void selectObjectAction(Vector2f p, int direction) {
         if (!mParent||!mParent->mPrimaryCamera) return;
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         Time time = mParent->simTime();
 
         if (!camera) {
@@ -545,7 +545,7 @@ private:
         }
         SpaceObjectReference parentId = mCurrentGroup;
 
-        ProxyManager *proxyMgr = mParent->mPrimaryCamera->getProxy().getProxyManager();
+        ProxyManager *proxyMgr = mParent->mPrimaryCamera->following()->getProxy().getProxyManager();
         Time now = mParent->simTime();
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
@@ -763,7 +763,7 @@ private:
 /*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         if (!camera) return;
         SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
         ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
@@ -802,7 +802,7 @@ private:
 /*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         if (!camera) return;
         Time now = mParent->simTime();
         Location curLoc (camera->getProxy().globalLocation(now));
@@ -904,7 +904,7 @@ private:
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         if (!camera) return;
         Time now = mParent->simTime();
         Location curLoc (camera->getProxy().globalLocation(now));
@@ -1056,7 +1056,7 @@ private:
             return;
         }
 
-        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
         if (!cam)
         {
             return;
@@ -1090,7 +1090,7 @@ private:
     void rotateAction(Vector3f about, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
@@ -1121,7 +1121,7 @@ private:
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
@@ -1298,7 +1298,7 @@ private:
         mInputBinding.handle(inputev);
 
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
@@ -1321,7 +1321,7 @@ private:
         }
 
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
@@ -1349,7 +1349,7 @@ private:
             return EventResponse::cancel();
         }
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
@@ -1383,7 +1383,7 @@ private:
         }
 
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
@@ -1438,7 +1438,7 @@ private:
     /// Camera Path Utilities
     void cameraPathSetCamera(const Vector3d& pos, const Quaternion& orient) {
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->following()->getProxyPtr());
         if (!cam) return;
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1491,7 +1491,7 @@ private:
 
     void cameraPathInsert() {
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->following()->getProxyPtr());
         if (!cam) return;
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);

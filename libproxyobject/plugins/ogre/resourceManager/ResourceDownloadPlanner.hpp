@@ -40,7 +40,7 @@
 #include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../CameraEntity.hpp"
+#include "../Camera.hpp"
 #include <vector>
 #include <sirikata/core/transfer/URI.hpp>
 
@@ -57,7 +57,7 @@ public:
 
     virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
     virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::CameraEntity *entity);
+    virtual void setCamera(Graphics::Camera *entity);
 
     //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
@@ -69,7 +69,7 @@ public:
     virtual void stop();
 
 protected:
-    Graphics::CameraEntity *camera;
+    Graphics::Camera *camera;
 
 };
 }

@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  CameraEntity.cpp
+ *  Camera.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -32,56 +32,74 @@
 
 #include "OgreSystem.hpp"
 #include <sirikata/proxyobject/Platform.hpp>
-#include "CameraEntity.hpp"
+#include "Camera.hpp"
 #include <sirikata/core/options/Options.hpp>
+
 namespace Sirikata {
 namespace Graphics {
-CameraEntity::CameraEntity(OgreSystem *scene,
-                           const std::tr1::shared_ptr<ProxyObject> &pco,
-                           std::string ogreName)
-    : Entity(scene,
-             pco,
-             ogreName.length()?ogreName:ogreName=ogreCameraName(pco->getObjectReference()),
-             NULL),
-             mRenderTarget(NULL),
-             mViewport(NULL)
+
+Camera::Camera(OgreSystem *scene, Entity* follow)
+ : mScene(scene),
+   mOgreCamera(NULL),
+   mSceneNode(NULL),
+   mRenderTarget(NULL),
+   mViewport(NULL),
+   mFollowing(follow)
 {
-    mAttachedIter=scene->mAttachedCameras.end();
-    String cameraName = ogreName;
-    if (scene->getSceneManager()->hasCamera(cameraName)) {
-        init(scene->getSceneManager()->getCamera(cameraName));
-    } else {
-        init(scene->getSceneManager()->createCamera(cameraName));
-    }
-    getOgreCamera()->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
-    getOgreCamera()->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
+    String cameraName = ogreCameraName(following()->id());
+
+    mSceneNode = scene->getSceneManager()->createSceneNode(cameraName);
+    mSceneNode->setInheritScale(false);
+    mScene->getSceneManager()->getRootSceneNode()->addChild(mSceneNode);
+
+
+    if (scene->getSceneManager()->hasCamera(cameraName))
+        mOgreCamera = scene->getSceneManager()->getCamera(cameraName);
+    else
+        mOgreCamera = scene->getSceneManager()->createCamera(cameraName);
+
+    mSceneNode->attachObject(mOgreCamera);
+
+    mAttachedIter = scene->mAttachedCameras.end();
+    mOgreCamera->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
+    mOgreCamera->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
 }
 
-void CameraEntity::attach (const String&renderTargetName,uint32 width,uint32 height)
+Camera::~Camera() {
+    if ((!mViewport) || (mViewport && mRenderTarget)) {
+        detach();
+    }
+    if (mAttachedIter != mScene->mAttachedCameras.end()) {
+        mScene->mAttachedCameras.erase(mAttachedIter);
+    }
+
+    mSceneNode->detachObject(mOgreCamera);
+    mScene->getSceneManager()->destroyCamera(mOgreCamera);
+
+    mSceneNode->removeAllChildren();
+    mScene->getSceneManager()->destroySceneNode(mSceneNode);
+}
+
+Entity* Camera::following() const {
+    return mFollowing;
+}
+
+void Camera::attach (const String&renderTargetName,uint32 width,uint32 height)
 {
     this->detach();
     mRenderTarget = mScene->createRenderTarget(renderTargetName,
                                                width,
                                                height);
-    mViewport= mRenderTarget->addViewport(getOgreCamera());
+    mViewport= mRenderTarget->addViewport(mOgreCamera);
     mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
-    getOgreCamera()->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
+    mOgreCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
     mAttachedIter = mScene->attachCamera(renderTargetName,this);
 }
 
 
-void CameraEntity::detach() {
-    if (mViewport&&mRenderTarget) {
+void Camera::detach() {
+    if (mViewport && mRenderTarget) {
         mRenderTarget->removeViewport(mViewport->getZOrder());
-/*
-  unsigned int numViewports=sm->getNumViewports();
-  for (unsigned int i=0;i<numViewports;++i){
-  if (sm->getViewport(i)==mViewport) {
-  sm->removeViewport(i);
-  break;
-  }
-  }
-*/
     }else {
         assert(!mViewport);
     }
@@ -89,31 +107,17 @@ void CameraEntity::detach() {
         mScene->destroyRenderTarget(mRenderTarget->getName());
         mRenderTarget=NULL;
     }
-    mAttachedIter=mScene->detachCamera(mAttachedIter);
-
+    mAttachedIter = mScene->detachCamera(mAttachedIter);
 }
 
-void CameraEntity::destroyed() {
-    detach();
-    Entity::destroyed();
+void Camera::tick() {
+    mSceneNode->setPosition(toOgre( mFollowing->getOgrePosition(), mFollowing->getScene()->getOffset() ));
+    mSceneNode->setOrientation(toOgre( mFollowing->getOgreOrientation() ));
 }
 
-CameraEntity::~CameraEntity() {
-    if ((!mViewport) || (mViewport && mRenderTarget)) {
-        detach();
-    }
-    if (mAttachedIter != mScene->mAttachedCameras.end()) {
-        mScene->mAttachedCameras.erase(mAttachedIter);
-    }
-    Ogre::Camera*toDestroy=getOgreCamera();
-    init(NULL);
-    mScene->getSceneManager()->destroyCamera(toDestroy);
-}
-std::string CameraEntity::ogreCameraName(const SpaceObjectReference&ref) {
+
+std::string Camera::ogreCameraName(const SpaceObjectReference&ref) {
     return "Camera:"+ref.toString();
-}
-std::string CameraEntity::ogreMovableName()const{
-    return ogreCameraName(id());
 }
 
 }

@@ -39,7 +39,7 @@
 #include "task/Event.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "CameraEntity.hpp"
+#include "Camera.hpp"
 #include "MeshEntity.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
@@ -322,10 +322,9 @@ void    setupResources(const String &filename){
     ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although the override is optional, this is mandatory
 }
 
-std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &renderTargetName, CameraEntity*entity) {
-    std::list<CameraEntity*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
+std::list<Camera*>::iterator OgreSystem::attachCamera(const String &renderTargetName, Camera* entity) {
+    std::list<Camera*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
     if (renderTargetName.empty()) {
-        mPrimaryCamera = entity;
         dlPlanner->setCamera(entity);
         std::vector<String> cubeMapNames;
 
@@ -347,7 +346,7 @@ std::list<CameraEntity*>::iterator OgreSystem::attachCamera(const String &render
     return retval;
 }
 
-std::list<CameraEntity*>::iterator OgreSystem::detachCamera(std::list<CameraEntity*>::iterator entity) {
+std::list<Camera*>::iterator OgreSystem::detachCamera(std::list<Camera*>::iterator entity) {
     if (entity != mAttachedCameras.end()) {
         if (mPrimaryCamera == *entity) {
             mPrimaryCamera = NULL;//move to second in chain??
@@ -731,25 +730,25 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;
 
-    bool is_camera = (p->getObjectReference() == mPresenceID);
-    if (is_camera)
+    MeshEntity* mesh = new MeshEntity(this,p);
+    dlPlanner->addNewObject(p,mesh);
+
+    bool is_viewer = (p->getObjectReference() == mPresenceID);
+    if (is_viewer)
     {
-        CameraEntity* cam = new CameraEntity(this,p);
-        cam->attach("", 0, 0);
-        attachCamera("", cam);
-    }
-    else
-    {
-        MeshEntity* mesh = new MeshEntity(this,p);
-        dlPlanner->addNewObject(p,mesh);
+        assert(mPrimaryCamera == NULL);
+        mPrimaryCamera = new Camera(this, mesh);
+        mPrimaryCamera->attach("", 0, 0);
+        attachCamera("", mPrimaryCamera);
+        // for now, always hide the original entity. In the future, this should
+        // be controlled based on the type of view we have (1st vs 3rd person).
+        mesh->setVisible(false);
     }
 }
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    bool is_camera = (p->getObjectReference() == mPresenceID);
-    if (!is_camera)
-        dlPlanner->removeObject(p);
+    dlPlanner->removeObject(p);
 }
 
 MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
@@ -830,34 +829,36 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
          iter != resultList.end(); ++iter) {
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
         Ogre::Entity *foundEntity = dynamic_cast<Ogre::Entity*>(result.movable);
+        if (!foundEntity) continue;
         Entity *ourEntity = Entity::fromMovableObject(result.movable);
-        if (foundEntity && ourEntity && ourEntity != mPrimaryCamera ) {
-            RayTraceResult rtr(result.distance,result.movable);
-            bool passed=aabbOnly&&result.distance > 0;
-            if (aabbOnly==false) {
-                rtr.mDistance=3.0e38f;
-                Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
-                Ogre::Mesh *mesh = foundEntity->getMesh().get();
-                uint16 numSubMeshes = mesh->getNumSubMeshes();
-                std::vector<TriVertex> sharedVertices;
-                for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
-                    Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
-                    OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
-                    IntersectResult intRes;
-                    ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
-                    if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {
-                        rtr.mResult = intRes;
-                        rtr.mMovableObject = result.movable;
-                        rtr.mDistance=intRes.distance;
-                        rtr.mSubMesh=ndx;
-                        passed=true;
-                    }
+        if (!ourEntity) continue;
+        if (ourEntity->id() != mPresenceID) continue;
+
+        RayTraceResult rtr(result.distance,result.movable);
+        bool passed=aabbOnly&&result.distance > 0;
+        if (aabbOnly==false) {
+            rtr.mDistance=3.0e38f;
+            Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
+            Ogre::Mesh *mesh = foundEntity->getMesh().get();
+            uint16 numSubMeshes = mesh->getNumSubMeshes();
+            std::vector<TriVertex> sharedVertices;
+            for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
+                Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
+                OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
+                IntersectResult intRes;
+                ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
+                if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {
+                    rtr.mResult = intRes;
+                    rtr.mMovableObject = result.movable;
+                    rtr.mDistance=intRes.distance;
+                    rtr.mSubMesh=ndx;
+                    passed=true;
                 }
             }
-            if (passed) {
-                fineGrainedResults.push_back(rtr);
-                ++count;
-            }
+        }
+        if (passed) {
+            fineGrainedResults.push_back(rtr);
+            ++count;
         }
     }
     if (!aabbOnly) {
@@ -965,6 +966,10 @@ void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
         SpaceID space(current->getProxy().getObjectReference().space());
         Time cur_time = simTime();
         current->extrapolateLocation(cur_time);
+    }
+    for(std::list<Camera*>::iterator cam_it = mAttachedCameras.begin(); cam_it != mAttachedCameras.end(); cam_it++) {
+        Camera* cam = *cam_it;
+        cam->tick();
     }
 }
 

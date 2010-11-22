@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  CameraEntity.hpp
+ *  Camera.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -31,6 +31,7 @@
  */
 #ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
 #define SIRIKATA_GRAPHICS_CAMERA_HPP__
+
 #include "Entity.hpp"
 #include "OgreHeaders.hpp"
 #include <OgreMovableObject.h>
@@ -41,40 +42,37 @@
 namespace Sirikata {
 namespace Graphics {
 
-class CameraEntity : public Entity {
+class Camera {
+    OgreSystem *const mScene;
+    Ogre::Camera* mOgreCamera;
+    Ogre::SceneNode *mSceneNode;
+
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
-    std::list<CameraEntity*>::iterator mAttachedIter;
+    std::list<Camera*>::iterator mAttachedIter;
 
+    Entity* mFollowing;
 public:
-    Ogre::Camera *getOgreCamera() {
-        return static_cast<Ogre::Camera*const>(mOgreObject);
-    }
+    Camera(OgreSystem *scene, Entity* follow);
+    ~Camera();
 
-    ProxyObject &getProxy() const {
-        return *std::tr1::static_pointer_cast<ProxyObject>(mProxy);
-    }
+    Entity* following() const;
 
-    virtual void attach (const String&renderTargetName,
+    void attach (const String&renderTargetName,
                          uint32 width,
                          uint32 height);
-    virtual void detach();
+    void detach();
 
-    // Override so we can detach
-    virtual void destroyed();
+    void tick();
 
-    CameraEntity(OgreSystem *scene,
-                 const std::tr1::shared_ptr<ProxyObject> &pco,
-                 std::string id=std::string());
-
-    virtual ~CameraEntity();
-    Ogre::Viewport* getViewport(){
+    Ogre::Viewport* getViewport() {
         return mViewport;
     }
-    static std::string ogreCameraName(const SpaceObjectReference&ref);
-    virtual std::string ogreMovableName() const;
 
-    void extrapolateLocation(TemporalValue<Location>::Time current);
+private:
+
+    static String ogreCameraName(const SpaceObjectReference&ref);
+
 };
 
 }

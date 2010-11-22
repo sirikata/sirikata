@@ -41,7 +41,6 @@
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "DistanceDownloadPlanner.hpp"
-#include "../CameraEntity.hpp"
 #include <vector>
 
 namespace Sirikata {

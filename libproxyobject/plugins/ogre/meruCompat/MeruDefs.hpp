@@ -81,7 +81,6 @@ class OgreSystem;
 class Entity;
 class LightEntity;
 class MeshEntity;
-class CameraEntity;
 }
 namespace Task {
 class EventResponse;
@@ -133,7 +132,6 @@ using ::Sirikata::Graphics::OgreSystem;
 using ::Sirikata::Graphics::Entity;
 using ::Sirikata::Graphics::LightEntity;
 using ::Sirikata::Graphics::MeshEntity;
-using ::Sirikata::Graphics::CameraEntity;
 using ::Sirikata::InitializeGlobalOptions;
 using ::Sirikata::InitializeClassOptions;
 using ::Sirikata::OptionValue;

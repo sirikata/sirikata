@@ -64,7 +64,7 @@ void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
 
 }
 
-void ResourceDownloadPlanner::setCamera(CameraEntity *entity)
+void ResourceDownloadPlanner::setCamera(Camera *entity)
 {
     camera = entity;
 }

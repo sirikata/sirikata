@@ -40,7 +40,6 @@
 #include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "ResourceDownloadPlanner.hpp"
-#include "../CameraEntity.hpp"
 #include <vector>
 
 namespace Sirikata {
