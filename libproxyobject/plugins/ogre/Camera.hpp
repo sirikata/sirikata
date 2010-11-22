@@ -49,7 +49,6 @@ class Camera {
 
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
-    std::list<Camera*>::iterator mAttachedIter;
 
     Entity* mFollowing;
 public:
@@ -67,6 +66,9 @@ public:
 
     Ogre::Viewport* getViewport() {
         return mViewport;
+    }
+    Ogre::Camera* getOgreCamera() {
+        return mOgreCamera;
     }
 
 private:

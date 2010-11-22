@@ -322,8 +322,8 @@ void    setupResources(const String &filename){
     ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although the override is optional, this is mandatory
 }
 
-std::list<Camera*>::iterator OgreSystem::attachCamera(const String &renderTargetName, Camera* entity) {
-    std::list<Camera*>::iterator retval=mAttachedCameras.insert(mAttachedCameras.end(), entity);
+void OgreSystem::attachCamera(const String &renderTargetName, Camera* entity) {
+    mAttachedCameras.insert(entity);
     if (renderTargetName.empty()) {
         dlPlanner->setCamera(entity);
         std::vector<String> cubeMapNames;
@@ -343,19 +343,17 @@ std::list<Camera*>::iterator OgreSystem::attachCamera(const String &renderTarget
         }
 
     }
-    return retval;
 }
 
-std::list<Camera*>::iterator OgreSystem::detachCamera(std::list<Camera*>::iterator entity) {
-    if (entity != mAttachedCameras.end()) {
-        if (mPrimaryCamera == *entity) {
-            mPrimaryCamera = NULL;//move to second in chain??
-            delete mCubeMap;
-            mCubeMap=NULL;
-        }
-        mAttachedCameras.erase(entity);
+void OgreSystem::detachCamera(Camera* entity) {
+    if (mAttachedCameras.find(entity) == mAttachedCameras.end()) return;
+
+    if (mPrimaryCamera == entity) {
+        mPrimaryCamera = NULL;
+        delete mCubeMap;
+        mCubeMap = NULL;
     }
-    return mAttachedCameras.end();
+    mAttachedCameras.erase(entity);
 }
 
 void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
@@ -967,7 +965,7 @@ void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
         Time cur_time = simTime();
         current->extrapolateLocation(cur_time);
     }
-    for(std::list<Camera*>::iterator cam_it = mAttachedCameras.begin(); cam_it != mAttachedCameras.end(); cam_it++) {
+    for(std::tr1::unordered_set<Camera*>::iterator cam_it = mAttachedCameras.begin(); cam_it != mAttachedCameras.end(); cam_it++) {
         Camera* cam = *cam_it;
         cam->tick();
     }

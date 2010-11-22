@@ -163,7 +163,7 @@ public:
     OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
-    std::list<Camera*> mAttachedCameras;
+    std::tr1::unordered_set<Camera*> mAttachedCameras;
     Camera *mPrimaryCamera;
 
     // For classes that only have access to OgreSystem and not a Context
@@ -174,9 +174,9 @@ public:
     String getResourcesDir() const { return mResourcesDir; }
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
-    std::list<Camera*>::iterator attachCamera(const String&renderTargetName,Camera*);
+    void  attachCamera(const String&renderTargetName,Camera*);
     ///removes the camera from the list of attached cameras.
-    std::list<Camera*>::iterator detachCamera(std::list<Camera*>::iterator);
+    void detachCamera(Camera*);
     Camera*getPrimaryCamera() {
         return mPrimaryCamera;
     }

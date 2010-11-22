@@ -60,7 +60,6 @@ Camera::Camera(OgreSystem *scene, Entity* follow)
 
     mSceneNode->attachObject(mOgreCamera);
 
-    mAttachedIter = scene->mAttachedCameras.end();
     mOgreCamera->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
     mOgreCamera->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
 }
@@ -68,9 +67,6 @@ Camera::Camera(OgreSystem *scene, Entity* follow)
 Camera::~Camera() {
     if ((!mViewport) || (mViewport && mRenderTarget)) {
         detach();
-    }
-    if (mAttachedIter != mScene->mAttachedCameras.end()) {
-        mScene->mAttachedCameras.erase(mAttachedIter);
     }
 
     mSceneNode->detachObject(mOgreCamera);
@@ -93,7 +89,7 @@ void Camera::attach (const String&renderTargetName,uint32 width,uint32 height)
     mViewport= mRenderTarget->addViewport(mOgreCamera);
     mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
     mOgreCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
-    mAttachedIter = mScene->attachCamera(renderTargetName,this);
+    mScene->attachCamera(renderTargetName,this);
 }
 
 
@@ -107,7 +103,7 @@ void Camera::detach() {
         mScene->destroyRenderTarget(mRenderTarget->getName());
         mRenderTarget=NULL;
     }
-    mAttachedIter = mScene->detachCamera(mAttachedIter);
+    mScene->detachCamera(this);
 }
 
 void Camera::tick() {
