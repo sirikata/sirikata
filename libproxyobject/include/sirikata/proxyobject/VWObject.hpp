@@ -58,9 +58,6 @@ public:
     VWObject();
     virtual ~VWObject();
 
-    // Identification
-    //virtual SpaceObjectReference id(const SpaceID& space) const = 0;
-
     /** Get the ProxyManager for the given presence. */
     virtual ProxyManagerPtr presence(const SpaceObjectReference& sor) { return ProxyManagerPtr(); };
     /** Get the proxy version of this object. */

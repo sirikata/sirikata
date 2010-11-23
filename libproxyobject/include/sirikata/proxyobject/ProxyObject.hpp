@@ -39,7 +39,6 @@
 
 #include <sirikata/core/util/Extrapolation.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include "ProxyObjectListener.hpp"
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include "PositionListener.hpp"
 
@@ -47,8 +46,6 @@
 #include <sirikata/core/odp/Port.hpp>
 
 #include "VWObject.hpp"
-
-#include "CameraListener.hpp"
 
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
@@ -70,7 +67,6 @@ class ProxyObjectListener;
 typedef double AbsTime;
 typedef Provider<PositionListener*> PositionProvider;
 typedef Provider<ProxyObjectListener*> ProxyObjectProvider;
-typedef Provider<CameraListener*> CameraProvider;
 typedef Provider< MeshListener* > MeshProvider;
 
 
@@ -81,7 +77,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
 public:
     virtual ~ProxyObjectListener(){}
     virtual void destroyed() = 0;
-    virtual void becomeCamera(ProxyObjectPtr p)=0;
 };
 
 
@@ -98,8 +93,7 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
     : public SelfWeakPtr<ProxyObject>,
       public ProxyObjectProvider,
       public PositionProvider,
-      public MeshProvider,
-      public CameraProvider
+      public MeshProvider
 {
 
 public:
@@ -127,10 +121,6 @@ private:
     Transfer::URI mMeshURI;
     Vector3f mScale;
     PhysicalParameters mPhysical;
-    bool mCamera;
-
-
-
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -242,8 +232,6 @@ public:
     }
 
 
-    void notifyBecomeCamera();
-
     // interface from MeshObject
     virtual void setMesh ( Transfer::URI const& rhs );
     virtual Transfer::URI const& getMesh () const;
@@ -251,15 +239,6 @@ public:
     virtual Vector3f const& getScale () const;
     virtual void setPhysical ( PhysicalParameters const& rhs );
     virtual PhysicalParameters const& getPhysical () const;
-
-    //interface from camera object
-    void attach(const String&renderTargetName,
-                uint32 width,
-                uint32 height);
-    void detach();
-
-    bool isCamera();
-    void setCamera(bool onOff);
 
 };
 }

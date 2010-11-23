@@ -1,7 +1,7 @@
-/*  Sirikata Object Host
- *  ProxyCameraObject.cpp
+/*  Sirikata Graphical Object Host
+ *  Camera.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,29 +29,55 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
+#define SIRIKATA_GRAPHICS_CAMERA_HPP__
 
-#include <sirikata/proxyobject/Platform.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/proxyobject/ProxyCameraObject.hpp>
+#include "Entity.hpp"
+#include "OgreHeaders.hpp"
+#include <OgreMovableObject.h>
+#include <OgreRenderable.h>
+#include <OgreRenderTarget.h>
+
+
 namespace Sirikata {
-ProxyCameraObject::ProxyCameraObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
- : ProxyObject(man, id, vwobj, owner_sor)
-{
+namespace Graphics {
+
+class Camera {
+    OgreSystem *const mScene;
+    Ogre::Camera* mOgreCamera;
+    Ogre::SceneNode *mSceneNode;
+
+    Ogre::RenderTarget *mRenderTarget;
+    Ogre::Viewport *mViewport;
+
+    Entity* mFollowing;
+public:
+    Camera(OgreSystem *scene, Entity* follow);
+    ~Camera();
+
+    Entity* following() const;
+
+    void attach (const String&renderTargetName,
+                         uint32 width,
+                         uint32 height);
+    void detach();
+
+    void tick();
+
+    Ogre::Viewport* getViewport() {
+        return mViewport;
+    }
+    Ogre::Camera* getOgreCamera() {
+        return mOgreCamera;
+    }
+
+private:
+
+    static String ogreCameraName(const SpaceObjectReference&ref);
+
+};
 
 }
-
-void ProxyCameraObject::destroy() {
-    detach();
-    ProxyObject::destroy();
 }
 
-void ProxyCameraObject::attach(const String&renderTargetName,
-                uint32 width,
-                uint32 height) {
-        CameraProvider::notify(&CameraListener::attach,renderTargetName,width,height);
-}
-void ProxyCameraObject::detach() {
-        CameraProvider::notify(&CameraListener::detach);
-}
-
-}
+#endif

@@ -70,7 +70,7 @@ void CSVObjectFactory::generate()
     std::ifstream fp(mFilename.c_str());
     if (!fp) return;
 
-    
+
     bool is_first = true;
     int objtype_idx = -1;
     int pos_idx = -1;
@@ -94,9 +94,9 @@ void CSVObjectFactory::generate()
 	// then this is a comment
         if(line.length() > 0 && line.at(0) == '#')
        {
-         continue;   
+         continue;
        }
-        
+
 
         // Split into parts
         StringList line_parts;
@@ -114,7 +114,7 @@ void CSVObjectFactory::generate()
             // Remove quotes from beginning and end
             if (next_val.size() > 2 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
                 next_val = next_val.substr(1, next_val.size() - 2);
-    
+
             line_parts.push_back(next_val);
 
             last_comma = next_comma;
@@ -134,16 +134,16 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "script_file") script_file_idx = idx;
                 if (line_parts[idx] == "script_type") script_type_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
-                if(line_parts[idx] == "objid") 
+                if(line_parts[idx] == "objid")
                 {
                     objid_idx = idx;
                 }
-                if(line_parts[idx] == "solid_angle") 
+                if(line_parts[idx] == "solid_angle")
                 {
                     solid_angle_idx = idx;
                 }
 
-                
+
             }
 
             is_first = false;
@@ -196,7 +196,7 @@ void CSVObjectFactory::generate()
 
                 String scriptFile = "";
                 String scriptType = "";
-                /* 
+                /*
                    FIX for 156: http://www.sirikata.com/trac/ticket/156
                 */
                 if(script_file_idx != -1)
@@ -207,50 +207,50 @@ void CSVObjectFactory::generate()
                 {
                     scriptType = line_parts[script_type_idx];
                 }
-                
+
                 float scale =
                     scale_idx == -1 ?
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
-                
+
                 String solid_angle = "";
                 SolidAngle query_angle(SolidAngle::Max);
 
                 if(solid_angle_idx != -1)
                 {
-                  solid_angle = line_parts[solid_angle_idx];  
+                  solid_angle = line_parts[solid_angle_idx];
                   if(solid_angle != "")
                   {
-                    
-                    query_angle = SolidAngle(atof(solid_angle.c_str())); 
+
+                    query_angle = SolidAngle(atof(solid_angle.c_str()));
                   }
                 }
-                
+
 
                 /*
-								
-                  Ticket #134 
-                  
+
+                  Ticket #134
+
                 */
                 String objid = "";
                 if(objid_idx != -1)
                 {
                     objid = line_parts[objid_idx];
                 }
-                
+
                 HostedObjectPtr obj;
-                
+
                 if(objid_idx == -1)
                 {
-                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
-                    
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random());
+
                 }
                 else
                 {
-                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()), false);
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()));
                 }
 
-                
+
                 obj->init();
 
                 ObjectConnectInfo oci;
@@ -270,7 +270,7 @@ void CSVObjectFactory::generate()
         }
     }
 
-    
+
     fp.close();
 
     connectObjects();
@@ -281,7 +281,7 @@ void CSVObjectFactory::generate()
 
 void CSVObjectFactory::connectObjects()
 {
-    
+
     if (mContext->stopped())
     {
         std::cout<<"\n\nContext stopped.  Will not get anywhere\n\n";

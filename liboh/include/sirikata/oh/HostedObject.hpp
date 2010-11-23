@@ -109,8 +109,6 @@ protected:
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
-    bool mIsCamera; // FIXME hack so we can get a camera up and running, need
-                    // more flexible selection of proxy type
 
     ODP::DelegateService* mDelegateODPService;
 
@@ -135,7 +133,7 @@ private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
     friend class PerPresenceData;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid, bool is_camera);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
@@ -344,7 +342,7 @@ public:
     Network::IOService* getIOService();
     //void registerTimeoutCallback(const Duration& dur, std::tr1::function<void( );
 
-    
+
   public:
     // Identification
     // virtual SpaceObjectReference id(const SpaceID& space) const;
@@ -359,7 +357,7 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
 
-    
+
     // Movement Interface
     //note: location update services both position and velocity
 
@@ -412,9 +410,9 @@ public:
 
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
-    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera);
-    ProxyObjectPtr createDummyProxy(bool is_camera);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
+    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri);
+    ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);

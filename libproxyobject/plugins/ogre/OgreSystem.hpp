@@ -73,7 +73,7 @@ class SDLInputManager;
 namespace Graphics {
 class Entity;
 using Input::SDLInputManager;
-class CameraEntity;
+class Camera;
 class CubeMap;
 struct IntersectResult;
 /** Represents one OGRE SceneManager, a single environment. */
@@ -83,6 +83,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Context* mContext;
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
+
+    Camera* mCamera;
 
     class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class OgreSystemMouseHandler;
@@ -101,7 +103,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     SceneEntitiesMap mSceneEntities;
     std::list<Entity*> mMovingEntities;
     friend class Entity; //Entity will insert/delete itself from these arrays.
-    friend class CameraEntity; //CameraEntity will insert/delete itself from the scene cameras array.
+    friend class Camera; //CameraEntity will insert/delete itself from the scene cameras array.
     OptionValue*mWindowWidth;
     OptionValue*mWindowHeight;
     OptionValue*mWindowDepth;
@@ -161,8 +163,8 @@ public:
     OptionValue *mParallaxShadowSteps;
     static std::list<OgreSystem*> sActiveOgreScenes;
     static uint32 sNumOgreSystems;
-    std::list<CameraEntity*> mAttachedCameras;
-    CameraEntity *mPrimaryCamera;
+    std::tr1::unordered_set<Camera*> mAttachedCameras;
+    Camera *mPrimaryCamera;
 
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();
@@ -172,10 +174,10 @@ public:
     String getResourcesDir() const { return mResourcesDir; }
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
-    std::list<CameraEntity*>::iterator attachCamera(const String&renderTargetName,CameraEntity*);
+    void  attachCamera(const String&renderTargetName,Camera*);
     ///removes the camera from the list of attached cameras.
-    std::list<CameraEntity*>::iterator detachCamera(std::list<CameraEntity*>::iterator);
-    CameraEntity*getPrimaryCamera() {
+    void detachCamera(Camera*);
+    Camera*getPrimaryCamera() {
         return mPrimaryCamera;
     }
     SDLInputManager *getInputManager() {
@@ -229,8 +231,6 @@ public:
      *  \param data the contents of the
      */
     MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
-
-    void becomeCamera(ProxyObjectPtr p);
 
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,

@@ -33,9 +33,9 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "OgreMeshRaytrace.hpp"
-#include "CameraEntity.hpp"
+#include "Camera.hpp"
 #include "Lights.hpp"
-#include "MeshEntity.hpp"
+#include "Entity.hpp"
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
@@ -83,13 +83,12 @@ using namespace std;
 #define SDL_SCANCODE_PAGEDOWN 0x5b
 #endif
 
+// FIXME this needs to be documented. this used to rely on whether entities were
+// cameras or not (using position instead of names). it is not clear at all how
+// or why this method is supposed to be the right way to compare entities.
 bool compareEntity (const Entity* one, const Entity* two)
 {
     ProxyObject *pp = one->getProxyPtr().get();
-
-    // ProxyCameraObject* camera1 = dynamic_cast<ProxyCameraObject*>(pp);
-    // ProxyMeshObject* mesh1 = dynamic_cast<ProxyMeshObject*>(pp);
-
 
     Time now = one->getScene()->simTime();
     Location loc1 = pp->globalLocation(now);
@@ -98,25 +97,7 @@ bool compareEntity (const Entity* one, const Entity* two)
     pp2 = two->getProxyPtr().get();
     Location loc2 = pp->globalLocation(now);
 
-    // ProxyCameraObject* camera2 = dynamic_cast<ProxyCameraObject*>(pp);
-    // ProxyMeshObject* mesh2 = dynamic_cast<ProxyMeshObject*>(pp);
-
-    // if (camera1 && !camera2) return true;
-    // if (camera2 && !camera1) return false;
-
-    if (pp->isCamera() && !pp2->isCamera()) return true;
-    if (pp2->isCamera() && !pp->isCamera()) return false;
-
-
-    if (pp->isCamera() && pp2->isCamera())
-    {
-        return loc1.getPosition().x < loc2.getPosition().x;
-    }
-
-    if (!pp->isCamera() &&  !pp2->isCamera())
-    {
-        return pp->getPhysical().name < pp2->getPhysical().name;
-    }
+    return pp->getPhysical().name < pp2->getPhysical().name;
 
     return one<two;
 }
@@ -228,14 +209,14 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
 
     /////////////////// HELPER FUNCTIONS ///////////////
 
-    void mouseOverWebView(CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
-        Location location(cam->getProxy().globalLocation(time));
+    void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
+        Location location(cam->following()->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
         ProxyObjectPtr obj(mMouseDownObject.lock());
         Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
         if (mMouseDownTri.intersected && ent) {
-            MeshEntity *me = static_cast<MeshEntity*>(ent);
+            Entity *me = ent;
             IntersectResult res = mMouseDownTri;
             res.distance = 1.0e38;
 /* fixme */
@@ -249,27 +230,11 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
             newt.v3.coord = (orient * (newt.v3.coord * scale)) + position;
 /* */
             OgreMesh::intersectTri(OgreMesh::transformRay(ent->getSceneNode(), traceFrom), res, &newt, true); // &res.tri
-            WebView *wv = me->getWebView(mMouseDownSubEntity);
-            if (wv) {
-                unsigned short int wid=0,hei=0;
-                wv->getExtents(wid,hei);
-                int x = res.u * wid;
-                int y = res.v * hei;
-                if (mousedown) {
-                    wv->injectMouseDown(x, y);
-                }
-                if (mouseup) {
-                    wv->injectMouseUp(x, y);
-                }
-                if (!mousedown && !mouseup) {
-                    wv->injectMouseMove(x, y);
-                }
-            }
         }
     }
 
-    Entity *hoverEntity (CameraEntity *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
-        Location location(cam->getProxy().globalLocation(time));
+    Entity *hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
+        Location location(cam->following()->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
         SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
@@ -280,15 +245,11 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
         Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
         Entity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
         if (mousedown && mouseOverEntity) {
-            MeshEntity *me = dynamic_cast<MeshEntity*>(mouseOverEntity);
+            Entity *me = mouseOverEntity;
             if (me) {
                 mMouseDownTri = res;
                 mMouseDownObject = me->getProxyPtr();
                 mMouseDownSubEntity = subent;
-                WebView *wv = me->getWebView(mMouseDownSubEntity);
-                if (wv) {
-                    //if (which==0) {*hitCount=-1;}
-                }
             }
         }
         if (mouseOverEntity) {
@@ -368,7 +329,7 @@ private:
     int mWhichRayObject;
     void selectObjectAction(Vector2f p, int direction) {
         if (!mParent||!mParent->mPrimaryCamera) return;
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         Time time = mParent->simTime();
 
         if (!camera) {
@@ -564,7 +525,7 @@ private:
         }
         SpaceObjectReference parentId = mCurrentGroup;
 
-        ProxyManager *proxyMgr = mParent->mPrimaryCamera->getProxy().getProxyManager();
+        ProxyManager *proxyMgr = mParent->mPrimaryCamera->following()->getProxy().getProxyManager();
         Time now = mParent->simTime();
         for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
                 iter != mSelectedObjects.end(); ++iter) {
@@ -782,7 +743,7 @@ private:
 /*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         if (!camera) return;
         SpaceObjectReference newId = SpaceObjectReference(camera->id().space(), ObjectReference(UUID::random()));
         ProxyManager *proxyMgr = camera->getProxy().getProxyManager();
@@ -821,7 +782,7 @@ private:
 /*
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         if (!camera) return;
         Time now = mParent->simTime();
         Location curLoc (camera->getProxy().globalLocation(now));
@@ -923,7 +884,7 @@ private:
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
-        CameraEntity *camera = mParent->mPrimaryCamera;
+        Camera *camera = mParent->mPrimaryCamera;
         if (!camera) return;
         Time now = mParent->simTime();
         Location curLoc (camera->getProxy().globalLocation(now));
@@ -1075,7 +1036,7 @@ private:
             return;
         }
 
-        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
         if (!cam)
         {
             return;
@@ -1109,7 +1070,7 @@ private:
     void rotateAction(Vector3f about, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
@@ -1140,7 +1101,7 @@ private:
 
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = mParent->mPrimaryCamera->getProxyPtr();
+        ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
         if (!cam) return;
 
         SpaceID space = cam->getObjectReference().space();
@@ -1213,33 +1174,6 @@ private:
         mParent->mInputManager->filesDropped(files);
     }
 
-    void saveSceneAction() {
-        std::set<std::string> saveSceneNames;
-        std::cout << "saving new scene as scene_new.csv: " << std::endl;
-        FILE *output = fopen("scene_new.csv", "wt");
-        if (!output) {
-            perror("Failed to open scene_new.csv");
-            return;
-        }
-        fprintf(output, "objtype,subtype,name,parent,script,scriptparams,");
-        fprintf(output, "pos_x,pos_y,pos_z,orient_x,orient_y,orient_z,orient_w,");
-        fprintf(output, "vel_x,vel_y,vel_z,rot_axis_x,rot_axis_y,rot_axis_z,rot_speed,");
-        fprintf(output, "scale_x,scale_y,scale_z,hull_x,hull_y,hull_z,");
-        fprintf(output, "density,friction,bounce,colMask,colMsg,meshURI,diffuse_x,diffuse_y,diffuse_z,ambient,");
-        fprintf(output, "specular_x,specular_y,specular_z,shadowpower,");
-        fprintf(output, "range,constantfall,linearfall,quadfall,cone_in,cone_out,power,cone_fall,shadow\n");
-        OgreSystem::SceneEntitiesMap::const_iterator iter;
-        vector<Entity*> entlist;
-        entlist.clear();
-        for (iter = mParent->mSceneEntities.begin(); iter != mParent->mSceneEntities.end(); ++iter) {
-            entlist.push_back(iter->second);
-        }
-        std::sort(entlist.begin(), entlist.end(), compareEntity);
-        for (unsigned int i=0; i<entlist.size(); i++)
-            dumpObject(output, entlist[i], saveSceneNames);
-        fclose(output);
-    }
-
     bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
         /// note that in the 'gymbal lock' situation, we will get nan's for pitch.
         /// for now, in that case we should revert to quaternion
@@ -1259,118 +1193,6 @@ private:
         }
         return true;
     }
-
-    string physicalName(ProxyObject *obj, std::set<std::string> &saveSceneNames)
-    {
-        std::string name = obj->getPhysical().name;
-        if (name.empty()) {
-            name = obj->getMesh().filename();
-            name.resize(name.size()-5);
-            //name += ".0";
-        }
-//        if (name.find(".") < name.size()) {             /// remove any enumeration
-//            name.resize(name.find("."));
-//        }
-        int basesize = name.size();
-        int count = 1;
-        while (saveSceneNames.count(name)) {
-            name.resize(basesize);
-            std::ostringstream os;
-            os << name << "." << count;
-            name = os.str();
-            count++;
-        }
-        saveSceneNames.insert(name);
-        return name;
-    }
-
-
-    void dumpObject(FILE* fp, Entity* e, std::set<std::string> &saveSceneNames)
-    {
-        ProxyObject *pp = e->getProxyPtr().get();
-        Time now = mParent->simTime();
-        Location loc = pp->globalLocation(now);
-
-
-        double x,y,z;
-        std::string w("");
-        /// if feasible, use Eulers: (not feasible == potential gymbal confusion)
-        if (!quat2Euler(loc.getOrientation(), x, z, y)) {
-            x=loc.getOrientation().x;
-            y=loc.getOrientation().y;
-            z=loc.getOrientation().z;
-            std::stringstream temp;
-            temp << loc.getOrientation().w;
-            w = temp.str();
-        }
-
-        Vector3f angAxis(loc.getAxisOfRotation());
-        float angSpeed(loc.getAngularSpeed());
-
-        string parent;
-        ProxyObjectPtr parentObj = pp->getParentProxy();
-
-        if (parentObj)
-        {
-            ProxyObject *parentMesh = dynamic_cast<ProxyObject*>(parentObj.get());
-            if (parentMesh) {
-                parent = physicalName(parentMesh, saveSceneNames);
-            }
-        }
-        else
-        {
-            Transfer::URI uri = pp->getMesh();
-            std::string uristr = uri.toString();
-            if (uri.proto().empty())
-            {
-                uristr = "";
-            }
-
-            const PhysicalParameters &phys = pp->getPhysical();
-            std::string subtype;
-            switch (phys.mode) {
-            case PhysicalParameters::Disabled:
-                subtype="graphiconly";
-                break;
-            case PhysicalParameters::Static:
-                subtype="staticmesh";
-                break;
-            case PhysicalParameters::DynamicBox:
-                subtype="dynamicbox";
-                break;
-            case PhysicalParameters::DynamicSphere:
-                subtype="dynamicsphere";
-                break;
-            case PhysicalParameters::DynamicCylinder:
-                subtype="dynamiccylinder";
-                break;
-            case PhysicalParameters::Character:
-                subtype="character";
-                break;
-            default:
-                std::cout << "unknown physical mode! " << (int)phys.mode << std::endl;
-            }
-            std::string name = physicalName(pp, saveSceneNames);
-            if (pp->isCamera())
-            {
-                fprintf(fp, "mesh,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-            }
-            else
-            {
-                fprintf(fp, "camera,%s,%s,%s,,,%f,%f,%f,%f,%f,%f,%s,%f,%f,%f,%f,%f,%f,%f,",subtype.c_str(),name.c_str(),parent.c_str(),
-                    loc.getPosition().x,loc.getPosition().y,loc.getPosition().z,x,y,z,w.c_str(),
-                    loc.getVelocity().x, loc.getVelocity().y, loc.getVelocity().z, angAxis.x, angAxis.y, angAxis.z, angSpeed);
-            }
-
-            fprintf(fp, "%f,%f,%f,%f,%f,%f,%f,%f,%f,%d,%d,%s\n",
-                    pp->getScale().x,pp->getScale().y,pp->getScale().z,
-                    phys.hull.x, phys.hull.y, phys.hull.z,
-                    phys.density, phys.friction, phys.bounce, phys.colMask, phys.colMsg, uristr.c_str());
-        }
-    }
-
 
 
     void zoomAction(float value, Vector2f axes)
@@ -1456,7 +1278,7 @@ private:
         mInputBinding.handle(inputev);
 
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, false);
@@ -1479,7 +1301,7 @@ private:
         }
 
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
@@ -1507,7 +1329,7 @@ private:
             return EventResponse::cancel();
         }
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, mouseev->mX, mouseev->mY, false, true);
@@ -1541,7 +1363,7 @@ private:
         }
 
         if (mParent->mPrimaryCamera) {
-            CameraEntity *camera = mParent->mPrimaryCamera;
+            Camera *camera = mParent->mPrimaryCamera;
             Time time = mParent->simTime();
             int lhc=mLastHitCount;
             mouseOverWebView(camera, time, ev->mX, ev->mY, false, ev->mType == Input::DRAG_END);
@@ -1596,7 +1418,7 @@ private:
     /// Camera Path Utilities
     void cameraPathSetCamera(const Vector3d& pos, const Quaternion& orient) {
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->following()->getProxyPtr());
         if (!cam) return;
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1649,7 +1471,7 @@ private:
 
     void cameraPathInsert() {
         if (!mParent||!mParent->mPrimaryCamera) return;
-        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->getProxyPtr());
+        ProxyObjectPtr cam = getTopLevelParent(mParent->mPrimaryCamera->following()->getProxyPtr());
         if (!cam) return;
         Time now = mParent->simTime();
         Location loc = cam->extrapolateLocation(now);
@@ -1869,7 +1691,6 @@ public:
         mInputResponses["deleteObjects"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::deleteObjectsAction, this));
         mInputResponses["cloneObjects"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::cloneObjectsAction, this));
         mInputResponses["import"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::importAction, this));
-        mInputResponses["saveScene"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::saveSceneAction, this));
 
         mInputResponses["selectObject"] = new Vector2fInputResponse(std::tr1::bind(&OgreSystemMouseHandler::selectObjectAction, this, _1, 1));
         mInputResponses["selectObjectReverse"] = new Vector2fInputResponse(std::tr1::bind(&OgreSystemMouseHandler::selectObjectAction, this, _1, -1));

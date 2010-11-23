@@ -36,7 +36,6 @@
 #include <sirikata/proxyobject/PositionListener.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 
-#include <sirikata/proxyobject/CameraListener.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 
 
@@ -52,8 +51,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
      mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
      mParent(vwobj),
      mMeshURI(),
-     mScale(1.f, 1.f, 1.f),
-     mCamera(false)
+     mScale(1.f, 1.f, 1.f)
 {
     assert(mParent);
     mDefaultPort = mParent->bindODPPort(owner_sor);
@@ -65,8 +63,6 @@ ProxyObject::~ProxyObject() {
 }
 
 void ProxyObject::destroy() {
-
-    detach();
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
@@ -112,13 +108,6 @@ ProxyObjectPtr ProxyObject::getParentProxy() const {
     return ProxyObjectPtr();
 }
 
-
-bool ProxyObject::isCamera()
-{
-    return mCamera;
-}
-
-
 //you can set a camera's mesh as of now.
 void ProxyObject::setMesh ( Transfer::URI const& mesh )
 {
@@ -158,41 +147,5 @@ PhysicalParameters const& ProxyObject::getPhysical () const
 {
     return mPhysical;
 }
-
-void ProxyObject::attach(const String&renderTargetName,uint32 width,uint32 height)
-{
-    if (mCamera)
-        CameraProvider::notify(&CameraListener::attach,renderTargetName,width,height);
-}
-
-
-void ProxyObject::detach()
-{
-    if (mCamera)
-        CameraProvider::notify(&CameraListener::detach);
-}
-
-
-//may actually want to notify some listeners on this event.  maybe
-void ProxyObject::setCamera(bool onOff)
-{
-    mCamera = onOff;
-}
-
-void ProxyObject::notifyBecomeCamera()
-{
-    //ProxyObjectPtr ptr (this);
-    ProxyObjectPtr ptr = getSharedPtr();
-
-    if (ptr)
-    {
-        ProxyObjectProvider::notify(&ProxyObjectListener::becomeCamera ,ptr);
-    }
-    else
-    {
-        std::cout<<"\n\nIn notifyBecomeCamera, did not get it\n\n";
-    }
-}
-
 
 }
