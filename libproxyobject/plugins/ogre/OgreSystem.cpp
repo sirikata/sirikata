@@ -830,7 +830,7 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
         if (!foundEntity) continue;
         Entity *ourEntity = Entity::fromMovableObject(result.movable);
         if (!ourEntity) continue;
-        if (ourEntity->id() != mPresenceID) continue;
+        if (ourEntity->id() == mPresenceID) continue;
 
         RayTraceResult rtr(result.distance,result.movable);
         bool passed=aabbOnly&&result.distance > 0;
