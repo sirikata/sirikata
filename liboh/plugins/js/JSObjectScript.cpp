@@ -60,7 +60,6 @@
 #include "JSSystemNames.hpp"
 #include "JSPresenceStruct.hpp"
 
-
 //#define __EMERSON_COMPILE_ON__
 
 
@@ -77,11 +76,27 @@ using namespace std;
 namespace Sirikata {
 namespace JS {
 
+JSObjectScript::ScopedEvalContext::ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx)
+ : parent(_parent)
+{
+    parent->mEvalContextStack.push(_ctx);
+}
+
+JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
+    assert(!parent->mEvalContextStack.empty());
+    parent->mEvalContextStack.pop();
+}
+
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan)
  : mParent(ho),
    mManager(jMan)
 {
+    // By default, our eval context has:
+    // 1. Empty currentScriptDir, indicating it should only use explicitly
+    //    specified search paths.
+    mEvalContextStack.push(EvalContext());
+
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
@@ -321,8 +336,10 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str)
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
 {
+    ScopedEvalContext sec(this, new_ctx);
+
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
     TryCatch try_catch;
@@ -452,7 +469,7 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
             target,
             cb
         ));
-    
+
 
 }
 
@@ -461,12 +478,44 @@ void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persis
 }
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    using namespace boost::filesystem;
+
+    // Search through the import paths to find the file to import, searching the
+    // current directory first if it is non-empty.
+    path full_filename;
+    path filename_as_path(filename);
+    assert(!mEvalContextStack.empty());
+    EvalContext& ctx = mEvalContextStack.top();
+    if (!ctx.currentScriptDir.empty()) {
+        path fq = ctx.currentScriptDir / filename_as_path;
+        if (boost::filesystem::exists(fq))
+            full_filename = fq;
+    }
+    if (full_filename.empty()) {
+        std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+        for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
+            path fq = path(*pit) / filename_as_path;
+            if (boost::filesystem::exists(fq)) {
+                full_filename = fq;
+                break;
+            }
+        }
+    }
+
+    // If we still haven't filled this in, we just can't find the file.
+    if (full_filename.empty())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't find file for import.")) );
+
+    // Now try to read in and run the file.
     FILE * pFile;
     long lSize;
     char * buffer;
     long result;
 
-    pFile = fopen (filename.c_str(), "r" );
+    pFile = fopen (full_filename.string().c_str(), "r" );
     if (pFile == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't open file for import.")) );
 
@@ -482,7 +531,9 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     if (result != lSize)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
 
-    return protectedEval(contents);
+    EvalContext new_ctx;
+    new_ctx.currentScriptDir = full_filename.parent_path().string();
+    return protectedEval(contents, new_ctx);
 }
 
 
@@ -748,7 +799,9 @@ void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, c
             Sirikata::JS::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
             String script_str = req.body();
 
-            protectedEval(script_str);
+            assert(!mEvalContextStack.empty());
+            // No new context info currently, just copy the previous one
+            protectedEval(script_str, mEvalContextStack.top());
         }
     }
 }

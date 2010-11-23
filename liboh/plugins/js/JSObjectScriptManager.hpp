@@ -35,7 +35,7 @@
 
 
 #include <sirikata/oh/ObjectScriptManager.hpp>
-
+#include <sirikata/core/options/Options.hpp>
 
 #include <v8.h>
 
@@ -52,6 +52,8 @@ public:
     virtual ObjectScript* createObjectScript(HostedObjectPtr ho,
         const Arguments &args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
+
+    OptionSet* getOptions() const { return mOptions; }
 
     v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
@@ -77,6 +79,7 @@ private:
     v8::Persistent<v8::FunctionTemplate> mQuaternionTemplate;
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
+    OptionSet* mOptions;
 };
 
 } // namespace JS

@@ -65,6 +65,17 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
+
+    OptionValue* import_paths;
+    InitializeClassOptions(
+        "jsobjectscriptmanager",this,
+        import_paths = new OptionValue("import-paths",".",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        NULL
+    );
+
+    mOptions = OptionSet::getOptions("jsobjectscriptmanager",this);
+    mOptions->parse(arguments);
+
     createSystemTemplate();
     createAddressableTemplate();
     createHandlerTemplate();
