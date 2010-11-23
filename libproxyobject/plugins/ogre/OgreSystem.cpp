@@ -51,7 +51,6 @@
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "meruCompat/SequentialWorkQueue.hpp"
 
-using Meru::CDNArchivePlugin;
 using Meru::SequentialWorkQueue;
 
 #include <boost/filesystem.hpp>
@@ -122,7 +121,7 @@ std::string getChromeResourcesDir() {
 
 
 Ogre::Root *OgreSystem::sRoot;
-Meru::CDNArchivePlugin *OgreSystem::mCDNArchivePlugin=NULL;
+CDNArchivePlugin *OgreSystem::mCDNArchivePlugin=NULL;
 Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
 Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;

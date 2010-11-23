@@ -34,7 +34,8 @@
 
 using namespace Ogre;
 
-namespace Meru {
+namespace Sirikata {
+namespace Graphics {
 
 static String sPluginName = "CDNArchive";
 
@@ -63,4 +64,5 @@ void CDNArchivePlugin::uninstall() {
 	delete CDNArchiveFactory::getSingletonPtr();
 }
 
-} // namespace Meru
+} // namespace Graphics
+} // namespace Sirikata

@@ -55,10 +55,6 @@
 #undef nil
 #endif
 
-namespace Meru {
-class CDNArchivePlugin;
-}
-
 namespace Ogre {
 struct RaySceneQueryResultEntry;
 class SubEntity;
@@ -76,6 +72,8 @@ using Input::SDLInputManager;
 class Camera;
 class CubeMap;
 struct IntersectResult;
+class CDNArchivePlugin;
+
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener
 
@@ -113,9 +111,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     OptionValue*mFrameDuration;
     OptionSet*mOptions;
     Task::LocalTime mLastFrameTime;
-    static Ogre::Plugin*sCDNArchivePlugin;
-    static Ogre::Root *sRoot;
-    static ::Meru::CDNArchivePlugin *mCDNArchivePlugin;
+    static Ogre::Plugin* sCDNArchivePlugin;
+    static Ogre::Root* sRoot;
+    static CDNArchivePlugin* mCDNArchivePlugin;
 
     String mResourcesDir;
 
