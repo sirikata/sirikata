@@ -34,7 +34,7 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include "Camera.hpp"
-#include "MeshEntity.hpp"
+#include "Entity.hpp"
 #include "input/SDLInputManager.hpp"
 #include "DragActions.hpp"
 #include <sirikata/core/task/Time.hpp>

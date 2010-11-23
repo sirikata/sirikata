@@ -40,7 +40,7 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "Camera.hpp"
-#include "MeshEntity.hpp"
+#include "Entity.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
 #include "input/SDLInputManager.hpp"
@@ -728,7 +728,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;
 
-    MeshEntity* mesh = new MeshEntity(this,p);
+    Entity* mesh = new Entity(this,p);
     dlPlanner->addNewObject(p,mesh);
 
     bool is_viewer = (p->getObjectReference() == mPresenceID);

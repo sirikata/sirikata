@@ -79,8 +79,6 @@ namespace Sirikata {
 namespace Graphics {
 class OgreSystem;
 class Entity;
-class LightEntity;
-class MeshEntity;
 }
 namespace Task {
 class EventResponse;
@@ -130,8 +128,6 @@ using ::Sirikata::BoundingSphere;
 using ::Sirikata::BoundingInfo;
 using ::Sirikata::Graphics::OgreSystem;
 using ::Sirikata::Graphics::Entity;
-using ::Sirikata::Graphics::LightEntity;
-using ::Sirikata::Graphics::MeshEntity;
 using ::Sirikata::InitializeGlobalOptions;
 using ::Sirikata::InitializeClassOptions;
 using ::Sirikata::OptionValue;
@@ -143,7 +139,7 @@ using ::Sirikata::Task::EventPtr;
 using ::Sirikata::Task::SubscriptionId;
 using ::Sirikata::Task::EventResponse;
 
-typedef MeshEntity GraphicsEntity;
+typedef Entity GraphicsEntity;
 
 
 using ::Sirikata::UUID;

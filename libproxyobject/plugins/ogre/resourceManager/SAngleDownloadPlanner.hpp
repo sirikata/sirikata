@@ -44,9 +44,6 @@
 #include <vector>
 
 namespace Sirikata {
-namespace Graphics{
-class MeshEntity;
-}
 
 class SAngleDownloadPlanner : public DistanceDownloadPlanner
 {

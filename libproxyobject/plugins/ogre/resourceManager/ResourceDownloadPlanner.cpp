@@ -31,7 +31,7 @@
  */
 
 #include "ResourceDownloadPlanner.hpp"
-#include "../MeshEntity.hpp"
+#include "../Entity.hpp"
 #include <stdlib.h>
 #include <algorithm>
 #include <sirikata/proxyobject/ProxyObject.hpp>
@@ -59,7 +59,7 @@ ResourceDownloadPlanner::~ResourceDownloadPlanner()
 
 }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
+void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
 {
 
 }

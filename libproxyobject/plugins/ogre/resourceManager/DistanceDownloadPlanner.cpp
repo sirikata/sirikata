@@ -32,7 +32,7 @@
 
 
 #include "DistanceDownloadPlanner.hpp"
-#include "../MeshEntity.hpp"
+#include "../Entity.hpp"
 #include "SAngleDownloadPlanner.hpp"
 #include <stdlib.h>
 #include <algorithm>
@@ -64,7 +64,7 @@ vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::fin
     return resources.end();
 }
 
-void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
+void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
 {
     p->MeshProvider::addListener(this);
     Resource r(mesh, p);

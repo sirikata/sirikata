@@ -44,7 +44,7 @@
 
 namespace Sirikata {
 namespace Graphics{
-class MeshEntity;
+class Entity;
 }
 
 class DistanceDownloadPlanner : public ResourceDownloadPlanner
@@ -53,7 +53,7 @@ public:
     DistanceDownloadPlanner(Context* c);
     ~DistanceDownloadPlanner();
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
     virtual void removeObject(ProxyObjectPtr p);
 
     //MeshListener interface
@@ -64,13 +64,13 @@ public:
     virtual void stop();
 
     struct Resource {
-        Resource(Graphics::MeshEntity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
+        Resource(Graphics::Entity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
             ready = false;
             file = NULL;
         }        virtual ~Resource(){}
 
         Transfer::URI *file;
-        Graphics::MeshEntity *mesh;
+        Graphics::Entity *mesh;
         ProxyObjectPtr proxy;
         bool ready;
     };

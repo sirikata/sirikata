@@ -46,7 +46,7 @@
 
 namespace Sirikata {
 namespace Graphics{
-class MeshEntity;
+class Entity;
 }
 
 class ResourceDownloadPlanner : public MeshListener, public PollingService
@@ -55,7 +55,7 @@ public:
     ResourceDownloadPlanner(Context* c);
     ~ResourceDownloadPlanner();
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
     virtual void removeObject(ProxyObjectPtr p) = 0;
     virtual void setCamera(Graphics::Camera *entity);
 

@@ -35,7 +35,7 @@
 #include "OgreMeshRaytrace.hpp"
 #include "Camera.hpp"
 #include "Lights.hpp"
-#include "MeshEntity.hpp"
+#include "Entity.hpp"
 #include "input/SDLInputManager.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
@@ -216,7 +216,7 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
         ProxyObjectPtr obj(mMouseDownObject.lock());
         Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
         if (mMouseDownTri.intersected && ent) {
-            MeshEntity *me = static_cast<MeshEntity*>(ent);
+            Entity *me = ent;
             IntersectResult res = mMouseDownTri;
             res.distance = 1.0e38;
 /* fixme */
@@ -230,22 +230,6 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
             newt.v3.coord = (orient * (newt.v3.coord * scale)) + position;
 /* */
             OgreMesh::intersectTri(OgreMesh::transformRay(ent->getSceneNode(), traceFrom), res, &newt, true); // &res.tri
-            WebView *wv = me->getWebView(mMouseDownSubEntity);
-            if (wv) {
-                unsigned short int wid=0,hei=0;
-                wv->getExtents(wid,hei);
-                int x = res.u * wid;
-                int y = res.v * hei;
-                if (mousedown) {
-                    wv->injectMouseDown(x, y);
-                }
-                if (mouseup) {
-                    wv->injectMouseUp(x, y);
-                }
-                if (!mousedown && !mouseup) {
-                    wv->injectMouseMove(x, y);
-                }
-            }
         }
     }
 
@@ -261,15 +245,11 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
         Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
         Entity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
         if (mousedown && mouseOverEntity) {
-            MeshEntity *me = dynamic_cast<MeshEntity*>(mouseOverEntity);
+            Entity *me = mouseOverEntity;
             if (me) {
                 mMouseDownTri = res;
                 mMouseDownObject = me->getProxyPtr();
                 mMouseDownSubEntity = subent;
-                WebView *wv = me->getWebView(mMouseDownSubEntity);
-                if (wv) {
-                    //if (which==0) {*hitCount=-1;}
-                }
             }
         }
         if (mouseOverEntity) {
