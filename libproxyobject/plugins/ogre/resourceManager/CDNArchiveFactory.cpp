@@ -30,7 +30,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../meruCompat/MeruDefs.hpp"
 #include "CDNArchiveFactory.hpp"
 #include "CDNArchive.hpp"
 

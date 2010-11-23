@@ -34,7 +34,6 @@
 #define _OGRE_MESH_HPP_
 
 #include <vector>
-#include "meruCompat/MeruDefs.hpp"
 #include "OgreVector3.h"
 namespace Ogre {
   class Entity;
