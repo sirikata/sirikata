@@ -5,7 +5,5 @@
 
 "mesh","graphiconly","tetrahedron",,0,-100,-100,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/ground.DAE",1000,,,,
 
-"mesh","graphiconly","tetrahedron",,-11,-10,-5,0,0,0,1,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/Poisonbird.dae",1,"importFiles/startupCamera.em","js",0.000000001f,
+"mesh","graphiconly","tetrahedron",,-11,-10,-5,0,0,0,1,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/Poisonbird.dae",1,"test/startupCamera.em","js",0.000000001f,
 "mesh","graphiconly","tetrahedron",,-11,-10,-5,0,0,0,1,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/Poisonbird.dae",10,,,,
-
-

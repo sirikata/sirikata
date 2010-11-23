@@ -40,6 +40,8 @@
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 
+#include <boost/filesystem.hpp>
+
 #include <v8.h>
 
 #include "JSPattern.hpp"
@@ -136,6 +138,28 @@ public:
     void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
 
 private:
+    // EvalContext tracks the current state w.r.t. eval-related statements which
+    // may change in response to user actions (changing directory) or due to the
+    // way the system defines actions (e.g. import searches the current script's
+    // directory before trying other import paths).
+    struct EvalContext {
+        boost::filesystem::path currentScriptDir;
+    };
+    // This is a helper which adds an EvalContext to the stack and ensures that
+    // when it goes out of scope it is removed. This will almost always be the
+    // right way to add and remove an EvalContext from the stack, ensure
+    // multiple exit paths from a method don't cause the stack to become
+    // incorrect.
+    struct ScopedEvalContext {
+        ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx);
+        ~ScopedEvalContext();
+
+        JSObjectScript* parent;
+    };
+    friend class ScopedEvalContext;
+
+    std::stack<EvalContext> mEvalContextStack;
+
     typedef std::vector<SpaceObjectReference*> AddressableList;
     AddressableList mAddressableList;
 
@@ -148,7 +172,7 @@ private:
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void getAllMessageable(AddressableList&allAvailableObjectReferences) const;
-    v8::Handle<v8::Value> protectedEval(const String& script_str);
+    v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
 
 
 
