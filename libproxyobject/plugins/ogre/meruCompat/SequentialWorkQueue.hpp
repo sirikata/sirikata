@@ -29,7 +29,7 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "Schedulable.hpp"
+
 #include "MeruDefs.hpp"
 #include "Singleton.hpp"
 #include <sirikata/core/queue/LockFreeQueue.hpp>
@@ -45,7 +45,7 @@ namespace Meru {
  * perform the operation without resulting in a framerate jitter
  * Use WorkQueue for threadsafe operations
  */
-class SequentialWorkQueue: public Schedulable, public ManualSingleton<SequentialWorkQueue> {
+class SequentialWorkQueue : public ManualSingleton<SequentialWorkQueue> {
 public:
     Sirikata::Task::WorkQueue *mWorkQueue;
     typedef Sirikata::Task::WorkItem WorkItem;
@@ -66,16 +66,7 @@ public:
 
 public:
     Sirikata::Task::WorkQueue *getWorkQueue() const { return mWorkQueue; }
-    virtual unsigned int numSchedulableJobs() {
-        return mWorkQueue->probablyEmpty()?0:1;
-    }
-    /**
-     * processes a single job in the work queue if one exists
-     * \returns true if there are any remaining jobs on the work queue
-     */
-    bool processOneJob() {
-    	return mWorkQueue->dequeuePoll();
-    }
+
     /**
      * constructs the work queue class
      */
