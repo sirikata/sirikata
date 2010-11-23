@@ -69,7 +69,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     OptionValue* import_paths;
     InitializeClassOptions(
         "jsobjectscriptmanager",this,
-        import_paths = new OptionValue("import-paths",".",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        // Default value allows us to use std libs in the build tree, starting
+        // from build/cmake
+        import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         NULL
     );
 
