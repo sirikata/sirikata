@@ -36,12 +36,10 @@
 #include "OgreSystem.hpp"
 #include "resourceManager/CDNArchive.hpp"
 #include "OgreHeaders.hpp"
-#include "meruCompat/SequentialWorkQueue.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "Lights.hpp"
 
 using namespace Sirikata::Transfer;
-using namespace Meru;
 
 namespace Sirikata {
 namespace Graphics {
@@ -404,7 +402,7 @@ void Entity::setSelected(bool selected) {
 
 void Entity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<const DenseData> response)
 {
-    Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&Entity::tryInstantiateExistingMesh, this, request, response));
+    mScene->context()->mainStrand->post(std::tr1::bind(&Entity::tryInstantiateExistingMesh, this, request, response));
 }
 
 void Entity::downloadMeshFile(Transfer::URI const& uri)
@@ -1155,7 +1153,7 @@ void Entity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
     }
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
-        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&Entity::createMeshWork, this, md));
+        mScene->context()->mainStrand->post(std::tr1::bind(&Entity::createMeshWork, this, md));
 }
 
 void Entity::handleMeshParsed(MeshdataPtr md) {
@@ -1163,7 +1161,7 @@ void Entity::handleMeshParsed(MeshdataPtr md) {
 
     // Special case for no dependent downloads
     if (mRemainingDownloads == 0) {
-        Meru::SequentialWorkQueue::getSingleton().queueWork(std::tr1::bind(&Entity::createMeshWork, this, md));
+        mScene->context()->mainStrand->post(std::tr1::bind(&Entity::createMeshWork, this, md));
         return;
     }
 

@@ -91,8 +91,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
-    Task::WorkQueue* mWorkQueue;
-
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
@@ -163,6 +161,8 @@ public:
     static uint32 sNumOgreSystems;
     std::tr1::unordered_set<Camera*> mAttachedCameras;
     Camera *mPrimaryCamera;
+
+    Context* context() const { return mContext; }
 
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();

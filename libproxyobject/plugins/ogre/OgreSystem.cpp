@@ -49,9 +49,6 @@
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
-#include "meruCompat/SequentialWorkQueue.hpp"
-
-using Meru::SequentialWorkQueue;
 
 #include <boost/filesystem.hpp>
 #include <stdio.h>
@@ -440,8 +437,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
-            mWorkQueue = new Task::LockFreeWorkQueue;
-            new SequentialWorkQueue(mWorkQueue);
             mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
@@ -710,9 +705,6 @@ OgreSystem::~OgreSystem() {
     destroyMouseHandler();
     delete mInputManager;
 
-
-    delete mWorkQueue;
-
     delete mModelParser;
 }
 
@@ -946,9 +938,6 @@ void OgreSystem::poll(){
         SILOG(ogre,warning,"No window set to render: skipping render phase");
     }
     mLastFrameTime=curFrameTime;//reevaluate Time::now()?
-
-    Meru::SequentialWorkQueue::getSingleton().dequeuePoll();
-    Meru::SequentialWorkQueue::getSingleton().dequeueUntil(finishTime);
 
     if (mQuitRequested && !mQuitRequestHandled) {
         mContext->shutdown();
