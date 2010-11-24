@@ -50,7 +50,7 @@ SimpleCameraObjectScriptManager::~SimpleCameraObjectScriptManager()
 {
 }
 
-ObjectScript* SimpleCameraObjectScriptManager::createObjectScript(HostedObjectPtr ho, const Arguments& args)
+ObjectScript* SimpleCameraObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
 {
     SimpleCameraObjectScript* new_script = new SimpleCameraObjectScript(ho, args);
     return new_script;

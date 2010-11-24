@@ -53,8 +53,7 @@ public:
 
     static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
 
-    virtual ObjectScript *createObjectScript(HostedObjectPtr ho,
-                                             const Arguments &args);
+    virtual ObjectScript *createObjectScript(HostedObjectPtr ho, const String& args);
     virtual void destroyObjectScript(ObjectScript*toDestroy);
     virtual ~MonoVWObjectScriptManager();
 

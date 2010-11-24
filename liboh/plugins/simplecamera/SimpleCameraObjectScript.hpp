@@ -43,7 +43,7 @@ namespace SimpleCamera {
 
 class SimpleCameraObjectScript : public ObjectScript, SessionEventListener {
 public:
-    SimpleCameraObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args);
+    SimpleCameraObjectScript(HostedObjectPtr ho, const String& args);
     virtual ~SimpleCameraObjectScript();
 
     virtual void updateAddressable();

@@ -162,12 +162,12 @@ public:
     virtual Time currentLocalTime();
 
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    void initializeScript(const String&script, const std::map<String,String> &args);
+    void initializeScript(const String&script, const String& args);
 
 
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
     //void initializeScript(const String&script, const std::map<String,String> &args);
-    void initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach="");
+    void initializeScript(const String& script, const String& args, const std::string& fileScriptToAttach="");
 
     bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void processInitScriptMessage(MemoryReference& body);
@@ -207,7 +207,6 @@ public:
 
     bool mHasScript;
     String mScriptType;
-    ObjectScriptManager::Arguments mScriptArgs;
     String mScriptName;
 
 
@@ -224,11 +223,6 @@ public:
     void setScriptType(String s)
     {
         mScriptType = s;
-    }
-
-    void setScriptArgs(ObjectScriptManager::Arguments& args)
-    {
-        mScriptArgs = args;
     }
 
     String getScriptName()

@@ -267,7 +267,7 @@ void HostedObject::attachScript(const String& script_name)
   mObjectScript->attachScript(script_name);
 }
 
-void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach)
+void HostedObject::initializeScript(const String& script, const String& args, const std::string& fileScriptToAttach)
 {
     if (mObjectScript) {
         SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
@@ -439,8 +439,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //attach script callback;
     if (scriptFile != "")
     {
-        ObjectScriptManager::Arguments script_args;  //these can just be empty;
-        this->initializeScript(scriptType,script_args,scriptFile);
+        this->initializeScript(scriptType,"",scriptFile);
     }
 
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref);
@@ -518,8 +517,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
         mHasScript = true;
         mScriptType = scriptType;
 
-        ObjectScriptManager::Arguments scriptargs;
-        initializeScript(scriptType,scriptargs,"");
+        initializeScript(scriptType,"","");
     }
 
     return true;

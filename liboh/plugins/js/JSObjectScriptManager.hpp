@@ -49,8 +49,7 @@ public:
     JSObjectScriptManager(const Sirikata::String& arguments);
     virtual ~JSObjectScriptManager();
 
-    virtual ObjectScript* createObjectScript(HostedObjectPtr ho,
-        const Arguments &args);
+    virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
     OptionSet* getOptions() const { return mOptions; }

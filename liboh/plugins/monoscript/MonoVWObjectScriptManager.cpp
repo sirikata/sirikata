@@ -45,10 +45,60 @@ MonoVWObjectScriptManager::MonoVWObjectScriptManager(Mono::MonoSystem* system, c
 {
 }
 
-ObjectScript *MonoVWObjectScriptManager::createObjectScript(HostedObjectPtr ho,
-                                                            const Arguments &args) {
+namespace {
+MonoVWObjectScript::ArgumentMap ParseArguments(const String& value) {
+    MonoVWObjectScript::ArgumentMap retval;
+
+    // Strip any whitespace around the list
+    int32 list_start = 0, list_end = value.size();
+    while(list_start < value.size()) {
+        if (value[list_start] == ' ' || value[list_start] == '\t')
+            list_start++;
+        else
+            break;
+    }
+    while(list_end >= 0) {
+        if (value[list_end-1] == ' ' || value[list_end-1] == '\t')
+            list_end--;
+        else
+            break;
+    }
+
+    if (list_end - list_start <= 0) return retval;
+
+    int32 space = list_start, last_space = list_start-1;
+
+    while(true) {
+        space = (int32)value.find(' ', last_space+1);
+        if (space > list_end || space == std::string::npos)
+            space = list_end;
+        std::string elem = value.substr(last_space+1, (space-(last_space+1)));
+        if (elem.size() > 0) {
+            // elem should be of the form --option=value
+            assert(elem[0] == '-' && elem[1] == '-');
+            elem = elem.substr(2);
+            int32 equals = value.find('=');
+
+            std::string opt_name = elem.substr(0, equals);
+            std::string opt_val = elem.substr(equals+1);
+
+            retval[opt_name] = opt_val;
+        }
+
+        // If we hit the end of the string, finish up
+        if (space >= list_end)
+            break;
+
+        last_space = space;
+    }
+    return retval;
+}
+}
+
+ObjectScript *MonoVWObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args_str) {
+    MonoVWObjectScript::ArgumentMap args = ParseArguments(args_str);
     // Fill in full argument list by script type
-    Arguments full_args = args;
+    MonoVWObjectScript::ArgumentMap full_args = args;
     if (mScriptType == IronPythonScript) {
         if (full_args.find("Assembly") != full_args.end())
             SILOG(mono,error,"[MONO] Overwriting Assembly argument to create IronPython object script.");

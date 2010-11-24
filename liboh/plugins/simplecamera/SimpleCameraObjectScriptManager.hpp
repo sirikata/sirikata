@@ -46,7 +46,7 @@ public:
     SimpleCameraObjectScriptManager(const Sirikata::String& arguments);
     virtual ~SimpleCameraObjectScriptManager();
 
-    virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const Arguments &args);
+    virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 };
 

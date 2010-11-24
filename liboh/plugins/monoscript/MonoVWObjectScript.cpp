@@ -40,11 +40,13 @@
 #include "MonoContext.hpp"
 namespace Sirikata {
 
+typedef std::map<String, String> ArgumentMap;
+
 namespace {
 /** Gets an argument from the argument map if it exists, removes it from the
  *  map, and returns its value (or the empty string if it doesn't exist).
  */
-String GetAndFilterArgument(ObjectScriptManager::Arguments& args, const String& argname) {
+String GetAndFilterArgument(ArgumentMap& args, const String& argname) {
     if (args.find(argname) == args.end())
         return "";
     String retval = args[argname];
@@ -53,19 +55,19 @@ String GetAndFilterArgument(ObjectScriptManager::Arguments& args, const String& 
 }
 } // namespace
 
-MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args)
+MonoVWObjectScript::MonoVWObjectScript(Mono::MonoSystem*mono_system, HostedObjectPtr ho, const ArgumentMap& args)
  : mParent(ho),
    mDomain(mono_system->createDomain()),
    mObject()
 {
     // Filter out reserved parameters
-    ObjectScriptManager::Arguments filtered_args = args;
+    ArgumentMap filtered_args = args;
     String assembly_name = GetAndFilterArgument(filtered_args, "Assembly");
     String namespace_name = GetAndFilterArgument(filtered_args, "Namespace");
     String class_name = GetAndFilterArgument(filtered_args, "Class");
     // Build the arg array to pass into the constructor
     std::vector<String> flattened_args;
-    for(ObjectScriptManager::Arguments::const_iterator arg_it = filtered_args.begin(); arg_it != filtered_args.end(); arg_it++) {
+    for(ArgumentMap::const_iterator arg_it = filtered_args.begin(); arg_it != filtered_args.end(); arg_it++) {
         flattened_args.push_back(arg_it->first);
         flattened_args.push_back(arg_it->second);
     }

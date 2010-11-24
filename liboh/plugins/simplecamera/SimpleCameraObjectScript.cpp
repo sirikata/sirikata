@@ -41,7 +41,7 @@
 namespace Sirikata {
 namespace SimpleCamera {
 
-SimpleCameraObjectScript::SimpleCameraObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args)
+SimpleCameraObjectScript::SimpleCameraObjectScript(HostedObjectPtr ho, const String& args)
  : mParent(ho)
 {
     mParent->addListener((SessionEventListener*)this);

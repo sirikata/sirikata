@@ -55,10 +55,7 @@ namespace JS {
 
 class JSObjectScript : public ObjectScript {
 public:
-    //JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments&
-    //args, v8::Persistent<v8::ObjectTemplate>& global_template,
-    //v8::Persistent<v8::ObjectTemplate>& oref_template);
-    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan);
+    JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);

@@ -88,7 +88,7 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 }
 
 
-JSObjectScript::JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan)
+JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
  : mParent(ho),
    mManager(jMan)
 {
