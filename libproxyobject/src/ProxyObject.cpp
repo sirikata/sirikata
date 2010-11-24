@@ -92,16 +92,17 @@ bool ProxyObject::isStatic() const {
 
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
     mLoc = reqloc;
-    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
 void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient) {
     mOrientation = TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position().normal(), reqorient.velocity().normal()));
-    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
 void ProxyObject::setBounds(const BoundingSphere3f& bnds) {
     mBounds = bnds;
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {

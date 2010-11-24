@@ -177,14 +177,16 @@ void Entity::init(Ogre::Entity *obj) {
     if (obj) {
         mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
-        mSceneNode->setScale( 1.f, 1.f, 1.f );
-        float rad = mOgreObject->getBoundingRadius();
-        BoundingSphere3f bnds = getProxy().getBounds();
-        float rad_factor = bnds.radius() / rad;
-        if (bnds.radius() > 50.f)
-            printf("SCALE %f %f %f\n", bnds.radius(), rad, rad_factor);
-        mSceneNode->setScale( rad_factor, rad_factor, rad_factor );
+        updateScale( getProxy().getBounds().radius() );
     }
+}
+
+void Entity::updateScale(float scale) {
+    if (mSceneNode == NULL || mOgreObject == NULL) return;
+    mSceneNode->setScale( 1.f, 1.f, 1.f );
+    float rad = mOgreObject->getBoundingRadius();
+    float rad_factor = scale / rad;
+    mSceneNode->setScale( rad_factor, rad_factor, rad_factor );
 }
 
 void Entity::setStatic(bool isStatic) {
@@ -236,7 +238,7 @@ void Entity::setOgreOrientation(const Quaternion &orient) {
 }
 
 
-void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient) {
+void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) {
     SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
     if (!getProxy().isStatic()) {
         setStatic(false);
@@ -244,6 +246,7 @@ void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedM
         setOgrePosition(Vector3d(newLocation.position()));
         setOgreOrientation(newOrient.position());
     }
+    updateScale( newBounds.radius() );
 }
 
 void Entity::destroyed() {

@@ -87,6 +87,8 @@ protected:
 
     void setStatic(bool isStatic);
 
+    void updateScale(float scale);
+
 protected:
     void setOgrePosition(const Vector3d &pos);
 
@@ -112,7 +114,7 @@ public:
         return mScene;
     }
 
-    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient);
+    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
 
     void destroyed();
 

@@ -1048,29 +1048,17 @@ v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectRe
 
 
 //scale
-//FIXME: need to return the right space here.
-//lkjs; need to return the visuals for a particular space.;
 v8::Handle<v8::Value> JSObjectScript::getVisualScaleFunction(const SpaceObjectReference* sporef)
 {
-    //FIXME: actually need to write this function.
-    assert(false);
-    return v8::Undefined();
-
-    //return CreateJSResult(mContext, mParent->getVisualScale(space));
+    float curscale = mParent->requestCurrentBounds(sporef->space(),sporef->object()).radius();
+    return CreateJSResult(mContext, curscale);
 }
 
-void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newscale)
+void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, float newscale)
 {
-    Handle<Object> scale_obj = ObjectCast(newscale);
-    if (!Vec3Validate(scale_obj))
-        return;
-
-    Vector3f native_scale(Vec3Extract(scale_obj));
-    FIXME_GET_SPACE_OREF();
-    assert(false);
-    //lkjs;
-    //FIXME: write this function.
-    //mParent->setVisualScale(space, native_scale);
+    BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef->space(),sporef->object());
+    bnds = BoundingSphere3f(bnds.center(), newscale);
+    mParent->requestBoundsUpdate(sporef->space(),sporef->object(), bnds);
 }
 
 

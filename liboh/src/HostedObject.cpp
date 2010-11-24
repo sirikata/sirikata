@@ -661,6 +661,10 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
             proxy_obj->setOrientation(orient);
         }
 
+        if (update.has_bounds()) {
+            proxy_obj->setBounds(update.bounds());
+        }
+
         if (update.has_mesh())
         {
           std::string mesh = update.mesh();
@@ -969,23 +973,14 @@ void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectRe
     sendLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL);
 }
 
+BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const ObjectReference& oref) {
+    ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    return proxy_obj->getBounds();
+}
+
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
     sendLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL);
 }
-
-void HostedObject::requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo)
-{
-    std::cout<<"\n\nThe requestScaleUpdate function does not work\n\n";
-    assert(false);
-}
-
-bool HostedObject::requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler)
-{
-    std::cout<<"\n\nThe requestCurrentScale function does not work\n\n";
-    assert(false);
-    return false;
-}
-
 
 void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh)
 {

@@ -233,6 +233,10 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
   mPresenceTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
 
+  //scale
+  mPresenceTemplate->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
+  mPresenceTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
+
   // Query angle
   mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 

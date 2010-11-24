@@ -244,6 +244,35 @@ namespace Sirikata
 
         }
 
+
+        Handle<v8::Value> getScale(const v8::Arguments& args)
+        {
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getScale function.  Invalid presence struct.")) );
+
+            return mStruct->jsObjScript->getVisualScaleFunction(mStruct->sporef);
+        }
+
+        v8::Handle<v8::Value> setScale(const v8::Arguments& args)
+        {
+            if (args.Length() != 1)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setScale.")) );
+
+            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Invalid presence struct.")) );
+
+            Handle<Object> scale_arg = ObjectCast(args[0]);
+            if (!NumericValidate(scale_arg))
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Wrong argument: require a number for query angle.")) );
+
+            float new_scale = NumericExtract(scale_arg);
+
+            mStruct->jsObjScript->setVisualScaleFunction(mStruct->sporef, new_scale);
+            return v8::Undefined();
+        }
+
         //Takes in args, tries to get out the first argument, which should be a
         //string that we convert to a TransferURI object.  If anything fails,
         //then we just return null

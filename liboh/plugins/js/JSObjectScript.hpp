@@ -113,7 +113,7 @@ public:
     v8::Handle<v8::Value> getOrientationFunction(const SpaceObjectReference* sporef);
 
     v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
-    void setVisualScaleFunction(const SpaceObjectReference* sporef, v8::Local<v8::Value>& newvis);
+    void setVisualScaleFunction(const SpaceObjectReference* sporef, float newScale);
 
     v8::Handle<v8::Value> getOrientationVelFunction(const SpaceObjectReference* sporef);
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);

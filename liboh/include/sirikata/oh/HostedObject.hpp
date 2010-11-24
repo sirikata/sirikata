@@ -381,12 +381,10 @@ public:
     virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
 
 
+    virtual BoundingSphere3f requestCurrentBounds(const SpaceID& space,const ObjectReference& oref);
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
 
-
-    virtual void requestScaleUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& toScaleTo);
-    virtual bool requestCurrentScale(const SpaceID& space, const ObjectReference& oref, Vector3f& scaler);
 
     virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
 
