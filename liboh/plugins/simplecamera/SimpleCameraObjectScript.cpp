@@ -44,10 +44,12 @@ namespace SimpleCamera {
 SimpleCameraObjectScript::SimpleCameraObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args)
  : mParent(ho)
 {
+    mParent->addListener((SessionEventListener*)this);
 }
 
 SimpleCameraObjectScript::~SimpleCameraObjectScript()
 {
+    mParent->removeListener((SessionEventListener*)this);
 }
 
 void SimpleCameraObjectScript::updateAddressable()
@@ -56,6 +58,13 @@ void SimpleCameraObjectScript::updateAddressable()
 
 void SimpleCameraObjectScript::attachScript(const String& script_name)
 {
+}
+
+void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    mParent->runSimulation(name, "ogregraphics");
+}
+
+void SimpleCameraObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
 }
 
 } // namespace SimpleCamera

@@ -36,17 +36,22 @@
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/proxyobject/SessionEventListener.hpp>
 
 namespace Sirikata {
 namespace SimpleCamera {
 
-class SimpleCameraObjectScript : public ObjectScript {
+class SimpleCameraObjectScript : public ObjectScript, SessionEventListener {
 public:
     SimpleCameraObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args);
     virtual ~SimpleCameraObjectScript();
 
     virtual void updateAddressable();
     virtual void attachScript(const String&);
+
+    // SessionEventListener Interface
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+    virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
 private:
     HostedObjectPtr mParent;
