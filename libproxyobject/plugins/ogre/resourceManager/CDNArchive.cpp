@@ -36,7 +36,8 @@
 #include <fstream>
 #include "ReplacingDataStream.hpp"
 
-namespace Meru {
+namespace Sirikata {
+namespace Graphics {
 
 static const unsigned char white_png[] = /* 160 */
 {0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A,0x00,0x00,0x00,0x0D,0x49,0x48,0x44
@@ -184,7 +185,7 @@ time_t CDNArchive::getModifiedTime(const Ogre::String&)
 class CDNArchiveDataStream : public Ogre::DataStream
 {
 public:
-	CDNArchiveDataStream(CDNArchiveFactory *owner, const Ogre::String &name, const SparseData &input)
+	CDNArchiveDataStream(CDNArchiveFactory *owner, const Ogre::String &name, const Transfer::SparseData &input)
 		: Ogre::DataStream()
 	{
 		mOwner=owner;
@@ -194,7 +195,7 @@ public:
 		mIter=mData.begin();
 	}
 	virtual size_t read(void* buffer, size_t length) {
-		SparseData::value_type *data = mIter.dataAt();
+		Transfer::SparseData::value_type *data = mIter.dataAt();
 		if (!data) {
 			return 0;
 		}
@@ -226,8 +227,8 @@ public:
 	}
 
 private:
-	SparseData mData;
-	SparseData::const_iterator mIter;
+	Transfer::SparseData mData;
+	Transfer::SparseData::const_iterator mIter;
 	CDNArchiveFactory *mOwner;
 };
 
@@ -239,10 +240,10 @@ CDNArchive::CDNArchive(CDNArchiveFactory *owner, const Ogre::String& name, const
     mNativeFileArchive=mOwner->addArchive();
     for (int i=0;i<num_native_files;++i) {
         int size=native_files_size[i];
-        DenseData*dd=new DenseData(Transfer::Range((Transfer::cache_usize_type)0,(Transfer::cache_usize_type)size,Transfer::LENGTH,true));
+        Transfer::DenseData*dd=new Transfer::DenseData(Transfer::Range((Transfer::cache_usize_type)0,(Transfer::cache_usize_type)size,Transfer::LENGTH,true));
         memcpy(dd->writableData(),native_files_data[i],size);
-        DenseDataPtr rbuffer(dd);
-        mOwner->addArchiveDataNoLock(mNativeFileArchive, native_files[i], SparseData(rbuffer));
+        Transfer::DenseDataPtr rbuffer(dd);
+        mOwner->addArchiveDataNoLock(mNativeFileArchive, native_files[i], Transfer::SparseData(rbuffer));
     }
 }
 
@@ -272,7 +273,7 @@ Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
 {
   boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
   std::string canonicalName = canonicalizeHash(filename);
-  std::tr1::unordered_map<std::string,SparseData>::iterator where =
+  std::tr1::unordered_map<std::string,Transfer::SparseData>::iterator where =
       mOwner->CDNArchiveFiles.find(canonicalName);
   if (where == mOwner->CDNArchiveFiles.end()) {
       where =
@@ -366,4 +367,5 @@ bool CDNArchive::exists(const Ogre::String& filename) {
     }
 }
 
-} // namespace Meru
+} // namespace Graphics
+} // namespace Sirikata

@@ -29,18 +29,23 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "../meruCompat/MeruDefs.hpp"
+
 #include "ReplacingDataStream.hpp"
 
 #include "CDNArchive.hpp"
 #include <boost/regex.hpp>
 #include <vector>
 
-namespace Meru{
+namespace Sirikata {
+namespace Graphics {
+
+using namespace Sirikata::Transfer;
+
 namespace MangleTextureName {
 const static std::string UScor="_";
 const static std::string DQuot="\"";
 }
+
 static String mangleTextureName(const String&resourceName, const String&materialName) {
     if (materialName.length()>2&&materialName[0]=='\"'&&materialName[materialName.length()-1]=='\"') {
         return mangleTextureName(resourceName,materialName.substr(1,materialName.length()-2));
@@ -53,6 +58,7 @@ static String mangleTextureName(const String&resourceName, const String&material
     }
     return retval+=':'+materialName;
 }
+
 ReplacingDataStream::ReplacingDataStream(Ogre::DataStreamPtr &input, const Ogre::String &destination,const Ogre::NameValuePairList*textureAliases):DataStream(destination),file(input) {
     this->mTextureAliases=textureAliases;
     if (mTextureAliases) {
@@ -471,4 +477,6 @@ void ReplacingDataStream::close(void) {
   file->close();
   dataAsString=Ogre::String();
 }
-}
+
+} // namespace Graphics
+} // namespace Sirikata

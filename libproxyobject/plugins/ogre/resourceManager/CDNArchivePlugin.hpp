@@ -36,7 +36,8 @@
 #include <OgrePlugin.h>
 #include "CDNArchiveFactory.hpp"
 
-namespace Meru {
+namespace Sirikata {
+namespace Graphics {
 
 /** Plugin to setup CDNArchive and CDNArchive factory with
  *  Ogre.  A specialization of Ogre::Plugin.  See Ogre's
@@ -54,7 +55,7 @@ public:
 	void uninstall();
 };
 
-} // namespace Meru
+} // namespace Graphics
+} // namespace Sirikata
 
 #endif //_CDN_ARCHIVE_PLUGIN_HPP_
-
