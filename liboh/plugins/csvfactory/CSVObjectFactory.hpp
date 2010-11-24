@@ -51,7 +51,7 @@ public:
 
     virtual void generate();
 
-    
+
 private:
     // Connects one batch of objects and sets up another callback for more
     // additions if necessary.
@@ -67,8 +67,8 @@ private:
         Location loc;
         BoundingSphere3f bounds;
         String mesh;
-        String scriptFile;
         String scriptType;
+        String scriptOpts;
         SolidAngle query_angle;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;

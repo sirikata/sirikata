@@ -92,6 +92,19 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
  : mParent(ho),
    mManager(jMan)
 {
+
+    OptionValue* init_script;
+    InitializeClassOptions(
+        "jsobjectscript", this,
+        // Default value allows us to use std libs in the build tree, starting
+        // from build/cmake
+        init_script = new OptionValue("init-script","",OptionValueType<String>(),"Script to run on startup."),
+        NULL
+    );
+
+    OptionSet* options = OptionSet::getOptions("jsobjectscript", this);
+    options->parse(args);
+
     // By default, our eval context has:
     // 1. Empty currentScriptDir, indicating it should only use explicitly
     //    specified search paths.
@@ -156,11 +169,12 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         //shouldn't need to receive on this port
     }
 
-
-
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
-
+    // Finally, if we have a script to load, load it.
+    String script_name = init_script->as<String>();
+    if (!script_name.empty())
+        import(script_name);
 }
 
 void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
@@ -953,13 +967,6 @@ void JSObjectScript::populateMath(Handle<Object>& system_obj)
     system_obj->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME),mathObject);
 }
 
-
-
-
-void JSObjectScript::attachScript(const String& script_name)
-{
-    import(script_name);
-}
 
 void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
 {

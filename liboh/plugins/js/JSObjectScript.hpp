@@ -61,9 +61,6 @@ public:
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     virtual void updateAddressable();
 
-
-    virtual void attachScript(const String&);
-
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */

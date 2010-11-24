@@ -178,9 +178,6 @@ public:
     //void updateAddressable() const;
 
 
-    /** Attach and run this script after the entity is initialized */
-    void attachScript(String&) const;
-
 		void persistEntityState(const String&);
 
   private:
