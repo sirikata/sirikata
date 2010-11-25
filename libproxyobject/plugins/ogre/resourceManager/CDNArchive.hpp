@@ -32,6 +32,7 @@
 #ifndef _CDN_ARCHIVE_HPP_
 #define _CDN_ARCHIVE_HPP_
 
+#include <sirikata/proxyobject/Platform.hpp>
 #include <Ogre.h>
 #include <vector>
 #include "CDNArchiveFactory.hpp"
