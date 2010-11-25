@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  MonoVWObjectScriptManager.hpp
+/*  Sirikata
+ *  PluginInterface.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,53 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
-#define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectScriptManagerFactory.hpp>
+#include "SimpleCameraObjectScriptManager.hpp"
 
-#include <sirikata/oh/ObjectScriptManager.hpp>
+static int simplecamera_plugin_refcount = 0;
 
-namespace Mono {
-class MonoSystem;
+
+SIRIKATA_PLUGIN_EXPORT_C const char* name() {
+    return "simplecamera";
 }
-namespace Sirikata {
-class HostedObject;
-class ObjectScript;
 
-class MonoVWObjectScriptManager : public ObjectScriptManager {
-public:
-    enum MonoScriptType {
-        MonoScript,
-        IronPythonScript
-    };
 
-    MonoVWObjectScriptManager(Mono::MonoSystem* system, const Sirikata::String& arguments, MonoScriptType script_type);
-
-    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
-
-    virtual ObjectScript *createObjectScript(HostedObjectPtr ho, const String& args);
-    virtual void destroyObjectScript(ObjectScript*toDestroy);
-    virtual ~MonoVWObjectScriptManager();
-
-private:
-    Mono::MonoSystem* mSystem;
-    MonoScriptType mScriptType;
-};
+SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
+    return ++simplecamera_plugin_refcount;
 }
-#endif
+
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
+    assert(simplecamera_plugin_refcount>0);
+    return --simplecamera_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int refcount() {
+    return simplecamera_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void init() {
+    using namespace Sirikata;
+    using std::tr1::placeholders::_1;
+    if (simplecamera_plugin_refcount == 0) {
+        ObjectScriptManagerFactory::getSingleton().registerConstructor(
+            "simplecamera",
+            std::tr1::bind(
+                &Sirikata::SimpleCamera::SimpleCameraObjectScriptManager::createObjectScriptManager,
+                _1
+            )
+        );
+    }
+    simplecamera_plugin_refcount++;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C void destroy() {
+    using namespace Sirikata;
+    if (simplecamera_plugin_refcount>0) {
+        simplecamera_plugin_refcount--;
+        assert(simplecamera_plugin_refcount==0);
+        if (simplecamera_plugin_refcount==0) {
+            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("simplecamera");
+        }
+    }
+}

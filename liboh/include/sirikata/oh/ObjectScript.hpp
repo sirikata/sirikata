@@ -52,19 +52,16 @@ class SIRIKATA_OH_EXPORT ObjectScript {
     //Different presences have different spaces
 
      virtual void updateAddressable() { NOT_IMPLEMENTED(ObjectScript); }
-     //virtual void attachScript(const String& ) {
-     //NOT_IMPLEMENTED(ObjectScript);}
-     virtual void attachScript(const String& ){NOT_IMPLEMENTED(ObjectScript);}
-     
-		 virtual String scriptType() const { return scriptType_;}
-		 virtual String scriptFile() const {return scriptFile_;}
-		 virtual void scriptTypeIs(String _scriptType) { scriptType_ = _scriptType;}
-		 virtual void scriptFileIs(String _scriptFile) {scriptFile_ = _scriptFile;}
 
-	protected:
-		String scriptType_;
-    String scriptFile_;
-	   
+     virtual String scriptType() const { return scriptType_;}
+     virtual String scriptOptions() const {return scriptOptions_;}
+     virtual void scriptTypeIs(String _scriptType) { scriptType_ = _scriptType;}
+     virtual void scriptOptionsIs(String _scriptOptions) {scriptOptions_ = _scriptOptions;}
+
+  protected:
+     String scriptType_;
+     String scriptOptions_;
+
 };
 
 }

@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  MonoVWObjectScriptManager.hpp
+/*  Sirikata
+ *  SimpleCameraObjectScript.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
-#define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
+#ifndef _SIRIKATA_SIMPLECAMERA_OBJECT_SCRIPT_HPP_
+#define _SIRIKATA_SIMPLECAMERA_OBJECT_SCRIPT_HPP_
 
+#include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/proxyobject/SessionEventListener.hpp>
 
-namespace Mono {
-class MonoSystem;
-}
 namespace Sirikata {
-class HostedObject;
-class ObjectScript;
+namespace SimpleCamera {
 
-class MonoVWObjectScriptManager : public ObjectScriptManager {
+class SimpleCameraObjectScript : public ObjectScript, SessionEventListener {
 public:
-    enum MonoScriptType {
-        MonoScript,
-        IronPythonScript
-    };
+    SimpleCameraObjectScript(HostedObjectPtr ho, const String& args);
+    virtual ~SimpleCameraObjectScript();
 
-    MonoVWObjectScriptManager(Mono::MonoSystem* system, const Sirikata::String& arguments, MonoScriptType script_type);
+    virtual void updateAddressable();
+    virtual void attachScript(const String&);
 
-    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
-
-    virtual ObjectScript *createObjectScript(HostedObjectPtr ho, const String& args);
-    virtual void destroyObjectScript(ObjectScript*toDestroy);
-    virtual ~MonoVWObjectScriptManager();
+    // SessionEventListener Interface
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+    virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
 private:
-    Mono::MonoSystem* mSystem;
-    MonoScriptType mScriptType;
+    HostedObjectPtr mParent;
 };
-}
-#endif
+
+} // namespace SimpleCamera
+} // namespace Sirikata
+
+#endif //_SIRIKATA_SIMPLECAMERA_OBJECT_SCRIPT_HPP_

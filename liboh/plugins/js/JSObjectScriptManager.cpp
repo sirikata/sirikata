@@ -275,7 +275,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 {
 }
 
-ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho,const Arguments& args)
+ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
 {
     JSObjectScript* new_script = new JSObjectScript(ho, args, this);
     if (!new_script->valid()) {

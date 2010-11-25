@@ -55,17 +55,11 @@ namespace JS {
 
 class JSObjectScript : public ObjectScript {
 public:
-    //JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments&
-    //args, v8::Persistent<v8::ObjectTemplate>& global_template,
-    //v8::Persistent<v8::ObjectTemplate>& oref_template);
-    JSObjectScript(HostedObjectPtr ho, const ObjectScriptManager::Arguments& args, JSObjectScriptManager* jMan);
+    JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     virtual void updateAddressable();
-
-
-    virtual void attachScript(const String&);
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.

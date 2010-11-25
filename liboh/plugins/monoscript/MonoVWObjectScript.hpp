@@ -41,7 +41,7 @@
 namespace Sirikata {
 class HostedObject;
 
-class MonoVWObjectScript : public ObjectScript{
+class MonoVWObjectScript : public ObjectScript {
     HostedObjectPtr mParent;
     Mono::Domain mDomain;
     Mono::Object mObject;
@@ -49,7 +49,9 @@ class MonoVWObjectScript : public ObjectScript{
     Mono::ThreadSafeSingleMethodLookupCache mProcessRPCCache;
     Mono::ThreadSafeSingleMethodLookupCache mProcessMessageCache;
 public:
-    MonoVWObjectScript(Mono::MonoSystem*, HostedObjectPtr ho, const ObjectScriptManager::Arguments&args);
+    typedef std::map<String, String> ArgumentMap;
+
+    MonoVWObjectScript(Mono::MonoSystem*, HostedObjectPtr ho, const ArgumentMap& args);
     virtual ~MonoVWObjectScript();
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded

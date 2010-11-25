@@ -43,13 +43,11 @@ class ObjectScript;
     To access an instance, @see ObjectScriptManagerFactory. */
 class SIRIKATA_OH_EXPORT ObjectScriptManager  {
   public:
-    /// String->String map, used to pass arbitrary arguments into a script.
-    typedef std::map<std::string,std::string> Arguments;
     /** Create a script linked to this HostedObject.
         Called by HostedObject::initializeScripted().
     */
     virtual ObjectScript *createObjectScript(HostedObjectPtr ho,
-                                             const Arguments &args)=0;
+                                             const String &args)=0;
     /// Delete this ObjectScript instance.
     virtual void destroyObjectScript(ObjectScript*toDestroy)=0;
     /// Destructor: called from the plugin itself.

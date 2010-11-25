@@ -79,8 +79,8 @@ void CSVObjectFactory::generate()
     int mesh_idx = -1;
 
     int quat_vel_idx = -1;
-    int script_file_idx = -1;
     int script_type_idx = -1;
+    int script_opts_idx = -1;
     int scale_idx = -1;
     int objid_idx = -1;
     int solid_angle_idx = -1;
@@ -131,8 +131,8 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "vel_x") vel_idx = idx;
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
-                if (line_parts[idx] == "script_file") script_file_idx = idx;
                 if (line_parts[idx] == "script_type") script_type_idx = idx;
+                if (line_parts[idx] == "script_options") script_opts_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
                 if(line_parts[idx] == "objid")
                 {
@@ -194,18 +194,16 @@ void CSVObjectFactory::generate()
 
                 String mesh( line_parts[mesh_idx] );
 
-                String scriptFile = "";
                 String scriptType = "";
-                /*
-                   FIX for 156: http://www.sirikata.com/trac/ticket/156
-                */
-                if(script_file_idx != -1)
-                {
-                    scriptFile = line_parts[script_file_idx];
-                }
+                String scriptOpts = "";
+
               	if(script_type_idx != -1)
                 {
                     scriptType = line_parts[script_type_idx];
+                }
+                if(script_opts_idx != -1)
+                {
+                    scriptOpts = line_parts[script_opts_idx];
                 }
 
                 float scale =
@@ -259,7 +257,7 @@ void CSVObjectFactory::generate()
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
                 oci.scriptType = scriptType;
-                oci.scriptFile = scriptFile;
+                oci.scriptOpts = scriptOpts;
                 oci.query_angle = query_angle;
                 mIncompleteObjects.push(oci);
 
@@ -297,8 +295,8 @@ void CSVObjectFactory::connectObjects()
             oci.loc, oci.bounds, oci.mesh,
             const_cast<SolidAngle&>(oci.query_angle),
             UUID::null(), NULL,
-            oci.scriptFile,
-            oci.scriptType
+            oci.scriptType,
+            oci.scriptOpts
         );
     }
 

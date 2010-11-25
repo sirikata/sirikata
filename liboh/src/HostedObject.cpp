@@ -86,8 +86,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
             _1, _2, _3
         )
     );
-
-    mHasScript = false;
 }
 
 
@@ -253,21 +251,7 @@ bool myisalphanum(char c) {
 }
 }
 
-
-// attaches a script to the entity. This is like running
-// the script after the entity is initialized
-// the entity should have been intialized
-void HostedObject::attachScript(const String& script_name)
-{
-  if(!mObjectScript)
-  {
-      SILOG(oh,warn,"[OH] Ignored attachScript because script is not initialized for " << getUUID().toString() << "(internal id)");
-      return;
-  }
-  mObjectScript->attachScript(script_name);
-}
-
-void HostedObject::initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach)
+void HostedObject::initializeScript(const String& script, const String& args)
 {
     if (mObjectScript) {
         SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
@@ -294,12 +278,8 @@ void HostedObject::initializeScript(const String& script, const ObjectScriptMana
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
     if (mgr) {
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
-				mObjectScript->scriptTypeIs(script);
-				mObjectScript->scriptFileIs(fileScriptToAttach);
-        if (fileScriptToAttach != "")
-        {
-            mObjectScript->attachScript(fileScriptToAttach);
-        }
+        mObjectScript->scriptTypeIs(script);
+        mObjectScript->scriptOptionsIs(args);
     }
 }
 
@@ -310,10 +290,10 @@ void HostedObject::connect(
         const String& mesh,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        const String& scriptFile,
-        const String& scriptType)
+        const String& scriptType,
+        const String& scriptOpts)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd,scriptFile,scriptType);
+    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd,scriptType,scriptOpts);
 }
 
 
@@ -325,8 +305,8 @@ void HostedObject::connect(
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        const String& scriptFile,
-        const String& scriptType)
+        const String& scriptType,
+        const String& scriptOpts)
 {
     if (spaceID == SpaceID::null())
         return;
@@ -341,7 +321,7 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, scriptFile, scriptType, ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, scriptType, scriptOpts, ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
@@ -376,7 +356,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -389,12 +369,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, scriptFile, scriptType, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, scriptType, scriptOpts, ppd)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptFile, const String& scriptType, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd)
 {
     if (info.server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
@@ -437,10 +417,9 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
     //attach script callback;
-    if (scriptFile != "")
+    if (scriptType != "")
     {
-        ObjectScriptManager::Arguments script_args;  //these can just be empty;
-        this->initializeScript(scriptType,script_args,scriptFile);
+        this->initializeScript(scriptType, scriptOpts);
     }
 
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref);
@@ -515,11 +494,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
     {
-        mHasScript = true;
-        mScriptType = scriptType;
-
-        ObjectScriptManager::Arguments scriptargs;
-        initializeScript(scriptType,scriptargs,"");
+        initializeScript(scriptType,"");
     }
 
     return true;
@@ -1123,7 +1098,7 @@ void HostedObject::EntityState::persistToFile(std::ofstream& fp)
 	 fp << script_type << ",";
 
 
-   fp << script_file << std::endl;
+   fp << script_opts << std::endl;
 }
 
 
@@ -1167,7 +1142,7 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
     if(mObjectScript)
     {
         es->script_type = mObjectScript->scriptType();
-        es->script_file = mObjectScript->scriptFile();
+        es->script_opts = mObjectScript->scriptOptions();
     }
     return es;
 

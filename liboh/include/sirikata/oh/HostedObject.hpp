@@ -93,7 +93,7 @@ protected:
          float scale;
          String objectID;
          String script_type;
-         String script_file;
+         String script_opts;
          void persistToFile(std::ofstream&);
 
      };
@@ -161,13 +161,8 @@ public:
     virtual Time localTime(const SpaceID& space, const Time& t);
     virtual Time currentLocalTime();
 
-    ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    void initializeScript(const String&script, const std::map<String,String> &args);
-
-
-    ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    //void initializeScript(const String&script, const std::map<String,String> &args);
-    void initializeScript(const String& script, const ObjectScriptManager::Arguments &args, const std::string& fileScriptToAttach="");
+    ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
+    void initializeScript(const String& script, const String& args);
 
     bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void processInitScriptMessage(MemoryReference& body);
@@ -197,51 +192,6 @@ public:
     ///const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
     const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
-
-
-
-	/** These are properties related the object script
-	    that would be attached to this hosted object in case
-		it is a scripted object
-	*/
-
-    bool mHasScript;
-    String mScriptType;
-    ObjectScriptManager::Arguments mScriptArgs;
-    String mScriptName;
-
-
-    bool hasScript()
-    {
-        return mHasScript;
-    }
-
-    void setHasScript(bool t)
-    {
-        mHasScript = t;
-    }
-
-    void setScriptType(String s)
-    {
-        mScriptType = s;
-    }
-
-    void setScriptArgs(ObjectScriptManager::Arguments& args)
-    {
-        mScriptArgs = args;
-    }
-
-    String getScriptName()
-    {
-        return mScriptName;
-    }
-    void setScriptName(String s)
-    {
-        mScriptName = s;
-    }
-
-    void attachScript(const String& );
-
 
 public:
 
@@ -284,8 +234,8 @@ public:
         const String& mesh,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        const String& scriptFile = "",
-        const String& scriptType = "");
+        const String& scriptType = "",
+        const String& scriptOpts = "");
 
 
 
@@ -300,8 +250,8 @@ public:
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        const String& scriptFile = "",
-        const String& scriptType = "");
+        const String& scriptType = "",
+        const String& scriptOpts = "");
 
 
   private:
@@ -310,8 +260,8 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info,  const String& scriptFile, const String& scriptType, PerPresenceData* ppd);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 

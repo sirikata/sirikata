@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  MonoVWObjectScriptManager.hpp
+/*  Sirikata
+ *  SimpleCameraObjectScriptManager.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
-#define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
+#ifndef _SIRIKATA_SIMPLECAMERA_OBJECT_SCRIPT_MANAGER_HPP_
+#define _SIRIKATA_SIMPLECAMERA_OBJECT_SCRIPT_MANAGER_HPP_
 
 #include <sirikata/oh/ObjectScriptManager.hpp>
+#include <sirikata/core/options/Options.hpp>
 
-namespace Mono {
-class MonoSystem;
-}
 namespace Sirikata {
-class HostedObject;
-class ObjectScript;
+namespace SimpleCamera {
 
-class MonoVWObjectScriptManager : public ObjectScriptManager {
+class SimpleCameraObjectScriptManager : public ObjectScriptManager {
 public:
-    enum MonoScriptType {
-        MonoScript,
-        IronPythonScript
-    };
+    static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
 
-    MonoVWObjectScriptManager(Mono::MonoSystem* system, const Sirikata::String& arguments, MonoScriptType script_type);
+    SimpleCameraObjectScriptManager(const Sirikata::String& arguments);
+    virtual ~SimpleCameraObjectScriptManager();
 
-    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
-
-    virtual ObjectScript *createObjectScript(HostedObjectPtr ho, const String& args);
-    virtual void destroyObjectScript(ObjectScript*toDestroy);
-    virtual ~MonoVWObjectScriptManager();
-
-private:
-    Mono::MonoSystem* mSystem;
-    MonoScriptType mScriptType;
+    virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args);
+    virtual void destroyObjectScript(ObjectScript* toDestroy);
 };
-}
-#endif
+
+} // namespace SimpleCamera
+} // namespace Sirikata
+
+#endif //_SIRIKATA_SIMPLECAMERA_OBJECT_SCRIPT_MANAGER_HPP_

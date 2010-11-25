@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  MonoVWObjectScriptManager.hpp
+/*  Sirikata
+ *  SimpleCameraObjectScript.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,42 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
-#define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
 
-#include <sirikata/oh/ObjectScriptManager.hpp>
+#include <sirikata/oh/Platform.hpp>
 
-namespace Mono {
-class MonoSystem;
-}
+#include <sirikata/core/util/KnownServices.hpp>
+
+
+#include "SimpleCameraObjectScript.hpp"
+
 namespace Sirikata {
-class HostedObject;
-class ObjectScript;
+namespace SimpleCamera {
 
-class MonoVWObjectScriptManager : public ObjectScriptManager {
-public:
-    enum MonoScriptType {
-        MonoScript,
-        IronPythonScript
-    };
-
-    MonoVWObjectScriptManager(Mono::MonoSystem* system, const Sirikata::String& arguments, MonoScriptType script_type);
-
-    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
-
-    virtual ObjectScript *createObjectScript(HostedObjectPtr ho, const String& args);
-    virtual void destroyObjectScript(ObjectScript*toDestroy);
-    virtual ~MonoVWObjectScriptManager();
-
-private:
-    Mono::MonoSystem* mSystem;
-    MonoScriptType mScriptType;
-};
+SimpleCameraObjectScript::SimpleCameraObjectScript(HostedObjectPtr ho, const String& args)
+ : mParent(ho)
+{
+    mParent->addListener((SessionEventListener*)this);
 }
-#endif
+
+SimpleCameraObjectScript::~SimpleCameraObjectScript()
+{
+    mParent->removeListener((SessionEventListener*)this);
+}
+
+void SimpleCameraObjectScript::updateAddressable()
+{
+}
+
+void SimpleCameraObjectScript::attachScript(const String& script_name)
+{
+}
+
+void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    mParent->runSimulation(name, "ogregraphics");
+}
+
+void SimpleCameraObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+}
+
+} // namespace SimpleCamera
+} // namespace Sirikata

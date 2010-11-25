@@ -1,7 +1,7 @@
-/*  Sirikata liboh -- Object Host
- *  MonoVWObjectScriptManager.hpp
+/*  Sirikata
+ *  SimpleCameraObjectScriptManager.cpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2010, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,36 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MONO_OBJECT_SCRIPT_MANAGER_HPP_
-#define _MONO_OBJECT_SCRIPT_MANAGER_HPP_
+#include <sirikata/oh/Platform.hpp>
 
-#include <sirikata/oh/ObjectScriptManager.hpp>
+#include "SimpleCameraObjectScriptManager.hpp"
+#include "SimpleCameraObjectScript.hpp"
 
-namespace Mono {
-class MonoSystem;
-}
 namespace Sirikata {
-class HostedObject;
-class ObjectScript;
+namespace SimpleCamera {
 
-class MonoVWObjectScriptManager : public ObjectScriptManager {
-public:
-    enum MonoScriptType {
-        MonoScript,
-        IronPythonScript
-    };
-
-    MonoVWObjectScriptManager(Mono::MonoSystem* system, const Sirikata::String& arguments, MonoScriptType script_type);
-
-    static ObjectScriptManager*createObjectScriptManager(Mono::MonoSystem* monosystem,const Sirikata::String& arguments, MonoScriptType script_type);
-
-    virtual ObjectScript *createObjectScript(HostedObjectPtr ho, const String& args);
-    virtual void destroyObjectScript(ObjectScript*toDestroy);
-    virtual ~MonoVWObjectScriptManager();
-
-private:
-    Mono::MonoSystem* mSystem;
-    MonoScriptType mScriptType;
-};
+ObjectScriptManager* SimpleCameraObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
+    return new SimpleCameraObjectScriptManager(arguments);
 }
-#endif
+
+SimpleCameraObjectScriptManager::SimpleCameraObjectScriptManager(const Sirikata::String& arguments)
+{
+}
+
+SimpleCameraObjectScriptManager::~SimpleCameraObjectScriptManager()
+{
+}
+
+ObjectScript* SimpleCameraObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
+{
+    SimpleCameraObjectScript* new_script = new SimpleCameraObjectScript(ho, args);
+    return new_script;
+}
+
+void SimpleCameraObjectScriptManager::destroyObjectScript(ObjectScript*toDestroy){
+    delete toDestroy;
+}
+
+} // namespace SimpleCamera
+} // namespace Sirikata
