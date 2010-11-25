@@ -609,10 +609,9 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
-
         ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
-
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(), ObjectReference(update.object())));
+
         if (!proxy_obj) continue;
 
 
@@ -985,25 +984,31 @@ void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReferen
 }
 
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh) {
+    ProxyObjectPtr self_proxy = getProxy(space, oref);
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
     if (loc != NULL) {
+        self_proxy->setLocation(*loc);
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
         requested_loc.set_t( spaceTime(space, loc->updateTime()) );
         requested_loc.set_position(loc->position());
         requested_loc.set_velocity(loc->velocity());
     }
     if (orient != NULL) {
+        self_proxy->setOrientation(*orient);
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
         requested_orient.set_t( spaceTime(space, orient->updateTime()) );
         requested_orient.set_position(orient->position());
         requested_orient.set_velocity(orient->velocity());
     }
-    if (bounds != NULL)
+    if (bounds != NULL) {
+        self_proxy->setBounds(*bounds);
         loc_request.set_bounds(*bounds);
+    }
     if (mesh != NULL)
     {
+        self_proxy->setMesh(Transfer::URI(*mesh));
         loc_request.set_mesh(*mesh);
     }
 
