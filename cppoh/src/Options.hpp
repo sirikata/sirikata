@@ -52,9 +52,6 @@
 
 #define OPT_CAMERASCRIPT         "camerascript"
 #define OPT_CAMERASCRIPTTYPE         "camerascripttype"
-#define OPT_OH_SIMS              "oh.sims"
-
-
 
 
 namespace Sirikata {

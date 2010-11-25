@@ -67,8 +67,6 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
         .addOption(new OptionValue(OPT_CAMERASCRIPT,"",OptionValueType<String>(),"The scripts the camera should startup with"))
         .addOption(new OptionValue(OPT_CAMERASCRIPTTYPE,"js",OptionValueType<String>(),"The language the script is written in."))
-
-        .addOption(new OptionValue(OPT_OH_SIMS, "ogregraphics", OptionValueType<std::list<String> >(), "Simulations to try to load and run."))
         ;
 }
 
