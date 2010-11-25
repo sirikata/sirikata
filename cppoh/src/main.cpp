@@ -73,7 +73,7 @@ int main (int argc, char** argv) {
     OHTrace::InitOptions();
     InitCPPOHOptions();
 
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
 
     PluginManager plugins;
 
@@ -163,7 +163,7 @@ int main (int argc, char** argv) {
 
 
 
-    
+
 
 
     ctx->run(1);
@@ -179,7 +179,7 @@ int main (int argc, char** argv) {
     //delete pd;
 
 
-    
+
     plugins.gc();
     SimulationFactory::destroy();
 

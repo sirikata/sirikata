@@ -94,6 +94,25 @@ void ParseOptionsFile(const String& fname, bool required) {
     options->parseFile(fname, required);
 }
 
+void ParseOptions(int argc, char** argv, const String& config_file_option) {
+    OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
+
+    // Parse command line once to make sure we have the right config
+    // file. On this pass, use defaults so everything gets filled in.
+    options->parse(argc, argv, true);
+
+    // Get the config file name and parse it. Don't use defaults to
+    // avoid overwriting.
+    String fname = GetOptionValue<String>(config_file_option.c_str());
+    if (!fname.empty())
+        options->parseFile(fname, true, false);
+
+    // And parse the command line args a second time to overwrite any settings
+    // the config file may have overwritten. Don't use defaults to
+    // avoid overwriting.
+    options->parse(argc, argv, false);
+}
+
 OptionValue* GetOption(const char* name) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     return options->referenceOption(name);

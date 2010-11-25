@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     Trace::Trace::InitOptions();
     SpaceTrace::InitOptions();
     InitSpaceOptions();
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );

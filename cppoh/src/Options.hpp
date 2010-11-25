@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
 #define _SIRIKATA_CPPOH_OPTIONS_HPP_
 
+#define OPT_CONFIG_FILE          "cfg"
+
 #define OPT_OH_PLUGINS           "oh.plugins"
 
 #define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"

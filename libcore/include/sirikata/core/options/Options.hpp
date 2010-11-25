@@ -98,9 +98,9 @@ public:
 
     OptionSet();
     ~OptionSet();
-    void parse(const std::string&);
-    void parse(int, const char * const *);
-    void parseFile(const std::string&, bool required);
+    void parse(const std::string&, bool use_defaults = true);
+    void parse(int, const char * const *, bool use_defaults = true);
+    void parseFile(const std::string&, bool required, bool use_defaults = true);
     void addOption(OptionValue*v);
     OptionValue* referenceOption(const std::string &option, OptionValue**pointer = NULL);
     static OptionValue* referenceOption(const std::string& module, const std::string &option, OptionValue**pointer=NULL);

@@ -267,7 +267,7 @@ public:
                                   i->second->description());
         }
     }
-    static bool update_options(std::map<std::string,OptionValue*>&names, boost::program_options::options_description &options_description, const boost::program_options::variables_map options) {
+    static bool update_options(std::map<std::string,OptionValue*>&names, boost::program_options::options_description &options_description, const boost::program_options::variables_map options, bool use_defaults) {
         if (options.count("help")){
             try {
                 std::cout << options_description;
@@ -283,7 +283,7 @@ public:
         for (std::map<std::string,OptionValue*>::iterator i=names.begin(),ie=names.end();
              i!=ie;
              ++i) {
-				 if (options.count(i->first)){
+            if (options.count(i->first) && (use_defaults || !options[i->first].defaulted())) {
                      const simple_string* s=boost::any_cast<simple_string>(&options[i->first].value());
                      assert(s!=NULL);
                      HolderStash::getSingleton().hideUntilQuit(i->first,i->second->mValue.newAndDoNotFree(i->second->mParser(*s)));
@@ -332,7 +332,7 @@ OptionSet::~OptionSet() {
         ValueStash::getSingleton().hideUntilQuit(i->first,i->second);
     }
 }
-void OptionSet::parse(int argc, const char * const *argv){
+void OptionSet::parse(int argc, const char * const *argv, bool use_defaults){
     if (argc>1)
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -346,12 +346,12 @@ void OptionSet::parse(int argc, const char * const *argv){
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        dienow=!OptionRegistration::update_options(mNames,options,output);
+        dienow=!OptionRegistration::update_options(mNames,options,output, use_defaults);
     }
     if (dienow)
         exit(0);
 }
-void OptionSet::parseFile(const std::string& file, bool required) {
+void OptionSet::parseFile(const std::string& file, bool required, bool use_defaults) {
     mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
     boost::program_options::variables_map output;
@@ -370,12 +370,12 @@ void OptionSet::parseFile(const std::string& file, bool required) {
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        dienow=!OptionRegistration::update_options(mNames,options,output);
+        dienow=!OptionRegistration::update_options(mNames,options,output, use_defaults);
     }
     if (dienow)
         exit(0);
 }
-void OptionSet::parse(const std::string&args){
+void OptionSet::parse(const std::string&args, bool use_defaults){
     if (args.size())
         mParsingStage=PARSED_UNBLANK_OPTIONS;
     boost::program_options::options_description options;
@@ -390,7 +390,7 @@ void OptionSet::parse(const std::string&args){
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
-        dienow=!OptionRegistration::update_options(mNames,options,output);
+        dienow=!OptionRegistration::update_options(mNames,options,output, use_defaults);
     }
     if (dienow)
         exit(0);
