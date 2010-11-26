@@ -31,6 +31,9 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args);
 
+v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args);
+
 }}}
 
 #endif

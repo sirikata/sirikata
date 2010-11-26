@@ -76,6 +76,44 @@ using namespace std;
 namespace Sirikata {
 namespace JS {
 
+namespace {
+
+
+
+void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(ctx);
+
+    TryCatch try_catch;
+
+    Handle<Value> result;
+    if (target->IsNull() || target->IsUndefined())
+        result = cb->Call(ctx->Global(), argc, argv);
+    else
+        result = cb->Call(target, argc, argv);
+
+    if (result.IsEmpty()) {
+        // FIXME what should we do with this exception?
+        v8::String::Utf8Value error(try_catch.Exception());
+        const char* cMsg = ToCString(error);
+        std::cout << cMsg << "\n";
+	}
+}
+
+void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
+    const int argc =
+#ifdef _WIN32
+		1
+#else
+		0
+#endif
+		;
+    Handle<Value> argv[argc] = { };
+    ProtectedJSCallback(ctx, target, cb, argc, argv);
+}
+
+}
+
 JSObjectScript::ScopedEvalContext::ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx)
  : parent(_parent)
 {
@@ -129,45 +167,16 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
 
-    //const HostedObject::SpaceSet& spaces = mParent->spaces();
-    HostedObject::SpaceObjRefSet spaceobjrefs;
 
+    // Subscribe for session events
+    mParent->addListener((SessionEventListener*)this);
+    // And notify the script of existing ones
+    HostedObject::SpaceObjRefSet spaceobjrefs;
     mParent->getSpaceObjRefs(spaceobjrefs);
     if (spaceobjrefs.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
-
-    for(HostedObject::SpaceObjRefSet::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it != spaceobjrefs.end()?space_it++:space_it)
-    {
-        //register for scripting messages from user
-        SpaceID space_id=space_it->space();
-        ObjectReference obj_refer = space_it->object();
-        mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
-
-
-        //FIXME: using deprecated version of receive (that's why we added the 1
-        //there).  Change it to the new MessageHandler function when you get a chance.
-        if (mScriptingPort)
-            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
-
-
-
-        //register port for messaging
-        mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
-
-        //FIXME: using deprecated version of receive (that's why we added the 1
-        //there).  Change it to the new MessageHandler function when you get a chance.
-        if (mMessagingPort)
-            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
-
-
-        //in case the space_set was munged in the process
-        space_it=spaceobjrefs.find(SpaceObjectReference(space_id, obj_refer));
-
-
-        //register a port for creating entities
-        mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
-        //shouldn't need to receive on this port
-    }
+    for(HostedObject::SpaceObjRefSet::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
+        onConnected(mParent, *space_it);
 
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
@@ -176,6 +185,34 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     if (!script_name.empty())
         import(script_name);
 }
+
+void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    //register for scripting messages from user
+    SpaceID space_id = name.space();
+    ObjectReference obj_refer = name.object();
+
+    mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
+    if (mScriptingPort)
+        mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
+
+    //register port for messaging
+    mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
+    if (mMessagingPort)
+        mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
+
+    mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
+
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() ) {
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceConnectedHandler);
+    }
+}
+
+void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() ) {
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
+    }
+}
+
 
 void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
 {
@@ -432,42 +469,6 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
         printf("\n\nBFTM: No object references available for sending messages");
 }
 
-
-
-
-
-
-void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctx);
-
-    TryCatch try_catch;
-
-    Handle<Value> result;
-    if (target->IsNull() || target->IsUndefined())
-        result = cb->Call(ctx->Global(), argc, argv);
-    else
-        result = cb->Call(target, argc, argv);
-
-    if (result.IsEmpty()) {
-        // FIXME what should we do with this exception?
-        v8::String::Utf8Value error(try_catch.Exception());
-        const char* cMsg = ToCString(error);
-        std::cout << cMsg << "\n";
-	}
-}
-
-void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
-    const int argc =
-#ifdef _WIN32
-		1
-#else
-		0
-#endif
-		;
-    Handle<Value> argv[argc] = { };
-    ProtectedJSCallback(ctx, target, cb, argc, argv);
-}
 
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
 {

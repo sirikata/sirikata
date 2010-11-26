@@ -39,6 +39,7 @@
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/proxyobject/SessionEventListener.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -53,10 +54,15 @@
 namespace Sirikata {
 namespace JS {
 
-class JSObjectScript : public ObjectScript {
+class JSObjectScript : public ObjectScript, public SessionEventListener {
 public:
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
+
+    // SessionEventListener Interface
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+    virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     virtual void updateAddressable();
@@ -118,11 +124,19 @@ public:
 
 
     /** Register an event pattern matcher and handler. */
-    //void registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
     JSEventHandler* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
 
     void deleteHandler(JSEventHandler* toDelete);
+
+
+    void registerOnPresenceConnectedHandler(v8::Persistent<v8::Function>& cb) {
+        mOnPresenceConnectedHandler = cb;
+    }
+    void registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function>& cb) {
+        mOnPresenceDisconnectedHandler = cb;
+    }
+
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
@@ -160,6 +174,10 @@ private:
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
+
+    // Handlers for presence connection events
+    v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
+    v8::Persistent<v8::Function> mOnPresenceDisconnectedHandler;
 
     void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
 
