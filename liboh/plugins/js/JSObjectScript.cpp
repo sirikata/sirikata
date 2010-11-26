@@ -151,8 +151,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
-    mPres = NULL; //bftm change.
-
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -202,15 +200,20 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 
     mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
-    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() ) {
+    // Add to system.presences array
+    addPresence(name);
+
+    // Invoke user callback
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() )
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceConnectedHandler);
-    }
 }
 
 void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
-    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() ) {
+    // Remove from system.presences array
+    removePresence(name);
+
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
-    }
 }
 
 
@@ -880,65 +883,71 @@ void JSObjectScript::updateAddressable()
 //called to build the presences array as well as to build the presence keyword
 void JSObjectScript::initializePresences(Handle<Object>& system_obj)
 {
-    clearAllPresences(system_obj);
-    populatePresences(system_obj);
-}
-
-
-
-//this function grabs all presence-related data, and frees the memory (that
-//we're responsible for) associated with each.
-void JSObjectScript::clearAllPresences(Handle<Object>& system_obj)
-{
-    system_obj->Delete(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME));
-
-    for (int s=0; s < (int) mPresenceList.size(); ++s)
-    {
-        delete mPresenceList[s]->sporef;
-        delete mPresenceList[s];
-    }
-    mPresenceList.clear();
-
-    if (mPres != NULL)
-    {
-        delete mPres->sporef;
-        mPres = NULL;
-    }
-}
-
-
-//this function adds the presences array to the system object
-void JSObjectScript::populatePresences(Handle<Object>& system_obj)
-{
-    HandleScope handle_scope;
-    //HostedObject::SpaceSet spaces = mParent->spaces();
-    HostedObject::SpaceObjRefSet spaces;
-    mParent->getSpaceObjRefs(spaces);
-    HostedObject::SpaceObjRefSet::const_iterator it = spaces.begin();
     v8::Context::Scope context_scope(mContext);
-    v8::Local<v8::Array> arrayObj= v8::Array::New();
-
-    for (int s=0; it != spaces.end(); ++s, ++it)
-    {
-        Local<Object> tmpObj = mManager->mPresenceTemplate->NewInstance();
-
-        JSPresenceStruct* presToAdd = new JSPresenceStruct;
-        presToAdd->jsObjScript = this;
-        presToAdd->sporef = new SpaceObjectReference(*it);
-
-        mPresenceList.push_back(presToAdd);
-
-        tmpObj->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
-        arrayObj->Set(v8::Number::New(s),tmpObj);
-
-    }
-
-    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME),arrayObj);
+    // Create the space for the presences, they get filled in by
+    // onConnected/onDisconnected calls
+    v8::Local<v8::Array> arrayObj = v8::Array::New();
+    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 }
 
+void JSObjectScript::addPresence(const SpaceObjectReference& sporef) {
+    HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
 
+    // Get the presences array
+    v8::Local<v8::Array> presences_array =
+        v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+    uint32 new_pos = presences_array->Length();
 
+    // Create the object for the new presence
+    Local<Object> js_pres = mManager->mPresenceTemplate->NewInstance();
+    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef);
+    js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
 
+    // Add to our internal map
+    mPresences[sporef] = presToAdd;
+
+    // Insert into the presences array
+    presences_array->Set(v8::Number::New(new_pos), js_pres);
+}
+
+void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {
+    // Find and remove from internal storage
+    PresenceMap::iterator internal_it = mPresences.find(sporef);
+    if (internal_it == mPresences.end()) {
+        JSLOG(error, "Got removePresence call for Presence that wasn't being tracked.");
+        return;
+    }
+    JSPresenceStruct* presence = internal_it->second;
+    delete presence;
+    mPresences.erase(internal_it);
+
+    // Get presences array, find and remove from that array.
+    HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+    v8::Local<v8::Array> presences_array
+        = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+    // FIXME this is really annoying and completely unsafe. system.presences
+    // shouldn't really be an array
+    int32 remove_idx = -1;
+    for(uint32 i = 0; i < presences_array->Length(); i++) {
+        v8::Local<v8::Object> pres_i =
+            v8::Local<v8::Object>::Cast(presences_array->Get(i));
+        v8::Local<v8::External> pres_handle =
+            v8::Local<v8::External>::Cast(pres_i->GetInternalField(PRESENCE_FIELD_PRESENCE));
+        if (((JSPresenceStruct*)pres_handle->Value()) == presence) {
+            remove_idx = i;
+            break;
+        }
+    }
+    if (remove_idx == -1) {
+        JSLOG(error, "Couldn't find presence in system.presences array.");
+        return;
+    }
+    for(uint32 i = remove_idx; i < presences_array->Length()-1; i++)
+        presences_array->Set(i, presences_array->Get(i+1));
+    presences_array->Delete(presences_array->Length()-1);
+}
 
 //this function can be called to re-initialize the system object's state
 void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)

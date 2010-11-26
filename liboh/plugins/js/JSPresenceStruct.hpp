@@ -14,18 +14,13 @@ class JSObjectScript;
 
 struct JSPresenceStruct
 {
-    
-    // //I'm repsonsible for sID memory.
-    // SpaceID*                       sID;
-    // //Object reference
-    // ObjectReference* oref;
+    JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef)
+     : jsObjScript(parent), sporef(new SpaceObjectReference(_sporef))
+    {}
+    ~JSPresenceStruct() { delete sporef; }
 
+    JSObjectScript* jsObjScript;
     SpaceObjectReference* sporef;
-    
-    //likely that the jsObjScript won't be owned by JSPresence (don't delete it myself).
-    JSObjectScript*        jsObjScript;
-
-
 };
 
 

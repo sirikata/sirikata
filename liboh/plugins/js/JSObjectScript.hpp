@@ -207,13 +207,13 @@ private:
 
     void populateAddressable(Handle<Object>& system_obj );
     void printAllHandlerLocations();
-    void populatePresences(Handle<Object>& system_obj );
+    void initializePresences(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
     void populateMath(Handle<Object>& system_obj);
 
-
-    void initializePresences(Handle<Object>& system_obj);
-    void clearAllPresences(Handle<Object>& system_obj);
+    // Adds/removes presences from the javascript's system.presences array.
+    void addPresence(const SpaceObjectReference& sporef);
+    void removePresence(const SpaceObjectReference& sporef);
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
@@ -222,11 +222,8 @@ private:
 
     JSObjectScriptManager* mManager;
 
-    typedef std::vector<JSPresenceStruct*> PresenceList;
-    PresenceList mPresenceList;
-
-    JSPresenceStruct* mPres;
-
+    typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
+    PresenceMap mPresences;
 };
 
 } // namespace JS
