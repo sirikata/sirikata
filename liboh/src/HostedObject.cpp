@@ -289,11 +289,9 @@ void HostedObject::connect(
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
-        const String& scriptType,
-        const String& scriptOpts)
+        PerPresenceData* ppd)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd,scriptType,scriptOpts);
+    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd);
 }
 
 
@@ -304,9 +302,7 @@ void HostedObject::connect(
         const String& mesh,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
-        const String& scriptType,
-        const String& scriptOpts)
+        PerPresenceData* ppd)
 {
     if (spaceID == SpaceID::null())
         return;
@@ -321,7 +317,7 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, scriptType, scriptOpts, ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
@@ -356,7 +352,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -369,12 +365,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, scriptType, scriptOpts, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
 {
     if (info.server == NullServerID) {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
@@ -415,12 +411,6 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //receive the scripting signal for the first time, that means that we create
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
-
-    //attach script callback;
-    if (scriptType != "")
-    {
-        this->initializeScript(scriptType, scriptOpts);
-    }
 
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref);
 }

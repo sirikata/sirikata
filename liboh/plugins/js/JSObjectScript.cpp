@@ -314,7 +314,6 @@ void JSObjectScript::test() const
 }
 
 
-
 //bftm
 //populates the internal addressable object references vector
 void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
@@ -326,7 +325,10 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Array> arrayObj= v8::Array::New();
+    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
 
+    // No work to do if we have no presences.
+    if (mPresences.empty()) return;
 
     //Right now, we have multiple presences, but only designate one as "self"
     //should we have multiple selves as well?
@@ -348,8 +350,6 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
 
     }
-    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
-
 }
 
 
@@ -962,10 +962,10 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 
    system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD, External::New(this));
 
+   initializePresences(system_obj);
+
    //FIXME: May need an initialize addressable
    populateAddressable(system_obj);
-
-   initializePresences(system_obj);
 
    populateMath(system_obj);
 }

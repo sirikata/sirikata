@@ -250,14 +250,14 @@ void CSVObjectFactory::generate()
 
 
                 obj->init();
+                if (scriptType != "")
+                    obj->initializeScript(scriptType, scriptOpts);
 
                 ObjectConnectInfo oci;
                 oci.object = obj;
                 oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
-                oci.scriptType = scriptType;
-                oci.scriptOpts = scriptOpts;
                 oci.query_angle = query_angle;
                 mIncompleteObjects.push(oci);
 
@@ -294,9 +294,7 @@ void CSVObjectFactory::connectObjects()
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
             const_cast<SolidAngle&>(oci.query_angle),
-            UUID::null(), NULL,
-            oci.scriptType,
-            oci.scriptOpts
+            UUID::null(), NULL
         );
     }
 
