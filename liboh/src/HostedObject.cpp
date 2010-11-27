@@ -138,32 +138,6 @@ void HostedObject::destroy()
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
 }
 
-struct HostedObject::PrivateCallbacks {
-    static void disconnectionEvent(const HostedObjectWPtr&weak_thus,const SpaceID&sid, const String&reason) {
-        std::tr1::shared_ptr<HostedObject>thus=weak_thus.lock();
-        if (thus) {
-            //FIXME: need to pass object reference here as well.
-            assert(false);
-
-            // SpaceDataMap::iterator where=thus->mSpaceData->find(sid);
-            // if (where!=thus->mSpaceData->end()) {
-            //     where->second.destroy(thus->getTracker(sid));
-            //     thus->mSpaceData->erase(where);//FIXME do we want to back this up to the database first?
-            // }
-        }
-    }
-
-    static void connectionEvent(const HostedObjectWPtr&thus,
-                                const SpaceID&sid,
-                                Network::Stream::ConnectionStatus ce,
-                                const String&reason) {
-
-        if (ce!=Network::Stream::Connected) {
-            disconnectionEvent(thus,sid,reason);
-        }
-    }
-};
-
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
     return t + mObjectHost->serverTimeOffset(space);
 }
