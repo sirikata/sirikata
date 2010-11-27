@@ -329,7 +329,43 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     return target_script->makeEventHandlerObject(evHand);
 }
 
+/** Registers a handler for presence connection events.
+ *  Arguments:
+ *   function cb: callback to invoke, with event as parameter
+ */
+v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args) {
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected.")) );
 
+    v8::Handle<v8::Value> cb_val = args[0];
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected().  Must contain callback function.")) );
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    target_script->registerOnPresenceConnectedHandler(cb_persist);
+
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args) {
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected.")) );
+
+    v8::Handle<v8::Value> cb_val = args[0];
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected().  Must contain callback function.")) );
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    target_script->registerOnPresenceDisconnectedHandler(cb_persist);
+
+    return v8::Undefined();
+}
 
 
 }

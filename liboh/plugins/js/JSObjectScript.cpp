@@ -76,6 +76,44 @@ using namespace std;
 namespace Sirikata {
 namespace JS {
 
+namespace {
+
+
+
+void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(ctx);
+
+    TryCatch try_catch;
+
+    Handle<Value> result;
+    if (target->IsNull() || target->IsUndefined())
+        result = cb->Call(ctx->Global(), argc, argv);
+    else
+        result = cb->Call(target, argc, argv);
+
+    if (result.IsEmpty()) {
+        // FIXME what should we do with this exception?
+        v8::String::Utf8Value error(try_catch.Exception());
+        const char* cMsg = ToCString(error);
+        std::cout << cMsg << "\n";
+	}
+}
+
+void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
+    const int argc =
+#ifdef _WIN32
+		1
+#else
+		0
+#endif
+		;
+    Handle<Value> argv[argc] = { };
+    ProtectedJSCallback(ctx, target, cb, argc, argv);
+}
+
+}
+
 JSObjectScript::ScopedEvalContext::ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx)
  : parent(_parent)
 {
@@ -113,8 +151,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
-    mPres = NULL; //bftm change.
-
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -129,53 +165,60 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
 
-    //const HostedObject::SpaceSet& spaces = mParent->spaces();
-    HostedObject::SpaceObjRefSet spaceobjrefs;
-
-    mParent->getSpaceObjRefs(spaceobjrefs);
-    if (spaceobjrefs.size() > 1)
-        JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
-
-    for(HostedObject::SpaceObjRefSet::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it != spaceobjrefs.end()?space_it++:space_it)
-    {
-        //register for scripting messages from user
-        SpaceID space_id=space_it->space();
-        ObjectReference obj_refer = space_it->object();
-        mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
-
-
-        //FIXME: using deprecated version of receive (that's why we added the 1
-        //there).  Change it to the new MessageHandler function when you get a chance.
-        if (mScriptingPort)
-            mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
-
-
-
-        //register port for messaging
-        mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
-
-        //FIXME: using deprecated version of receive (that's why we added the 1
-        //there).  Change it to the new MessageHandler function when you get a chance.
-        if (mMessagingPort)
-            mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
-
-
-        //in case the space_set was munged in the process
-        space_it=spaceobjrefs.find(SpaceObjectReference(space_id, obj_refer));
-
-
-        //register a port for creating entities
-        mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
-        //shouldn't need to receive on this port
-    }
-
-    mParent->getObjectHost()->persistEntityState(String("scene.persist"));
-
-    // Finally, if we have a script to load, load it.
+    // If we have a script to load, load it.
     String script_name = init_script->as<String>();
     if (!script_name.empty())
         import(script_name);
+
+    // Subscribe for session events
+    mParent->addListener((SessionEventListener*)this);
+    // And notify the script of existing ones
+    HostedObject::SpaceObjRefSet spaceobjrefs;
+    mParent->getSpaceObjRefs(spaceobjrefs);
+    if (spaceobjrefs.size() > 1)
+        JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
+    for(HostedObject::SpaceObjRefSet::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
+        onConnected(mParent, *space_it);
+
+    mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
+
+void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    //register for scripting messages from user
+    SpaceID space_id = name.space();
+    ObjectReference obj_refer = name.object();
+
+    mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
+    if (mScriptingPort)
+        mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
+
+    //register port for messaging
+    mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
+    if (mMessagingPort)
+        mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
+
+    mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
+
+    // Add to system.presences array
+    v8::Handle<v8::Object> new_pres = addPresence(name);
+
+    // Invoke user callback
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() ) {
+        int argc = 1;
+        v8::Handle<v8::Value> argv[1] = { new_pres };
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceConnectedHandler, argc, argv);
+    }
+}
+
+void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+    // Remove from system.presences array
+    removePresence(name);
+
+    // FIXME this should get the presence but its already been deleted
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
+}
+
 
 void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
 {
@@ -271,7 +314,6 @@ void JSObjectScript::test() const
 }
 
 
-
 //bftm
 //populates the internal addressable object references vector
 void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
@@ -283,7 +325,10 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
     v8::Context::Scope context_scope(mContext);
     v8::Local<v8::Array> arrayObj= v8::Array::New();
+    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
 
+    // No work to do if we have no presences.
+    if (mPresences.empty()) return;
 
     //Right now, we have multiple presences, but only designate one as "self"
     //should we have multiple selves as well?
@@ -305,8 +350,6 @@ void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
 
 
     }
-    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
-
 }
 
 
@@ -432,42 +475,6 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
         printf("\n\nBFTM: No object references available for sending messages");
 }
 
-
-
-
-
-
-void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctx);
-
-    TryCatch try_catch;
-
-    Handle<Value> result;
-    if (target->IsNull() || target->IsUndefined())
-        result = cb->Call(ctx->Global(), argc, argv);
-    else
-        result = cb->Call(target, argc, argv);
-
-    if (result.IsEmpty()) {
-        // FIXME what should we do with this exception?
-        v8::String::Utf8Value error(try_catch.Exception());
-        const char* cMsg = ToCString(error);
-        std::cout << cMsg << "\n";
-	}
-}
-
-void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
-    const int argc =
-#ifdef _WIN32
-		1
-#else
-		0
-#endif
-		;
-    Handle<Value> argv[argc] = { };
-    ProtectedJSCallback(ctx, target, cb, argc, argv);
-}
 
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
 {
@@ -879,65 +886,73 @@ void JSObjectScript::updateAddressable()
 //called to build the presences array as well as to build the presence keyword
 void JSObjectScript::initializePresences(Handle<Object>& system_obj)
 {
-    clearAllPresences(system_obj);
-    populatePresences(system_obj);
-}
-
-
-
-//this function grabs all presence-related data, and frees the memory (that
-//we're responsible for) associated with each.
-void JSObjectScript::clearAllPresences(Handle<Object>& system_obj)
-{
-    system_obj->Delete(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME));
-
-    for (int s=0; s < (int) mPresenceList.size(); ++s)
-    {
-        delete mPresenceList[s]->sporef;
-        delete mPresenceList[s];
-    }
-    mPresenceList.clear();
-
-    if (mPres != NULL)
-    {
-        delete mPres->sporef;
-        mPres = NULL;
-    }
-}
-
-
-//this function adds the presences array to the system object
-void JSObjectScript::populatePresences(Handle<Object>& system_obj)
-{
-    HandleScope handle_scope;
-    //HostedObject::SpaceSet spaces = mParent->spaces();
-    HostedObject::SpaceObjRefSet spaces;
-    mParent->getSpaceObjRefs(spaces);
-    HostedObject::SpaceObjRefSet::const_iterator it = spaces.begin();
     v8::Context::Scope context_scope(mContext);
-    v8::Local<v8::Array> arrayObj= v8::Array::New();
-
-    for (int s=0; it != spaces.end(); ++s, ++it)
-    {
-        Local<Object> tmpObj = mManager->mPresenceTemplate->NewInstance();
-
-        JSPresenceStruct* presToAdd = new JSPresenceStruct;
-        presToAdd->jsObjScript = this;
-        presToAdd->sporef = new SpaceObjectReference(*it);
-
-        mPresenceList.push_back(presToAdd);
-
-        tmpObj->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
-        arrayObj->Set(v8::Number::New(s),tmpObj);
-
-    }
-
-    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME),arrayObj);
+    // Create the space for the presences, they get filled in by
+    // onConnected/onDisconnected calls
+    v8::Local<v8::Array> arrayObj = v8::Array::New();
+    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 }
 
+v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& sporef) {
+    HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
 
+    // Get the presences array
+    v8::Local<v8::Array> presences_array =
+        v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+    uint32 new_pos = presences_array->Length();
 
+    // Create the object for the new presence
+    Local<Object> js_pres = mManager->mPresenceTemplate->NewInstance();
+    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef);
+    js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
 
+    // Add to our internal map
+    mPresences[sporef] = presToAdd;
+
+    // Insert into the presences array
+    presences_array->Set(v8::Number::New(new_pos), js_pres);
+
+    return js_pres;
+}
+
+void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {
+    // Find and remove from internal storage
+    PresenceMap::iterator internal_it = mPresences.find(sporef);
+    if (internal_it == mPresences.end()) {
+        JSLOG(error, "Got removePresence call for Presence that wasn't being tracked.");
+        return;
+    }
+    JSPresenceStruct* presence = internal_it->second;
+    delete presence;
+    mPresences.erase(internal_it);
+
+    // Get presences array, find and remove from that array.
+    HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+    v8::Local<v8::Array> presences_array
+        = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+    // FIXME this is really annoying and completely unsafe. system.presences
+    // shouldn't really be an array
+    int32 remove_idx = -1;
+    for(uint32 i = 0; i < presences_array->Length(); i++) {
+        v8::Local<v8::Object> pres_i =
+            v8::Local<v8::Object>::Cast(presences_array->Get(i));
+        v8::Local<v8::External> pres_handle =
+            v8::Local<v8::External>::Cast(pres_i->GetInternalField(PRESENCE_FIELD_PRESENCE));
+        if (((JSPresenceStruct*)pres_handle->Value()) == presence) {
+            remove_idx = i;
+            break;
+        }
+    }
+    if (remove_idx == -1) {
+        JSLOG(error, "Couldn't find presence in system.presences array.");
+        return;
+    }
+    for(uint32 i = remove_idx; i < presences_array->Length()-1; i++)
+        presences_array->Set(i, presences_array->Get(i+1));
+    presences_array->Delete(presences_array->Length()-1);
+}
 
 //this function can be called to re-initialize the system object's state
 void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
@@ -947,10 +962,10 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 
    system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD, External::New(this));
 
+   initializePresences(system_obj);
+
    //FIXME: May need an initialize addressable
    populateAddressable(system_obj);
-
-   initializePresences(system_obj);
 
    populateMath(system_obj);
 }

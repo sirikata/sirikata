@@ -167,6 +167,8 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
 
+    system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
+    system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
 
     mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     system_templ->Set(v8::String::New("Vec3"), mVec3Template);

@@ -67,8 +67,6 @@ private:
         Location loc;
         BoundingSphere3f bounds;
         String mesh;
-        String scriptType;
-        String scriptOpts;
         SolidAngle query_angle;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;

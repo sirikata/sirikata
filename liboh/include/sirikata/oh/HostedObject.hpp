@@ -233,14 +233,7 @@ public:
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
-        const String& scriptType = "",
-        const String& scriptOpts = "");
-
-
-
-    Location getLocation(const SpaceID& space, const ObjectReference& oref);
-
+        PerPresenceData* ppd);
 
     void connect(
         const SpaceID&spaceID,
@@ -249,10 +242,10 @@ public:
         const String& mesh,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
-        const String& scriptType = "",
-        const String& scriptOpts = "");
+        PerPresenceData* ppd);
 
+
+    Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
   private:
 
@@ -260,8 +253,8 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, const String& scriptType, const String& scriptOpts, PerPresenceData* ppd);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
