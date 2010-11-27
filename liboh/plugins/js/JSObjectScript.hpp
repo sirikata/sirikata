@@ -212,7 +212,7 @@ private:
     void populateMath(Handle<Object>& system_obj);
 
     // Adds/removes presences from the javascript's system.presences array.
-    void addPresence(const SpaceObjectReference& sporef);
+    v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
     void removePresence(const SpaceObjectReference& sporef);
 
     ODP::Port* mScriptingPort;

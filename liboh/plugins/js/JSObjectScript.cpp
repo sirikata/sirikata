@@ -165,6 +165,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
 
+    // If we have a script to load, load it.
+    String script_name = init_script->as<String>();
+    if (!script_name.empty())
+        import(script_name);
 
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
@@ -177,11 +181,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         onConnected(mParent, *space_it);
 
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
-
-    // Finally, if we have a script to load, load it.
-    String script_name = init_script->as<String>();
-    if (!script_name.empty())
-        import(script_name);
 }
 
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
@@ -201,17 +200,21 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
     // Add to system.presences array
-    addPresence(name);
+    v8::Handle<v8::Object> new_pres = addPresence(name);
 
     // Invoke user callback
-    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() )
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceConnectedHandler);
+    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() ) {
+        int argc = 1;
+        v8::Handle<v8::Value> argv[1] = { new_pres };
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceConnectedHandler, argc, argv);
+    }
 }
 
 void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
     // Remove from system.presences array
     removePresence(name);
 
+    // FIXME this should get the presence but its already been deleted
     if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
 }
@@ -890,7 +893,7 @@ void JSObjectScript::initializePresences(Handle<Object>& system_obj)
     system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 }
 
-void JSObjectScript::addPresence(const SpaceObjectReference& sporef) {
+v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& sporef) {
     HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
@@ -909,6 +912,8 @@ void JSObjectScript::addPresence(const SpaceObjectReference& sporef) {
 
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
+
+    return js_pres;
 }
 
 void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {

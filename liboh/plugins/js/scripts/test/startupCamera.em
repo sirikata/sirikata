@@ -1,8 +1,9 @@
 system.print("\n\n\nSTARTING A CAMERA OBJECT\n\n\n");
-system.presences[0].runSimulation("ogregraphics");
 
-system.onPresenceConnected( function() {
-    system.print("startupCamera connected");
+system.onPresenceConnected( function(pres) {
+    system.print("startupCamera connected " + pres);
+    if (system.presences.length == 1)
+        pres.runSimulation("ogregraphics");
 });
 
 system.onPresenceDisconnected( function() {
