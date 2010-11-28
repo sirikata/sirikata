@@ -102,6 +102,16 @@ uint64 GetUniqueIDMessageID(uint64 uid) {
 
 }
 
+#define LOG_INVALID_MESSAGE(module, lvl, msg)                           \
+    SILOG(module, lvl, "Error parsing message at " << __FILE__ << ":" << __LINE__ << " Contents: (" << msg.size() << " bytes)"); \
+    for(int _i__ = 0; _i__ < (int)msg.size(); _i__++)                   \
+        SILOG(module, lvl, "  " << (int)msg[_i__] )
+
+#define LOG_INVALID_MESSAGE_BUFFER(module, lvl, msg_begin, msg_size)    \
+    SILOG(module, lvl, "Error parsing message at " << __FILE__ << ":" << __LINE__ << " Contents: (" << msg_size << " bytes)"); \
+    for(int _i__ = 0; _i__ < (int)msg_size; _i__++)                     \
+        SILOG(module, lvl, "  " << (int)msg_begin[_i__] )
+
 } // namespace Sirikata
 
 #endif //_SIRIKATA_MESSAGE_HPP_

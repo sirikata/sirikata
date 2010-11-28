@@ -265,14 +265,15 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
         bool space_dest = (obj_msg->dest_object() == spaceID);
         if (space_dest) {
             String response_payload = mTimeSyncServer->getResponse(MemoryReference(obj_msg->payload()));
-            Sirikata::Protocol::Object::ObjectMessage* sync_response = createObjectMessage(
-                mContext->id(),
-                UUID::null(), OBJECT_PORT_TIMESYNC,
-                obj_msg->source_object(), OBJECT_PORT_TIMESYNC,
-                response_payload
-            );
-            mObjectHostConnectionManager->send(conn_id, sync_response);
-
+            if (!response_payload.empty()) {
+                Sirikata::Protocol::Object::ObjectMessage* sync_response = createObjectMessage(
+                    mContext->id(),
+                    UUID::null(), OBJECT_PORT_TIMESYNC,
+                    obj_msg->source_object(), OBJECT_PORT_TIMESYNC,
+                    response_payload
+                );
+                mObjectHostConnectionManager->send(conn_id, sync_response);
+            }
             delete obj_msg;
             return true;
         }
@@ -369,7 +370,11 @@ bool Server::handleSingleObjectHostMessageRouting() {
 void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, Sirikata::Protocol::Object::ObjectMessage* msg) {
     Sirikata::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(space, error, msg->payload());
+        delete msg;
+        return;
+    }
 
     // Connect or migrate messages
     if (session_msg.has_connect()) {

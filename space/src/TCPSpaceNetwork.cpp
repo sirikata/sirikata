@@ -508,7 +508,10 @@ void TCPSpaceNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTC
         // Parse the header indicating the remote ID
         Sirikata::Protocol::Server::ServerIntro intro;
         bool parsed = parsePBJMessage(&intro, data);
-        assert(parsed);
+        if (!parsed) {
+            LOG_INVALID_MESSAGE(tcpnetwork, error, data);
+            return;
+        }
 
         TCPNET_LOG(info,"Parsed remote endpoint information from " << intro.id());
         remote_stream->logical_endpoint = intro.id();

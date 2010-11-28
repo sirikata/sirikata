@@ -48,7 +48,10 @@ TimeSyncServer::~TimeSyncServer() {
 String TimeSyncServer::getResponse(MemoryReference payload) {
     Sirikata::Protocol::TimeSync sync_msg;
     bool parse_success = sync_msg.ParseFromArray(payload.data(), payload.size());
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE_BUFFER(sync, error, ((char*)payload.data()), payload.size());
+        return "";
+    }
 
     // Our only job is to take the existing message, fill in a timestamp, and
     // send it back.

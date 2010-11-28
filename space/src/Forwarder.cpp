@@ -382,8 +382,12 @@ void Forwarder::receiveMessage(Message* msg) {
 void Forwarder::receiveObjectRoutingMessage(Message* msg) {
     Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
     bool parsed = parsePBJMessage(obj_msg, msg->payload());
-    assert(parsed);
-
+    if (!parsed) {
+        LOG_INVALID_MESSAGE(forwarder, error, msg->payload());
+        delete obj_msg;
+        delete msg;
+        return;
+    }
 
     TIMESTAMP(obj_msg, Trace::HANDLE_SPACE_MESSAGE);
 
@@ -413,7 +417,10 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
 
     Sirikata::Protocol::Forwarder::WeightUpdate weight_update;
     bool parsed = parsePBJMessage(&weight_update, msg->payload());
-    assert(parsed);
+    if (!parsed) {
+        LOG_INVALID_MESSAGE(forwarder, error, msg->payload());
+        return;
+    }
 
     SILOG(forwarder,insane,"Received weights: " << source << " -> " << mContext->id() <<
         " server_pair_total_weight: " << weight_update.server_pair_total_weight() <<
@@ -621,7 +628,12 @@ void Forwarder::serverMessageReceived(Message* msg) {
     if (msg->dest_port() == SERVER_PORT_OBJECT_MESSAGE_ROUTING) {
         Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
         bool parsed = parsePBJMessage(obj_msg, msg->payload());
-        assert(parsed);
+        if (!parsed) {
+            LOG_INVALID_MESSAGE(forwarder, error, msg->payload());
+            delete obj_msg;
+            delete msg;
+            return;
+        }
 
         // This process is very similar to the one followed in Server for
         // handling OH messages.  We should probably merge them....

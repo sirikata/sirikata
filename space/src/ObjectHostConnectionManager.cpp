@@ -216,9 +216,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
     bool parse_success = obj_msg->ParseFromArray(&(*chunk.begin()),chunk.size());
 
     if (!parse_success) {
-        SPACE_LOG(error, "Error parsing ObjectMessage in ObjectHostConnectionManager::handleConnectionRead. Contents: (" << chunk.size() << " bytes)");
-        for(int i = 0; i < chunk.size(); i++)
-            SPACE_LOG(error, "  " << (int) chunk[i] );
+        LOG_INVALID_MESSAGE(space, error, chunk);
         return; // Ignore, treat as dropped. Hopefully this doesn't cascade...
     }
 

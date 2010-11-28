@@ -240,7 +240,10 @@ void Proximity::newSession(ObjectSession* session) {
 void Proximity::handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length) {
     Sirikata::Protocol::Prox::QueryRequest prox_update;
     bool parse_success = prox_update.ParseFromString( String((char*) buffer, length) );
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE_BUFFER(prox, error, ((char*)buffer), length);
+        return;
+    }
 
     if (!prox_update.has_query_angle()) return;
 
@@ -388,7 +391,10 @@ std::string Proximity::generateMigrationData(const UUID& obj, ServerID source_se
 void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) {
     Sirikata::Protocol::Prox::ObjectMigrationData migr_data;
     bool parse_success = migr_data.ParseFromString(data);
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(prox, error, data);
+        return;
+    }
 
     SolidAngle obj_query_angle(migr_data.min_angle());
     addQuery(obj, obj_query_angle);

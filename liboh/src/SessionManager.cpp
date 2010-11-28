@@ -395,7 +395,7 @@ void SessionManager::openConnectionStartSession(const UUID& uuid, SpaceNodeConne
     orient.set_velocity( ci.orient.velocity() );
     connect_msg.set_bounds( ci.bounds );
 
-    
+
    if (ci.regQuery)
        connect_msg.set_query_angle( ci.queryAngle.asFloat() );
 
@@ -755,7 +755,11 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
     Sirikata::Protocol::Session::Container session_msg;
     bool parse_success = session_msg.ParseFromString(msg->payload());
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(session, error, msg->payload());
+        delete msg;
+        return;
+    }
 
     assert(!session_msg.has_connect());
 

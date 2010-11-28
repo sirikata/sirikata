@@ -100,7 +100,11 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
     // Parse
     ObjectMessage* msg = new ObjectMessage();
     bool parse_success = msg->ParseFromArray(&(*chunk.begin()), chunk.size());
-    assert(parse_success == true);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(session, error, chunk);
+        delete msg;
+        return;
+    }
 
     TIMESTAMP_START(tstamp, msg);
 
