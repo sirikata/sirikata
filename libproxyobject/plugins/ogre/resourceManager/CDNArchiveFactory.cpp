@@ -30,15 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../meruCompat/MeruDefs.hpp"
 #include "CDNArchiveFactory.hpp"
 #include "CDNArchive.hpp"
 
 using namespace Ogre;
 
-template<> Meru::CDNArchiveFactory* Ogre::Singleton<Meru::CDNArchiveFactory>::ms_Singleton = 0;
-namespace Meru {
+template<> Sirikata::Graphics::CDNArchiveFactory* Ogre::Singleton<Sirikata::Graphics::CDNArchiveFactory>::ms_Singleton = 0;
 
+namespace Sirikata {
+namespace Graphics {
+
+using namespace Sirikata::Transfer;
 
 CDNArchiveFactory::CDNArchiveFactory() {
 	mCurArchive = 0;
@@ -121,4 +123,5 @@ void CDNArchiveFactory::removeArchive(unsigned int which)
 }
 
 
-} // namespace Meru
+} // namespace Graphics
+} // namespace Sirikata

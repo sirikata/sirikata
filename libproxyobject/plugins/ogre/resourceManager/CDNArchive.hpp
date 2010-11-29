@@ -32,12 +32,13 @@
 #ifndef _CDN_ARCHIVE_HPP_
 #define _CDN_ARCHIVE_HPP_
 
-#include "../meruCompat/MeruDefs.hpp"
+#include <sirikata/proxyobject/Platform.hpp>
 #include <Ogre.h>
 #include <vector>
 #include "CDNArchiveFactory.hpp"
 
-namespace Meru {
+namespace Sirikata {
+namespace Graphics {
 
 class CDNArchiveFactory;
 
@@ -73,7 +74,8 @@ public:
   Ogre::FileInfoListPtr findFileInfo(const Ogre::String& pattern, bool recursive = true, bool dirs = false);
 };
 
-} // namespace Meru
+} // namespace Graphics
+} // namespace Sirikata
 
 #define CDN_REPLACING_MATERIAL_STREAM_HINT "%%_%%"
 

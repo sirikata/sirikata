@@ -70,6 +70,7 @@ SSTBenchmark::SSTBenchmark(const FinishedCallback& finished_cb, const String&par
     OptionValue*whichPlugin;
     OptionValue*numPings;
     mIOService = Sirikata::Network::IOServiceFactory::makeIOService();
+    mIOStrand = mIOService->createStrand();
     Sirikata::InitializeClassOptions ico("SSTBenchmark",this,
                                          port=new OptionValue("port","4091",Sirikata::OptionValueType<String>(),"port to connect/listen on"),
                                          host=new OptionValue("host","",Sirikata::OptionValueType<String>(),"host to connect to (blank for listen)"),
@@ -211,7 +212,7 @@ void SSTBenchmark::start() {
     pluginManager.load(mStreamPlugin);
     mForceStop = false;
     if (!mHost.empty()) {
-        mStream=Sirikata::Network::StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mStreamOptions));
+        mStream=Sirikata::Network::StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOStrand,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mStreamOptions));
         mStream->connect(Sirikata::Network::Address(mHost,mPort),
                          &Sirikata::Network::Stream::ignoreSubstreamCallback,
                          std::tr1::bind(&SSTBenchmark::connected,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2),
@@ -219,7 +220,7 @@ void SSTBenchmark::start() {
                          &Sirikata::Network::Stream::ignoreReadySendCallback);
 
     }else {
-        mListener=Sirikata::Network::StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mListenOptions));
+        mListener=Sirikata::Network::StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOStrand,Sirikata::Network::StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(mListenOptions));
         mListener->listen(Sirikata::Network::Address("127.0.0.1",mPort),
                           std::tr1::bind(&SSTBenchmark::newStream,this,std::tr1::placeholders::_1,std::tr1::placeholders::_2));
 
@@ -237,6 +238,8 @@ void SSTBenchmark::stop() {
         mListener->close();
     if(mStream)
         mStream->close();
+    if (mIOStrand)
+        delete mIOStrand;
     if (mIOService)
         Network::IOServiceFactory::destroyIOService(mIOService);
     mIOService=NULL;

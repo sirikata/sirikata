@@ -322,7 +322,10 @@ void StandardLocationService::receiveMessage(Message* msg) {
 void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 length) {
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE_BUFFER(standardloc, error, ((char*)buffer), length);
+        return;
+    }
 
     if (loc_container.has_update_request()) {
         Sirikata::Protocol::Loc::LocationUpdateRequest request = loc_container.update_request();

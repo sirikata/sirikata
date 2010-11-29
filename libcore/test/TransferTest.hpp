@@ -41,6 +41,9 @@
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
+#include <sirikata/core/transfer/DiskManager.hpp>
+#include <sirikata/core/transfer/LRUPolicy.hpp>
+
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
 
@@ -512,23 +515,27 @@ protected:
     Transfer::Fingerprint mHash;
     Transfer::URI mURI;
     std::tr1::shared_ptr<Transfer::RemoteFileMetadata> mMetadata;
+    bool mGotResponse;
 
     void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response, VerifyFinished cb) {
-        SILOG(transfer, debug, "verifying metadata");
+        SILOG(transfer, debug, "verifying metadata for " << request->getURI().toString());
         TS_ASSERT(response);
         TS_ASSERT(response->getSize() == mFileSize);
         TS_ASSERT(response->getFingerprint() == mHash);
         TS_ASSERT(response->getURI() == mURI);
         mMetadata = response;
 
-
-	cb();
+        {
+            boost::unique_lock<boost::mutex> lock(mut);
+            mGotResponse = true;
+        }
+        cb();
     }
 
 public:
     MetadataVerifier(Transfer::URI uri, uint64 file_size, const char * hash)
-        : mFileSize(file_size), mHash(Transfer::Fingerprint::convertFromHex(hash)), mURI(uri) {
+        : mFileSize(file_size), mHash(Transfer::Fingerprint::convertFromHex(hash)), mURI(uri), mGotResponse(false) {
     }
     void addToPool(std::tr1::shared_ptr<Transfer::TransferPool> pool,
             VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
@@ -536,6 +543,14 @@ public:
                 new Transfer::MetadataRequest(mURI, priority, std::tr1::bind(
                 &MetadataVerifier::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
         pool->addRequest(req);
+
+        if(mHash.toString() == "719c397d1019e56e41b5f98b1074abf32fb6e1fb832984f6d47a5761cfa3bcf6") {
+            boost::unique_lock<boost::mutex> lock(mut);
+            if(!mGotResponse) {
+                pool->deleteRequest(req);
+                numClis--;
+            }
+        }
     }
 };
 
@@ -560,9 +575,10 @@ public:
             VerifyFinished cb, Transfer::TransferRequest::PriorityType priority) {
 
         //Make sure chunk given is part of file
+        SILOG(transfer, debug, "Verifying metadata response for chunk " << mURI.toString());
         std::tr1::shared_ptr<Transfer::Chunk> chunk;
         const Transfer::ChunkList & chunks = mMetadata->getChunkList();
-	for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
+        for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
             if(it->getHash() == mChunkHash) {
                 std::tr1::shared_ptr<Transfer::Chunk> found(new Transfer::Chunk(*it));
                 chunk = found;
@@ -575,10 +591,13 @@ public:
                 &ChunkVerifier::chunkFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, cb)));
 
         pool->addRequest(req);
+
+        //invert the priority just to test updating priority
+        pool->updatePriority(req, 1.0 - req->getPriority());
     }
     void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
             std::tr1::shared_ptr<const Transfer::DenseData> response, VerifyFinished cb) {
-        SILOG(transfer, debug, "verifying chunk");
+        SILOG(transfer, debug, "verifying chunk response for chunk " << mURI.toString());
         TS_ASSERT(request);
         TS_ASSERT(response);
         SILOG(transfer, debug, "response size = " << response->size() << ", req size = " << request->getChunk().getRange().size() );
@@ -602,7 +621,8 @@ public:
 	        std::vector<std::tr1::shared_ptr<RequestVerifier> > reqList) :
 		mTransferMediator(transferMediator), mClientID(clientID), mReqList(reqList) {
 		boost::unique_lock<boost::mutex> lock(mut);
-		numClis++;
+		numClis += reqList.size();
+		SILOG(transfer, debug, "sample client started! increased numClis to " << numClis);
 	}
 
 	void run() {
@@ -615,17 +635,129 @@ public:
             float pri = rand()/(float(RAND_MAX)+1);
             (*it)->addToPool(mTransferPool, std::tr1::bind(&SampleClient::request_finished, this), pri);
         }
-
 	}
 
 	void request_finished() {
-	    SILOG(transfer, debug, "request finished!");
         boost::unique_lock<boost::mutex> lock(mut);
         numClis--;
+        SILOG(transfer, debug, mClientID << " request finished! reduced numClis to " << numClis);
         if(numClis <= 0) {
             done.notify_all();
         }
 	}
+
+};
+
+class DiskManagerTest : public CxxTest::TestSuite {
+
+public:
+
+    std::string testData;
+    std::tr1::shared_ptr<Transfer::DenseData> mData;
+
+    DiskManagerTest()
+         : CxxTest::TestSuite(),
+           testData("BlahBlahMessage\r\nTestline2\nLineEndingsAreCool\n\n\n") {
+    }
+
+    void setUp() {
+
+    }
+
+    void tearDown() {
+
+    }
+
+    void scanCallback(std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing) {
+        SILOG(transfer, debug, "Got directory scan callback!");
+
+        TS_ASSERT(dirListing);
+        if(dirListing) {
+            TS_ASSERT(dirListing->size() > 0);
+        }
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.notify_all();
+    }
+
+    void testDirectoryScan() {
+        SILOG(transfer, debug, "Testing reading root dir...");
+
+        std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req(
+                new Transfer::DiskManager::ScanRequest("/",
+                std::tr1::bind(&DiskManagerTest::scanCallback, this, std::tr1::placeholders::_1)));
+
+        Transfer::DiskManager::getSingleton().addRequest(req);
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.wait(lock);
+    }
+
+    void writeCallback(bool status) {
+        SILOG(transfer, debug, "Got file write callback!");
+
+        TS_ASSERT(status);
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.notify_all();
+    }
+
+    void readCallback(std::tr1::shared_ptr<Transfer::DenseData> fileContents) {
+        SILOG(transfer, debug, "Got file read callback!");
+
+        TS_ASSERT(fileContents);
+        if(fileContents) {
+            std::string s = fileContents->asString();
+            TS_ASSERT(s == testData);
+        }
+
+        boost::unique_lock<boost::mutex> lock(mut);
+        done.notify_all();
+    }
+
+    void writeThenRead() {
+        std::tr1::shared_ptr<Transfer::DenseData> toWrite(new Transfer::DenseData(testData));
+        mData = toWrite;
+
+        std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req(
+                new Transfer::DiskManager::WriteRequest("testFileWrite_TESTFILE.txt", mData,
+                std::tr1::bind(&DiskManagerTest::writeCallback, this, std::tr1::placeholders::_1)));
+
+        Transfer::DiskManager::getSingleton().addRequest(req);
+
+        {
+            boost::unique_lock<boost::mutex> lock(mut);
+            done.wait(lock);
+        }
+
+
+        SILOG(transfer, debug, "Testing file read...");
+        std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> req2(
+                new Transfer::DiskManager::ReadRequest("testFileWrite_TESTFILE.txt",
+                std::tr1::bind(&DiskManagerTest::readCallback, this, std::tr1::placeholders::_1)));
+
+        Transfer::DiskManager::getSingleton().addRequest(req2);
+
+        {
+            boost::unique_lock<boost::mutex> lock(mut);
+            done.wait(lock);
+        }
+    }
+
+    void testFileWriteThenRead() {
+        SILOG(transfer, debug, "Testing file write...");
+
+        writeThenRead();
+
+        SILOG(transfer, debug, "Increasing the size of test file from " << testData.length() << " bytes");
+        for(int i=0; i<12; i++) {
+            testData = testData + testData;
+        }
+        SILOG(transfer, debug, "New size of test file = " << testData.length());
+
+        SILOG(transfer, debug, "Repeating write and read calls...");
+        writeThenRead();
+    }
 
 };
 
@@ -662,6 +794,22 @@ public:
 		        Transfer::URI("meerkat:///test/polySurface01.mesh"),
 		        156125,
 		        "85dbb7af4eed5c4e01eb64c70fc299946a2c19080173ea648948cca2039e30b4")));
+        list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/blackclear.png"),
+                167,
+                "b18db4fb7971117be7124c7a05e2afb265fb26d0181f15f038a4628e2ae9b571")));
+        list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/ArchD_Triumph_mesh.mesh"),
+                215464,
+                "e61a8cac4c938ea80182f8e23499c9c83248d01e1b506716bcca79b04cdaded5")));
+        list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/whitecube_bk.png"),
+                160,
+                "2b4d4a27c51611238140e9980d4954ba56e8d90e7b73545fe46ce3f701cff034")));
+        list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/arch.os"),
+                3657,
+                "719c397d1019e56e41b5f98b1074abf32fb6e1fb832984f6d47a5761cfa3bcf6")));
 
 		//4 new urls, 1 overlap from list1
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list2;
@@ -669,19 +817,37 @@ public:
                 Transfer::URI("meerkat:///test/blackclear.png"),
                 167,
                 "b18db4fb7971117be7124c7a05e2afb265fb26d0181f15f038a4628e2ae9b571")));
+        list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new ChunkVerifier(
+                        Transfer::URI("meerkat:///test/arcade.os"),
+                        6246,
+                        "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea",
+                        6246,
+                        "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
+        list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/whitecube_up.png"),
+                160,
+                "2b4d4a27c51611238140e9980d4954ba56e8d90e7b73545fe46ce3f701cff034")));
+        list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/whitecube_rt.png"),
+                160,
+                "2b4d4a27c51611238140e9980d4954ba56e8d90e7b73545fe46ce3f701cff034")));
 
 		//3 new urls, 1 overlap from list1, 1 overlap from list2
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list3;
-        /*list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/arcade.os"),
-                6246,
-                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));*/
+        list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/polySurface01.mesh"),
+                156125,
+                "85dbb7af4eed5c4e01eb64c70fc299946a2c19080173ea648948cca2039e30b4")));
 		list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new ChunkVerifier(
 		                Transfer::URI("meerkat:///test/arcade.os"),
 		                6246,
 		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea",
 		                6246,
 		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
+        list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
+                Transfer::URI("meerkat:///test/blackcube_rt.png"),
+                158,
+                "784a5b0809ed274036733777f9a158678ffa852247deefd4b1140409dffdac14")));
 
 		mSampleClient1 = new SampleClient(*mTransferMediator, "sample1", list1);
 		mSampleClient2 = new SampleClient(*mTransferMediator, "sample2", list2);

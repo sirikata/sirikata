@@ -74,9 +74,10 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
     AggregateListByID& idIndex = mAggregateList.get<tagID>();
     AggregateListByID::iterator findID = idIndex.find(id);
     if(findID == idIndex.end()) {
-        SILOG(transfer, error, "Got a callback in TransferMediator from a TransferRequest with no associated ID");
+        //This can happen now if a request was canceled but it was already outstanding
         mNumOutstanding--;
         lock.unlock();
+        checkQueue();
         return;
     }
 
@@ -158,6 +159,13 @@ void TransferMediator::AggregateRequest::setClientPriority(std::tr1::shared_ptr<
     }
 }
 
+void TransferMediator::AggregateRequest::removeClient(std::string clientID) {
+    std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::iterator findClient = mTransferReqs.find(clientID);
+    if(findClient != mTransferReqs.end()) {
+        mTransferReqs.erase(findClient);
+    }
+}
+
 const std::string& TransferMediator::AggregateRequest::getIdentifier() const {
     return mIdentifier;
 }
@@ -201,24 +209,54 @@ void TransferMediator::PoolWorker::run() {
         //SILOG(transfer, debug, "worker got one!");
 
         boost::unique_lock<boost::mutex> lock(TransferMediator::getSingleton().mAggMutex);
-        AggregateListByID::iterator findID = TransferMediator::getSingleton().mAggregateList.get<tagID>().find(req->getIdentifier());
+        AggregateListByID& idIndex = TransferMediator::getSingleton().mAggregateList.get<tagID>();
+        AggregateListByID::iterator findID = idIndex.find(req->getIdentifier());
 
         //Check if this request already exists
-        if(findID != TransferMediator::getSingleton().mAggregateList.end()) {
-            //store original aggregated priority for later
-            TransferRequest::PriorityType oldAggPriority = (*findID)->getPriority();
+        if(findID != idIndex.end()) {
+            //Check if this request is for deleting
+            if(req->isDeletionRequest()) {
+                const std::map<std::string, std::tr1::shared_ptr<TransferRequest> >&
+                    allReqs = (*findID)->getTransferRequests();
 
-            //Update the priority of this client
-            (*findID)->setClientPriority(req);
+                std::map<std::string,
+                    std::tr1::shared_ptr<TransferRequest> >::const_iterator findClient =
+                    allReqs.find(req->getClientID());
 
-            //And check if it's changed, we need to update the index
-            TransferRequest::PriorityType newAggPriority = (*findID)->getPriority();
-            if(oldAggPriority != newAggPriority) {
-                using boost::lambda::_1;
-                //Convert the iterator to the priority one and update
-                AggregateListByPriority::iterator byPriority = TransferMediator::getSingleton().mAggregateList.project<tagPriority>(findID);
-                AggregateListByPriority & priorityIndex = TransferMediator::getSingleton().mAggregateList.get<tagPriority>();
-                priorityIndex.modify_key(byPriority, _1=newAggPriority);
+                /* If the client isn't in the aggregated request, it must have already
+                 * been deleted, or the deletion request is invalid
+                 */
+                if(findClient == allReqs.end()) {
+                    continue;
+                }
+
+                if(allReqs.size() > 1) {
+                    /* If there are more than one, we need to just delete the single client
+                     * from the aggregate request
+                     */
+                    (*findID)->removeClient(req->getClientID());
+                } else {
+                    // If only one in the list, we can erase the entire request
+                    TransferMediator::getSingleton().mAggregateList.erase(findID);
+                }
+            } else {
+                //store original aggregated priority for later
+                TransferRequest::PriorityType oldAggPriority = (*findID)->getPriority();
+
+                //Update the priority of this client
+                (*findID)->setClientPriority(req);
+
+                //And check if it's changed, we need to update the index
+                TransferRequest::PriorityType newAggPriority = (*findID)->getPriority();
+                if(oldAggPriority != newAggPriority) {
+                    using boost::lambda::_1;
+                    //Convert the iterator to the priority one and update
+                    AggregateListByPriority::iterator byPriority =
+                            TransferMediator::getSingleton().mAggregateList.project<tagPriority>(findID);
+                    AggregateListByPriority & priorityIndex =
+                            TransferMediator::getSingleton().mAggregateList.get<tagPriority>();
+                    priorityIndex.modify_key(byPriority, _1=newAggPriority);
+                }
             }
         } else {
             //Make a new one and insert it

@@ -32,6 +32,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "TCPStream.hpp"
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include "ASIOSocketWrapper.hpp"
@@ -146,15 +148,19 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
             tcp::resolver::iterator nextIterator=it;
             ++nextIterator;
             connection->getASIOSocketWrapper(whichSocket).getSocket()
-                .async_connect(*it,
-                               boost::bind(&ASIOConnectAndHandshake::connectToIPAddress,
-                                           thus,
-					   connection,
-                                           address,
-                                           no_delay,
-                                           whichSocket,
-                                           nextIterator,
-                                           boost::asio::placeholders::error));
+                .async_connect(
+                    *it,
+                    connection->getStrand()->wrap(
+                        boost::bind(&ASIOConnectAndHandshake::connectToIPAddress,
+                            thus,
+                            connection,
+                            address,
+                            no_delay,
+                            whichSocket,
+                            nextIterator,
+                            boost::asio::placeholders::error)
+                    )
+                );
         }
     } else {
         connection->getASIOSocketWrapper(whichSocket)
@@ -167,14 +173,17 @@ void ASIOConnectAndHandshake::connectToIPAddress(const ASIOConnectAndHandshakePt
         boost::asio::async_read(connection->getASIOSocketWrapper(whichSocket).getSocket(),
                                 boost::asio::buffer(header->begin(),(int)TCPStream::MaxWebSocketHeaderSize>(int)ASIOReadBuffer::sBufferLength?(int)ASIOReadBuffer::sBufferLength:(int)TCPStream::MaxWebSocketHeaderSize),
                                 headerCheck,
-                                boost::bind(&ASIOConnectAndHandshake::checkHeader,
-                                            thus,
-					    connection,
-                                            no_delay,
-                                            whichSocket,
-                                            header,
-                                            boost::asio::placeholders::error,
-                                            boost::asio::placeholders::bytes_transferred));
+            connection->getStrand()->wrap(
+                boost::bind(&ASIOConnectAndHandshake::checkHeader,
+                    thus,
+                    connection,
+                    no_delay,
+                    whichSocket,
+                    header,
+                    boost::asio::placeholders::error,
+                    boost::asio::placeholders::bytes_transferred)
+            )
+        );
     }
 }
 
@@ -209,23 +218,28 @@ void ASIOConnectAndHandshake::connect(const ASIOConnectAndHandshakePtr &thus,
                                       const Address&address,
                                       bool no_delay){
     tcp::resolver::query query(tcp::v4(), address.getHostName(), address.getService());
-    thus->mResolver.async_resolve(query,
-                                  boost::bind(&ASIOConnectAndHandshake::handleResolve,
-                                              thus,
-					      connection,
-                                              address,
-                                              no_delay,
-                                              boost::asio::placeholders::error,
-                                              boost::asio::placeholders::iterator));
+    thus->mResolver.async_resolve(
+        query,
+        connection->getStrand()->wrap(
+            boost::bind(&ASIOConnectAndHandshake::handleResolve,
+                thus,
+                connection,
+                address,
+                no_delay,
+                boost::asio::placeholders::error,
+                boost::asio::placeholders::iterator)
+        )
+    );
 
 }
 
 ASIOConnectAndHandshake::ASIOConnectAndHandshake(const MultiplexedSocketPtr &connection,
-                                                 const UUID&sharedUuid):
-    mResolver(connection->getASIOService()),
-        mConnection(connection),
-        mFinishedCheckCount(connection->numSockets()),
-        mHeaderUUID(sharedUuid) {
+                                                 const UUID&sharedUuid)
+ : mResolver(connection->getStrand()->service()),
+   mConnection(connection),
+   mFinishedCheckCount(connection->numSockets()),
+   mHeaderUUID(sharedUuid)
+{
 }
 
 

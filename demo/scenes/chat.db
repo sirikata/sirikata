@@ -1,0 +1,9 @@
+"objtype","subtype","name","scriptparams","pos_x","pos_y","pos_z","orient_x","orient_y","orient_z","orient_w","vel_x","vel_y","vel_z","rot_axis_x","rot_axis_y","rot_axis_z","rot_speed","scale_x","scale_y","scale_z","meshURI","scale","script_type","script_options","solid_angle"
+
+"mesh","graphiconly","tetrahedron",,0,0,0,0,.86,0,-.5,0,0,0,0,1,0,0,1,1,1,"meerkat:///ewencp/lights.dae",1,,,,
+"mesh","graphiconly","tetrahedron",,0,0,0,0,.86,0,-.5,0,0,0,0,1,0,0,1,1,1,"meerkat:///ewencp/lights.dae",1,,,,
+
+"mesh","graphiconly","tetrahedron",,0,-100,-100,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/ground.DAE",1000,,,,
+
+"mesh","graphiconly","tetrahedron",,-11,-10,-5,0,0,0,1,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/Poisonbird.dae",1,"js","--init-script=test/startupCamera.em",0.000000001f,
+"mesh","graphiconly","tetrahedron",,-11,-10,-5,0,0,0,1,0,0,0,0,1,0,0,1,1,1,"meerkat:///danielrh/Poisonbird.dae",10,,,,

@@ -34,7 +34,6 @@
 
 #include <sirikata/core/util/UUID.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyObjectListener.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
@@ -46,20 +45,49 @@ class OgreSystem;
 /** Base class for any ProxyObject that has a representation in Ogre. */
 class Entity
   : public PositionListener,
-    public ProxyObjectListener
+    public ProxyObjectListener,
+    public MeshListener
 {
+public:
+    typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
+    typedef std::map<String, String > TextureBindingsMap;
 protected:
     OgreSystem *const mScene;
     const ProxyObjectPtr mProxy;
 
-    Ogre::MovableObject *mOgreObject;
+    Ogre::Entity* mOgreObject;
     Ogre::SceneNode *mSceneNode;
 
     std::list<Entity*>::iterator mMovingIter;
 
-    void init(Ogre::MovableObject *obj);
+    ReplacedMaterialMap mReplacedMaterials;
+    TextureBindingsMap mTextureBindings;
+
+    uint32 mRemainingDownloads; // Downloads remaining before loading can occur
+    TextureBindingsMap mTextureFingerprints;
+
+    typedef std::vector<Ogre::Light*> LightList;
+    LightList mLights;
+
+    Transfer::URI mURI;
+    String mURIString;
+
+    bool mActiveCDNArchive;
+    unsigned int mCDNArchive;
+
+
+    void fixTextures();
+
+    // Wrapper for createMesh which allows us to use a WorkQueue
+    bool createMeshWork(MeshdataPtr md);
+
+    void createMesh(MeshdataPtr md);
+
+    void init(Ogre::Entity *obj);
 
     void setStatic(bool isStatic);
+
+    void updateScale(float scale);
 
 protected:
     void setOgrePosition(const Vector3d &pos);
@@ -73,11 +101,9 @@ public:
         return mProxy;
     }
     Entity(OgreSystem *scene,
-           const ProxyObjectPtr &ppo,
-           const std::string &ogreId,
-           Ogre::MovableObject *obj=NULL);
+        const ProxyObjectPtr &ppo);
 
-    virtual ~Entity();
+    ~Entity();
 
     static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
@@ -88,28 +114,67 @@ public:
         return mScene;
     }
 
-    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient);
+    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
 
-    virtual void destroyed();
+    void destroyed();
 
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;
     }
+
+    Ogre::Entity *getOgreEntity() const {
+        return mOgreObject;
+    }
+
     Vector3d getOgrePosition();
 
     Quaternion getOgreOrientation();
 
     void extrapolateLocation(TemporalValue<Location>::Time current);
 
-    virtual void setSelected(bool selected) {
-      mSceneNode->showBoundingBox(selected);
-    }
-    virtual std::string ogreMovableName() const{
-        return id().toString();
-    }
+    void setSelected(bool selected);
+
+    static std::string ogreMeshName(const SpaceObjectReference&ref);
+    std::string ogreMovableName()const;
+
+
     const SpaceObjectReference&id()const{
         return mProxy->getObjectReference();
     }
+
+    void setVisible(bool vis);
+
+    void bindTexture(const std::string &textureName, const SpaceObjectReference &objId);
+    void unbindTexture(const std::string &textureName);
+
+    void processMesh(Transfer::URI const& newMesh);
+
+    void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<const Transfer::DenseData> response, MeshdataPtr md);
+
+    /** Load the mesh and use it for this entity
+     *  \param meshname the name (ID) of the mesh to use for this entity
+     */
+    void loadMesh(const String& meshname);
+
+    void unloadMesh();
+
+    void downloadMeshFile(Transfer::URI const& uri);
+
+    // interface from MeshListener
+    public:
+        virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
+        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
+
+    protected:
+
+    void handleMeshParsed(MeshdataPtr md);
+
+    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
+    // After a mesh is downloaded, try instantiating it from an existing mesh,
+    // i.e. in case this URI/underlying hash has already been loaded.
+    bool tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

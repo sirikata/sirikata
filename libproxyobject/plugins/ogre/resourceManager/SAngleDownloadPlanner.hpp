@@ -37,22 +37,18 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 #include "DistanceDownloadPlanner.hpp"
-#include "../CameraEntity.hpp"
 #include <vector>
 
 namespace Sirikata {
-namespace Graphics{
-class MeshEntity;
-}
 
 class SAngleDownloadPlanner : public DistanceDownloadPlanner
 {
 public:
-    SAngleDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    SAngleDownloadPlanner(Context *c);
     ~SAngleDownloadPlanner();
 
 protected:

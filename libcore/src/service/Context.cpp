@@ -55,6 +55,7 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
 }
 
 Context::~Context() {
+    delete profiler;
 }
 
 void Context::start() {
@@ -76,6 +77,27 @@ void Context::start() {
     );
 }
 
+void Context::run(uint32 nthreads) {
+    std::vector<Thread*> workerThreads;
+
+    // Start workers
+    for(uint32 i = 1; i < nthreads; i++) {
+        workerThreads.push_back(
+            new Thread( std::tr1::bind(&Network::IOService::runNoReturn, ioService) )
+        );
+    }
+
+    // Run
+    ioService->run();
+
+    // Wait for workers to finish
+    for(uint32 i = 0; i < workerThreads.size(); i++) {
+        workerThreads[i]->join();
+        delete workerThreads[i];
+    }
+    workerThreads.clear();
+}
+
 void Context::shutdown() {
     Signal::unregisterHandler(mSignalHandler);
 
@@ -85,9 +107,11 @@ void Context::shutdown() {
 }
 
 void Context::stop() {
-    mStopRequested = true;
-    mFinishedTimer.reset();
-    startForceQuitTimer();
+    if (!mStopRequested.read()) {
+        mStopRequested = true;
+        mFinishedTimer.reset();
+        startForceQuitTimer();
+    }
 }
 
 

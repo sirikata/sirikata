@@ -33,6 +33,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
@@ -251,12 +252,17 @@ void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket,
                              mSendManyDequeItems);
 }
 void ASIOSocketWrapper::bindFunctions(const MultiplexedSocketPtr&parent) {
+    mStrand = parent->getStrand();
     std::tr1::weak_ptr<MultiplexedSocket> weak_parent(parent);
-    mSendManyDequeItems=std::tr1::bind(&ASIOSocketWrapper::sendManyDequeItems,
-                                       this,
-                                       weak_parent,
-                                       _1,
-                                       _2);
+    mSendManyDequeItems =
+        mStrand->wrap(
+            std::tr1::bind(&ASIOSocketWrapper::sendManyDequeItems,
+                this,
+                weak_parent,
+                _1,
+                _2
+            )
+        );
 }
 void ASIOSocketWrapper::sendToWire(const MultiplexedSocketPtr&parentMultiSocket, std::deque<TimestampedChunk>&input_toSend){
     std::vector<boost::asio::mutable_buffer> bufs;
@@ -339,8 +345,8 @@ void ASIOSocketWrapper::shutdownAndClose() {
     }
 }
 
-void ASIOSocketWrapper::createSocket(IOService&io, unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize) {
-    mSocket=new TCPSocket(io);
+void ASIOSocketWrapper::createSocket(unsigned int kernelSendBufferSize, unsigned int kernelReceiveBufferSize) {
+    mSocket=new TCPSocket(mStrand->service());
     if (kernelReceiveBufferSize) {
         boost::asio::socket_base::receive_buffer_size option(kernelReceiveBufferSize);
         mSocket->set_option(option);

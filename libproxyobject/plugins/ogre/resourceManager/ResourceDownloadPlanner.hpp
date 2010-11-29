@@ -37,33 +37,30 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../CameraEntity.hpp"
+#include "../Camera.hpp"
 #include <vector>
+#include <sirikata/core/transfer/URI.hpp>
 
 namespace Sirikata {
 namespace Graphics{
-class MeshEntity;
+class Entity;
 }
 
-class ResourceDownloadPlanner : public MeshListener, public ProxyCreationListener, public PollingService
+class ResourceDownloadPlanner : public MeshListener, public PollingService
 {
 public:
-    ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    ResourceDownloadPlanner(Context* c);
     ~ResourceDownloadPlanner();
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-    virtual void setCamera(Graphics::CameraEntity *entity);
-
-    //ProxyCreationListener interface
-    virtual void onCreateProxy ( ProxyObjectPtr object );
-    virtual void onDestroyProxy ( ProxyObjectPtr object );
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
+    virtual void removeObject(ProxyObjectPtr p) = 0;
+    virtual void setCamera(Graphics::Camera *entity);
 
     //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
     virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
@@ -72,7 +69,7 @@ public:
     virtual void stop();
 
 protected:
-    Graphics::CameraEntity *camera;
+    Graphics::Camera *camera;
 
 };
 }

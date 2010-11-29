@@ -47,7 +47,7 @@ namespace Sirikata {
 class SIRIKATA_EXPORT TimeProfiler {
 public:
     struct SIRIKATA_EXPORT Stage {
-        Stage(const String& name);
+        ~Stage();
 
         void started();
         void finished();
@@ -60,6 +60,12 @@ public:
 
         void report(const String& indent) const;
     private:
+        friend class TimeProfiler;
+
+        Stage(TimeProfiler* parent, const String& name);
+        void invalidate();
+
+        TimeProfiler* mParent;
         String mName;
 
         Time mStartTime;
@@ -68,16 +74,32 @@ public:
         Duration mMaximum;
         Duration mSum;
         uint64 mIts;
+
+        bool mValid;
     };
 
     TimeProfiler(const String& name);
     ~TimeProfiler();
 
+    /** Add a stage for profiling, not categorized under any group. Returns a
+     *  Stage which can be used to update the statistics on each iteration. Note
+     *  that the caller obtains ownership of the stage and is responsible for
+     *  freeing it.
+     */
     Stage* addStage(const String& name);
+    /** Add a stage for profiling under the specified group. Returns a
+     *  Stage which can be used to update the statistics on each iteration. Note
+     *  that the caller obtains ownership of the stage and is responsible for
+     *  freeing it.
+     */
     Stage* addStage(const String& group_name, const String& name);
 
     void report() const;
 private:
+    friend class Stage;
+
+    void remove(Stage* stage);
+
     String mName;
     typedef std::vector<Stage*> StageList;
     typedef std::map<String, StageList> GroupMap;

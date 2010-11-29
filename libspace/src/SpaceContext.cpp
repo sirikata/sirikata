@@ -47,26 +47,6 @@ SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStr
 }
 
 SpaceContext::~SpaceContext() {
-    mObjectStreams.clear();
-}
-
-void SpaceContext::newStream(int err, SSTStreamPtr s) {
-    typedef Connection<SpaceObjectReference> SSTConnection;
-    typedef SSTConnection::Ptr SSTConnectionPtr;
-
-    SSTConnectionPtr conn = s->connection().lock();
-    assert(conn);
-    SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
-
-    if (mObjectStreams.find(sourceObject.object()) != mObjectStreams.end()) {
-        std::cout << "A stream already exists from source object " << sourceObject.toString() << "\n";fflush(stdout);
-
-        SSTConnectionPtr sstConnection = mObjectStreams[sourceObject.object()]->connection().lock();
-        assert(sstConnection);
-        sstConnection->close(false);
-    }
-
-    mObjectStreams[sourceObject.object()] = s;
 }
 
 } // namespace Sirikata

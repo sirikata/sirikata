@@ -31,6 +31,11 @@
  */
 
 #include "CSVObjectFactory.hpp"
+#include <list>
+#include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+#include <vector>
+
 
 namespace Sirikata {
 
@@ -56,11 +61,15 @@ T safeLexicalCast(const String& orig) {
     return safeLexicalCast<T>(orig, (T)0);
 }
 
-void CSVObjectFactory::generate() {
+void CSVObjectFactory::generate()
+{
+
+    int count =0;
     typedef std::vector<String> StringList;
 
     std::ifstream fp(mFilename.c_str());
     if (!fp) return;
+
 
     bool is_first = true;
     int objtype_idx = -1;
@@ -70,15 +79,24 @@ void CSVObjectFactory::generate() {
     int mesh_idx = -1;
 
     int quat_vel_idx = -1;
-
+    int script_type_idx = -1;
+    int script_opts_idx = -1;
     int scale_idx = -1;
-
-    int count = 0;
+    int objid_idx = -1;
+    int solid_angle_idx = -1;
 
     // For each line
-    while(fp && count < mMaxObjects) {
+    while(fp && (count < mMaxObjects))
+    {
         String line;
         std::getline(fp, line);
+        // First char is # and not the first non whitespace char
+	// then this is a comment
+        if(line.length() > 0 && line.at(0) == '#')
+       {
+         continue;
+       }
+
 
         // Split into parts
         StringList line_parts;
@@ -103,22 +121,37 @@ void CSVObjectFactory::generate() {
         }
 
 
-
         if (is_first) {
-            for(uint32 idx = 0; idx < line_parts.size(); idx++) {
+            for(uint32 idx = 0; idx < line_parts.size(); idx++)
+            {
+
                 if (line_parts[idx] == "objtype") objtype_idx = idx;
                 if (line_parts[idx] == "pos_x") pos_idx = idx;
                 if (line_parts[idx] == "orient_x") orient_idx = idx;
                 if (line_parts[idx] == "vel_x") vel_idx = idx;
                 if (line_parts[idx] == "meshURI") mesh_idx = idx;
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
+                if (line_parts[idx] == "script_type") script_type_idx = idx;
+                if (line_parts[idx] == "script_options") script_opts_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
+                if(line_parts[idx] == "objid")
+                {
+                    objid_idx = idx;
+                }
+                if(line_parts[idx] == "solid_angle")
+                {
+                    solid_angle_idx = idx;
+                }
+
+
             }
 
             is_first = false;
         }
         else {
-            assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
+            //note: script_file is not required, so not checking it with the assert
+            assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
+            //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {
                 Vector3d pos(
@@ -161,25 +194,80 @@ void CSVObjectFactory::generate() {
 
                 String mesh( line_parts[mesh_idx] );
 
+                String scriptType = "";
+                String scriptOpts = "";
+
+              	if(script_type_idx != -1)
+                {
+                    scriptType = line_parts[script_type_idx];
+                }
+                if(script_opts_idx != -1)
+                {
+                    scriptOpts = line_parts[script_opts_idx];
+                }
+
                 float scale =
                     scale_idx == -1 ?
                     1.f :
                     safeLexicalCast<float>(line_parts[scale_idx], 1.f);
 
-                HostedObjectPtr obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random(), false);
+                String solid_angle = "";
+                SolidAngle query_angle(SolidAngle::Max);
+
+                if(solid_angle_idx != -1)
+                {
+                  solid_angle = line_parts[solid_angle_idx];
+                  if(solid_angle != "")
+                  {
+
+                    query_angle = SolidAngle(atof(solid_angle.c_str()));
+                  }
+                }
+
+
+                /*
+
+                  Ticket #134
+
+                */
+                String objid = "";
+                if(objid_idx != -1)
+                {
+                    objid = line_parts[objid_idx];
+                }
+
+                HostedObjectPtr obj;
+
+                if(objid_idx == -1)
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random());
+
+                }
+                else
+                {
+                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()));
+                }
+
+
                 obj->init();
+                if (scriptType != "")
+                    obj->initializeScript(scriptType, scriptOpts);
 
                 ObjectConnectInfo oci;
                 oci.object = obj;
                 oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
+                oci.query_angle = query_angle;
                 mIncompleteObjects.push(oci);
 
                 count++;
+
+
             }
         }
     }
+
 
     fp.close();
 
@@ -188,17 +276,25 @@ void CSVObjectFactory::generate() {
     return;
 }
 
-void CSVObjectFactory::connectObjects() {
+
+void CSVObjectFactory::connectObjects()
+{
+
     if (mContext->stopped())
+    {
+        std::cout<<"\n\nContext stopped.  Will not get anywhere\n\n";
         return;
+    }
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();
         mIncompleteObjects.pop();
+
         oci.object->connect(
             mSpace,
             oci.loc, oci.bounds, oci.mesh,
-            UUID::null()
+            const_cast<SolidAngle&>(oci.query_angle),
+            UUID::null(), NULL
         );
     }
 

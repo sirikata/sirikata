@@ -94,6 +94,27 @@ LocationService::~LocationService() {
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOCATION, this);
 }
 
+void LocationService::newSession(ObjectSession* session) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    Stream<SpaceObjectReference>::Ptr strm = session->getStream();
+
+    Connection<SpaceObjectReference>::Ptr conn = strm->connection().lock();
+    assert(conn);
+
+    SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
+
+
+    conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
+        std::tr1::bind(
+            &LocationService::locationUpdate, this,
+            sourceObject.object().getAsUUID(),
+            std::tr1::placeholders::_1,std::tr1::placeholders::_2
+        )
+    );
+}
+
 void LocationService::poll() {
     mProfiler->started();
     service();
@@ -153,6 +174,7 @@ void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const
             it->listener->localObjectRemoved(uuid, agg);
 }
 
+
 void LocationService::notifyLocalLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
@@ -170,6 +192,7 @@ void LocationService::notifyLocalBoundsUpdated(const UUID& uuid, bool agg, const
         if (!agg || it->wantAggregates)
             it->listener->localBoundsUpdated(uuid, agg, newval);
 }
+
 
 void LocationService::notifyLocalMeshUpdated(const UUID& uuid, bool agg, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
@@ -189,6 +212,7 @@ void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
 }
 
 void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
+    std::cout<<"\n\nInside of notifyreplicalocationupdated\n";
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         it->listener->replicaLocationUpdated(uuid, newval);
 }

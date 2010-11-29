@@ -37,11 +37,9 @@ namespace Sirikata {
 namespace Network {
 
 class Stream;
+class IOStrand;
 
-class IOService;
-
-
-class SIRIKATA_EXPORT StreamFactory: public FactoryWithOptions2<Stream*,IOService*, OptionSet*>,public AutoSingleton<StreamFactory> {
+class SIRIKATA_EXPORT StreamFactory: public FactoryWithOptions2<Stream*,IOStrand*, OptionSet*>,public AutoSingleton<StreamFactory> {
   public:
     static StreamFactory& getSingleton();
     static void destroy();

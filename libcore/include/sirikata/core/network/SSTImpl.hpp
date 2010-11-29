@@ -323,6 +323,7 @@ private:
   EndPoint<EndPointType> mLocalEndPoint;
   EndPoint<EndPointType> mRemoteEndPoint;
 
+
   BaseDatagramLayerPtr mDatagramLayer;
 
   int mState;
@@ -361,7 +362,7 @@ private:
 
   std::tr1::weak_ptr<Connection<EndPointType> > mWeakThis;
 
-  uint mNumInitialRetransmissionAttempts;
+  uint16 mNumInitialRetransmissionAttempts;
 
   google::protobuf::LogSilencer logSilencer;
 
@@ -425,6 +426,9 @@ private:
 
   bool inSendingMode; uint16 numSegmentsSent;
 
+  void serviceConnectionNoReturn(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      serviceConnection(conn);
+  }
   bool serviceConnection(std::tr1::shared_ptr<Connection<EndPointType> > conn) {
     const Time curTime = Timer::now();
 
@@ -451,7 +455,6 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
           cleanup(thus);
-
         }else {
             SILOG(sst,error,"FATAL: pending disconnection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -504,7 +507,7 @@ private:
 
       if (!inSendingMode || mState == CONNECTION_PENDING_CONNECT) {
         getContext()->mainStrand->post(Duration::microseconds(mRTOMicroseconds),
-                                       std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
+                                       std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
       }
     }
     else {
@@ -512,7 +515,6 @@ private:
         std::tr1::shared_ptr<Connection<EndPointType> > thus (mWeakThis.lock());
         if (thus) {
           cleanup(thus);
-
         }else {
             SILOG(sst,error,"FATAL: pending connection lost weak pointer for Connection<EndPointType> too early to call cleanup on it");
         }
@@ -533,7 +535,7 @@ private:
       inSendingMode = true;
 
       getContext()->mainStrand->post(Duration::microseconds(1),
-                                     std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
+                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
     }
 
     return true;
@@ -716,9 +718,8 @@ private:
         pushedIntoQueue = true;
 
         if (inSendingMode) {
-
           getContext()->mainStrand->post(Duration::milliseconds(1.0),
-                                         std::tr1::bind(&(Connection<EndPointType>::serviceConnection), this, mWeakThis.lock()) );
+                                         std::tr1::bind(&Connection::serviceConnectionNoReturn, this, mWeakThis.lock()) );
         }
       }
     }
@@ -775,7 +776,7 @@ private:
         inSendingMode = true;
 
         getContext()->mainStrand->post(
-                                     std::tr1::bind(&Connection<EndPointType>::serviceConnection, this, mWeakThis.lock()) );
+                                     std::tr1::bind(&Connection<EndPointType>::serviceConnectionNoReturn, this, mWeakThis.lock()) );
 
         if (rand() % mCwnd == 0)  {
           mCwnd += 1;
@@ -1027,6 +1028,7 @@ private:
     conn->mDatagramLayer->unlisten(conn->mLocalEndPoint);
 
     int connState = conn->mState;
+
     if (connState == CONNECTION_PENDING_CONNECT || connState == CONNECTION_DISCONNECTED) {
       //Deal with the connection not getting connected with the remote endpoint.
       //This is in contrast to the case where the connection got connected, but
@@ -1038,12 +1040,14 @@ private:
         cb = sConnectionReturnCallbackMap[conn->localEndPoint()];
       }
 
+
       std::tr1::shared_ptr<Connection>  failed_conn = conn;
 
       sConnectionReturnCallbackMap.erase(conn->localEndPoint());
       sConnectionMap.erase(conn->localEndPoint());
 
       lock.unlock();
+
 
       if (connState == CONNECTION_PENDING_CONNECT && cb ) {
         cb(SST_IMPL_FAILURE, failed_conn);
@@ -1345,14 +1349,14 @@ class StreamBuffer{
 public:
 
   uint8* mBuffer;
-  uint16 mBufferLength;
-  uint32 mOffset;
+  uint32 mBufferLength;
+  uint64 mOffset;
 
   Time mTransmitTime;
   Time mAckTime;
 
 
-  StreamBuffer(const uint8* data, int len, int offset) :
+  StreamBuffer(const uint8* data, uint32 len, uint64 offset) :
     mTransmitTime(Time::null()), mAckTime(Time::null())
   {
     assert(len > 0);
@@ -1467,10 +1471,11 @@ public:
       mCurrentQueueLength += len;
       mNumBytesSent += len;
 
+
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
       return len;
     }
@@ -1493,10 +1498,11 @@ public:
 	count++;
       }
 
+
       std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
       if (conn)
         getContext()->mainStrand->post(Duration::seconds(0.01),
-          std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+          std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
       return currOffset;
     }
@@ -1571,6 +1577,7 @@ public:
     if (force) {
       mConnected = false;
       mState = DISCONNECTED;
+
 
       std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       if (conn)
@@ -1755,7 +1762,7 @@ private:
       cb(SST_IMPL_FAILURE, StreamPtr() );
 
       return;
-    }    
+    }
 
     c->stream(mStreamReturnCallbackMap[c->localEndPoint()], NULL , 0,
 	      c->localEndPoint().port, c->remoteEndPoint().port);
@@ -1763,11 +1770,17 @@ private:
     mStreamReturnCallbackMap.erase(c->localEndPoint());
   }
 
+  void serviceStreamNoReturn(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      serviceStream(strm, conn);
+  }
+
   /* Returns false only if this is the root stream of a connection and it was
      unable to connect. In that case, the connection for this stream needs to
      be closed and the 'false' return value is an indication of this for
      the underlying connection. */
+
   bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+
     const Time curTime = Timer::now();
 
     if (mState != CONNECTED && mState != DISCONNECTED) {
@@ -1790,7 +1803,7 @@ private:
         assert(conn);
 
         mStreamReturnCallbackMap.erase(conn->localEndPoint());
-        
+
 	// If this is the root stream that failed to connect, close the
 	// connection associated with it as well.
 	if (mParentLSID == 0) {
@@ -1874,7 +1887,7 @@ private:
           std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
           if (conn)
             getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-              std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
         }
       }
     }
@@ -1901,12 +1914,11 @@ private:
        }
      }
 
+
     std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
     if (conn)
       getContext()->mainStrand->post(Duration::seconds(0.01),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
-
-
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
 
     if (mChannelToBufferMap.empty() && !mQueuedBuffers.empty()) {
       std::tr1::shared_ptr<StreamBuffer> buffer = mQueuedBuffers.front();
@@ -2052,7 +2064,7 @@ private:
     }
     else {
       // ACK received but not found in mChannelToBufferMap
-      if (mChannelToStreamOffsetMap.find(offset) == mChannelToStreamOffsetMap.end()) {
+      if (mChannelToStreamOffsetMap.find(offset) != mChannelToStreamOffsetMap.end()) {
         uint64 dataOffset = mChannelToStreamOffsetMap[offset];
         mChannelToStreamOffsetMap.erase(offset);
 
@@ -2113,6 +2125,7 @@ private:
 
     std::string buffer = serializePBJMessage(sstMsg);
 
+
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
 
     if (!conn) return;
@@ -2120,7 +2133,9 @@ private:
     conn->sendData( buffer.data(), buffer.size(), false );
 
     getContext()->mainStrand->post(Duration::microseconds(2*mStreamRTOMicroseconds),
-        std::tr1::bind(&Stream<EndPointType>::serviceStream, this, mWeakThis.lock(), conn) );
+
+        std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
+
   }
 
   void sendAckPacket() {
@@ -2140,7 +2155,7 @@ private:
     conn->sendData(  buffer.data(), buffer.size(), true);
   }
 
-  uint64 sendDataPacket(const void* data, uint32 len, uint32 offset) {
+  uint64 sendDataPacket(const void* data, uint32 len, uint64 offset) {
     Sirikata::Protocol::SST::SSTStreamHeader sstMsg;
     sstMsg.set_lsid( mLSID );
     sstMsg.set_type(sstMsg.DATA);
@@ -2185,7 +2200,7 @@ private:
   uint16 mLocalPort;
   uint16 mRemotePort;
 
-  uint32 mNumBytesSent;
+  uint64 mNumBytesSent;
 
   LSID mParentLSID;
 
@@ -2241,6 +2256,7 @@ private:
   uint8 mNumInitRetransmissions;
   uint8 MAX_INIT_RETRANSMISSIONS;
 
+
   std::tr1::weak_ptr<Stream<EndPointType> > mWeakThis;
 };
 #if SIRIKATA_PLATFORM == SIRIKATA_WINDOWS
@@ -2248,23 +2264,17 @@ private:
 SIRIKATA_EXPORT_TEMPLATE template class SIRIKATA_EXPORT Stream<SpaceObjectReference>;
 #endif
 
-class SSTConnectionManager : public PollingService {
+class SSTConnectionManager : public Service {
 public:
-    SSTConnectionManager(Context* ctx)
-      : PollingService(ctx->mainStrand, Duration::milliseconds((int64)10000)), // FIXME
-       mProfiler(ctx->profiler->addStage("SSTConnectionManager Service"))
-    {
+    virtual void start() {
     }
-
-    void poll() {
+    virtual void stop() {
+        Connection<SpaceObjectReference>::closeConnections();
     }
 
     ~SSTConnectionManager() {
         Connection<SpaceObjectReference>::closeConnections();
-        delete mProfiler;
     }
-private:
-    TimeProfiler::Stage* mProfiler;
 };
 
 

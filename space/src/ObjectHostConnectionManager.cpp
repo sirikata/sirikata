@@ -33,8 +33,6 @@
 #include "ObjectHostConnectionManager.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/space/ServerMessage.hpp>
-#include <sirikata/core/network/IOService.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
@@ -91,28 +89,17 @@ ObjectHostConnectionManager::ConnectionID ObjectHostConnectionManager::ObjectHos
 
 ObjectHostConnectionManager::ObjectHostConnectionManager(SpaceContext* ctx, const Address4& listen_addr, MessageReceivedCallback msg_cb, ConnectionClosedCallback closed_cb)
  : mContext(ctx),
-   mIOService( Network::IOServiceFactory::makeIOService() ),
-   mIOStrand( mIOService->createStrand() ),
-   mIOWork(NULL),
-   mIOThread(NULL),
+   mIOStrand( ctx->ioService->createStrand() ),
    mAcceptor(NULL),
    mMessageReceivedCallback(msg_cb),
    mConnectionClosedCallback(closed_cb)
 {
-    mIOWork = new Network::IOWork( mIOService, "ObjectHostConnectionManager Work" );
-    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
-
     listen(listen_addr);
 }
 
 ObjectHostConnectionManager::~ObjectHostConnectionManager() {
     delete mAcceptor;
-
-    if (mIOWork != NULL)
-        delete mIOWork;
-
     delete mIOStrand;
-    Network::IOServiceFactory::destroyIOService(mIOService);
 }
 
 
@@ -157,7 +144,7 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     assert(mAcceptor == NULL);
     mAcceptor=Sirikata::Network::StreamListenerFactory::getSingleton()
         .getConstructor(oh_stream_lib)
-          (mIOService,
+          (mIOStrand,
            Sirikata::Network::StreamListenerFactory::getSingleton()
               .getOptionParser(oh_stream_lib)
                (oh_stream_options));
@@ -180,15 +167,6 @@ void ObjectHostConnectionManager::shutdown() {
     mContext->mainStrand->post(
         std::tr1::bind(&ObjectHostConnectionManager::closeAllConnections, this)
     );
-
-    // Get rid of bogus work which ensures we keep the service running
-    delete mIOWork;
-    mIOWork = NULL;
-
-    // Wait for the other thread to finish operations
-    mIOThread->join();
-    delete mIOThread;
-    mIOThread = NULL;
 }
 
 void ObjectHostConnectionManager::handleNewConnection(Sirikata::Network::Stream* str, Sirikata::Network::Stream::SetCallbacks& set_callbacks) {
@@ -236,7 +214,11 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
     Sirikata::Protocol::Object::ObjectMessage* obj_msg = new Sirikata::Protocol::Object::ObjectMessage();
     bool parse_success = obj_msg->ParseFromArray(&(*chunk.begin()),chunk.size());
-    assert(parse_success == true);
+
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(space, error, chunk);
+        return; // Ignore, treat as dropped. Hopefully this doesn't cascade...
+    }
 
     TIMESTAMP(obj_msg, Trace::HANDLE_OBJECT_HOST_MESSAGE);
 

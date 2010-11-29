@@ -1,0 +1,214 @@
+Trying to compile 
+ 
+
+// This is testing the function declaration/invocation feature of emerson
+
+function distance(vecA,vecB)
+{
+    var diffX = vecA.x - vecB.x;
+    var diffY = vecA.y - vecB.y;
+    var diffZ = vecA.z - vecB.z;
+    
+    var returner = system.sqrt(diffX*diffX + diffY*diffY + diffZ*diffZ);
+
+    return returner;
+}
+
+
+// function call inside function decl
+function cameraLocationCallback(object, sender)
+{
+    var camLocation = parseLocationFromObject(object);
+    var curPosition = system.presences[0].getPosition();
+
+    if (distance(camLocation,curPosition) < minDist)
+    {
+        system.print("\n\n\nSQUAWK!  SQUAWK!  Evasive maneuvers\n\n");
+        evasiveManeuvers(camLocation,curPosition);
+    }
+}
+
+
+// function expressions
+
+int_quaternionToRotation = function(q) {
+  var qX = q[0];
+  var qY = q[1];
+  var qZ = q[2];
+  var qW = q[3];
+
+  var qWqW = qW * qW;
+  var qWqX = qW * qX;
+  var qWqY = qW * qY;
+  var qWqZ = qW * qZ;
+  var qXqW = qX * qW;
+  var qXqX = qX * qX;
+  var qXqY = qX * qY;
+  var qXqZ = qX * qZ;
+  var qYqW = qY * qW;
+  var qYqX = qY * qX;
+  var qYqY = qY * qY;
+  var qYqZ = qY * qZ;
+  var qZqW = qZ * qW;
+  var qZqX = qZ * qX;
+  var qZqY = qZ * qY;
+  var qZqZ = qZ * qZ;
+
+  var d = qWqW + qXqX + qYqY + qZqZ;
+  system.print("IS d zero "+d);
+  return [
+    [(qWqW + qXqX - qYqY - qZqZ) / d,
+     2 * (qWqZ + qXqY) / d,
+     2 * (qXqZ - qWqY) / d, 0],
+    [2 * (qXqY - qWqZ) / d,
+     (qWqW - qXqX + qYqY - qZqZ) / d,
+     2 * (qWqX + qYqZ) / d, 0],
+    [2 * (qWqY + qXqZ) / d,
+     2 * (qYqZ - qWqX) / d,
+     (qWqW - qXqX - qYqY + qZqZ) / d, 0],
+    [0, 0, 0, 1]];
+};
+
+
+// function decl inside function decl
+
+function forwardToQuaternion(ev) {
+    var l=system.sqrt(ev.x*ev.x+ev.y*ev.y+ev.z*ev.z);
+    var input=[-ev.x/l,-ev.y/l,-ev.z/l];
+    var y=input;
+    var up=[0,1,0];
+    var x=[1,0,0];
+    if (ev.y==0&&ev.z==0) {
+        x=[0,1,0];
+    }
+    function cross (a, b) {
+        return [a[1] * b[2] - a[2] * b[1],
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0]];
+    }
+    function len (a) {
+       return system.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]);
+    }
+    function renorm (a) {
+        var l = len(a);
+        return [a[0]/l,a[1]/l,a[2]/l];
+    }
+    var rotationaxis=cross(up,input);
+    var sinangle = len(rotationaxis);
+    var angle = system.asin(sinangle);
+    var q = axisRotation(rotationaxis,angle);
+    system.print("\n\nforwardtoquaternion_out\n\n");
+    var sysq = new system.Quaternion(q[0],q[1],q[2],q[3]);
+    var test = int_quaternionToRotation(q);
+    system.print ("Velocity is ");
+    system.print(input);
+    system.print("Axis is ");
+    system.print(rotationaxis);
+    system.print("intermediate Quat is ");
+    system.print(q);
+    system.print ("Test is ");
+    system.print(test);
+
+    return sysq;
+}
+
+
+
+
+
+Emerson Tree after parsing 
+(PROG (FUNC_DECL distance (FUNC_PARAMS vecA vecB) (VARLIST (VAR diffX (COND_EXPR (SUB (POSTEXPR (DOT vecA x)) (POSTEXPR (DOT vecB x)))))) (VARLIST (VAR diffY (COND_EXPR (SUB (POSTEXPR (DOT vecA y)) (POSTEXPR (DOT vecB y)))))) (VARLIST (VAR diffZ (COND_EXPR (SUB (POSTEXPR (DOT vecA z)) (POSTEXPR (DOT vecB z)))))) (VARLIST (VAR returner (COND_EXPR (POSTEXPR (CALL (DOT system sqrt) (ARGLIST (COND_EXPR (ADD (ADD (MULT (POSTEXPR diffX) (POSTEXPR diffX)) (MULT (POSTEXPR diffY) (POSTEXPR diffY))) (MULT (POSTEXPR diffZ) (POSTEXPR diffZ)))))))))) (RETURN (EXPR_LIST (COND_EXPR (POSTEXPR returner))))) (FUNC_DECL cameraLocationCallback (FUNC_PARAMS object sender) (VARLIST (VAR camLocation (COND_EXPR (POSTEXPR (CALL parseLocationFromObject (ARGLIST (COND_EXPR (POSTEXPR object)))))))) (VARLIST (VAR curPosition (COND_EXPR (POSTEXPR (CALL (DOT (ARRAY_INDEX (DOT system presences) (EXPR_LIST (COND_EXPR (POSTEXPR 0)))) getPosition) ))))) (IF (EXPR_LIST (COND_EXPR (LESS_THAN (POSTEXPR (CALL distance (ARGLIST (COND_EXPR (POSTEXPR camLocation)) (COND_EXPR (POSTEXPR curPosition))))) (POSTEXPR minDist)))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR "\n\n\nSQUAWK!  SQUAWK!  Evasive maneuvers\n\n"))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL evasiveManeuvers (ARGLIST (COND_EXPR (POSTEXPR camLocation)) (COND_EXPR (POSTEXPR curPosition)))))))))) (EXPR_LIST (ASSIGN int_quaternionToRotation (COND_EXPR (POSTEXPR (FUNC_EXPR (FUNC_PARAMS q) (VARLIST (VAR qX (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 0)))))))) (VARLIST (VAR qY (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 1)))))))) (VARLIST (VAR qZ (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 2)))))))) (VARLIST (VAR qW (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 3)))))))) (VARLIST (VAR qWqW (COND_EXPR (MULT (POSTEXPR qW) (POSTEXPR qW))))) (VARLIST (VAR qWqX (COND_EXPR (MULT (POSTEXPR qW) (POSTEXPR qX))))) (VARLIST (VAR qWqY (COND_EXPR (MULT (POSTEXPR qW) (POSTEXPR qY))))) (VARLIST (VAR qWqZ (COND_EXPR (MULT (POSTEXPR qW) (POSTEXPR qZ))))) (VARLIST (VAR qXqW (COND_EXPR (MULT (POSTEXPR qX) (POSTEXPR qW))))) (VARLIST (VAR qXqX (COND_EXPR (MULT (POSTEXPR qX) (POSTEXPR qX))))) (VARLIST (VAR qXqY (COND_EXPR (MULT (POSTEXPR qX) (POSTEXPR qY))))) (VARLIST (VAR qXqZ (COND_EXPR (MULT (POSTEXPR qX) (POSTEXPR qZ))))) (VARLIST (VAR qYqW (COND_EXPR (MULT (POSTEXPR qY) (POSTEXPR qW))))) (VARLIST (VAR qYqX (COND_EXPR (MULT (POSTEXPR qY) (POSTEXPR qX))))) (VARLIST (VAR qYqY (COND_EXPR (MULT (POSTEXPR qY) (POSTEXPR qY))))) (VARLIST (VAR qYqZ (COND_EXPR (MULT (POSTEXPR qY) (POSTEXPR qZ))))) (VARLIST (VAR qZqW (COND_EXPR (MULT (POSTEXPR qZ) (POSTEXPR qW))))) (VARLIST (VAR qZqX (COND_EXPR (MULT (POSTEXPR qZ) (POSTEXPR qX))))) (VARLIST (VAR qZqY (COND_EXPR (MULT (POSTEXPR qZ) (POSTEXPR qY))))) (VARLIST (VAR qZqZ (COND_EXPR (MULT (POSTEXPR qZ) (POSTEXPR qZ))))) (VARLIST (VAR d (COND_EXPR (ADD (ADD (ADD (POSTEXPR qWqW) (POSTEXPR qXqX)) (POSTEXPR qYqY)) (POSTEXPR qZqZ))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (ADD (POSTEXPR "IS d zero ") (POSTEXPR d)))))))) (RETURN (EXPR_LIST (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (DIV (POSTEXPR (EXPR_LIST (COND_EXPR (SUB (SUB (ADD (POSTEXPR qWqW) (POSTEXPR qXqX)) (POSTEXPR qYqY)) (POSTEXPR qZqZ))))) (POSTEXPR d))) (COND_EXPR (POSTEXPR 0))))) (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 0)) (COND_EXPR (POSTEXPR 1))))))))))))))) (FUNC_DECL forwardToQuaternion (FUNC_PARAMS ev) (VARLIST (VAR l (COND_EXPR (POSTEXPR (CALL (DOT system sqrt) (ARGLIST (COND_EXPR (ADD (ADD (MULT (POSTEXPR (DOT ev x)) (POSTEXPR (DOT ev x))) (MULT (POSTEXPR (DOT ev y)) (POSTEXPR (DOT ev y)))) (MULT (POSTEXPR (DOT ev z)) (POSTEXPR (DOT ev z))))))))))) (VARLIST (VAR input (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (DIV (UNARY_MINUS (POSTEXPR (DOT ev x))) (POSTEXPR l))) (COND_EXPR (DIV (UNARY_MINUS (POSTEXPR (DOT ev z))) (POSTEXPR l)))))))) (VARLIST (VAR y (COND_EXPR (POSTEXPR input)))) (VARLIST (VAR up (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 0)) (COND_EXPR (POSTEXPR 0))))))) (VARLIST (VAR x (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 1)) (COND_EXPR (POSTEXPR 0))))))) (IF (EXPR_LIST (COND_EXPR (AND (EQUALS (POSTEXPR (DOT ev y)) (POSTEXPR 0)) (EQUALS (POSTEXPR (DOT ev z)) (POSTEXPR 0))))) (SLIST (EXPR_LIST (ASSIGN x (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 0)) (COND_EXPR (POSTEXPR 0))))))))) (FUNC_DECL cross (FUNC_PARAMS a b) (RETURN (EXPR_LIST (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (SUB (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 1))))) (POSTEXPR (ARRAY_INDEX b (EXPR_LIST (COND_EXPR (POSTEXPR 2)))))) (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 2))))) (POSTEXPR (ARRAY_INDEX b (EXPR_LIST (COND_EXPR (POSTEXPR 1)))))))) (COND_EXPR (SUB (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 0))))) (POSTEXPR (ARRAY_INDEX b (EXPR_LIST (COND_EXPR (POSTEXPR 1)))))) (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 1))))) (POSTEXPR (ARRAY_INDEX b (EXPR_LIST (COND_EXPR (POSTEXPR 0)))))))))))))) (FUNC_DECL len (FUNC_PARAMS a) (RETURN (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system sqrt) (ARGLIST (COND_EXPR (ADD (ADD (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 0))))) (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 0)))))) (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 1))))) (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 1))))))) (MULT (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 2))))) (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 2))))))))))))))) (FUNC_DECL renorm (FUNC_PARAMS a) (VARLIST (VAR l (COND_EXPR (POSTEXPR (CALL len (ARGLIST (COND_EXPR (POSTEXPR a)))))))) (RETURN (EXPR_LIST (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (DIV (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 0))))) (POSTEXPR l))) (COND_EXPR (DIV (POSTEXPR (ARRAY_INDEX a (EXPR_LIST (COND_EXPR (POSTEXPR 2))))) (POSTEXPR l))))))))) (VARLIST (VAR rotationaxis (COND_EXPR (POSTEXPR (CALL cross (ARGLIST (COND_EXPR (POSTEXPR up)) (COND_EXPR (POSTEXPR input)))))))) (VARLIST (VAR sinangle (COND_EXPR (POSTEXPR (CALL len (ARGLIST (COND_EXPR (POSTEXPR rotationaxis)))))))) (VARLIST (VAR angle (COND_EXPR (POSTEXPR (CALL (DOT system asin) (ARGLIST (COND_EXPR (POSTEXPR sinangle)))))))) (VARLIST (VAR q (COND_EXPR (POSTEXPR (CALL axisRotation (ARGLIST (COND_EXPR (POSTEXPR rotationaxis)) (COND_EXPR (POSTEXPR angle)))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR "\n\nforwardtoquaternion_out\n\n"))))))) (VARLIST (VAR sysq (COND_EXPR (POSTEXPR (NEW (DOT system Quaternion) (ARGLIST (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 0)))))) (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 1)))))) (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 2)))))) (COND_EXPR (POSTEXPR (ARRAY_INDEX q (EXPR_LIST (COND_EXPR (POSTEXPR 3)))))))))))) (VARLIST (VAR test (COND_EXPR (POSTEXPR (CALL int_quaternionToRotation (ARGLIST (COND_EXPR (POSTEXPR q)))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR "Velocity is "))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR input))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR "Axis is "))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR rotationaxis))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR "intermediate Quat is "))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR q))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR "Test is "))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (POSTEXPR test))))))) (RETURN (EXPR_LIST (COND_EXPR (POSTEXPR sysq))))))
+The generated code is 
+ function distance( vecA , vecB  )
+{
+var diffX = vecA.x - vecB.x;
+var diffY = vecA.y - vecB.y;
+var diffZ = vecA.z - vecB.z;
+var returner = system.sqrt ( diffX * diffX + diffY * diffY + diffZ * diffZ ) ;
+return returner;
+
+}
+function cameraLocationCallback( object , sender  )
+{
+var camLocation = parseLocationFromObject ( object ) ;
+var curPosition = system.presences[ 0 ].getPosition (  ) ;
+ if  ( distance ( camLocationcurPosition )  < minDist )  {
+ system.print ( "\n\n\nSQUAWK!  SQUAWK!  Evasive maneuvers\n\n" ) ; 
+evasiveManeuvers ( camLocationcurPosition ) ; 
+ }
+;
+
+}
+int_quaternionToRotation  =  function ( q   )
+{
+var qX = q[ 0 ];
+var qY = q[ 1 ];
+var qZ = q[ 2 ];
+var qW = q[ 3 ];
+var qWqW = qW * qW;
+var qWqX = qW * qX;
+var qWqY = qW * qY;
+var qWqZ = qW * qZ;
+var qXqW = qX * qW;
+var qXqX = qX * qX;
+var qXqY = qX * qY;
+var qXqZ = qX * qZ;
+var qYqW = qY * qW;
+var qYqX = qY * qX;
+var qYqY = qY * qY;
+var qYqZ = qY * qZ;
+var qZqW = qZ * qW;
+var qZqX = qZ * qX;
+var qZqY = qZ * qY;
+var qZqZ = qZ * qZ;
+var d = qWqW + qXqX + qYqY + qZqZ;
+system.print ( "IS d zero " + d ) ;
+return [ [ qWqW + qXqX - qYqY - qZqZ / d0 ] [ 01 ]  ] ;
+
+};
+function forwardToQuaternion( ev  )
+{
+var l = system.sqrt ( ev.x * ev.x + ev.y * ev.y + ev.z * ev.z ) ;
+var input = [ -ev.x / l-ev.z / l ] ;
+var y = input;
+var up = [ 00 ] ;
+var x = [ 10 ] ;
+ if  ( ev.y == 0 && ev.z == 0 )  {
+ x  =  [ 00 ] ; 
+ }
+;
+function cross( a , b  )
+{
+return [ a[ 1 ] * b[ 2 ] - a[ 2 ] * b[ 1 ]a[ 0 ] * b[ 1 ] - a[ 1 ] * b[ 0 ] ] ;
+
+}
+function len( a  )
+{
+return system.sqrt ( a[ 0 ] * a[ 0 ] + a[ 1 ] * a[ 1 ] + a[ 2 ] * a[ 2 ] ) ;
+
+}
+function renorm( a  )
+{
+var l = len ( a ) ;
+return [ a[ 0 ] / la[ 2 ] / l ] ;
+
+}
+var rotationaxis = cross ( upinput ) ;
+var sinangle = len ( rotationaxis ) ;
+var angle = system.asin ( sinangle ) ;
+var q = axisRotation ( rotationaxisangle ) ;
+system.print ( "\n\nforwardtoquaternion_out\n\n" ) ;
+var sysq = new system.Quaternion ( q[ 0 ]q[ 1 ]q[ 2 ]q[ 3 ] ) ;
+var test = int_quaternionToRotation ( q ) ;
+system.print ( "Velocity is " ) ;
+system.print ( input ) ;
+system.print ( "Axis is " ) ;
+system.print ( rotationaxis ) ;
+system.print ( "intermediate Quat is " ) ;
+system.print ( q ) ;
+system.print ( "Test is " ) ;
+system.print ( test ) ;
+return sysq;
+
+}
+ 

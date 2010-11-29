@@ -186,14 +186,16 @@ void Object::connect() {
             mQueryAngle,
             std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3),
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
-	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) )
+	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceDisconnection, this, _1, _2) )
         );
     else
         mContext->objectHost->connect(
             this,
             std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3),
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
-	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) )
+	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this ) ),
+            mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceDisconnection, this, _1, _2) )
         );
 }
 
@@ -252,6 +254,8 @@ void Object::handleSpaceStreamCreated() {
   }
 }
 
+void Object::handleSpaceDisconnection(const SpaceObjectReference& spaceobj, Disconnect::Code) {
+}
 
 bool Object::connected() {
     return (mConnectedTo != NullServerID);

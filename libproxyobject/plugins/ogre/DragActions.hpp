@@ -48,12 +48,12 @@ typedef std::tr1::shared_ptr<MouseDragEvent> MouseDragEventPtr;
 namespace Graphics {
 class Entity;
 using Input::SDLInputManager;
-class CameraEntity;
 class OgreSystem;
+class Camera;
 
 struct DragStartInfo {
     OgreSystem *sys;
-    CameraEntity *camera;
+    Camera *camera;
     typedef std::set<ProxyObjectWPtr> EntitySet;
     const EntitySet &objects;
     const Input::MouseDragEventPtr &ev;
@@ -98,13 +98,10 @@ public:
     static const DragAction &get(const std::string &name);
 };
 
-class CameraEntity;
-class Entity;
-class OgreSystem;
-Vector3f pixelToDirection(CameraEntity *cam, Quaternion orient, float xPixel, float yPixel);
-void zoomInOut(float value, const Vector2f& axes, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent);
-void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, CameraEntity *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent);
-void pixelToRadians(CameraEntity *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians);
+Vector3f pixelToDirection(Camera *cam, Quaternion orient, float xPixel, float yPixel);
+void zoomInOut(float value, const Vector2f& axes, Camera *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent);
+void zoomInOut(Input::AxisValue value, const Input::InputDevicePtr &dev, Camera *camera, const std::set<ProxyObjectWPtr>& objects, OgreSystem *parent);
+void pixelToRadians(Camera *cam, float deltaXPct, float deltaYPct, float &xRadians, float &yRadians);
 
 template <class Iterator>
 inline Vector3d averageSelectedPosition(const Time &now, Iterator iter, Iterator end) {

@@ -73,7 +73,7 @@ public:
      */
     class HumanReadable{};
     class BinaryString{};
-    UUID(const std::string&,HumanReadable );
+    UUID(const std::string&,HumanReadable);
     UUID(const std::string&s,BinaryString ){
         mData.memcpy(s.data(),s.length());
     }

@@ -33,6 +33,8 @@
 #ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
 #define _SIRIKATA_CPPOH_OPTIONS_HPP_
 
+#define OPT_CONFIG_FILE          "cfg"
+
 #define OPT_OH_PLUGINS           "oh.plugins"
 
 #define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
@@ -47,7 +49,10 @@
 #define OPT_OBJECT_FACTORY       "object-factory"
 #define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
 
-#define OPT_OH_SIMS              "oh.sims"
+
+#define OPT_CAMERASCRIPT         "camerascript"
+#define OPT_CAMERASCRIPTTYPE         "camerascripttype"
+
 
 namespace Sirikata {
 

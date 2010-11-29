@@ -33,7 +33,9 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/TemporalValue.hpp>
 #include "WebView.hpp"
+#include "WebViewManager.hpp"
 #include <OgreBitwise.h>
+#include <sirikata/core/util/UUID.hpp>
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/StringUtil.hpp"
@@ -54,6 +56,7 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 	webView = 0;
 #endif
 	viewName = name;
+        viewType = type;
 	viewWidth = width;
 	viewHeight = height;
 	maxUpdatePS = 0;
@@ -97,17 +100,19 @@ WebView::WebView(const std::string& name, unsigned short width, unsigned short h
 		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
 }
 
-WebView::WebView(const std::string& name, unsigned short width, unsigned short height,
+WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
 			Ogre::FilterOptions texFiltering)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
 #endif
+
     mBorderLeft=2;
     mBorderRight=2;
     mBorderTop=25;
     mBorderBottom=2;
 	viewName = name;
+        viewType = type;
 	viewWidth = width;
 	viewHeight = height;
 	overlay = 0;
@@ -152,27 +157,6 @@ WebView::~WebView()
         this->viewTexture.setNull();
         Ogre::TextureManager::getSingleton().remove(res);
     }
-
-	setProxyObject(std::tr1::shared_ptr<ProxyWebViewObject>());
-}
-
-void WebView::destroyed() {
-	WebViewManager::getSingleton().destroyWebView(this);
-}
-
-void WebView::setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject)
-{
-	if(this->proxyObject) {
-		this->proxyObject->WebViewProvider::removeListener(this);
-		this->proxyObject->ProxyObjectProvider::removeListener(this);
-    }
-
-	this->proxyObject = proxyObject;
-
-	if(this->proxyObject) {
-		proxyObject->WebViewProvider::addListener(this);
-		proxyObject->ProxyObjectProvider::addListener(this);
-	}
 }
 
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
@@ -592,6 +576,11 @@ void WebView::createMaterial()
  std::string WebView::getName()
  {
      return viewName;
+ }
+
+ std::string WebView::getType()
+ {
+     return viewType;
  }
 
  std::string WebView::getViewTextureName()
@@ -1109,7 +1098,8 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
     Berkelium::stringUtil_free(nameUTF8);
 	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
-	if(i != delegateMap.end()) {
+    if(i != delegateMap.end())
+    {
         JSArguments argVector;
         std::vector<UTF8String> argStorage;
         for (size_t j=0;j!=numArgs;++j) {
@@ -1127,6 +1117,7 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
 #endif
 }
 
+const WebView::WebViewBorderSize WebView::mDefaultBorder(2,2,25,2);
 
 }
 }

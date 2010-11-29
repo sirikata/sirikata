@@ -36,19 +36,27 @@
 #include <sirikata/proxyobject/PositionListener.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 
+#include <sirikata/proxyobject/MeshListener.hpp>
+
+
 namespace Sirikata {
 
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
- : mID(id),
-   mManager(man),
-   mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
-   mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
-   mParent(vwobj)
+ :   SelfWeakPtr<ProxyObject>(),
+     ProxyObjectProvider(),
+     MeshProvider (),
+     mID(id),
+     mManager(man),
+     mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
+     mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
+     mParent(vwobj),
+     mMeshURI(),
+     mScale(1.f, 1.f, 1.f)
 {
     assert(mParent);
-
     mDefaultPort = mParent->bindODPPort(owner_sor);
 }
+
 
 ProxyObject::~ProxyObject() {
     delete mDefaultPort;
@@ -58,6 +66,14 @@ void ProxyObject::destroy() {
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
+
+
+
+bool ProxyObject::sendMessage(const ODP::PortID& dest_port, MemoryReference message) const {
+    ODP::Endpoint dest(mID.space(), mID.object(), dest_port);
+    return mDefaultPort->send(dest, message);
+}
+
 
 bool ProxyObject::UpdateNeeded::operator() (
     const Location&updatedValue,
@@ -73,24 +89,64 @@ bool ProxyObject::isStatic() const {
     return mLoc.velocity() == Vector3f::nil() && mOrientation.velocity() == Quaternion::identity();
 }
 
+
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
     mLoc = reqloc;
-    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
 void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient) {
     mOrientation = TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position().normal(), reqorient.velocity().normal()));
-    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation);
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
 void ProxyObject::setBounds(const BoundingSphere3f& bnds) {
     mBounds = bnds;
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {
     return ProxyObjectPtr();
 }
 
+//you can set a camera's mesh as of now.
+void ProxyObject::setMesh ( Transfer::URI const& mesh )
+{
+    mMeshURI = mesh;
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
+}
 
+//cameras may have meshes as of now.
+Transfer::URI const& ProxyObject::getMesh () const
+{
+    return mMeshURI;
+}
+
+void ProxyObject::setScale ( Vector3f const& scale )
+{
+    mScale = scale;
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify (&MeshListener::onSetScale, ptr, scale );
+}
+
+Vector3f const& ProxyObject::getScale () const
+{
+    return mScale;
+}
+
+void ProxyObject::setPhysical ( PhysicalParameters const& pp )
+{
+    mPhysical = pp;
+    ProxyObjectPtr ptr = getSharedPtr();
+
+    if (ptr)
+        MeshProvider::notify (&MeshListener::onSetPhysical, ptr, pp );
+}
+
+PhysicalParameters const& ProxyObject::getPhysical () const
+{
+    return mPhysical;
+}
 
 }

@@ -71,6 +71,7 @@ void DelegatePort::receiveFrom(const Endpoint& from, const MessageHandler& cb) {
     mFromHandlers[from] = cb;
 }
 
+
 bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference data) const {
     if (mInvalidated) return false;
 
@@ -85,13 +86,17 @@ bool DelegatePort::deliver(const ODP::Endpoint& src, const ODP::Endpoint& dst, M
     return false;
 }
 
+
 bool DelegatePort::tryDeliver(const Endpoint& src_match_ep, const Endpoint& src_real_ep, const Endpoint& dst, MemoryReference data) const {
     ReceiveFromHandlers::const_iterator rit = mFromHandlers.find(src_match_ep);
+
     if (rit == mFromHandlers.end())
         return false;
 
     const MessageHandler& handler = rit->second;
+
     handler(src_real_ep, dst, data);
+
     return true;
 }
 

@@ -44,6 +44,7 @@ using namespace std;
 using std::tr1::placeholders::_1;
 static int core_plugin_refcount = 0;
 
+
 //#define DEBUG_OUTPUT(x) x
 #define DEBUG_OUTPUT(x)
 
@@ -53,9 +54,11 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     DEBUG_OUTPUT(cout << "dbm: plugin init" << endl;)
     if (core_plugin_refcount==0)
+    {
         SimulationFactory::getSingleton().registerConstructor("bulletphysics",
                 &BulletSystem::create,
                 true);
+    }
     core_plugin_refcount++;
     DEBUG_OUTPUT(cout << "dbm: plugin init return" << endl;)
 }
@@ -97,7 +100,7 @@ const SpaceID&BulletObj::getSpaceID()const {
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
 
-void BulletObj::onSetMesh (ProxyObjectPtr proxy, const URI &newMesh) {
+void BulletObj::onSetMesh (ProxyObjectPtr proxy, const Transfer::URI &newMesh) {
     DEBUG_OUTPUT(cout << "dbm:    onSetMesh: " << newMesh << endl;)
     mMeshname = newMesh;
 }
@@ -425,7 +428,9 @@ void BulletObj::requestLocation(TemporalValue<Location>::Time timeStamp, const P
 //        mBulletBodyPtr->setAngularVelocity(btangvel);
         mDesiredAngularVelocity = btangvel;}
 }
+
 */
+
 void BulletSystem::addPhysicalObject(BulletObj* obj,
                                      positionOrientation po,
                                      float density, float friction, float bounce, Vector3f hull,
@@ -730,7 +735,7 @@ void customNearCallback(btBroadphasePair& collisionPair, btCollisionDispatcher& 
     }
 }
 
-bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, const String&options) {
+bool BulletSystem::initialize(ProxyCreationProviderPtr proxyManager, const String&options) {
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialize options: " << options << endl);
     /// HelloWorld from Bullet/Demos
     InitializeClassOptions("bulletphysics",this, NULL);
@@ -764,7 +769,7 @@ bool BulletSystem::initialize(Provider<ProxyCreationListener*>*proxyManager, con
     groundBody = new btRigidBody(rbInfo);
     groundBody->setRestitution(0.5);                 /// bouncy for fun & profit
     dynamicsWorld->addRigidBody(groundBody);
-    proxyManager->addListener(this);
+    proxyManager->addListener((ProxyCreationListener*)this);
     DEBUG_OUTPUT(cout << "dbm: BulletSystem::initialized, including test bullet object" << endl);
     /// we don't delete these, the ProxyManager does (I think -- someone does anyway)
     return true;
@@ -793,21 +798,16 @@ BulletSystem::~BulletSystem() {
 }
 
 void BulletSystem::onCreateProxy(ProxyObjectPtr p) {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    if (meshptr) {
-        DEBUG_OUTPUT(cout << "dbm: onCreateProxy ptr:" << meshptr << " mesh: " << meshptr->getMesh() << endl;)
-        objects.push_back(new BulletObj(this));     /// clean up memory!!!
-        objects.back()->mMeshptr = meshptr;
-        meshptr->MeshProvider::addListener(objects.back());
-    }
+    p->MeshProvider::addListener(objects.back());
 }
 
-void BulletSystem::onDestroyProxy(ProxyObjectPtr p) {
-    ProxyMeshObjectPtr meshptr(tr1::dynamic_pointer_cast<ProxyMeshObject>(p));
-    for (unsigned int i=0; i<objects.size(); i++) {
-        if (objects[i]->mMeshptr==meshptr) {
+void BulletSystem::onDestroyProxy(ProxyObjectPtr p)
+{
+    for (unsigned int i=0; i<objects.size(); i++)
+    {
+        if (objects[i]->mMeshptr==p) {
             DEBUG_OUTPUT(cout << "dbm: onDestroyProxy, object=" << objects[i] << endl);
-            meshptr->MeshProvider::removeListener(objects[i]);
+            p->MeshProvider::removeListener(objects[i]);
             removePhysicalObject(objects[i]);
             objects.erase(objects.begin()+i);
             break;
@@ -857,7 +857,7 @@ void BulletSystem::sendMessage(const RoutableMessageHeader&mh, MemoryReference m
 bool BulletSystem::queryRay(const Vector3d& position,
                             const Vector3f& direction,
                             const double maxDistance,
-                            ProxyMeshObjectPtr ignore,
+                            ProxyObjectPtr ignore,
                             double &returnDistance,
                             Vector3f &returnNormal,
                             SpaceObjectReference &returnName) {

@@ -80,7 +80,9 @@ private:
     // Worker method for deliver, tries to deliver to the handler for this exact
     // endpoint.
     // \deprecated Prefer the version using both ODP::Endpoints
+
     bool tryDeliver(const Endpoint& src_match_ep, const Endpoint& src_real_ep, const Endpoint& dst, MemoryReference data) const;
+
 
     typedef std::tr1::unordered_map<Endpoint, MessageHandler, Endpoint::Hasher> ReceiveFromHandlers;
 

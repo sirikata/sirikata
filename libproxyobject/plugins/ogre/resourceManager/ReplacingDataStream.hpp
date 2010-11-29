@@ -31,12 +31,18 @@
  */
 #ifndef _REPLACING_DATA_STREAM_HPP_
 #define _REPLACING_DATA_STREAM_HPP_
+
 #include "../OgreHeaders.hpp"
 #include <OgreDataStream.h>
 #ifndef STANDALONE
 #include <OgreCommon.h>
 #endif
-namespace Meru {
+
+#include <sirikata/core/transfer/URI.hpp>
+
+namespace Sirikata {
+namespace Graphics {
+
 /**
  * A class that replaces text out of an Ogre DataStream as it is read
  * Currently does the simple thing by reading the entire document as
@@ -57,7 +63,7 @@ protected:
   std::vector<Ogre::String> provides;//materials and programs this provides
   std::vector<Ogre::String> depends_on;//materials and programs this depends on
   const Ogre::NameValuePairList*mTextureAliases;
-  URI mSourceURI;
+    Transfer::URI mSourceURI;
   ///loads in and replaces the data
   void verifyData()const;
     /**
@@ -148,6 +154,8 @@ public:
   virtual bool eof(void) const;
   virtual void close(void);
 };
-}
+
+} // namespace Graphics
+} // namespace Sirikata
 
 #endif //_REPLACING_DATA_STREAM_HPP_

@@ -47,9 +47,7 @@ namespace Sirikata {
 
 MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const String& params)
  : mContext(ctx),
-   mIOService( Network::IOServiceFactory::makeIOService() ),
-   mIOWork(NULL),
-   mIOThread(NULL),
+   mIOStrand(ctx->ioService->createStrand()),
    mConnected(false),
    mGaveID(false),
    mRegion(),
@@ -59,9 +57,6 @@ MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const Stri
    mAggregateQuery(SolidAngle::Max),
    mAggregateQueryDirty(true)
 {
-    mIOWork = new Network::IOWork( mIOService, "MasterPintoServerQuerier Work" );
-    mIOThread = new Thread( std::tr1::bind(&Network::IOService::runNoReturn, mIOService) );
-
     OptionSet* optionsSet = OptionSet::getOptions("space_master_pinto",NULL);
     optionsSet->parse(params);
 
@@ -70,7 +65,7 @@ MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const Stri
 
     OptionSet* server_protocol_optionset = StreamFactory::getSingleton().getOptionParser(server_protocol)(server_protocol_options);
 
-    mServerStream = StreamFactory::getSingleton().getConstructor(server_protocol)(mIOService, server_protocol_optionset);
+    mServerStream = StreamFactory::getSingleton().getConstructor(server_protocol)(mIOStrand, server_protocol_optionset);
 
     mHost = optionsSet->referenceOption(OPT_MASTER_PINTO_HOST)->as<String>();
     mPort = optionsSet->referenceOption(OPT_MASTER_PINTO_PORT)->as<String>();
@@ -81,9 +76,7 @@ MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const Stri
 
 MasterPintoServerQuerier::~MasterPintoServerQuerier() {
     delete mServerStream;
-
-    delete mIOWork;
-    Network::IOServiceFactory::destroyIOService(mIOService);
+    delete mIOStrand;
 }
 
 void MasterPintoServerQuerier::start() {
@@ -110,21 +103,21 @@ void MasterPintoServerQuerier::updateRegion(const BoundingBox3f& region) {
     MP_LOG(debug, "Updating region " << region);
     mRegion = region;
     mRegionDirty = true;
-    mIOService->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
 }
 
 void MasterPintoServerQuerier::updateLargestObject(float max_radius) {
     MP_LOG(debug, "Updating largest object " << max_radius);
     mMaxRadius = max_radius;
     mMaxRadiusDirty = true;
-    mIOService->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
 }
 
 void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle) {
     MP_LOG(debug, "Updating aggregate query angle " << min_angle);
     mAggregateQuery = min_angle;
     mAggregateQueryDirty = true;
-    mIOService->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
+    mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
 }
 
 void MasterPintoServerQuerier::tryServerUpdate() {

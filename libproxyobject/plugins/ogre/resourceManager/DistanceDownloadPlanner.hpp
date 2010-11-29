@@ -37,45 +37,40 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include "ResourceDownloadPlanner.hpp"
-#include "../CameraEntity.hpp"
 #include <vector>
 
 namespace Sirikata {
 namespace Graphics{
-class MeshEntity;
+class Entity;
 }
 
 class DistanceDownloadPlanner : public ResourceDownloadPlanner
 {
 public:
-    DistanceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c);
+    DistanceDownloadPlanner(Context* c);
     ~DistanceDownloadPlanner();
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::MeshEntity *mesh);
-
-    //ProxyCreationListener interface
-    virtual void onCreateProxy ( ProxyObjectPtr object );
-    virtual void onDestroyProxy ( ProxyObjectPtr object );
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
+    virtual void removeObject(ProxyObjectPtr p);
 
     //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
 
     //PollingService interface
     virtual void poll();
     virtual void stop();
 
     struct Resource {
-        Resource(Graphics::MeshEntity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
+        Resource(Graphics::Entity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
             ready = false;
             file = NULL;
         }        virtual ~Resource(){}
 
-        URI *file;
-        Graphics::MeshEntity *mesh;
+        Transfer::URI *file;
+        Graphics::Entity *mesh;
         ProxyObjectPtr proxy;
         bool ready;
     };

@@ -42,9 +42,10 @@ namespace Sirikata{
 ///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
 class SIRIKATA_PROXYOBJECT_EXPORT SimulationFactory
     : public AutoSingleton<SimulationFactory>,
-      public Factory3<TimeSteppedQueryableSimulation*,
+      public Factory4<TimeSteppedQueryableSimulation*,
                       Context*,
-                      Provider<ProxyCreationListener*>*,//the ProxyManager
+                      VWObjectPtr, // Object simulation is working within
+                      const SpaceObjectReference&, // Presence the simulation is working within
                       const String&> //options string for the graphics system
 {
 public:

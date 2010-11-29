@@ -32,7 +32,11 @@
 
 #include "AggregateManager.hpp"
 
-#include <sirikata/proxyobject/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
+
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#define snprintf _snprintf
+#endif
 
 namespace Sirikata {
 
@@ -81,6 +85,7 @@ void AggregateManager::removeAggregate(const UUID& uuid) {
 
 void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
   std::vector<UUID>& children = getChildren(uuid);
+  uint32 numChildrenBefore = children.size();
 
   if ( std::find(children.begin(), children.end(), child_uuid) == children.end() ) {
     children.push_back(child_uuid);
@@ -93,18 +98,20 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
     else {
       mAggregateObjects[child_uuid]->mParentUUID = uuid;
     }
+
+    updateChildrenTreeLevel(uuid, mAggregateObjects[uuid]->mTreeLevel);
+
     lock.unlock();
 
-    //String locationStr  = ( (mLoc->contains(child_uuid)) ? (mLoc->currentPosition(child_uuid).toString()) : " NOT IN LOC ");
-
-    std::cout << "addChild: generateAggregateMesh called: "  << uuid.toString()
-              << " CHILD " << child_uuid.toString() << " "   
-              //<< locationStr    
+    std::cout << "addChild:  "  << uuid.toString()
+              << " CHILD " << child_uuid.toString() << " "
               << "\n";
     fflush(stdout);
 
+    mAggregateGenerationStartTime = Timer::now();
 
-    generateAggregateMesh(uuid, Duration::seconds(120.0f+rand()%2));
+    mContext->mainStrand->post(Duration::seconds(60), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+
   }
 }
 
@@ -116,13 +123,11 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
   if (it != children.end()) {
     children.erase( it );
 
-    String locationStr  = ( (mLoc->contains(child_uuid)) ? (mLoc->currentPosition(child_uuid).toString()) : " NOT IN LOC ");
+    mDirtyAggregateObjects[uuid] = mAggregateObjects[uuid];
 
-    //std::cout << "removeChild: " <<  uuid.toString() << " CHILD " << child_uuid.toString() << " "
-    //          <<  locationStr
-    //          << " generateAggregateMesh called\n";
+    mAggregateGenerationStartTime = Timer::now();
 
-    generateAggregateMesh(uuid, Duration::seconds(120.0f+rand() % 2));
+    mContext->mainStrand->post(Duration::seconds(60), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 }
 
@@ -134,19 +139,9 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& d
   lock.unlock();
   aggObject->mLastGenerateTime = Timer::now();
 
-  //std::cout << "Posted generateAggregateMesh for " << uuid.toString() << "\n";
-
   mContext->mainStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsync, this, uuid, aggObject->mLastGenerateTime)  );
 }
 
-
-
-Vector3f fixUp(int up, Vector3f v) {
-    if (up==3) return Vector3f(v[0],v[2], -v[1]);
-    else if (up==2) return v;
-    std::cerr << "ERROR: X up? You gotta be frakkin' kiddin'\n";
-    assert(false);
-}
 
 void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime) {
   /* Get the aggregate object corresponding to UUID 'uuid'.  */
@@ -159,7 +154,6 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   lock.unlock();
   /****/
 
-  
 
   if (postTime < aggObject->mLastGenerateTime) {
     //std::cout << "1\n";fflush(stdout);
@@ -173,34 +167,34 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     return;
   }
 
-  for (uint i= 0; i < children.size(); i++) {
+  for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
 
     if (!mLoc->contains(child_uuid)) {
       generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
-      //std::cout << "4\n";
+
       return;
     }
 
     std::string meshName = mLoc->mesh(child_uuid);
-    
+
     MeshdataPtr childMeshPtr = MeshdataPtr();
 
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     if (mAggregateObjects.find(child_uuid) != mAggregateObjects.end()) {
       childMeshPtr = mAggregateObjects[child_uuid]->mMeshdata;
     }
-    lock.unlock();   
+    lock.unlock();
 
     if (meshName == "" && !childMeshPtr) {
       generateAggregateMesh(child_uuid, Duration::microseconds(1.0f));
-      
+
       return;
     }
   }
 
-  if (!mLoc->contains(uuid)) {   
-    //std::cout << "3\n"; fflush(stdout); 
+  if (!mLoc->contains(uuid)) {
+    //std::cout << "3\n"; fflush(stdout);
     generateAggregateMesh(uuid, Duration::milliseconds(10.0f));
     return;
   }
@@ -208,9 +202,9 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   std::tr1::shared_ptr<Meshdata> agg_mesh =  std::tr1::shared_ptr<Meshdata>( new Meshdata() );
   BoundingSphere3f bnds = mLoc->bounds(uuid);
 
-  uint   numAddedSubMeshGeometries = 0;
+  uint32   numAddedSubMeshGeometries = 0;
   double totalVertices = 0;
-  for (uint i= 0; i < children.size(); i++) {
+  for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
 
     Vector3f location = mLoc->currentPosition(child_uuid);
@@ -220,7 +214,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
       continue;
     }
-    std::tr1::shared_ptr<Meshdata> m = mAggregateObjects[child_uuid]->mMeshdata;    
+    std::tr1::shared_ptr<Meshdata> m = mAggregateObjects[child_uuid]->mMeshdata;
 
     if (!m) {
       //request a download or generation of the mesh
@@ -246,11 +240,10 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         }
       }
     }
-    
+
 
     lock.unlock();
-    
-    agg_mesh->up_axis = m->up_axis;
+
     agg_mesh->lightInstances.insert(agg_mesh->lightInstances.end(),
                                     m->lightInstances.begin(),
                                     m->lightInstances.end() );
@@ -267,17 +260,16 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
-    for (uint i = 0; i < m->instances.size(); i++) {
+    for (uint32 i = 0; i < m->instances.size(); i++) {
       const GeometryInstance& geomInstance = m->instances[i];
       SubMeshGeometry smg = m->geometry[geomInstance.geometryIndex];
 
-      for (uint j = 0; j < smg.positions.size(); j++) {
+      for (uint32 j = 0; j < smg.positions.size(); j++) {
         Vector4f jth_vertex_4f =  geomInstance.transform*Vector4f(smg.positions[j].x,
                                                                   smg.positions[j].y,
                                                                   smg.positions[j].z,
                                                                   1.0f);
         Vector3f jth_vertex(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);
-        jth_vertex = fixUp(m->up_axis, jth_vertex);
 
         if (originalMeshBoundingBox == BoundingBox3f3f::null()) {
           originalMeshBoundingBox = BoundingBox3f3f(jth_vertex, 0);
@@ -289,17 +281,17 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
     BoundingSphere3f originalMeshBounds = originalMeshBoundingBox.toBoundingSphere();
     BoundingSphere3f scaledMeshBounds = mLoc->bounds(child_uuid);
-    double scalingfactor = scaledMeshBounds.radius()/(2.0*originalMeshBounds.radius());
+    double scalingfactor = scaledMeshBounds.radius()/(3.0*originalMeshBounds.radius());
 
     //std::cout << mLoc->mesh(child_uuid) << " :mLoc->mesh(child_uuid)\n";
     //std::cout << originalMeshBounds << " , scaled = " << scaledMeshBounds << "\n";
     //std::cout << scalingfactor  << " : scalingfactor\n";
     /** End: find scaling factor **/
 
-    uint geometrySize = agg_mesh->geometry.size();
+    uint32 geometrySize = agg_mesh->geometry.size();
 
     std::vector<GeometryInstance> instances;
-    for (uint i = 0; i < m->instances.size(); i++) {
+    for (uint32 i = 0; i < m->instances.size(); i++) {
       GeometryInstance geomInstance = m->instances[i];
 
       assert (geomInstance.geometryIndex < m->geometry.size());
@@ -309,13 +301,12 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       smg.aabb = BoundingBox3f3f::null();
 
-      for (uint j = 0; j < smg.positions.size(); j++) {
+      for (uint32 j = 0; j < smg.positions.size(); j++) {
         Vector4f jth_vertex_4f =  geomInstance.transform*Vector4f(smg.positions[j].x,
                                                                   smg.positions[j].y,
                                                                   smg.positions[j].z,
                                                                   1.0f);
         smg.positions[j] = Vector3f( jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z );
-        smg.positions[j] = fixUp(m->up_axis, smg.positions[j]);
 
         smg.positions[j] = smg.positions[j] * scalingfactor;
 
@@ -342,7 +333,7 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       totalVertices = totalVertices + smg.positions.size();
     }
 
-    for (uint i = 0; i < instances.size(); i++) {
+    for (uint32 i = 0; i < instances.size(); i++) {
       GeometryInstance geomInstance = instances[i];
 
       for (GeometryInstance::MaterialBindingMap::iterator mat_it = geomInstance.materialBindingMap.begin();
@@ -358,11 +349,11 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                                m->materials.begin(),
                                m->materials.end());
 
-    uint lightsSize = agg_mesh->lights.size();
+    uint32 lightsSize = agg_mesh->lights.size();
     agg_mesh->lights.insert(agg_mesh->lights.end(),
                             m->lights.begin(),
                             m->lights.end());
-    for (uint j = 0; j < m->lightInstances.size(); j++) {
+    for (uint32 j = 0; j < m->lightInstances.size(); j++) {
       LightInstance& lightInstance = m->lightInstances[j];
       lightInstance.lightIndex += lightsSize;
       agg_mesh->lightInstances.push_back(lightInstance);
@@ -375,32 +366,30 @@ void AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       }
   }
 
-  for (uint i= 0; i < children.size(); i++) {
+  for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
       assert(false);
     }
-    
+
     MeshdataPtr mptr = mAggregateObjects[child_uuid]->mMeshdata;
-    mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();    
+
+    if (mAggregateObjects[child_uuid]->mParentUUID == uuid) {
+      mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
+    }
   }
 
-  mMeshSimplifier.simplify(agg_mesh, 20000);
-  
-  aggObject->mMeshdata = agg_mesh;    
+  mMeshSimplifier.simplify(agg_mesh, 40000);
+
+  aggObject->mMeshdata = agg_mesh;
 
   uploadMesh(uuid, agg_mesh);
 
-  std::cout << "Generated another one...\n";
 
-  /* Set the mesh for the aggregated object and if it has a parent, schedule
-   a task to update the parent's mesh */
-  if (aggObject->mParentUUID != UUID::null()) {
-    generateAggregateMeshAsync(aggObject->mParentUUID, Timer::now());
-    std::cout << "Posted parent generation task...\n";
-  }
+
+  generateMeshesFromQueue(Timer::now());
 }
 
 void AggregateManager::metadataFinished(const UUID uuid, const UUID child_uuid, std::string meshName,
@@ -450,6 +439,65 @@ void AggregateManager::chunkFinished(const UUID uuid, const UUID child_uuid,
     }
 }
 
+std::vector<UUID>& AggregateManager::getChildren(const UUID& uuid) {
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    static std::vector<UUID> emptyVector;
+
+    if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
+      return emptyVector;
+    }
+
+    std::vector<UUID>& children = mAggregateObjects[uuid]->mChildren;
+
+    return children;
+}
+
+
+void AggregateManager::generateMeshesFromQueue(Time postTime) {
+
+    if (postTime < mAggregateGenerationStartTime) {
+      return;
+    }
+
+    for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
+         it != mDirtyAggregateObjects.end(); it++)
+    {
+      mObjectsByPriority[it->second->mTreeLevel].push_back(it->second);
+    }
+
+    mDirtyAggregateObjects.clear();
+
+    for (std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > >::reverse_iterator it =  mObjectsByPriority.rbegin();
+         it != mObjectsByPriority.rend(); it++)
+    {
+      if (it->second.size() > 0) {
+        std::tr1::shared_ptr<AggregateObject> aggObject = it->second.front();
+
+        //Should we really pop it off now?
+        it->second.pop_front();
+        generateAggregateMesh(aggObject->mUUID);
+        break;
+      }
+    }
+}
+
+void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel) {
+    //mAggregateObjectsMutex MUST be locked BEFORE calling this function.
+
+    mAggregateObjects[uuid]->mTreeLevel = treeLevel;
+
+    if ( mAggregateObjects[uuid]->mChildren.size() > 0 ) {
+      mDirtyAggregateObjects[uuid] = mAggregateObjects[uuid];
+    }
+
+    for (uint32 i = 0; i < mAggregateObjects[uuid]->mChildren.size(); i++) {
+      updateChildrenTreeLevel(mAggregateObjects[uuid]->mChildren[i], treeLevel+1);
+    }
+
+}
+
+
+
 void AggregateManager::uploadMesh(const UUID& uuid, std::tr1::shared_ptr<Meshdata> meshptr) {
   boost::mutex::scoped_lock lock(mUploadQueueMutex);
 
@@ -474,31 +522,34 @@ void AggregateManager::uploadQueueServiceThread() {
       }
     }
 
-    if (mUploadQueue.size() < 40) {
+    if (mUploadQueue.size() < 100) {
       std::map<UUID, std::tr1::shared_ptr<Meshdata>  >::iterator it = mUploadQueue.begin();
       UUID uuid = it->first;
       std::tr1::shared_ptr<Meshdata> meshptr = it->second;
 
       mUploadQueue.erase(it);
 
-      lock.unlock();   
+      lock.unlock();
 
       const int MESHNAME_LEN = 1024;
       char localMeshName[MESHNAME_LEN];
       snprintf(localMeshName, MESHNAME_LEN, "aggregate_mesh_%s.dae", uuid.toString().c_str());
-      
-      mModelsSystem->convertMeshdata(*meshptr, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);      
+
+      mModelsSystem->convertMeshdata(*meshptr, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
       //Upload to CDN
       std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
-      system( cmdline.c_str()  );    
+      system( cmdline.c_str()  );
+
 
       //Update loc
       std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
-      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);    
+      mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
+
+      boost::this_thread::sleep(boost::posix_time::seconds(5));
     }
     else {
       std::map<UUID, std::tr1::shared_ptr<Meshdata>  >::iterator it = mUploadQueue.begin();
-      
+
       while (it != mUploadQueue.end()) {
         UUID uuid = it->first;
         MeshdataPtr meshptr = it->second;
@@ -506,16 +557,17 @@ void AggregateManager::uploadQueueServiceThread() {
         const int MESHNAME_LEN = 1024;
         char localMeshName[MESHNAME_LEN];
         snprintf(localMeshName, MESHNAME_LEN, "aggregate_mesh_%s.dae", uuid.toString().c_str());
-      
-        mModelsSystem->convertMeshdata(*meshptr, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);        
-      
+
+        mModelsSystem->convertMeshdata(*meshptr, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
+
         //Upload to CDN
         std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
-        system( cmdline.c_str()  );    
+        system( cmdline.c_str()  );
+
 
         //Update loc
         std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
-        mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);    
+        mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
 
         it++;
       }

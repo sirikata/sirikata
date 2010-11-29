@@ -31,8 +31,8 @@
  */
 
 #include "TCPSpaceNetwork.hpp"
-#include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/network/StreamListenerFactory.hpp>
@@ -87,7 +87,7 @@ bool TCPSpaceNetwork::RemoteStream::push(Chunk& data, bool* was_empty) {
     }
 }
 
-Chunk* TCPSpaceNetwork::RemoteStream::pop(Network::IOService* ios) {
+Chunk* TCPSpaceNetwork::RemoteStream::pop(Network::IOStrand* ios) {
     boost::lock_guard<boost::mutex> lck(mPushPopMutex);
     // NOTE: the ordering in this method is very important since calls to push()
     // and pop() are possibly concurrent.
@@ -170,7 +170,7 @@ bool TCPSpaceNetwork::TCPSendStream::send(const Chunk& data) {
 }
 
 
-TCPSpaceNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, Network::IOService* _ios)
+TCPSpaceNetwork::TCPReceiveStream::TCPReceiveStream(ServerID sid, RemoteSessionPtr s, Network::IOStrand* _ios)
  : logical_endpoint(sid),
    session(s),
    front_stream(),
@@ -273,11 +273,10 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
     mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
 
-    mIOService = Network::IOServiceFactory::makeIOService();
-    mIOWork = new Network::IOWork(mIOService, "TCPSpaceNetwork Work");
-    mThread = new Thread(std::tr1::bind(&Network::IOService::runNoReturn,mIOService));
+    mIOStrand = mContext->ioService->createStrand();
+    mIOWork = new Network::IOWork(mContext->ioService, "TCPSpaceNetwork Work");
 
-    mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mListenOptions);
+    mListener = StreamListenerFactory::getSingleton().getConstructor(mStreamPlugin)(mIOStrand,mListenOptions);
 }
 
 TCPSpaceNetwork::~TCPSpaceNetwork() {
@@ -297,13 +296,8 @@ TCPSpaceNetwork::~TCPSpaceNetwork() {
     delete mIOWork;
     mIOWork = NULL;
 
-    mIOService->stop(); // FIXME forceful shutdown...
-
-    mThread->join();
-    delete mThread;
-
-    Network::IOServiceFactory::destroyIOService(mIOService);
-    mIOService = NULL;
+    delete mIOStrand;
+    mIOStrand = NULL;
 }
 
 
@@ -358,7 +352,7 @@ TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::getNewReceiveStream(ServerID
         TCPSpaceNetwork::RemoteData* data = getRemoteData(sid);
         if (data->receive == NULL) {
             notify = true;
-            data->receive = new TCPReceiveStream(sid, data->session, mIOService);
+            data->receive = new TCPReceiveStream(sid, data->session, mIOStrand);
         }
         result = data->receive;
     }
@@ -378,7 +372,7 @@ TCPSpaceNetwork::RemoteStreamPtr TCPSpaceNetwork::getNewOutgoingStream(ServerID 
     if (pending != RemoteStreamPtr())
         return RemoteStreamPtr();
 
-    Sirikata::Network::Stream* strm = StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOService,mSendOptions);
+    Sirikata::Network::Stream* strm = StreamFactory::getSingleton().getConstructor(mStreamPlugin)(mIOStrand,mSendOptions);
 
     pending = RemoteStreamPtr(
         new RemoteStream(
@@ -514,7 +508,10 @@ void TCPSpaceNetwork::bytesReceivedCallback(RemoteStreamWPtr wstream, IndirectTC
         // Parse the header indicating the remote ID
         Sirikata::Protocol::Server::ServerIntro intro;
         bool parsed = parsePBJMessage(&intro, data);
-        assert(parsed);
+        if (!parsed) {
+            LOG_INVALID_MESSAGE(tcpnetwork, error, data);
+            return;
+        }
 
         TCPNET_LOG(info,"Parsed remote endpoint information from " << intro.id());
         remote_stream->logical_endpoint = intro.id();
@@ -676,7 +673,7 @@ TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::handleConnectedStream(Remote
         session->remote_stream = stream_to_save;
         stream_to_close->shutting_down = true;
 
-        Sirikata::Network::IOTimerPtr timer = Sirikata::Network::IOTimer::create(mIOService);
+        Sirikata::Network::IOTimerPtr timer = Sirikata::Network::IOTimer::create(mIOStrand->service());
         timer->wait(
             Duration::seconds(5),
             std::tr1::bind(&TCPSpaceNetwork::handleClosingStreamTimeout, this, timer, stream_to_close)

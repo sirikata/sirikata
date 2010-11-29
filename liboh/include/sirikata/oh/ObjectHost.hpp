@@ -60,7 +60,9 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
+
 class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
+
     ObjectHostContext* mContext;
     SpaceIDMap *mSpaceIDMap;
 
@@ -73,17 +75,31 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     HostedObjectMap mHostedObjects;
     PluginManager *mScriptPlugins;
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
+
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> SessionConnectedCallback;
 public:
+    struct ConnectionInfo {
+        ServerID server;
+        TimedMotionVector3f loc;
+        TimedMotionQuaternion orient;
+        BoundingSphere3f bnds;
+        String mesh;
+    };
+
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&)> ConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ConnectionInfo)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
-    typedef SessionCallback MigratedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
+    // Notifies the ObjectHost of object connection that was closed, including a
+    // reason.
+    typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
 
-    typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
+    //FIXME: this call will have to go away sooner or later.
+    SpaceID getDefaultSpace();
 
     /** Caller is responsible for starting a thread
      *
@@ -109,7 +125,9 @@ public:
         const String& mesh,
         const SolidAngle& init_sa,
         ConnectedCallback connected_cb,
-        MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb);
+        MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+        DisconnectedCallback disconnected_cb
+    );
 
     /** Disconnect the object from the space. */
     void disconnect(HostedObjectPtr obj, const SpaceID& space);
@@ -126,6 +144,7 @@ public:
     /** Primary ODP send function. */
     bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
     bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+
 
 
     /** Register object by private UUID, so that it is possible to
@@ -147,6 +166,7 @@ public:
     /// Returns the SpaceID -> Network::Address lookup map.
     SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
 
+
     virtual void start();
     virtual void stop();
 
@@ -155,15 +175,24 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 
+    //void updateAddressable() const;
+
+
+		void persistEntityState(const String&);
+
   private:
     // Session Management Implementation
     void handleObjectConnected(const UUID& internalID, ServerID server);
     void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
     void handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
+    void handleObjectDisconnected(const UUID& internalID, Disconnect::Code);
 
+    // Wrapper to convert callback to use ConnectionInfo
+    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;
+
 }; // class ObjectHost
 
 } // namespace Sirikata

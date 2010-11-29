@@ -35,6 +35,11 @@
 
 #include <sirikata/oh/ObjectFactory.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <vector>
+#include <list>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
+
+
 
 namespace Sirikata {
 
@@ -45,6 +50,8 @@ public:
     virtual ~CSVObjectFactory() {}
 
     virtual void generate();
+
+
 private:
     // Connects one batch of objects and sets up another callback for more
     // additions if necessary.
@@ -60,6 +67,7 @@ private:
         Location loc;
         BoundingSphere3f bounds;
         String mesh;
+        SolidAngle query_angle;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;
     int32 mConnectRate;

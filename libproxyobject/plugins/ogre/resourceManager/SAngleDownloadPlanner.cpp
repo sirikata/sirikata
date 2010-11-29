@@ -35,8 +35,8 @@
 
 namespace Sirikata {
 
-SAngleDownloadPlanner::SAngleDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
- : DistanceDownloadPlanner(proxyManager, c)
+SAngleDownloadPlanner::SAngleDownloadPlanner(Context* c)
+ : DistanceDownloadPlanner(c)
 {
 
 }
@@ -61,7 +61,7 @@ double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 
     float radius = proxy->getBounds().radius();
     Vector3d objLoc = proxy->getPosition();
-    Vector3d cameraLoc = camera->getOgrePosition();
+    Vector3d cameraLoc = camera->following()->getOgrePosition();
 
     if (withinBound(radius, objLoc, cameraLoc)) return 0.99;
 

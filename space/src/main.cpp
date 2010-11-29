@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     Trace::Trace::InitOptions();
     SpaceTrace::InitOptions();
     InitSpaceOptions();
-    ParseOptions(argc, argv);
+    ParseOptions(argc, argv, OPT_CONFIG_FILE);
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
@@ -228,7 +228,7 @@ int main(int argc, char** argv) {
     }
 
     ///////////Go go go!! start of simulation/////////////////////
-    SSTConnectionManager* sstConnMgr = new SSTConnectionManager(space_context);
+    SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     space_context->add(space_context);
     space_context->add(gNetwork);

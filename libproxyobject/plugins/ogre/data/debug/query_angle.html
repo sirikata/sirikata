@@ -19,13 +19,14 @@
 <script type="text/javascript">
 $(function(){
   $('#slider').slider({
-     min : 0.0,
-     max : 12.56636,
-     step : 0.0000001,
-     value : 0.000001,
+     min : -15.0,
+     max : Math.log(2.0*Math.PI)/Math.LN10,
+     step : 0.0000000001,
+     value : 0.0000001,
      slide: function(event, ui) {
-       $("#qangle").val('' + ui.value);
-       set_query_angle(ui.value);
+       var real_val = Math.pow(10, ui.value);
+       $("#qangle").val('' + real_val);
+       set_query_angle(real_val);
      }
   });
   $("#qangle").val('' + $("#slider").slider("value"));

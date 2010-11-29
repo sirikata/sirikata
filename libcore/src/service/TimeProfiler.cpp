@@ -37,14 +37,25 @@
 
 namespace Sirikata {
 
-TimeProfiler::Stage::Stage(const String& name)
- : mName(name),
+TimeProfiler::Stage::Stage(TimeProfiler* parent, const String& name)
+ : mParent(parent),
+   mName(name),
    mStartTime( Time::null() ),
    mMinimum( Duration::seconds(100000) ),
    mMaximum( Duration::zero() ),
    mSum( Duration::zero() ),
-   mIts(0)
+   mIts(0),
+   mValid(true)
 {
+}
+
+TimeProfiler::Stage::~Stage() {
+    if (mValid)
+        mParent->remove(this);
+}
+
+void TimeProfiler::Stage::invalidate() {
+    mValid = false;
 }
 
 void TimeProfiler::Stage::started() {
@@ -95,26 +106,49 @@ TimeProfiler::TimeProfiler(const String& name)
 }
 
 TimeProfiler::~TimeProfiler() {
+    // Ownership of stages remains with the caller of addStage. Instead, we just
+    // invalidate pointers to us in those stages that still exist
+
     for(GroupMap::iterator git = mGroups.begin(); git != mGroups.end(); git++) {
         StageList& stages = git->second;
         for(StageList::iterator it = stages.begin(); it != stages.end(); it++)
-            delete *it;
+            (*it)->invalidate();
     }
 
     for(StageList::iterator it = mFreeStages.begin(); it != mFreeStages.end(); it++)
-        delete *it;
+        (*it)->invalidate();
 }
 
 TimeProfiler::Stage* TimeProfiler::addStage(const String& name) {
-    Stage* sinfo = new Stage(name);
+    Stage* sinfo = new Stage(this, name);
     mFreeStages.push_back(sinfo);
     return sinfo;
 }
 
 TimeProfiler::Stage* TimeProfiler::addStage(const String& group_name, const String& name) {
-    Stage* sinfo = new Stage(name);
+    Stage* sinfo = new Stage(this, name);
     mGroups[group_name].push_back(sinfo);
     return sinfo;
+}
+
+void TimeProfiler::remove(Stage* stage) {
+    // This could be handled better, but here we just iterate through all the
+    // stages looking for the one we're removing.
+    for(GroupMap::iterator git = mGroups.begin(); git != mGroups.end(); git++) {
+        StageList& stages = git->second;
+        for(StageList::iterator it = stages.begin(); it != stages.end(); it++) {
+            if (*it == stage) {
+                stages.erase(it);
+                break;
+            }
+        }
+    }
+    for(StageList::iterator it = mFreeStages.begin(); it != mFreeStages.end(); it++) {
+        if (*it == stage) {
+            mFreeStages.erase(it);
+            break;
+        }
+    }
 }
 
 void TimeProfiler::report() const {

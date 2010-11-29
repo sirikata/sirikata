@@ -141,23 +141,23 @@ double MeshSimplifier::invert(Matrix4x4f& inv, Matrix4x4f& orig)
 }
 
 
-void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh, uint numVerticesLeft) {
+void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh, uint32 numVerticesLeft) {
   //Go through all the triangles, getting the vertices they consist of.
   //Calculate the Q for all the vertices.  
 
   int totalVertices = 0;
 
-  for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     totalVertices += curGeometry.positions.size();
 
-    for (uint j = 0; j < curGeometry.positions.size(); j++) {
+    for (uint32 j = 0; j < curGeometry.positions.size(); j++) {
         curGeometry.positionQs.push_back( Matrix4x4f::nil());
     }
 
 
-    for (uint j = 0; j < curGeometry.primitives.size(); j++) {
-      for (uint k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
+      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
 
         unsigned short idx = curGeometry.primitives[j].indices[k];
         unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
@@ -195,13 +195,13 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
 
   //Iterate through all vertex pairs. Calculate the cost, v'(Q1+Q2)v, for each vertex pair.
   std::priority_queue<QSlimStruct> vertexPairs;
-  for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     BoundingSphere3f boundingSphere = curGeometry.aabb.toBoundingSphere();
     boundingSphere.mergeIn( BoundingSphere3f(boundingSphere.center(), boundingSphere.radius()*11.0/10.0));
 
-    for (uint j = 0; j < curGeometry.primitives.size(); j++) {
-      for (uint k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
+      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
 
 
         unsigned short idx = curGeometry.primitives[j].indices[k];
@@ -312,9 +312,9 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
   int remainingVertices = totalVertices;
   while (remainingVertices > numVerticesLeft && vertexPairs.size() > 0) {
     const QSlimStruct& top = vertexPairs.top();
-    uint j = top.mPrimitiveIdx;
-    uint k1 = top.mPrimitiveIndicesIdx;
-    uint k2;
+    uint32 j = top.mPrimitiveIdx;
+    uint32 k1 = top.mPrimitiveIndicesIdx;
+    uint32 k2;
 
     switch(top.mCombination) {
       case QSlimStruct::ONE_TWO:
@@ -358,8 +358,7 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
     }
 
 
-    if (remainingVertices % 10000 == 0)
-      std::cout << remainingVertices << " : remainingVertices\n";
+    
 
     vertexPairs.pop();
   }
@@ -367,7 +366,7 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
   //remove unused vertices; get new mapping from previous vertex indices to new vertex indices in vertexMapping2;
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping2;
 
-  for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[i];
     std::tr1::unordered_map<int, int>& oldToNewMap = vertexMapping2[i];
@@ -376,7 +375,7 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
     std::vector<Sirikata::Vector3f> normals;
     std::vector<SubMeshGeometry::TextureSet>texUVs;
 
-    for (uint j = 0 ; j < curGeometry.positions.size(); j++) {
+    for (uint32 j = 0 ; j < curGeometry.positions.size(); j++) {
       if (vertexMapping.find(j) == vertexMapping.end()) {
         oldToNewMap[j] = positions.size();
         positions.push_back(curGeometry.positions[j]);
@@ -395,14 +394,14 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
   }
 
   //remove degenerate triangles.
-  for (uint i = 0; i < agg_mesh->geometry.size(); i++) {
+  for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     std::tr1::unordered_map<int, int>& vertexMapping =  vertexMapping1[i];
     std::tr1::unordered_map<int, int>& oldToNewMap = vertexMapping2[i];
 
-    for (uint j = 0; j < curGeometry.primitives.size(); j++) {
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
       std::vector<unsigned short> newPrimitiveList;
-      for (uint k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
+      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
         unsigned short idx = curGeometry.primitives[j].indices[k];
         unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
         unsigned short idx3 = curGeometry.primitives[j].indices[k+2];

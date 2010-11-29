@@ -31,10 +31,12 @@
  */
 
 #include "ResourceDownloadPlanner.hpp"
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
-#include "../MeshEntity.hpp"
+#include "../Entity.hpp"
 #include <stdlib.h>
 #include <algorithm>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
 
 using namespace std;
 using namespace Sirikata;
@@ -45,11 +47,10 @@ using namespace Sirikata::Graphics;
 
 namespace Sirikata {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Provider<ProxyCreationListener*> *proxyManager, Context *c)
+ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
  : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
 {
     c->add(this);
-    proxyManager->addListener(this);
     camera = NULL;
 }
 
@@ -58,22 +59,12 @@ ResourceDownloadPlanner::~ResourceDownloadPlanner()
 
 }
 
-void ResourceDownloadPlanner::onCreateProxy(ProxyObjectPtr p)
+void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
 {
 
 }
 
-void ResourceDownloadPlanner::onDestroyProxy(ProxyObjectPtr p)
-{
-
-}
-
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, MeshEntity *mesh)
-{
-
-}
-
-void ResourceDownloadPlanner::setCamera(CameraEntity *entity)
+void ResourceDownloadPlanner::setCamera(Camera *entity)
 {
     camera = entity;
 }

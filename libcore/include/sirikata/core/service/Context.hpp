@@ -102,26 +102,16 @@ public:
         ps->start();
     }
 
-    void run(uint32 nthreads = 1) {
-        std::vector<Thread*> workerThreads;
-
-        // Start workers
-        for(uint32 i = 1; i < nthreads; i++) {
-            workerThreads.push_back(
-                new Thread( std::tr1::bind(&Network::IOService::runNoReturn, ioService) )
-            );
+    void remove(Service* ps) {
+        for(ServiceList::iterator it = mServices.begin(); it != mServices.end(); it++) {
+            if (*it == ps) {
+                mServices.erase(it);
+                return;
+            }
         }
-
-        // Run
-        ioService->run();
-
-        // Wait for workers to finish
-        for(uint32 i = 0; i < workerThreads.size(); i++) {
-            workerThreads[i]->join();
-            delete workerThreads[i];
-        }
-        workerThreads.clear();
     }
+
+    void run(uint32 nthreads = 1);
 
     // Stop the simulation
     void shutdown();
@@ -165,7 +155,8 @@ protected:
     Sirikata::AtomicValue<Time> mEpoch;
     Sirikata::AtomicValue<Time> mLastSimTime;
     Duration mSimDuration;
-    std::vector<Service*> mServices;
+    typedef std::vector<Service*> ServiceList;
+    ServiceList mServices;
 
     std::tr1::shared_ptr<Thread> mKillThread;
     Network::IOService* mKillService;

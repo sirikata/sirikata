@@ -78,7 +78,10 @@ void TimeSyncClient::poll() {
 void TimeSyncClient::handleSyncMessage(const ODP::Endpoint &src, const ODP::Endpoint &dst, MemoryReference payload) {
     Sirikata::Protocol::TimeSync sync_msg;
     bool parse_success = sync_msg.ParseFromArray(payload.data(), payload.size());
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE_BUFFER(sync, error, ((char*)payload.data()), payload.size());
+        return;
+    }
 
     Time local_start_t = mRequestTimes[sync_msg.seqno()];
     Time server_t = sync_msg.t();

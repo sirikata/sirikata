@@ -41,7 +41,10 @@ void InitCPPOHOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         // Note: we load *many* more plugins for cppoh by default since it is
         // also the client.
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,weight-const,tcpsst,sqlite,ogregraphics,colladamodels,csvfactory",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+
+        .addOption(new OptionValue(OPT_CONFIG_FILE,"",Sirikata::OptionValueType<String>(),"Configuration file to load."))
+
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,csvfactory,scripting-js,simplecamera",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
 
@@ -62,8 +65,8 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
-
-        .addOption(new OptionValue(OPT_OH_SIMS, "ogregraphics", OptionValueType<std::list<String> >(), "Simulations to try to load and run."))
+        .addOption(new OptionValue(OPT_CAMERASCRIPT,"",OptionValueType<String>(),"The scripts the camera should startup with"))
+        .addOption(new OptionValue(OPT_CAMERASCRIPTTYPE,"js",OptionValueType<String>(),"The language the script is written in."))
         ;
 }
 

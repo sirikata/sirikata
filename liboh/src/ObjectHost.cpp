@@ -89,18 +89,19 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
         mContext, space_id, sidmap,
         std::tr1::bind(&ObjectHost::handleObjectConnected, this, _1, _2),
         std::tr1::bind(&ObjectHost::handleObjectMigrated, this, _1, _2, _3),
-        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2)
+        std::tr1::bind(&ObjectHost::handleObjectMessage, this, _1, space_id, _2),
+        std::tr1::bind(&ObjectHost::handleObjectDisconnected, this, _1, _2)
     );
     mSessionManagers[space_id] = smgr;
     smgr->start();
 }
 
 void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
-    NOT_IMPLEMENTED(oh);
+    // ignored
 }
 
 void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
-    NOT_IMPLEMENTED(oh);
+    // ignored
 }
 
 void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
@@ -115,6 +116,23 @@ void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& spac
     }
 }
 
+void ObjectHost::handleObjectDisconnected(const UUID& internalID, Disconnect::Code) {
+    // ignored
+}
+
+//This function just returns the first space id in the unordered map
+//associated with mSessionManagers.
+SpaceID ObjectHost::getDefaultSpace()
+{
+    if (mSessionManagers.size() == 0)
+    {
+        std::cout<<"\n\nERROR: no record of space in object host\n\n";
+        assert(false);
+    }
+
+    return mSessionManagers.begin()->first;
+}
+
 // Primary HostedObject API
 
 void ObjectHost::connect(
@@ -125,11 +143,29 @@ void ObjectHost::connect(
     const String& mesh,
     const SolidAngle& init_sa,
     ConnectedCallback connected_cb,
-    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb)
+    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+    DisconnectedCallback disconnected_cb
+)
 {
     bool with_query = init_sa != SolidAngle::Max;
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-    mSessionManagers[space]->connect(obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh, connected_cb, migrated_cb, stream_created_cb);
+    mSessionManagers[space]->connect(
+        obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,
+        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, connected_cb),
+        migrated_cb,
+        stream_created_cb,
+        disconnected_cb
+    );
+}
+
+void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb) {
+    ConnectionInfo info;
+    info.server = server;
+    info.loc = loc;
+    info.orient = orient;
+    info.bnds = bnds;
+    info.mesh = mesh;
+    cb(space, obj, info);
 }
 
 void ObjectHost::disconnect(HostedObjectPtr obj, const SpaceID& space) {
@@ -184,7 +220,8 @@ ObjectHost::SSTStreamPtr ObjectHost::getSpaceStream(const SpaceID& space, const 
 }
 
 
-void ObjectHost::start() {
+void ObjectHost::start()
+{
 }
 
 void ObjectHost::stop() {
@@ -194,11 +231,32 @@ void ObjectHost::stop() {
     }
 }
 
-ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const {
+ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
+{
     DEPRECATED();
     NOT_IMPLEMENTED(oh);
     return NULL;
 }
+
+
+void ObjectHost::persistEntityState( const String& filename)
+{
+    std::ofstream fp(filename.c_str());
+
+
+    fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\",\"objid\",\"script_type\",\"script_options\"" << std::endl;
+
+
+
+    HostedObjectMap::iterator it = mHostedObjects.begin();
+    for( ; it != mHostedObjects.end(); it++)
+    {
+        HostedObjectPtr objPtr = (*it).second;
+        objPtr->persistToFile(fp);
+    }
+}
+
+
 
 
 

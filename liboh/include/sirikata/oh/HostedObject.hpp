@@ -38,17 +38,23 @@
 
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
+#include <sirikata/oh/ObjectScriptManager.hpp>
+
+#include <map>
+#include <list>
+#include <utility>
 
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <sirikata/core/network/SSTImpl.hpp>
 
 #include <sirikata/core/transfer/URI.hpp>
 
+#include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
+#include <sirikata/oh/PerPresenceData.hpp>
+#include <sirikata/proxyobject/SimulationFactory.hpp>
 
 namespace Sirikata {
-class ObjectHostContext;
-class ObjectHost;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
@@ -58,28 +64,54 @@ typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 
 class ObjectScript;
 class HostedObject;
+class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
 //------- Private inner classes
-    class PerSpaceData;
+
     struct PrivateCallbacks;
 protected:
 
 //------- Members
     ObjectHostContext* mContext;
 
-    typedef std::map<SpaceID, PerSpaceData> SpaceDataMap;
+  public:
+     struct EntityState
+     {
+       public:
+
+         String objType;
+         String subType;
+         String name;
+         Vector3d pos;
+         Quaternion orient;
+         Vector3f vel;
+         Vector3f rot;
+         float angular_speed;
+         String mesh;
+         float scale;
+         String objectID;
+         String script_type;
+         String script_opts;
+         void persistToFile(std::ofstream&);
+
+     };
+     typedef struct EntityState EntityState;
+
+  private:
+    //SpaceSet mSpaces;
+
+    typedef std::map<SpaceObjectReference, PerPresenceData> SpaceDataMap;
     SpaceDataMap *mSpaceData;
 
     int mNextSubscriptionID;
     ObjectScript *mObjectScript;
     ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
-    bool mIsCamera; // FIXME hack so we can get a camera up and running, need
-                    // more flexible selection of proxy type
 
     ODP::DelegateService* mDelegateODPService;
+
 
     typedef EndPoint<SpaceObjectReference> EndPointType;
     typedef BaseDatagramLayer<SpaceObjectReference> BaseDatagramLayerType;
@@ -89,14 +121,19 @@ protected:
     typedef Connection<SpaceObjectReference> SSTConnection;
     typedef SSTConnection::Ptr SSTConnectionPtr;
 
+
+
+
     // FIXME maintain a proper map here or put in per-presence data
     std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;
 
 //------- Constructors/Destructors
+
 private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
+    friend class PerPresenceData;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
-    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid, bool is_camera);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
@@ -106,8 +143,15 @@ public:
 private:
 //------- Private member functions:
     // When a connection to a space is setup, initialize it to handle default behaviors
-    void initializePerSpaceData(PerSpaceData& psd, ProxyObjectPtr selfproxy);
+    void initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
 public:
+
+    /** Get a set of spaces the object is currently connected to. */
+    typedef std::set<SpaceObjectReference> SpaceObjRefSet;
+    void getSpaceObjRefs(SpaceObjRefSet& ss) const;
+
+
+
 //------- Public member functions:
     ObjectHostContext* context() { return mContext; }
     const ObjectHostContext* context() const { return mContext; }
@@ -117,8 +161,12 @@ public:
     virtual Time localTime(const SpaceID& space, const Time& t);
     virtual Time currentLocalTime();
 
-    ///makes a new objects with objectName startingLocation mesh and connect to some interesting space [not implemented]
-    void initializeScript(const String&script, const std::map<String,String> &args);
+    ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
+    void initializeScript(const String& script, const String& args);
+
+    bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+    void processInitScriptMessage(MemoryReference& body);
+    bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
     /// Attempt to restore this item from database including script
     //void initializeRestoreFromDatabase(const SpaceID&spaceID);
@@ -127,6 +175,9 @@ public:
      *  underlying ObjectHost.
      */
     void init();
+    void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
+
+
 
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
@@ -138,10 +189,18 @@ public:
     ObjectHost *getObjectHost()const {return mObjectHost;}
 
     /// Gets the proxy object representing this HostedObject inside space.
-    const ProxyObjectPtr &getProxy(const SpaceID &space) const;
+    ///const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
+    const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
 
 public:
+
+    ObjectReference getObjReference(const SpaceID& space);
+
+    void runSimulation(const SpaceObjectReference& sporef, const String& simName);
+
+
+
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
         persistence messages.
@@ -150,7 +209,13 @@ public:
         return mInternalObjectReference;
     }
 
-    virtual ProxyManagerPtr getProxyManager(const SpaceID& space);
+
+    virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
+    virtual ProxyManagerPtr getDefaultProxyManager(const SpaceID& space);
+    virtual ProxyObjectPtr  getDefaultProxyObject(const SpaceID& space);
+
+    /** Called once per frame, at a certain framerate. */
+    void tick();
 
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
@@ -161,40 +226,54 @@ public:
         @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
         @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
     */
+
     void connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
-        const BoundingSphere3f&meshBounds,
+        const BoundingSphere3f &meshBounds,
+        const String& mesh,
+        const UUID&object_uuid_evidence,
+        PerPresenceData* ppd);
+
+    void connect(
+        const SpaceID&spaceID,
+        const Location&startingLocation,
+        const BoundingSphere3f &meshBounds,
         const String& mesh,
         const SolidAngle& queryAngle,
-        const UUID&evidence);
-    void connect(
-        const SpaceID&spaceID,
-        const Location&startingLocation,
-        const BoundingSphere3f&meshBounds,
-        const String& mesh,
-        const UUID&evidence);
+        const UUID&object_uuid_evidence,
+        PerPresenceData* ppd);
+
+
+    Location getLocation(const SpaceID& space, const ObjectReference& oref);
 
   private:
+
     // Because IOStrand->wrap() can't handle > 5 parameters (because the
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ServerID server,
-        const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds);
+
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+
+    bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
     void handleStreamCreated(const SpaceObjectReference& spaceobj);
+    void handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc);
 
   public:
     /// Disconnects from the given space by terminating the corresponding substream.
-    void disconnectFromSpace(const SpaceID&id);
+    void disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref);
 
     /// Receive an ObjectMessage from the space via the ObjectHost. Translate it
     /// to our runtime ODP structure and deliver it.
     void receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg);
 
+
   public:
+    void updateAddressable();
+
 
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
@@ -203,10 +282,16 @@ public:
         return std::tr1::static_pointer_cast<HostedObject>(this->VWObject::getSharedPtr());
     }
 
+    Network::IOService* getIOService();
+    //void registerTimeoutCallback(const Duration& dur, std::tr1::function<void( );
+
 
   public:
     // Identification
-    virtual SpaceObjectReference id(const SpaceID& space) const;
+    // virtual SpaceObjectReference id(const SpaceID& space) const;
+
+    virtual ProxyManagerPtr presence(const SpaceObjectReference& sor);
+    virtual ProxyObjectPtr self(const SpaceObjectReference& sor);
 
     // ODP::Service Interface
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port);
@@ -215,15 +300,40 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
 
+
     // Movement Interface
-    virtual void requestLocationUpdate(const SpaceID& space, const TimedMotionVector3f& loc);
+    //note: location update services both position and velocity
+
+    virtual void requestLocationUpdate(const SpaceID& space, const ObjectReference& oref,const TimedMotionVector3f& loc);
+
+
     virtual void requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos);
     virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
-    virtual void requestOrientationUpdate(const SpaceID& space, const TimedMotionQuaternion& orient);
+
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
-    virtual void requestBoundsUpdate(const SpaceID& space, const BoundingSphere3f& bounds);
-    virtual void requestMeshUpdate(const SpaceID& space, const String& mesh);
+
+
+    virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
+
+    virtual void requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& orient);
+    virtual void requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat);
+
+    virtual Quaternion requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref);
+    virtual Quaternion requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref);
+    virtual Quaternion requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref);
+
+
+    virtual BoundingSphere3f requestCurrentBounds(const SpaceID& space,const ObjectReference& oref);
+    virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
+    virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
+
+
+    virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
+
+    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle);
+    virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
+
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
@@ -240,17 +350,28 @@ public:
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
     // Helper for creating the correct type of proxy
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
-    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, bool is_camera);
+
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
+    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri);
+    ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update
-    void sendLocUpdateRequest(const SpaceID& space, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
+    void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
+
+    public:
+    HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);
+    void persistToFile(std::ofstream& file);
 };
+
+
+
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 /// weak_ptr, to be used to hold onto a HostedObject reference. @see SelfWeakPtr.
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
+
+
 
 }
 

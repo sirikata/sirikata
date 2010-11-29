@@ -130,6 +130,7 @@ int main(int argc, char** argv) {
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
+    Network::IOStrand* iostrand = ios->createStrand();
 
     String stream_type = GetOptionValue<String>("ohstreamlib");
     String stream_opts = GetOptionValue<String>("ohstreamoptions");
@@ -137,7 +138,7 @@ int main(int argc, char** argv) {
     Sirikata::Network::StreamListener* listener =
         Sirikata::Network::StreamListenerFactory::getSingleton()
         .getConstructor(stream_type)
-        (ios,
+        (iostrand,
             Sirikata::Network::StreamListenerFactory::getSingleton()
             .getOptionParser(stream_type)
             (stream_opts));
@@ -151,7 +152,7 @@ int main(int argc, char** argv) {
     Sirikata::Network::StreamListener* pbj_listener =
         Sirikata::Network::StreamListenerFactory::getSingleton()
         .getConstructor(stream_type)
-        (ios,
+        (iostrand,
             Sirikata::Network::StreamListenerFactory::getSingleton()
             .getOptionParser(stream_type)
             (stream_opts));
@@ -163,6 +164,7 @@ int main(int argc, char** argv) {
 
     ios->run();
 
+    delete iostrand;
     Network::IOServiceFactory::destroyIOService(ios);
 
     return 0;

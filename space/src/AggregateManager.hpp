@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+
 #ifndef _AGGREGATE_MANAGER_HPP
 #define _AGGREGATE_MANAGER_HPP
 
@@ -42,10 +43,12 @@
 
 #include <sirikata/space/LocationService.hpp>
 
-#include <sirikata/proxyobject/Meshdata.hpp>
-#include <sirikata/proxyobject/ModelsSystem.hpp>
+
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
 
 #include <sirikata/core/util/MeshSimplifier.hpp>
+
 
 namespace Sirikata {
 
@@ -56,7 +59,9 @@ private:
   LocationService* mLoc;
 
   ModelsSystem* mModelsSystem;
+
   MeshSimplifier mMeshSimplifier;
+
 
   typedef struct AggregateObject{
     UUID mUUID;
@@ -68,11 +73,14 @@ private:
     Time mLastGenerateTime;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID) :
-      mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null())
+      mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
+      mTreeLevel(0)
     {
       mMeshdata = std::tr1::shared_ptr<Meshdata>();
     }
-    
+
+    uint16 mTreeLevel;
+
   } AggregateObject;
 
 
@@ -80,31 +88,12 @@ private:
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher > mAggregateObjects;
 
   boost::mutex mMeshStoreMutex;
-  std::tr1::unordered_map<String, MeshdataPtr> mMeshStore; 
+  std::tr1::unordered_map<String, MeshdataPtr> mMeshStore;
 
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
 
   bool mThreadRunning;
-
-
-
-  std::vector<UUID> mEmptyVector;
-  std::vector<UUID>& getChildren(const UUID& uuid) {
-    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-
-    if (mAggregateObjects.find(uuid) == mAggregateObjects.end()) {
-      return mEmptyVector;
-    }
-
-    std::vector<UUID>& children = mAggregateObjects[uuid]->mChildren;
-
-    return children;
-  }
-
-  void generateAggregateMeshAsync(const UUID uuid, Time postTime);
-
-
 
   boost::mutex mUploadQueueMutex;
 
@@ -112,8 +101,21 @@ private:
 
   boost::condition_variable mCondVar;
 
-  void uploadQueueServiceThread();
+  Time mAggregateGenerationStartTime;
 
+  std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher> mDirtyAggregateObjects;
+
+  std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
+
+  std::vector<UUID>& getChildren(const UUID& uuid);
+
+  void generateMeshesFromQueue(Time postTime);
+
+  void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
+
+  void generateAggregateMeshAsync(const UUID uuid, Time postTime);
+
+  void uploadQueueServiceThread();
 
 
 public:

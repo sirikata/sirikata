@@ -36,7 +36,6 @@
 
 #include "SimplePriorityAggregation.hpp"
 
-#include <iostream>
 #include <map>
 #include <vector>
 #include <boost/multi_index_container.hpp>
@@ -45,18 +44,7 @@
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/hashed_index.hpp>
-#include <boost/format.hpp>
 #include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
-#include <boost/lambda/if.hpp>
-#include <boost/lambda/loops.hpp>
-#include <boost/lambda/switch.hpp>
-#include <boost/lambda/construct.hpp>
-#include <boost/lambda/casts.hpp>
-#include <boost/lambda/exceptions.hpp>
-#include <boost/lambda/algorithm.hpp>
-#include <boost/lambda/numeric.hpp>
-#include <boost/asio.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/util/Thread.hpp>
@@ -105,6 +93,9 @@ class SIRIKATA_EXPORT TransferMediator
 		//Adds an additional client's request
 		void setClientPriority(std::tr1::shared_ptr<TransferRequest> req);
 
+        //Removes a client request from this aggregate request
+        void removeClient(std::string clientID);
+
 		//Returns a unique identifier for this aggregated request
 		const std::string& getIdentifier() const;
 
@@ -130,9 +121,9 @@ class SIRIKATA_EXPORT TransferMediator
 		std::tr1::shared_ptr<AggregateRequest>,
 		indexed_by<
 			hashed_unique<tag<tagID>, const_mem_fun<AggregateRequest,const std::string &,&AggregateRequest::getIdentifier> >,
-		ordered_non_unique<tag<tagPriority>,
-member<AggregateRequest,TransferRequest::PriorityType,&AggregateRequest::mPriority>,
-std::greater<TransferRequest::PriorityType> >
+			ordered_non_unique<tag<tagPriority>,
+			member<AggregateRequest,TransferRequest::PriorityType,&AggregateRequest::mPriority>,
+			std::greater<TransferRequest::PriorityType> >
 		>
 	> AggregateList;
 	AggregateList mAggregateList;
@@ -175,12 +166,12 @@ std::greater<TransferRequest::PriorityType> >
 		void cleanup();
 	};
 
-        friend class PoolWorker;
-        //Helper for compatibility with compilers where TransferPool declaring
-        //TransferMediator as a friend does not give PoolWorker access
-        static inline std::tr1::shared_ptr<TransferRequest> getRequest(std::tr1::shared_ptr<TransferPool> pool) {
-            return pool->getRequest();
-        }
+    friend class PoolWorker;
+    //Helper for compatibility with compilers where TransferPool declaring
+    //TransferMediator as a friend does not give PoolWorker access
+    static inline std::tr1::shared_ptr<TransferRequest> getRequest(std::tr1::shared_ptr<TransferPool> pool) {
+        return pool->getRequest();
+    }
 
 	//Maps a client ID string to the PoolWorker class
 	typedef std::map<std::string, std::tr1::shared_ptr<PoolWorker> > PoolType;

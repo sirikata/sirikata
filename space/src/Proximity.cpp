@@ -170,8 +170,6 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
 
     mProxServerMessageService = mContext->serverRouter()->createServerMessageService("proximity");
 
-
-
     // Start the processing thread
     mProxThread = new Thread( std::tr1::bind(&Proximity::proxThreadMain, this) );
 }
@@ -218,6 +216,38 @@ void Proximity::shutdown() {
             mProxService->stop();
         mProxThread->join();
     }
+}
+
+void Proximity::newSession(ObjectSession* session) {
+    using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
+
+    Stream<SpaceObjectReference>::Ptr strm = session->getStream();
+    Connection<SpaceObjectReference>::Ptr conn = strm->connection().lock();
+    assert(conn);
+
+    SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
+
+    conn->registerReadDatagramCallback( OBJECT_PORT_PROXIMITY,
+        std::tr1::bind(
+            &Proximity::handleObjectProximityMessage, this,
+            sourceObject.object().getAsUUID(),
+            _1, _2
+        )
+    );
+}
+
+void Proximity::handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length) {
+    Sirikata::Protocol::Prox::QueryRequest prox_update;
+    bool parse_success = prox_update.ParseFromString( String((char*) buffer, length) );
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE_BUFFER(prox, error, ((char*)buffer), length);
+        return;
+    }
+
+    if (!prox_update.has_query_angle()) return;
+
+    updateQuery(objid, mLocService->location(objid), mLocService->bounds(objid), SolidAngle(prox_update.query_angle()));
 }
 
 // Setup all known servers for a server query update
@@ -361,7 +391,10 @@ std::string Proximity::generateMigrationData(const UUID& obj, ServerID source_se
 void Proximity::receiveMigrationData(const UUID& obj, ServerID source_server, ServerID dest_server, const std::string& data) {
     Sirikata::Protocol::Prox::ObjectMigrationData migr_data;
     bool parse_success = migr_data.ParseFromString(data);
-    assert(parse_success);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(prox, error, data);
+        return;
+    }
 
     SolidAngle obj_query_angle(migr_data.min_angle());
     addQuery(obj, obj_query_angle);
@@ -397,10 +430,8 @@ void Proximity::invokeAggregateEventHandler() {
 }
 
 void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
-
-
     // On addition, an "aggregate" will have no children, i.e. its zero sized.
-  
+
     mAggregateEventHandlers.push(
         std::tr1::bind(
             &LocationService::addLocalAggregateObject, mLocService,
@@ -411,14 +442,15 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
             ""
         )
     );
-  
+
     scheduleAggregateEventHandler();
 
 
     mAggregateManager->addAggregate(objid);
 }
 
-  void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
+
+void Proximity::updateAggregateLoc(const UUID& objid, const BoundingSphere3f& bnds) {
 
   if (mLocService->contains(objid)) {
     mLocService->updateLocalAggregateLocation(
@@ -469,10 +501,10 @@ void Proximity::aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& ob
             &Proximity::updateAggregateLoc, this,
             objid, bnds
         )
-    );   
+    );
   }
   scheduleAggregateEventHandler();
-      
+
   if (mLocService->contains(objid) && mLocService->bounds(objid) != bnds)
     mAggregateManager->generateAggregateMesh(objid, Duration::seconds(300.0+rand()%300));
 }
@@ -593,7 +625,8 @@ void Proximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMo
 void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_stream) {
     using std::tr1::placeholders::_1;
 
-    ProxStreamPtr base_stream = mContext->getObjectStream(ObjectReference(objid));
+    ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(objid));
+    ProxStreamPtr base_stream = session != NULL ? session->getStream() : ProxStreamPtr();
     if (!base_stream) {
         mContext->mainStrand->post(
             Duration::milliseconds((int64)5),
@@ -724,8 +757,6 @@ void Proximity::poll() {
         sendObjectResult(msg_front);
         mObjectResultsToSend.pop_front();
     }
-
-
 }
 
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
@@ -926,6 +957,7 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                 UUID objid = evt.additions()[aidx].id();
                 if (mLocCache->tracking(objid)) { // If the cache already lost it, we can't do anything
                     count++;
+
                     mContext->mainStrand->post(
                         std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
                     );

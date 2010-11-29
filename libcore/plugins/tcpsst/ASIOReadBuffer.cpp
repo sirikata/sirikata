@@ -32,6 +32,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/Asio.hpp>
+#include <sirikata/core/network/IOStrandImpl.hpp>
 #include "TcpsstUtil.hpp"
 #include "TCPStream.hpp"
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
@@ -63,21 +64,31 @@ struct ASIOReadBufferUtil {
     }
 };
 
-void ASIOReadBuffer::bindFunctions() {
-    mAsioReadIntoChunk=std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
-                                      this,
-                                      _1,
-                                      _2);
-    mAsioReadIntoFixedBuffer=std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
-                                      this,
-                                      _1,
-                                      _2);
-
-    mAsioReadIntoZeroDelimChunk=std::tr1::bind(&ASIOReadBuffer::asioReadIntoZeroDelimChunk,
-                                      this,
-                                      _1,
-                                      _2);
-
+void ASIOReadBuffer::bindFunctions(IOStrand* strand) {
+    mAsioReadIntoChunk =
+        strand->wrap(
+            std::tr1::bind(&ASIOReadBuffer::asioReadIntoChunk,
+                this,
+                _1,
+                _2
+            )
+        );
+    mAsioReadIntoFixedBuffer =
+        strand->wrap(
+            std::tr1::bind(&ASIOReadBuffer::asioReadIntoFixedBuffer,
+                this,
+                _1,
+                _2
+            )
+        );
+    mAsioReadIntoZeroDelimChunk =
+        strand->wrap(
+            std::tr1::bind(&ASIOReadBuffer::asioReadIntoZeroDelimChunk,
+                this,
+                _1,
+                _2
+            )
+        );
 }
 
 void BufferPrint(void * pointerkey, const char extension[16], const void * vbuf, size_t size) ;
@@ -180,7 +191,6 @@ static Stream::StreamID parseId(Chunk&newChunk,int&outBuffPosn) {
 }
 
 //Adding this bug to the stream library and turning on base64 triggers a space server crash, so we need to fix it ASAP
-//#define TRIGGER_SPACE_BUG
 ASIOReadBuffer::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const MultiplexedSocketPtr &parentSocket, unsigned int whichSocket,const uint8*begin, const uint8*end, const Stream::PauseReceiveCallback& pauseReceive){
     if (mCachedRejectedChunk) {
         bool user_paused_stream_cached = false;
@@ -203,9 +213,6 @@ ASIOReadBuffer::ReceivedResponse ASIOReadBuffer::processFullZeroDelimChunk(const
     if (parsedId==false) {
         return AcceptedData;//burn it, runt packet
     }
-#ifdef TRIGGER_SPACE_BUG
-    id=Stream::StreamID(id.read()%10);
-#endif
     begin+=streamIdOffset;
 
 
@@ -527,7 +534,8 @@ void ASIOReadBuffer::asioReadIntoFixedBuffer(const ErrorCode&error,std::size_t b
     }
 }
 ASIOReadBuffer::ASIOReadBuffer(const MultiplexedSocketPtr &parentSocket,unsigned int whichSocket):mParentSocket(parentSocket){
-    bindFunctions();
+    IOStrand* strand = parentSocket->getStrand();
+    bindFunctions(strand);
     mReadStatus=READING_FIXED_BUFFER;
     mBufferPos=0;
     mWhichBuffer=whichSocket;

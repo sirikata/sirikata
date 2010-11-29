@@ -74,6 +74,12 @@ SolidAngle SolidAngle::fromCenterRadius(const Vector3<float>& to_center, float r
     return SolidAngle( 2.0f * Pi * (1.0f - cos_alpha) );
 }
 
+float SolidAngle::maxDistance(float obj_radius) const {
+    float C = 1.f - mSolidAngle / (2.0f * SolidAngle::Pi);
+    C = 1.f - C*C;
+    return obj_radius / C;
+}
+
 SolidAngle SolidAngle::operator+(const SolidAngle& rhs) const {
     return SolidAngle( mSolidAngle + rhs.mSolidAngle );
 }

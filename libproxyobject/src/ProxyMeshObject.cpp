@@ -40,15 +40,14 @@ using namespace Sirikata::Transfer;
 
 namespace Sirikata {
 
+
 ProxyMeshObject::ProxyMeshObject ( ProxyManager* man, SpaceObjectReference const& id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor )
  : MeshProvider (),
    ProxyObject ( man, id, vwobj, owner_sor),
    mMeshURI(),
    mScale(1.f, 1.f, 1.f)
 {
-
 }
-
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshObject
 
@@ -58,6 +57,7 @@ void ProxyMeshObject::setMesh ( URI const& mesh )
     ProxyObjectPtr ptr = getSharedPtr();
     if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
 }
+
 
 URI const& ProxyMeshObject::getMesh () const
 {

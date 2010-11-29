@@ -35,10 +35,14 @@
 
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
-#include "WebViewManager.hpp"
-#include <sirikata/proxyobject/ProxyObjectListener.hpp>
-#include <sirikata/proxyobject/WebViewListener.hpp>
-#include <sirikata/proxyobject/ProxyWebViewObject.hpp>
+#include "ViewportOverlay.hpp"
+
+#ifdef HAVE_BERKELIUM
+#include "berkelium/Berkelium.hpp"
+#include "berkelium/Widget.hpp"
+#include "berkelium/Window.hpp"
+#include "berkelium/WindowDelegate.hpp"
+#endif
 
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
@@ -52,6 +56,10 @@ namespace Berkelium {
 #endif
 
 namespace Sirikata {
+
+typedef Sirikata::DataReference<const char*> JSArgument;
+typedef std::vector<JSArgument> JSArguments;
+
 namespace Graphics {
 
 	class WebView;
@@ -65,20 +73,12 @@ namespace Graphics {
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
 	class WebView
-        : public Ogre::ManualResourceLoader,
+        : public Ogre::ManualResourceLoader
 #ifdef HAVE_BERKELIUM
-          public Berkelium::WindowDelegate,
+        , public Berkelium::WindowDelegate
 #endif
-          public Sirikata::WebViewListener,
-          public Sirikata::ProxyObjectListener
 	{
 	public:
-
-            // ProxyObjectListener Interface
-            void destroyed();
-
-
-		void setProxyObject(const std::tr1::shared_ptr<ProxyWebViewObject>& proxyObject);
 
 		/**
 		* Loads a URL into the main frame.
@@ -270,6 +270,11 @@ namespace Graphics {
 		std::string getName();
 
 		/**
+		* Returns the type of this WebView.
+		*/
+		std::string getType();
+
+		/**
 		* Returns the name of the Ogre::Material used internally by this WebView.
 		*/
 		std::string getViewTextureName();
@@ -345,6 +350,20 @@ namespace Graphics {
 
 		void resize(int width, int height);
 
+		class WebViewBorderSize {
+		public:
+		    unsigned short mBorderLeft;
+		    unsigned short mBorderRight;
+		    unsigned short mBorderTop;
+		    unsigned short mBorderBottom;
+		    WebViewBorderSize(unsigned short left, unsigned short right,
+		            unsigned short top, unsigned short bottom)
+		    : mBorderLeft(left), mBorderRight(right),
+		      mBorderTop(top), mBorderBottom(bottom) {}
+		};
+
+		static const WebViewBorderSize mDefaultBorder;
+
 	protected:
 #ifdef HAVE_BERKELIUM
 		Berkelium::Window* webView;
@@ -355,6 +374,8 @@ namespace Graphics {
 #endif
         ///the name of the webview, so as to allocate predictable ogre names to the textures and materials
 		std::string viewName;
+            /// The type of the webview, which is used when generating events.
+            std::string viewType;
         ///the width of the overlay and observed pixel view of the web page
 		unsigned short viewWidth;
         ///the height of the overlay and observed pixel view of the web page
@@ -416,15 +437,14 @@ namespace Graphics {
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
 
-        ///shared pointer to proxy object that supplies this webview
-		std::tr1::shared_ptr<ProxyWebViewObject> proxyObject;
-
 		friend class WebViewManager;
 
-		WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
 
-		WebView(const std::string& name, unsigned short width, unsigned short height,
+		WebView(const std::string& name,const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
+			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border = mDefaultBorder);
+
+
+            WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
 			Ogre::FilterOptions texFiltering);
 
 		~WebView();

@@ -38,6 +38,9 @@ namespace Sirikata {
 
 void InitSpaceOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
+
+        .addOption(new OptionValue(OPT_CONFIG_FILE,"",Sirikata::OptionValueType<String>(),"Configuration file to load."))
+
         .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-local,space-standard,colladamodels",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))

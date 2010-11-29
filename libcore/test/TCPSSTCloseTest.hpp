@@ -37,6 +37,7 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOServicePool.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/util/DynamicLibrary.hpp>
@@ -55,7 +56,9 @@ class SstCloseTest : public CxxTest::TestSuite
         NUM_TEST_STREAMS=3
     };
     IOServicePool* mSendService;
+    IOStrand* mSendStrand;
     IOServicePool* mRecvService;
+    IOStrand* mRecvStrand;
     String mPort;
     int mBytes;
     int mChunks;
@@ -139,9 +142,11 @@ private:
         mBytes=65536;
         mChunks=3;
         mOffset=1;
-        mSendService = new IOServicePool(1);
-        mRecvService = new IOServicePool(1);
-        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mRecvService->service(),StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
+        mSendService = new IOServicePool(4);
+        mSendStrand = mSendService->service()->createStrand();
+        mRecvService = new IOServicePool(4);
+        mRecvStrand = mRecvService->service()->createStrand();
+        mListener = StreamListenerFactory::getSingleton().getDefaultConstructor()(mRecvStrand,StreamListenerFactory::getSingleton().getDefaultOptionParser()(String()));
         using std::tr1::placeholders::_1;
         using std::tr1::placeholders::_2;
         mListener->listen(Address("127.0.0.1",mPort),std::tr1::bind(&SstCloseTest::listenerNewStreamCallback,this,_1,_2));
@@ -167,7 +172,7 @@ public:
 
         for(int i=0;i<NUM_TEST_STREAMS;++i) {
             if (i==0||!fork) {
-                mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendService->service(),StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1")));
+                mSenders[i]=StreamFactory::getSingleton().getDefaultConstructor()(mSendStrand,StreamFactory::getSingleton().getDefaultOptionParser()(String("--parallel-sockets=1")));
                 mSenders[i]->connect(Address("127.0.0.1",mPort),
                                      &Stream::ignoreSubstreamCallback,
                                      std::tr1::bind(&SstCloseTest::connectionCallback,this,i,_1,_2),
@@ -295,6 +300,8 @@ public:
         delete mListener;
         mSendService->join();
         mRecvService->join();
+        delete mSendStrand;
+        delete mRecvStrand;
         delete mSendService;
         delete mRecvService;
 

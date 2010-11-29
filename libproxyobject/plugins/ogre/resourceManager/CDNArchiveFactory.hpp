@@ -32,13 +32,14 @@
 #ifndef _CDN_ARCHIVE_FACTORY_HPP_
 #define _CDN_ARCHIVE_FACTORY_HPP_
 
-#include "../meruCompat/MeruDefs.hpp"
 #include "../OgreHeaders.hpp"
 #include <Ogre.h>
 #include <OgreArchiveFactory.h>
 #include <OgreSingleton.h>
+#include <sirikata/core/transfer/TransferData.hpp>
 
-namespace Meru {
+namespace Sirikata {
+namespace Graphics {
 
 /** Archive factory for URLArchives, a specialization of Ogre::ArchiveFactory.
  *  See Ogre's documentation for interface details and documentation.
@@ -47,11 +48,11 @@ class CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CD
 
   friend class CDNArchive;
 
-  void addArchiveDataNoLock(unsigned int archiveName, const Ogre::String &filename, const SparseData &rbuffer);
+  void addArchiveDataNoLock(unsigned int archiveName, const Ogre::String &filename, const Transfer::SparseData &rbuffer);
 
   boost::mutex CDNArchiveMutex;
   std::map<unsigned int, std::vector <Ogre::String> > CDNArchivePackages;
-  std::tr1::unordered_map<std::string, SparseData > CDNArchiveFiles;
+  std::tr1::unordered_map<std::string, Transfer::SparseData > CDNArchiveFiles;
   int mCurArchive;
 
 public:
@@ -65,7 +66,7 @@ public:
   /**
    * Add a specific data stream to a package that will be hung onto until removeArchive is called
    */
-  void addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer);
+  void addArchiveData(unsigned int archiveName, const String &uri, const Transfer::SparseData &rbuffer);
 
   /**
    * Adds a package to the CDNArchive that will stay open until all items are used
@@ -76,7 +77,7 @@ public:
   /**
    * Adds a package to the CDNArchive and one instance of filename/data
    */
-  unsigned int addArchive(const String& uri, const SparseData &rbuffer);
+  unsigned int addArchive(const String& uri, const Transfer::SparseData &rbuffer);
 
   /**
    * Removes a package from CDNArchive that may be later opened by ogre
@@ -92,6 +93,7 @@ public:
 
 };
 
-} // namespace Meru
+} // namespace Graphics
+} // namespace Sirikata
 
 #endif //_URL_ARCHIVE_FACTORY_HPP_

@@ -48,7 +48,7 @@ SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStra
    mHandleReadStage(handle_read_stage),
    mSpace(spaceid),
    mServer(sid),
-   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(&ioStrand->service(),streamOptions)),
+   socket(Sirikata::Network::StreamFactory::getSingleton().getConstructor(GetOptionValue<String>("ohstreamlib"))(ioStrand,streamOptions)),
    mAddr(addr),
    mConnecting(false),
    receive_queue(GetOptionValue<int32>("object-host-receive-buffer"), std::tr1::bind(&ObjectMessage::size, std::tr1::placeholders::_1)),
@@ -100,7 +100,11 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
     // Parse
     ObjectMessage* msg = new ObjectMessage();
     bool parse_success = msg->ParseFromArray(&(*chunk.begin()), chunk.size());
-    assert(parse_success == true);
+    if (!parse_success) {
+        LOG_INVALID_MESSAGE(session, error, chunk);
+        delete msg;
+        return;
+    }
 
     TIMESTAMP_START(tstamp, msg);
 
@@ -120,6 +124,7 @@ void SpaceNodeConnection::handleRead(Chunk& chunk, const Sirikata::Network::Stre
     else {
         TIMESTAMP_END(tstamp, Trace::OH_DROPPED_AT_RECEIVE_QUEUE);
         TRACE_DROP(OH_DROPPED_AT_RECEIVE_QUEUE);
+        delete msg;
     }
 
     mHandleReadStage->finished();

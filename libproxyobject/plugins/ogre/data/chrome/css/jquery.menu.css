@@ -1,0 +1,72 @@
+/*
+000000 - black
+ffffff - white
+eeeeff - almost white
+
+3f75cd - darker gradient dark end
+589ae1 - darker gradient light end
+
+7798d9 - lighter gradient dark end
+87b4e7 - lighter gradient light end
+
+c8d2ff - lightest gradient dark end
+e2e7ff - lightest gradient light end
+
+004db8 - bottom border of top menu
+b4c4ff - border color for expanded menus
+
+3366cc - text color for expanded menus
+*/
+
+#root-menu-div ul {
+	border: 1px solid #b4c4ff;
+}
+#root-menu-div li{
+	white-space:nowrap;
+	cursor: pointer;
+}
+ul.menu,
+#root-menu-div ul {
+	background-color: #ffffff;
+	color: #3366cc;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+li.menu-separator.active{
+	background-color: transparent;
+}
+li.active {
+	background: -moz-linear-gradient(top,  #c8d2ff,  #e2e7ff);
+	background: -webkit-gradient(linear, left top, left bottom, from(#c8d2ff), to(#e2e7ff));
+}
+.activetarget{
+	background-color: #ffffff;
+}
+
+li.menumain {
+	float: left;
+	padding: 0 10px;
+	cursor: pointer;
+	background: -moz-linear-gradient(top,  #589ae1,  #3f75cd);
+	background: -webkit-gradient(linear, left top, left bottom, from(#589ae1), to(#3f75cd));
+	color: #eeeeff;
+	border-bottom: 1px solid #004db8;
+}
+li.menumain:hover {
+	background: -moz-linear-gradient(top,  #87b4e7,  #7798d9);
+	background: -webkit-gradient(linear, left top, left bottom, from(#87b4e7), to(#7798d9));
+}
+div.menu-item {
+	padding: 1px 10px 1px 4px;
+}
+img.menu-item-arrow{
+	position: absolute;
+	right: 4px;
+	top: 8px;
+}
+li.menu-separator{
+	border-bottom: 1px solid #b4c4ff;
+	height: 0;
+	margin: 2px 0;
+}

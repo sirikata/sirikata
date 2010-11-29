@@ -39,13 +39,13 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 #include <fstream>
 #include <vector>
 #include <string>
-#include <sirikata/proxyobject/ProxyMeshObject.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "btBulletDynamicsCommon.h"
-#include <sirikata/proxyobject/Meshdata.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 #define GRAVITY (-9.8f)
 
@@ -257,7 +257,7 @@ public:
 };//class parseOgreMesh
 
 
-typedef tr1::shared_ptr<ProxyMeshObject> ProxyMeshObjectPtr;
+typedef tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 
 class BulletSystem;
 struct positionOrientation {
@@ -309,8 +309,8 @@ class BulletObj : public MeshListener, Noncopyable {
     Vector3d mVelocity;
     btRigidBody* mBulletBodyPtr;
     btCollisionShape* mColShape;
-    ProxyMeshObjectPtr mMeshptr;
-    URI mMeshname;
+    ProxyObjectPtr mMeshptr;
+    Transfer::URI mMeshname;
     float mSizeX;
     float mSizeY;
     float mSizeZ;
@@ -368,7 +368,7 @@ public:
         virtual void onSetScale ( Vector3f const& scale );
         virtual void onSetPhysical ( PhysicalParameters const& pp );*/
 
-    virtual void onSetMesh (ProxyObjectPtr proxy, URI const& newMesh);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
         virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
         virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
@@ -460,7 +460,7 @@ public:
 };
 
 class BulletSystem: public TimeSteppedQueryableSimulation {
-    bool initialize(Provider<ProxyCreationListener*>*proxyManager,
+    bool initialize(ProxyCreationProviderPtr proxyManager,
                     const String&options);
     Context* mContext;
     Vector3f mGravity;
@@ -487,17 +487,23 @@ public:
                            float sizx, float sizy, float sizz);
     void removePhysicalObject(BulletObj*);
 
-    static TimeSteppedQueryableSimulation* create(Context* ctx,
-        Provider<ProxyCreationListener*>*proxyManager,
-            const String&options) {
+    static TimeSteppedQueryableSimulation* create(
+        Context* ctx,
+        VWObjectPtr obj,
+        const SpaceObjectReference& presenceid,
+        const String& options
+    ) {
         BulletSystem*os= new BulletSystem(ctx);
-        if (os->initialize(proxyManager,options))
-            return os;
+        ProxyManagerPtr proxyMgr = obj->presence(presenceid);
+        if (proxyMgr) {
+            if (os->initialize(proxyMgr,options))
+                return os;
+        }
         delete os;
         return NULL;
     }
 
-    BulletObj* mesh2bullet (ProxyMeshObjectPtr meshptr) {
+    BulletObj* mesh2bullet (ProxyObjectPtr meshptr) {
         BulletObj* bo=0;
         for (unsigned int i=0; i<objects.size(); i++) {
             if (objects[i]->mMeshptr==meshptr) {
@@ -516,7 +522,7 @@ public:
     virtual bool queryRay(const Vector3d& position,
                           const Vector3f& direction,
                           const double maxDistance,
-                          ProxyMeshObjectPtr ignore,
+                          ProxyObjectPtr ignore,
                           double &returnDistance,
                           Vector3f &returnNormal,
                           SpaceObjectReference &returnName);
