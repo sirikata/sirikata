@@ -225,7 +225,7 @@ v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
 
     //sender
     JSObjectScript* target = GetTargetJSObjectScript(args);
-    target->bftm_testSendMessageBroadcast(serialized_message);
+    target->testSendMessageBroadcast(serialized_message);
 
     return v8::Undefined();
 }

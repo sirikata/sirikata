@@ -56,7 +56,9 @@ namespace Sirikata {
 namespace JS {
 
 
-class JSObjectScript : public ObjectScript, public SessionEventListener {
+class JSObjectScript : public ObjectScript,
+                       public SessionEventListener,
+                       public ProxyCreationListener
 {
 
 public:
@@ -81,8 +83,8 @@ public:
 
     /** Dummy callback for testing exposing new functionality to scripts. */
     void test() const;
-    void bftm_testSendMessageBroadcast(const std::string& msgToBCast) const;
-    void bftm_debugPrintString(std::string cStrMsgBody) const;
+    void testSendMessageBroadcast(const std::string& msgToBCast) const;
+    void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, const std::string& msgBody) const;
     void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
     int  getAddressableSize();
