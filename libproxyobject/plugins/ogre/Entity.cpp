@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "boost/lexical_cast.hpp"
 #include <sirikata/proxyobject/Platform.hpp>
 #include "Entity.hpp"
 #include <sirikata/core/options/Options.hpp>

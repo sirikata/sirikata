@@ -310,31 +310,36 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
 
   int remainingVertices = totalVertices;
+  uint numSimplified = 0;
   while (remainingVertices > numVerticesLeft && vertexPairs.size() > 0) {
     const QSlimStruct& top = vertexPairs.top();
+
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
+    std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[top.mGeomIdx];
+
+    
+
     uint32 j = top.mPrimitiveIdx;
     uint32 k1 = top.mPrimitiveIndicesIdx;
     uint32 k2;
 
     switch(top.mCombination) {
-      case QSlimStruct::ONE_TWO:
-        k2 = k1+1;
-        break;
+    case QSlimStruct::ONE_TWO:
+      k2 = k1+1;
+      break;
 
-      case QSlimStruct::TWO_THREE:
-        k2 = k1 + 2;
-        k1 = k1 + 1;
+    case QSlimStruct::TWO_THREE:
+      k2 = k1 + 2;
+      k1 = k1 + 1;
 
-        break;
+      break;
 
-      case QSlimStruct::ONE_THREE:
-        k2 = k1 + 2;
-        break;
+    case QSlimStruct::ONE_THREE:
+      k2 = k1 + 2;
+      break;
 
     }
-
-    SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
-    std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[top.mGeomIdx];
+    
     unsigned short idx = curGeometry.primitives[j].indices[k1];
     unsigned short idx2 = curGeometry.primitives[j].indices[k2];
 
@@ -355,16 +360,19 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
       remainingVertices--;
      
       vertexMapping[idx2] = idx;
+
+      numSimplified++;
     }
-
-
     
 
     vertexPairs.pop();
   }
 
+
   //remove unused vertices; get new mapping from previous vertex indices to new vertex indices in vertexMapping2;
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping2;
+
+  totalVertices = 0;
 
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
@@ -373,9 +381,10 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
 
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
-    std::vector<SubMeshGeometry::TextureSet>texUVs;
+    std::vector<SubMeshGeometry::TextureSet>texUVs;    
 
-    for (uint32 j = 0 ; j < curGeometry.positions.size(); j++) {
+    
+    for (uint32 j = 0 ; j < curGeometry.positions.size() ; j++) {
       if (vertexMapping.find(j) == vertexMapping.end()) {
         oldToNewMap[j] = positions.size();
         positions.push_back(curGeometry.positions[j]);
@@ -387,6 +396,7 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
         texUVs.push_back(curGeometry.texUVs[j]);
       }
     }
+    
 
     curGeometry.positions = positions;
     curGeometry.normals = normals;
@@ -396,9 +406,15 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
   //remove degenerate triangles.
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
+
+    curGeometry.positionQs.clear(); //no longer need these.
+
     std::tr1::unordered_map<int, int>& vertexMapping =  vertexMapping1[i];
     std::tr1::unordered_map<int, int>& oldToNewMap = vertexMapping2[i];
 
+    bool hasTriangles = false;
+
+    
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
       std::vector<unsigned short> newPrimitiveList;
       for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
@@ -425,11 +441,24 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
 
       }
       curGeometry.primitives[j].indices = newPrimitiveList;
+
+
+      if (newPrimitiveList.size() != 0) {
+        hasTriangles = true;
+      }
     }
+  
+
+    if (!hasTriangles) {
+      curGeometry.positions.clear();
+      curGeometry.texUVs.clear();
+      curGeometry.normals.clear();
+    }
+
+    totalVertices += curGeometry.positions.size();
   }
 
+
 }
-
-
 
 }
