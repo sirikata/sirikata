@@ -225,9 +225,26 @@ void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const Str
     mParent->runSimulation(sporef,simname);
 }
 
-void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& mesh_name)
-{
 
+
+void JSObjectScript::create_entity(EntityCreateInfo& eci)
+{
+    FIXME_GET_SPACE_OREF();
+
+    
+    HostedObjectPtr obj = HostedObject::construct<HostedObject>(mParent->context(), mParent->getObjectHost(), UUID::random());
+    obj->init();
+    if (eci.scriptFile != "")
+        obj->initializeScript(eci.scriptFile, eci.scriptOpts);
+    
+    obj->connect(space,
+        eci.loc,
+        BoundingSphere3f(Vector3f::nil(), eci.scale),
+        eci.mesh,
+        eci.solid_angle,
+        UUID::null(),
+        NULL);
+    
   //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
 
   // get the script type
@@ -256,7 +273,7 @@ void JSObjectScript::create_entity(Vector3d& vec, String& script_name, String& m
   // //serialized.length()));
   // mCreateEntityPort->send(dest, MemoryReference(serializedCreate));
 
-    assert(false);
+    // assert(false);
 }
 
 

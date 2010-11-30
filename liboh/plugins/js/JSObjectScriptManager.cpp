@@ -65,7 +65,6 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
-
     OptionValue* import_paths;
     InitializeClassOptions(
         "jsobjectscriptmanager",this,

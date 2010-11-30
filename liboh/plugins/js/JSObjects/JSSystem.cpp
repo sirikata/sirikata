@@ -50,12 +50,13 @@ v8::Handle<v8::Value> ScriptUpdateAddressable(const v8::Arguments& args)
 //third argument is the mesh file to use.
 v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 {
-    if (args.Length() != 3)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>, <script filename>, <mesh uri> arguments")) );
+    if (args.Length() != 5)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>, <script filename>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
 
   JSObjectScript* target_script = GetTargetJSObjectScript(args);
   // get the location from the args
 
+  //get position
   Handle<Object> val_obj = ObjectCast(args[0]);
   if( !Vec3Validate(val_obj))
       return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
@@ -73,8 +74,38 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
   const char* mesh_cstr = ToCString(mesh_str);
   String mesh(cstr);
 
+  //get the scale
+  Handle<Object> scale_arg = ObjectCast(args[3]);
+  if (!NumericValidate(scale_arg))
+      return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
+  
+  float scale  =  NumericExtract(scale_arg);
 
-  target_script->create_entity(pos, script,mesh);
+  //get the solid angle
+  Handle<Object> qa_arg = ObjectCast(args[4]);
+  if (!NumericValidate(qa_arg))
+      return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
+
+  SolidAngle new_qa(NumericExtract(qa_arg));
+
+
+
+  //parse a bunch of arguments here
+  EntityCreateInfo eci;
+  eci.scriptFile = script;
+  eci.mesh = mesh;
+
+//  oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
+  
+  eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
+
+  
+  eci.solid_angle = new_qa;
+  eci.scale = scale;
+  
+  
+  //target_script->create_entity(pos, script,mesh);
+  target_script->create_entity(eci);
 
 
   return v8::Undefined();

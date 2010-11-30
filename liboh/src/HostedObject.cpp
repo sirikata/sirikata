@@ -228,11 +228,11 @@ bool myisalphanum(char c) {
 void HostedObject::initializeScript(const String& script, const String& args)
 {
     if (mObjectScript) {
-        SILOG(oh,warn,"[OH] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
+        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
         return;
     }
 
-    SILOG(oh,debug,"[OH] Creating a script object for " << getUUID().toString() << "(internal id)");
+    SILOG(oh,debug,"[HO] Creating a script object for " << getUUID().toString() << "(internal id)");
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);

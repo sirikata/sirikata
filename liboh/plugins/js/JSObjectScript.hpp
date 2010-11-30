@@ -55,6 +55,18 @@
 namespace Sirikata {
 namespace JS {
 
+struct EntityCreateInfo
+{
+    String scriptFile;
+    String scriptOpts;
+    SpaceID spaceID;
+    Location loc;
+    float  scale;
+    String mesh;
+    SolidAngle solid_angle;
+};
+
+
 
 class JSObjectScript : public ObjectScript,
                        public SessionEventListener,
@@ -101,8 +113,8 @@ public:
     void reboot();
 
     /** create a new entity at the run time */
-    void create_entity(Vector3d& vec, String& script_name, String& mesh_name);
-
+    void create_entity(EntityCreateInfo& eci);
+    
     /** create a new presence of this entity */
     //void create_presence(const SpaceID&);
     void create_presence(const SpaceID& new_space,std::string new_mesh);
