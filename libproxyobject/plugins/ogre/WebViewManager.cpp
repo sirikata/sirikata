@@ -114,7 +114,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->setTransparent(true);
 */
 
-        chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView = createWebView("__chrome", "__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
         chromeWebView->loadFile("chrome/navbar.html");
 
         /*
@@ -229,7 +229,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, const std
 
 
         WebView* newWebView = new WebView(webViewName, webViewType,width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
-            viewport? viewport : defaultViewport, border);
+            viewport? viewport : defaultViewport);
         newWebView->createWebView(asyncRender, maxAsyncRenderRate);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -792,7 +792,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventP
 
 Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::EventPtr evt)
 {
-    
+
     MouseDownEventPtr e = std::tr1::dynamic_pointer_cast<MouseDownEvent>(evt);
     if (!e) {
         return Sirikata::Task::EventResponse::nop();

@@ -614,7 +614,7 @@ IF(WIN32)
   SET(BERKELIUM_TARGET_LIBRARIES)
 ELSE()
   # FIXME real check for berkelium + chrome
-  IF(EXISTS ${TOP_LEVEL}/dependencies/chromium AND EXISTS ${TOP_LEVEL}/dependencies/chromium/chromium)
+  IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     #Prevent submodule from making a CHROME_SYMLINK_TARGET
     SET(CHROME_SYMLINKS_TARGET cppoh)
     SET(CHROME_SYMLINKS_BINARIES ${CHROME_SYMLINKS_BINARIES}
@@ -624,10 +624,7 @@ ELSE()
                    ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d
                    ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
-
-
-
-    SET(BERKELIUM_CHROME_ROOT_SEARCH_PATHS ${TOP_LEVEL}/dependencies/chromium/chromium)
+    SET(BERKELIUM_CHROME_ROOT_SEARCH_PATHS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/berkelium ${CMAKE_CURRENT_BINARY_DIR}/chrome)
 
     SET(CMAKE_MODULE_PATH ${TOP_LEVEL}/externals/berkelium ${CMAKE_MODULE_PATH})

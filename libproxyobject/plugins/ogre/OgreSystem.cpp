@@ -551,7 +551,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
 
   // Test web view
-    WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), 400, 300, OverlayPosition());
+    WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), UUID::random().rawHexData(), 400, 300, OverlayPosition());
     //view->setProxyObject(webviewpxy);
     view->loadURL("http://www.google.com");
 

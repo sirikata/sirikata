@@ -441,7 +441,7 @@ namespace Graphics {
 
 
 		WebView(const std::string& name,const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border = mDefaultBorder);
+			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport);
 
 
             WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,

@@ -49,7 +49,7 @@ namespace Graphics {
 
 using Berkelium::UTF8String;
 
-WebView::WebView(const std::string& name, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
+WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
 {
 #ifdef HAVE_BERKELIUM
