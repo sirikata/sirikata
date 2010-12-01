@@ -856,7 +856,8 @@ Berkelium::Rect WebView::getBorderedRect(const Berkelium::Rect& orig) const {
 void WebView::blitNewImage(
     HardwarePixelBufferSharedPtr pixelBuffer,
     const unsigned char* srcBuffer, const Berkelium::Rect& srcRect,
-    const Berkelium::Rect& copyRect
+    const Berkelium::Rect& copyRect,
+    bool updateAlphaCache
 ) {
     Berkelium::Rect destRect = getBorderlessRect(pixelBuffer);
 
@@ -879,13 +880,20 @@ void WebView::blitNewImage(
             ),
             Ogre::Box(borderedDestRect.left(), borderedDestRect.top() + y, borderedDestRect.right(), borderedDestRect.top() + y + 1)
         );
+
+        if(updateAlphaCache && isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch) {
+            for(int x = 0; x < destRectInSrc.width(); x++)
+                alphaCache[ alphaCachePitch*(borderedDestRect.top()+y) + (borderedDestRect.left()+x) ] =
+                    srcBuffer[ (srcRect.width()*(destRectInSrc.top()+y) + destRectInSrc.left()+x)*4 + 3 ];
+        }
     }
 }
 
 void WebView::blitScrollImage(
     HardwarePixelBufferSharedPtr pixelBuffer,
     const Berkelium::Rect& scrollOrigRect,
-    int scroll_dx, int scroll_dy
+    int scroll_dx, int scroll_dy,
+    bool updateAlphaCache
 ) {
     assert(scroll_dx != 0 || scroll_dy != 0);
 
@@ -923,6 +931,11 @@ void WebView::blitScrollImage(
     }
     Ogre::ResourcePtr shadowResource(shadow);
     Ogre::TextureManager::getSingleton().remove(shadowResource);
+
+    // FIXME We should be updating the alpha cache here, but that would require
+    // pulling data back from the card...
+    //if(updateAlphaCache && isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch) {
+    //}
 }
 #endif // HAVE_BERKELIUM
 
@@ -939,27 +952,13 @@ void WebView::onPaint(Berkelium::Window*win,
     // requires shifting existing data, some of which will be overwritten by
     // the regular dirty rect update.
     if (dx != 0 || dy != 0)
-        blitScrollImage(pixelBuffer, scroll_rect, dx, dy);
+        blitScrollImage(pixelBuffer, scroll_rect, dx, dy, false);
 
     for (size_t i = 0; i < num_copy_rects; i++)
-        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i]);
+        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i], true);
 
-    if (!backingTexture.isNull()) {
+    if (!backingTexture.isNull())
         compositeWidgets(win);
-    }
-
-/*
-    if(isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch)
-    {
-        int top = pixelBufferRect.top();
-        int left = pixelBufferRect.left();
-        for(int row = 0; row < pixelBufferRect.height(); row++) {
-            for(int col = 0; col < pixelBufferRect.width(); col++) {
-                alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * pixelBufferRect.width() + col)*4 + 3];
-            }
-        }
-    }
-*/
 #endif
 }
 void WebView::onCrashed(Berkelium::Window*) {
@@ -1127,10 +1126,10 @@ void WebView::onWidgetPaint(
 
     HardwarePixelBufferSharedPtr pixelBuffer = widgetTex->getBuffer();
     if (dx != 0 || dy != 0)
-        blitScrollImage(pixelBuffer, scroll_rect, dx, dy);
+        blitScrollImage(pixelBuffer, scroll_rect, dx, dy, false);
 
     for (size_t i = 0; i < num_copy_rects; i++)
-        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i]);
+        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i], false);
 
     compositeWidgets(win);
     SILOG(webview,debug,"onWidgetPaint");

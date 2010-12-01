@@ -383,7 +383,8 @@ namespace Graphics {
             void blitNewImage(
                 Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
                 const unsigned char* srcBuffer, const Berkelium::Rect& srcRect,
-                const Berkelium::Rect& copyRect
+                const Berkelium::Rect& copyRect,
+                bool updateAlphaCache
             );
             /** Blit scrolled image data from the buffer back to itself, in the
              *  new location.
@@ -395,7 +396,8 @@ namespace Graphics {
             void blitScrollImage(
                 Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
                 const Berkelium::Rect& scrollOrigRect,
-                int scroll_dx, int scroll_dy
+                int scroll_dx, int scroll_dy,
+                bool updateAlphaCache
             );
 
             void compositeWidgets(Berkelium::Window*);
