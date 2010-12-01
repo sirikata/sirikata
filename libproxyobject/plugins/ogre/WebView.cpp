@@ -839,71 +839,116 @@ void WebView::onScriptAlert(Berkelium::Window *win, WideString message,
 }
 
 #ifdef HAVE_BERKELIUM
-Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
-                      const unsigned char*srcBuffer, const Berkelium::Rect&rect,
-                      int dx, int dy, const Berkelium::Rect&clipRect) {
+
+Berkelium::Rect WebView::getBorderlessRect(Ogre::HardwarePixelBufferSharedPtr pixelBuffer) const {
     Berkelium::Rect pixelBufferRect;
     pixelBufferRect.mHeight=pixelBuffer->getHeight()-mBorderTop-mBorderBottom;
     pixelBufferRect.mWidth=pixelBuffer->getWidth()-mBorderLeft-mBorderRight;
     pixelBufferRect.mTop=0;
     pixelBufferRect.mLeft=0;
-    if (dx || dy) {
-        SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
-
-        Berkelium::Rect scrollRect = clipRect;
-        scrollRect.mLeft += dx;
-        scrollRect.mTop += dy;
-
-        scrollRect = scrollRect.intersect(clipRect);
-        scrollRect = scrollRect.intersect(pixelBufferRect);
-        size_t width=scrollRect.width();
-        size_t height=scrollRect.height();
-        if (width && height) {
-
-            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,Bitwise::firstPO2From(width),Bitwise::firstPO2From(height),1,1,PF_BYTE_BGRA);
-            {
-                HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();
-
-                SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
-                shadowBuffer->blit(
-                    pixelBuffer,
-                    Ogre::Box(scrollRect.left()-dx+mBorderLeft, scrollRect.top()+mBorderTop-dy, scrollRect.right()+mBorderLeft-dx, scrollRect.bottom()-dy+mBorderTop),
-                    Ogre::Box(0,0,width,height));
-
-                pixelBuffer->blit(
-                    shadowBuffer,
-                    Ogre::Box(0,0,width,height),
-                    Ogre::Box(scrollRect.left()+mBorderLeft, scrollRect.top()+mBorderTop, scrollRect.right()+mBorderLeft, scrollRect.bottom()+mBorderTop));
-            }
-            Ogre::ResourcePtr shadowResource(shadow);
-            Ogre::TextureManager::getSingleton().remove(shadowResource);
-        }
-    }
-    pixelBufferRect=pixelBufferRect.intersect(rect);
-    if (memcmp(&pixelBufferRect,&rect,sizeof(Berkelium::Rect))!=0) {
-        SILOG(webview,error,"Incoming berkelium size mismatch ["<<pixelBufferRect.left()<<' '<<pixelBufferRect.top()<<'-'<<pixelBufferRect.right()<<' '<<pixelBufferRect.bottom()<<"] != [" <<rect.left()<<' '<<rect.top()<<'-'<<rect.right()<<' '<<rect.bottom()<<"]");
-    }
-    pixelBuffer->blitFromMemory(
-        Ogre::PixelBox(pixelBufferRect.width(), pixelBufferRect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
-        Ogre::Box(pixelBufferRect.left()+mBorderLeft, pixelBufferRect.top()+mBorderTop, pixelBufferRect.right()+mBorderLeft, pixelBufferRect.bottom()+mBorderTop));
     return pixelBufferRect;
+}
+
+Berkelium::Rect WebView::getBorderedRect(const Berkelium::Rect& orig) const {
+    return orig.translate(mBorderLeft, mBorderTop);
+}
+
+void WebView::blitNewImage(
+    HardwarePixelBufferSharedPtr pixelBuffer,
+    const unsigned char* srcBuffer, const Berkelium::Rect& srcRect,
+    const Berkelium::Rect& copyRect
+) {
+    Berkelium::Rect destRect = getBorderlessRect(pixelBuffer);
+
+    destRect = destRect.intersect(srcRect);
+    destRect = destRect.intersect(copyRect);
+
+    // Find the location of the rect in the source data. It needs to be offset
+    // since newPixelBuffer doesn't necessarily cover the entire image.
+    Berkelium::Rect destRectInSrc = destRect.translate(-srcRect.left(), -srcRect.top());
+
+    Berkelium::Rect borderedDestRect = getBorderedRect(destRect);
+
+    // For new data, because of the way HardwarePixelBuffers work (no copy
+    // subregions from *Memory*), we have to copy each line over individually
+    for(int y = 0; y < destRectInSrc.height(); y++) {
+        pixelBuffer->blitFromMemory(
+            Ogre::PixelBox(
+                destRectInSrc.width(), 1, 1, Ogre::PF_A8R8G8B8,
+                const_cast<unsigned char*>(srcBuffer + (srcRect.width()*(destRectInSrc.top()+y) + destRectInSrc.left()) * 4)
+            ),
+            Ogre::Box(borderedDestRect.left(), borderedDestRect.top() + y, borderedDestRect.right(), borderedDestRect.top() + y + 1)
+        );
+    }
+}
+
+void WebView::blitScrollImage(
+    HardwarePixelBufferSharedPtr pixelBuffer,
+    const Berkelium::Rect& scrollOrigRect,
+    int scroll_dx, int scroll_dy
+) {
+    assert(scroll_dx != 0 || scroll_dy != 0);
+
+    Berkelium::Rect scrolledRect = scrollOrigRect.translate(scroll_dx, scroll_dy);
+
+    Berkelium::Rect scrolled_shared_rect = scrollOrigRect.intersect(scrolledRect);
+    // Only do scrolling if they have non-zero intersection
+    if (scrolled_shared_rect.width() == 0 || scrolled_shared_rect.height() == 0) return;
+    Berkelium::Rect shared_rect = scrolled_shared_rect.translate(-scroll_dx, -scroll_dy);
+
+    size_t width = shared_rect.width();
+    size_t height = shared_rect.height();
+
+    Ogre::TexturePtr shadow = Ogre::TextureManager::getSingleton().createManual(
+        "_ _internal","_ _internal",
+        Ogre::TEX_TYPE_2D,
+        Bitwise::firstPO2From(width), Bitwise::firstPO2From(height), 1, 1,
+        PF_BYTE_BGRA
+    );
+    {
+        HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();
+
+        Berkelium::Rect borderedScrollRect = getBorderedRect(shared_rect);
+        Berkelium::Rect borderedScrolledRect = getBorderedRect(scrolled_shared_rect);
+
+        shadowBuffer->blit(
+            pixelBuffer,
+            Ogre::Box( borderedScrollRect.left(), borderedScrollRect.top(), borderedScrollRect.right(), borderedScrollRect.bottom()),
+            Ogre::Box(0,0,width,height));
+
+        pixelBuffer->blit(
+            shadowBuffer,
+            Ogre::Box(0,0,width,height),
+            Ogre::Box(borderedScrolledRect.left(), borderedScrolledRect.top(), borderedScrolledRect.right(), borderedScrolledRect.bottom()));
+    }
+    Ogre::ResourcePtr shadowResource(shadow);
+    Ogre::TextureManager::getSingleton().remove(shadowResource);
 }
 #endif // HAVE_BERKELIUM
 
 
 void WebView::onPaint(Berkelium::Window*win,
-                      const unsigned char*srcBuffer, const Berkelium::Rect&rect,
-                      size_t numCopyRects, const Berkelium::Rect *copyRects,
-                      int dx, int dy, const Berkelium::Rect&clipRect) {
+                      const unsigned char*srcBuffer, const Berkelium::Rect& srcRect,
+                      size_t num_copy_rects, const Berkelium::Rect *copy_rects,
+                      int dx, int dy, const Berkelium::Rect& scroll_rect) {
 #ifdef HAVE_BERKELIUM
     TexturePtr texture = backingTexture.isNull()?viewTexture:backingTexture;
-
     HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
-    Berkelium::Rect pixelBufferRect=blitNewImage(pixelBuffer,srcBuffer,rect,dx,dy,clipRect);
+
+    // Now, we first handle scrolling. We need to do this first since it
+    // requires shifting existing data, some of which will be overwritten by
+    // the regular dirty rect update.
+    if (dx != 0 || dy != 0)
+        blitScrollImage(pixelBuffer, scroll_rect, dx, dy);
+
+    for (size_t i = 0; i < num_copy_rects; i++)
+        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i]);
 
     if (!backingTexture.isNull()) {
         compositeWidgets(win);
     }
+
+/*
     if(isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch)
     {
         int top = pixelBufferRect.top();
@@ -913,7 +958,8 @@ void WebView::onPaint(Berkelium::Window*win,
                 alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * pixelBufferRect.width() + col)*4 + 3];
             }
         }
-      }
+    }
+*/
 #endif
 }
 void WebView::onCrashed(Berkelium::Window*) {
@@ -1054,12 +1100,13 @@ void WebView::compositeWidgets(Berkelium::Window*win) {
 void WebView::onWidgetPaint(
         Berkelium::Window *win,
         Berkelium::Widget *wid,
-        const unsigned char *sourceBuffer,
-        const Berkelium::Rect &rect,
-        size_t numCopyRects,
-        const Berkelium::Rect *copyRects,
+        const unsigned char *srcBuffer,
+        const Berkelium::Rect &srcRect,
+        size_t num_copy_rects,
+        const Berkelium::Rect *copy_rects,
         int dx, int dy,
-        const Berkelium::Rect &scrollRect) {
+        const Berkelium::Rect &scroll_rect) {
+    return;
 #ifdef HAVE_BERKELIUM
     if (backingTexture.isNull()&&!viewTexture.isNull()) {
         backingTexture=TextureManager::getSingleton().createManual(
@@ -1077,7 +1124,14 @@ void WebView::onWidgetPaint(
         onWidgetResize(win,wid,wid->getRect().width(),wid->getRect().height());
         widgetTex=widgetTextures[wid];
     }
-    blitNewImage(widgetTex->getBuffer(),sourceBuffer,rect,dx,dy,scrollRect);
+
+    HardwarePixelBufferSharedPtr pixelBuffer = widgetTex->getBuffer();
+    if (dx != 0 || dy != 0)
+        blitScrollImage(pixelBuffer, scroll_rect, dx, dy);
+
+    for (size_t i = 0; i < num_copy_rects; i++)
+        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i]);
+
     compositeWidgets(win);
     SILOG(webview,debug,"onWidgetPaint");
 #endif //HAVE_BERKELIUM

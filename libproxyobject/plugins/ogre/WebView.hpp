@@ -366,11 +366,39 @@ namespace Graphics {
 
 	protected:
 #ifdef HAVE_BERKELIUM
-		Berkelium::Window* webView;
-        Berkelium::Rect blitNewImage(Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
-                                              const unsigned char*srcBuffer, const Berkelium::Rect&rect,
-                                              int dx, int dy, const Berkelium::Rect&clipRect);
-        void compositeWidgets(Berkelium::Window*);
+            Berkelium::Window* webView;
+
+            // Get Rect used for blitting that doesn't include borders.
+            Berkelium::Rect getBorderlessRect(Ogre::HardwarePixelBufferSharedPtr pixelBuffer) const;
+            // Get Rect offset by border
+            Berkelium::Rect getBorderedRect(const Berkelium::Rect& orig) const;
+
+            /** Blit new image data into the buffer.
+              * \param pixelBuffer the destination for the blit
+              * \param srcBuffer the raw pixel source buffer
+              * \param srcRect the rect covered by the source buffer
+              * \param copyRect the rect to copy from the source buffer to the
+              *        destination pixel buffer
+              */
+            void blitNewImage(
+                Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
+                const unsigned char* srcBuffer, const Berkelium::Rect& srcRect,
+                const Berkelium::Rect& copyRect
+            );
+            /** Blit scrolled image data from the buffer back to itself, in the
+             *  new location.
+             *  \param pixelBuffer the source and destination of the blit
+             *  \param scrollOrigRect the original rect to copy
+             *  \param scroll_dx the size of the scroll along the X axis
+             *  \param scroll_dy the size of the scroll along the Y axis
+             */
+            void blitScrollImage(
+                Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
+                const Berkelium::Rect& scrollOrigRect,
+                int scroll_dx, int scroll_dy
+            );
+
+            void compositeWidgets(Berkelium::Window*);
 #endif
         ///the name of the webview, so as to allocate predictable ogre names to the textures and materials
 		std::string viewName;
