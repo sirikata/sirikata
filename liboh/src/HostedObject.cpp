@@ -248,9 +248,14 @@ void HostedObject::initializeScript(const String& script, const String& args)
         if (passed) {
             mObjectHost->getScriptPluginManager()->load(script);
         }
+        else
+        {
+            SILOG(oh,debug,"[HO] Failed to create script for " << getUUID().toString() << "(internal id) because incorrect script type");
+        }
     }
     ObjectScriptManager *mgr = ObjectScriptManagerFactory::getSingleton().getConstructor(script)("");
     if (mgr) {
+        SILOG(oh,debug,"[HO] Creating script for " << getUUID().toString() << "(internal id) with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         mObjectScript->scriptTypeIs(script);
         mObjectScript->scriptOptionsIs(args);

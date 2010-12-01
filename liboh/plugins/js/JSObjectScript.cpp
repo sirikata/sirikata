@@ -142,7 +142,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     OptionSet* options = OptionSet::getOptions("jsobjectscript", this);
     options->parse(args);
-
+    
     // By default, our eval context has:
     // 1. Empty currentScriptDir, indicating it should only use explicitly
     //    specified search paths.
@@ -161,14 +161,23 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
     Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
-    populateSystemObject(system_obj);
+    system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+
+    //hangs math, presences, and addressable off of system_obj
+    initializeMath(system_obj);
+    initializePresences(system_obj);
+    initializeAddressable(system_obj);
+
     
     mHandlingEvent = false;
 
     // If we have a script to load, load it.
     String script_name = init_script->as<String>();
     if (!script_name.empty())
+    {
+        JSLOG(info,"Have an initial script to import from " + script_name );
         import(script_name);
+    }
 
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
@@ -187,6 +196,15 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     //register for scripting messages from user
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
+
+    //on connected, want to populate addressable array corresponding to new
+    //space and objref
+    //also want to initializePresence corresponding to it.
+
+    v8::HandleScope handle_scope;
+
+    Handle<Object> system_obj = getSystemObject();
+
 
     mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
     if (mScriptingPort)
@@ -234,8 +252,9 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
     
     HostedObjectPtr obj = HostedObject::construct<HostedObject>(mParent->context(), mParent->getObjectHost(), UUID::random());
     obj->init();
-    if (eci.scriptFile != "")
-        obj->initializeScript(eci.scriptFile, eci.scriptOpts);
+    if (eci.scriptType != "")
+        obj->initializeScript(eci.scriptType, eci.scriptOpts);
+
     
     obj->connect(space,
         eci.loc,
@@ -244,36 +263,6 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
         eci.solid_angle,
         UUID::null(),
         NULL);
-    
-  //float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
-  // get the script type
-  // String script_type = "js";
-  // Sirikata::Protocol::CreateObject creator;
-  // Sirikata::Protocol::IConnectToSpace spacer = creator.add_space_properties();
-  // Sirikata::Protocol::IObjLoc loc = spacer.mutable_requested_object_loc();
-
-  // loc.set_position(vec);
-  // loc.set_velocity(Vector3f(0,0,0));
-  // loc.set_angular_speed(0);
-  // loc.set_rotational_axis(Vector3f(1,0,0));
-
-  // creator.set_mesh(mesh_name);
-  // creator.set_scale(Vector3f(1,1,1));
-  // creator.set_script(script_type);
-  // creator.set_script_name(script_name);
-
-  // std::string serializedCreate;
-  // creator.SerializeToString(&serializedCreate);
-
-  // FIXME_GET_SPACE_OREF();
-
-  // ODP::Endpoint dest (space,oref,Services::CREATE_ENTITY);
-  // //mCreateEntityPort->send(dest, MemoryReference(serialized.data(),
-  // //serialized.length()));
-  // mCreateEntityPort->send(dest, MemoryReference(serializedCreate));
-
-    // assert(false);
 }
 
 
@@ -329,47 +318,6 @@ void JSObjectScript::test() const
 {
     testSendMessageBroadcast("default message");
 }
-
-
-//bftm
-//populates the internal addressable object references vector
-// void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
-// {
-//     //loading the vector
-//     mAddressableList.clear();
-//     getAllMessageable(mAddressableList);
-
-//     v8::Context::Scope context_scope(mContext);
-//     v8::Local<v8::Array> arrayObj= v8::Array::New();
-//     system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
-
-//     // No work to do if we have no presences.
-//     if (mPresences.empty()) return;
-
-// //     v8::Context::Scope context_scope(mContext);
-// //     v8::Local<v8::Array> arrayObj= v8::Array::New();
-
-
-// //     Right now, we have multiple presences, but only designate one as "self"
-// //     should we have multiple selves as well?
-// //     FIXME_GET_SPACE_OREF();
-// //     SpaceObjectReference mSporef = SpaceObjectReference(space,oref);
-
-// //     for (int s=0;s < (int)mAddressableList.size(); ++s)
-// //     {
-// //         Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
-
-// //         tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
-// //         tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(mAddressableList[s]));
-// //         arrayObj->Set(v8::Number::New(s),tmpObj);
-
-// //         if((*mAddressableList[s]) == mSporef)
-// //             system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), tmpObj);
-// //     }
-// //     system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
-// // }
-// }
-
 
 
 int JSObjectScript::getAddressableSize()
@@ -444,7 +392,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     #endif
 
 
-
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
@@ -493,62 +440,33 @@ void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferen
 }
 
 
-//this function runs through 
-void JSObjectScript::createMessageableArray()
+//this function hangs the 
+void JSObjectScript::addAddressable(ProxyObjectPtr p)
 {
-    AddressableList allAvailableObjectReferences;
-
-    HostedObject::SpaceObjRefSet allSporefs;
-    mParent->getSpaceObjRefs(allSporefs);
-
-    for (HostedObject::SpaceObjRefSet::iterator sporefIt = allSporefs.begin(); sporefIt != allSporefs.end(); ++ sporefIt)
-    {
-        ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(sporefIt->space(),sporefIt->object());
-        proxManagerPtr->getAllObjectReferences(mAddressableList);
-        proxManagerPtr->addListener(this);
-    }
-}
+    SpaceObjectReference* toAdd = new SpaceObjectReference(p->getObjectReference());
+    mAddressableList.push_back(toAdd);
 
 
-//bftm
-//populates the js addressable array
-//createMessageableArray should have been called before this;
-void JSObjectScript::populateAddressable(Handle<Object>& system_obj )
-{
-    //loading the vector
-
+    HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
-    v8::Local<v8::Array> arrayObj= v8::Array::New();
 
-    //Right now, we have multiple presences, but only designate one as "self"
-    //should we have multiple selves as well?
-    FIXME_GET_SPACE_OREF();
-    SpaceObjectReference mSporef = SpaceObjectReference(space,oref);
+    // Get the presences array
+    v8::Local<v8::Array> addr_array =
+        v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME)));
+    uint32 new_pos = addr_array->Length();
 
-    for (int s=0;s < (int)mAddressableList.size(); ++s)
-    {
-        Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
+    //create the addressable object associated with the new proxy object
+    Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
 
-        tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
-        tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(mAddressableList[s]));
+    newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
+    newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(toAdd));
 
-        arrayObj->Set(v8::Number::New(s),tmpObj);
-
-        if((*mAddressableList[s]) == mSporef)
-            system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), tmpObj);
-
-    }
-    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME),arrayObj);
+    addr_array->Set(v8::Number::New(new_pos),newAddrObj);
 }
-
 
 void JSObjectScript::onCreateProxy(ProxyObjectPtr p)
 {
-    std::cout<<"\n\nIssue: likely incorrect behavior in onCreateProxy: need to keep track of actual system object rather than create a new one.\n\n";
-    mAddressableList.push_back(new SpaceObjectReference(p->getObjectReference()));
-    HandleScope handle_scope;
-    Handle<Object> system_obj = getSystemObject();
-    populateAddressable(system_obj);
+    addAddressable(p);
 }
 
 void JSObjectScript::onDestroyProxy(ProxyObjectPtr p)
@@ -678,9 +596,6 @@ void JSObjectScript::printAllHandlerLocations()
 /*
  * Populates the message properties
  */
-
-
-
 
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
@@ -905,12 +820,15 @@ void JSObjectScript::updateAddressable()
 
 }
 
-// void JSObjectScript::updateAddressable()
-// {
-//   HandleScope handle_scope;
-//   Handle<Object> system_obj = getSystemObject();
-//   populateAddressable(system_obj);
-// }
+
+void JSObjectScript::initializeAddressable(Handle<Object>& system_obj)
+{
+    v8::Context::Scope context_scope(mContext);
+    // Create the space for the addressables, they get filled in by
+    // onConnected/onCreateProxy calls
+    v8::Local<v8::Array> arrayObj = v8::Array::New();
+    system_obj->Set(v8::String::New(JSSystemNames::ADDRESSABLE_ARRAY_NAME), arrayObj);
+}
 
 
 //called to build the presences array as well as to build the presence keyword
@@ -987,23 +905,13 @@ void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {
 //this function can be called to re-initialize the system object's state
 void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
-   HandleScope handle_scope;
-   //takes care of the addressable array in sys.
-
-   system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD, External::New(this));
-
-   initializePresences(system_obj);
-
-   //FIXME: May need an initialize addressable
-
-   createMessageableArray();
-   populateAddressable(system_obj);
-   initializePresences(system_obj);
-   populateMath(system_obj);
+   std::cout<<"\n\nPopulateSystemObject is deprecated\n\n";
+   assert(false);
+   
 }
 
 
-void JSObjectScript::populateMath(Handle<Object>& system_obj)
+void JSObjectScript::initializeMath(Handle<Object>& system_obj)
 {
     v8::Context::Scope context_scope(mContext);
 

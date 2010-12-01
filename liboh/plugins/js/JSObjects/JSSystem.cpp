@@ -50,8 +50,8 @@ v8::Handle<v8::Value> ScriptUpdateAddressable(const v8::Arguments& args)
 //third argument is the mesh file to use.
 v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 {
-    if (args.Length() != 5)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>, <script filename>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
+    if (args.Length() != 6)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script filename>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
 
   JSObjectScript* target_script = GetTargetJSObjectScript(args);
   // get the location from the args
@@ -63,26 +63,34 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 
   Vector3d pos(Vec3Extract(val_obj));
 
+
+  //getting script type
+  v8::String::Utf8Value str(args[1]);
+  const char* cstrType = ToCString(str);
+  String scriptType(cstrType);
+
+  
   // get the script to attach from the args
   //script is a string args
-  v8::String::Utf8Value str(args[1]);
-  const char* cstr = ToCString(str);
-  String script(cstr);
+  v8::String::Utf8Value str2(args[2]);
+  const char* cstr = ToCString(str2);
+  String scriptOpts(cstr);
+  scriptOpts = "--init-script="+scriptOpts;
 
   //get the mesh to represent as
-  v8::String::Utf8Value mesh_str(args[2]);
+  v8::String::Utf8Value mesh_str(args[3]);
   const char* mesh_cstr = ToCString(mesh_str);
   String mesh(cstr);
 
   //get the scale
-  Handle<Object> scale_arg = ObjectCast(args[3]);
+  Handle<Object> scale_arg = ObjectCast(args[4]);
   if (!NumericValidate(scale_arg))
       return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
   
   float scale  =  NumericExtract(scale_arg);
 
   //get the solid angle
-  Handle<Object> qa_arg = ObjectCast(args[4]);
+  Handle<Object> qa_arg = ObjectCast(args[5]);
   if (!NumericValidate(qa_arg))
       return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
 
@@ -92,10 +100,10 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 
   //parse a bunch of arguments here
   EntityCreateInfo eci;
-  eci.scriptFile = script;
+  eci.scriptType = scriptType;
   eci.mesh = mesh;
+  eci.scriptOpts = scriptOpts;
 
-//  oci.loc = Location( pos, orient, vel, rot_axis, angular_speed);
   
   eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
@@ -192,8 +200,10 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
     v8::Handle<v8::Value> filename = args[0];
 
     StringCheckAndExtract(native_filename, filename);
-
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    // target_script->debugPrintString("\n\nPrinting from scriptImport.  Works?\n\n");
+    // std::cout.flush();
+    
     target_script->import(native_filename);
 
     return v8::Undefined();

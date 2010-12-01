@@ -57,7 +57,7 @@ namespace JS {
 
 struct EntityCreateInfo
 {
-    String scriptFile;
+    String scriptType;
     String scriptOpts;
     SpaceID spaceID;
     Location loc;
@@ -206,7 +206,8 @@ private:
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void getAllMessageable(AddressableList&allAvailableObjectReferences) const;
     v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
-
+    void addAddressable(ProxyObjectPtr p);
+    
 
 
 //    v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
@@ -227,11 +228,11 @@ private:
     Handle<Object> getGlobalObject();
 
     void populateAddressable(Handle<Object>& system_obj );
-    void createMessageableArray();
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);
+    void initializeAddressable(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
-    void populateMath(Handle<Object>& system_obj);
+    void initializeMath(Handle<Object>& system_obj);
 
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
