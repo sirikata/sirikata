@@ -33,6 +33,7 @@
 #define _OBJECT_SCRIPT_HPP_
 
 #include <sirikata/core/util/Logging.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata {
 
@@ -51,8 +52,10 @@ class SIRIKATA_OH_EXPORT ObjectScript {
     //Addressables depend upon the space the presence is
     //Different presences have different spaces
 
-     virtual void updateAddressable() { NOT_IMPLEMENTED(ObjectScript); }
+    virtual void  notifyProximateGone(std::tr1::shared_ptr<ProxyObject> p){ NOT_IMPLEMENTED(ObjectScript); }
+    virtual void  notifyProximate(std::tr1::shared_ptr<ProxyObject> p){ NOT_IMPLEMENTED(ObjectScript); }
 
+    
      virtual String scriptType() const { return scriptType_;}
      virtual String scriptOptions() const {return scriptOptions_;}
      virtual void scriptTypeIs(String _scriptType) { scriptType_ = _scriptType;}

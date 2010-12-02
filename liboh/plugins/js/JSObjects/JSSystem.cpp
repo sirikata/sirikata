@@ -37,13 +37,6 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 
 }
 
-//instructs the JSObjectScript to update its addressable array.
-v8::Handle<v8::Value> ScriptUpdateAddressable(const v8::Arguments& args)
-{
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    target_script->updateAddressable();
-    return v8::Undefined();
-}
 
 //first argument is the position of the new entity
 //second argument is the name of the file to execute scripts from

@@ -177,8 +177,25 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 }
 
 
+//returns all the spaceobjectreferences associated with the presence with id sporef
+void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
+{
+    SpaceDataMap::iterator smapIter = mSpaceData->find(sporef);
 
-void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
+
+    if (smapIter != mSpaceData->end())
+    {
+        //means that we actually did have a connection with this sporef
+        //load the proxy objects the sporef'd connection has actually seen into
+        //ss.
+        smapIter->second.proxyManager->getAllObjectReferences(ss);
+    }
+}
+
+
+//returns all the spaceobjrefs associated with all presences of this object.
+//They are returned in ss.
+void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
     if (mSpaceData == NULL)
     {
@@ -189,7 +206,7 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefSet& ss) const
     SpaceDataMap::const_iterator smapIter;
     for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
     {
-        ss.insert(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
+        ss.push_back(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
     }
 }
 
@@ -660,6 +677,12 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
                 ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds);
+
+                //tells the object script that something that was close has come
+                //into view
+                if(mObjectScript)
+                    mObjectScript->notifyProximate(proxy_obj);
+                
             }
             else
             {
@@ -672,6 +695,12 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                     continue;
 
                 proxy_obj->setMesh(Transfer::URI(addition.mesh()));
+
+                //tells the object script that something that was close has come
+                //into view
+                if(mObjectScript)
+                    mObjectScript->notifyProximate(proxy_obj);
+
             }
         }
 
@@ -684,6 +713,10 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;
 
+            
+            if (mObjectScript)
+                mObjectScript->notifyProximateGone(proxy_obj);
+            
             proxy_obj->setMesh(Transfer::URI(""));
 
 
@@ -697,8 +730,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     }
 
 
-    //Update the addressable for this Entity
-    updateAddressable();
 
     return true;
 }
@@ -1002,22 +1033,14 @@ Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& 
     return currentLoc;
 }
 
-//BFTM_FIXME: need to actually write this function (called by ObjectHost's updateAddressable).
-void HostedObject::updateAddressable()
-{
-    if(mObjectScript)
-    {
-        mObjectScript->updateAddressable();
-    }
-}
 
 void HostedObject::persistToFile(std::ofstream& fp)
 {
-  SpaceObjRefSet ss;
+  SpaceObjRefVec ss;
 
   getSpaceObjRefs(ss);
 
-  SpaceObjRefSet::iterator it = ss.begin();
+  SpaceObjRefVec::iterator it = ss.begin();
 
   for(; it != ss.end(); it++)
   {

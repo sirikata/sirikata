@@ -77,6 +77,7 @@ public:
     void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
     void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
 
+    
     void createObject(const ProxyObjectPtr &newObj);
     void destroyObject(const ProxyObjectPtr &delObj);
 

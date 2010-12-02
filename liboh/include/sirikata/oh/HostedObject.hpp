@@ -147,9 +147,9 @@ private:
 public:
 
     /** Get a set of spaces the object is currently connected to. */
-    typedef std::set<SpaceObjectReference> SpaceObjRefSet;
-    void getSpaceObjRefs(SpaceObjRefSet& ss) const;
-
+    typedef std::vector<SpaceObjectReference> SpaceObjRefVec;
+    void getSpaceObjRefs(SpaceObjRefVec& ss) const;
+    void getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const;
 
 
 //------- Public member functions:
@@ -272,7 +272,6 @@ public:
 
 
   public:
-    void updateAddressable();
 
 
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {

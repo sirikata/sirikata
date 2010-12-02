@@ -83,8 +83,11 @@ public:
 
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-    virtual void updateAddressable();
 
+
+    virtual void  notifyProximateGone(ProxyObjectPtr p);
+    virtual void  notifyProximate(ProxyObjectPtr p);
+    
     virtual void onCreateProxy(ProxyObjectPtr p);
     virtual void onDestroyProxy(ProxyObjectPtr p);
     
@@ -204,13 +207,11 @@ private:
 
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    void getAllMessageable(AddressableList&allAvailableObjectReferences) const;
     v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
-    void addAddressable(ProxyObjectPtr p);
-    
+    void addAddressable(const SpaceObjectReference& sporefToAdd);
+    void populateAddressable(const SpaceObjectReference& sporef);
 
 
-//    v8::Local<v8::Object> getMessageSender(const RoutableMessageHeader& msgHeader);
     v8::Local<v8::Object> getMessageSender(const ODP::Endpoint& src);
 
     void flushQueuedHandlerEvents();

@@ -64,7 +64,7 @@
 
 
 #define FIXME_GET_SPACE_OREF() \
-    HostedObject::SpaceObjRefSet spaceobjrefs;              \
+    HostedObject::SpaceObjRefVec spaceobjrefs;              \
     mParent->getSpaceObjRefs(spaceobjrefs);                 \
     assert(spaceobjrefs.size() == 1);                 \
     SpaceID space = (spaceobjrefs.begin())->space(); \
@@ -182,15 +182,42 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
     // And notify the script of existing ones
-    HostedObject::SpaceObjRefSet spaceobjrefs;
+    HostedObject::SpaceObjRefVec spaceobjrefs;
     mParent->getSpaceObjRefs(spaceobjrefs);
     if (spaceobjrefs.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
-    for(HostedObject::SpaceObjRefSet::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
+    for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
 
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
+
+void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
+{
+    SpaceID space = sporef.space();
+    ObjectReference obj = sporef.object();
+
+    HostedObject::SpaceObjRefVec proxyObjNeighbors;
+    mParent->getProxySpaceObjRefs(sporef,proxyObjNeighbors);
+
+    for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
+        addAddressable(*sporefIt);
+}
+
+
+
+void  JSObjectScript::notifyProximateGone(ProxyObjectPtr p)
+{
+    JSLOG(info,"Notified that object "<<p->getObjectReference()<<" went out of query.  Mostly just ignoring it.");
+}
+
+void  JSObjectScript::notifyProximate(ProxyObjectPtr p)
+{
+    JSLOG(info,"Notified that object "<<p->getObjectReference()<<" is within query.  Adding to addressable list.");
+    addAddressable(p->getObjectReference());
+}
+
+
 
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
     //register for scripting messages from user
@@ -199,7 +226,7 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 
     //on connected, want to populate addressable array corresponding to new
     //space and objref
-    //also want to initializePresence corresponding to it.
+    populateAddressable(name);
 
     v8::HandleScope handle_scope;
 
@@ -419,31 +446,22 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 }
 
 
-//this function gets a list of all objects that are messageable
-void JSObjectScript::getAllMessageable(AddressableList&allAvailableObjectReferences) const
+
+//this function adds the sporefToAdd to the mAddressableList, then it pushes
+//the new addressable object onto the addressable array accessible by emerson
+//developers.  It does not add the sporef if we already have a copy in the array.
+void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
 {
-    allAvailableObjectReferences.clear();
-
-    HostedObject::SpaceObjRefSet allSporefs;
-    mParent->getSpaceObjRefs(allSporefs);
-
-
-    for (HostedObject::SpaceObjRefSet::iterator sporefIt = allSporefs.begin(); sporefIt != allSporefs.end(); ++ sporefIt)
+    AddressableList::const_iterator alreadyHave;
+    for (alreadyHave= mAddressableList.begin(); alreadyHave != mAddressableList.end(); ++alreadyHave)
     {
-        ProxyManagerPtr proxManagerPtr = mParent->getProxyManager(sporefIt->space(),sporefIt->object());
-        proxManagerPtr->getAllObjectReferences(allAvailableObjectReferences);
+        //just checks if we already have that sporef in our addressable array.
+        if ((*(*alreadyHave)) == sporefToAdd)
+            return;
     }
-
-
-    if (allAvailableObjectReferences.empty())
-        printf("\n\nBFTM: No object references available for sending messages");
-}
-
-
-//this function hangs the 
-void JSObjectScript::addAddressable(ProxyObjectPtr p)
-{
-    SpaceObjectReference* toAdd = new SpaceObjectReference(p->getObjectReference());
+    
+    
+    SpaceObjectReference* toAdd = new SpaceObjectReference(sporefToAdd);
     mAddressableList.push_back(toAdd);
 
 
@@ -466,7 +484,7 @@ void JSObjectScript::addAddressable(ProxyObjectPtr p)
 
 void JSObjectScript::onCreateProxy(ProxyObjectPtr p)
 {
-    addAddressable(p);
+    addAddressable(p->getObjectReference());
 }
 
 void JSObjectScript::onDestroyProxy(ProxyObjectPtr p)
@@ -812,12 +830,6 @@ Handle<Object> JSObjectScript::getSystemObject()
 
   Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
   return ret_obj;
-}
-
-
-void JSObjectScript::updateAddressable()
-{
-
 }
 
 
