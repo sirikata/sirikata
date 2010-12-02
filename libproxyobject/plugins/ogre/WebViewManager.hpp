@@ -89,12 +89,14 @@ public:
 	*                        last parameter of
 	*                        WebViewManager::createWebView.
 	* @inputMgr input manager to gather input from
+        * @param binDirectory Path to the binary directory, i.e. the one that
+	*                     holds the berkelium binary, liblibberkelium, etc.
 	* @param baseDirectory The relative path to your base directory. This
 	*                      directory is used by WebView::loadFile and
 	*                      WebView::loadHTML (to resolve relative URLs).
 	* @throws Ogre::Exception::ERR_INTERNAL_ERROR When initialization fails
 	*/
-    WebViewManager(Ogre::Viewport* defaultViewport, Input::InputManager* inputMgr = NULL, const std::string &baseDirectory = "WebViewLocal");
+    WebViewManager(Ogre::Viewport* defaultViewport, Input::InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory);
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).

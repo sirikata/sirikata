@@ -71,7 +71,7 @@ int InputModifiersToWebViewModifiers(Modifier mod, bool numpad);
 }
 
 
-WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string &baseDirectory)
+WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory)
 	: focusedWebView(0), tooltipParent(0),
           chromeWebView(NULL), focusedNonChromeWebView(NULL),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
@@ -87,11 +87,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
     {
         std::string ldLibraryPath;
         ldLibraryPath = getenv("LD_LIBRARY_PATH")?getenv("LD_LIBRARY_PATH"):"";
-        ldLibraryPath=baseDirectory+"/chrome:"
-#ifndef NDEBUG
-            "chrome:"
-#endif
-            +ldLibraryPath;
+        ldLibraryPath = binDirectory + ":" + ldLibraryPath;
         setenv("LD_LIBRARY_PATH",ldLibraryPath.c_str(),1);
     }
 #endif

@@ -70,7 +70,10 @@ namespace Graphics {
 namespace {
 
 // FIXME we really need a better way to figure out where our data is
-std::string getOgreResourcesDir() {
+// This is a generic search method. It searches upwards from the current
+// directory for any of the specified files and returns the first path it finds
+// that contains one of them.
+std::string findResourceDir(boost::filesystem::path* search_paths, uint32 nsearch_paths, boost::filesystem::path default_ = boost::filesystem::complete(boost::filesystem::path("."))) {
     using namespace boost::filesystem;
 
     // FIXME there probably need to be more of these, including
@@ -86,6 +89,22 @@ std::string getOgreResourcesDir() {
     };
     uint32 nsearch_offsets = sizeof(search_offsets)/sizeof(*search_offsets);
 
+    for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
+        for(uint32 spath = 0; spath < nsearch_paths; spath++) {
+            path full = search_offsets[offset] / search_paths[spath];
+            if (exists(full) && is_directory(full))
+                return full.string();
+        }
+    }
+
+    // If we can't find it anywhere else, just let it try to use the current directory
+    return default_.string();
+}
+
+// FIXME we really need a better way to figure out where our data is
+std::string getOgreResourcesDir() {
+    using namespace boost::filesystem;
+
     // FIXME there probably need to be more of these
     // The current two reflect what we'd expect for installed
     // and what's in the source tree.
@@ -96,16 +115,23 @@ std::string getOgreResourcesDir() {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
-        for(uint32 spath = 0; spath < nsearch_paths; spath++) {
-            path full = search_offsets[offset] / search_paths[spath];
-            if (exists(full) && is_directory(full))
-                return full.string();
-        }
-    }
+    return findResourceDir(search_paths, nsearch_paths);
+}
 
-    // If we can't find it anywhere else, just let it try to use the current directory
-    return boost::filesystem::complete(path(".")).string();
+// FIXME we really need a better way to figure out where our data is
+std::string getBerkeliumBinaryDir() {
+    using namespace boost::filesystem;
+
+    // FIXME there probably need to be more of these
+    // The current two reflect what we'd expect for installed
+    // and what's in the source tree.
+    path search_paths[] = {
+        path("chrome"),
+        path("build/cmake/chrome")
+    };
+    uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
+
+    return findResourceDir(search_paths, nsearch_paths);
 }
 
 std::string getChromeResourcesDir() {
@@ -548,7 +574,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler(keybindingFile->as<String>());
-    new WebViewManager(0, mInputManager, getOgreResourcesDir()); ///// FIXME: Initializing singleton class
+    new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
 
   // Test web view
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), UUID::random().rawHexData(), 400, 300, OverlayPosition());
