@@ -118,7 +118,10 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
         return false;
     }
 
-    assert( mConnections.find(conn) != mConnections.end() );
+    if (mConnections.find(conn) == mConnections.end()) {
+        SPACE_LOG(error,"Tried to send over out-of-date connection ID.");
+        return false;
+    }
 
     String data;
     serializePBJMessage(&data, *msg);
