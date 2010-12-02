@@ -47,7 +47,9 @@ using namespace Ogre;
 namespace Sirikata {
 namespace Graphics {
 
+#ifdef HAVE_BERKELIUM
 using Berkelium::UTF8String;
+#endif
 
 WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
@@ -795,7 +797,7 @@ void WebView::resize(int width, int height)
 
 
 
-
+#ifdef HAVE_BERKELIUM
 ///////// Berkelium Callbacks...
 void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
     SILOG(webview,debug,"onAddressBarChanged"<<newURL);
@@ -837,8 +839,6 @@ void WebView::onScriptAlert(Berkelium::Window *win, WideString message,
     UTF8String textString = Berkelium::WideToUTF8(message);
     SILOG(webview,debug,"onScriptAlert "<<textString);
 }
-
-#ifdef HAVE_BERKELIUM
 
 Berkelium::Rect WebView::getBorderlessRect(Ogre::HardwarePixelBufferSharedPtr pixelBuffer) const {
     Berkelium::Rect pixelBufferRect;
@@ -937,14 +937,11 @@ void WebView::blitScrollImage(
     //if(updateAlphaCache && isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch) {
     //}
 }
-#endif // HAVE_BERKELIUM
-
 
 void WebView::onPaint(Berkelium::Window*win,
                       const unsigned char*srcBuffer, const Berkelium::Rect& srcRect,
                       size_t num_copy_rects, const Berkelium::Rect *copy_rects,
                       int dx, int dy, const Berkelium::Rect& scroll_rect) {
-#ifdef HAVE_BERKELIUM
     TexturePtr texture = backingTexture.isNull()?viewTexture:backingTexture;
     HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
 
@@ -959,7 +956,6 @@ void WebView::onPaint(Berkelium::Window*win,
 
     if (!backingTexture.isNull())
         compositeWidgets(win);
-#endif
 }
 void WebView::onCrashed(Berkelium::Window*) {
     SILOG(webview,debug,"onCrashed");
@@ -981,7 +977,6 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     }
     SILOG(webview,debug,"onCreatedWindow "<<name);
 
-#ifdef HAVE_BERKELIUM
     Berkelium::Rect r;
     r.mLeft = 0;
     r.mTop = 0;
@@ -996,7 +991,6 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
         OverlayPosition(r.left(), r.top()),
         newwin, TIER_MIDDLE,
         overlay?overlay->viewport:WebViewManager::getSingleton().defaultViewport);
-#endif
 }
 
 void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
@@ -1048,12 +1042,10 @@ void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, in
 void WebView::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y) {
     SILOG(webview,debug,"onWidgetMove");
     if (!backingTexture.isNull()) {
-#ifdef HAVE_BERKELIUM
         compositeWidgets(win);
-#endif
     }
 }
-#ifdef HAVE_BERKELIUM
+
 void WebView::compositeWidgets(Berkelium::Window*win) {
     if (viewTexture.isNull()||backingTexture.isNull()) {
         SILOG(webview,fatal,"View or backing texture null during ocmpositing step");
@@ -1095,7 +1087,7 @@ void WebView::compositeWidgets(Berkelium::Window*win) {
 
     }
 }
-#endif //HAVE_BERKELIUM
+
 void WebView::onWidgetPaint(
         Berkelium::Window *win,
         Berkelium::Widget *wid,
@@ -1106,7 +1098,6 @@ void WebView::onWidgetPaint(
         int dx, int dy,
         const Berkelium::Rect &scroll_rect) {
     return;
-#ifdef HAVE_BERKELIUM
     if (backingTexture.isNull()&&!viewTexture.isNull()) {
         backingTexture=TextureManager::getSingleton().createManual(
             "B"+getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
@@ -1133,11 +1124,9 @@ void WebView::onWidgetPaint(
 
     compositeWidgets(win);
     SILOG(webview,debug,"onWidgetPaint");
-#endif //HAVE_BERKELIUM
 }
 
 void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLString origin, WideString funcName, Berkelium::Script::Variant *args, size_t numArgs) {
-#ifdef HAVE_BERKELIUM
     if (numArgs < 1) {
         if (replyMsg)
             win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
@@ -1167,8 +1156,8 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
 	}
     if (replyMsg)
         win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
-#endif
 }
+#endif //HAVE_BERKELIUM
 
 const WebView::WebViewBorderSize WebView::mDefaultBorder(2,2,25,2);
 

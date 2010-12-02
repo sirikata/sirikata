@@ -63,8 +63,10 @@ typedef std::vector<JSArgument> JSArguments;
 namespace Graphics {
 
 	class WebView;
+#ifdef HAVE_BERKELIUM
     using Berkelium::WideString;
     using Berkelium::URLString;
+#endif
 
 	typedef std::tr1::function<void (WebView*, const JSArguments&)> JSDelegate;
 
@@ -497,6 +499,7 @@ namespace Graphics {
 
 		bool isPointOverMe(int x, int y);
 
+#ifdef HAVE_BERKELIUM
         void onAddressBarChanged(Berkelium::Window*, URLString url);
         void onStartLoading(Berkelium::Window*, URLString url);
         void onTitleChanged(Berkelium::Window*, WideString title);
@@ -534,8 +537,8 @@ namespace Graphics {
             const Berkelium::Rect *copyRects,
             int dx, int dy,
             const Berkelium::Rect &scrollRect);
-	};
-
+#endif // HAVE_BERKELIUM
+        };
 }
 }
 
