@@ -225,7 +225,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, const std
 
 
         WebView* newWebView = new WebView(webViewName, webViewType,width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
-            viewport? viewport : defaultViewport);
+            viewport? viewport : defaultViewport, border);
         newWebView->createWebView(asyncRender, maxAsyncRenderRate);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));

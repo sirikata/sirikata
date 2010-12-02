@@ -51,8 +51,11 @@ namespace Graphics {
 using Berkelium::UTF8String;
 #endif
 
-WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport)
+WebView::WebView(
+    const std::string& name, const std::string& type,
+    unsigned short width, unsigned short height,
+    const OverlayPosition &viewPosition, Ogre::uchar zOrder, Tier tier,
+    Ogre::Viewport* viewport, const WebViewBorderSize& border)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -83,17 +86,12 @@ WebView::WebView(const std::string& name, const std::string& type, unsigned shor
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
-    if (tier == TIER_FRONT) {
-        mBorderTop = 1;
-        mBorderLeft = 1;
-        mBorderBottom = 1;
-        mBorderRight = 1;
-    } else {
-        mBorderLeft=2;
-        mBorderRight=2;
-        mBorderTop=25;
-        mBorderBottom=2;
-    }
+
+    mBorderLeft = border.mBorderLeft;
+    mBorderRight = border.mBorderRight;
+    mBorderTop = border.mBorderTop;
+    mBorderBottom = border.mBorderBottom;
+
 	createMaterial();
 
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
