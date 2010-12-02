@@ -128,6 +128,8 @@ public:
     Network::IOService* ioService;
     Network::IOStrand* mainStrand;
     TimeProfiler* profiler;
+
+    static Context* mainContextPtr;
 protected:
 
     // Main Lifetime Management
@@ -146,6 +148,8 @@ protected:
         SILOG(forcequit,fatal,"[FORCEQUIT] Fatal error: Quit forced by timeout.");
         ioService->stop();
     }
+
+    void workerThread();
 
     // Signal handling
     void handleSignal(Signal::Type stype);
