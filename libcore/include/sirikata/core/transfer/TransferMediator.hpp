@@ -185,17 +185,20 @@ class SIRIKATA_EXPORT TransferMediator
 	//Number of outstanding requests
 	uint32 mNumOutstanding;
 
-	//TransferMediator's worker thread
+	//Main thread that handles the input pools
 	Thread* mThread;
-
-    //Main thread that handles the input pools
     void mediatorThread();
 
     //Callback for when an executed request finishes
     void execute_finished(std::tr1::shared_ptr<TransferRequest> req, std::string id);
 
+    //Called after an action could be taken
+    void afterScreenshot();
+
     //Check our internal queue to see what request to process next
     void checkQueue();
+
+    int mScreenshotNum;
 
 public:
 	static TransferMediator& getSingleton();
@@ -211,6 +214,17 @@ public:
 
 	//Call when system should be shut down
 	void cleanup();
+
+	//Hack to signal screenshots to OgreSystem
+    static bool mScreenshotEnabled;
+    class ScreenshotRequest {
+    public:
+        std::string mFileName;
+        std::tr1::function<void ()> mCb;
+        ScreenshotRequest(std::string fn, std::tr1::function<void ()> cb)
+            : mFileName(fn), mCb(cb) {}
+    };
+    static ThreadSafeQueue<std::tr1::shared_ptr<ScreenshotRequest> > mScreenshotQueue;
 };
 
 }

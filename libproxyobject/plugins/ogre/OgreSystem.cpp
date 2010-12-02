@@ -49,6 +49,7 @@
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
+#include <sirikata/core/transfer/TransferMediator.hpp>
 
 #include <boost/filesystem.hpp>
 #include <stdio.h>
@@ -116,7 +117,24 @@ std::string getChromeResourcesDir() {
 
 }
 
+void OgreSystem::screenshotWorker() {
+    while(true) {
+        std::tr1::shared_ptr<Transfer::TransferMediator::ScreenshotRequest> curReq;
+        Transfer::TransferMediator::mScreenshotQueue.blockingPop(curReq);
+        if(!curReq) {
+            return;
+        }
 
+        Context::mainContextPtr->mainStrand->post(std::tr1::bind(&OgreSystem::screenshotMain, this, curReq));
+    }
+}
+void OgreSystem::screenshotMain(std::tr1::shared_ptr<Transfer::TransferMediator::ScreenshotRequest> req) {
+    screenshot(req->mFileName);
+
+    req->mCb();
+}
+
+OgreSystem* OgreSystem::sOgreSystem = NULL;
 Ogre::Root *OgreSystem::sRoot;
 CDNArchivePlugin *OgreSystem::mCDNArchivePlugin=NULL;
 Ogre::RenderTarget* OgreSystem::sRenderTarget=NULL;
@@ -143,6 +161,7 @@ OgreSystem::OgreSystem(Context* ctx)
     mRenderTarget=NULL;
     mMouseHandler=NULL;
     mRayQuery=NULL;
+    mScreenshotThread = new Thread(std::tr1::bind(&OgreSystem::screenshotWorker, this));
 }
 namespace {
 class FrequencyType{public:
@@ -706,6 +725,10 @@ OgreSystem::~OgreSystem() {
     delete mInputManager;
 
     delete mModelParser;
+
+    Transfer::TransferMediator::mScreenshotQueue.push(std::tr1::shared_ptr<Transfer::TransferMediator::ScreenshotRequest>());
+    mScreenshotThread->join();
+    delete mScreenshotThread;
 }
 
 static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {

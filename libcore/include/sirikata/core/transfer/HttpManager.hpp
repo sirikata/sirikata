@@ -144,6 +144,8 @@ public:
      */
     void makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb);
 
+    static uint64 byte_counter;
+
 protected:
     /*
      * Protect constructor and destructor so can't make an instance of this class

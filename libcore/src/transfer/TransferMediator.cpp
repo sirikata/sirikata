@@ -1,5 +1,6 @@
 #include <sirikata/core/util/Standard.hh>
 
+#include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <stdio.h>
 
@@ -25,9 +26,11 @@ void TransferMediator::destroy() {
     AutoSingleton<TransferMediator>::destroy();
 }
 
-TransferMediator::TransferMediator() {
-    mCleanup = false;
-    mNumOutstanding = 0;
+bool TransferMediator::mScreenshotEnabled = true;
+ThreadSafeQueue<std::tr1::shared_ptr<TransferMediator::ScreenshotRequest> > TransferMediator::mScreenshotQueue;
+
+TransferMediator::TransferMediator()
+ : mCleanup(false), mNumOutstanding(0), mScreenshotNum(0) {
     mThread = new Thread(std::tr1::bind(&TransferMediator::mediatorThread, this));
 }
 
@@ -67,6 +70,15 @@ void TransferMediator::cleanup() {
     mThread->join();
 }
 
+void TransferMediator::afterScreenshot() {
+    boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
+    lock.lock();
+    mNumOutstanding--;
+    SILOG(transfer, debug, "done transfer mediator execute_finished");
+    lock.unlock();
+    checkQueue();
+}
+
 void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> req, std::string id) {
     boost::unique_lock<boost::mutex> lock(mAggMutex, boost::defer_lock_t());
     lock.lock();
@@ -91,11 +103,33 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
     }
 
     mAggregateList.erase(findID);
-
-    mNumOutstanding--;
     lock.unlock();
-    SILOG(transfer, debug, "done transfer mediator execute_finished");
-    checkQueue();
+
+    if(mScreenshotEnabled) {
+        std::string fileName = req->getIdentifier();
+        std::string::size_type pos = fileName.find("/");
+        while(pos != std::string::npos) {
+            fileName.replace(pos, 1, "");
+            pos = fileName.find("/");
+        }
+
+        ostringstream os;
+        if(mScreenshotNum < 100) os << "0";
+        if(mScreenshotNum < 10) os << "0";
+        os << (mScreenshotNum++) << "_";
+        os << HttpManager::byte_counter;
+        HttpManager::byte_counter = 0;
+        os << "_" << fileName << ".png";
+
+        boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+
+        std::tr1::shared_ptr<ScreenshotRequest> req(new ScreenshotRequest(os.str(),
+                std::tr1::bind(&TransferMediator::afterScreenshot, this)));
+        mScreenshotQueue.push(req);
+    } else {
+        afterScreenshot();
+    }
+
 }
 
 void TransferMediator::checkQueue() {

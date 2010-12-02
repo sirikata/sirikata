@@ -45,6 +45,8 @@ void HttpManager::destroy() {
     AutoSingleton<HttpManager>::destroy();
 }
 
+uint64 HttpManager::byte_counter = 0;
+
 HttpManager::HttpManager()
     : mNumTotalConnections(0) {
 
@@ -291,6 +293,8 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
 
     /*SILOG(transfer, debug, "handle_read triggered with bytes_transferred = " << bytes_transferred << " EOF? "
             << (err == boost::asio::error::eof ? "Y" : "N"));*/
+
+    byte_counter += bytes_transferred;
 
     if ((err || bytes_transferred == 0) && err != boost::asio::error::eof) {
         SILOG(transfer, error, "Failed to write. Error = " << err.message());

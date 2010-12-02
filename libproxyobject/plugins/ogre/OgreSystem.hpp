@@ -130,8 +130,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     void postFrame(Task::LocalTime, Duration);
     void destroyRenderTarget(Ogre::ResourcePtr &name);
 
-    void screenshot(const String& filename);
-
     void suspend();
 
     // Initiate quiting by indicating to the main loop that we want to shut down
@@ -154,6 +152,11 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
                      int& returnSubMesh,
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
+
+    Thread* mScreenshotThread;
+    void screenshotWorker();
+    void screenshotMain(std::tr1::shared_ptr<Transfer::TransferMediator::ScreenshotRequest> f);
+
 public:
     OptionValue *mParallaxSteps;
     OptionValue *mParallaxShadowSteps;
@@ -170,6 +173,8 @@ public:
     Transfer::TransferPoolPtr transferPool();
 
     String getResourcesDir() const { return mResourcesDir; }
+
+    void screenshot(const String& filename);
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     void  attachCamera(const String&renderTargetName,Camera*);
@@ -193,6 +198,7 @@ public:
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
     Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
 
+    static OgreSystem* sOgreSystem;
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
         VWObjectPtr obj,
@@ -201,8 +207,10 @@ public:
     )
     {
         OgreSystem*os= new OgreSystem(ctx);
-        if (os->initialize(obj, presenceid, options))
+        if (os->initialize(obj, presenceid, options)) {
+            sOgreSystem = os;
             return os;
+        }
         delete os;
         return NULL;
     }
@@ -275,7 +283,6 @@ private:
     void instantiateAllObjects(ProxyManagerPtr pop);
 
 };
-
 
 } }
 #endif
