@@ -755,6 +755,7 @@ void Proximity::poll() {
     while(object_sent && !mObjectResultsToSend.empty()) {
         Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
         sendObjectResult(msg_front);
+        delete msg_front;
         mObjectResultsToSend.pop_front();
     }
 }
