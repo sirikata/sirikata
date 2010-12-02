@@ -188,7 +188,13 @@ bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endp
     // This call needs to be thread safe, and we shouldn't be using this
     // ODP::Service to communicate with any non-local objects, so just use the
     // local forwarder.
-    return mLocalForwarder->tryForward(msg);
+    bool send_success = mLocalForwarder->tryForward(msg);
+
+    // If the send failed, we need to destroy the message.
+    if (!send_success)
+        delete msg;
+
+    return send_success;
 }
 
 ObjectSession* Server::getSession(const ObjectReference& objid) const {
