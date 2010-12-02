@@ -56,25 +56,23 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 
   Vector3d pos(Vec3Extract(val_obj));
 
-
   //getting script type
-  v8::String::Utf8Value str(args[1]);
-  const char* cstrType = ToCString(str);
+  v8::String::Utf8Value strScriptType(args[1]);
+  const char* cstrType = ToCString(strScriptType);
   String scriptType(cstrType);
-
   
   // get the script to attach from the args
   //script is a string args
-  v8::String::Utf8Value str2(args[2]);
-  const char* cstr = ToCString(str2);
-  String scriptOpts(cstr);
+  v8::String::Utf8Value scriptOpters(args[2]);
+  const char* cstrOpts = ToCString(scriptOpters);
+  String scriptOpts(cstrOpts);
   scriptOpts = "--init-script="+scriptOpts;
 
   //get the mesh to represent as
   v8::String::Utf8Value mesh_str(args[3]);
   const char* mesh_cstr = ToCString(mesh_str);
-  String mesh(cstr);
-
+  String mesh(mesh_cstr);
+  
   //get the scale
   Handle<Object> scale_arg = ObjectCast(args[4]);
   if (!NumericValidate(scale_arg))

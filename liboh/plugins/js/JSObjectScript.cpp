@@ -275,7 +275,6 @@ void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const Str
 void JSObjectScript::create_entity(EntityCreateInfo& eci)
 {
     FIXME_GET_SPACE_OREF();
-
     
     HostedObjectPtr obj = HostedObject::construct<HostedObject>(mParent->context(), mParent->getObjectHost(), UUID::random());
     obj->init();
@@ -543,9 +542,14 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
         }
     }
 
+
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't find file for import.")) );
+    {
+        std::string errorMessage("Couldn't find file for import named");
+        errorMessage+=filename;
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+    }
 
     // Now try to read in and run the file.
     FILE * pFile;
