@@ -150,16 +150,20 @@ void AlwaysLocationUpdatePolicy::tryCreateChildStream(SSTStreamPtr parent_stream
 void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_stream, std::string* msg, int count) {
     // If we got it, the data got sent and we can drop the stream
     if (substream) {
+        delete msg;
         substream->close(false);
         return;
     }
 
     // If we didn't get it and we haven't retried too many times, try
     // again. Otherwise, report error and give up.
-    if (count < 5)
+    if (count < 5) {
         tryCreateChildStream(parent_stream, msg, count);
-    else
+    }
+    else {
         SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
+        delete msg;
+    }
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)
