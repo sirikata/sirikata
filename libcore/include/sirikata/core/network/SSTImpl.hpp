@@ -677,9 +677,9 @@ private:
 
     std::tr1::shared_ptr<Stream<EndPointType> > stream =
       std::tr1::shared_ptr<Stream<EndPointType> >
-      ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid,
-				 initial_data, length, false, 0, cb) );
+      ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb) );
     stream->mWeakThis = stream;
+    stream->init(initial_data, length, false, 0);
 
     mOutgoingSubstreamMap[lsid]=stream;
   }
@@ -834,7 +834,10 @@ private:
 				     received_stream_msg->dest_port(),
 				     received_stream_msg->src_port(),
 				     usid, newLSID,
-				     NULL, 0, true, incomingLsid, NULL));
+				     NULL));
+        stream->mWeakThis = stream;
+        stream->init(NULL, 0, true, incomingLsid);
+
 	mOutgoingSubstreamMap[newLSID] = stream;
 	mIncomingSubstreamMap[incomingLsid] = stream;
 
@@ -1020,6 +1023,7 @@ private:
 
   void eraseDisconnectedStream(Stream<EndPointType>* s) {
     mOutgoingSubstreamMap.erase(s->getLSID());
+    mIncomingSubstreamMap.erase(s->getLSID());
   }
 
 
@@ -1385,6 +1389,7 @@ public:
        CONNECTED=2,
        PENDING_DISCONNECT=3,
        PENDING_CONNECT=4,
+       NOT_FINISHED_CONSTRUCTING__CALL_INIT
      };
 
 
@@ -1679,10 +1684,9 @@ public:
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
-	 USID usid, LSID lsid, void* initial_data, uint32 length,
-	 bool remotelyInitiated, LSID remoteLSID, StreamReturnCallbackFunction cb)
+	 USID usid, LSID lsid, StreamReturnCallbackFunction cb)
     :
-    mState(PENDING_CONNECT),
+    mState(NOT_FINISHED_CONSTRUCTING__CALL_INIT),
     mLocalPort(local_port),
     mRemotePort(remote_port),
     mParentLSID(parentLSID),
@@ -1705,9 +1709,28 @@ private:
     mConnected (false),
     MAX_INIT_RETRANSMISSIONS(5)
   {
+    mInitialData = NULL;
+    mInitialDataLength = 0;
+
+    mReceiveBuffer = new uint8[mReceiveWindowSize];
+    mReceiveBitmap = new uint8[mReceiveWindowSize];
+    memset(mReceiveBitmap, 0, mReceiveWindowSize);
+
+    mQueuedBuffers.clear();
+    mCurrentQueueLength = 0;
+
+    // Continues in init, when we have mWeakThis set
+  }
+
+  void init(void* initial_data, uint32 length,
+      bool remotelyInitiated, LSID remoteLSID) {
     if (remotelyInitiated) {
-      mConnected = true;
-      mState = CONNECTED;
+        mConnected = true;
+        mState = CONNECTED;
+    }
+    else {
+        mConnected = false;
+        mState = PENDING_CONNECT;
     }
 
     mInitialDataLength = (length <= MAX_PAYLOAD_SIZE) ? length : MAX_PAYLOAD_SIZE;
@@ -1721,13 +1744,6 @@ private:
       mInitialData = new uint8[1];
       mInitialDataLength = 0;
     }
-
-    mReceiveBuffer = new uint8[mReceiveWindowSize];
-    mReceiveBitmap = new uint8[mReceiveWindowSize];
-    memset(mReceiveBitmap, 0, mReceiveWindowSize);
-
-    mQueuedBuffers.clear();
-    mCurrentQueueLength = 0;
 
     if (remotelyInitiated) {
       sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID);
@@ -1784,6 +1800,7 @@ private:
      the underlying connection. */
 
   bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      assert(strm.get() == this);
 
     const Time curTime = Timer::now();
 
