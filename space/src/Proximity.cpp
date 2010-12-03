@@ -633,6 +633,11 @@ void Proximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMo
 void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr prox_stream) {
     using std::tr1::placeholders::_1;
 
+    // Always mark this up front. This keeps further requests from
+    // occuring since the first time this method is entered, even if
+    // the request is deferred, should eventually result in a stream.
+    prox_stream->iostream_requested = true;
+
     ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(objid));
     ProxStreamPtr base_stream = session != NULL ? session->getStream() : ProxStreamPtr();
     if (!base_stream) {
@@ -650,7 +655,6 @@ void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr prox_s
         (void*)NULL, 0,
         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
     );
-    prox_stream->iostream_requested = true;
 }
 
 void Proximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfoPtr prox_stream_info) {
