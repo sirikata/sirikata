@@ -635,6 +635,7 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     mObjects.erase(obj_id);
 
     ObjectReference obj(obj_id);
+    notify(&ObjectSessionListener::sessionClosed, mObjectSessions[obj]);
     delete mObjectSessions[obj];
     mObjectSessions.erase(obj);
 
@@ -897,6 +898,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
             ObjectReference obj(obj_id);
+            notify(&ObjectSessionListener::sessionClosed, mObjectSessions[obj]);
             delete mObjectSessions[obj];
             mObjectSessions.erase(obj);
         }

@@ -48,6 +48,10 @@ class SIRIKATA_SPACE_EXPORT ObjectSession {
         : mID(objid),
         mSSTStream(strm)
     {}
+    ~ObjectSession()
+    {
+        mSSTStream->close(false);
+    }
 
     const ObjectReference& id() const { return mID; }
 
@@ -61,6 +65,7 @@ class SIRIKATA_SPACE_EXPORT ObjectSession {
 class SIRIKATA_SPACE_EXPORT ObjectSessionListener {
   public:
     virtual void newSession(ObjectSession* session) {}
+    virtual void sessionClosed(ObjectSession* session) {}
     virtual ~ObjectSessionListener() {}
 };
 
