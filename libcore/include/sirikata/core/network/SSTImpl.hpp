@@ -1860,6 +1860,8 @@ private:
 	  mLastSendTime = curTime;
         }
 
+	boost::mutex::scoped_lock lock(mQueueMutex);
+
 	if (mState == PENDING_DISCONNECT &&
 	    mQueuedBuffers.empty()  &&
 	    mChannelToBufferMap.empty() )
@@ -1872,8 +1874,6 @@ private:
 
 	    return true;
 	}
-
-	boost::mutex::scoped_lock lock(mQueueMutex);
 
         bool sentSomething = false;
 	while ( !mQueuedBuffers.empty() ) {
