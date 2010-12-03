@@ -149,7 +149,10 @@ void AlwaysLocationUpdatePolicy::tryCreateChildStream(SSTStreamPtr parent_stream
 
 void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_stream, std::string* msg, int count) {
     // If we got it, the data got sent and we can drop the stream
-    if (substream) return;
+    if (substream) {
+        substream->close(false);
+        return;
+    }
 
     // If we didn't get it and we haven't retried too many times, try
     // again. Otherwise, report error and give up.
