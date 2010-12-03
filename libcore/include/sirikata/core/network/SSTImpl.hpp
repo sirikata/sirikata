@@ -1574,12 +1574,11 @@ public:
 
   */
   virtual bool close(bool force) {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (force) {
       mConnected = false;
       mState = DISCONNECTED;
 
-
-      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       if (conn)
         conn->eraseDisconnectedStream(this);
 
@@ -1587,6 +1586,11 @@ public:
     }
     else {
       mState = PENDING_DISCONNECT;
+      if (conn) {
+          getContext()->mainStrand->post(
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn)
+          );
+      }
       return true;
     }
   }
@@ -1783,7 +1787,7 @@ private:
 
     const Time curTime = Timer::now();
 
-    if (mState != CONNECTED && mState != DISCONNECTED) {
+    if (mState != CONNECTED && mState != DISCONNECTED && mState != PENDING_DISCONNECT) {
 
       if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
 
