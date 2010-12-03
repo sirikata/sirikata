@@ -112,11 +112,12 @@ protected:
   private:
     //SpaceSet mSpaces;
 
+
     ObjectHost *mObjectHost;
     ObjectScript *mObjectScript;
+    typedef std::map<SpaceObjectReference, PerPresenceData> PresenceDataMap;
+    PresenceDataMap *mPresenceData;
 
-    typedef std::map<SpaceObjectReference, PerPresenceData> SpaceDataMap;
-    SpaceDataMap *mSpaceData;
 
     int mNextSubscriptionID;
     UUID mInternalObjectReference;

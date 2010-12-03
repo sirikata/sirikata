@@ -74,7 +74,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
  : mContext(ctx),
    mObjectHost(parent),
    mObjectScript(NULL),
-   mSpaceData(new SpaceDataMap),
+   mPresenceData(new PresenceDataMap),
    mNextSubscriptionID(0),
    mInternalObjectReference(objectName),
    mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
@@ -101,10 +101,10 @@ void HostedObject::runSimulation(const SpaceObjectReference& sporef, const Strin
 {
     TimeSteppedSimulation* sim = NULL;
 
-    SpaceDataMap::iterator psd_it = mSpaceData->find(sporef);
-    if (psd_it == mSpaceData->end())
+    PresenceDataMap::iterator psd_it = mPresenceData->find(sporef);
+    if (psd_it == mPresenceData->end())
     {
-        std::cout<<"\n\nERROR: should have an entry for this space object reference in spacedatamap.  Aborting.\n\n";
+        std::cout<<"\n\nERROR: should have an entry for this space object reference in presencedatamap.  Aborting.\n\n";
         assert(false);
     }
 
@@ -121,7 +121,7 @@ void HostedObject::runSimulation(const SpaceObjectReference& sporef, const Strin
 
 HostedObject::~HostedObject() {
     destroy();
-    delete mSpaceData;
+    delete mPresenceData;
 }
 
 void HostedObject::init() {
@@ -135,7 +135,7 @@ void HostedObject::destroy()
         mObjectScript=NULL;
     }
 
-    mSpaceData->clear();
+    mPresenceData->clear();
     mObjectHost->unregisterHostedObject(mInternalObjectReference);
 }
 
@@ -158,8 +158,8 @@ Time HostedObject::currentLocalTime() {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
-    SpaceDataMap::const_iterator it = mSpaceData->find(SpaceObjectReference(space,oref));
-    if (it == mSpaceData->end())
+    PresenceDataMap::const_iterator it = mPresenceData->find(SpaceObjectReference(space,oref));
+    if (it == mPresenceData->end())
     {
         // SpaceDataMap::const_iterator twoIt = mSpaceData->begin();
         // // for (twoIt = mSpaceData->begin(); twoIt != mSpaceData->end(); ++twoIt)
@@ -181,10 +181,10 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 //returns all the spaceobjectreferences associated with the presence with id sporef
 void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
 {
-    SpaceDataMap::iterator smapIter = mSpaceData->find(sporef);
+    PresenceDataMap::iterator smapIter = mPresenceData->find(sporef);
 
 
-    if (smapIter != mSpaceData->end())
+    if (smapIter != mPresenceData->end())
     {
         //means that we actually did have a connection with this sporef
         //load the proxy objects the sporef'd connection has actually seen into
@@ -198,14 +198,14 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
-    if (mSpaceData == NULL)
+    if (mPresenceData == NULL)
     {
         std::cout<<"\n\n\nCalling getSpaceObjRefs when not connected to any spaces.  This really shouldn't happen\n\n\n";
         assert(false);
     }
 
-    SpaceDataMap::const_iterator smapIter;
-    for (smapIter = mSpaceData->begin(); smapIter != mSpaceData->end(); ++smapIter)
+    PresenceDataMap::const_iterator smapIter;
+    for (smapIter = mPresenceData->begin(); smapIter != mPresenceData->end(); ++smapIter)
     {
         ss.push_back(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
     }
@@ -216,8 +216,8 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 static ProxyObjectPtr nullPtr;
 const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const ObjectReference& oref) const
 {
-    SpaceDataMap::const_iterator iter = mSpaceData->find(SpaceObjectReference(space,oref));
-    if (iter == mSpaceData->end()) {
+    PresenceDataMap::const_iterator iter = mPresenceData->find(SpaceObjectReference(space,oref));
+    if (iter == mPresenceData->end()) {
         return nullPtr;
     }
     return iter->second.mProxyObject;
@@ -375,20 +375,20 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     }
 
     SpaceObjectReference self_objref(space, obj);
-    if(mSpaceData->find(self_objref) == mSpaceData->end())
+    if(mPresenceData->find(self_objref) == mPresenceData->end())
     {
         if (ppd != NULL)
         {
             ppd->populateSpaceObjRef(SpaceObjectReference(space,obj));
-            mSpaceData->insert(
-                SpaceDataMap::value_type(self_objref, *ppd)
+            mPresenceData->insert(
+                PresenceDataMap::value_type(self_objref, *ppd)
             );
         }
         else
         {
             PerPresenceData toInsert(this,space,obj);
-            mSpaceData->insert(
-                SpaceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
+            mPresenceData->insert(
+                PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
             );
         }
     }
@@ -399,7 +399,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds);
 
     // Use to initialize PerSpaceData
-    SpaceDataMap::iterator psd_it = mSpaceData->find(self_objref);
+    PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
     initializePerPresenceData(psd, self_proxy);
 
@@ -436,10 +436,10 @@ void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPt
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref)
 {
-    SpaceDataMap::iterator where;
-    where=mSpaceData->find(SpaceObjectReference(spaceID, oref));
-    if (where!=mSpaceData->end()) {
-        mSpaceData->erase(where);
+    PresenceDataMap::iterator where;
+    where=mPresenceData->find(SpaceObjectReference(spaceID, oref));
+    if (where!=mPresenceData->end()) {
+        mPresenceData->erase(where);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
     }
@@ -749,7 +749,7 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
     if (!proxy_manager)
     {
-        mSpaceData->insert(SpaceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object()) ));
+        mPresenceData->insert(PresenceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object()) ));
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
@@ -764,14 +764,14 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
 {
     std::cout<<"\n\nINCORRECT in getDefaultProxyManager: should try to match object!!!\n\n";
-    ObjectReference oref = mSpaceData->begin()->first.object();
+    ObjectReference oref = mPresenceData->begin()->first.object();
     return  getProxyManager(space, oref);
 }
 
 ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 {
     std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match object!!!\n\n";
-    ObjectReference oref = mSpaceData->begin()->first.object();
+    ObjectReference oref = mPresenceData->begin()->first.object();
     return  getProxy(space, oref);
 }
 
