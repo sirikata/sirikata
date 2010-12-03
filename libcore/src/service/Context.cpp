@@ -38,6 +38,8 @@
 
 namespace Sirikata {
 
+Context* Context::mainContextPtr = NULL;
+
 Context::Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen)
  : ioService(ios),
    mainStrand(strand),
@@ -83,7 +85,7 @@ void Context::run(uint32 nthreads) {
     // Start workers
     for(uint32 i = 1; i < nthreads; i++) {
         workerThreads.push_back(
-            new Thread( std::tr1::bind(&Network::IOService::runNoReturn, ioService) )
+            new Thread( std::tr1::bind(&Context::workerThread, this) )
         );
     }
 
@@ -96,6 +98,10 @@ void Context::run(uint32 nthreads) {
         delete workerThreads[i];
     }
     workerThreads.clear();
+}
+
+void Context::workerThread() {
+    ioService->run();
 }
 
 void Context::shutdown() {
