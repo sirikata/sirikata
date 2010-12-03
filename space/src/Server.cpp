@@ -278,7 +278,8 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
                     obj_msg->source_object(), OBJECT_PORT_TIMESYNC,
                     response_payload
                 );
-                mObjectHostConnectionManager->send(conn_id, sync_response);
+                bool send_success = mObjectHostConnectionManager->send(conn_id, sync_response);
+                if (!send_success) delete sync_response;
             }
             delete obj_msg;
             return true;
