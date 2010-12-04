@@ -333,7 +333,7 @@ private:
   uint64 mTransmitSequenceNumber;
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
 
-
+  typedef std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > LSIDStreamMap;
   std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
   std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
@@ -865,6 +865,7 @@ private:
       if (mOutgoingSubstreamMap.find(initiatingLSID) != mOutgoingSubstreamMap.end()) {
 	std::tr1::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
 	mIncomingSubstreamMap[incomingLsid] = stream;
+        stream->initRemoteLSID(incomingLsid);
 
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
@@ -1023,7 +1024,7 @@ private:
 
   void eraseDisconnectedStream(Stream<EndPointType>* s) {
     mOutgoingSubstreamMap.erase(s->getLSID());
-    mIncomingSubstreamMap.erase(s->getLSID());
+    mIncomingSubstreamMap.erase(s->getRemoteLSID());
   }
 
 
@@ -1693,6 +1694,7 @@ private:
     mConnection(conn),mContext(NULL),
     mUSID(usid),
     mLSID(lsid),
+    mRemoteLSID(-1),
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
     MAX_RECEIVE_WINDOW(10000),
@@ -1725,6 +1727,7 @@ private:
   void init(void* initial_data, uint32 length,
       bool remotelyInitiated, LSID remoteLSID) {
     if (remotelyInitiated) {
+        mRemoteLSID = remoteLSID;
         mConnected = true;
         mState = CONNECTED;
     }
@@ -1758,6 +1761,10 @@ private:
     if (length > mInitialDataLength) {
       write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
     }
+  }
+
+  void initRemoteLSID(LSID remoteLSID) {
+      mRemoteLSID = remoteLSID;
   }
 
   const Context* getContext() {
@@ -2109,6 +2116,10 @@ private:
     return mLSID;
   }
 
+  LSID getRemoteLSID() {
+    return mRemoteLSID;
+  }
+
   void updateRTO(Time sampleStartTime, Time sampleEndTime) {
 
 
@@ -2237,6 +2248,7 @@ private:
 
   USID mUSID;
   LSID mLSID;
+  LSID mRemoteLSID;
 
   uint16 MAX_PAYLOAD_SIZE;
   uint32 MAX_QUEUE_LENGTH;
