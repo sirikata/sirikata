@@ -53,11 +53,11 @@ public:
     AlwaysLocationUpdatePolicy(const String& args);
     virtual ~AlwaysLocationUpdatePolicy();
 
-    virtual void subscribe(ServerID remote, const UUID& uuid);
+    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote);
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid);
+    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
@@ -127,7 +127,7 @@ private:
             mObjectSubscribers.clear();
         }
 
-        void subscribe(const SubscriberType& remote, const UUID& uuid) {
+        void subscribe(const SubscriberType& remote, const UUID& uuid, LocationService* locservice) {
             // Add object to server's subscription list
             typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
             if (sub_it == mSubscriptions.end()) {
@@ -145,6 +145,12 @@ private:
             }
             SubscriberSet* obj_subs = obj_sub_it->second;
             obj_subs->insert(remote);
+
+            // Force an update. This is necessary because the subscription comes
+            // in asynchronously from Proximity, so its possible the data sent
+            // with the origin subscription is out of date by the time this
+            // subscription occurs. Forcing an extra update handles this case.
+            propertyUpdatedForSubscriber(uuid, locservice, remote, NULL);
         }
 
         void unsubscribe(const SubscriberType& remote, const UUID& uuid) {
@@ -186,35 +192,40 @@ private:
         // update to values.
         void propertyUpdated(const UUID& uuid, LocationService* locservice, UpdateFunctor fup) {
             // Add the update to each subscribed object
-
-            
             typename ObjectSubscribersMap::iterator obj_sub_it = mObjectSubscribers.find(uuid);
             if (obj_sub_it == mObjectSubscribers.end()) return;
 
             SubscriberSet* object_subscribers = obj_sub_it->second;
-            
+
             for(typename SubscriberSet::iterator subscriber_it = object_subscribers->begin(); subscriber_it != object_subscribers->end(); subscriber_it++)
             {
-                
-                if (mSubscriptions.find(*subscriber_it) == mSubscriptions.end()) continue; // XXX FIXME
-                assert(mSubscriptions.find(*subscriber_it) != mSubscriptions.end());
-                SubscriberInfo* sub_info = mSubscriptions[*subscriber_it];
-                if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) continue; // XXX FIXME
-                assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
-
-                
-                if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
-                    UpdateInfo new_ui;
-                    new_ui.location = locservice->location(uuid);
-                    new_ui.bounds = locservice->bounds(uuid);
-                    new_ui.mesh = locservice->mesh(uuid);
-                    new_ui.orientation = locservice->orientation(uuid);
-                    sub_info->outstandingUpdates[uuid] = new_ui;
-                }
-
-                UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
-                fup(ui);
+                propertyUpdatedForSubscriber(uuid, locservice, *subscriber_it, fup);
             }
+        }
+
+        // Update of location information for individual subscriber. Note that
+        // this should only be used in special cases -- mainly to handle when a
+        // new subscriber is added.  Otherwise its just a utility for the normal
+        // update method above.
+        void propertyUpdatedForSubscriber(const UUID& uuid, LocationService* locservice, SubscriberType sub, UpdateFunctor fup) {
+            if (mSubscriptions.find(sub) == mSubscriptions.end()) return; // XXX FIXME
+            assert(mSubscriptions.find(sub) != mSubscriptions.end());
+            SubscriberInfo* sub_info = mSubscriptions[sub];
+            if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) return; // XXX FIXME
+            assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
+
+            if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
+                UpdateInfo new_ui;
+                new_ui.location = locservice->location(uuid);
+                new_ui.bounds = locservice->bounds(uuid);
+                new_ui.mesh = locservice->mesh(uuid);
+                new_ui.orientation = locservice->orientation(uuid);
+                sub_info->outstandingUpdates[uuid] = new_ui;
+            }
+
+            UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
+            if (fup)
+                fup(ui);
         }
 
         static void setUILocation(UpdateInfo& ui, const TimedMotionVector3f& newval) {ui.location = newval; }
@@ -299,8 +310,9 @@ private:
                 // Try to send the last few if necessary/possible
                 if (!send_failed && bulk_update.update_size() > 0) {
                     bool sent = parent->trySend(sid, bulk_update);
-                    if (sent)
+                    if (sent) {
                         last_shipped = sub_info->outstandingUpdates.end();
+                    }
                 }
 
                 // Finally clear out any entries successfully sent out

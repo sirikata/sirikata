@@ -56,8 +56,8 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(const String& args)
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid) {
-    mServerSubscriptions.subscribe(remote, uuid);
+void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, LocationService* locservice) {
+    mServerSubscriptions.subscribe(remote, uuid, locservice);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
@@ -68,8 +68,8 @@ void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
-    mObjectSubscriptions.subscribe(remote, uuid);
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) {
+    mObjectSubscriptions.subscribe(remote, uuid, locservice);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
