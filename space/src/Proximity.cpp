@@ -194,6 +194,8 @@ Proximity::~Proximity() {
     mProxService = NULL;
 
     delete mAggregateManager;
+
+    delete mProxThread;
 }
 
 

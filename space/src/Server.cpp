@@ -82,8 +82,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 
-    mTimeSyncServer = new TimeSyncServer(mContext);
-
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
     mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
@@ -156,6 +154,8 @@ Server::~Server()
 
     delete mObjectHostConnectionManager;
     delete mLocalForwarder;
+
+    delete mMigrationMonitor;
 
     delete mTimeSyncServer;
 }

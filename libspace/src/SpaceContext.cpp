@@ -47,6 +47,7 @@ SpaceContext::SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStr
 }
 
 SpaceContext::~SpaceContext() {
+    delete mSpaceTrace;
 }
 
 } // namespace Sirikata

@@ -141,6 +141,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
 
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
       this->unregisterMessageRecipient(SERVER_PORT_FORWARDER_WEIGHT_UPDATE, this);
+
+      delete mOutgoingMessages;
+      delete mOSegLookups;
   }
 
   /*
