@@ -67,6 +67,12 @@ public:
     /** Run this plugin's initialization code. */
     void initialize();
 
+    /** Increment the ref count on this plugin by one. */
+    int incref();
+
+    /** Decrease the ref count on this plugin by one. */
+    int decref();
+
     /** Destroy this plugin. */
     void destroy();
 
@@ -80,12 +86,16 @@ private:
     typedef void(*DestroyFunc)();
     typedef const char*(*NameFunc)();
     typedef int(*RefCountFunc)();
+    typedef int(*IncRefCountFunc)();
+    typedef int(*DecRefCountFunc)();
 
     DynamicLibrary mDL;
     InitFunc mInit;
     DestroyFunc mDestroy;
     NameFunc mName;
     RefCountFunc mRefCount;
+    IncRefCountFunc mIncRefCount;
+    DecRefCountFunc mDecRefCount;
     int mInitialized;
 }; // class Plugin
 

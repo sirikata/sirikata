@@ -83,7 +83,6 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
     if (space_standard_plugin_refcount>0) {
         space_standard_plugin_refcount--;
-        assert(space_standard_plugin_refcount==0);
         if (space_standard_plugin_refcount==0) {
             LocationServiceFactory::getSingleton().unregisterConstructor("standard");
             LocationUpdatePolicyFactory::getSingleton().unregisterConstructor("always");

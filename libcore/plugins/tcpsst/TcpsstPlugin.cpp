@@ -94,13 +94,9 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (core_plugin_refcount>0) {
-        core_plugin_refcount--;
-        assert(core_plugin_refcount==0);
-        if (core_plugin_refcount==0) {
-            Sirikata::Network::StreamListenerFactory::getSingleton().unregisterConstructor("tcpsst");
-            Sirikata::Network::StreamFactory::getSingleton().unregisterConstructor("tcpsst");
-        }
+    if (core_plugin_refcount==0) {
+        Sirikata::Network::StreamListenerFactory::getSingleton().unregisterConstructor("tcpsst");
+        Sirikata::Network::StreamFactory::getSingleton().unregisterConstructor("tcpsst");
     }
 }
 

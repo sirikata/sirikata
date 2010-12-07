@@ -101,12 +101,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (weightsqr_plugin_refcount>0) {
-        weightsqr_plugin_refcount--;
-        assert(weightsqr_plugin_refcount==0);
-        if (weightsqr_plugin_refcount==0) {
-            RegionWeightCalculatorFactory::getSingleton().unregisterConstructor("const");
-        }
+    if (weightsqr_plugin_refcount==0) {
+        RegionWeightCalculatorFactory::getSingleton().unregisterConstructor("const");
     }
 }
 

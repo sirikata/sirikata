@@ -138,9 +138,6 @@ void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    static Sirikata::PluginManager sPluginManager;
-    sPluginManager.load("tcpsst");
-
     String oh_stream_lib = GetOptionValue<String>("ohstreamlib");
     String oh_stream_options = GetOptionValue<String>("ohstreamoptions");
 

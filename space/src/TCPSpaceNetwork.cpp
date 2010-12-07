@@ -268,7 +268,6 @@ TCPSpaceNetwork::TCPSpaceNetwork(SpaceContext* ctx)
    mReceiveListener(NULL)
 {
     mStreamPlugin = GetOptionValue<String>("spacestreamlib");
-    mPluginManager.load(mStreamPlugin);
 
     mListenOptions = StreamListenerFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));
     mSendOptions = StreamFactory::getSingleton().getOptionParser(mStreamPlugin)(GetOptionValue<String>("spacestreamoptions"));

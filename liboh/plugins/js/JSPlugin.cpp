@@ -74,12 +74,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (js_plugin_refcount>0) {
-        js_plugin_refcount--;
-        assert(js_plugin_refcount==0);
-        if (js_plugin_refcount==0) {
-            JSLOG(info,"Destroying JS Plugin.");
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("js");
-        }
+    if (js_plugin_refcount==0) {
+        JSLOG(info,"Destroying JS Plugin.");
+        ObjectScriptManagerFactory::getSingleton().unregisterConstructor("js");
     }
 }

@@ -244,9 +244,19 @@ public:
             delete i->second;
         }
         delete OptionSet::optionSets();
+/* This should work, but is currently causing a crash when it tries to handle
+        options generated in plugins which have since been unloaded. Since there
+        doesn't appear to be an easy way to clear out options from each plugin
+        currently, we just have to settle with disabling this for now.
+
         HolderStash::destroy();
         ValueStash::destroy();
+
+And this absolutely should not be necessary here since the options system
+        doesn't load any libraries/plugins...
+
         Sirikata::DynamicLibrary::gc();
+*/
     }
 }gQuitOptionsPlugin;
 }

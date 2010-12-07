@@ -72,11 +72,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (simplecamera_plugin_refcount>0) {
-        simplecamera_plugin_refcount--;
-        assert(simplecamera_plugin_refcount==0);
-        if (simplecamera_plugin_refcount==0) {
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("simplecamera");
-        }
+    if (simplecamera_plugin_refcount==0) {
+        ObjectScriptManagerFactory::getSingleton().unregisterConstructor("simplecamera");
     }
 }

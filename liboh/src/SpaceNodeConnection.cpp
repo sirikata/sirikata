@@ -55,8 +55,6 @@ SpaceNodeConnection::SpaceNodeConnection(ObjectHostContext* ctx, Network::IOStra
    mConnectCB(ccb),
    mReceiveCB(rcb)
 {
-    static Sirikata::PluginManager sPluginManager;
-    static int tcpSstLoaded=(sPluginManager.load(GetOptionValue<String>("ohstreamlib")),0);
 }
 
 SpaceNodeConnection::~SpaceNodeConnection() {
