@@ -88,6 +88,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mLocService(locservice),
    mCSeg(NULL),
    mDistanceQueryDistance(0.f),
+   mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
    mProxThread(NULL),
    mProxService(NULL),
