@@ -54,7 +54,7 @@ using std::tr1::placeholders::_1;
 
 IOService::IOService() {
     mImpl = new boost::asio::io_service(1);
-    mOwn = false;
+    mOwn = true;
 }
 
 IOService::IOService(InternalIOService* bs)
