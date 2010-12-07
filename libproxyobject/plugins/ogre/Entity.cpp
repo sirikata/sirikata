@@ -511,7 +511,7 @@ public:
         unsigned int valid_passes=0;
         {
             Ogre::Pass* pass = tech->getPass(0);
-            pass->setAmbient(ColourValue(0,0,0,0));
+            pass->setAmbient(ColourValue(1,1,1,1));
             pass->setDiffuse(ColourValue(0,0,0,0));
             pass->setSelfIllumination(ColourValue(0,0,0,0));
             pass->setSpecular(ColourValue(0,0,0,0));
@@ -655,7 +655,7 @@ public:
 
 
                         pass->setDiffuse(ColourValue(0,0,0,0));
-                        pass->setAmbient(ColourValue(0,0,0,0));
+                        pass->setAmbient(ColourValue(1,1,1,1));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         //pass->setIlluminationStage(IS_PER_LIGHT);
 

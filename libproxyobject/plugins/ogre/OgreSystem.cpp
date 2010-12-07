@@ -397,7 +397,8 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     proxyManager->addListener(this);
 
     //initialize the Resource Download Planner
-    dlPlanner = new DistanceDownloadPlanner(mContext);
+    dlPlanner = new SAngleDownloadPlanner(mContext);
+    //dlPlanner = new DistanceDownloadPlanner(mContext);
 
     //add ogre system options here
     OptionValue*pluginFile;
@@ -563,7 +564,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     }
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
-    mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
+    mSceneManager->setAmbientLight(Ogre::ColourValue(1.0f,1.0f,1.0f,1.0f));
     sActiveOgreScenes.push_back(this);
 
     allocMouseHandler(keybindingFile->as<String>());
