@@ -220,6 +220,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
     if (!parse_success) {
         LOG_INVALID_MESSAGE(space, error, chunk);
+        delete obj_msg;
         return; // Ignore, treat as dropped. Hopefully this doesn't cascade...
     }
 
