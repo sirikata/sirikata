@@ -51,6 +51,7 @@ ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sen
 }
 
 ServerMessageQueue::~ServerMessageQueue() {
+    delete mProfiler;
     delete mSenderStrand;
 }
 

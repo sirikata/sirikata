@@ -58,6 +58,7 @@ LoadMonitor::LoadMonitor(SpaceContext* ctx, CoordinateSegmentation* cseg)
 }
 
 LoadMonitor::~LoadMonitor() {
+    delete mProfiler;
     delete mLoadServerMessageService;
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOAD_STATUS, this);
 }

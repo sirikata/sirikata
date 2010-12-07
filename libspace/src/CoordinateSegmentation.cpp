@@ -41,6 +41,10 @@ CoordinateSegmentation::CoordinateSegmentation(SpaceContext* ctx)
     mServiceStage = mContext->profiler->addStage("CSeg");
 }
 
+CoordinateSegmentation::~CoordinateSegmentation() {
+    delete mServiceStage;
+}
+
 void CoordinateSegmentation::addListener(Listener* listener) {
     assert (mListeners.find(listener) == mListeners.end());
     mListeners.insert(listener);

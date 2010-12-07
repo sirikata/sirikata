@@ -89,6 +89,7 @@ LocationService::LocationService(SpaceContext* ctx, LocationUpdatePolicy* update
 }
 
 LocationService::~LocationService() {
+    delete mProfiler;
     delete mUpdatePolicy;
 
     mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_LOCATION, this);
