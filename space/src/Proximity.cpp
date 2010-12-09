@@ -862,8 +862,13 @@ void Proximity::proxThreadMain() {
     Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
     Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
 
+    Poller staticRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(60.f));
+    Poller dynamicRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(10.f));
+
     mServerHandlerPoller.start();
     mObjectHandlerPoller.start();
+    staticRebuilder.start();
+    dynamicRebuilder.start();
 
     mProxService->run();
 }
@@ -874,6 +879,13 @@ void Proximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
         if (qh[i] != NULL)
             qh[i]->tick(simT);
     }
+}
+
+void Proximity::rebuildHandler(ObjectClass objtype) {
+    if (mServerQueryHandler[objtype] != NULL)
+        mServerQueryHandler[objtype]->rebuild();
+    if (mObjectQueryHandler[objtype] != NULL)
+        mObjectQueryHandler[objtype]->rebuild();
 }
 
 void Proximity::generateServerQueryEvents(Query* query) {

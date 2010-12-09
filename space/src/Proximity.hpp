@@ -301,6 +301,7 @@ private:
     // PROX Thread - Should only be accessed in methods used by the main thread
 
     void tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]);
+    void rebuildHandler(ObjectClass objtype);
 
     Thread* mProxThread;
     Network::IOService* mProxService;
