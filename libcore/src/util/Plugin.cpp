@@ -54,7 +54,7 @@ Plugin::~Plugin() {
     while(mDestroy && mInitialized)
         destroy();
 
-    if (refcount() == 0)
+    if (mRefCount && refcount() == 0)
         unload();
 }
 
