@@ -73,7 +73,7 @@ PintoManager::PintoManager(PintoContext* ctx)
     String handler_options = GetOptionValue<String>(OPT_PINTO_HANDLER_OPTIONS);
     mQueryHandler = QueryHandlerFactory<ServerProxSimulationTraits>(handler_type, handler_options);
     bool static_objects = false;
-    mQueryHandler->initialize(mLocCache, static_objects);
+    mQueryHandler->initialize(mLocCache, mLocCache, static_objects);
 }
 
 PintoManager::~PintoManager() {

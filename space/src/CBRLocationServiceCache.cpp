@@ -57,7 +57,8 @@ CBRLocationServiceCache::~CBRLocationServiceCache() {
 }
 
 LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const UUID& id) {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    Lock lck(mMutex);
+
     ObjectDataMap::iterator it = mObjects.find(id);
     assert(it != mObjects.end());
 
@@ -67,7 +68,8 @@ LocationServiceCache::Iterator CBRLocationServiceCache::startTracking(const UUID
 }
 
 void CBRLocationServiceCache::stopTracking(const Iterator& id) {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    Lock lck(mMutex);
+
     // In this special case, we ignore the true iterator and do the lookup.
     // This is necessary because ordering problems can cause the iterator to
     // become invalidated.
@@ -85,13 +87,15 @@ void CBRLocationServiceCache::stopTracking(const Iterator& id) {
     tryRemoveObject(it);
 }
 
-bool CBRLocationServiceCache::tracking(const UUID& id) const {
+bool CBRLocationServiceCache::tracking(const UUID& id) {
+    Lock lck(mMutex);
+
     return (mObjects.find(id) != mObjects.end());
 }
 
 
 const TimedMotionVector3f& CBRLocationServiceCache::location(const Iterator& id) const {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
@@ -99,7 +103,7 @@ const TimedMotionVector3f& CBRLocationServiceCache::location(const Iterator& id)
 }
 
 const BoundingSphere3f& CBRLocationServiceCache::region(const Iterator& id) const {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    // NOTE: Only accesses via iterator, shouldn't need a lock
     // "Region" for individual objects is the degenerate bounding sphere about
     // their center.
     IteratorData* itdat = (IteratorData*)id.data;
@@ -109,7 +113,7 @@ const BoundingSphere3f& CBRLocationServiceCache::region(const Iterator& id) cons
 }
 
 float32 CBRLocationServiceCache::maxSize(const Iterator& id) const {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
+    // NOTE: Only accesses via iterator, shouldn't need a lock
     // Max size is just the size of the object.
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
@@ -118,8 +122,7 @@ float32 CBRLocationServiceCache::maxSize(const Iterator& id) const {
 }
 
 bool CBRLocationServiceCache::isLocal(const Iterator& id) const {
-    // NOTE: should only be accessed by prox thread, shouldn't need lock
-    // Max size is just the size of the object.
+    // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     assert(it != mObjects.end());
@@ -128,17 +131,22 @@ bool CBRLocationServiceCache::isLocal(const Iterator& id) const {
 
 
 const UUID& CBRLocationServiceCache::iteratorID(const Iterator& id) const {
+    // NOTE: Only accesses via iterator, shouldn't need a lock
     IteratorData* itdat = (IteratorData*)id.data;
     ObjectDataMap::iterator it = itdat->it;
     return it->first;
 }
 
 void CBRLocationServiceCache::addUpdateListener(LocationUpdateListener* listener) {
+    Lock lck(mMutex);
+
     assert( mListeners.find(listener) == mListeners.end() );
     mListeners.insert(listener);
 }
 
 void CBRLocationServiceCache::removeUpdateListener(LocationUpdateListener* listener) {
+    Lock lck(mMutex);
+
     ListenerSet::iterator it = mListeners.find(listener);
     assert( it != mListeners.end() );
     mListeners.erase(it);
@@ -238,6 +246,8 @@ void CBRLocationServiceCache::objectAdded(const UUID& uuid, bool islocal, bool a
 }
 
 void CBRLocationServiceCache::processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+    Lock lck(mMutex);
+
     if (mObjects.find(uuid) != mObjects.end())
         return;
 
@@ -268,6 +278,8 @@ void CBRLocationServiceCache::objectRemoved(const UUID& uuid, bool agg) {
 }
 
 void CBRLocationServiceCache::processObjectRemoved(const UUID& uuid, bool agg) {
+    Lock lck(mMutex);
+
     ObjectDataMap::iterator data_it = mObjects.find(uuid);
     if (data_it == mObjects.end()) return;
 
@@ -291,6 +303,8 @@ void CBRLocationServiceCache::locationUpdated(const UUID& uuid, bool agg, const 
 }
 
 void CBRLocationServiceCache::processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval) {
+    Lock lck(mMutex);
+
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
@@ -312,6 +326,8 @@ void CBRLocationServiceCache::orientationUpdated(const UUID& uuid, bool agg, con
 }
 
 void CBRLocationServiceCache::processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) {
+    Lock lck(mMutex);
+
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
@@ -329,6 +345,8 @@ void CBRLocationServiceCache::boundsUpdated(const UUID& uuid, bool agg, const Bo
 }
 
 void CBRLocationServiceCache::processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval) {
+    Lock lck(mMutex);
+
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
 
@@ -358,6 +376,8 @@ void CBRLocationServiceCache::meshUpdated(const UUID& uuid, bool agg, const Stri
 }
 
 void CBRLocationServiceCache::processMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
+    Lock lck(mMutex);
+
     ObjectDataMap::iterator it = mObjects.find(uuid);
     if (it == mObjects.end()) return;
     String oldval = it->second.mesh;

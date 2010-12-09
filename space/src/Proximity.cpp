@@ -141,7 +141,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
         mServerQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i]->initialize(
-            mLocCache, server_static_objects,
+            mLocCache, mLocCache, server_static_objects,
             std::tr1::bind(&Proximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
         );
     }
@@ -159,7 +159,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
         mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i]->initialize(
-            mLocCache, object_static_objects,
+            mLocCache, mLocCache, object_static_objects,
             std::tr1::bind(&Proximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
         );
     }
