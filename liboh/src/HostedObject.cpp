@@ -72,13 +72,14 @@ namespace Sirikata {
 
 HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName)
  : mContext(ctx),
-   mInternalObjectReference(objectName)
+   mObjectHost(parent),
+   mObjectScript(NULL),
+   mSpaceData(new SpaceDataMap),
+   mNextSubscriptionID(0),
+   mInternalObjectReference(objectName),
+   mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
 {
-    mSpaceData = new SpaceDataMap;
-    mNextSubscriptionID = 0;
-    mObjectHost=parent;
-    mObjectScript=NULL;
-
+    mContext->add(&mOrphanLocUpdates);
 
     mDelegateODPService = new ODP::DelegateService(
         std::tr1::bind(
@@ -576,6 +577,37 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
     //s->registerReadCallback(0);
 }
 
+void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    if (update.has_location()) {
+        Sirikata::Protocol::TimedMotionVector update_loc = update.location();
+        TimedMotionVector3f loc(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
+
+        proxy_obj->setLocation(loc);
+
+        CONTEXT_OHTRACE(objectLoc,
+            getUUID(),
+            update.object(),
+            loc
+        );
+    }
+
+    if (update.has_orientation()) {
+        Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
+        TimedMotionQuaternion orient(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
+        proxy_obj->setOrientation(orient);
+    }
+
+    if (update.has_bounds()) {
+        proxy_obj->setBounds(update.bounds());
+    }
+
+    if (update.has_mesh()) {
+        std::string mesh = update.mesh();
+        if (mesh != "")
+            proxy_obj->setMesh(Transfer::URI(mesh));
+    }
+}
+
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
     Sirikata::Protocol::Frame frame;
     bool parse_success = frame.ParseFromString(payload);
@@ -596,41 +628,15 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
         ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
-        ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(), ObjectReference(update.object())));
+        SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
+        ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
-        if (!proxy_obj) continue;
-
-
-        if (update.has_location()) {
-
-            Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-            TimedMotionVector3f loc(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
-
-            proxy_obj->setLocation(loc);
-
-            CONTEXT_OHTRACE(objectLoc,
-                getUUID(),
-                update.object(),
-                loc
-            );
+        if (!proxy_obj) {
+            mOrphanLocUpdates.addOrphanUpdate(observed, update);
+            continue;
         }
 
-        if (update.has_orientation()) {
-            Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
-            TimedMotionQuaternion orient(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
-            proxy_obj->setOrientation(orient);
-        }
-
-        if (update.has_bounds()) {
-            proxy_obj->setBounds(update.bounds());
-        }
-
-        if (update.has_mesh())
-        {
-          std::string mesh = update.mesh();
-          if (mesh != "")
-              proxy_obj->setMesh(Transfer::URI(mesh));
-        }
+        processLocationUpdate(space, proxy_obj, update);
     }
 
     return true;
@@ -660,15 +666,12 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             );
 
 
-            ProxyManagerPtr pmp = getProxyManager(spaceobj.space(),spaceobj.object());
-            if (! pmp)
-            {
+            ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
+            if (!proxy_manager)
                 return true;
-            }
 
-
-
-            if (!getProxyManager(spaceobj.space(),spaceobj.object())->getProxyObject(proximateID)) {
+            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
+            if (!proxy_obj) {
                 TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
 
                 Transfer::URI meshuri;
@@ -676,32 +679,21 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
                 // FIXME use weak_ptr instead of raw
                 BoundingSphere3f bnds = addition.bounds();
-                ProxyObjectPtr proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds);
-
-                //tells the object script that something that was close has come
-                //into view
-                if(mObjectScript)
-                    mObjectScript->notifyProximate(proxy_obj);
-                
+                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds);
             }
-            else
-            {
-
-                ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
-                ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
-                        ObjectReference(addition.object())));
-
-                if (!proxy_obj)
-                    continue;
-
+            else {
                 proxy_obj->setMesh(Transfer::URI(addition.mesh()));
-
-                //tells the object script that something that was close has come
-                //into view
-                if(mObjectScript)
-                    mObjectScript->notifyProximate(proxy_obj);
-
             }
+
+            // Notify of any out of order loc updates
+            OrphanLocUpdateManager::UpdateList orphan_loc_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);
+            for(OrphanLocUpdateManager::UpdateList::iterator orphan_it = orphan_loc_updates.begin(); orphan_it != orphan_loc_updates.end(); orphan_it++)
+                processLocationUpdate(spaceobj.space(), proxy_obj, *orphan_it);
+
+            //tells the object script that something that was close has come
+            //into view
+            if(mObjectScript)
+                mObjectScript->notifyProximate(proxy_obj);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -713,10 +705,10 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;
 
-            
+
             if (mObjectScript)
                 mObjectScript->notifyProximateGone(proxy_obj);
-            
+
             proxy_obj->setMesh(Transfer::URI(""));
 
 

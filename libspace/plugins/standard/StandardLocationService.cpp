@@ -280,6 +280,12 @@ void StandardLocationService::receiveMessage(Message* msg) {
                 continue;
 
             LocationMap::iterator loc_it = mLocations.find( update.object() );
+            // We can safely make this assertion right now because space server
+            // to space server loc and prox are on the same reliable channel. If
+            // this goes away then a) we can't make this assertion and b) we
+            // need an OrphanLocUpdateManager to save updates where this
+            // condition is false so they can be applied once the prox update
+            // arrives.
             assert(loc_it != mLocations.end());
 
             if (update.has_location()) {
