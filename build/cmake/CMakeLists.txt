@@ -1230,6 +1230,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
 SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
