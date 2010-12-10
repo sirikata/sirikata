@@ -378,7 +378,7 @@ v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args) {
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     target_script->registerOnPresenceConnectedHandler(cb_persist);
-
+    
     return v8::Undefined();
 }
 

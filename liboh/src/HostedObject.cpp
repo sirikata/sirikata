@@ -693,7 +693,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             //tells the object script that something that was close has come
             //into view
             if(mObjectScript)
-                mObjectScript->notifyProximate(proxy_obj);
+                mObjectScript->notifyProximate(proxy_obj,spaceobj);
         }
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
@@ -707,7 +707,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 
             if (mObjectScript)
-                mObjectScript->notifyProximateGone(proxy_obj);
+                mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
             proxy_obj->setMesh(Transfer::URI(""));
 

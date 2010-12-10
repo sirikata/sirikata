@@ -206,15 +206,71 @@ void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
 
 
 
-void  JSObjectScript::notifyProximateGone(ProxyObjectPtr p)
+void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
-    JSLOG(info,"Notified that object "<<p->getObjectReference()<<" went out of query.  Mostly just ignoring it.");
+    JSLOG(info,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
+
+    // Invoke user callback    
+    PresenceMap::iterator iter = mPresences.find(querier);
+    if (iter == mPresences.end())
+    {
+        JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximateGone.  Taking no action.");
+        return;
+    }
+        
+    if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
+    {
+        v8::HandleScope handle_scope;
+        v8::Context::Scope context_scope(mContext);
+        Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
+        newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
+        newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
+        
+        int argc = 1;
+        v8::Handle<v8::Value> argv[1] = { newAddrObj };
+        //FIXME: Potential memory leak: when will newAddrObj's
+        //SpaceObjectReference field be garbage collected and deleted?
+        JSLOG(info,"Issuing user callback for proximate object gone.");
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, argv);
+    }
 }
 
-void  JSObjectScript::notifyProximate(ProxyObjectPtr p)
+
+void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
-    JSLOG(info,"Notified that object "<<p->getObjectReference()<<" is within query.  Adding to addressable list.");
-    addAddressable(p->getObjectReference());
+    JSLOG(info,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".  Adding to addressable list.");
+
+    //add the proximate object to addAddressable if can before issuing callback
+    addAddressable(proximateObject->getObjectReference());
+
+
+    // Invoke user callback
+    PresenceMap::iterator iter = mPresences.find(querier);
+    if (iter == mPresences.end())
+    {
+        JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
+        return;
+    }
+        
+    if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
+    {
+        v8::HandleScope handle_scope;
+        v8::Context::Scope context_scope(mContext);
+        Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
+        newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
+        newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
+
+
+        
+        int argc = 1;
+        v8::Handle<v8::Value> argv[1] = { newAddrObj };
+        //FIXME: Potential memory leak: when will newAddrObj's
+        //SpaceObjectReference field be garbage collected and deleted?
+        JSLOG(info,"Issuing user callback for proximate object.");
+        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
+    }
+    
+
 }
 
 
@@ -229,7 +285,6 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     populateAddressable(name);
 
     v8::HandleScope handle_scope;
-
     Handle<Object> system_obj = getSystemObject();
 
 
@@ -506,8 +561,6 @@ void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& ta
             target,
             cb
         ));
-
-
 }
 
 void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
@@ -541,7 +594,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
             }
         }
     }
-
 
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
@@ -598,7 +650,6 @@ JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::
     }
     else
         mEventHandlers.push_back(new_handler);
-
 
     return new_handler;
 }
@@ -680,11 +731,8 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
             matchesSomeHandler = true;
         }
     }
-
-
     mHandlingEvent = false;
     flushQueuedHandlerEvents();
-
 
     /*
       FIXME: What should I do if the message that I receive does not match any handler?
@@ -806,8 +854,6 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
 
     return returner;
 }
-
-
 
 
 
@@ -1063,10 +1109,12 @@ void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, cons
 }
 
 
+//just sets the solid angle query for the object.
 void JSObjectScript::setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa)
 {
     mParent->requestQueryUpdate(sporef->space(), sporef->object(), sa);
 }
+
 
 
 

@@ -72,6 +72,7 @@ private:
     void createContextTemplate();
     void createMathTemplate();
 
+    
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;

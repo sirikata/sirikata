@@ -23,12 +23,8 @@ function proxRemovedCallback(arg)
     system.print(numInProx);
     system.print("\n\n");
 }
-
-
-
 system.presences[0].onProxAdded(proxAddedCallback);
 system.presences[0].onProxRemoved(proxRemovedCallback);
-
 
 
 system.presences[0].setQueryAngle(.1);

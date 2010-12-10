@@ -237,6 +237,11 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
   mPresenceTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
+  //callback on prox addition and removal
+  mPresenceTemplate->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  mPresenceTemplate->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  
+    
   // Query angle
   mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 

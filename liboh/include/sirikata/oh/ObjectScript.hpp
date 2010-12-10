@@ -52,8 +52,8 @@ class SIRIKATA_OH_EXPORT ObjectScript {
     //Addressables depend upon the space the presence is
     //Different presences have different spaces
 
-    virtual void  notifyProximateGone(std::tr1::shared_ptr<ProxyObject> p){ NOT_IMPLEMENTED(ObjectScript); }
-    virtual void  notifyProximate(std::tr1::shared_ptr<ProxyObject> p){ NOT_IMPLEMENTED(ObjectScript); }
+    virtual void  notifyProximateGone(std::tr1::shared_ptr<ProxyObject> p, const SpaceObjectReference&){}
+    virtual void  notifyProximate(std::tr1::shared_ptr<ProxyObject> p, const SpaceObjectReference&){ }
 
     
      virtual String scriptType() const { return scriptType_;}

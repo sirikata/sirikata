@@ -19,8 +19,22 @@ struct JSPresenceStruct
     {}
     ~JSPresenceStruct() { delete sporef; }
 
+    void registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb)
+    {
+        mOnProxRemovedEventHandler = cb;
+    }
+    
+    void registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb)
+    {
+        mOnProxAddedEventHandler = cb;
+    }
+    
+    
     JSObjectScript* jsObjScript;
     SpaceObjectReference* sporef;
+    v8::Persistent<v8::Function> mOnProxRemovedEventHandler;
+    v8::Persistent<v8::Function> mOnProxAddedEventHandler;
+    
 };
 
 

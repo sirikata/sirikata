@@ -84,10 +84,11 @@ public:
 
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
+    virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+    virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    virtual void  notifyProximateGone(ProxyObjectPtr p);
-    virtual void  notifyProximate(ProxyObjectPtr p);
     
+    //note: may want to remove these calls.
     virtual void onCreateProxy(ProxyObjectPtr p);
     virtual void onDestroyProxy(ProxyObjectPtr p);
     
@@ -152,7 +153,6 @@ public:
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
 
     void deleteHandler(JSEventHandler* toDelete);
-
 
     void registerOnPresenceConnectedHandler(v8::Persistent<v8::Function>& cb) {
         mOnPresenceConnectedHandler = cb;
