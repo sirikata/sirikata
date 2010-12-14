@@ -47,6 +47,7 @@
 #include "JSUtil.hpp"
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
+#include "JSObjects/JSInvokableObject.hpp"
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -272,7 +273,13 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
 }
 
 
+JSInvokableObject::JSInvokableObjectInt* JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
+{
+    TimeSteppedSimulation* sim = mParent->runSimulation(sporef,simname);
 
+    return new JSInvokableObject::JSInvokableObjectInt(sim);
+}
+  
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
     //register for scripting messages from user
     SpaceID space_id = name.space();
@@ -534,9 +541,11 @@ void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
     addr_array->Set(v8::Number::New(new_pos),newAddrObj);
 }
 
+
 void JSObjectScript::onCreateProxy(ProxyObjectPtr p)
 {
     addAddressable(p->getObjectReference());
+
 }
 
 void JSObjectScript::onDestroyProxy(ProxyObjectPtr p)

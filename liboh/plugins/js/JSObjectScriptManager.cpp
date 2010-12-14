@@ -49,6 +49,7 @@
 #include "JSObjects/Addressable.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSFields.hpp"
+#include "JSObjects/JSInvokableObject.hpp"
 #include "JSSystemNames.hpp"
 
 
@@ -82,6 +83,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     createHandlerTemplate();
     createPresenceTemplate();
     createMathTemplate();
+    createJSInvokableObjectTemplate();
 }
 
 void JSObjectScriptManager::createMathTemplate()
@@ -195,6 +197,15 @@ void JSObjectScriptManager::createAddressableTemplate()
     mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
     mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
     mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
+}
+
+void JSObjectScriptManager::createJSInvokableObjectTemplate()
+{
+  v8::HandleScope handle_scope;
+
+  mInvokableObjectTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+  mInvokableObjectTemplate->SetInternalFieldCount(JSSIMOBJECT_TEMPLATE_FIELD_COUNT);
+  mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke)); 
 }
 
 void JSObjectScriptManager::createPresenceTemplate()

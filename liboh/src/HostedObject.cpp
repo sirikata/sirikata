@@ -90,6 +90,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 }
 
 
+
 //Need to define this function so that can register timeouts in jscript
 Network::IOService* HostedObject::getIOService()
 {
@@ -97,7 +98,7 @@ Network::IOService* HostedObject::getIOService()
 }
 
 
-void HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
+TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
 
@@ -116,6 +117,7 @@ void HostedObject::runSimulation(const SpaceObjectReference& sporef, const Strin
         HO_LOG(info, "Adding simulation to context");
         mContext->add(sim);
     }
+    return sim;
 }
 
 
@@ -321,6 +323,7 @@ void HostedObject::connect(
     );
 
 }
+
 
 
 
@@ -1040,6 +1043,9 @@ void HostedObject::persistToFile(std::ofstream& fp)
       es->persistToFile(fp);
   }
 }
+
+
+
 
 
 void HostedObject::EntityState::persistToFile(std::ofstream& fp)

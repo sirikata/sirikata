@@ -743,6 +743,7 @@ private:
 
     void createChatUIAction()
     {
+      /*
       static bool onceInitialized = false;
       initScriptOnSelectedObjects(); 
       for(SelectedObjectSet::iterator sel_it = mSelectedObjects.begin(); sel_it != mSelectedObjects.end(); sel_it++) {
@@ -795,11 +796,13 @@ private:
 
 
       }
+      */
     }
 
 
     void processChatMessage(WebView* wv, const JSArguments& args)
     {
+      /*
 
       std::cout << "\n\n processing chat message\n\n";
       ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
@@ -832,7 +835,6 @@ private:
                 String msgBody = String(nexter->begin());
                 
                 std::cout << "Chat Message: " << msgBody;
-                /*
                 scripting_req.set_body(msgBody);
                 std::string serialized_scripting_request;
                 scripting_msg.SerializeToString(&serialized_scripting_request);
@@ -840,11 +842,10 @@ private:
                     Services::SCRIPTING,
                     MemoryReference(serialized_scripting_request)
                 );
-                */
-
+             
             }
         }
-      
+     */ 
     }
 
     void LOCAL_createWebviewAction() {
@@ -1784,10 +1785,11 @@ public:
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createWebviewAction, this));
 
 
-        mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createScriptingUIAction, this));
-        mInputResponses["openChatUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createChatUIAction, this));
+      
+        mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptingUIAction, this));
+        mInputResponses["openChatUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createChatUIAction, this));
 
-        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&MouseHandler::createUIAction, this, "object/object.html"));
+        mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createUIAction, this, "object/object.html"));
 
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptedObjectAction, this, _1));
