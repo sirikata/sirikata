@@ -108,6 +108,7 @@ public:
 
     /** Print the given string to the current output. */
     void print(const String& str);
+    v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -243,7 +244,8 @@ private:
     void initializeAddressable(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
     void initializeMath(Handle<Object>& system_obj);
-
+    void initializeVisible(Handle<Object>&system_obj);
+    
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
     void removePresence(const SpaceObjectReference& sporef);

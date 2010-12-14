@@ -37,6 +37,7 @@
 
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
+#include "JSObjects/JSVisible.hpp"
 #include "JSObjects/JSSystem.hpp"
 #include "JSObjects/JSMath.hpp"
 #include "JSObjects/JSHandler.hpp"
@@ -199,6 +200,7 @@ void JSObjectScriptManager::createAddressableTemplate()
     mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
 }
 
+
 void JSObjectScriptManager::createJSInvokableObjectTemplate()
 {
   v8::HandleScope handle_scope;
@@ -208,6 +210,24 @@ void JSObjectScriptManager::createJSInvokableObjectTemplate()
   mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke)); 
 }
 
+
+
+void JSObjectScriptManager::createVisibleTemplate()
+{
+    v8::HandleScope handle_scope;
+    mVisibleTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    // An internal field holds the external address of the addressable object
+    mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
+
+    //these function calls are defined in JSObjects/Addressable.hpp
+    mVisibleTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
+    mVisibleTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
+    mVisibleTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
+    mVisibleTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
+}
+
+
+>>>>>>> Adding a visible array to emerson.
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;

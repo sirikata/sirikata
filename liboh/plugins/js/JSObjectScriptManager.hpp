@@ -58,6 +58,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
+    v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
     v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
     v8::Persistent<v8::ObjectTemplate> mMathTemplate;
@@ -67,6 +68,7 @@ public:
 private:
 
     void createAddressableTemplate();
+    void createVisibleTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();
     void createPresenceTemplate();

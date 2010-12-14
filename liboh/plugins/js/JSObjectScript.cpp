@@ -179,7 +179,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     initializeMath(system_obj);
     initializePresences(system_obj);
     initializeAddressable(system_obj);
-
+    initializeVisible(system_obj);
+    
 
     mHandlingEvent = false;
 
@@ -236,10 +237,15 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
         return;
     }
 
+
     if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
     {
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
+
+        for (int s=0; s < 
+        Local<Object> removedObject = 
+        lkjs;
         Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
         newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
         newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
@@ -274,14 +280,14 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
     {
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
-        Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
-        newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
-        newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
+        addAddressable(proximateObject->getObjectReference());
 
-
+        Local<Object> newVisibleObj;
+        newVisibleObj = addVisible(proximateObject->getObjectReference());
+        
 
         int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { newAddrObj };
+        v8::Handle<v8::Value> argv[1] = { newVisibleObj };
         //FIXME: Potential memory leak: when will newAddrObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object.");
@@ -524,14 +530,14 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 //this function adds the sporefToAdd to the mAddressableList, then it pushes
 //the new addressable object onto the addressable array accessible by emerson
 //developers.  It does not add the sporef if we already have a copy in the array.
-void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
+v8::Handle<v8::Value> JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
 {
     AddressableList::const_iterator alreadyHave;
     for (alreadyHave= mAddressableList.begin(); alreadyHave != mAddressableList.end(); ++alreadyHave)
     {
         //just checks if we already have that sporef in our addressable array.
         if ((*(*alreadyHave)) == sporefToAdd)
-            return;
+            return v8::Undefined();
     }
 
 
@@ -554,6 +560,8 @@ void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
     newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(toAdd));
 
     addr_array->Set(v8::Number::New(new_pos),newAddrObj);
+
+    return newAddrObj;
 }
 
 
@@ -700,7 +708,6 @@ void JSObjectScript::printAllHandlerLocations()
 /*
  * Populates the message properties
  */
-
 v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 {
 
@@ -939,6 +946,16 @@ void JSObjectScript::initializeAddressable(Handle<Object>& system_obj)
 }
 
 
+void JSObjectScript::initializeVisible(Handle<Object>&system_obj)
+{
+    v8::Context::Scope context_scope(mContext);
+    // Create the space for the addressables, they get filled in by
+    // onConnected/onCreateProxy calls
+    v8::Local<v8::Array> arrayObj = v8::Array::New();
+    system_obj->Set(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME), arrayObj);
+}
+
+
 //called to build the presences array as well as to build the presence keyword
 void JSObjectScript::initializePresences(Handle<Object>& system_obj)
 {
@@ -1100,6 +1117,12 @@ v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectRefer
     return CreateJSResult(mContext,vec3f);
 }
 
+
+v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(ProxyObjectPtr p)
+{
+    Vector3d vec3d = p->getPosition();
+    return CreateJSResult(mContext,vec3d);
+}
 
 
 //orientation
