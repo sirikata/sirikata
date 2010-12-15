@@ -196,6 +196,9 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 }
 
 
+
+
+
 //returns all the spaceobjrefs associated with all presences of this object.
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
@@ -224,6 +227,25 @@ const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const Ob
     }
     return iter->second.mProxyObject;
 }
+
+
+//first checks to see if have a presence associated with spVisTo.  If do, then
+//checks if have a proxy object associated with sporef, sets p to the associated
+//proxy object, and returns true.  Otherwise, returns false.
+bool HostedObject::getProxyObjectFrom(SpaceObjectReference*   spVisTo, SpaceObjectReference*   sporef, ProxyObjectPtr& p)
+{
+    ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
+    if (ohpmp.get() == NULL)
+        return false;
+        
+    p = ohpmp->getProxyObject(*sporef);
+
+    if (p.get() == NULL)
+        return false;
+
+    return true;
+}
+
 
 static ProxyManagerPtr nullManPtr;
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)

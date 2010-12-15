@@ -223,6 +223,56 @@ void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
     }
 }
 
+v8::Local<v8::Object> JSObjectScript::removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
+{
+    Local<Object>removedProxObj;
+    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
+    int removedIndex = -1;
+    for (int s=0; s < (int)vis_array->Length(); ++s)
+    {
+        removedProxObj= v8::Local<v8::Object>::Cast(vis_array->Get(s));
+
+        v8::Local<v8::External> wrapSpaceObj;
+        wrapSpaceObj = v8::Local<v8::External>::Cast(removedProxObj->GetInternalField(VISIBLE_SPACEOBJREF_FIELD));
+        void* ptr = wrapSpaceObj->Value();
+        SpaceObjectReference* sporef = static_cast<SpaceObjectReference*>(ptr);
+        
+        v8::Local<v8::External> wrapSpaceObjVisTo;
+        wrapSpaceObjVisTo = v8::Local<v8::External>::Cast(removedProxObj->GetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD));
+        void* ptr2 = wrapSpaceObjVisTo->Value();
+        SpaceObjectReference* sporefVisTo = static_cast < SpaceObjectReference* > (ptr2);
+
+        if ((sporef != NULL) && (sporefVisTo != NULL))
+        {
+            if ((*sporef== proximateObject->getObjectReference()) && (*sporefVisTo == querier))
+            {
+                removedIndex = s;
+                break;
+            }
+        }
+        else
+        {
+            std::cout<<"\nUnable to decode an object in the visible array correctly\n\n";
+            assert(false);
+        }
+    }
+
+    //actually remove from array.
+    if (removedIndex == -1)
+    {
+        JSLOG(error, "Couldn't find the visible entity in the visible array.");
+        assert(false);
+    }
+    else
+    {
+        for(uint32 i = removedIndex; i < vis_array->Length()-1; i++)
+            vis_array->Set(i, vis_array->Get(i+1));
+        
+        vis_array->Delete(vis_array->Length()-1);
+    }
+
+    return removedProxObj;
+}
 
 
 void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
@@ -237,22 +287,19 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
         return;
     }
 
+    
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
 
+
+    Local<Object>removedProxObj;
+    removedProxObj= removeVisible(proximateObject,querier);
+    
     if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
     {
-        v8::HandleScope handle_scope;
-        v8::Context::Scope context_scope(mContext);
-
-        for (int s=0; s < 
-        Local<Object> removedObject = 
-        lkjs;
-        Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
-        newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
-        newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
-
         int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { newAddrObj };
-        //FIXME: Potential memory leak: when will newAddrObj's
+        v8::Handle<v8::Value> argv[1] = { removedProxObj };
+        //FIXME: Potential memory leak: when will removedProxObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object gone.");
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, argv);
@@ -283,7 +330,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         addAddressable(proximateObject->getObjectReference());
 
         Local<Object> newVisibleObj;
-        newVisibleObj = addVisible(proximateObject->getObjectReference());
+        newVisibleObj = addVisible(proximateObject,querier);
         
 
         int argc = 1;
@@ -293,6 +340,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         JSLOG(info,"Issuing user callback for proximate object.");
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
     }
+
 }
 
 
@@ -530,14 +578,14 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 //this function adds the sporefToAdd to the mAddressableList, then it pushes
 //the new addressable object onto the addressable array accessible by emerson
 //developers.  It does not add the sporef if we already have a copy in the array.
-v8::Handle<v8::Value> JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
+void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
 {
     AddressableList::const_iterator alreadyHave;
     for (alreadyHave= mAddressableList.begin(); alreadyHave != mAddressableList.end(); ++alreadyHave)
     {
         //just checks if we already have that sporef in our addressable array.
         if ((*(*alreadyHave)) == sporefToAdd)
-            return v8::Undefined();
+            return;
     }
 
 
@@ -561,8 +609,53 @@ v8::Handle<v8::Value> JSObjectScript::addAddressable(const SpaceObjectReference&
 
     addr_array->Set(v8::Number::New(new_pos),newAddrObj);
 
-    return newAddrObj;
 }
+
+
+v8::Local<v8::Object> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier)
+{
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
+    int removedIndex = -1;
+    for (int s=0; s < (int) vis_array->Length(); ++s)
+    {
+        v8::Local<Object> obj= v8::Local<v8::Object>::Cast(vis_array->Get(s));
+        
+        v8::Local<v8::External> wrapSpaceObj;
+        wrapSpaceObj = v8::Local<v8::External>::Cast(obj->GetInternalField(VISIBLE_SPACEOBJREF_FIELD));
+        void* ptr = wrapSpaceObj->Value();
+        SpaceObjectReference* sporef = static_cast<SpaceObjectReference*>(ptr);
+        
+        v8::Local<v8::External> wrapSpaceObjVisTo;
+        wrapSpaceObjVisTo = v8::Local<v8::External>::Cast(obj->GetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD));
+        void* ptr2 = wrapSpaceObjVisTo->Value();
+        SpaceObjectReference* sporefVisTo = static_cast < SpaceObjectReference* > (ptr2);
+        
+
+        if ((*sporef == proximateObject->getObjectReference()) && (*sporefVisTo == querier))
+            return obj;
+    }
+
+        
+    //means that we don't already have this object in visible array.
+    uint32 new_pos = vis_array->Length();
+
+    //create the addressable object associated with the new proxy object
+    Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
+
+    SpaceObjectReference* sporefToAdd     = new SpaceObjectReference(proximateObject->getObjectReference());
+    SpaceObjectReference* sporefVisibleTo = new SpaceObjectReference(querier);
+    
+    newVisObj->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD,External::New(this));
+    newVisObj->SetInternalField(VISIBLE_SPACEOBJREF_FIELD,External::New(sporefToAdd));
+    newVisObj->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD,External::New(sporefVisibleTo));
+    
+    vis_array->Set(v8::Number::New(new_pos),newVisObj);
+    return newVisObj;
+}
+
 
 
 void JSObjectScript::onCreateProxy(ProxyObjectPtr p)
@@ -1105,6 +1198,8 @@ v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceObjectRefer
     return CreateJSResult(mContext,vec3);
 }
 
+
+
 //velocity
 void JSObjectScript::setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec)
 {
@@ -1118,11 +1213,44 @@ v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectRefer
 }
 
 
-v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(ProxyObjectPtr p)
+v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo)
 {
-    Vector3d vec3d = p->getPosition();
-    return CreateJSResult(mContext,vec3d);
+    ProxyObjectPtr p;
+    bool succeeded =  mParent->getProxyObjectFrom(spVisTo,sporef,p);
+
+    if (succeeded)
+    {
+        Vector3d vec3d = p->getPosition();
+        return CreateJSResult(mContext,vec3d);
+    }
+
+    std::cout<<"\n\n  Error: no association for given sporefs\n\n";
+    assert(false);
+    return v8::Undefined();
 }
+
+
+lkjs;
+v8::Handle<v8::Value> JSObjectScript::printPositionFunction(const SpaceObjectReference* sporef,SpaceObjectReference*   spVisTo)
+{
+    ProxyObjectPtr p;
+    bool succeeded =  mParent->getProxyObjectFrom(spVisTo,sporef,p);
+
+    if (succeeded)
+    {
+        Vector3d vec3d = p->getPosition();
+        std::cout << "Printing position :" << vec3d << "\n";
+        return v8::Undefined();       
+    }
+
+    std::cout<<"\n\n  Error: no association for given sporefs\n\n";
+    assert(false);
+    return v8::Undefined();
+
+}
+
+
+
 
 
 //orientation

@@ -29,15 +29,15 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
     
     JSObjectScript*         caller;
     SpaceObjectReference*   sporef;
-    ProxyObjectPtr               p;
+    SpaceObjectReference*   spVisTo;
     
-    if ( ! decodeVisible(args.This(), caller,sporef,p))
+    if ( ! decodeVisible(args.This(), caller,sporef,spVisTo))
     {
         std::cout<<"\n\nInside of getPosition function\n\n";
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters: require you to send through a visible object")) );
     }
 
-    return caller->returnProxyPosition(p);
+    return caller->returnProxyPosition(sporef,spVisTo);
 
 }
 
@@ -76,13 +76,15 @@ v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
     
     JSObjectScript* caller;
     SpaceObjectReference* sporef;
-    ProxyObjectPtr p;
-    if (! decodeVisible(args[0],caller,sporef,p))
+    SpaceObjectReference* spVisTo;
+    if (! decodeVisible(args[0],caller,sporef,spVisTo))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters: require you to send through a visible object")) );
 
 
     std::cout << "Printing Object Reference :" << sporef->toString() << "\n";
-    std::cout << "Printing Position:         " << p->getPosition()<<"\n";
+    caller->printPosition(sporef,spVisTo);
+
+    lkjs;    
     return v8::Undefined();
 }
 
@@ -96,9 +98,9 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
     //first need to extract out the sending jsobjectscript and oref
     JSObjectScript* caller;
     SpaceObjectReference* sporef;
-    ProxyObjectPtr p;
+    SpaceObjectReference* spVisTo;
     
-    if (! decodeVisible(args.This(),caller,sporef,p))
+    if (! decodeVisible(args.This(),caller,sporef,spVisTo))
     {
         std::cout<<"\n\nInside of visibleSendMessageFunction\n\n";
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters: require you to send through an visible object")) );
@@ -115,7 +117,7 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
 
 
     //actually send the message to the entity
-    caller->sendMessageToEntity(sporef,serialized_message);
+    caller->sendMessageToEntity(sporef,spVisTo,serialized_message);
     
     return v8::Undefined();
 }
@@ -129,7 +131,7 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
 //reference that was visible
 //bool decodeVisible(v8::Handle<v8::Value> sender_val, JSObjectScript*&
 //jsObjScript, SpaceObjectReference*& sporef)
-bool decodeVisible(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, ProxyObjectPtr& p)
+bool decodeVisible(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, SpaceObjectReference*& p)
 {
     if ((!senderVal->IsObject()) || (senderVal->IsUndefined()))
     {
@@ -144,7 +146,7 @@ bool decodeVisible(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript
 }
 
 
-bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, ProxyObjectPtr& p)
+bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, SpaceObjectReference*&  sporefVisTo )
 {
     if (senderVal->InternalFieldCount() == VISIBLE_FIELD_COUNT)
     {
@@ -157,6 +159,7 @@ bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScrip
         if (jsObjScript == NULL)
         {
             sporef = NULL;
+            sporefVisTo = NULL;
             std::cout<<"\n\nReturning false from decodeVisible 2: jsobject script\n\n";
             return false;
         }
@@ -170,24 +173,25 @@ bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScrip
         if (sporef == NULL)
         {
             jsObjScript = NULL;
+            sporefVisTo = NULL;
             std::cout<<"\n\nReturning false from decodeVisible 2 sporef\n\n";
             return false;
         }
 
 
-        v8::Local<v8::External> wrapProxyObjPtr;
-        wrapProxyObjPtr = v8::Local<v8::External>::Cast(senderVal->GetInternalField(VISIBLE_PROXYOBJ_FIELD));
+        v8::Local<v8::External> wrapSPVisTo;
+        wrapSPVisTo = v8::Local<v8::External>::Cast(senderVal->GetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD));
         
-        void* ptr3 = wrapProxyObjPtr->Value();
-        ProxyObjectPtr* pop = static_cast<ProxyObjectPtr*>(ptr3);
-        if (pop == NULL)
+        void* ptr3 = wrapSPVisTo->Value();
+        sporefVisTo = static_cast<SpaceObjectReference*>(ptr3);
+        if (sporefVisTo == NULL)
         {
             jsObjScript = NULL;
+            sporef =  NULL;
             std::cout<<"\n\nReturning false from decodeVisible 3 proxy object\n\n";
             return false;
         }
 
-        p = *pop;
 
         return true;
     }
@@ -195,6 +199,7 @@ bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScrip
     std::cout<<"\n\nReturning false from decodeVisible 2 incorrect field count: "<<senderVal->InternalFieldCount()<<"\n\n";
     jsObjScript = NULL;
     sporef = NULL;
+    sporefVisTo = NULL;
     return false;
 }
 

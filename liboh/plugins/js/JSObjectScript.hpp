@@ -250,10 +250,14 @@ private:
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
     void removePresence(const SpaceObjectReference& sporef);
 
+    v8::Local<v8::Object> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+    v8::Local<v8::Object> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
+
+    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo);
+    
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
-
 
     JSObjectScriptManager* mManager;
 

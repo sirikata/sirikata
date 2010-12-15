@@ -21,9 +21,9 @@ v8::Handle<v8::Value> __debugRef(const v8::Arguments& args);
 v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args);
 v8::Handle<v8::Value> getPosition(const v8::Arguments& args);
 
-bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef,ProxyObjectPtr& p);
-bool decodeVisible(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, ProxyObjectPtr& p);
 
+bool decodeVisible(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, SpaceObjectReference*&  sporefVisTo );
+bool decodeVisible(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, SpaceObjectReference*&  sporefVisTo );
 
 
 }//end jsvisible namespace

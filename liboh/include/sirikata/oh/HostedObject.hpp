@@ -210,7 +210,7 @@ public:
 
     TimeSteppedSimulation* runSimulation(const SpaceObjectReference& sporef, const String& simName);
 
-
+    bool getProxyObjectFrom(SpaceObjectReference*   spVisTo, SpaceObjectReference*   sporef, ProxyObjectPtr& p);
 
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
