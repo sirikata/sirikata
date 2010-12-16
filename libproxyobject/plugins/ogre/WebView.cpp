@@ -1155,7 +1155,6 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
     if (replyMsg)
         win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
 }
-#endif //HAVE_BERKELIUM
 
 boost::any WebView::invoke(std::vector<boost::any>& params)
 {
@@ -1165,24 +1164,24 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
   if(!params[0].empty() && params[0].type() == typeid(std::string) )
   {
-    name = boost::any_cast<std::string>(params[0]);  
-  }  
+    name = boost::any_cast<std::string>(params[0]);
+  }
 
   // This will bind a callback for the graphics to the script
   if(name == "bind")
   {
-    // we need to bind a function to some event. 
+    // we need to bind a function to some event.
     // second argument is the event name
     std::cout << "\n\nIn WebView::invoke\n\n";
     std::string event = "";
     if(!params[1].empty() && params[1].type() == typeid(std::string) )
     {
-      event = boost::any_cast<std::string>(params[1]);  
-    } 
+      event = boost::any_cast<std::string>(params[1]);
+    }
 
     // the third argument has to be a function ptr
     //This function would take any
-    
+
     //just _1, _2 for now
     std::cout << "\n\n Trying to get the param[2] \n\n";
     Invokable* invokable = boost::any_cast<Invokable*>(params[2]);
@@ -1191,28 +1190,28 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
     return boost::any(inv_result);
 
   }
-  
+
   // This will write message from the script to the graphics window
   if(name == "write")
   {
     std::cout << "\n\n In WebView::invoke \n\n";
 
     // get the params[1] for the value of the message to be writte on the window
-    
+
     std::string msg="";
     if(!params[1].empty() && params[1].type() == typeid(std::string) )
     {
-      msg = boost::any_cast<std::string>(params[1]);  
-    } 
+      msg = boost::any_cast<std::string>(params[1]);
+    }
 
     if(msg.empty()) return boost::any();
 
     std::cout << "msg is " << msg << "\n\n";
     // whenthe msg is not empty
-    // FIXME: we need to escape strings 
+    // FIXME: we need to escape strings
     String jsScript = String("addMessage(\"") +msg + String("\")");
     evaluateJS(jsScript);
-    
+
     //JSArguments args;
     //args.push_back(JSArgument("ExecScript"));
     //args.push_back(JSArgument("Command"));
@@ -1220,7 +1219,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
     //WebViewManager::getSingletonPtr()->onRaiseWebViewEvent(this, *const_cast<JSArguments*>(&args));
 
-    
+
     return boost::any();
 
   }
@@ -1236,7 +1235,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
   for(unsigned int i = 2 ; i < args.size(); i++)
   {
     const char* s = args[i].begin();
-    
+
     params.push_back(String(s));
   }
 
@@ -1245,6 +1244,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
 
 }
 
+#endif //HAVE_BERKELIUM
 
 
 const WebView::WebViewBorderSize WebView::mDefaultBorder(2,2,25,2);
