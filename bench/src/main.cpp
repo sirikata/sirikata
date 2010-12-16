@@ -37,6 +37,8 @@
 #include "TimerMonotonicityBenchmark.hpp"
 #include "TCPSSTBenchmark.hpp"
 
+#include <sirikata/core/util/DynamicLibrary.hpp>
+
 using namespace Sirikata;
 
 typedef std::list<String> BenchmarkList;
@@ -49,6 +51,8 @@ void runAll(BenchmarkRunner& runner, const BenchmarkList all_benchmarks) {
 }
 
 int main(int argc, char** argv) {
+    DynamicLibrary::Initialize();
+
     BenchmarkFactory factory;
     BenchmarkList all_benchmarks;
 

@@ -72,6 +72,8 @@ bool is_analysis() {
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
+    DynamicLibrary::Initialize();
+
     InitOptions();
     Trace::Trace::InitOptions();
     InitAnalysisOptions();
@@ -106,7 +108,7 @@ int main(int argc, char** argv) {
     //uint32 num_oh_servers = GetOptionValue<uint32>("num-oh");
     //uint32 nservers = max_space_servers + num_oh_servers;
     uint32 nservers = GetOptionValue<uint32>(ANALYSIS_TOTAL_NUM_ALL_SERVERS);
-    
+
     srand( GetOptionValue<uint32>("rand-seed") );
 
     if ( GetOptionValue<bool>(ANALYSIS_LOC) ) {

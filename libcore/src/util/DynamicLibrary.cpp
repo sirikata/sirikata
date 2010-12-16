@@ -42,9 +42,32 @@
 #  include <dlfcn.h>
 #endif
 
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#include <mach-o/dyld.h>
+#endif
+
 namespace Sirikata {
 
 static std::vector<String> DL_search_paths;
+
+static String GetExecutablePath() {
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+    // Executable path can have relative references ("..") depending on
+    // how the app was launched.
+    uint32_t executable_length = 0;
+    _NSGetExecutablePath(NULL, &executable_length);
+    std::string executable_path(executable_length, '\0');
+    char* executable_path_c = (char*)executable_path.c_str();
+    int rv = _NSGetExecutablePath(executable_path_c, &executable_length);
+    assert(rv == 0);
+    if ((rv != 0) || (executable_path.empty()))
+        return "";
+    boost::filesystem::path exe_path(executable_path);
+    return exe_path.parent_path().string();
+#else
+    return "";
+#endif
+}
 
 void DynamicLibrary::Initialize() {
     using namespace boost::filesystem;
@@ -55,6 +78,12 @@ void DynamicLibrary::Initialize() {
     if (exists(to_macos_dir) && is_directory(to_macos_dir))
         AddLoadPath(to_macos_dir.string());
 #endif
+
+    // On all platforms, allow plugins to load from within the same
+    // directory as the executable
+    String exe_path = GetExecutablePath();
+    if (!exe_path.empty())
+        AddLoadPath(exe_path);
 }
 
 void DynamicLibrary::AddLoadPath(const String& path) {
