@@ -68,6 +68,8 @@
 int main (int argc, char** argv) {
     using namespace Sirikata;
 
+    DynamicLibrary::Initialize();
+
     InitOptions();
     Trace::Trace::InitOptions();
     OHTrace::InitOptions();

@@ -50,6 +50,12 @@ namespace Sirikata {
  */
 class SIRIKATA_EXPORT DynamicLibrary {
 public:
+    // Helper to initialize loading of dynamic libraries. Certain
+    // platform-specific initialization that is common occurs here.
+    static void Initialize();
+    // Helper for adding locations to load from
+    static void AddLoadPath(const String& path);
+
     DynamicLibrary(const String& path);
     ~DynamicLibrary();
 

@@ -126,8 +126,17 @@ std::string getBerkeliumBinaryDir() {
     // The current two reflect what we'd expect for installed
     // and what's in the source tree.
     path search_paths[] = {
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+        // On mac we must be in a .app/Contents
+        // It needs to be there so that running the .app from the Finder works
+        // and therefore the resources for berkelium are setup to be found from
+        // that location. However, the binaries are in .app/Contents/MacOS, so
+        // that needs to be the search path
+        path("MacOS")
+#else
         path("chrome"),
         path("build/cmake/chrome")
+#endif
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 

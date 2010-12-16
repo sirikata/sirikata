@@ -32,6 +32,7 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/TemporalValue.hpp>
+#include <sirikata/core/util/DynamicLibrary.hpp>
 #include "WebViewManager.hpp"
 #include "WebView.hpp"
 #include "input/SDLInputManager.hpp"
@@ -83,14 +84,7 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 
 {
     tooltipWebView = 0;
-#ifndef _WIN32
-    {
-        std::string ldLibraryPath;
-        ldLibraryPath = getenv("LD_LIBRARY_PATH")?getenv("LD_LIBRARY_PATH"):"";
-        ldLibraryPath = binDirectory + ":" + ldLibraryPath;
-        setenv("LD_LIBRARY_PATH",ldLibraryPath.c_str(),1);
-    }
-#endif
+    DynamicLibrary::AddLoadPath(binDirectory);
 #ifdef HAVE_BERKELIUM
     Berkelium::init(Berkelium::FileString::empty());
     bkContext = Berkelium::Context::create();
