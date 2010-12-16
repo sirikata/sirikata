@@ -64,6 +64,20 @@ static String GetExecutablePath() {
         return "";
     boost::filesystem::path exe_path(executable_path);
     return exe_path.parent_path().string();
+#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+    // boost::filesystem can't chase symlinks, do it manually
+    const char* selfExe = "/proc/self/exe";
+#define PATH_MAX 1024
+    char bin_dir[PATH_MAX + 1];
+    int bin_dir_size = readlink(selfExe, bin_dir, PATH_MAX);
+    if (bin_dir_size < 0 || bin_dir_size > PATH_MAX) {
+        SILOG(core,fatal,"Couldn't read self symlink to setup dynamic loading paths.");
+        return "";
+    }
+    bin_dir[bin_dir_size] = 0;
+    boost::filesystem::path exe_path(String(bin_dir, bin_dir_size));
+    return exe_path.parent_path().string();
+#undef PATH_MAX
 #else
     return "";
 #endif
