@@ -19,10 +19,10 @@ function onChatMsgReceived(msg)
   broadcast(new ChatMsgObject(msg));
 }
 
-function onChatFromNeighbor(sender, msg)
+function onChatFromNeighbor(msg, sender)
 {
-    print("Got chat from neigbor " + sender);
-    chat.invoke("write", msg );
+    print("Got chat: " + msg.chat + ": from neigbor " + sender);
+    chat.invoke("write", msg.chat );
 }
 
 

@@ -1118,7 +1118,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
   }
 
 
-  return NULL;
+  return boost::any();
 }
 
 void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const JSArguments& args)
