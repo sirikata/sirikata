@@ -4,6 +4,25 @@ system.print("\n\n\nSTARTING A CAMERA OBJECT\n\n\n");
 simulator = undefined;
 chat = undefined;
 
+function sendAll(msg)
+{
+  for(var i = 0; i < addressable.length; )
+  {
+    
+    print("Sedning b4 to " + addressable[i]);
+    if(addressable[i] != Self)
+    {
+      print("Sedning to " + addressable[i]);
+      msg -> addressable[i];
+    }
+    i = i + 1;
+  }
+
+}
+
+
+
+
 function ChatMsgObject(msg)
 {
   this.chat = msg;
@@ -16,7 +35,7 @@ function onChatMsgReceived(msg)
   system.print(msg);
   system.print("\n\n"); 
   system.print("Sending out to others....\n\n");
-  broadcast(new ChatMsgObject(msg));
+  sendAll(new ChatMsgObject(msg));
 }
 
 function onChatFromNeighbor(msg, sender)
@@ -49,3 +68,11 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
+
+
+
+
+
+
+
+

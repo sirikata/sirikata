@@ -1137,8 +1137,8 @@ unaryExpression
 	
 
 postfixExpression
-	: leftHandSideExpression '++'?
-	| leftHandSideExpression '--'?
+	: leftHandSideExpression ('++' { APP("++");})?
+	| leftHandSideExpression ('--'{ APP("--"); })?
 	;
 
 primaryExpression
