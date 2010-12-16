@@ -334,7 +334,7 @@ public:
 
 	/// Constructs a URI... will exclude an empty username.
 	inline std::string toString(bool trailingSlash=true) const {
-		std::string ret (mProto + "://" + (mUser.empty() ? std::string() : (mUser + "@")) + mHost);
+		std::string ret (mProto + "://" + (mUser.empty() ? "" : (mUser + "@")) + mHost);
 		if (!mDirectory.empty()) {
 			ret += ("/" + mDirectory);
 		}

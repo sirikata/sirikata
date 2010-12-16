@@ -387,6 +387,7 @@ callExpressionSuffix
 arguments
 	: '(' (LTERM* (assignmentExpression) (LTERM* ',' LTERM* assignmentExpression)*)? LTERM* ')' -> ^(ARGLIST assignmentExpression*) 
 	;
+
 	
 indexSuffix
 	: '[' LTERM* expression LTERM* ']' -> ^(ARRAY_INDEX expression)

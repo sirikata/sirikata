@@ -68,17 +68,21 @@ private:
     UUID mParentUUID;
 
     std::vector<UUID> mChildren;
-    std::tr1::shared_ptr<Meshdata> mMeshdata;
 
     Time mLastGenerateTime;
+
+    bool generatedLastRound;
+
+    std::tr1::shared_ptr<Meshdata> mMeshdata;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID) :
       mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
       mTreeLevel(0)
     {
       mMeshdata = std::tr1::shared_ptr<Meshdata>();
-    }
-
+      generatedLastRound = false;
+    }    
+    
     uint16 mTreeLevel;
 
   } AggregateObject;
@@ -93,13 +97,6 @@ private:
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
 
-  bool mThreadRunning;
-
-  boost::mutex mUploadQueueMutex;
-
-  std::map<UUID, std::tr1::shared_ptr<Meshdata> > mUploadQueue;
-
-  boost::condition_variable mCondVar;
 
   Time mAggregateGenerationStartTime;
 
@@ -109,13 +106,12 @@ private:
 
   std::vector<UUID>& getChildren(const UUID& uuid);
 
-  void generateMeshesFromQueue(Time postTime);
 
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
 
-  void generateAggregateMeshAsync(const UUID uuid, Time postTime);
-
-  void uploadQueueServiceThread();
+  void generateMeshesFromQueue(Time postTime);
+  
+  bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
 
 public:
@@ -131,9 +127,8 @@ public:
   void addChild(const UUID& uuid, const UUID& child_uuid) ;
 
   void removeChild(const UUID& uuid, const UUID& child_uuid);
-
-
-  void uploadMesh(const UUID& uuid, std::tr1::shared_ptr<Meshdata> meshptr);
+  
+  
 
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
@@ -141,8 +136,9 @@ public:
                         std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                         std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)  ;
 
-  void chunkFinished(const UUID uuid, const UUID child_uuid,std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-                                       std::tr1::shared_ptr<const Transfer::DenseData> response);
+  void chunkFinished(const UUID uuid, const UUID child_uuid, std::string meshName, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+                      std::tr1::shared_ptr<const Transfer::DenseData> response);
+
 
 };
 

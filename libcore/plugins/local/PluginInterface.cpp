@@ -80,12 +80,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (local_plugin_refcount>0) {
-        local_plugin_refcount--;
-        assert(local_plugin_refcount==0);
-        if (local_plugin_refcount==0) {
-            ServerIDMapFactory::getSingleton().unregisterConstructor("local");
-        }
+    if (local_plugin_refcount==0) {
+        ServerIDMapFactory::getSingleton().unregisterConstructor("local");
     }
 }
 

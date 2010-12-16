@@ -43,6 +43,8 @@ Plugin::Plugin(const String& path)
    mDestroy(NULL),
    mName(NULL),
    mRefCount(NULL),
+   mIncRefCount(NULL),
+   mDecRefCount(NULL),
    mInitialized(0)
 {
 }
@@ -51,6 +53,9 @@ Plugin::~Plugin() {
     // Destroy and unload just in case.
     while(mDestroy && mInitialized)
         destroy();
+
+    if (mRefCount && refcount() == 0)
+        unload();
 }
 
 bool Plugin::load() {
@@ -61,8 +66,10 @@ bool Plugin::load() {
     mDestroy = (DestroyFunc)mDL.symbol("destroy");
     mName = (NameFunc)mDL.symbol("name");
     mRefCount = (RefCountFunc)mDL.symbol("refcount");
+    mIncRefCount = (IncRefCountFunc)mDL.symbol("increfcount");
+    mDecRefCount = (DecRefCountFunc)mDL.symbol("decrefcount");
 
-    return (mInit != NULL && mDestroy != NULL && mName != NULL && mRefCount != NULL);
+    return (mInit != NULL && mDestroy != NULL && mName != NULL && mRefCount != NULL && mIncRefCount != NULL && mDecRefCount != NULL);
 }
 
 bool Plugin::unload() {
@@ -70,6 +77,8 @@ bool Plugin::unload() {
     mDestroy = NULL;
     mName = NULL;
     mRefCount = NULL;
+    mIncRefCount = NULL;
+    mDecRefCount = NULL;
     return mDL.unload();
 }
 
@@ -97,6 +106,16 @@ String Plugin::name() {
 int Plugin::refcount() {
     assert(mRefCount);
     return mRefCount();
+}
+
+int Plugin::incref() {
+    assert(mIncRefCount);
+    return mIncRefCount();
+}
+
+int Plugin::decref() {
+    assert(mDecRefCount);
+    return mDecRefCount();
 }
 
 } // namespace Sirikata

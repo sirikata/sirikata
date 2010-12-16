@@ -62,6 +62,9 @@ PluginManager::PluginManager() {
 }
 
 PluginManager::~PluginManager() {
+    for(PluginInfoList::iterator it = mPlugins.begin(); it != mPlugins.end(); it++)
+        (*it)->plugin->decref();
+    gc();
 }
 
 void PluginManager::searchPath(const String& path) {
@@ -111,13 +114,7 @@ void PluginManager::loadList(const String& filename_list) {
 void PluginManager::gc() {
     for(PluginInfoList::iterator it = mPlugins.begin(); it != mPlugins.end();) {
         PluginInfo* pi = *it;
-        if (pi->plugin != NULL && pi->plugin->refcount() <= 1) {
-            if (pi->plugin->refcount()==0) {
-                pi->plugin->destroy();
-                pi->plugin->unload();//unload plugin straight away, no outstanding variables
-            }else {
-                pi->plugin->destroy();//destroy the plugin, but leave program code for outstanding destructors
-            }
+        if (pi->plugin != NULL) {
             delete pi->plugin;
             pi->plugin = NULL;
             delete pi;

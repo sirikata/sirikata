@@ -52,6 +52,8 @@ ServerMessageReceiver::ServerMessageReceiver(SpaceContext* ctx, SpaceNetwork* ne
 }
 
 ServerMessageReceiver::~ServerMessageReceiver() {
+    delete mProfiler;
+    delete mReceiverStrand;
 }
 
 double ServerMessageReceiver::totalUsedWeight() {

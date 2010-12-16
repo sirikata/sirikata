@@ -62,7 +62,7 @@ public:
     virtual Iterator startTracking(const ObjectID& id);
     virtual void stopTracking(const Iterator& id);
 
-    bool tracking(const ObjectID& id) const;
+    bool tracking(const ObjectID& id);
 
     virtual const TimedMotionVector3f& location(const Iterator& id) const;
     virtual const BoundingSphere3f& region(const Iterator& id) const;
@@ -106,7 +106,10 @@ private:
     void meshUpdated(const UUID& uuid, bool agg, const String& newval);
 
     // These do the actual work for the LocationServiceListener methods.  Local versions always
-    // call these, replica versions only call them if replica tracking is on
+    // call these, replica versions only call them if replica tracking is
+    // on. Although we now have to lock in these, we put them on the strand
+    // instead of processing directly in the methods above so that they don't
+    // block any other work.
     void processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
     void processObjectRemoved(const UUID& uuid, bool agg);
     void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
@@ -116,6 +119,10 @@ private:
 
 
     CBRLocationServiceCache();
+
+    typedef boost::recursive_mutex Mutex;
+    typedef boost::lock_guard<Mutex> Lock;
+    Mutex mMutex;
 
     Network::IOStrand* mStrand;
     LocationService* mLoc;

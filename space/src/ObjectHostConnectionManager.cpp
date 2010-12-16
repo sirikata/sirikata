@@ -118,7 +118,10 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
         return false;
     }
 
-    assert( mConnections.find(conn) != mConnections.end() );
+    if (mConnections.find(conn) == mConnections.end()) {
+        SPACE_LOG(error,"Tried to send over out-of-date connection ID.");
+        return false;
+    }
 
     String data;
     serializePBJMessage(&data, *msg);
@@ -134,9 +137,6 @@ bool ObjectHostConnectionManager::send(const ConnectionID& conn_id, Sirikata::Pr
 void ObjectHostConnectionManager::listen(const Address4& listen_addr) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
-
-    static Sirikata::PluginManager sPluginManager;
-    sPluginManager.load("tcpsst");
 
     String oh_stream_lib = GetOptionValue<String>("ohstreamlib");
     String oh_stream_options = GetOptionValue<String>("ohstreamoptions");
@@ -217,6 +217,7 @@ void ObjectHostConnectionManager::handleConnectionRead(ObjectHostConnection* con
 
     if (!parse_success) {
         LOG_INVALID_MESSAGE(space, error, chunk);
+        delete obj_msg;
         return; // Ignore, treat as dropped. Hopefully this doesn't cascade...
     }
 

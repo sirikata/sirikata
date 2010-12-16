@@ -54,7 +54,16 @@
 #include <sirikata/oh/PerPresenceData.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
+#include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>
+
 namespace Sirikata {
+
+namespace Protocol {
+namespace Loc {
+class LocationUpdate;
+}
+}
+
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
@@ -67,6 +76,7 @@ class HostedObject;
 class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
+
 class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
 //------- Private inner classes
 
@@ -102,12 +112,14 @@ protected:
   private:
     //SpaceSet mSpaces;
 
-    typedef std::map<SpaceObjectReference, PerPresenceData> SpaceDataMap;
-    SpaceDataMap *mSpaceData;
+
+    ObjectHost *mObjectHost;
+    ObjectScript *mObjectScript;
+    typedef std::map<SpaceObjectReference, PerPresenceData> PresenceDataMap;
+    PresenceDataMap *mPresenceData;
+
 
     int mNextSubscriptionID;
-    ObjectScript *mObjectScript;
-    ObjectHost *mObjectHost;
     UUID mInternalObjectReference;
 
     ODP::DelegateService* mDelegateODPService;
@@ -121,11 +133,10 @@ protected:
     typedef Connection<SpaceObjectReference> SSTConnection;
     typedef SSTConnection::Ptr SSTConnectionPtr;
 
-
-
-
     // FIXME maintain a proper map here or put in per-presence data
     std::vector<BaseDatagramLayerPtr> mSSTDatagramLayers;
+
+    OrphanLocUpdateManager mOrphanLocUpdates;
 
 //------- Constructors/Destructors
 
@@ -147,9 +158,9 @@ private:
 public:
 
     /** Get a set of spaces the object is currently connected to. */
-    typedef std::set<SpaceObjectReference> SpaceObjRefSet;
-    void getSpaceObjRefs(SpaceObjRefSet& ss) const;
-
+    typedef std::vector<SpaceObjectReference> SpaceObjRefVec;
+    void getSpaceObjRefs(SpaceObjRefVec& ss) const;
+    void getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const;
 
 
 //------- Public member functions:
@@ -197,7 +208,7 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
-    void runSimulation(const SpaceObjectReference& sporef, const String& simName);
+    TimeSteppedSimulation* runSimulation(const SpaceObjectReference& sporef, const String& simName);
 
 
 
@@ -272,7 +283,6 @@ public:
 
 
   public:
-    void updateAddressable();
 
 
     std::tr1::shared_ptr<HostedObject> getSharedPtr() {
@@ -346,6 +356,8 @@ public:
     void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
+    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh);
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 

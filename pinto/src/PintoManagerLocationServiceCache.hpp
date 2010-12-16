@@ -35,6 +35,7 @@
 
 #include <prox/LocationServiceCache.hpp>
 #include <sirikata/space/ProxSimulationTraits.hpp>
+#include <boost/thread.hpp>
 
 namespace Sirikata {
 
@@ -80,6 +81,10 @@ private:
 
     ServerMap mServers;
     ListenerSet mListeners;
+
+    typedef boost::recursive_mutex Mutex;
+    typedef boost::lock_guard<Mutex> Lock;
+    Mutex mMutex;
 };
 
 } // namespace Sirikata

@@ -90,13 +90,9 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (space_local_plugin_refcount>0) {
-        space_local_plugin_refcount--;
-        assert(space_local_plugin_refcount==0);
-        if (space_local_plugin_refcount==0) {
-            OSegFactory::getSingleton().unregisterConstructor("local");
-            PintoServerQuerierFactory::getSingleton().unregisterConstructor("local");
-        }
+    if (space_local_plugin_refcount==0) {
+        OSegFactory::getSingleton().unregisterConstructor("local");
+        PintoServerQuerierFactory::getSingleton().unregisterConstructor("local");
     }
 }
 

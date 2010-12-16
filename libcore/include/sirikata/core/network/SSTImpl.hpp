@@ -333,7 +333,7 @@ private:
   uint64 mTransmitSequenceNumber;
   uint64 mLastReceivedSequenceNumber;   //the last transmit sequence number received from the other side
 
-
+  typedef std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > LSIDStreamMap;
   std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mOutgoingSubstreamMap;
   std::map<LSID, std::tr1::shared_ptr< Stream<EndPointType> > > mIncomingSubstreamMap;
 
@@ -677,9 +677,9 @@ private:
 
     std::tr1::shared_ptr<Stream<EndPointType> > stream =
       std::tr1::shared_ptr<Stream<EndPointType> >
-      ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid,
-				 initial_data, length, false, 0, cb) );
+      ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb) );
     stream->mWeakThis = stream;
+    stream->init(initial_data, length, false, 0);
 
     mOutgoingSubstreamMap[lsid]=stream;
   }
@@ -834,7 +834,10 @@ private:
 				     received_stream_msg->dest_port(),
 				     received_stream_msg->src_port(),
 				     usid, newLSID,
-				     NULL, 0, true, incomingLsid, NULL));
+				     NULL));
+        stream->mWeakThis = stream;
+        stream->init(NULL, 0, true, incomingLsid);
+
 	mOutgoingSubstreamMap[newLSID] = stream;
 	mIncomingSubstreamMap[incomingLsid] = stream;
 
@@ -862,6 +865,7 @@ private:
       if (mOutgoingSubstreamMap.find(initiatingLSID) != mOutgoingSubstreamMap.end()) {
 	std::tr1::shared_ptr< Stream<EndPointType> > stream = mOutgoingSubstreamMap[initiatingLSID];
 	mIncomingSubstreamMap[incomingLsid] = stream;
+        stream->initRemoteLSID(incomingLsid);
 
 	if (stream->mStreamReturnCallback != NULL){
 	  stream->mStreamReturnCallback(SST_IMPL_SUCCESS, stream);
@@ -1020,6 +1024,7 @@ private:
 
   void eraseDisconnectedStream(Stream<EndPointType>* s) {
     mOutgoingSubstreamMap.erase(s->getLSID());
+    mIncomingSubstreamMap.erase(s->getRemoteLSID());
   }
 
 
@@ -1385,6 +1390,7 @@ public:
        CONNECTED=2,
        PENDING_DISCONNECT=3,
        PENDING_CONNECT=4,
+       NOT_FINISHED_CONSTRUCTING__CALL_INIT
      };
 
 
@@ -1574,12 +1580,11 @@ public:
 
   */
   virtual bool close(bool force) {
+      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     if (force) {
       mConnected = false;
       mState = DISCONNECTED;
 
-
-      std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
       if (conn)
         conn->eraseDisconnectedStream(this);
 
@@ -1587,6 +1592,11 @@ public:
     }
     else {
       mState = PENDING_DISCONNECT;
+      if (conn) {
+          getContext()->mainStrand->post(
+              std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn)
+          );
+      }
       return true;
     }
   }
@@ -1675,16 +1685,16 @@ public:
 private:
   Stream(LSID parentLSID, std::tr1::weak_ptr<Connection<EndPointType> > conn,
 	 uint16 local_port, uint16 remote_port,
-	 USID usid, LSID lsid, void* initial_data, uint32 length,
-	 bool remotelyInitiated, LSID remoteLSID, StreamReturnCallbackFunction cb)
+	 USID usid, LSID lsid, StreamReturnCallbackFunction cb)
     :
-    mState(PENDING_CONNECT),
+    mState(NOT_FINISHED_CONSTRUCTING__CALL_INIT),
     mLocalPort(local_port),
     mRemotePort(remote_port),
     mParentLSID(parentLSID),
     mConnection(conn),mContext(NULL),
     mUSID(usid),
     mLSID(lsid),
+    mRemoteLSID(-1),
     MAX_PAYLOAD_SIZE(1000),
     MAX_QUEUE_LENGTH(4000000),
     MAX_RECEIVE_WINDOW(10000),
@@ -1701,9 +1711,29 @@ private:
     mConnected (false),
     MAX_INIT_RETRANSMISSIONS(5)
   {
+    mInitialData = NULL;
+    mInitialDataLength = 0;
+
+    mReceiveBuffer = new uint8[mReceiveWindowSize];
+    mReceiveBitmap = new uint8[mReceiveWindowSize];
+    memset(mReceiveBitmap, 0, mReceiveWindowSize);
+
+    mQueuedBuffers.clear();
+    mCurrentQueueLength = 0;
+
+    // Continues in init, when we have mWeakThis set
+  }
+
+  void init(void* initial_data, uint32 length,
+      bool remotelyInitiated, LSID remoteLSID) {
     if (remotelyInitiated) {
-      mConnected = true;
-      mState = CONNECTED;
+        mRemoteLSID = remoteLSID;
+        mConnected = true;
+        mState = CONNECTED;
+    }
+    else {
+        mConnected = false;
+        mState = PENDING_CONNECT;
     }
 
     mInitialDataLength = (length <= MAX_PAYLOAD_SIZE) ? length : MAX_PAYLOAD_SIZE;
@@ -1718,13 +1748,6 @@ private:
       mInitialDataLength = 0;
     }
 
-    mReceiveBuffer = new uint8[mReceiveWindowSize];
-    mReceiveBitmap = new uint8[mReceiveWindowSize];
-    memset(mReceiveBitmap, 0, mReceiveWindowSize);
-
-    mQueuedBuffers.clear();
-    mCurrentQueueLength = 0;
-
     if (remotelyInitiated) {
       sendReplyPacket(mInitialData, mInitialDataLength, remoteLSID);
     }
@@ -1738,6 +1761,10 @@ private:
     if (length > mInitialDataLength) {
       write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
     }
+  }
+
+  void initRemoteLSID(LSID remoteLSID) {
+      mRemoteLSID = remoteLSID;
   }
 
   const Context* getContext() {
@@ -1780,10 +1807,11 @@ private:
      the underlying connection. */
 
   bool serviceStream(std::tr1::shared_ptr<Stream<EndPointType> > strm, std::tr1::shared_ptr<Connection<EndPointType> > conn) {
+      assert(strm.get() == this);
 
     const Time curTime = Timer::now();
 
-    if (mState != CONNECTED && mState != DISCONNECTED) {
+    if (mState != CONNECTED && mState != DISCONNECTED && mState != PENDING_DISCONNECT) {
 
       if (!mConnected && mNumInitRetransmissions < MAX_INIT_RETRANSMISSIONS ) {
 
@@ -1839,6 +1867,8 @@ private:
 	  mLastSendTime = curTime;
         }
 
+	boost::mutex::scoped_lock lock(mQueueMutex);
+
 	if (mState == PENDING_DISCONNECT &&
 	    mQueuedBuffers.empty()  &&
 	    mChannelToBufferMap.empty() )
@@ -1851,8 +1881,6 @@ private:
 
 	    return true;
 	}
-
-	boost::mutex::scoped_lock lock(mQueueMutex);
 
         bool sentSomething = false;
 	while ( !mQueuedBuffers.empty() ) {
@@ -2088,6 +2116,10 @@ private:
     return mLSID;
   }
 
+  LSID getRemoteLSID() {
+    return mRemoteLSID;
+  }
+
   void updateRTO(Time sampleStartTime, Time sampleEndTime) {
 
 
@@ -2216,6 +2248,7 @@ private:
 
   USID mUSID;
   LSID mLSID;
+  LSID mRemoteLSID;
 
   uint16 MAX_PAYLOAD_SIZE;
   uint32 MAX_QUEUE_LENGTH;

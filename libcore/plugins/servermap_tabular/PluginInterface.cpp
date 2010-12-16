@@ -79,12 +79,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (servermap_tabular_plugin_refcount>0) {
-        servermap_tabular_plugin_refcount--;
-        assert(servermap_tabular_plugin_refcount==0);
-        if (servermap_tabular_plugin_refcount==0) {
-            ServerIDMapFactory::getSingleton().unregisterConstructor("tabular");
-        }
+    if (servermap_tabular_plugin_refcount==0) {
+        ServerIDMapFactory::getSingleton().unregisterConstructor("tabular");
     }
 }
 

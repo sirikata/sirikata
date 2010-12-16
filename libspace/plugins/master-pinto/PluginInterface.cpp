@@ -79,12 +79,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (space_master_pinto_plugin_refcount>0) {
-        space_master_pinto_plugin_refcount--;
-        assert(space_master_pinto_plugin_refcount==0);
-        if (space_master_pinto_plugin_refcount==0) {
-            PintoServerQuerierFactory::getSingleton().unregisterConstructor("master");
-        }
+    if (space_master_pinto_plugin_refcount==0) {
+        PintoServerQuerierFactory::getSingleton().unregisterConstructor("master");
     }
 }
 

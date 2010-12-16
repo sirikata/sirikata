@@ -529,30 +529,73 @@ tryStatement
        
 
 msgSendStatement
+scope{
+  pANTLR3_STRING prev_program_string;
+	unsigned int  prev_program_len;
+	char* firstExprString;
+	char* secondExprString;
+  pANTLR3_STRING init_program_string;
+
+}
  : ^(
 	     MESSAGE_SEND 
+       /* A little hack for the things to work */
+       
+			 {
+			 /* Save the program string here */
+			   $msgSendStatement::prev_program_string = program_string;
+       /* length of the program string */
+			   $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
+         pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+				 $msgSendStatement::init_program_string = factory->newRaw(factory);
+				 $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
+       }
+
 	     leftHandSideExpression 
 				  {
+					   unsigned int prev_program_len = $msgSendStatement::prev_program_len;
 
-						  APP(".sendMessage( ");
-						}
+			       unsigned int  new_program_len = program_string->len;
+             $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+						 memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
+						 memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
+						 
+             $msgSendStatement::prev_program_len = new_program_len; 
+						  //APP(".sendMessage( ");
+					}
 				leftHandSideExpression 
-				  				
+				    {
+						  unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+						  unsigned int new_program_len = program_string->len;
+              $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+							memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
+							memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
+
+              pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
+              init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
+              init_program_string->append(init_program_string, ".sendMessage( ");
+              init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
+
+							program_string->setS(program_string, init_program_string); 
+
+						}      				
 				(
 				
 				 {
 					  APP(", ");
 					}
 				memberExpression
-			 			
-						)?
-						
+			 		{
+					  
+					}	
+				)?
+						{
+						  APP(" ) ");
+				    }
+
 				)
 
-				{
-				  APP(" )" );
-				}
-;
+				;
 
 msgRecvStatement
  : ^(
@@ -777,11 +820,11 @@ callExpressionSuffix
 arguments
 	: ^(ARGLIST 
 	       {
-								  APP(" ( ");  
-								}
-			(
-			  assignmentExpression
-	      (
+                 APP(" ( ");  
+               }
+               (
+                 assignmentExpression
+	          (
 			   {
 					  APP(", ");
 					}
@@ -797,6 +840,7 @@ arguments
 				}
 	;
 	
+
 indexSuffix
 	: ^(ARRAY_INDEX expression)
 	;	
@@ -914,9 +958,9 @@ bitwiseANDExpressionNoIn
 equalityExpression
 	: relationalExpression
 	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
-	| ^(NOT_EQUALS e=equalityExpression {APP(" == ");} relationalExpression)
+	| ^(NOT_EQUALS e=equalityExpression {APP(" != ");} relationalExpression)
 	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {APP(" === ");} relationalExpression)
+	| ^(NOT_IDENT e=equalityExpression {APP(" !=== ");} relationalExpression)
 ;
 
 equalityExpressionNoIn
@@ -1123,10 +1167,18 @@ arrayLiteral
 	: ^(ARRAY_LITERAL
 	       {
 								  APP("[ ");
-								}
+			 	}
+
+
 	       head=assignmentExpression? 
-	
-	     tail=assignmentExpression*)
+      	
+	       (
+				   {
+					   APP(", ");
+					 }
+				   tail=assignmentExpression*
+			   )
+			)
 
         {
 								  APP(" ] ");

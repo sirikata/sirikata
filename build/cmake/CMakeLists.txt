@@ -1227,9 +1227,11 @@ SET(LIBMESH_SOURCES
 
 SET(LIBPROXYOBJECT_SOURCES
   ${Bullet_PBJ_CPP_FILES}
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/Invokable.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
 SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/SpaceNodeConnection.cpp
@@ -1874,6 +1876,9 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
+
   ${EMERSON_SOURCES}
   )
 IF(V8_FOUND)

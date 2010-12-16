@@ -50,7 +50,10 @@ ServerMessageQueue::ServerMessageQueue(SpaceContext* ctx, SpaceNetwork* net, Sen
     mCapacityOverestimate=GetOptionValue<double>("send-capacity-overestimate");
 }
 
-ServerMessageQueue::~ServerMessageQueue(){}
+ServerMessageQueue::~ServerMessageQueue() {
+    delete mProfiler;
+    delete mSenderStrand;
+}
 
 
 void ServerMessageQueue::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_segmentation) {

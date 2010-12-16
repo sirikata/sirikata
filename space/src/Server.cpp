@@ -82,8 +82,6 @@ Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_ser
 
     mTimeSyncServer = new TimeSyncServer(mContext);
 
-    mTimeSyncServer = new TimeSyncServer(mContext);
-
     mMigrateServerMessageService = mForwarder->createServerMessageService("migrate");
 
     mForwarder->registerMessageRecipient(SERVER_PORT_MIGRATION, this);
@@ -157,6 +155,8 @@ Server::~Server()
     delete mObjectHostConnectionManager;
     delete mLocalForwarder;
 
+    delete mMigrationMonitor;
+
     delete mTimeSyncServer;
 }
 
@@ -188,7 +188,13 @@ bool Server::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endp
     // This call needs to be thread safe, and we shouldn't be using this
     // ODP::Service to communicate with any non-local objects, so just use the
     // local forwarder.
-    return mLocalForwarder->tryForward(msg);
+    bool send_success = mLocalForwarder->tryForward(msg);
+
+    // If the send failed, we need to destroy the message.
+    if (!send_success)
+        delete msg;
+
+    return send_success;
 }
 
 ObjectSession* Server::getSession(const ObjectReference& objid) const {
@@ -272,7 +278,8 @@ bool Server::handleObjectHostMessage(const ObjectHostConnectionManager::Connecti
                     obj_msg->source_object(), OBJECT_PORT_TIMESYNC,
                     response_payload
                 );
-                mObjectHostConnectionManager->send(conn_id, sync_response);
+                bool send_success = mObjectHostConnectionManager->send(conn_id, sync_response);
+                if (!send_success) delete sync_response;
             }
             delete obj_msg;
             return true;
@@ -628,8 +635,12 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     mObjects.erase(obj_id);
 
     ObjectReference obj(obj_id);
-    delete mObjectSessions[obj];
-    mObjectSessions.erase(obj);
+    ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
+    if (session_it != mObjectSessions.end()) {
+        notify(&ObjectSessionListener::sessionClosed, session_it->second);
+        delete session_it->second;
+        mObjectSessions.erase(session_it);
+    }
 
     delete conn;
 }
@@ -890,6 +901,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
             ObjectReference obj(obj_id);
+            notify(&ObjectSessionListener::sessionClosed, mObjectSessions[obj]);
             delete mObjectSessions[obj];
             mObjectSessions.erase(obj);
         }

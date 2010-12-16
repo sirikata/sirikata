@@ -268,6 +268,7 @@ public:
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {};
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
+    virtual boost::any invoke(vector<boost::any>& params);
     ~OgreSystem();
 
 private:

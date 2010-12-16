@@ -148,6 +148,7 @@ void ObjectHost::connect(
 )
 {
     bool with_query = init_sa != SolidAngle::Max;
+    
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     mSessionManagers[space]->connect(
         obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,

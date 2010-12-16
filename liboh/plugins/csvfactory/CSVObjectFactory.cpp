@@ -241,7 +241,6 @@ void CSVObjectFactory::generate()
                 if(objid_idx == -1)
                 {
                     obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random());
-
                 }
                 else
                 {

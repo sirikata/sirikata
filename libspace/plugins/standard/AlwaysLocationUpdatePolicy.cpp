@@ -56,8 +56,8 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(const String& args)
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid) {
-    mServerSubscriptions.subscribe(remote, uuid);
+void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, LocationService* locservice) {
+    mServerSubscriptions.subscribe(remote, uuid, locservice);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
@@ -68,8 +68,8 @@ void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid) {
-    mObjectSubscriptions.subscribe(remote, uuid);
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) {
+    mObjectSubscriptions.subscribe(remote, uuid, locservice);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
@@ -149,14 +149,21 @@ void AlwaysLocationUpdatePolicy::tryCreateChildStream(SSTStreamPtr parent_stream
 
 void AlwaysLocationUpdatePolicy::locSubstreamCallback(int x, SSTStreamPtr substream, SSTStreamPtr parent_stream, std::string* msg, int count) {
     // If we got it, the data got sent and we can drop the stream
-    if (substream) return;
+    if (substream) {
+        delete msg;
+        substream->close(false);
+        return;
+    }
 
     // If we didn't get it and we haven't retried too many times, try
     // again. Otherwise, report error and give up.
-    if (count < 5)
+    if (count < 5) {
         tryCreateChildStream(parent_stream, msg, count);
-    else
+    }
+    else {
         SILOG(always_loc,error,"Failed multiple times to open loc update substream.");
+        delete msg;
+    }
 }
 
 bool AlwaysLocationUpdatePolicy::trySend(const UUID& dest, const Sirikata::Protocol::Loc::BulkLocationUpdate& blu)

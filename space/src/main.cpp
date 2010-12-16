@@ -258,9 +258,11 @@ int main(int argc, char** argv) {
     delete prox;
     delete server_id_map;
 
+    delete loadMonitor;
 
     delete cseg;
     delete oseg;
+    delete oseg_cache;
     delete loc_service;
     delete sstConnMgr;
     delete forwarder;

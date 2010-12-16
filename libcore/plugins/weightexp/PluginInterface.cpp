@@ -87,12 +87,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (weightexp_plugin_refcount>0) {
-        weightexp_plugin_refcount--;
-        assert(weightexp_plugin_refcount==0);
-        if (weightexp_plugin_refcount==0) {
-            RegionWeightCalculatorFactory::getSingleton().unregisterConstructor("gaussian");
-        }
+    if (weightexp_plugin_refcount==0) {
+        RegionWeightCalculatorFactory::getSingleton().unregisterConstructor("gaussian");
     }
 }
 

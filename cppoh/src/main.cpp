@@ -114,6 +114,7 @@ int main (int argc, char** argv) {
     Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
     Duration duration = Duration::zero(); // Indicates to run forever.
     ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, trace, start_time, duration);
+    Context::mainContextPtr = ctx;
 
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager();

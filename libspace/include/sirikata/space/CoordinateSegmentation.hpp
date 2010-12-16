@@ -57,7 +57,7 @@ public:
     }; // class Listener
 
     CoordinateSegmentation(SpaceContext* ctx);
-    virtual ~CoordinateSegmentation() {}
+    virtual ~CoordinateSegmentation();
 
     virtual ServerID lookup(const Vector3f& pos) = 0;
     virtual BoundingBoxList serverRegion(const ServerID& server)  = 0;

@@ -1035,5 +1035,35 @@ void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectR
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
+boost::any OgreSystem::invoke(vector<boost::any>& params)
+{
+  string name="";
+  /*Check the first param */
+
+  if(!params[0].empty() && params[0].type() == typeid(string) )
+  {
+    name = boost::any_cast<std::string>(params[0]);  
+  }
+
+  std::cout << "\n\n\n Invoking the function " << name << "\n\n\n";
+
+  if(name == "getChatWindow")
+  {
+    // create a chatwindow
+    // WebView mNager is already initialized by the ogre system
+
+    WebViewManager* wvManager = WebViewManager::getSingletonPtr(); 
+    WebView* ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+    ui_wv->loadFile("chat/prompt.html");
+    std::cout << "\n\n Returning a chat window\n\n";
+    Invokable* inn = ui_wv;
+    boost::any result(inn);
+    return result;
+  }
+  
+
+  return NULL;
+}
+
 }
 }

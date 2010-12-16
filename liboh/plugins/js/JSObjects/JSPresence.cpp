@@ -3,16 +3,16 @@
 #include "../JSPresenceStruct.hpp"
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
+#include "JSInvokableObject.hpp"
 #include <sirikata/core/transfer/URI.hpp>
 
 using namespace v8;
 namespace Sirikata
 {
-  namespace JS
-  {
-    namespace JSPresence
-	{
-
+namespace JS
+{
+namespace JSPresence
+{
 
         template<typename WithHolderType>
         JSPresenceStruct* GetTargetPresenceStruct(const WithHolderType& with_holder)
@@ -70,10 +70,53 @@ namespace Sirikata
             v8::String::Utf8Value str(args[0]);
             const char* cstr = ToCString(str);
             String simname(cstr);
+            v8::HandleScope scope;
 
-            mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
-            return v8::Undefined();
+            JSInvokableObject::JSInvokableObjectInt* invokableObj = mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
+
+            Local<Object> tmpObj = mStruct->jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
+            Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
+
+            tmpObjP->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mStruct->jsObjScript));
+            tmpObjP->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
+            return tmpObjP;
         }
+
+v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args) {
+    JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded.")) );
+
+    v8::Handle<v8::Value> cb_val = args[0];
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded().  Must contain callback function.")) );
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    mStruct->registerOnProxAddedEventHandler(cb_persist);
+    return v8::Undefined();
+}
+
+
+v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
+{
+    JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+    
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved.")) );
+
+    v8::Handle<v8::Value> cb_val = args[0];
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved().  Must contain callback function.")) );
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    mStruct->registerOnProxRemovedEventHandler(cb_persist);
+    return v8::Undefined();
+}
+
 
 
         //changine this function to actually do something

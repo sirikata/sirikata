@@ -190,7 +190,7 @@ bool decodeAddressable(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjS
         void* ptr2 = wrapSpaceObjRef->Value();
 
         sporef = static_cast<SpaceObjectReference*>(ptr2);
-        if (jsObjScript == NULL)
+        if (sporef == NULL)
         {
             jsObjScript = NULL;
             std::cout<<"\n\nReturning false from decodeAddressable 2 sporef\n\n";

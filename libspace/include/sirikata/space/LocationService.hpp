@@ -84,11 +84,11 @@ public:
 
     virtual void initialize(LocationService* loc);
 
-    virtual void subscribe(ServerID remote, const UUID& uuid) = 0;
+    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid) = 0;
+    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) = 0;
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote) = 0;
 

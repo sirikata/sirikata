@@ -61,6 +61,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
     v8::Persistent<v8::ObjectTemplate> mMathTemplate;
+    v8::Persistent<v8::ObjectTemplate> mInvokableObjectTemplate;
     void testPrint();
 
 private:
@@ -71,7 +72,9 @@ private:
     void createPresenceTemplate();
     void createContextTemplate();
     void createMathTemplate();
+    void  createJSInvokableObjectTemplate();
 
+    
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;

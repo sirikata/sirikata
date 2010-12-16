@@ -88,6 +88,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mLocService(locservice),
    mCSeg(NULL),
    mDistanceQueryDistance(0.f),
+   mMaxObject(0.0f),
    mMinObjectQueryAngle(SolidAngle::Max),
    mProxThread(NULL),
    mProxService(NULL),
@@ -140,7 +141,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
         mServerQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool server_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mServerQueryHandler[i]->initialize(
-            mLocCache, server_static_objects,
+            mLocCache, mLocCache, server_static_objects,
             std::tr1::bind(&Proximity::handlerShouldHandleObject, this, server_static_objects, false, _1, _2, _3, _4, _5)
         );
     }
@@ -158,7 +159,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
         mObjectQueryHandler[i]->setAggregateListener(this); // *Must* be before handler->initialize
         bool object_static_objects = (mSeparateDynamicObjects && i == OBJECT_CLASS_STATIC);
         mObjectQueryHandler[i]->initialize(
-            mLocCache, object_static_objects,
+            mLocCache, mLocCache, object_static_objects,
             std::tr1::bind(&Proximity::handlerShouldHandleObject, this, object_static_objects, true, _1, _2, _3, _4, _5)
         );
     }
@@ -193,6 +194,8 @@ Proximity::~Proximity() {
     mProxService = NULL;
 
     delete mAggregateManager;
+
+    delete mProxThread;
 }
 
 
@@ -235,6 +238,14 @@ void Proximity::newSession(ObjectSession* session) {
             _1, _2
         )
     );
+}
+
+void Proximity::sessionClosed(ObjectSession* session) {
+    ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(session->id().getAsUUID());
+    if (prox_stream_it != mObjectProxStreams.end()) {
+        prox_stream_it->second->disable();
+        mObjectProxStreams.erase(prox_stream_it);
+    }
 }
 
 void Proximity::handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length) {
@@ -622,8 +633,13 @@ void Proximity::checkObjectClass(bool is_local, const UUID& objid, const TimedMo
     );
 }
 
-void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_stream) {
+void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfoPtr prox_stream) {
     using std::tr1::placeholders::_1;
+
+    // Always mark this up front. This keeps further requests from
+    // occuring since the first time this method is entered, even if
+    // the request is deferred, should eventually result in a stream.
+    prox_stream->iostream_requested = true;
 
     ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(objid));
     ProxStreamPtr base_stream = session != NULL ? session->getStream() : ProxStreamPtr();
@@ -642,10 +658,9 @@ void Proximity::requestProxSubstream(const UUID& objid, ProxStreamInfo* prox_str
         (void*)NULL, 0,
         OBJECT_PORT_PROXIMITY, OBJECT_PORT_PROXIMITY
     );
-    prox_stream->iostream_requested = true;
 }
 
-void Proximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfo* prox_stream_info) {
+void Proximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxStreamPtr substream, ProxStreamInfoPtr prox_stream_info) {
     if (!substream) {
         // Retry
         PROXLOG(warn,"Error opening Prox substream, retrying...");
@@ -666,8 +681,11 @@ void Proximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxSt
     writeSomeObjectResults(prox_stream_info);
 }
 
-void Proximity::writeSomeObjectResults(ProxStreamInfo* prox_stream) {
+void Proximity::writeSomeObjectResults(ProxStreamInfoWPtr w_prox_stream) {
     static Duration retry_rate = Duration::milliseconds((int64)1);
+
+    ProxStreamInfoPtr prox_stream = w_prox_stream.lock();
+    if (!prox_stream) return;
 
     prox_stream->writing = true;
 
@@ -708,25 +726,25 @@ void Proximity::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg)
     // Try to find stream info for the object
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(msg->dest_object());
     if (prox_stream_it == mObjectProxStreams.end()) {
-        prox_stream_it = mObjectProxStreams.insert( ObjectProxStreamMap::value_type(msg->dest_object(), ProxStreamInfo()) ).first;
-        prox_stream_it->second.writecb = std::tr1::bind(
-            &Proximity::writeSomeObjectResults, this, &(prox_stream_it->second)
+        prox_stream_it = mObjectProxStreams.insert( ObjectProxStreamMap::value_type(msg->dest_object(), ProxStreamInfoPtr(new ProxStreamInfo())) ).first;
+        prox_stream_it->second->writecb = std::tr1::bind(
+            &Proximity::writeSomeObjectResults, this, ProxStreamInfoWPtr(prox_stream_it->second)
         );
     }
-    ProxStreamInfo& prox_stream = prox_stream_it->second;
+    ProxStreamInfoPtr prox_stream = prox_stream_it->second;
 
     // If we don't have a stream yet, try to build it
-    if (!prox_stream.iostream_requested)
-        requestProxSubstream(msg->dest_object(), &prox_stream);
+    if (!prox_stream->iostream_requested)
+        requestProxSubstream(msg->dest_object(), prox_stream);
 
     // Build the result and push it into the stream
     // FIXME this is an infinite sized queue, but we don't really want to drop
     // proximity results....
-    prox_stream.outstanding.push(Network::Frame::write(msg->payload()));
+    prox_stream->outstanding.push(Network::Frame::write(msg->payload()));
 
     // If writing isn't already in progress, start it up
-    if (!prox_stream.writing)
-        writeSomeObjectResults(&prox_stream);
+    if (!prox_stream->writing)
+        writeSomeObjectResults(prox_stream);
 }
 
 void Proximity::poll() {
@@ -755,6 +773,7 @@ void Proximity::poll() {
     while(object_sent && !mObjectResultsToSend.empty()) {
         Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
         sendObjectResult(msg_front);
+        delete msg_front;
         mObjectResultsToSend.pop_front();
     }
 }
@@ -843,8 +862,13 @@ void Proximity::proxThreadMain() {
     Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
     Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
 
+    Poller staticRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(60.f));
+    Poller dynamicRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(10.f));
+
     mServerHandlerPoller.start();
     mObjectHandlerPoller.start();
+    staticRebuilder.start();
+    dynamicRebuilder.start();
 
     mProxService->run();
 }
@@ -855,6 +879,13 @@ void Proximity::tickQueryHandler(ProxQueryHandler* qh[NUM_OBJECT_CLASSES]) {
         if (qh[i] != NULL)
             qh[i]->tick(simT);
     }
+}
+
+void Proximity::rebuildHandler(ObjectClass objtype) {
+    if (mServerQueryHandler[objtype] != NULL)
+        mServerQueryHandler[objtype]->rebuild();
+    if (mObjectQueryHandler[objtype] != NULL)
+        mObjectQueryHandler[objtype]->rebuild();
 }
 
 void Proximity::generateServerQueryEvents(Query* query) {

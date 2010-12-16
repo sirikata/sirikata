@@ -131,13 +131,9 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (core_plugin_refcount>0) {
-        core_plugin_refcount--;
-        assert(core_plugin_refcount==0);
-        if (core_plugin_refcount==0) {
-            ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monoscript");
-            delete mono_system;
-        }
+    if (core_plugin_refcount==0) {
+        ObjectScriptManagerFactory::getSingleton().unregisterConstructor("monoscript");
+        delete mono_system;
     }
 }
 

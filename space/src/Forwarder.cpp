@@ -141,6 +141,9 @@ Forwarder::Forwarder(SpaceContext* ctx)
 
       this->unregisterMessageRecipient(SERVER_PORT_OBJECT_MESSAGE_ROUTING, this);
       this->unregisterMessageRecipient(SERVER_PORT_FORWARDER_WEIGHT_UPDATE, this);
+
+      delete mOutgoingMessages;
+      delete mOSegLookups;
   }
 
   /*
@@ -639,10 +642,8 @@ void Forwarder::serverMessageReceived(Message* msg) {
         // handling OH messages.  We should probably merge them....
 
         // Local
-        if (mLocalForwarder->tryForward(obj_msg)) {
-            delete msg;
+        if (mLocalForwarder->tryForward(obj_msg))
             return;
-        }
 
         // OSeg Cache
         // 4. Try to shortcut them main thread. Use forwarder to try to forward

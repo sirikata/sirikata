@@ -82,12 +82,8 @@ SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (csvfactory_plugin_refcount>0) {
-        csvfactory_plugin_refcount--;
-        assert(csvfactory_plugin_refcount==0);
-        if (csvfactory_plugin_refcount==0) {
-            ObjectFactoryFactory::getSingleton().unregisterConstructor("csv");
-        }
+    if (csvfactory_plugin_refcount==0) {
+        ObjectFactoryFactory::getSingleton().unregisterConstructor("csv");
     }
 }
 

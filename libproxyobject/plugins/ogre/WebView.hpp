@@ -36,6 +36,11 @@
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
+//#include <sirikata/proxyobject/ProxyObjectListener.hpp>
+#include <sirikata/proxyobject/Invokable.hpp>
+#include <vector>
+#include <boost/any.hpp>
+
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"
@@ -43,6 +48,7 @@
 #include "berkelium/Window.hpp"
 #include "berkelium/WindowDelegate.hpp"
 #endif
+
 
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
@@ -54,6 +60,8 @@ namespace Berkelium {
   };
 }
 #endif
+
+
 
 namespace Sirikata {
 
@@ -79,6 +87,7 @@ namespace Graphics {
 #ifdef HAVE_BERKELIUM
         , public Berkelium::WindowDelegate
 #endif
+        , public Invokable
 	{
 	public:
 
@@ -523,6 +532,9 @@ namespace Graphics {
         void onUnresponsive(Berkelium::Window*);
 
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
+
+     virtual boost::any invoke(std::vector<boost::any>& params);
+     void translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
 
         void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
         void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);

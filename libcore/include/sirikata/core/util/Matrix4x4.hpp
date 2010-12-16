@@ -230,10 +230,10 @@ public:
         Vector4<scalar> ocol2=other.getCol(2);
         Vector4<scalar> ocol3=other.getCol(3);
         //cannot do this *= inplace
-        ocol0=mCol[0]*ocol0.x+mCol[1]*ocol0.y+mCol[2]*ocol0.z;
-        ocol1=mCol[0]*ocol1.x+mCol[1]*ocol1.y+mCol[2]*ocol1.z;
-        ocol2=mCol[0]*ocol2.x+mCol[1]*ocol2.y+mCol[2]*ocol2.z;
-        ocol2=mCol[0]*ocol3.x+mCol[1]*ocol3.y+mCol[2]*ocol3.z;
+        ocol0=mCol[0]*ocol0.x+mCol[1]*ocol0.y+mCol[2]*ocol0.z+mCol[3]*ocol0.w;
+        ocol1=mCol[0]*ocol1.x+mCol[1]*ocol1.y+mCol[2]*ocol1.z+mCol[3]*ocol1.w;
+        ocol2=mCol[0]*ocol2.x+mCol[1]*ocol2.y+mCol[2]*ocol2.z+mCol[3]*ocol2.w;
+        ocol3=mCol[0]*ocol3.x+mCol[1]*ocol3.y+mCol[2]*ocol3.z+mCol[3]*ocol3.w;
         //have to copy back
         mCol[0]=ocol0;
         mCol[1]=ocol1;

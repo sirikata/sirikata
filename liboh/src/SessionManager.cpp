@@ -303,7 +303,7 @@ void SessionManager::connect(
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
     using std::tr1::placeholders::_6;
-		using std::tr1::placeholders::_7;
+    using std::tr1::placeholders::_7;
 
     ConnectingInfo ci;
     ci.loc = init_loc;
@@ -313,7 +313,7 @@ void SessionManager::connect(
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
 
-
+    
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
     mObjectConnections.add(

@@ -45,6 +45,8 @@ PintoManagerLocationServiceCache::~PintoManagerLocationServiceCache() {
 }
 
 void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& region, float32 ms) {
+    Lock lck(mMutex);
+
     assert(mServers.find(sid) == mServers.end());
 
     mServers[sid].location = loc;
@@ -58,6 +60,8 @@ void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedM
 }
 
 void PintoManagerLocationServiceCache::updateSpaceServerLocation(ServerID sid, const TimedMotionVector3f& loc) {
+    Lock lck(mMutex);
+
     ServerMap::iterator it = mServers.find(sid);
     assert( it != mServers.end() );
     SpaceServerData& dat = it->second;
@@ -69,6 +73,8 @@ void PintoManagerLocationServiceCache::updateSpaceServerLocation(ServerID sid, c
 }
 
 void PintoManagerLocationServiceCache::updateSpaceServerRegion(ServerID sid, const BoundingSphere3f& region) {
+    Lock lck(mMutex);
+
     ServerMap::iterator it = mServers.find(sid);
     assert( it != mServers.end() );
     SpaceServerData& dat = it->second;
@@ -80,6 +86,8 @@ void PintoManagerLocationServiceCache::updateSpaceServerRegion(ServerID sid, con
 }
 
 void PintoManagerLocationServiceCache::updateSpaceServerMaxSize(ServerID sid, float32 ms) {
+    Lock lck(mMutex);
+
     ServerMap::iterator it = mServers.find(sid);
     assert( it != mServers.end() );
     SpaceServerData& dat = it->second;
@@ -91,6 +99,8 @@ void PintoManagerLocationServiceCache::updateSpaceServerMaxSize(ServerID sid, fl
 }
 
 void PintoManagerLocationServiceCache::removeSpaceServer(ServerID sid) {
+    Lock lck(mMutex);
+
     ServerMap::iterator it = mServers.find(sid);
     assert( it != mServers.end() );
     SpaceServerData& dat = it->second;
@@ -108,6 +118,8 @@ void PintoManagerLocationServiceCache::removeSpaceServer(ServerID sid) {
 
 
 LocationServiceCache::Iterator PintoManagerLocationServiceCache::startTracking(const ObjectID& id) {
+    Lock lck(mMutex);
+
     ServerMap::iterator it = mServers.find(id);
     assert( it != mServers.end() );
     SpaceServerData& dat = it->second;
@@ -125,6 +137,8 @@ LocationServiceCache::Iterator PintoManagerLocationServiceCache::startTracking(c
 #define EXTRACT_ITERATOR_DATA(x) (EXTRACT_ITERATOR(x)->second)
 
 void PintoManagerLocationServiceCache::stopTracking(const Iterator& id) {
+    Lock lck(mMutex);
+
     assert(id.data != NULL);
     SpaceServerData& dat = EXTRACT_ITERATOR_DATA(id);
     dat.tracking = false;
@@ -159,11 +173,15 @@ const ServerID& PintoManagerLocationServiceCache::iteratorID(const Iterator& id)
 }
 
 void PintoManagerLocationServiceCache::addUpdateListener(LocationUpdateListenerType* listener) {
+    Lock lck(mMutex);
+
     assert( mListeners.find(listener) == mListeners.end() );
     mListeners.insert(listener);
 }
 
 void PintoManagerLocationServiceCache::removeUpdateListener(LocationUpdateListenerType* listener) {
+    Lock lck(mMutex);
+
     ListenerSet::iterator it = mListeners.find(listener);
     assert( it != mListeners.end() );
     mListeners.erase(it);

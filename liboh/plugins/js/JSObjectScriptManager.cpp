@@ -49,6 +49,7 @@
 #include "JSObjects/Addressable.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSFields.hpp"
+#include "JSObjects/JSInvokableObject.hpp"
 #include "JSSystemNames.hpp"
 
 
@@ -65,7 +66,6 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
-
     OptionValue* import_paths;
     InitializeClassOptions(
         "jsobjectscriptmanager",this,
@@ -83,6 +83,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     createHandlerTemplate();
     createPresenceTemplate();
     createMathTemplate();
+    createJSInvokableObjectTemplate();
 }
 
 void JSObjectScriptManager::createMathTemplate()
@@ -162,7 +163,6 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(JSSystem::__ScriptGetTest));
     system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
-    system_templ->Set(v8::String::New("update_addressable"),v8::FunctionTemplate::New(JSSystem::ScriptUpdateAddressable));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
@@ -197,6 +197,15 @@ void JSObjectScriptManager::createAddressableTemplate()
     mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
     mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
     mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
+}
+
+void JSObjectScriptManager::createJSInvokableObjectTemplate()
+{
+  v8::HandleScope handle_scope;
+
+  mInvokableObjectTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+  mInvokableObjectTemplate->SetInternalFieldCount(JSSIMOBJECT_TEMPLATE_FIELD_COUNT);
+  mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke)); 
 }
 
 void JSObjectScriptManager::createPresenceTemplate()
@@ -239,6 +248,11 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
   mPresenceTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
+  //callback on prox addition and removal
+  mPresenceTemplate->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  mPresenceTemplate->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  
+    
   // Query angle
   mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 
