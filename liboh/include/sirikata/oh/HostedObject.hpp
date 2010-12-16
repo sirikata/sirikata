@@ -357,6 +357,7 @@ public:
 
     // Handlers for core space-managed updates
     void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh);
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 

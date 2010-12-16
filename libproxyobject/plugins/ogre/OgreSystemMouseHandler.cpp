@@ -1064,7 +1064,7 @@ private:
         SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
         cam_vwobj->requestLocationUpdate(space, oref,newloc);
         // And update our local Proxy's information, assuming the move will be successful
-        cam->setLocation(newloc);
+        cam->setLocation(newloc, 0, true);
     }
 
     void rotateAction(Vector3f about, float amount) {
@@ -1094,7 +1094,7 @@ private:
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
         cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
-        cam->setOrientation(neworient);
+        cam->setOrientation(neworient, 0, true);
     }
 
     void stableRotateAction(float dir, float amount) {
@@ -1132,7 +1132,7 @@ private:
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
         cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
-        cam->setOrientation(neworient);
+        cam->setOrientation(neworient, 0, true);
     }
 
     void setDragModeAction(const String& modename) {
@@ -1435,9 +1435,9 @@ private:
         //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
         //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
         Location oldloc = cam->extrapolateLocation(now);
-        cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))));
+        cam->setOrientation(TimedMotionQuaternion(now,MotionQuaternion(loc.getOrientation(), Quaternion(Vector3f(1,0,0),0))), 0, true);
         TimedMotionVector3f newplace(now,MotionVector3f(Vector3f(oldloc.getPosition()),Vector3f(pos-oldloc.getPosition())));
-        cam->setLocation(newplace);
+        cam->setLocation(newplace, 0, true);
         cam_vwobj->requestLocationUpdate(space, oref,newplace);
     }
 

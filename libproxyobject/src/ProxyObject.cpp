@@ -54,11 +54,17 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
 {
     assert(mParent);
     mDefaultPort = mParent->bindODPPort(owner_sor);
+
+    reset();
 }
 
 
 ProxyObject::~ProxyObject() {
     delete mDefaultPort;
+}
+
+void ProxyObject::reset() {
+    memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));
 }
 
 void ProxyObject::destroy() {
@@ -89,17 +95,26 @@ bool ProxyObject::isStatic() const {
 }
 
 
-void ProxyObject::setLocation(const TimedMotionVector3f& reqloc) {
+void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive) {
+    if (seqno < mUpdateSeqno[LOC_POS_PART] && !predictive) return;
+
+    if (!predictive) mUpdateSeqno[LOC_POS_PART] = seqno;
     mLoc = reqloc;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
-void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient) {
+void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive) {
+    if (seqno < mUpdateSeqno[LOC_ORIENT_PART] && !predictive) return;
+
+    if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
     mOrientation = TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position().normal(), reqorient.velocity().normal()));
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 
-void ProxyObject::setBounds(const BoundingSphere3f& bnds) {
+void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive) {
+    if (seqno < mUpdateSeqno[LOC_BOUNDS_PART] && !predictive) return;
+
+    if (!predictive) mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
     mBounds = bnds;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
     ProxyObjectPtr ptr = getSharedPtr();
@@ -112,8 +127,10 @@ ProxyObjectPtr ProxyObject::getParentProxy() const {
 }
 
 //you can set a camera's mesh as of now.
-void ProxyObject::setMesh ( Transfer::URI const& mesh )
-{
+void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predictive) {
+    if (seqno < mUpdateSeqno[LOC_MESH_PART] && !predictive) return;
+
+    if (!predictive) mUpdateSeqno[LOC_MESH_PART] = seqno;
     mMeshURI = mesh;
     ProxyObjectPtr ptr = getSharedPtr();
     if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);

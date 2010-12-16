@@ -578,34 +578,64 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
 }
 
 void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+    uint64 seqno = (update.has_seqno() ? update.seqno() : 0);
+
+    TimedMotionVector3f loc;
+    TimedMotionQuaternion orient;
+    BoundingSphere3f bounds;
+    String mesh;
+
+    TimedMotionVector3f* locptr = NULL;
+    TimedMotionQuaternion* orientptr = NULL;
+    BoundingSphere3f* boundsptr = NULL;
+    String* meshptr = NULL;
+
+
     if (update.has_location()) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-        TimedMotionVector3f loc(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
-
-        proxy_obj->setLocation(loc);
+        loc = TimedMotionVector3f(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
 
         CONTEXT_OHTRACE(objectLoc,
             getUUID(),
             update.object(),
             loc
         );
+
+        locptr = &loc;
     }
 
     if (update.has_orientation()) {
         Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
-        TimedMotionQuaternion orient(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
-        proxy_obj->setOrientation(orient);
+        orient = TimedMotionQuaternion(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
+        orientptr = &orient;
     }
 
     if (update.has_bounds()) {
-        proxy_obj->setBounds(update.bounds());
+        bounds = update.bounds();
+        boundsptr = &bounds;
     }
 
     if (update.has_mesh()) {
         std::string mesh = update.mesh();
-        if (mesh != "")
-            proxy_obj->setMesh(Transfer::URI(mesh));
+        meshptr = &mesh;
     }
+
+    processLocationUpdate(space, proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr);
+}
+
+void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh) {
+
+    if (loc)
+        proxy_obj->setLocation(*loc, seqno);
+
+    if (orient)
+        proxy_obj->setOrientation(*orient, seqno);
+
+    if (bounds)
+        proxy_obj->setBounds(*bounds, seqno);
+
+    if (mesh && *mesh != "")
+        proxy_obj->setMesh(Transfer::URI(*mesh), seqno);
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
@@ -665,6 +695,9 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 loc
             );
 
+            TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
+            BoundingSphere3f bnds = addition.bounds();
+            String mesh = (addition.has_mesh() ? addition.mesh() : "");
 
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
@@ -672,17 +705,17 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
             if (!proxy_obj) {
-                TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
-
                 Transfer::URI meshuri;
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
-                BoundingSphere3f bnds = addition.bounds();
                 proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds);
             }
             else {
-                proxy_obj->setMesh(Transfer::URI(addition.mesh()));
+                // Reset so that updates from this new "session" for this proxy
+                // get applied
+                proxy_obj->reset();
+                processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh);
             }
 
             // Notify of any out of order loc updates
@@ -709,7 +742,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (mObjectScript)
                 mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
-            proxy_obj->setMesh(Transfer::URI(""));
+            // FIXME this is *not* the right way to handle this
+            proxy_obj->setMesh(Transfer::URI(""), 0, true);
 
 
             CONTEXT_OHTRACE(prox,
@@ -730,12 +764,12 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
 {
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri);
-    returner->setLocation(tmv);
-    returner->setOrientation(tmq);
-    returner->setBounds(bs);
+    returner->setLocation(tmv, 0);
+    returner->setOrientation(tmq, 0);
+    returner->setBounds(bs, 0);
 
     if(meshuri)
-        returner->setMesh(meshuri);
+        returner->setMesh(meshuri, 0);
 
     return returner;
 }
@@ -980,26 +1014,26 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
     if (loc != NULL) {
-        self_proxy->setLocation(*loc);
+        self_proxy->setLocation(*loc, 0, true);
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
         requested_loc.set_t( spaceTime(space, loc->updateTime()) );
         requested_loc.set_position(loc->position());
         requested_loc.set_velocity(loc->velocity());
     }
     if (orient != NULL) {
-        self_proxy->setOrientation(*orient);
+        self_proxy->setOrientation(*orient, 0, true);
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
         requested_orient.set_t( spaceTime(space, orient->updateTime()) );
         requested_orient.set_position(orient->position());
         requested_orient.set_velocity(orient->velocity());
     }
     if (bounds != NULL) {
-        self_proxy->setBounds(*bounds);
+        self_proxy->setBounds(*bounds, 0, true);
         loc_request.set_bounds(*bounds);
     }
     if (mesh != NULL)
     {
-        self_proxy->setMesh(Transfer::URI(*mesh));
+        self_proxy->setMesh(Transfer::URI(*mesh), 0, true);
         loc_request.set_mesh(*mesh);
     }
 

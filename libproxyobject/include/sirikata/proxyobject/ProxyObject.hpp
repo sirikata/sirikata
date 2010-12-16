@@ -109,6 +109,16 @@ private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
 
+    enum LOC_PARTS {
+        LOC_POS_PART = 0,
+        LOC_ORIENT_PART = 1,
+        LOC_BOUNDS_PART = 2,
+        LOC_MESH_PART = 3,
+        LOC_NUM_PART = 4
+    };
+
+    uint64 mUpdateSeqno[LOC_NUM_PART];
+
     TimedMotionVector3f mLoc;
     TimedMotionQuaternion mOrientation;
     BoundingSphere3f mBounds;
@@ -183,6 +193,9 @@ public:
 
     ~ProxyObject();
 
+    // Resets the state of this proxy as if it had been freshly created
+    void reset();
+
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;
     /// Gets the owning Proxy
@@ -198,15 +211,15 @@ public:
 
     /** Sets the location for this update. Note: This does not tell the
         Space that we have moved, but it is the first step in moving a local object. */
-    void setLocation(const TimedMotionVector3f& reqloc);
+    void setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive = false);
 
     /** Sets the orientation for this update. Note: This does not tell the
         Space that we have moved, but it is the first step in moving a local object. */
-    void setOrientation(const TimedMotionQuaternion& reqorient);
+    void setOrientation(const TimedMotionQuaternion& reqorient, uint64 seqno, bool predictive = false);
 
     /** Sets the bounds. Note: This does not tell the Space that we have moved,
         but it is the first step in moving a local object. */
-    void setBounds(const BoundingSphere3f& bnds);
+    void setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive = false);
 
     /// Returns the global location of this object in space coordinates at timeStamp.
     Location globalLocation(TemporalValue<Location>::Time timeStamp) const {
@@ -232,7 +245,7 @@ public:
 
 
     // interface from MeshObject
-    virtual void setMesh ( Transfer::URI const& rhs );
+    virtual void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
     virtual Transfer::URI const& getMesh () const;
     virtual void setPhysical ( PhysicalParameters const& rhs );
     virtual PhysicalParameters const& getPhysical () const;
