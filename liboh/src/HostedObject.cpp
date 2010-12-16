@@ -508,7 +508,6 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
-    std::cout << "\n\n\n GOT A MESSSAGGEEEE \n\n\n\n" ;
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
 
