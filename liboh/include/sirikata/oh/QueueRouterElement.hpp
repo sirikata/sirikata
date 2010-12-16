@@ -83,7 +83,6 @@ public:
 
         if (new_size > mMaxSize) {
             // drop
-            delete pkt;
             return false;
         }
 
