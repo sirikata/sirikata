@@ -202,7 +202,9 @@ void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
     mParent->getProxySpaceObjRefs(sporef,proxyObjNeighbors);
 
     for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
+    {
         addAddressable(*sporefIt);
+    }
 }
 
 
