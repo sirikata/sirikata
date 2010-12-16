@@ -3,6 +3,7 @@
 #include "../JSPresenceStruct.hpp"
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
+#include "JSInvokableObject.hpp"
 #include <sirikata/core/transfer/URI.hpp>
 
 using namespace v8;
@@ -69,9 +70,16 @@ namespace JSPresence
             v8::String::Utf8Value str(args[0]);
             const char* cstr = ToCString(str);
             String simname(cstr);
+            v8::HandleScope scope;
 
-            mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
-            return v8::Undefined();
+            JSInvokableObject::JSInvokableObjectInt* invokableObj = mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
+
+            Local<Object> tmpObj = mStruct->jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
+            Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
+
+            tmpObjP->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mStruct->jsObjScript));
+            tmpObjP->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
+            return tmpObjP;
         }
 
 v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args) {

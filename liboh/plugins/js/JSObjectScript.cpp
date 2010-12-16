@@ -47,6 +47,7 @@
 #include "JSUtil.hpp"
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
+#include "JSObjects/JSInvokableObject.hpp"
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -188,7 +189,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
-
+    import("std/library.em");
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
@@ -201,7 +202,9 @@ void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
     mParent->getProxySpaceObjRefs(sporef,proxyObjNeighbors);
 
     for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
+    {
         addAddressable(*sporefIt);
+    }
 }
 
 
@@ -269,12 +272,16 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         JSLOG(info,"Issuing user callback for proximate object.");
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
     }
-    
-
 }
 
 
+JSInvokableObject::JSInvokableObjectInt* JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
+{
+    TimeSteppedSimulation* sim = mParent->runSimulation(sporef,simname);
 
+    return new JSInvokableObject::JSInvokableObjectInt(sim);
+}
+  
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
     //register for scripting messages from user
     SpaceID space_id = name.space();
@@ -319,11 +326,6 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
 }
 
-
-void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
-{
-    mParent->runSimulation(sporef,simname);
-}
 
 
 
@@ -451,8 +453,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     // Special casing emerson compilation
 
 
-    #ifdef __EMERSON_COMPILE_ON__
-
+    #ifdef EMERSON_COMPILE
+    
     String em_script_str_new = em_script_str;
 
     if(em_script_str.at(em_script_str.size() -1) != '\n')
@@ -536,9 +538,11 @@ void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
     addr_array->Set(v8::Number::New(new_pos),newAddrObj);
 }
 
+
 void JSObjectScript::onCreateProxy(ProxyObjectPtr p)
 {
     addAddressable(p->getObjectReference());
+
 }
 
 void JSObjectScript::onDestroyProxy(ProxyObjectPtr p)

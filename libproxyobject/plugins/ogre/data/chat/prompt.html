@@ -1,0 +1,85 @@
+<html>
+  <head>
+    <style type="text/css">
+      p.command {
+        border-width: 1px 1px 1px 1px;
+        border-color: black;
+        border-style: solid;
+        padding: 0px;
+      }
+    </style>
+    <script language="javascript" type="text/javascript">
+      function pageScroll() {
+        window.scrollBy(0,1000); // horizontal and vertical scroll increments
+      }
+
+      function addMessage(msg) {
+        var new_p = document.createElement('p');
+        new_p.appendChild( document.createTextNode(msg) );
+        new_p.className = 'command';
+        var results_div = document.getElementById('Results');
+        results_div.appendChild( new_p );
+
+        setTimeout('pageScroll()',100);
+      }
+
+      function clearCommand() {
+        var command_area = document.getElementById('Command');
+        command_area.value = '';
+      }
+
+      function runCommand() {
+        var command_area = document.getElementById('Command');
+        var command = command_area.value;
+        command_area.value = '';
+
+        addMessage(command);
+
+        var arg_map = [
+          'ExecScript',
+          'Command', command
+        ];
+        chrome.send("event", arg_map);
+      }
+
+      // We track key up and key down to make shift + enter trigger a send
+      function registerHotkeys() {
+        var command_area = document.getElementById('Command');
+        command_area.onkeydown = handleCodeKeyDown;
+        command_area.onkeyup = handleCodeKeyUp;
+      }
+      var shift_down = false;
+      function handleCodeKeyDown(evt) {
+        if (evt.shiftKey)
+          shift_down = true;
+        if (evt.keyCode == 13 && shift_down) {
+          runCommand();
+          // We set a timeout because the addition of the new line occurs *after* this handler
+          setTimeout('clearCommand()',1);
+        }
+      }
+      function handleCodeKeyUp(evt) {
+        if (evt.shiftKey)
+          shift_down = false;
+      }
+
+      function closePrompt() {
+        var arg_map = [
+          'Close'
+        ];
+        chrome.send("event", arg_map);
+      }
+    </script>
+  </head>
+  <body onload="registerHotkeys()">
+    <div id="Results">
+    </div>
+    <div>
+      <form>
+        <textarea id="Command" name="Command" rows="5" cols="30"></textarea><br>
+        <button type="button" onclick="runCommand()">Send</button>
+        <button type="button" onclick="closePrompt()">Close</button>
+      </form>
+    </div>
+  </body>
+</html>

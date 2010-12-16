@@ -50,6 +50,7 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
+#include "JSObjects/JSInvokableObject.hpp"
 
 
 namespace Sirikata {
@@ -116,6 +117,7 @@ public:
     /** reboot the state of the script, basically reset the state */
     void reboot();
 
+    Handle<v8::Context> context() { return mContext;}
     /** create a new entity at the run time */
     void create_entity(EntityCreateInfo& eci);
     
@@ -145,7 +147,7 @@ public:
 
     void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
 
-    void runSimulation(const SpaceObjectReference& sporef, const String& simname);
+    Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
     /** Register an event pattern matcher and handler. */
@@ -169,6 +171,7 @@ public:
     v8::Handle<v8::Value> getVelocity(SpaceID&);
     void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
 
+    JSObjectScriptManager* manager() const { return mManager; }
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
@@ -225,9 +228,9 @@ private:
     v8::Persistent<v8::Context> mContext;
 
 
+
     Handle<Object> getSystemObject();
     Handle<Object> getGlobalObject();
-
     void populateAddressable(Handle<Object>& system_obj );
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);

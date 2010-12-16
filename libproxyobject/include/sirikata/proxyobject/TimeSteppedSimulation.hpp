@@ -37,10 +37,16 @@
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/service/Context.hpp>
+#include "Invokable.hpp"
+
+
+#include <vector>
+#include <boost/any.hpp>
+
 
 namespace Sirikata {
 
-class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener, public PollingService {
+class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener, public PollingService , public Invokable{
 public:
     TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name)
      : PollingService(ctx->mainStrand, rate, ctx, name)
@@ -49,6 +55,14 @@ public:
     virtual Duration desiredTickRate() const = 0;
     ///returns true if simulation should continue (false quits app)
     virtual void poll()=0;
+    
+
+    /* This interface is for scripting */
+    /* Not making it as a purely virtual as this might break other dependent plugin classes */
+    virtual boost::any invoke(std::vector<boost::any>& params){ return NULL; }
+    
+    
+    
 };
 
 }

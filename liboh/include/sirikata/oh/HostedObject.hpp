@@ -208,7 +208,7 @@ public:
 
     ObjectReference getObjReference(const SpaceID& space);
 
-    void runSimulation(const SpaceObjectReference& sporef, const String& simName);
+    TimeSteppedSimulation* runSimulation(const SpaceObjectReference& sporef, const String& simName);
 
 
 

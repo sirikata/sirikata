@@ -90,6 +90,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 }
 
 
+
 //Need to define this function so that can register timeouts in jscript
 Network::IOService* HostedObject::getIOService()
 {
@@ -97,7 +98,7 @@ Network::IOService* HostedObject::getIOService()
 }
 
 
-void HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
+TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& sporef, const String& simName)
 {
     TimeSteppedSimulation* sim = NULL;
 
@@ -116,6 +117,7 @@ void HostedObject::runSimulation(const SpaceObjectReference& sporef, const Strin
         HO_LOG(info, "Adding simulation to context");
         mContext->add(sim);
     }
+    return sim;
 }
 
 
@@ -324,6 +326,7 @@ void HostedObject::connect(
 
 
 
+
 void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
 {
     SpaceID space = mObjectHost->getDefaultSpace();
@@ -505,7 +508,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
 
-
+    std::cout << "\n\n\n GOT A MESSSAGGEEEE \n\n\n\n" ;
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
 
@@ -1074,6 +1077,9 @@ void HostedObject::persistToFile(std::ofstream& fp)
       es->persistToFile(fp);
   }
 }
+
+
+
 
 
 void HostedObject::EntityState::persistToFile(std::ofstream& fp)
