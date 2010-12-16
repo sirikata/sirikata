@@ -6,7 +6,7 @@ chat = undefined;
 
 function sendAll(msg)
 {
-  for(var i = 0; i < addressable.length; )
+  for(var i = 0; i < addressable.length; i++)
   {
     
     print("Sedning b4 to " + addressable[i]);
@@ -15,7 +15,6 @@ function sendAll(msg)
       print("Sedning to " + addressable[i]);
       msg -> addressable[i];
     }
-    i = i + 1;
   }
 
 }
