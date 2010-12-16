@@ -101,6 +101,11 @@ private:
         typedef std::set<SubscriberType> SubscriberSet;
 
         struct SubscriberInfo {
+            SubscriberInfo()
+             : seqno(1)
+            {}
+
+            uint64 seqno;
             UUIDSet subscribedTo;
             std::map<UUID, UpdateInfo> outstandingUpdates;
         };
@@ -278,6 +283,8 @@ private:
                 for(std::map<UUID, UpdateInfo>::iterator up_it = sub_info->outstandingUpdates.begin(); up_it != sub_info->outstandingUpdates.end(); up_it++) {
                     Sirikata::Protocol::Loc::ILocationUpdate update = bulk_update.add_update();
                     update.set_object(up_it->first);
+
+                    update.set_seqno(sub_info->seqno++);
 
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
