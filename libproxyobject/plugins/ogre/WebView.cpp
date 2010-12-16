@@ -1101,12 +1101,17 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
     std::cout << "msg is " << msg << "\n\n";
     // whenthe msg is not empty
-    JSArguments args;
-    args.push_back(JSArgument("ExecScript"));
-    args.push_back(JSArgument("Command"));
-    args.push_back(JSArgument(msg.data()));
+    // FIXME: we need to escape strings 
+    String jsScript = String("addMessage(\"") +msg + String("\")");
+    evaluateJS(jsScript);
+    
+    //JSArguments args;
+    //args.push_back(JSArgument("ExecScript"));
+    //args.push_back(JSArgument("Command"));
+    //args.push_back(JSArgument(msg.data()));
 
-    WebViewManager::getSingletonPtr()->onRaiseWebViewEvent(this, *const_cast<JSArguments*>(&args));
+    //WebViewManager::getSingletonPtr()->onRaiseWebViewEvent(this, *const_cast<JSArguments*>(&args));
+
     
     return boost::any();
 

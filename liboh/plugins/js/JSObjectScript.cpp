@@ -189,7 +189,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
-    import("library.em");
+    import("std/library.em");
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
@@ -324,11 +324,6 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
 }
 
-
-void JSObjectScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)
-{
-    mParent->runSimulation(sporef,simname);
-}
 
 
 

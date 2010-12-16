@@ -36,7 +36,7 @@
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
-#include <sirikata/proxyobject/ProxyObjectListener.hpp>
+//#include <sirikata/proxyobject/ProxyObjectListener.hpp>
 #include <sirikata/proxyobject/Invokable.hpp>
 #include <vector>
 #include <boost/any.hpp>
