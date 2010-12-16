@@ -119,7 +119,6 @@ private:
 
     //added private members to proxy object from mesh object
     Transfer::URI mMeshURI;
-    Vector3f mScale;
     PhysicalParameters mPhysical;
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -235,8 +234,6 @@ public:
     // interface from MeshObject
     virtual void setMesh ( Transfer::URI const& rhs );
     virtual Transfer::URI const& getMesh () const;
-    virtual void setScale ( Vector3f const& rhs );
-    virtual Vector3f const& getScale () const;
     virtual void setPhysical ( PhysicalParameters const& rhs );
     virtual PhysicalParameters const& getPhysical () const;
 

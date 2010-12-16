@@ -379,7 +379,7 @@ public:
                 std::cout << "debug avgPos: " << avgPos << " localTrans" << localTrans << " scale: " << mTotalScale << std::endl;
                 //ent->resetLocation(now, loc);
 
-                ent->setScale(ent->getScale()*scaleamt);
+                //ent->setScale(ent->getScale()*scaleamt);
             }
         }
         if (ev->deltaLastX() != 0) {

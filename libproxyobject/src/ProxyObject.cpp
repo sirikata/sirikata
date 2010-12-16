@@ -50,8 +50,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
      mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
      mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
      mParent(vwobj),
-     mMeshURI(),
-     mScale(1.f, 1.f, 1.f)
+     mMeshURI()
 {
     assert(mParent);
     mDefaultPort = mParent->bindODPPort(owner_sor);
@@ -103,6 +102,9 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient) {
 void ProxyObject::setBounds(const BoundingSphere3f& bnds) {
     mBounds = bnds;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
+    ProxyObjectPtr ptr = getSharedPtr();
+    assert(ptr);
+    MeshProvider::notify (&MeshListener::onSetScale, ptr, Vector3f(mBounds.radius(), mBounds.radius(), mBounds.radius()));
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {
@@ -121,18 +123,6 @@ void ProxyObject::setMesh ( Transfer::URI const& mesh )
 Transfer::URI const& ProxyObject::getMesh () const
 {
     return mMeshURI;
-}
-
-void ProxyObject::setScale ( Vector3f const& scale )
-{
-    mScale = scale;
-    ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify (&MeshListener::onSetScale, ptr, scale );
-}
-
-Vector3f const& ProxyObject::getScale () const
-{
-    return mScale;
 }
 
 void ProxyObject::setPhysical ( PhysicalParameters const& pp )

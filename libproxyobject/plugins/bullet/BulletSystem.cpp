@@ -186,8 +186,8 @@ void BulletObj::onSetPhysical(ProxyObjectPtr proxy, const PhysicalParameters &pp
         positionOrientation po;
         po.p = mMeshptr->getPosition();
         po.o = mMeshptr->getOrientation();
-        Vector3f size = mMeshptr->getScale();
-        system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, pp.hull, size.x, size.y, size.z);
+        float size = mMeshptr->getBounds().radius();
+        system->addPhysicalObject(this, po, pp.density, pp.friction, pp.bounce, pp.hull, size, size, size);
     }
 }
 
