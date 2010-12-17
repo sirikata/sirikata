@@ -49,6 +49,7 @@
 #include "COLLADAFWEffectCommon.h"
 #include "COLLADAFWSkinControllerData.h"
 #include "COLLADAFWSkinController.h"
+#include "COLLADAFWAnimationList.h"
 #include <sirikata/mesh/Meshdata.hpp>
 
 /////////////////////////////////////////////////////////////////////
@@ -182,6 +183,11 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         };
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, AnimationCurve, UniqueIdHash> AnimationCurveMap;
         AnimationCurveMap mAnimationCurves;
+
+        /** */
+        typedef std::vector<COLLADAFW::AnimationList::AnimationBinding> AnimationBindings;
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, AnimationBindings, UniqueIdHash> AnimationBindingsMap;
+        AnimationBindingsMap mAnimationBindings;
 
         Meshdata::SubMeshGeometryList mGeometries;
         IndicesMultimap mGeometryMap;

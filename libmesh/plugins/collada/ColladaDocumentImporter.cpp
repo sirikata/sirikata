@@ -938,6 +938,12 @@ bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* anima
 bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList const* animationList )
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimationList(" << animationList << ") entered");
+
+    AnimationBindings* copy = &mAnimationBindings[animationList->getUniqueId()];
+    const COLLADAFW::AnimationList::AnimationBindings& orig = animationList->getAnimationBindings();
+    for(int i = 0; i < orig.getCount(); i++)
+        copy->push_back( orig[i] );
+
     return true;
 }
 
