@@ -32,6 +32,7 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/util/TemporalValue.hpp>
+#include <sirikata/core/util/DynamicLibrary.hpp>
 #include "WebViewManager.hpp"
 #include "WebView.hpp"
 #include "input/SDLInputManager.hpp"
@@ -42,6 +43,10 @@
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #include <direct.h>
 #include <stdlib.h>
+#endif
+
+#ifdef HAVE_BERKELIUM
+#include "berkelium/Context.hpp"
 #endif
 
 template<> Sirikata::Graphics::WebViewManager* Ogre::Singleton<Sirikata::Graphics::WebViewManager>::ms_Singleton = 0;
@@ -67,7 +72,7 @@ int InputModifiersToWebViewModifiers(Modifier mod, bool numpad);
 }
 
 
-WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string &baseDirectory)
+WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory)
 	: focusedWebView(0), tooltipParent(0),
           chromeWebView(NULL), focusedNonChromeWebView(NULL),
 	  defaultViewport(defaultViewport), mouseXPos(0), mouseYPos(0),
@@ -79,20 +84,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
 
 {
     tooltipWebView = 0;
-#ifndef _WIN32
-    {
-        std::string ldLibraryPath;
-        ldLibraryPath = getenv("LD_LIBRARY_PATH")?getenv("LD_LIBRARY_PATH"):"";
-        ldLibraryPath=baseDirectory+"/chrome:"
-#ifndef NDEBUG
-            "chrome:"
-#endif
-            +ldLibraryPath;
-        setenv("LD_LIBRARY_PATH",ldLibraryPath.c_str(),1);
-    }
-#endif
+    DynamicLibrary::AddLoadPath(binDirectory);
 #ifdef HAVE_BERKELIUM
-    Berkelium::init();
+    Berkelium::init(Berkelium::FileString::empty());
+    bkContext = Berkelium::Context::create();
 #endif
 #ifdef HAVE_BERKELIUM
 /*
@@ -108,11 +103,10 @@ WebViewManager::WebViewManager(Ogre::Viewport* defaultViewport, InputManager* in
         mychromeWebView->loadURL("http://www.youtube.com/watch?v=oHg5SJYRHA0");
         mychromeWebView->setTransparent(true);
 */
-
-        /*chromeWebView = createWebView("__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
-        FILE * testfile=NULL;
-        chromeWebView->loadFile("chrome/navbar.html");*/
-
+/*
+        chromeWebView = createWebView("__chrome", "__chrome", 410, 40, OverlayPosition(RP_TOPCENTER), false, 70, TIER_FRONT);
+        chromeWebView->loadFile("chrome/navbar.html");
+*/
         /*
         WebView *mychromeWebView = createWebView("google", 400, 300, OverlayPosition(RP_BOTTOMLEFT), false, 70);
         mychromeWebView->loadURL("http://google.com/");
@@ -139,6 +133,7 @@ WebViewManager::~WebViewManager()
 		delete toDelete;
 	}
 #ifdef HAVE_BERKELIUM
+    bkContext->destroy();
     Berkelium::destroy();
 #endif
 }
@@ -787,7 +782,7 @@ Sirikata::Task::EventResponse WebViewManager::onMouseMove(Sirikata::Task::EventP
 
 Sirikata::Task::EventResponse WebViewManager::onMouseClick(Sirikata::Task::EventPtr evt)
 {
-    
+
     MouseDownEventPtr e = std::tr1::dynamic_pointer_cast<MouseDownEvent>(evt);
     if (!e) {
         return Sirikata::Task::EventResponse::nop();

@@ -614,7 +614,10 @@ IF(WIN32)
   SET(BERKELIUM_TARGET_LIBRARIES)
 ELSE()
   # FIXME real check for berkelium + chrome
-  IF(EXISTS ${TOP_LEVEL}/dependencies/chromium AND EXISTS ${TOP_LEVEL}/dependencies/chromium/chromium)
+  IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
+    # This name is needed by the ADD_CHROME_APP macro
+    SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
+
     #Prevent submodule from making a CHROME_SYMLINK_TARGET
     SET(CHROME_SYMLINKS_TARGET cppoh)
     SET(CHROME_SYMLINKS_BINARIES ${CHROME_SYMLINKS_BINARIES}
@@ -624,10 +627,7 @@ ELSE()
                    ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d
                    ${CMAKE_CURRENT_BINARY_DIR}/scene.db)
 
-
-
-
-    SET(BERKELIUM_CHROME_ROOT_SEARCH_PATHS ${TOP_LEVEL}/dependencies/chromium/chromium)
+    SET(BERKELIUM_CHROME_ROOT_SEARCH_PATHS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     ADD_SUBDIRECTORY(${TOP_LEVEL}/externals/berkelium ${CMAKE_CURRENT_BINARY_DIR}/chrome)
 
     SET(CMAKE_MODULE_PATH ${TOP_LEVEL}/externals/berkelium ${CMAKE_MODULE_PATH})
@@ -2089,6 +2089,34 @@ TARGET_LINK_LIBRARIES(${BENCH_BINARY}
 
 IF(CHROME_FOUND)
   IF(APPLE)
+  ELSE()
+    MACRO(ADD_CHROME_SYMLINK_TARGET)
+      PARSE_ARGUMENTS(CHROME_SYMLINKS_ARG "TARGETNAME;DEPENDS" "" ${ARGN})
+
+      SET(CHROME_SYMLINKS_COMMAND_TARGET chrome_symlinks)
+      IF(CHROME_SYMLINKS_ARG_TARGETNAME)
+        SET(CHROME_SYMLINKS_COMMAND_TARGET ${CHROME_SYMLINKS_ARG_TARGETNAME})
+      ENDIF()
+
+      SET(CHROME_SYMLINKS_COMMAND
+        ln -sf ${CHROMIUM_DATADIR}/locales &&
+        ln -sf ${CHROMIUM_DATADIR}/resources.pak &&
+        ln -sf ${CHROMIUM_DATADIR}/chrome.pak
+        )
+
+      SET(DEPENDS_ARGS)
+      IF(CHROME_SYMLINKS_ARG_DEPENDS)
+        SET(DEPENDS_ARGS DEPENDS ${CHROME_SYMLINKS_ARG_DEPENDS})
+      ENDIF()
+
+      ADD_CUSTOM_TARGET(${CHROME_SYMLINKS_COMMAND_TARGET} ALL
+        COMMAND ${CHROME_SYMLINKS_COMMAND}
+        ${DEPENDS_ARGS}
+        )
+    ENDMACRO()
+  ENDIF()
+
+  IF(APPLE)
     # FIXME GET_TARGET_PROPERTY doesn't seem to have anything that gives us this without a full path
     IF(ISDEBUG)
       SET(CPPOH_BINARY_FILENAME "${CPPOH_BINARY}_d")
@@ -2100,26 +2128,11 @@ IF(CHROME_FOUND)
       APP ${CPPOH_BINARY_FILENAME}
       DEPENDS ${CPPOH_BINARY}
       LINKS
-      ${CMAKE_CURRENT_BINARY_DIR}/chrome/libplugin_carbon_interpose.dylib
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
-
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
-      ${TOP_LEVEL}/cdn.txt
       ${CMAKE_CURRENT_BINARY_DIR}/scene.db
       )
 
-    # FIXME for some reason, the links inside the .app aren't working
-    # here, even though they seem to work fine for Berkelium
-    ADD_CUSTOM_TARGET(cppoh_app_help
-      ALL COMMAND
-      ln -sf chrome/berkelium ${CMAKE_CURRENT_BINARY_DIR}/berkelium &&
-      ln -sf ${CHROME_APP_NAME}/Contents/Resources/chrome.pak ${CMAKE_CURRENT_BINARY_DIR}/chrome.pak &&
-      ln -sf ${CHROME_APP_NAME}/Contents/Resources/theme.pak ${CMAKE_CURRENT_BINARY_DIR}/theme.pak &&
-      ln -sf ${CHROME_APP_NAME}/Contents/Resources/linkCursor.png ${CMAKE_CURRENT_BINARY_DIR}/linkCursor.png &&
-      ln -sf ${CHROME_APP_NAME}/Contents/Resources/renderer.sb ${CMAKE_CURRENT_BINARY_DIR}/renderer.sb &&
-      ln -sf ${CHROME_APP_NAME}/Contents/Resources/en_US.lproj ${CMAKE_CURRENT_BINARY_DIR}/en_US.lproj
-      DEPENDS ${CPPOH_BINARY} ${CPPOH_BINARY_FILENAME}.app
-      )
   ELSEIF(ISLINUX)
     ADD_CHROME_SYMLINK_TARGET(TARGETNAME chrome_symlinks_for_sirikata DEPENDS libberkelium)
   ENDIF()
@@ -2391,9 +2404,6 @@ IF(WIN32)
           DESTINATION bin/ )
 ELSE()
 IF(APPLE)
-    IF(NOT CHROME_ROOT)
-      SET(CHROME_ROOT ${PLATFORM_LIBS}/ch/c)
-    ENDIF()
     SET(CHROMIUM_FRAMEWORK Chromium\ Framework.framework)
     SET(APPLE_PLUGIN_COMMANDS)
     FOREACH (APPLE_PLUGIN ${ENABLED_PLUGINS})
@@ -2405,12 +2415,9 @@ IF(APPLE)
       ${CHROME_SYMLINKS_COMMAND} && ln -sf ${TOP_LEVEL}/libproxyobject
       ${CMAKE_CURRENT_BINARY_DIR}/${CHROME_SYMLINKS_COMMAND_TARGET}/ ${APPLE_PLUGIN_COMMANDS})
     ENDIF()
-#    ADD_CUSTOM_TARGET(sirikata.app ALL COMMAND mkdir -p sirikata.app && mkdir -p sirikata.app/Contents && mkdir -p sirikata.app/Contents/Resources && mkdir -p sirikata.app/Contents/Frameworks && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app sirikata.app/Contents/Resources/Berkelium\ Helper.app && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/sirikata.app/Contents sirikata.app/Contents/Frameworks/${CHROMIUM_FRAMEWORK} && mkdir -p sirikata.app/Contents/MacOS && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh_d sirikata.app/Contents/MacOS/cppoh_d&& ln -sf ${CMAKE_CURRENT_BINARY_DIR}/cppoh sirikata.app/Contents/MacOS/cppoh && ln -sf ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium sirikata.app/Contents/MacOS/berkelium && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/chrome.pak sirikata.app/Contents/Resources/chrome.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/theme.pak sirikata.app/Contents/Resources/theme.pak && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/linkCursor.png sirikata.app/Contents/Resources/linkCursor.png  && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/renderer.sb sirikata.app/Contents/Resources/renderer.sb && ln -sf ${CHROME_ROOT}/src/xcodebuild/Release/${CHROMIUM_FRAMEWORK}/Resources/en_US.lproj sirikata.app/Contents/Resources/en_US.lproj && ln -sf ${GENERATED_SCENE_DB} sirikata.app/Contents/MacOS/scene.db ${APPLE_PLUGIN_COMMANDS})
-
 ELSE()
 IF(NOT WIN32)
 ADD_CUSTOM_TARGET(berkelium.bin ALL COMMAND ln -sf chrome/berkelium && ln -sf chrome/berkelium berkelium.bin)
-#ADD_CUSTOM_TARGET(${CHROME_SYMLINKS_COMMAND_TARGET}.install ALL COMMAND ${CHROME_SYMLINKS_COMMAND} DEPENDS ${CHROME_SYMLINKS_COMMAND_TARGET})
 ENDIF()
 ENDIF()
 ENDIF()

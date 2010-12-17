@@ -44,6 +44,8 @@
 int main(int argc, char** argv) {
     using namespace Sirikata;
 
+    DynamicLibrary::Initialize();
+
     InitOptions();
     Trace::Trace::InitOptions();
     InitCSegOptions();
@@ -61,8 +63,8 @@ int main(int argc, char** argv) {
     String start_time_str = GetOptionValue<String>("wait-until");
     Time start_time = start_time_str.empty() ? Timer::now() : Timer::getSpecifiedDate( start_time_str );
 
-    Duration duration = GetOptionValue<Duration>("duration") 
-                        + GetOptionValue<Duration>("additional-cseg-duration") 
+    Duration duration = GetOptionValue<Duration>("duration")
+                        + GetOptionValue<Duration>("additional-cseg-duration")
                         + GetOptionValue<Duration>("wait-additional");
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();

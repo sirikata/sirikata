@@ -71,6 +71,10 @@ typedef std::vector<JSArgument> JSArguments;
 namespace Graphics {
 
 	class WebView;
+#ifdef HAVE_BERKELIUM
+    using Berkelium::WideString;
+    using Berkelium::URLString;
+#endif
 
 	typedef std::tr1::function<void (WebView*, const JSArguments&)> JSDelegate;
 
@@ -373,11 +377,41 @@ namespace Graphics {
 
 	protected:
 #ifdef HAVE_BERKELIUM
-		Berkelium::Window* webView;
-        Berkelium::Rect blitNewImage(Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
-                                              const unsigned char*srcBuffer, const Berkelium::Rect&rect,
-                                              int dx, int dy, const Berkelium::Rect&clipRect);
-        void compositeWidgets(Berkelium::Window*);
+            Berkelium::Window* webView;
+
+            // Get Rect used for blitting that doesn't include borders.
+            Berkelium::Rect getBorderlessRect(Ogre::HardwarePixelBufferSharedPtr pixelBuffer) const;
+            // Get Rect offset by border
+            Berkelium::Rect getBorderedRect(const Berkelium::Rect& orig) const;
+
+            /** Blit new image data into the buffer.
+              * \param pixelBuffer the destination for the blit
+              * \param srcBuffer the raw pixel source buffer
+              * \param srcRect the rect covered by the source buffer
+              * \param copyRect the rect to copy from the source buffer to the
+              *        destination pixel buffer
+              */
+            void blitNewImage(
+                Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
+                const unsigned char* srcBuffer, const Berkelium::Rect& srcRect,
+                const Berkelium::Rect& copyRect,
+                bool updateAlphaCache
+            );
+            /** Blit scrolled image data from the buffer back to itself, in the
+             *  new location.
+             *  \param pixelBuffer the source and destination of the blit
+             *  \param scrollOrigRect the original rect to copy
+             *  \param scroll_dx the size of the scroll along the X axis
+             *  \param scroll_dy the size of the scroll along the Y axis
+             */
+            void blitScrollImage(
+                Ogre::HardwarePixelBufferSharedPtr pixelBuffer,
+                const Berkelium::Rect& scrollOrigRect,
+                int scroll_dx, int scroll_dy,
+                bool updateAlphaCache
+            );
+
+            void compositeWidgets(Berkelium::Window*);
 #endif
         ///the name of the webview, so as to allocate predictable ogre names to the textures and materials
 		std::string viewName;
@@ -474,50 +508,49 @@ namespace Graphics {
 
 		bool isPointOverMe(int x, int y);
 
-        void onAddressBarChanged(Berkelium::Window*, const char*url, size_t urlLength);
-        void onStartLoading(Berkelium::Window*, const char* url, size_t urlLength);
+#ifdef HAVE_BERKELIUM
+        void onAddressBarChanged(Berkelium::Window*, URLString url);
+        void onStartLoading(Berkelium::Window*, URLString url);
+        void onTitleChanged(Berkelium::Window*, WideString title);
+        void onTooltipChanged(Berkelium::Window*, WideString text);
         void onLoad(Berkelium::Window*);
-        void onLoadError(Berkelium::Window*, const char* error, size_t errorLength);
-        void onPaint(Berkelium::Window*, const unsigned char*, const Berkelium::Rect&, int x, int y, const Berkelium::Rect&);
-        void onBeforeUnload(Berkelium::Window*, bool*);
-        void onCancelUnload(Berkelium::Window*);
+        void onConsoleMessage(Berkelium::Window *win, WideString message,
+                              WideString sourceId, int line_no);
+        void onScriptAlert(Berkelium::Window *win, WideString message,
+                           WideString defaultValue, URLString url,
+                           int flags, bool &success, WideString &value);
+        void onPaint(Berkelium::Window *win,
+                     const unsigned char *sourceBuffer,
+                     const Berkelium::Rect &sourceBufferRect,
+                     size_t numCopyRects, const Berkelium::Rect *copyRects,
+                     int dx, int dy, const Berkelium::Rect &scrollRect);
+
+        void onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLString origin, WideString funcName, Berkelium::Script::Variant *args, size_t numArgs);
+
         void onCrashed(Berkelium::Window*);
         void onResponsive(Berkelium::Window*);
         void onUnresponsive(Berkelium::Window*);
+
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
-
-        void onChromeSend(Berkelium::Window *win, Berkelium::WindowDelegate::Data msg, const Berkelium::WindowDelegate::Data*str, size_t numStr);
-
-    /** Linux only. uses an OpenGL texture.
-     * If not using OpenGL, each srcRect will get its own call to 'onPaint'
-     * It should be possible to paint plugins directly onto the canvas.
-     * If this is not possible, then plugins may be created as widgets with
-     * a negative z-index (i.e. below anything else on the screen).
-
-    virtual void onPaintPluginTexture(
-        Berkelium::Window *win,
-        void* sourceGLTexture,
-        const std::vector<Berkelium::Rect> srcRects, // relative to destRect
-        const Berkelium::Rect &destRect);
-    */
-    virtual void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
-    virtual void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
-    virtual void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h);
-    virtual void onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y);
-    virtual void onWidgetPaint(
-        Berkelium::Window *win,
-        Berkelium::Widget *wid,
-        const unsigned char *sourceBuffer,
-        const Berkelium::Rect &rect,
-        int dx, int dy,
-        const Berkelium::Rect &scrollRect);
-
 
      virtual boost::any invoke(std::vector<boost::any>& params);
      void translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
 
-	};
-
+        void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
+        void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
+        void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h);
+        void onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y);
+        void onWidgetPaint(
+            Berkelium::Window *win,
+            Berkelium::Widget *wid,
+            const unsigned char *sourceBuffer,
+            const Berkelium::Rect &rect,
+            size_t numCopyRects,
+            const Berkelium::Rect *copyRects,
+            int dx, int dy,
+            const Berkelium::Rect &scrollRect);
+#endif // HAVE_BERKELIUM
+        };
 }
 }
 

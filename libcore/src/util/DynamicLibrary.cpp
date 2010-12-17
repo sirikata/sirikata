@@ -42,7 +42,80 @@
 #  include <dlfcn.h>
 #endif
 
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#include <mach-o/dyld.h>
+#endif
+
 namespace Sirikata {
+
+static std::vector<String> DL_search_paths;
+
+String DynamicLibrary::GetExecutablePath() {
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+    // Executable path can have relative references ("..") depending on
+    // how the app was launched.
+    uint32_t executable_length = 0;
+    _NSGetExecutablePath(NULL, &executable_length);
+    std::string executable_path(executable_length, '\0');
+    char* executable_path_c = (char*)executable_path.c_str();
+    int rv = _NSGetExecutablePath(executable_path_c, &executable_length);
+    assert(rv == 0);
+    if ((rv != 0) || (executable_path.empty()))
+        return "";
+    boost::filesystem::path exe_path(executable_path);
+    return exe_path.parent_path().string();
+#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+    // boost::filesystem can't chase symlinks, do it manually
+    const char* selfExe = "/proc/self/exe";
+#define PATH_MAX 1024
+    char bin_dir[PATH_MAX + 1];
+    int bin_dir_size = readlink(selfExe, bin_dir, PATH_MAX);
+    if (bin_dir_size < 0 || bin_dir_size > PATH_MAX) {
+        SILOG(core,fatal,"Couldn't read self symlink to setup dynamic loading paths.");
+        return "";
+    }
+    bin_dir[bin_dir_size] = 0;
+    boost::filesystem::path exe_path(String(bin_dir, bin_dir_size));
+    return exe_path.parent_path().string();
+#undef PATH_MAX
+#else
+    return "";
+#endif
+}
+
+void DynamicLibrary::Initialize() {
+    using namespace boost::filesystem;
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+    // On mac, we might be in a .app, specifically at .app/Contents. To load the
+    // libs we need, we add .app/Contents/MacOS to the LD_LIBRARY_PATH
+    path to_macos_dir = boost::filesystem::complete(path(".")) / path("MacOS");
+    if (exists(to_macos_dir) && is_directory(to_macos_dir))
+        AddLoadPath(to_macos_dir.string());
+#endif
+
+    // On all platforms, allow plugins to load from within the same
+    // directory as the executable
+    String exe_path = GetExecutablePath();
+    if (!exe_path.empty())
+        AddLoadPath(exe_path);
+}
+
+void DynamicLibrary::AddLoadPath(const String& path) {
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+#define LD_LIBRARY_PATH_STR "LD_LIBRARY_PATH"
+    {
+        String oldLdLibraryPath = getenv(LD_LIBRARY_PATH_STR)?getenv(LD_LIBRARY_PATH_STR):"";
+        String ldLibraryPath = path;
+        if (!oldLdLibraryPath.empty())
+            ldLibraryPath = ldLibraryPath + ":" + oldLdLibraryPath;
+        setenv(LD_LIBRARY_PATH_STR,ldLibraryPath.c_str(),1);
+    }
+#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+    // Mac doesn't seem to like setting DYLD_LIBRARY_PATH dynamically. Instead,
+    // we add to the search paths and handle the search ourselves.
+    DL_search_paths.push_back(path);
+#endif
+}
 
 DynamicLibrary::DynamicLibrary(const String& path)
  : mPath(path),
@@ -91,6 +164,14 @@ bool DynamicLibrary::load() {
     }
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
     mHandle = dlopen(mPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    if (mHandle == NULL) {
+        // Try any registered search paths
+        for(int i = 0; mHandle == NULL && i < DL_search_paths.size(); i++)
+            mHandle = dlopen(
+                (boost::filesystem::path(DL_search_paths[i]) / mPath).string().c_str(),
+                RTLD_LAZY | RTLD_GLOBAL
+            );
+    }
     if (mHandle == NULL) {
         const char *errorstr = dlerror();
         SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errorstr);

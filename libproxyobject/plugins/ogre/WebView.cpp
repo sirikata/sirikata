@@ -37,15 +37,25 @@
 #include <OgreBitwise.h>
 #include <sirikata/core/util/UUID.hpp>
 
+#ifdef HAVE_BERKELIUM
+#include "berkelium/StringUtil.hpp"
+#include "berkelium/ScriptVariant.hpp"
+#endif
+
 using namespace Ogre;
 
 namespace Sirikata {
 namespace Graphics {
 
+#ifdef HAVE_BERKELIUM
+using Berkelium::UTF8String;
+#endif
 
-WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
-    Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border)
-
+WebView::WebView(
+    const std::string& name, const std::string& type,
+    unsigned short width, unsigned short height,
+    const OverlayPosition &viewPosition, Ogre::uchar zOrder, Tier tier,
+    Ogre::Viewport* viewport, const WebViewBorderSize& border)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -76,10 +86,12 @@ WebView::WebView(const std::string& name, const std::string& type, unsigned shor
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
 	texFiltering = Ogre::FO_NONE;
+
     mBorderLeft = border.mBorderLeft;
     mBorderRight = border.mBorderRight;
     mBorderTop = border.mBorderTop;
     mBorderBottom = border.mBorderBottom;
+
 	createMaterial();
 
 	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
@@ -134,7 +146,7 @@ WebView::~WebView()
 	if(alphaCache)
 		delete[] alphaCache;
 #ifdef HAVE_BERKELIUM
-    delete webView;
+    webView->destroy();
 #endif
 	if(overlay)
 		delete overlay;
@@ -150,7 +162,8 @@ WebView::~WebView()
 void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
 {
 #ifdef HAVE_BERKELIUM
-    initializeWebView(Berkelium::Window::create());
+    initializeWebView(Berkelium::Window::create(
+                          WebViewManager::getSingleton().bkContext));
 #endif
 }
 
@@ -163,6 +176,16 @@ void WebView::initializeWebView(
 #ifdef HAVE_BERKELIUM
     webView = win;
     webView->setDelegate(this);
+    webView->addBindOnStartLoading(WideString::point_to(L"chrome"),
+                  Berkelium::Script::Variant::emptyObject());
+    webView->addBindOnStartLoading(WideString::point_to(L"chrome.send_"),
+                  Berkelium::Script::Variant::bindFunction(
+                      WideString::point_to(L"send"), false));
+    webView->addEvalOnStartLoading(
+        WideString::point_to(L"chrome.send = function(n, args) {\n"
+                             L"console.log([n].concat(args));\n"
+                             L"chrome.send_.apply(this, [n].concat(args));\n"
+                             L"};"));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
         webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
@@ -340,13 +363,18 @@ void WebView::createMaterial()
  #endif
  }
 
- void WebView::evaluateJS(const std::string& utf8js)
+ void WebView::evaluateJS(const std::string& utf8jsoo)
  {
+     std::string utf8js = utf8jsoo + ";//";
  #if defined(HAVE_BERKELIUM)
-     wchar_t *outchars = new wchar_t[utf8js.size()+1];
-     size_t len = mbstowcs(outchars, utf8js.c_str(), utf8js.size());
-     webView->executeJavascript(outchars,len);
-     delete []outchars;
+     WideString wideJS = Berkelium::UTF8ToWide(
+         UTF8String::point_to(utf8js.data(), utf8js.length()));
+     UTF8String uJS = Berkelium::WideToUTF8(
+         WideString::point_to(wideJS.data(), wideJS.length()));
+     SILOG(webview,debug,"Eval JS: "<<uJS);
+     webView->executeJavascript(wideJS);
+     Berkelium::stringUtil_free(uJS);
+     Berkelium::stringUtil_free(wideJS);
  #endif
  }
 
@@ -767,104 +795,165 @@ void WebView::resize(int width, int height)
 
 
 
-
+#ifdef HAVE_BERKELIUM
 ///////// Berkelium Callbacks...
-void WebView::onAddressBarChanged(Berkelium::Window*, const char*newURL, size_t newURLLength) {
-    SILOG(webview,debug,"onAddressBarChanged"<<std::string(newURL,newURLLength));
+void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
+    SILOG(webview,debug,"onAddressBarChanged"<<newURL);
 }
-void WebView::onStartLoading(Berkelium::Window*, const char*newURL, size_t newURLLength) {
-    SILOG(webview,debug,"onStartLoading"<<std::string(newURL,newURLLength));
+void WebView::onStartLoading(Berkelium::Window*, URLString newURL) {
+    SILOG(webview,debug,"onStartLoading"<<newURL);
 }
+void WebView::onTitleChanged(Berkelium::Window*, WideString wtitle) {
+    UTF8String textString = Berkelium::WideToUTF8(wtitle);
+    std::string title (textString.data(), textString.length());
+    Berkelium::stringUtil_free(textString);
+    SILOG(webview,debug,"onTitleChanged"<<title);
+}
+void WebView::onTooltipChanged(Berkelium::Window*, WideString wtext) {
+    UTF8String textString = Berkelium::WideToUTF8(wtext);
+    std::string tooltip (textString.data(), textString.length());
+    Berkelium::stringUtil_free(textString);
+    SILOG(webview,debug,"onTooltipChanged"<<tooltip);
+}
+
 void WebView::onLoad(Berkelium::Window*) {
     SILOG(webview,debug,"onLoad");
 }
-void WebView::onLoadError(Berkelium::Window*, const char* error, size_t errorLength) {
-    SILOG(webview,debug,"onLoadError"<<std::string(error,errorLength));
+
+void WebView::onConsoleMessage(Berkelium::Window *win, WideString wmessage,
+                               WideString wsourceId, int line_no) {
+    UTF8String textString = Berkelium::WideToUTF8(wmessage);
+    UTF8String sourceString = Berkelium::WideToUTF8(wsourceId);
+    std::string message (textString.data(), textString.length());
+    std::string sourceId (sourceString.data(), sourceString.length());
+    Berkelium::stringUtil_free(textString);
+    Berkelium::stringUtil_free(sourceString);
+    SILOG(webview,debug,"onConsoleMessage " << message << " at file " << sourceId << ":" << line_no);
+}
+void WebView::onScriptAlert(Berkelium::Window *win, WideString message,
+                            WideString defaultValue, URLString url,
+                            int flags, bool &success, WideString &value) {
+    // FIXME: C++ string conversion functions are a pile of garbage.
+    UTF8String textString = Berkelium::WideToUTF8(message);
+    SILOG(webview,debug,"onScriptAlert "<<textString);
 }
 
-
-#ifdef HAVE_BERKELIUM
-Berkelium::Rect WebView::blitNewImage(HardwarePixelBufferSharedPtr pixelBuffer,
-                      const unsigned char*srcBuffer, const Berkelium::Rect&rect,
-                      int dx, int dy, const Berkelium::Rect&clipRect) {
+Berkelium::Rect WebView::getBorderlessRect(Ogre::HardwarePixelBufferSharedPtr pixelBuffer) const {
     Berkelium::Rect pixelBufferRect;
     pixelBufferRect.mHeight=pixelBuffer->getHeight()-mBorderTop-mBorderBottom;
     pixelBufferRect.mWidth=pixelBuffer->getWidth()-mBorderLeft-mBorderRight;
     pixelBufferRect.mTop=0;
     pixelBufferRect.mLeft=0;
-    if (dx || dy) {
-        SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; cliprect = "<<clipRect.left()<<","<<clipRect.top()<<","<<clipRect.right()<<","<<clipRect.bottom());
-
-        Berkelium::Rect scrollRect = clipRect;
-        scrollRect.mLeft += dx;
-        scrollRect.mTop += dy;
-
-        scrollRect = scrollRect.intersect(clipRect);
-        scrollRect = scrollRect.intersect(pixelBufferRect);
-        size_t width=scrollRect.width();
-        size_t height=scrollRect.height();
-        if (width && height) {
-
-            Ogre::TexturePtr shadow=Ogre::TextureManager::getSingleton().createManual("_ _internal","_ _internal",Ogre::TEX_TYPE_2D,Bitwise::firstPO2From(width),Bitwise::firstPO2From(height),1,1,PF_BYTE_BGRA);
-            {
-                HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();
-
-                SILOG(webview,debug,"scroll dx="<<dx<<"; dy="<<dy<<"; scrollrect = "<<scrollRect.left()<<","<<scrollRect.top()<<","<<scrollRect.right()<<","<<scrollRect.bottom());
-                shadowBuffer->blit(
-                    pixelBuffer,
-                    Ogre::Box(scrollRect.left()-dx+mBorderLeft, scrollRect.top()+mBorderTop-dy, scrollRect.right()+mBorderLeft-dx, scrollRect.bottom()-dy+mBorderTop),
-                    Ogre::Box(0,0,width,height));
-
-                pixelBuffer->blit(
-                    shadowBuffer,
-                    Ogre::Box(0,0,width,height),
-                    Ogre::Box(scrollRect.left()+mBorderLeft, scrollRect.top()+mBorderTop, scrollRect.right()+mBorderLeft, scrollRect.bottom()+mBorderTop));
-            }
-            Ogre::ResourcePtr shadowResource(shadow);
-            Ogre::TextureManager::getSingleton().remove(shadowResource);
-        }
-    }
-    pixelBufferRect=pixelBufferRect.intersect(rect);
-    if (memcmp(&pixelBufferRect,&rect,sizeof(Berkelium::Rect))!=0) {
-        SILOG(webview,error,"Incoming berkelium size mismatch ["<<pixelBufferRect.left()<<' '<<pixelBufferRect.top()<<'-'<<pixelBufferRect.right()<<' '<<pixelBufferRect.bottom()<<"] != [" <<rect.left()<<' '<<rect.top()<<'-'<<rect.right()<<' '<<rect.bottom()<<"]");
-    }
-    pixelBuffer->blitFromMemory(
-        Ogre::PixelBox(pixelBufferRect.width(), pixelBufferRect.height(), 1, Ogre::PF_A8R8G8B8, const_cast<unsigned char*>(srcBuffer)),
-        Ogre::Box(pixelBufferRect.left()+mBorderLeft, pixelBufferRect.top()+mBorderTop, pixelBufferRect.right()+mBorderLeft, pixelBufferRect.bottom()+mBorderTop));
     return pixelBufferRect;
 }
-#endif // HAVE_BERKELIUM
 
+Berkelium::Rect WebView::getBorderedRect(const Berkelium::Rect& orig) const {
+    return orig.translate(mBorderLeft, mBorderTop);
+}
+
+void WebView::blitNewImage(
+    HardwarePixelBufferSharedPtr pixelBuffer,
+    const unsigned char* srcBuffer, const Berkelium::Rect& srcRect,
+    const Berkelium::Rect& copyRect,
+    bool updateAlphaCache
+) {
+    Berkelium::Rect destRect = getBorderlessRect(pixelBuffer);
+
+    destRect = destRect.intersect(srcRect);
+    destRect = destRect.intersect(copyRect);
+
+    // Find the location of the rect in the source data. It needs to be offset
+    // since newPixelBuffer doesn't necessarily cover the entire image.
+    Berkelium::Rect destRectInSrc = destRect.translate(-srcRect.left(), -srcRect.top());
+
+    Berkelium::Rect borderedDestRect = getBorderedRect(destRect);
+
+    // For new data, because of the way HardwarePixelBuffers work (no copy
+    // subregions from *Memory*), we have to copy each line over individually
+    for(int y = 0; y < destRectInSrc.height(); y++) {
+        pixelBuffer->blitFromMemory(
+            Ogre::PixelBox(
+                destRectInSrc.width(), 1, 1, Ogre::PF_A8R8G8B8,
+                const_cast<unsigned char*>(srcBuffer + (srcRect.width()*(destRectInSrc.top()+y) + destRectInSrc.left()) * 4)
+            ),
+            Ogre::Box(borderedDestRect.left(), borderedDestRect.top() + y, borderedDestRect.right(), borderedDestRect.top() + y + 1)
+        );
+
+        if(updateAlphaCache && isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch) {
+            for(int x = 0; x < destRectInSrc.width(); x++)
+                alphaCache[ alphaCachePitch*(borderedDestRect.top()+y) + (borderedDestRect.left()+x) ] =
+                    srcBuffer[ (srcRect.width()*(destRectInSrc.top()+y) + destRectInSrc.left()+x)*4 + 3 ];
+        }
+    }
+}
+
+void WebView::blitScrollImage(
+    HardwarePixelBufferSharedPtr pixelBuffer,
+    const Berkelium::Rect& scrollOrigRect,
+    int scroll_dx, int scroll_dy,
+    bool updateAlphaCache
+) {
+    assert(scroll_dx != 0 || scroll_dy != 0);
+
+    Berkelium::Rect scrolledRect = scrollOrigRect.translate(scroll_dx, scroll_dy);
+
+    Berkelium::Rect scrolled_shared_rect = scrollOrigRect.intersect(scrolledRect);
+    // Only do scrolling if they have non-zero intersection
+    if (scrolled_shared_rect.width() == 0 || scrolled_shared_rect.height() == 0) return;
+    Berkelium::Rect shared_rect = scrolled_shared_rect.translate(-scroll_dx, -scroll_dy);
+
+    size_t width = shared_rect.width();
+    size_t height = shared_rect.height();
+
+    Ogre::TexturePtr shadow = Ogre::TextureManager::getSingleton().createManual(
+        "_ _internal","_ _internal",
+        Ogre::TEX_TYPE_2D,
+        Bitwise::firstPO2From(width), Bitwise::firstPO2From(height), 1, 1,
+        PF_BYTE_BGRA
+    );
+    {
+        HardwarePixelBufferSharedPtr shadowBuffer = shadow->getBuffer();
+
+        Berkelium::Rect borderedScrollRect = getBorderedRect(shared_rect);
+        Berkelium::Rect borderedScrolledRect = getBorderedRect(scrolled_shared_rect);
+
+        shadowBuffer->blit(
+            pixelBuffer,
+            Ogre::Box( borderedScrollRect.left(), borderedScrollRect.top(), borderedScrollRect.right(), borderedScrollRect.bottom()),
+            Ogre::Box(0,0,width,height));
+
+        pixelBuffer->blit(
+            shadowBuffer,
+            Ogre::Box(0,0,width,height),
+            Ogre::Box(borderedScrolledRect.left(), borderedScrolledRect.top(), borderedScrolledRect.right(), borderedScrolledRect.bottom()));
+    }
+    Ogre::ResourcePtr shadowResource(shadow);
+    Ogre::TextureManager::getSingleton().remove(shadowResource);
+
+    // FIXME We should be updating the alpha cache here, but that would require
+    // pulling data back from the card...
+    //if(updateAlphaCache && isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch) {
+    //}
+}
 
 void WebView::onPaint(Berkelium::Window*win,
-                      const unsigned char*srcBuffer, const Berkelium::Rect&rect,
-                      int dx, int dy, const Berkelium::Rect&clipRect) {
-#ifdef HAVE_BERKELIUM
+                      const unsigned char*srcBuffer, const Berkelium::Rect& srcRect,
+                      size_t num_copy_rects, const Berkelium::Rect *copy_rects,
+                      int dx, int dy, const Berkelium::Rect& scroll_rect) {
     TexturePtr texture = backingTexture.isNull()?viewTexture:backingTexture;
-
     HardwarePixelBufferSharedPtr pixelBuffer = texture->getBuffer();
-    Berkelium::Rect pixelBufferRect=blitNewImage(pixelBuffer,srcBuffer,rect,dx,dy,clipRect);
 
-    if (!backingTexture.isNull()) {
+    // Now, we first handle scrolling. We need to do this first since it
+    // requires shifting existing data, some of which will be overwritten by
+    // the regular dirty rect update.
+    if (dx != 0 || dy != 0)
+        blitScrollImage(pixelBuffer, scroll_rect, dx, dy, false);
+
+    for (size_t i = 0; i < num_copy_rects; i++)
+        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i], true);
+
+    if (!backingTexture.isNull())
         compositeWidgets(win);
-    }
-    if(isWebViewTransparent && !usingMask && ignoringTrans && alphaCache && alphaCachePitch)
-    {
-        int top = pixelBufferRect.top();
-        int left = pixelBufferRect.left();
-        for(int row = 0; row < pixelBufferRect.height(); row++) {
-            for(int col = 0; col < pixelBufferRect.width(); col++) {
-                alphaCache[(top+row) * alphaCachePitch + (left+col)] = srcBuffer[(row * pixelBufferRect.width() + col)*4 + 3];
-            }
-        }
-      }
-#endif
-}
-void WebView::onBeforeUnload(Berkelium::Window*, bool*) {
-    SILOG(webview,debug,"onBeforeUnload");
-}
-void WebView::onCancelUnload(Berkelium::Window*) {
-    SILOG(webview,debug,"onCancelUnload");
 }
 void WebView::onCrashed(Berkelium::Window*) {
     SILOG(webview,debug,"onCrashed");
@@ -886,7 +975,6 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     }
     SILOG(webview,debug,"onCreatedWindow "<<name);
 
-#ifdef HAVE_BERKELIUM
     Berkelium::Rect r;
     r.mLeft = 0;
     r.mTop = 0;
@@ -901,7 +989,6 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
         OverlayPosition(r.left(), r.top()),
         newwin, TIER_MIDDLE,
         overlay?overlay->viewport:WebViewManager::getSingleton().defaultViewport);
-#endif
 }
 
 void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
@@ -953,12 +1040,10 @@ void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, in
 void WebView::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y) {
     SILOG(webview,debug,"onWidgetMove");
     if (!backingTexture.isNull()) {
-#ifdef HAVE_BERKELIUM
         compositeWidgets(win);
-#endif
     }
 }
-#ifdef HAVE_BERKELIUM
+
 void WebView::compositeWidgets(Berkelium::Window*win) {
     if (viewTexture.isNull()||backingTexture.isNull()) {
         SILOG(webview,fatal,"View or backing texture null during ocmpositing step");
@@ -1000,15 +1085,17 @@ void WebView::compositeWidgets(Berkelium::Window*win) {
 
     }
 }
-#endif //HAVE_BERKELIUM
+
 void WebView::onWidgetPaint(
         Berkelium::Window *win,
         Berkelium::Widget *wid,
-        const unsigned char *sourceBuffer,
-        const Berkelium::Rect &rect,
+        const unsigned char *srcBuffer,
+        const Berkelium::Rect &srcRect,
+        size_t num_copy_rects,
+        const Berkelium::Rect *copy_rects,
         int dx, int dy,
-        const Berkelium::Rect &scrollRect) {
-#ifdef HAVE_BERKELIUM
+        const Berkelium::Rect &scroll_rect) {
+    return;
     if (backingTexture.isNull()&&!viewTexture.isNull()) {
         backingTexture=TextureManager::getSingleton().createManual(
             "B"+getViewTextureName(), ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
@@ -1025,28 +1112,48 @@ void WebView::onWidgetPaint(
         onWidgetResize(win,wid,wid->getRect().width(),wid->getRect().height());
         widgetTex=widgetTextures[wid];
     }
-    blitNewImage(widgetTex->getBuffer(),sourceBuffer,rect,dx,dy,scrollRect);
+
+    HardwarePixelBufferSharedPtr pixelBuffer = widgetTex->getBuffer();
+    if (dx != 0 || dy != 0)
+        blitScrollImage(pixelBuffer, scroll_rect, dx, dy, false);
+
+    for (size_t i = 0; i < num_copy_rects; i++)
+        blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i], false);
+
     compositeWidgets(win);
     SILOG(webview,debug,"onWidgetPaint");
-#endif //HAVE_BERKELIUM
 }
 
-void WebView::onChromeSend(Berkelium::Window *win, const Berkelium::WindowDelegate::Data name, const Berkelium::WindowDelegate::Data*args, size_t numArgs) {
-#ifdef HAVE_BERKELIUM
-    std::string nameStr(name.message,name.length);
-    std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
+void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLString origin, WideString funcName, Berkelium::Script::Variant *args, size_t numArgs) {
+    if (numArgs < 1) {
+        if (replyMsg)
+            win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
+        return;
+    }
+    const Berkelium::Script::Variant &name = args[0];
+    args++;
+    numArgs--;
+    UTF8String nameUTF8 = Berkelium::WideToUTF8(name.toString());
+    std::string nameStr(nameUTF8.get<std::string>());
+    Berkelium::stringUtil_free(nameUTF8);
+	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
     if(i != delegateMap.end())
     {
         JSArguments argVector;
-        for (size_t j=0;j!=numArgs;++j)
-        {
-            argVector.push_back(JSArgument(args[j].message,args[j].length));
+        std::vector<UTF8String> argStorage;
+        for (size_t j=0;j!=numArgs;++j) {
+            UTF8String temp = Berkelium::WideToUTF8(args[j].toString());
+            argStorage.push_back(temp);
+            argVector.push_back(JSArgument(temp.data(), temp.length()));
         }
-        
-        i->second(this, argVector);
-    }
-#endif
+		i->second(this, argVector);
+        for (size_t j=0;j<argStorage.size();j++) {
+            Berkelium::stringUtil_free(argStorage[j]);
+        }
+	}
+    if (replyMsg)
+        win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
 }
 
 boost::any WebView::invoke(std::vector<boost::any>& params)
@@ -1057,24 +1164,24 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
   if(!params[0].empty() && params[0].type() == typeid(std::string) )
   {
-    name = boost::any_cast<std::string>(params[0]);  
-  }  
+    name = boost::any_cast<std::string>(params[0]);
+  }
 
   // This will bind a callback for the graphics to the script
   if(name == "bind")
   {
-    // we need to bind a function to some event. 
+    // we need to bind a function to some event.
     // second argument is the event name
     std::cout << "\n\nIn WebView::invoke\n\n";
     std::string event = "";
     if(!params[1].empty() && params[1].type() == typeid(std::string) )
     {
-      event = boost::any_cast<std::string>(params[1]);  
-    } 
+      event = boost::any_cast<std::string>(params[1]);
+    }
 
     // the third argument has to be a function ptr
     //This function would take any
-    
+
     //just _1, _2 for now
     std::cout << "\n\n Trying to get the param[2] \n\n";
     Invokable* invokable = boost::any_cast<Invokable*>(params[2]);
@@ -1083,28 +1190,28 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
     return boost::any(inv_result);
 
   }
-  
+
   // This will write message from the script to the graphics window
   if(name == "write")
   {
     std::cout << "\n\n In WebView::invoke \n\n";
 
     // get the params[1] for the value of the message to be writte on the window
-    
+
     std::string msg="";
     if(!params[1].empty() && params[1].type() == typeid(std::string) )
     {
-      msg = boost::any_cast<std::string>(params[1]);  
-    } 
+      msg = boost::any_cast<std::string>(params[1]);
+    }
 
     if(msg.empty()) return boost::any();
 
     std::cout << "msg is " << msg << "\n\n";
     // whenthe msg is not empty
-    // FIXME: we need to escape strings 
+    // FIXME: we need to escape strings
     String jsScript = String("addMessage(\"") +msg + String("\")");
     evaluateJS(jsScript);
-    
+
     //JSArguments args;
     //args.push_back(JSArgument("ExecScript"));
     //args.push_back(JSArgument("Command"));
@@ -1112,7 +1219,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
     //WebViewManager::getSingletonPtr()->onRaiseWebViewEvent(this, *const_cast<JSArguments*>(&args));
 
-    
+
     return boost::any();
 
   }
@@ -1128,7 +1235,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
   for(unsigned int i = 2 ; i < args.size(); i++)
   {
     const char* s = args[i].begin();
-    
+
     params.push_back(String(s));
   }
 
@@ -1137,6 +1244,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
 
 }
 
+#endif //HAVE_BERKELIUM
 
 
 const WebView::WebViewBorderSize WebView::mDefaultBorder(2,2,25,2);
