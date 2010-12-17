@@ -1155,11 +1155,9 @@ private:
         return camProxy;
     }
 
-    void moveAction(Vector3f dir, float amount) {
-
-
+    void moveAction(Vector3f dir, float amount)
+    {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
 
         if (!mParent||!mParent->mPrimaryCamera)
         {
@@ -1196,6 +1194,7 @@ private:
         // And update our local Proxy's information, assuming the move will be successful
         cam->setLocation(newloc, 0, true);
     }
+
 
     void rotateAction(Vector3f about, float amount) {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
