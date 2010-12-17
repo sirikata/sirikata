@@ -89,7 +89,9 @@ std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_p
         path("../.."),
         path("../../.."),
         path("../../../.."),
-        path("../../../../..")
+        path("../../../../.."),
+        path("../../../../../.."),
+        path("../../../../../../..")
     };
     uint32 nsearch_offsets = sizeof(search_offsets)/sizeof(*search_offsets);
 
@@ -604,6 +606,12 @@ namespace {
 bool ogreLoadPlugin(const String& filename, const String& root = "") {
     using namespace boost::filesystem;
 
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+    // Ogre Framework handles this differently than other platforms
+    Ogre::Root::getSingleton().loadPlugin(filename);
+    return true;
+#endif
+
     // FIXME there probably need to be more of these
     // The current two reflect what we'd expect for installed
     // and what's in the source tree.
@@ -628,19 +636,9 @@ bool ogreLoadPlugin(const String& filename, const String& root = "") {
     path plugin_path = path(findResource(search_paths, nsearch_paths, false, root));
     String plugin_str = plugin_path.string();
 
-#ifndef __APPLE__
     FILE *fp=fopen(plugin_str.c_str(),"rb");
-#endif
-    if (
-#ifndef __APPLE__
-        fp
-#else
-        true
-#endif
-        ) {
-#ifndef __APPLE__
+    if (fp) {
         fclose(fp);
-#endif
         Ogre::Root::getSingleton().loadPlugin(plugin_str);
         return true;
     }
