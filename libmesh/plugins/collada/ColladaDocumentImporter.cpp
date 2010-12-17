@@ -43,6 +43,10 @@
 #include "COLLADAFWLibraryNodes.h"
 #include "COLLADAFWLight.h"
 #include "COLLADAFWEffect.h"
+#include "COLLADAFWFormulas.h"
+#include "COLLADAFWAnimation.h"
+#include "COLLADAFWAnimationList.h"
+#include "COLLADAFWAnimationCurve.h"
 
 #include "MeshdataToCollada.hpp"
 
@@ -895,17 +899,45 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     return true;
 }
 
+static void convertColladaFloatDoubleArray(const COLLADAFW::FloatOrDoubleArray& input, std::vector<float>& output) {
+    if (input.getType() == COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
+        const COLLADAFW::FloatArray* input_float = input.getFloatValues();
+        for (size_t i = 0; i < input_float->getCount(); ++i) {
+            output.push_back((*input_float)[i]);
+        }
+    }else {
+        const COLLADAFW::DoubleArray* input_double = input.getDoubleValues();
+        for (size_t i = 0; i < input_double->getCount(); ++i) {
+            output.push_back((*input_double)[i]);
+        }
+    }
+}
 
 bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* animation )
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimation(" << animation << ") entered");
+
+    if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {
+        const COLLADAFW::AnimationCurve* curveAnimation = dynamic_cast<const COLLADAFW::AnimationCurve*>(animation);
+        AnimationCurve* copy = &mAnimationCurves[animation->getUniqueId()];
+
+        convertColladaFloatDoubleArray(curveAnimation->getInputValues(), copy->inputs);
+        convertColladaFloatDoubleArray(curveAnimation->getOutputValues(), copy->outputs);
+        // FIXME interpolation types don't seem to be getting returned, only
+        // getInterpolationType() has a value. Currently always assuming linear.
+        // FIXME tangents
+    }
+    else {
+        COLLADA_LOG(error, "Unsupported animation type encountered: " << animation->getAnimationType());
+    }
+
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList const* animationList )
 {
-    COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered");
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimationList(" << animationList << ") entered");
     return true;
 }
 
@@ -913,20 +945,12 @@ bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList cons
 #define SKIN_COPY(target,source,name) ((source)->get##name().cloneArray((target)->get##name()))
 bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControllerData const* skinControllerData )
 {
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered");
+
     SkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
     copy->bindShapeMatrix = Matrix4x4f(skinControllerData->getBindShapeMatrix(),Matrix4x4f::ROW_MAJOR());
     std::vector<float> xweights;
-    if (skinControllerData->getWeights().getType()==COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
-        const COLLADAFW::FloatArray * weights=skinControllerData->getWeights().getFloatValues();
-        for (size_t i=0;i<weights->getCount();++i) {
-            xweights.push_back((*weights)[i]);
-        }
-    }else {
-        const COLLADAFW::DoubleArray * weights=skinControllerData->getWeights().getDoubleValues();
-        for (size_t i=0;i<weights->getCount();++i) {
-            xweights.push_back((*weights)[i]);
-        }
-    }
+    convertColladaFloatDoubleArray(skinControllerData->getWeights(), xweights);
     const COLLADAFW::Matrix4Array * inverseBind = &skinControllerData->getInverseBindMatrices();
     for (size_t i=0;i<inverseBind->getCount();++i) {
         copy->inverseBindMatrices.push_back(Matrix4x4f((*inverseBind)[i],Matrix4x4f::ROW_MAJOR()));
@@ -952,13 +976,14 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
         copy->jointIndices.push_back((*jointIndices)[i]);
     }
 
-    COLLADA_LOG(insane, "ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered");
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* controller )
 {
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
+
     if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {
         SkinController * copy = &mSkinController[controller->getUniqueId()];
         const COLLADAFW::SkinController * skinController = dynamic_cast<const COLLADAFW::SkinController*>(controller);
@@ -968,8 +993,10 @@ bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* con
             copy->joints.push_back((skinController->getJoints())[i]);
         }
     }
+    else {
+        COLLADA_LOG(error, "Unsupported controller type encountered: " << controller->getControllerType());
+    }
 
-    COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
     return true;
 }
 
