@@ -38,7 +38,6 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
     }
 
     return caller->returnProxyPosition(sporef,spVisTo);
-
 }
 
 
@@ -53,7 +52,7 @@ v8::Handle<v8::Value> toString(const v8::Arguments& args)
     
     JSObjectScript*         caller;
     SpaceObjectReference*   sporef;
-    ProxyObjectPtr               p;
+    SpaceObjectReference*        p;
     
     if ( ! decodeVisible(args.This(), caller,sporef,p))
     {
@@ -82,9 +81,8 @@ v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 
 
     std::cout << "Printing Object Reference :" << sporef->toString() << "\n";
-    caller->printPosition(sporef,spVisTo);
+    caller->printPositionFunction(sporef,spVisTo);
 
-    lkjs;    
     return v8::Undefined();
 }
 

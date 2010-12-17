@@ -102,8 +102,8 @@ public:
     void test() const;
     void testSendMessageBroadcast(const std::string& msgToBCast) const;
     void debugPrintString(std::string cStrMsgBody) const;
-    void sendMessageToEntity(SpaceObjectReference* reffer, const std::string& msgBody) const;
-    void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
+    void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
+    void sendMessageToEntity(int numIndex, SpaceObjectReference* from, const std::string& msgBody) const;
     int  getAddressableSize();
 
     /** Print the given string to the current output. */
@@ -166,6 +166,9 @@ public:
         mOnPresenceDisconnectedHandler = cb;
     }
 
+    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo);
+    v8::Handle<v8::Value> printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo);
+    
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
@@ -245,6 +248,8 @@ private:
     void populateSystemObject(Handle<Object>& system_obj );
     void initializeMath(Handle<Object>& system_obj);
     void initializeVisible(Handle<Object>&system_obj);
+
+
     
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
@@ -253,7 +258,7 @@ private:
     v8::Local<v8::Object> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     v8::Local<v8::Object> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
-    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo);
+
     
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;

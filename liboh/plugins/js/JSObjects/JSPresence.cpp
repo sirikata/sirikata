@@ -5,6 +5,7 @@
 #include "JSQuaternion.hpp"
 #include "JSInvokableObject.hpp"
 #include <sirikata/core/transfer/URI.hpp>
+#include "JSObjectsUtils.hpp"
 
 using namespace v8;
 namespace Sirikata
@@ -30,7 +31,6 @@ namespace JSPresence
             void* ptr = wrap->Value();
             return static_cast<JSPresenceStruct*>(ptr);
         }
-
 
 
         //changine this function to actually do something
@@ -339,29 +339,33 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
 
 
-        JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
-        {
-            HandleScope handle_scope;
-            v8::Local<v8::Object> v8Object = args.This();
-            v8::Local<v8::External> wrapJSPresStructObj;
-            if (v8Object->InternalFieldCount() > 0)
-            {
-                wrapJSPresStructObj = v8::Local<v8::External>::Cast(
-                    v8Object->GetInternalField(PRESENCE_FIELD_PRESENCE));
-            }
-            else
-            {
-                wrapJSPresStructObj = v8::Local<v8::External>::Cast(
-                    v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
-            }
-            void* ptr = wrapJSPresStructObj->Value();
-            JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);
+JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    v8::Local<v8::Object> v8Object = args.This();
+    v8::Local<v8::External> wrapJSPresStructObj;
+    if (v8Object->InternalFieldCount() > 0)
+    {
+        wrapJSPresStructObj = v8::Local<v8::External>::Cast(
+            v8Object->GetInternalField(PRESENCE_FIELD_PRESENCE));
+    }
+    else
+    {
+        wrapJSPresStructObj = v8::Local<v8::External>::Cast(
+            v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
+    }
+    void* ptr = wrapJSPresStructObj->Value();
+    JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);
+    
+    if (jspres_struct == NULL)
+        assert(false);
+        
+        return jspres_struct;
+    return NULL;
+}
 
-            if (jspres_struct == NULL)
-                assert(false);
 
-            return jspres_struct;
-        }
+
 
 
         Handle<v8::Value> toString(const v8::Arguments& args)

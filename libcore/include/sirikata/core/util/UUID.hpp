@@ -39,7 +39,8 @@ class uuid;
 }
 
 namespace Sirikata {
-class SIRIKATA_EXPORT UUID :public TotallyOrdered<UUID> {
+class SIRIKATA_EXPORT UUID : public TotallyOrdered<UUID>
+{
 public:
     enum {static_size=16};
     typedef unsigned char byte;

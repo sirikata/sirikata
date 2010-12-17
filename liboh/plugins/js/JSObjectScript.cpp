@@ -483,25 +483,28 @@ int JSObjectScript::getAddressableSize()
 //ObjectReference for
 void JSObjectScript::testSendMessageBroadcast(const std::string& msgToBCast) const
 {
+    FIXME_GET_SPACE_OREF();
+
+    SpaceObjectReference tmper = spaceobjrefs[0];
+    
     Sirikata::JS::Protocol::JSMessage js_object_msg;
     Sirikata::JS::Protocol::IJSField js_object_field = js_object_msg.add_fields();
 
     for (int s=0; s < (int)mAddressableList.size(); ++s)
-        sendMessageToEntity(mAddressableList[s],msgToBCast);
+        sendMessageToEntity(mAddressableList[s],&tmper,msgToBCast);
 }
 
 
 
 //takes in the index into the mAddressableList (for the object reference) and
 //a string that forms the message body.
-void JSObjectScript::sendMessageToEntity(int numIndex, const std::string& msgBody) const
+void JSObjectScript::sendMessageToEntity(int numIndex, SpaceObjectReference* from, const std::string& msgBody) const
 {
-    sendMessageToEntity(mAddressableList[numIndex],msgBody);
+    sendMessageToEntity(mAddressableList[numIndex],from,msgBody);
 }
 
-//void JSObjectScript::sendMessageToEntity(ObjectReference* reffer, const
-//std::string& msgBody) const
-void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std::string& msgBody) const
+
+void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObjectReference* from, const std::string& msgBody) const
 {
     ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
     MemoryReference toSend(msgBody);
@@ -517,7 +520,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
     TryCatch try_catch;
-
 
     // Special casing emerson compilation
 
@@ -1230,8 +1232,8 @@ v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(SpaceObjectReference*  
 }
 
 
-lkjs;
-v8::Handle<v8::Value> JSObjectScript::printPositionFunction(const SpaceObjectReference* sporef,SpaceObjectReference*   spVisTo)
+
+v8::Handle<v8::Value> JSObjectScript::printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo)
 {
     ProxyObjectPtr p;
     bool succeeded =  mParent->getProxyObjectFrom(spVisTo,sporef,p);

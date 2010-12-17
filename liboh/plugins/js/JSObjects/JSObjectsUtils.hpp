@@ -4,13 +4,13 @@
 
 #include <v8.h>
 
+
 namespace Sirikata{
 namespace JS{
 
+class JSPresenceStruct;
+
 const char* ToCString(const v8::String::Utf8Value& value);
-
-
-
 
 }}//end namespaces
 

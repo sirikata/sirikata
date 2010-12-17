@@ -210,7 +210,7 @@ public:
 
     TimeSteppedSimulation* runSimulation(const SpaceObjectReference& sporef, const String& simName);
 
-    bool getProxyObjectFrom(SpaceObjectReference*   spVisTo, SpaceObjectReference*   sporef, ProxyObjectPtr& p);
+    bool getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p);
 
     /** Returns the internal object reference, which can be used for connecting
         to a space, talking to other objects within this object host, and
@@ -374,8 +374,6 @@ public:
     HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);
     void persistToFile(std::ofstream& file);
 };
-
-
 
 
 /// shared_ptr, keeps a reference to the HostedObject. Do not store one of these.

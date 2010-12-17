@@ -42,7 +42,7 @@
 namespace Sirikata {
 namespace JS {
 
-class JSObjectScriptManager : public ObjectScriptManager {
+class SIRIKATA_OH_EXPORT JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
 

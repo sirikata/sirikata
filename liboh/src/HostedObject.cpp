@@ -232,7 +232,7 @@ const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const Ob
 //first checks to see if have a presence associated with spVisTo.  If do, then
 //checks if have a proxy object associated with sporef, sets p to the associated
 //proxy object, and returns true.  Otherwise, returns false.
-bool HostedObject::getProxyObjectFrom(SpaceObjectReference*   spVisTo, SpaceObjectReference*   sporef, ProxyObjectPtr& p)
+bool HostedObject::getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p)
 {
     ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
     if (ohpmp.get() == NULL)
@@ -818,6 +818,18 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     proxy_manager->createObject(proxy_obj);
     return proxy_obj;
 }
+ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
+{
+    //    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(),sor.object());
+    //  return proxyManPtr;
+    return getProxyManager(sor.space(), sor.object());
+}
+ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
+{
+    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match object!!!\n\n";
+    ObjectReference oref = mPresenceData->begin()->first.object();
+    return  getProxy(space, oref);
+}
 
 ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
 {
@@ -826,20 +838,10 @@ ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
     return  getProxyManager(space, oref);
 }
 
-ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
+
+
+ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match object!!!\n\n";
-    ObjectReference oref = mPresenceData->begin()->first.object();
-    return  getProxy(space, oref);
-}
-
-
-ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor) {
-    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(), sor.object());
-    return proxyManPtr;
-}
-
-ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor) {
     ProxyManagerPtr proxy_man = presence(sor);
     if (!proxy_man) return ProxyObjectPtr();
     ProxyObjectPtr proxy_obj = proxy_man->getProxyObject(sor);
@@ -848,7 +850,8 @@ ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor) {
 
 
 // ODP::Service Interface
-ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) {
+ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port)
+{
     return mDelegateODPService->bindODPPort(space, objref, port);
 }
 
@@ -1182,8 +1185,6 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
 
     es->mesh = poptr->getMesh().toString();
 
-
-
     /* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
     es->scale = poptr->getBounds().radius();
     es->objectID = oref.toString();
@@ -1194,11 +1195,10 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
         es->script_opts = mObjectScript->scriptOptions();
     }
     return es;
+}
 
 }
 
 
 
 
-
-}

@@ -9,9 +9,9 @@
 #include "../JSPattern.hpp"
 
 #include "JSFields.hpp"
-
+#include "JSObjectsUtils.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-
+#include "../JSPresenceStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -79,8 +79,6 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
         std::cout<<"\n\nInside of addressableSendMessageFunction\n\n";
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters: require you to send through an addressable object")) );
     }
-
-    
         
     //then need to read the object
     v8::Handle<v8::Value> messageBody = args[0];
@@ -90,10 +88,14 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
     //serialize the object to send
     Local<v8::Object> v8Object = messageBody->ToObject();
     std::string serialized_message = JSSerializer::serializeObject(v8Object);
-
-
+    JSPresenceStruct* jsps = getPresStructFromArgs(args);
+    if (jsps == NULL)
+    {
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message not being sent from a valid presence in addressableSendMessage.")) );
+    }
+    
     //actually send the message to the entity
-    caller->sendMessageToEntity(sporef,serialized_message);
+    caller->sendMessageToEntity(sporef,jsps->sporef,serialized_message);
     
     return v8::Undefined();
 }
@@ -161,6 +163,34 @@ bool decodeAddressable(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjS
     sporef = NULL;
     return false;
 }
+
+
+
+JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    v8::Local<v8::Object> v8Object = args.This();
+    v8::Local<v8::External> wrapJSPresStructObj;
+    if (v8Object->InternalFieldCount() > 0)
+    {
+        wrapJSPresStructObj = v8::Local<v8::External>::Cast(
+            v8Object->GetInternalField(PRESENCE_FIELD_PRESENCE));
+    }
+    else
+    {
+        wrapJSPresStructObj = v8::Local<v8::External>::Cast(
+            v8::Handle<v8::Object>::Cast(v8Object->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
+    }
+    void* ptr = wrapJSPresStructObj->Value();
+    JSPresenceStruct* jspres_struct = static_cast<JSPresenceStruct*>(ptr);
+    
+    if (jspres_struct == NULL)
+        assert(false);
+        
+        return jspres_struct;
+    return NULL;
+}
+
 
 
 }//end jsaddressable namespace
