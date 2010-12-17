@@ -50,6 +50,8 @@
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 
+#include <sirikata/core/util/DynamicLibrary.hpp>
+
 #include <boost/filesystem.hpp>
 #include <stdio.h>
 
@@ -73,26 +75,28 @@ namespace {
 // This is a generic search method. It searches upwards from the current
 // directory for any of the specified files and returns the first path it finds
 // that contains one of them.
-std::string findResourceDir(boost::filesystem::path* search_paths, uint32 nsearch_paths, boost::filesystem::path default_ = boost::filesystem::complete(boost::filesystem::path("."))) {
+std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_paths, bool want_dir = true, const std::string& start_path = ".", boost::filesystem::path default_ = boost::filesystem::complete(boost::filesystem::path("."))) {
     using namespace boost::filesystem;
+
+    path start_path_path = boost::filesystem::complete(start_path);
 
     // FIXME there probably need to be more of these, including
     // some absolute paths of expected installation locations.
     // It should also be possible to add some from the options.
     path search_offsets[] = {
-        boost::filesystem::complete(path(".")),
-        boost::filesystem::complete(path("..")),
-        boost::filesystem::complete(path("../..")),
-        boost::filesystem::complete(path("../../..")),
-        boost::filesystem::complete(path("../../../..")),
-        boost::filesystem::complete(path("../../../../.."))
+        path("."),
+        path(".."),
+        path("../.."),
+        path("../../.."),
+        path("../../../.."),
+        path("../../../../..")
     };
     uint32 nsearch_offsets = sizeof(search_offsets)/sizeof(*search_offsets);
 
     for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
         for(uint32 spath = 0; spath < nsearch_paths; spath++) {
-            path full = search_offsets[offset] / search_paths[spath];
-            if (exists(full) && is_directory(full))
+            path full = start_path_path / search_offsets[offset] / search_paths[spath];
+            if (exists(full) && (!want_dir || is_directory(full)))
                 return full.string();
         }
     }
@@ -115,7 +119,7 @@ std::string getOgreResourcesDir() {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    return findResourceDir(search_paths, nsearch_paths);
+    return findResource(search_paths, nsearch_paths);
 }
 
 // FIXME we really need a better way to figure out where our data is
@@ -140,7 +144,7 @@ std::string getBerkeliumBinaryDir() {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    return findResourceDir(search_paths, nsearch_paths);
+    return findResource(search_paths, nsearch_paths);
 }
 
 std::string getChromeResourcesDir() {
@@ -437,7 +441,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
-                           mOgreRootDir=new OptionValue("ogretoplevel",".",OptionValueType<String>(),"Directory with ogre plugins"),
+                           mOgreRootDir=new OptionValue("ogretoplevel","",OptionValueType<String>(),"Directory with ogre plugins"),
                            ogreSceneManager=new OptionValue("scenemanager","OctreeSceneManager",OptionValueType<String>(),"Which scene manager to use to arrange objects"),
                            mWindowWidth=new OptionValue("windowwidth","1024",OptionValueType<uint32>(),"Window width"),
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
@@ -597,12 +601,35 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     return true;
 }
 namespace {
-bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
-    if (root.length())
-        root+='/';
-    root+=filename;
+bool ogreLoadPlugin(const String& filename, const String& root = "") {
+    using namespace boost::filesystem;
+
+    // FIXME there probably need to be more of these
+    // The current two reflect what we'd expect for installed
+    // and what's in the source tree.
+    path search_paths[] = {
+        path(".") / filename,
+        path("dependencies/ogre-1.6.1/lib") / filename,
+        path("dependencies/ogre-1.6.x/lib") / filename,
+        path("dependencies/ogre-1.6.1/lib/OGRE") / filename,
+        path("dependencies/ogre-1.6.x/lib/OGRE") / filename,
+        path("dependencies/lib/OGRE") / filename,
+        path("lib/OGRE") / filename,
+        path("OGRE") / filename,
+        path("Debug") / filename,
+        path("Release") / filename,
+        path("MinSizeRel") / filename,
+        path("RelWithDebInfo") / filename,
+        path("/usr/local/lib/OGRE") / filename,
+        path("/usr/lib/OGRE") / filename
+    };
+    uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
+
+    path plugin_path = path(findResource(search_paths, nsearch_paths, false, root));
+    String plugin_str = plugin_path.string();
+
 #ifndef __APPLE__
-    FILE *fp=fopen(root.c_str(),"rb");
+    FILE *fp=fopen(plugin_str.c_str(),"rb");
 #endif
     if (
 #ifndef __APPLE__
@@ -614,58 +641,23 @@ bool ogreLoadPlugin(String root, const String&filename, bool recursive=true) {
 #ifndef __APPLE__
         fclose(fp);
 #endif
-        Ogre::Root::getSingleton().loadPlugin(root);
+        Ogre::Root::getSingleton().loadPlugin(plugin_str);
         return true;
-    }else {
-        if (recursive)  {
-            if (ogreLoadPlugin("../../dependencies/ogre-1.6.1/lib",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../dependencies/ogre-1.6.x/lib",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../dependencies/ogre-1.6.1/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../dependencies/ogre-1.6.x/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../dependencies/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.1/lib",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.x/lib",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.1/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../../dependencies/ogre-1.6.x/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("../../../dependencies/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("../lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("Debug",filename,false))
-                return true;
-            if (ogreLoadPlugin("Release",filename,false))
-                return true;
-            if (ogreLoadPlugin("MinSizeRel",filename,false))
-                return true;
-            if (ogreLoadPlugin("RelWithDebInfo",filename,false))
-                return true;
-            if (ogreLoadPlugin("/usr/local/lib/OGRE",filename,false))
-                return true;
-            if (ogreLoadPlugin("/usr/lib/OGRE",filename,false))
-                return true;
-        }
     }
     return false;
 }
 }
 bool OgreSystem::loadBuiltinPlugins () {
-    bool retval=true;
+    bool retval = true;
+    String exeDir = mOgreRootDir->as<String>();
+    if (exeDir.empty())
+        exeDir = DynamicLibrary::GetExecutablePath();
+
 #ifdef __APPLE__
-    retval = ogreLoadPlugin(String(),"RenderSystem_GL");
-    retval = ogreLoadPlugin(String(),"Plugin_CgProgramManager") && retval;
-    retval = ogreLoadPlugin(String(),"Plugin_ParticleFX") && retval;
-    retval = ogreLoadPlugin(String(),"Plugin_OctreeSceneManager") && retval;
+    retval = ogreLoadPlugin("RenderSystem_GL", exeDir);
+    retval = ogreLoadPlugin("Plugin_CgProgramManager", exeDir) && retval;
+    retval = ogreLoadPlugin("Plugin_ParticleFX", exeDir) && retval;
+    retval = ogreLoadPlugin("Plugin_OctreeSceneManager", exeDir) && retval;
 	if (!retval) {
 		SILOG(ogre,error,"The required ogre plugins failed to load. Check that all .dylib files named RenderSystem_* and Plugin_* are copied to the current directory.");
 	}
@@ -683,17 +675,17 @@ bool OgreSystem::loadBuiltinPlugins () {
    #define OGRE_DEBUG_MACRO ".so"
 #endif
 #endif
-	retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_GL" OGRE_DEBUG_MACRO);
+        retval = ogreLoadPlugin("RenderSystem_GL" OGRE_DEBUG_MACRO, exeDir);
 #ifdef _WIN32
 	try {
-	    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"RenderSystem_Direct3D9" OGRE_DEBUG_MACRO) || retval;
+	    retval=ogreLoadPlugin("RenderSystem_Direct3D9" OGRE_DEBUG_MACRO, exeDir) || retval;
 	} catch (Ogre::InternalErrorException) {
 		SILOG(ogre,warn,"Received an Internal Error when loading the Direct3D9 plugin, falling back to OpenGL. Check that you have the latest version of DirectX installed from microsoft.com/directx");
 	}
 #endif
-    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_CgProgramManager" OGRE_DEBUG_MACRO) && retval;
-    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_ParticleFX" OGRE_DEBUG_MACRO) && retval;
-    retval=ogreLoadPlugin(mOgreRootDir->as<String>(),"Plugin_OctreeSceneManager" OGRE_DEBUG_MACRO) && retval;
+    retval=ogreLoadPlugin("Plugin_CgProgramManager" OGRE_DEBUG_MACRO, exeDir) && retval;
+    retval=ogreLoadPlugin("Plugin_ParticleFX" OGRE_DEBUG_MACRO, exeDir) && retval;
+    retval=ogreLoadPlugin("Plugin_OctreeSceneManager" OGRE_DEBUG_MACRO, exeDir) && retval;
 	if (!retval) {
 		SILOG(ogre,error,"The required ogre plugins failed to load. Check that all DLLs named RenderSystem_* and Plugin_* are copied to the current directory.");
 	}
@@ -1042,7 +1034,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 
   if(!params[0].empty() && params[0].type() == typeid(string) )
   {
-    name = boost::any_cast<std::string>(params[0]);  
+    name = boost::any_cast<std::string>(params[0]);
   }
 
   std::cout << "\n\n\n Invoking the function " << name << "\n\n\n";
@@ -1052,7 +1044,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     // create a chatwindow
     // WebView mNager is already initialized by the ogre system
 
-    WebViewManager* wvManager = WebViewManager::getSingletonPtr(); 
+    WebViewManager* wvManager = WebViewManager::getSingletonPtr();
     WebView* ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
     ui_wv->loadFile("chat/prompt.html");
     std::cout << "\n\n Returning a chat window\n\n";
@@ -1060,7 +1052,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     boost::any result(inn);
     return result;
   }
-  
+
 
   return NULL;
 }

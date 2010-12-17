@@ -50,7 +50,7 @@ namespace Sirikata {
 
 static std::vector<String> DL_search_paths;
 
-static String GetExecutablePath() {
+String DynamicLibrary::GetExecutablePath() {
 #if SIRIKATA_PLATFORM == PLATFORM_MAC
     // Executable path can have relative references ("..") depending on
     // how the app was launched.

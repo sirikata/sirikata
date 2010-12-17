@@ -55,6 +55,9 @@ public:
     static void Initialize();
     // Helper for adding locations to load from
     static void AddLoadPath(const String& path);
+    // Helper to get the location of the executable file that's currently
+    // running
+    static String GetExecutablePath();
 
     DynamicLibrary(const String& path);
     ~DynamicLibrary();
