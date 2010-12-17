@@ -131,7 +131,8 @@ int main (int argc, char** argv) {
         spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
     }
 
-    ObjectHost *oh = new ObjectHost(ctx, spaceMap, ios, "");
+    String oh_options = GetOptionValue<String>(OPT_OH_OPTIONS);
+    ObjectHost *oh = new ObjectHost(ctx, spaceMap, ios, oh_options);
 
     // Add all the spaces to the ObjectHost.
     // FIXME we're adding all spaces and having them use the same ServerIDMap

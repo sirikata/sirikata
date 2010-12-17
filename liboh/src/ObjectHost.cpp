@@ -57,9 +57,15 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Network::IO
     mScriptPlugins=new PluginManager;
     mSpaceIDMap = spaceMap;
     OptionValue *protocolOptions;
+    OptionValue *scriptManagers;
     InitializeClassOptions ico("objecthost",this,
                            protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
+                           scriptManagers=new OptionValue("scriptManagers","simplecamera:{},js:{}",OptionValueType<std::map<std::string,std::string> >(),"Instantiates script managers with specified options like \"simplecamera:{},js:{--import-paths=/path/to/scripts}\""),
                            NULL);
+
+    OptionSet* oh_options = OptionSet::getOptions("objecthost",this);
+    oh_options->parse(options);
+
     {
         std::map<std::string,std::string> *options=&protocolOptions->as<std::map<std::string,std::string> > ();
         for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
@@ -67,6 +73,15 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Network::IO
         }
     }
 
+    {
+        std::map<std::string,std::string> *options=&scriptManagers->as<std::map<std::string,std::string> > ();
+        for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
+            if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(i->first)) continue;
+            ObjectScriptManager* newmgr = ObjectScriptManagerFactory::getSingleton().getConstructor(i->first)(i->second);
+            if (newmgr)
+                mScriptManagers[i->first] = newmgr;
+        }
+    }
 }
 
 ObjectHost::~ObjectHost() {
@@ -148,7 +163,7 @@ void ObjectHost::connect(
 )
 {
     bool with_query = init_sa != SolidAngle::Max;
-    
+
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     mSessionManagers[space]->connect(
         obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,
@@ -230,6 +245,13 @@ void ObjectHost::stop() {
         SessionManager* sm = it->second;
         sm->stop();
     }
+}
+
+ObjectScriptManager* ObjectHost::getScriptManager(const String& id) {
+    ScriptManagerMap::iterator it = mScriptManagers.find(id);
+    if (it == mScriptManagers.end())
+        return NULL;
+    return it->second;
 }
 
 ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const

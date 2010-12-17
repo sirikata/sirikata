@@ -73,7 +73,11 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     SpaceSessionManagerMap mSessionManagers;
 
     HostedObjectMap mHostedObjects;
+
     PluginManager *mScriptPlugins;
+    typedef std::tr1::unordered_map<String, ObjectScriptManager*> ScriptManagerMap;
+    ScriptManagerMap mScriptManagers;
+
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
 
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> SessionConnectedCallback;
@@ -171,6 +175,12 @@ public:
     virtual void stop();
 
     PluginManager *getScriptPluginManager(){return mScriptPlugins;}
+
+    // The object host will instantiate script managers and pass them user
+    // specified flags.  These can then be reused by calling this method to get
+    // at them.
+    ObjectScriptManager* getScriptManager(const String& id);
+
     /// DEPRECATED
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
