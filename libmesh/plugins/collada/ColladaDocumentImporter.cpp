@@ -39,7 +39,9 @@
 
 #include "COLLADAFWScene.h"
 #include "COLLADAFWVisualScene.h"
+#include "COLLADAFWKinematicsScene.h"
 #include "COLLADAFWInstanceVisualScene.h"
+#include "COLLADAFWInstanceKinematicsScene.h"
 #include "COLLADAFWLibraryNodes.h"
 #include "COLLADAFWLight.h"
 #include "COLLADAFWEffect.h"
@@ -205,7 +207,6 @@ void ColladaDocumentImporter::finish ()
 
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
-
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -373,6 +374,11 @@ bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 {
     const COLLADAFW::InstanceVisualScene* inst_vis_scene = scene->getInstanceVisualScene();
     mVisualSceneId = inst_vis_scene->getInstanciatedObjectId();
+
+    const COLLADAFW::InstanceKinematicsScene* inst_kin_scene = scene->getInstanceKinematicsScene();
+    if (inst_kin_scene) {
+        // This never seems to be true...
+    }
 
     return true;
 }
@@ -1015,6 +1021,10 @@ bool ColladaDocumentImporter::writeFormulas ( COLLADAFW::Formulas const* formula
 bool ColladaDocumentImporter::writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene )
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeKinematicsScene(" << kinematicsScene << ") entered");
+
+    // For some reason, unlike VisualScene, this doesn't use ObjectTemplate.
+    // Also, none of the data seems to be filled in... ignore it.
+
     return true;
 }
 
