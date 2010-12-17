@@ -456,6 +456,9 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 
     String em_script_str_new = em_script_str;
 
+    if(em_script_str.empty())
+        return v8::Undefined();
+
     if(em_script_str.at(em_script_str.size() -1) != '\n')
     {
         em_script_str_new.push_back('\n');
