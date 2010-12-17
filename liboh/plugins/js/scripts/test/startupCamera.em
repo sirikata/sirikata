@@ -1,3 +1,4 @@
+system.import("std/library.em");
 
 system.print("\n\n\nSTARTING A CAMERA OBJECT\n\n\n");
 
@@ -67,11 +68,3 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
-
-
-
-
-
-
-
-

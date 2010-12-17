@@ -143,7 +143,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     OptionSet* options = OptionSet::getOptions("jsobjectscript", this);
     options->parse(args);
-    
+
     // By default, our eval context has:
     // 1. Empty currentScriptDir, indicating it should only use explicitly
     //    specified search paths.
@@ -169,7 +169,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     initializePresences(system_obj);
     initializeAddressable(system_obj);
 
-    
+
     mHandlingEvent = false;
 
     // If we have a script to load, load it.
@@ -189,7 +189,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
-    import("std/library.em");
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
@@ -213,14 +212,14 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 {
     JSLOG(info,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
 
-    // Invoke user callback    
+    // Invoke user callback
     PresenceMap::iterator iter = mPresences.find(querier);
     if (iter == mPresences.end())
     {
         JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximateGone.  Taking no action.");
         return;
     }
-        
+
     if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
     {
         v8::HandleScope handle_scope;
@@ -228,7 +227,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
         Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
         newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
         newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
-        
+
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { newAddrObj };
         //FIXME: Potential memory leak: when will newAddrObj's
@@ -254,7 +253,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
         return;
     }
-        
+
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
         v8::HandleScope handle_scope;
@@ -264,7 +263,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(new SpaceObjectReference(proximateObject->getObjectReference())));
 
 
-        
+
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { newAddrObj };
         //FIXME: Potential memory leak: when will newAddrObj's
@@ -281,7 +280,7 @@ JSInvokableObject::JSInvokableObjectInt* JSObjectScript::runSimulation(const Spa
 
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
-  
+
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
     //register for scripting messages from user
     SpaceID space_id = name.space();
@@ -332,13 +331,13 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
 void JSObjectScript::create_entity(EntityCreateInfo& eci)
 {
     FIXME_GET_SPACE_OREF();
-    
+
     HostedObjectPtr obj = HostedObject::construct<HostedObject>(mParent->context(), mParent->getObjectHost(), UUID::random());
     obj->init();
     if (eci.scriptType != "")
         obj->initializeScript(eci.scriptType, eci.scriptOpts);
 
-    
+
     obj->connect(space,
         eci.loc,
         BoundingSphere3f(Vector3f::nil(), eci.scale),
@@ -454,7 +453,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 
 
     #ifdef EMERSON_COMPILE
-    
+
     String em_script_str_new = em_script_str;
 
     if(em_script_str.at(em_script_str.size() -1) != '\n')
@@ -515,8 +514,8 @@ void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
         if ((*(*alreadyHave)) == sporefToAdd)
             return;
     }
-    
-    
+
+
     SpaceObjectReference* toAdd = new SpaceObjectReference(sporefToAdd);
     mAddressableList.push_back(toAdd);
 
@@ -590,6 +589,8 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     }
     if (full_filename.empty()) {
         std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+        // Always search the current directory as a last resort
+        search_paths.push_back(".");
         for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
             path fq = path(*pit) / filename_as_path;
             if (boost::filesystem::exists(fq)) {
@@ -973,7 +974,7 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
    std::cout<<"\n\nPopulateSystemObject is deprecated\n\n";
    assert(false);
-   
+
 }
 
 
