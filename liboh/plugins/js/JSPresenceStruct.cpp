@@ -3,13 +3,7 @@
 #include <v8.h>
 
 
-void registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb)
-{
-    mOnProxRemovedEventHandler = cb;
-}
+void JSPresenceStruct::registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb)
     
-void registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb)
-{
-    mOnProxAddedEventHandler = cb;
-}
+void JSPresenceStruct::registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb)
 

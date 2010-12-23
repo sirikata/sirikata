@@ -81,6 +81,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
     createSystemTemplate();
     createAddressableTemplate();
+    createVisibleTemplate();
     createHandlerTemplate();
     createPresenceTemplate();
     createMathTemplate();
@@ -219,7 +220,8 @@ void JSObjectScriptManager::createVisibleTemplate()
     // An internal field holds the external address of the addressable object
     mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 
-    //these function calls are defined in JSObjects/Addressable.hpp
+    
+    //these function calls are defined in JSObjects/JSVisible.hpp
     mVisibleTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
     mVisibleTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
     mVisibleTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));

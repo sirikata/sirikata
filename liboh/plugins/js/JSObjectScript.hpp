@@ -249,7 +249,7 @@ private:
     void initializeMath(Handle<Object>& system_obj);
     void initializeVisible(Handle<Object>&system_obj);
 
-
+    void printVisibleArray();
     
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);

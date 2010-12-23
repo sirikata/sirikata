@@ -48,7 +48,7 @@ namespace Sirikata
     template<typename WithHolderType>
     JSPresenceStruct* GetTargetPresenceStruct(const WithHolderType&);
 
-    JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args);
+
     //Transfer::URI* getURI(const v8::Arguments& args);
     bool getURI(const v8::Arguments& args,std::string& returner);
 

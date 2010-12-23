@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_UUID_HPP_
 #define _SIRIKATA_UUID_HPP_
 
+#include <sirikata/core/util/Platform.hpp>
 
 namespace boost_{
 class uuid;

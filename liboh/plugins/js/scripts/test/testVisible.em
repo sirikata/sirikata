@@ -8,10 +8,12 @@ system.print("\n\n Testing visible calls.\n\n");
 
 var haveCallback = false;
 var objToMvTowards;
-var inverseSpeed = 10;
+var inverseSpeed = 100;
+var CALLBACK_PERIOD = 5;
 
 function proxCallback(calledBack)
 {
+    system.print("\n\nHave prox callback\n\n");
     if (! haveCallback)
     {
         haveCallback   = true;
@@ -38,6 +40,17 @@ function moveTowards(toMoveTowards)
     system.print("\nMoving towards object tango-tango-niner-niner.\n");
 }
 
+function printStatement(toMoveTowards)
+{
+    var posToMoveTowards = toMoveTowards.getPosition();
+    var myPosition  = system.presences[0].getPosition();
+
+    system.print("\n\nPrinting pos to move towards:\n");
+    system.print(posToMoveTowards.toString());
+    system.print("\n\nPrinting my pos:\n");
+    system.print(myPosition.toString());
+}
+
 
 //actually updates the velocity of object to go twoards.
 function timerCallback()
@@ -45,12 +58,15 @@ function timerCallback()
     if (haveCallback)
     {
         moveTowards(objToMvTowards);
+        //printStatement(objToMvTowards);
     }
 
     //reset timer
-    system.timeout(1,null,timerCallback);
+    system.timeout(CALLBACK_PERIOD,null,timerCallback);
 }
 
 
 //establish timer to move towards.
 system.timeout(1,null,timerCallback);
+
+system.presences[0].setQueryAngle(.5);

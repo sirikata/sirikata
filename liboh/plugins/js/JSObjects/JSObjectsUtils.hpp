@@ -11,7 +11,7 @@ namespace JS{
 class JSPresenceStruct;
 
 const char* ToCString(const v8::String::Utf8Value& value);
-
+JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args);
 }}//end namespaces
 
 #endif

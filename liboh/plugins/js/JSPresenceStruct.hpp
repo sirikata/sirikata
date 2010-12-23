@@ -4,15 +4,15 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 
+
 namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 
-class SIRIKATA_OH_EXPORT JSPresenceStruct
+struct JSPresenceStruct
 {
-public:
     
     JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef)
         : jsObjScript(parent),
@@ -21,8 +21,17 @@ public:
     
     ~JSPresenceStruct() { delete sporef; }
 
-    void registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb);
-    void registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb);
+    void registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb)
+    {
+        mOnProxAddedEventHandler = cb;
+    }
+
+    
+    void registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb)
+    {
+    mOnProxRemovedEventHandler = cb;
+    }
+
 
     //data
     JSObjectScript* jsObjScript;

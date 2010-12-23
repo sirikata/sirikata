@@ -1879,7 +1879,6 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSPresenceStruct.cpp
   ${EMERSON_SOURCES}
   )
 IF(V8_FOUND)
