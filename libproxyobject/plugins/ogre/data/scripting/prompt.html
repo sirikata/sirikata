@@ -12,7 +12,18 @@
       function pageScroll() {
         window.scrollBy(0,1000); // horizontal and vertical scroll increments
       }
-
+      var lastMessages = new Array();
+      var last_msg_index = undefined;
+      function appendMessage(msg)
+      {
+        lastMessages.push(msg);
+        last_msg_index = lastMessages.length -1;
+      }
+      function displayCommand(msg)
+      {
+        var command_area = document.getElementById('Command');
+        command_area.value = msg;
+      }
       function addMessage(msg) {
         var new_p = document.createElement('p');
         new_p.appendChild( document.createTextNode(msg) );
@@ -34,6 +45,7 @@
         command_area.value = '';
 
         addMessage(command);
+				appendMessage(command);
 
         var arg_map = [
           'ExecScript',
@@ -49,6 +61,7 @@
         command_area.onkeyup = handleCodeKeyUp;
       }
       var shift_down = false;
+      
       function handleCodeKeyDown(evt) {
         if (evt.shiftKey)
           shift_down = true;
@@ -57,10 +70,35 @@
           // We set a timeout because the addition of the new line occurs *after* this handler
           setTimeout('clearCommand()',1);
         }
+        if(evt.keyCode == 40)
+        {
+	  if(last_msg_index < (lastMessages.length -1) )
+	  {
+	    last_msg_index++;
+	    displayCommand(lastMessages[last_msg_index]);  
+	  }
+	  else if(last_msg_index == lastMessages.length -1)
+	  {
+	    displayCommand(lastMessages[lastMessages.length -1]);  
+	  }
+	}
       }
       function handleCodeKeyUp(evt) {
         if (evt.shiftKey)
           shift_down = false;
+				if(evt.keyCode == 38)
+				{
+				  if(last_msg_index > 0)
+					{
+            displayCommand(lastMessages[last_msg_index]);
+					  last_msg_index--;
+					}
+					else if(last_msg_index == 0)
+					{
+					  
+            displayCommand(lastMessages[0]);
+					}
+				}
       }
 
       function closePrompt() {
