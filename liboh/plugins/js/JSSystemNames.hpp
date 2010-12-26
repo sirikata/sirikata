@@ -15,7 +15,7 @@ static const char* PRESENCES_ARRAY_NAME   =   "presences";
 static const char* PRES_KEYWORD_NAME      =        "pres";
 static const char* MATH_OBJECT_NAME       =        "math";
 
-
+static const char* VISIBLE_OBJECT_STILL_VISIBLE_FIELD = "stillVisible";
 
 
 } //end namespace js system names

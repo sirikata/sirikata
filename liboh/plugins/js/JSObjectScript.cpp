@@ -268,8 +268,9 @@ v8::Local<v8::Object> JSObjectScript::removeVisible(ProxyObjectPtr proximateObje
     if (removedIndex == -1)
     {
         JSLOG(error, "Couldn't find the visible entity in the visible array.  Looking for object: "<<proximateObject->getObjectReference());
-        printVisibleArray();
-        assert(false);
+        //printVisibleArray();
+        Local<Object> emptyReturner = mManager->mVisibleTemplate->NewInstance();
+        return emptyReturner;
     }
     else
     {
@@ -277,7 +278,7 @@ v8::Local<v8::Object> JSObjectScript::removeVisible(ProxyObjectPtr proximateObje
         v8::Local<v8::Array> newVis = v8::Array::New();
 
         //create a new visible array without the previous member.
-        for (uint32 i = 0; i < removedIndex; ++i)
+        for (uint32 i = 0; i < (uint32)removedIndex; ++i)
             newVis->Set(i,vis_array->Get(i));
         
         for(uint32 i = removedIndex; i < vis_array->Length()-1; i++)
@@ -287,6 +288,7 @@ v8::Local<v8::Object> JSObjectScript::removeVisible(ProxyObjectPtr proximateObje
 
     }
 
+    removedProxObj->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(false));
     return removedProxObj;
 }
 
@@ -344,12 +346,25 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
     
     if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
     {
-        int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { removedProxObj };
-        //FIXME: Potential memory leak: when will removedProxObj's
-        //SpaceObjectReference field be garbage collected and deleted?
-        JSLOG(info,"Issuing user callback for proximate object gone.");
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, argv);
+        //check if have the the removed prox obj has 
+        if (removedProxObj->Has( v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD)))
+        {
+            int argc = 1;
+            v8::Handle<v8::Value> argv[1] = { removedProxObj };
+            //FIXME: Potential memory leak: when will removedProxObj's
+            //SpaceObjectReference field be garbage collected and deleted?
+            JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
+            ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, argv);
+        }
+        else
+        {
+            int argc = 0;
+            //v8::Handle<v8::Value> argv[0] = { };
+            //FIXME: Potential memory leak: when will removedProxObj's
+            //SpaceObjectReference field be garbage collected and deleted?
+            JSLOG(info,"Issuing user callback for proximate object gone.  No argument passed.");
+            ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, {});
+        }
     }
 }
 
@@ -374,18 +389,23 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
     {
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
-        addAddressable(proximateObject->getObjectReference());
 
         Local<Object> newVisibleObj;
         newVisibleObj = addVisible(proximateObject,querier);
         
 
-        int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { newVisibleObj };
-        //FIXME: Potential memory leak: when will newAddrObj's
-        //SpaceObjectReference field be garbage collected and deleted?
-        JSLOG(info,"Issuing user callback for proximate object.");
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
+        if (newVisibleObj->Has( v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD)))
+        {
+            int argc = 1;
+            v8::Handle<v8::Value> argv[1] = { newVisibleObj };
+            //FIXME: Potential memory leak: when will newAddrObj's
+            //SpaceObjectReference field be garbage collected and deleted?
+            JSLOG(info,"Issuing user callback for proximate object.");
+            ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
+        }
+        else
+            JSLOG(info,"Ignoring addition of visible object because already had it in visible object array.");
+
     }
 
 }
@@ -691,25 +711,16 @@ v8::Local<v8::Object> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
             assert(false);
         }
 
-        std::cout<<"\n\nArray len:  "<<vis_array->Length()<<"\n";
-        std::cout.flush();
-        std::cout<<"\n\nGot here:\n";
-        std::cout.flush();
-        std::cout<<"\nThis is proxObj:       "<<proximateObject->getObjectReference()<<"\n";
-        std::cout.flush();
-        std::cout<<"\nThis is sporefVisTo:   "<<*sporefVisTo<<"\n";
-        std::cout.flush();
-        std::cout<<"\nThis is sporef:        "<<*sporef<<"\n";
-        std::cout.flush();
-        std::cout<<"\nThis is querier:       "<<querier<<"\n";
-        std::cout.flush();
-        std::cout<<"\n\n";
-        std::cout.flush();
-
         if ((*sporef == proximateObject->getObjectReference()) && (*sporefVisTo == querier))
-            return obj;
+        {
+            JSLOG(info, "Already had the associated object in visible array.  Returning empty.");
+            Local<Object> emptyReturner = mManager->mVisibleTemplate->NewInstance();
+            return emptyReturner;
+            //return obj;
+        }
     }
-        
+
+    JSLOG(info, "Did not already have the associated object in visible array.  Creating new one.");
     //means that we don't already have this object in visible array.
     uint32 new_pos = vis_array->Length();
 
@@ -723,6 +734,8 @@ v8::Local<v8::Object> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     newVisObj->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD,External::New(this));
     newVisObj->SetInternalField(VISIBLE_SPACEOBJREF_FIELD,External::New(sporefToAdd));
     newVisObj->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD,External::New(sporefVisibleTo));
+
+    newVisObj->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(true));
     
     vis_array->Set(v8::Number::New(new_pos),newVisObj);
     return newVisObj;
