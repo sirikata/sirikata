@@ -825,6 +825,10 @@ private:
                     Services::SCRIPTING,
                     MemoryReference(serialized_scripting_request)
                 );
+=======
+                //new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript,this,_1,_2));
+                onceInitialized = true;
+>>>>>>> Trying to fix turning and moving simultaneously.  I think that the position code is broken.
 
             }
         }
@@ -1196,7 +1200,8 @@ private:
     }
 
 
-    void rotateAction(Vector3f about, float amount) {
+    void rotateAction(Vector3f about, float amount)
+    {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
@@ -1220,14 +1225,22 @@ private:
         const Quaternion &orient = loc.getOrientation();
 
         // Request updates from spcae
+        //previous
+        // TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
+        // cam_vwobj->requestOrientationUpdate(space, oref,neworient);
+        // And update our local Proxy's information, assuming the move will be
+        // successful
+
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
         cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setOrientation(neworient, 0, true);
+
     }
 
-    void stableRotateAction(float dir, float amount) {
 
+    void stableRotateAction(float dir, float amount)
+    {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
@@ -1814,7 +1827,6 @@ public:
 
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptedObjectAction, this, _1));
-        //lkjs;
         //mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::executeScript, this, _1, _2));
 
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::enterObjectAction, this));
