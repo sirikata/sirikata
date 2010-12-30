@@ -37,8 +37,6 @@ v8::Handle<v8::Value> toString(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters: require you to send through an addressable object")) );
     }
 
-    
-
   //std::string s = oref->toString();
   std::string s = sporef->toString();
   v8::Local<v8::String> ret = v8::String::New(s.c_str(), s.length());

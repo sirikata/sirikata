@@ -76,6 +76,11 @@ private:
     void createMathTemplate();
     void  createJSInvokableObjectTemplate();
 
+    void addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo);
+    void addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
+    void createTemplates();
+
+    
     
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.

@@ -1874,6 +1874,8 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVisible.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
