@@ -82,10 +82,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mOptions->parse(arguments);
 
     createTemplates(); //these templates involve vec, quat, pattern, etc.
-
-    
-
 }
+
+
 
 void JSObjectScriptManager::createMathTemplate()
 {
@@ -113,6 +112,8 @@ void JSObjectScriptManager::createTemplates()
     mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
     createMathTemplate();
+    createContextTemplate();
+    
     createHandlerTemplate();
     createVisibleTemplate();    
     createAddressableTemplate();
@@ -148,7 +149,7 @@ void JSObjectScriptManager::createContextTemplate()
     
     //add basic templates: vec3, quat, etc.
     addBaseTemplates(mContextTemplate);
-
+    
 }
 
 //takes in a template (likely either the context template or the system template)
@@ -193,6 +194,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
+
     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
 
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));

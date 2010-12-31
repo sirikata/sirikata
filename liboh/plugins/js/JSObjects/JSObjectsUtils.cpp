@@ -61,7 +61,7 @@ JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
     if (jspres_struct == NULL)
         assert(false);
         
-        return jspres_struct;
+    return jspres_struct;
     return NULL;
 }
 

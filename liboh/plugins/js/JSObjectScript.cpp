@@ -60,6 +60,8 @@
 #include "emerson/EmersonUtil.h"
 #include "JSSystemNames.hpp"
 #include "JSPresenceStruct.hpp"
+#include "JSContextStruct.hpp"
+
 
 //#define __EMERSON_COMPILE_ON__
 
@@ -142,7 +144,11 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
  : mParent(ho),
    mManager(jMan)
 {
+    static int whichObject = 0;
+    mWhichObject = whichObject;
+    ++whichObject;
 
+    
     OptionValue* init_script;
     InitializeClassOptions(
         "jsobjectscript", this,
@@ -163,6 +169,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
 
+    std::cout<<"\n\nCreated mContext for object "<< whichObject<<"\n\n";
+
+    
     Local<Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -591,30 +600,41 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     // Special casing emerson compilation
 
 
-    #ifdef EMERSON_COMPILE
+    // #ifdef EMERSON_COMPILE
 
-    String em_script_str_new = em_script_str;
+    // String em_script_str_new = em_script_str;
 
-    if(em_script_str.empty())
-        return v8::Undefined();
+    // if(em_script_str.empty())
+    //     return v8::Undefined();
 
-    if(em_script_str.at(em_script_str.size() -1) != '\n')
-    {
-        em_script_str_new.push_back('\n');
-    }
+    // if(em_script_str.at(em_script_str.size() -1) != '\n')
+    // {
+    //     em_script_str_new.push_back('\n');
+    // }
 
-    emerson_init();
-    String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-    JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+    // emerson_init();
+    // String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+    // cout << " js script = \n" <<js_script_str << "\n";
 
-    v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
-    #else
+
+    // emerson_init();
+    // String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+    // JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+
+    // v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+    // #else
+
+
+    // // assume the input string to be a valid js rather than emerson
+    // v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
+    // #endif
 
     // assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
-    #endif
 
+    
 
     // Compile
     //note, because using compile command, will run in the mContext context
@@ -1144,7 +1164,8 @@ void JSObjectScript::initializePresences(Handle<Object>& system_obj)
     system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 }
 
-v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& sporef) {
+v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& sporef)
+{
     HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
@@ -1166,6 +1187,29 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
 
     return js_pres;
 }
+
+
+
+v8::Handle<v8::Value> JSObjectScript::createContext()
+{
+    std::cout<<"\n\nInside of createContext for object "<< mWhichObject<<"\n\n";
+    
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+
+    // v8::HandleScope handle_scope;
+    // mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
+    // Local<Object> global_obj = mContext->Global();
+    
+    v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
+    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this)));
+
+    return returner;
+}
+
+
+
 
 void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {
     // Find and remove from internal storage
@@ -1244,7 +1288,6 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
 
   //FIXME: will need to add this presence to the presences vector.
   //but only want to do so when the function has succeeded.
-
 }
 
 
@@ -1255,8 +1298,6 @@ void JSObjectScript::create_presence(const SpaceID& new_space)
     assert(false);
     create_presence(new_space,"http://www.sirikata.com/content/assets/tetra.dae");
 }
-
-
 
 
 void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef,const Quaternion& quat)

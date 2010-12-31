@@ -93,6 +93,13 @@ public:
     virtual void onCreateProxy(ProxyObjectPtr p);
     virtual void onDestroyProxy(ProxyObjectPtr p);
 
+
+    //this function returns a context with
+    v8::Handle<v8::Value> createContext();
+    int mWhichObject;
+
+    
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */

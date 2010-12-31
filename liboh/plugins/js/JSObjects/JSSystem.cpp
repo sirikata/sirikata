@@ -17,11 +17,6 @@ namespace JS{
 namespace JSSystem{
 
 
-v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
-{
-    std::cout<<"\n\nERROR: ScriptCreateContext has not been built yet!\n\n";
-    assert(false);
-}
 
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
@@ -34,7 +29,19 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
   target_script->create_presence(new_space);
 
   return v8::Undefined();
+}
 
+
+v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
+{
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    if (target_script == NULL)
+    {
+        std::cout<<"\n\nError.  Receiving empty jsobjectsript fields when creating a context\n\n";
+        assert(false);
+    }
+
+    return target_script->createContext();
 }
 
 
@@ -97,7 +104,6 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 
 
   eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
-
 
   eci.solid_angle = new_qa;
   eci.scale = scale;
@@ -218,8 +224,6 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
-    JSObjectScript* target = GetTargetJSObjectScript(args);
-    assert(target != NULL);
 
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {
