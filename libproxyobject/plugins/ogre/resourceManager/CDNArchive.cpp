@@ -269,7 +269,7 @@ char * findMem(char *data, size_t howmuch, const char * target, size_t targlen)
     return NULL;
 }
 
-Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
+Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename, bool readOnly) const
 {
   boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
   std::string canonicalName = canonicalizeHash(filename);
