@@ -115,6 +115,17 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 
 }
 
+JSObjectScript::EvalContext::EvalContext()
+ : currentScriptDir(),
+   currentOutputStream(&std::cout)
+{}
+
+JSObjectScript::EvalContext::EvalContext(const EvalContext& rhs)
+ : currentScriptDir(rhs.currentScriptDir),
+   currentOutputStream(rhs.currentOutputStream)
+{}
+
+
 JSObjectScript::ScopedEvalContext::ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx)
  : parent(_parent)
 {
@@ -553,6 +564,13 @@ void JSObjectScript::onDestroyProxy(ProxyObjectPtr p)
 }
 
 
+void JSObjectScript::print(const String& str) {
+    assert(!mEvalContextStack.empty());
+    std::ostream* os = mEvalContextStack.top().currentOutputStream;
+    assert(os != NULL);
+    (*os) << str;
+}
+
 void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
 {
     // FIXME using the raw pointer isn't safe
@@ -633,7 +651,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     if (result != lSize)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
 
-    EvalContext new_ctx;
+    EvalContext new_ctx(ctx);
     new_ctx.currentScriptDir = full_filename.parent_path().string();
     return protectedEval(contents, new_ctx);
 }
@@ -826,25 +844,41 @@ void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, c
 {
     Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
-    if (!parsed)
-    {
+    if (!parsed) {
         JSLOG(fatal, "Parsing failed.");
+        return;
     }
-    else
-    {
-        // Handle all requests
-        for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
-        {
-            Sirikata::JS::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
-            String script_str = req.body();
 
-            assert(!mEvalContextStack.empty());
-            // No new context info currently, just copy the previous one
-            protectedEval(script_str, mEvalContextStack.top());
+    Sirikata::JS::Protocol::ScriptingMessage scripting_reply;
+
+    // Handle all requests
+    for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
+    {
+        Sirikata::JS::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
+        String script_str = req.body();
+
+        // Replace output stream in context with string stream to collect
+        // resulting output.
+        std::stringstream output;
+        assert(!mEvalContextStack.empty());
+        EvalContext new_ctx(mEvalContextStack.top());
+        new_ctx.currentOutputStream = &output;
+        // No new context info currently, just copy the previous one
+        protectedEval(script_str, new_ctx);
+
+        if (output.str().size() > 0) {
+            Sirikata::JS::Protocol::IScriptingReply reply = scripting_reply.add_replies();
+            reply.set_id(req.id());
+            reply.set_body(output.str());
         }
     }
-}
 
+    if (scripting_reply.replies_size() > 0) {
+        std::string serialized_scripting_reply;
+        scripting_reply.SerializeToString(&serialized_scripting_reply);
+        mScriptingPort->send(src, MemoryReference(serialized_scripting_reply));
+    }
+}
 
 
 //This function takes in a jseventhandler, and wraps a javascript object with

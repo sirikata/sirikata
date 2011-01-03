@@ -88,11 +88,11 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    
+
     //note: may want to remove these calls.
     virtual void onCreateProxy(ProxyObjectPtr p);
     virtual void onDestroyProxy(ProxyObjectPtr p);
-    
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
@@ -106,6 +106,8 @@ public:
     void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
     int  getAddressableSize();
 
+    /** Print the given string to the current output. */
+    void print(const String& str);
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -120,7 +122,7 @@ public:
     Handle<v8::Context> context() { return mContext;}
     /** create a new entity at the run time */
     void create_entity(EntityCreateInfo& eci);
-    
+
     /** create a new presence of this entity */
     //void create_presence(const SpaceID&);
     void create_presence(const SpaceID& new_space,std::string new_mesh);
@@ -178,7 +180,11 @@ private:
     // way the system defines actions (e.g. import searches the current script's
     // directory before trying other import paths).
     struct EvalContext {
+        EvalContext();
+        EvalContext(const EvalContext& rhs);
+
         boost::filesystem::path currentScriptDir;
+        std::ostream* currentOutputStream;
     };
     // This is a helper which adds an EvalContext to the stack and ensures that
     // when it goes out of scope it is removed. This will almost always be the
