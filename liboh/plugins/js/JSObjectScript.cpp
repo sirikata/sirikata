@@ -190,7 +190,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // If we have a script to load, load it.
     //Always import the library
 
-		import("std/library.em");
+    import("std/library.em");
 
     String script_name = init_script->as<String>();
     if (!script_name.empty())
@@ -208,23 +208,24 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
+    
+    mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
-		mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
-void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
-{
-    SpaceID space = sporef.space();
-    ObjectReference obj = sporef.object();
+// void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
+// {
+//     SpaceID space = sporef.space();
+//     ObjectReference obj = sporef.object();
 
-    HostedObject::SpaceObjRefVec proxyObjNeighbors;
-    mParent->getProxySpaceObjRefs(sporef,proxyObjNeighbors);
+//     HostedObject::SpaceObjRefVec proxyObjNeighbors;
+//     mParent->getProxySpaceObjRefs(sporef,proxyObjNeighbors);
 
-    for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
-    {
-        addAddressable(*sporefIt);
-    }
-}
+//     for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
+//     {
+//         addAddressable(*sporefIt);
+//     }
+// }
 
 
 //removes the object from the visible array if it exists (returns the object
@@ -430,9 +431,6 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
 
-    //on connected, want to populate addressable array corresponding to new
-    //space and objref
-    populateAddressable(name);
 
     v8::HandleScope handle_scope;
     Handle<Object> system_obj = getSystemObject();
@@ -1196,7 +1194,7 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
 v8::Handle<v8::Value> JSObjectScript::createContext()
 {
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
+//    v8::Context::Scope context_scope(mContext);
 
 
     // v8::HandleScope handle_scope;

@@ -251,8 +251,6 @@ void JSObjectScriptManager::createVisibleTemplate()
 
 }
 
-
->>>>>>> Adding a visible array to emerson.
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
