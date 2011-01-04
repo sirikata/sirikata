@@ -1,3 +1,6 @@
+
+//#include "JSObjectScript.hpp"
+
 #ifndef _SIRIKATA_JS_CONTEXT_STRUCT_HPP_
 #define _SIRIKATA_JS_CONTEXT_STRUCT_HPP_
 
@@ -24,7 +27,7 @@ struct JSContextStruct
         mContext.Dispose();
     }
 
-    void executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
+    v8::Handle<v8::Value> executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
     
     //data
     JSObjectScript* jsObjScript;

@@ -144,10 +144,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
  : mParent(ho),
    mManager(jMan)
 {
-    static int whichObject = 0;
-    mWhichObject = whichObject;
-    ++whichObject;
-
     
     OptionValue* init_script;
     InitializeClassOptions(
@@ -168,8 +164,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
-
-    std::cout<<"\n\nCreated mContext for object "<< whichObject<<"\n\n";
 
     
     Local<Object> global_obj = mContext->Global();
@@ -372,7 +366,11 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
             //FIXME: Potential memory leak: when will removedProxObj's
             //SpaceObjectReference field be garbage collected and deleted?
             JSLOG(info,"Issuing user callback for proximate object gone.  No argument passed.");
-            ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, {});
+            ProtectedJSCallback(mContext,
+                v8::Handle<Object>::Cast(v8::Undefined()),
+                iter->second->mOnProxRemovedEventHandler,
+                argc,
+                {});
         }
     }
 }
@@ -634,8 +632,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
 
-    
-
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
@@ -663,6 +659,13 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 }
 
 
+
+v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+{
+    JSLOG(info, "executing script in alternate context");
+    ProtectedJSCallback(contExecIn, v8::Handle<Object>::Cast(v8::Undefined()), funcToCall, argc, argv);
+    return v8::Undefined();
+}
 
 //this function adds the sporefToAdd to the mAddressableList, then it pushes
 //the new addressable object onto the addressable array accessible by emerson
@@ -1192,8 +1195,6 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
 
 v8::Handle<v8::Value> JSObjectScript::createContext()
 {
-    std::cout<<"\n\nInside of createContext for object "<< mWhichObject<<"\n\n";
-    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 

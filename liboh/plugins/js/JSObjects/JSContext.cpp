@@ -95,11 +95,15 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 
 
     v8::Handle<v8::Function> exec_func = v8::Handle<v8::Function>::Cast(args[0]);
-    jscontstruct->executeScript(exec_func,argc, argv);
+
+    v8::Handle<v8::Value> returner = jscontstruct->executeScript(exec_func,argc, argv);
 
 
-    std::cout<<"\n\nFIXME: JSContext: free arguments\n\n";
-    //should probably free the arguments here;
+    //freeing args here
+    delete argv;
+    return returner;
+    
+
 }
 
 
