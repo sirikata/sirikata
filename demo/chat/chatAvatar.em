@@ -1,8 +1,6 @@
 
 system.import("std/library.em");
 
-system.print("\n\n\nSTARTING A CAMERA OBJECT\n\n\n");
-
 simulator = undefined;
 chat = undefined;
 
@@ -45,8 +43,6 @@ function onChatFromNeighbor(msg, sender)
 
 
 system.onPresenceConnected( function(pres) {
-                                system.print("\n\nGOT INTO ON PRESENCE CREATED\n\n");
-                                
     system.print("startupCamera connected " + pres);
     system.print(system.presences.length);
     if (system.presences.length == 1)

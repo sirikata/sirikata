@@ -243,7 +243,7 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
     Entity *hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
         Location location(cam->following()->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
-        SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
+        SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
         double dist;
         Vector3f normal;

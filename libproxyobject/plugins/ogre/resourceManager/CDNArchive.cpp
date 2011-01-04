@@ -280,7 +280,7 @@ Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
           mOwner->CDNArchiveFiles.find(filename);
   }
   if (where != mOwner->CDNArchiveFiles.end()) {
-    SILOG(resource,debug,"File "<<filename << " Opened");
+    SILOG(resource,detailed,"File "<<filename << " Opened");
     unsigned int hintlen=strlen(CDN_REPLACING_MATERIAL_STREAM_HINT);
     if (filename.length()>hintlen&&memcmp(filename.data(),CDN_REPLACING_MATERIAL_STREAM_HINT,hintlen)==0) {
       Ogre::DataStreamPtr inner (new CDNArchiveDataStream(mOwner, filename.substr(hintlen),where->second));
@@ -295,7 +295,7 @@ Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
     }
   }
   else {
-    SILOG(resource,debug,"File " << filename << " Not available in recently loaded cache");
+    SILOG(resource,detailed,"File " << filename << " Not available in recently loaded cache");
     return Ogre::DataStreamPtr();
   }
 }
@@ -339,10 +339,10 @@ bool CDNArchive::exists(const Ogre::String& filename) {
     boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
     std::string canonicalName = canonicalizeHash(filename);
     if (mOwner->CDNArchiveFiles.find(canonicalName)!=mOwner->CDNArchiveFiles.end()) {
-        SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalName);
+        SILOG(resource,detailed,"File "<<filename << " Exists as "<<canonicalName);
         return true;
     }else if (mOwner->CDNArchiveFiles.find(filename)!=mOwner->CDNArchiveFiles.end()) {
-        SILOG(resource,info,"File "<<filename << " Exists as "<<canonicalName);
+        SILOG(resource,detailed,"File "<<filename << " Exists as "<<canonicalName);
         return true;
     }else {
       String Filename=filename;

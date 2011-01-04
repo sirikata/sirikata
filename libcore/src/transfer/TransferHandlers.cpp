@@ -183,7 +183,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
             file_size, chunkList, response->getHeaders()));
 
     callback(met);
-    SILOG(transfer, debug, "done http name handler request_finished");
+    SILOG(transfer, detailed, "done http name handler request_finished");
 }
 
 HttpChunkHandler::HttpChunkHandler()
@@ -372,11 +372,11 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         return;
     }
 
-    SILOG(transfer, debug, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
+    SILOG(transfer, detailed, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
     mCache->addToCache(file->getFingerprint(), response->getData());
 
     callback(response->getData());
-    SILOG(transfer, debug, "done http chunk handler request_finished");
+    SILOG(transfer, detailed, "done http chunk handler request_finished");
 }
 
 }

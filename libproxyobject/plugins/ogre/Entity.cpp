@@ -194,13 +194,13 @@ void Entity::setStatic(bool isStatic) {
     const std::list<Entity*>::iterator end = mScene->mMovingEntities.end();
     if (isStatic) {
         if (mMovingIter != end) {
-            SILOG(ogre,debug,"Removed "<<this<<" from moving entities queue.");
+            SILOG(ogre,detailed,"Removed "<<this<<" from moving entities queue.");
             mScene->mMovingEntities.erase(mMovingIter);
             mMovingIter = end;
         }
     } else {
         if (mMovingIter == end) {
-            SILOG(ogre,debug,"Added "<<this<<" to moving entities queue.");
+            SILOG(ogre,detailed,"Added "<<this<<" to moving entities queue.");
             mMovingIter = mScene->mMovingEntities.insert(end, this);
         }
     }
@@ -227,20 +227,20 @@ void Entity::addToScene(Ogre::SceneNode *newParent) {
 }
 
 void Entity::setOgrePosition(const Vector3d &pos) {
-    //SILOG(ogre,debug,"setOgrePosition "<<this<<" to "<<pos);
+    //SILOG(ogre,detailed,"setOgrePosition "<<this<<" to "<<pos);
     Ogre::Vector3 ogrepos = toOgre(pos, getScene()->getOffset());
     const Ogre::Vector3 &scale = mSceneNode->getScale();
     mSceneNode->setPosition(ogrepos);
 }
 
 void Entity::setOgreOrientation(const Quaternion &orient) {
-    //SILOG(ogre,debug,"setOgreOrientation "<<this<<" to "<<orient);
+    //SILOG(ogre,detailed,"setOgreOrientation "<<this<<" to "<<orient);
     mSceneNode->setOrientation(toOgre(orient));
 }
 
 
 void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) {
-    SILOG(ogre,debug,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
+    SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
     if (!getProxy().isStatic()) {
         setStatic(false);
     } else {
@@ -274,7 +274,7 @@ void Entity::fixTextures() {
 	if (!ent) {
 		return;
 	}
-	SILOG(ogre,debug,"Fixing texture for "<<id());
+	SILOG(ogre,detailed,"Fixing texture for "<<id());
 	int numSubEntities = ent->getNumSubEntities();
 	for (ReplacedMaterialMap::iterator iter = mReplacedMaterials.begin();
 			iter != mReplacedMaterials.end();
@@ -287,20 +287,20 @@ void Entity::fixTextures() {
 		Ogre::SubEntity *subEnt = ent->getSubEntity(whichSubEntity);
 		Ogre::MaterialPtr origMaterial = iter->second.second;
 		subEnt->setMaterial(origMaterial);
-		SILOG(ogre,debug,"Resetting a material "<<id());
+		SILOG(ogre,detailed,"Resetting a material "<<id());
 	}
 	mReplacedMaterials.clear();
 	for (int whichSubEntity = 0; whichSubEntity < numSubEntities; whichSubEntity++) {
 		Ogre::SubEntity *subEnt = ent->getSubEntity(whichSubEntity);
 		Ogre::MaterialPtr material = subEnt->getMaterial();
 		if (forEachTexture(material, ShouldReplaceTexture(mTextureBindings))) {
-			SILOG(ogre,debug,"Replacing a material "<<id());
+			SILOG(ogre,detailed,"Replacing a material "<<id());
 			Ogre::MaterialPtr newMaterial = material->clone(material->getName()+id().toString(), false, Ogre::String());
 			String newTexture;
 			for (TextureBindingsMap::const_iterator iter = mTextureBindings.begin();
 					iter != mTextureBindings.end();
 					++iter) {
-				SILOG(ogre,debug,"Replacing a texture "<<id()<<" : "<<iter->first<<" -> "<<iter->second);
+				SILOG(ogre,detailed,"Replacing a texture "<<id()<<" : "<<iter->first<<" -> "<<iter->second);
 				forEachTexture(newMaterial, ReplaceTexture(iter->first, iter->second));
 				newTexture = iter->second;
 			}
@@ -357,7 +357,7 @@ void Entity::loadMesh(const String& meshname)
         return;
         */
     }
-    SILOG(ogre,debug,"Bounding box: " << new_entity->getBoundingBox());
+    SILOG(ogre,detailed,"Bounding box: " << new_entity->getBoundingBox());
     if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {
         new_entity->setMaterialName("BaseWhiteTexture");
     }
@@ -455,14 +455,14 @@ bool Entity::createMeshWork(MeshdataPtr md) {
 Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectInfo::Texture::WrapMode w) {
     switch(w) {
       case MaterialEffectInfo::Texture::WRAP_MODE_CLAMP:
-        printf ("CLAMPING");
+        SILOG(ogre,insane,"CLAMPING");
         return Ogre::TextureUnitState::TAM_CLAMP;
       case MaterialEffectInfo::Texture::WRAP_MODE_MIRROR:
-        printf ("MIRRORING");
+        SILOG(ogre,insane,"CLAMPING");
         return Ogre::TextureUnitState::TAM_MIRROR;
       case MaterialEffectInfo::Texture::WRAP_MODE_WRAP:
       default:
-        printf ("WRAPPING");
+        SILOG(ogre,insane,"WRAPPING");
         return Ogre::TextureUnitState::TAM_WRAP;
     }
 }

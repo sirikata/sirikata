@@ -52,19 +52,6 @@ Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handl
 
 bool Pattern::matches(v8::Handle<v8::Object> obj) const
 {
-    // std::cout<<"\n\nPrinting the fields the object has: \n";
-    // v8::Local<v8::Array> allFields = obj->GetPropertyNames();
-    // for (int s=0; s < allFields->Length(); ++s)
-    // {
-    //     v8::Local<v8::Value> toPrint = allFields->Get(s);
-    //     v8::Local<v8::String>toPrintV8String = toPrint->ToString();
-    //     v8::String::AsciiValue ascii(toPrintV8String);
-        
-    //     std::cout<<"\tThis is the object's internal field: " << *ascii<<"\n\n";
-    // }
-
-    
-    
     if (!obj->Has(v8::String::New(mName.c_str())))
     {
         return false;
@@ -74,7 +61,7 @@ bool Pattern::matches(v8::Handle<v8::Object> obj) const
     {
         Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
 
-        
+
         if (!field->Equals(mValue))
             return false;
 
@@ -163,7 +150,7 @@ Pattern PatternExtract(Handle<Object>& src_obj) {
     std::string name = StringExtract( src_obj->Get(JS_STRING(name)) );
     Handle<Value> val = src_obj->Has(JS_STRING(value)) ? src_obj->Get(JS_STRING(value)) : Handle<Value>();
     Handle<Value> proto = src_obj->Has(JS_STRING(proto)) ? src_obj->Get(JS_STRING(proto)) : Handle<Value>();
-    
+
     return Pattern(name, val, proto);
 }
 

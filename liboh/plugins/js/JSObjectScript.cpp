@@ -97,8 +97,8 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
         // FIXME what should we do with this exception?
         v8::String::Utf8Value error(try_catch.Exception());
         const char* cMsg = ToCString(error);
-        std::cout << cMsg << "\n";
-	}
+        JSLOG(error, "Uncaught exception: " << cMsg);
+    }
 }
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
@@ -204,7 +204,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
-    
+
 		mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
@@ -226,7 +226,7 @@ void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
 
 void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
-    JSLOG(info,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
+    JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
 
     // Invoke user callback
     PresenceMap::iterator iter = mPresences.find(querier);
@@ -256,7 +256,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
-    JSLOG(info,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".  Adding to addressable list.");
+    JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".  Adding to addressable list.");
 
     //add the proximate object to addAddressable if can before issuing callback
     addAddressable(proximateObject->getObjectReference());
@@ -387,7 +387,7 @@ void JSObjectScript::reboot()
 
 void JSObjectScript::debugPrintString(std::string cStrMsgBody) const
 {
-    std::cout<<"\n\n\n\nIs it working:  "<<cStrMsgBody<<"\n\n";
+    JSLOG(debug,"Is it working: " << cStrMsgBody);
 }
 
 
@@ -458,7 +458,6 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
 {
-    std::cout << "\n\n\n Protected Eval called \n\n\n";
     ScopedEvalContext sec(this, new_ctx);
 
     v8::Context::Scope context_scope(mContext);
@@ -483,7 +482,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 
     emerson_init();
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-    cout << " js script = \n" <<js_script_str << "\n";
+    JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
@@ -721,8 +720,6 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     v8::Local<v8::Object> obj = v8::Object::New();
 
 
-    std::cout<<"\n\nComm: dst space: "<<dst.space()<<"\n\n";
-
     v8::Local<v8::Object> msgSender = getMessageSender(src);
     //try deserialization
 
@@ -733,7 +730,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
 
     if (! parsed)
     {
-        std::cout<<"\n\nCannot parse the message that I received on this port\n\n";
+        JSLOG(error,"Cannot parse the message that I received on this port");
         assert(false);
     }
 
@@ -769,8 +766,9 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     /*
       FIXME: What should I do if the message that I receive does not match any handler?
      */
-    if (!matchesSomeHandler)
-        std::cout<<"\n\nMessage did not match any files\n\n";
+    if (!matchesSomeHandler) {
+        JSLOG(info,"Message did not match any files");
+    }
 }
 
 
@@ -848,7 +846,6 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 //parses them.
 void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
-    std::cout << "\n\n\n HandleScripting Message \n\n\n" ;    
     Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
     if (!parsed) {
@@ -1016,9 +1013,7 @@ void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {
 //this function can be called to re-initialize the system object's state
 void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
-   std::cout<<"\n\nPopulateSystemObject is deprecated\n\n";
-   assert(false);
-
+    DEPRECATED(js);
 }
 
 
@@ -1049,7 +1044,7 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
 
   //mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
 
-  std::cout<<"\n\nERROR: Must fix create_presence to use new connect interface\n\n";
+  NOT_IMPLEMENTED(js);// Must fix create_presence to use new connect interface
   assert(false);
 
   //FIXME: will need to add this presence to the presences vector.
@@ -1061,7 +1056,7 @@ void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_me
 //FIXME: Hard coded default mesh below
 void JSObjectScript::create_presence(const SpaceID& new_space)
 {
-    std::cout<<"\n\nThis function does not exist yet.\n\n";
+    NOT_IMPLEMENTED(js);
     assert(false);
     create_presence(new_space,"http://www.sirikata.com/content/assets/tetra.dae");
 }

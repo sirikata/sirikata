@@ -13,7 +13,7 @@ keymap* emerson_sysKeys;
 // Initialize emerson compiler
 int emerson_init()
 {
-  emerson_sysKeys = new keymap(); 
+  emerson_sysKeys = new keymap();
 		insertKeywords();
    return 1;
 }
@@ -42,7 +42,7 @@ void emerson_printRewriteStream(pANTLR3_REWRITE_RULE_TOKEN_STREAM rwStream)
   while(tree != NULL)
 		{
 		  pANTLR3_COMMON_TOKEN token = tree->getToken(tree);
-		  if( !(emerson_isImaginaryToken(token))) 
+		  if( !(emerson_isImaginaryToken(token)))
 				{
 				  printf((const char*)token->getText(token)->chars);
 		  }
@@ -64,7 +64,7 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
   {
     return	tree->toString(tree);
   }
-  
+
 		// THis is how you get a new string. The string is blank
 
   string	= tree->strFactory->newRaw(tree->strFactory);
@@ -82,7 +82,7 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 		{
 		  n = tree->children->size(tree->children);
 				for	(i = 0; i < n; i++)
-				{   
+				{
 				  t   = (pANTLR3_BASE_TREE) tree->children->get(tree->children, i);
 
 						if  (i > 0)
@@ -92,7 +92,7 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 						string->appendS(string, emerson_printAST(t));
 					}
 			}
-   
+
 			if	(tree->isNilNode(tree) == ANTLR3_FALSE)
 				{
 						string->append8(string,")");
@@ -104,7 +104,7 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 
 void emerson_createTreeMirrorImage2(pANTLR3_BASE_TREE ptr)
 {
-  
+
   if(ptr!= NULL && ptr->children != NULL)
   {
 
@@ -120,7 +120,7 @@ void emerson_createTreeMirrorImage2(pANTLR3_BASE_TREE ptr)
 			   //emerson_createTreeMirrorImage( (pANTLR3_BASE_TREE)(ptr->getChild(ptr, 1)) );
 				  ptr->setChild(ptr, 1, ptr->getChild(ptr, 0));
 						ptr->setChild(ptr, 0, right);
-				}		
+				}
 		}
 
 
@@ -129,7 +129,7 @@ void emerson_createTreeMirrorImage2(pANTLR3_BASE_TREE ptr)
 
 void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 {
-  
+
   if(ptr!= NULL && ptr->children != NULL)
   {
 
@@ -145,7 +145,7 @@ void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 			   emerson_createTreeMirrorImage( (pANTLR3_BASE_TREE)(ptr->getChild(ptr, 1)) );
 				  ptr->setChild(ptr, 1, ptr->getChild(ptr, 0));
 						ptr->setChild(ptr, 0, right);
-				}		
+				}
 		}
 
 
@@ -159,12 +159,12 @@ void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 char* emerson_compile(const char* em_script_str)
 {
 
- printf("Trying to compile \n %s\n", em_script_str);
-	
- 
+// printf("Trying to compile \n %s\n", em_script_str);
 
- pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str; 
- pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);     
+
+
+ pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
+ pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
 	char* js_str;
 	pEmersonLexer lxr;
 	pEmersonParser psr;
@@ -221,7 +221,7 @@ if (psr->pParser->rec->state->errorCount > 0)
 	tstream ->free  (tstream);	tstream	= NULL;
 	lxr	    ->free  (lxr);	    lxr		= NULL;
 	input   ->close (input);	input	= NULL;
- 
+
  return js_str;
 }
 
@@ -229,11 +229,11 @@ char* emerson_compile_diag(const char* em_script_str, FILE* dbg)
 {
 
  fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
-	
 
 
- pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str; 
- pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);     
+
+ pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
+ pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
 	char* js_str;
 	pEmersonLexer lxr;
 	pEmersonParser psr;
@@ -287,7 +287,7 @@ if (psr->pParser->rec->state->errorCount > 0)
    nodes	= antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE HINT WILL SOON BE DEPRECATED!!
    treePsr	= EmersonTreeNew(nodes);
 		 js_str = (char*)treePsr->program(treePsr)->chars;
-   
+
 			fprintf(dbg, "The generated code is \n %s \n", js_str);
 
 
@@ -299,7 +299,7 @@ if (psr->pParser->rec->state->errorCount > 0)
 	tstream ->free  (tstream);	tstream	= NULL;
 	lxr	    ->free  (lxr);	    lxr		= NULL;
 	input   ->close (input);	input	= NULL;
- 
+
  return js_str;
 }
 
@@ -320,15 +320,15 @@ char* read_file(char* filename)
 			}
 			myfile.close();
 			return output;
-		}	
+		}
 		else
 		{
 			cout << "Could not open the file " << filename << endl;
 		}
 
 		return NULL;
- 
-		
+
+
 }
 
 
@@ -342,17 +342,16 @@ int  emerson_isAKeyword(const char* word)
   if( strcmp(word, "print") == 0)
 		{
 		  //cout << "word is print\n";
-		
+
 		}
-	 keymap::iterator it = emerson_sysKeys->find(word);	
-	 //keymap::iterator it = emerson_sysKeys->find("print");	
+	 keymap::iterator it = emerson_sysKeys->find(word);
+	 //keymap::iterator it = emerson_sysKeys->find("print");
   if( it != emerson_sysKeys->end() )
 		{
 		  cout << "Returning 1\n";
 		  return 1;
 		}
 		*/
-		
+
   return 0;
 }
-

@@ -46,6 +46,7 @@ enum LOGGING_LEVEL {
     warn=warning,
     info=512,
     debug=4096,
+    detailed=8192,
     insane=32768
 };
 } }

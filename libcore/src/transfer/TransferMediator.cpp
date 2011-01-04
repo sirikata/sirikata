@@ -86,7 +86,7 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
 
     for(std::map<std::string, std::tr1::shared_ptr<TransferRequest> >::const_iterator
             it = allReqs.begin(); it != allReqs.end(); it++) {
-        SILOG(transfer, debug, "Notifying a caller that TransferRequest is complete");
+        SILOG(transfer, detailed, "Notifying a caller that TransferRequest is complete");
         it->second->notifyCaller(req);
     }
 
@@ -94,7 +94,7 @@ void TransferMediator::execute_finished(std::tr1::shared_ptr<TransferRequest> re
 
     mNumOutstanding--;
     lock.unlock();
-    SILOG(transfer, debug, "done transfer mediator execute_finished");
+    SILOG(transfer, detailed, "done transfer mediator execute_finished");
     checkQueue();
 }
 
@@ -109,7 +109,7 @@ void TransferMediator::checkQueue() {
     if(findTop != priorityIndex.end()) {
         std::string topId = (*findTop)->getIdentifier();
 
-        SILOG(transfer, debug, priorityIndex.size() << " length agg list, top priority "
+        SILOG(transfer, detailed, priorityIndex.size() << " length agg list, top priority "
                 << (*findTop)->getPriority() << " id " << topId);
 
         std::tr1::shared_ptr<TransferRequest> req = (*findTop)->getSingleRequest();
@@ -120,7 +120,7 @@ void TransferMediator::checkQueue() {
         }
 
     } else {
-        //SILOG(transfer, debug, priorityIndex.size() << " length agg list");
+        //SILOG(transfer, detailed, priorityIndex.size() << " length agg list");
     }
 
     lock.unlock();

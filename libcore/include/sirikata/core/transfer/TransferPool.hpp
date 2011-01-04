@@ -181,7 +181,7 @@ protected:
     inline void execute_finished(std::tr1::shared_ptr<RemoteFileMetadata> response, ExecuteFinished cb) {
         mRemoteFileMetadata = response;
         cb();
-        SILOG(transfer, debug, "done MetadataRequest execute_finished");
+        SILOG(transfer, detailed, "done MetadataRequest execute_finished");
     }
 
 };
@@ -232,17 +232,17 @@ public:
 	}
 
 	inline void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
-	    SILOG(transfer, debug, "execute_finished in ChunkRequest called");
+	    SILOG(transfer, detailed, "execute_finished in ChunkRequest called");
         mDenseData = response;
         HttpManager::getSingleton().postCallback(cb);
-        SILOG(transfer, debug, "done ChunkRequest execute_finished");
+        SILOG(transfer, detailed, "done ChunkRequest execute_finished");
 	}
 
     inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
         std::tr1::shared_ptr<ChunkRequest> fromC =
                 std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
         HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, fromC, fromC->mDenseData));
-        SILOG(transfer, debug, "done ChunkRequest notifyCaller");
+        SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
     }
 
 protected:
