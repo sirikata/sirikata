@@ -184,6 +184,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     mHandlingEvent = false;
 
     // If we have a script to load, load it.
+    //Always import the library
+
+		import("std/library.em");
+
     String script_name = init_script->as<String>();
     if (!script_name.empty())
     {
@@ -200,7 +204,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it);
-    mParent->getObjectHost()->persistEntityState(String("scene.persist"));
+    
+		mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 }
 
 void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
@@ -453,6 +458,7 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, const std
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
 {
+    std::cout << "\n\n\n Protected Eval called \n\n\n";
     ScopedEvalContext sec(this, new_ctx);
 
     v8::Context::Scope context_scope(mContext);
@@ -842,6 +848,7 @@ void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
 //parses them.
 void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
+    std::cout << "\n\n\n HandleScripting Message \n\n\n" ;    
     Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
     bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
     if (!parsed) {

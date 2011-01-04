@@ -1028,6 +1028,9 @@ private:
         for (command_it = args.begin(); command_it != args.end(); ++command_it)
         {
             std::string strcmp (command_it->begin());
+
+
+
             if (strcmp == "Command")
             {
                 Sirikata::JS::Protocol::ScriptingMessage scripting_msg;

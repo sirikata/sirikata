@@ -1144,15 +1144,21 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
     if(i != delegateMap.end())
     {
         JSArguments argVector;
-        std::vector<UTF8String> argStorage;
+        std::vector<std::string*> argStorage;
+				
         for (size_t j=0;j!=numArgs;++j) {
+					  
             UTF8String temp = Berkelium::WideToUTF8(args[j].toString());
-            argStorage.push_back(temp);
-            argVector.push_back(JSArgument(temp.data(), temp.length()));
+						std::string* s = new std::string(temp.get<std::string>());
+					  std::cout << "info "  << *s << "\n\n";
+            argStorage.push_back(s);
+            //argVector.push_back(JSArgument(temp.data(), temp.length()));
+            argVector.push_back(JSArgument(s->data(), s->length()));
         }
-		i->second(this, argVector);
+		    i->second(this, argVector);
         for (size_t j=0;j<argStorage.size();j++) {
-            Berkelium::stringUtil_free(argStorage[j]);
+            //Berkelium::stringUtil_free(argStorage[j]);
+						delete(argStorage[j]);
         }
 	}
     if (replyMsg)
