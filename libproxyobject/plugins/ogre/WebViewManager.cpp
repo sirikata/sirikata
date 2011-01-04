@@ -463,7 +463,14 @@ bool WebViewManager::injectTextEvent(std::string utf8text) {
 }
 
 namespace {
-struct compare { bool operator()(WebView* a, WebView* b){ return(a->getOverlay()->getZOrder() > b->getOverlay()->getZOrder()); }};
+struct compare {
+    bool operator()(WebView* a, WebView* b) {
+        ViewportOverlay* a_over = a->getOverlay();
+        ViewportOverlay* b_over = b->getOverlay();
+        if (a_over == NULL || b_over == NULL) return (a > b);
+        return(a_over->getZOrder() > b_over->getZOrder());
+    }
+};
 }
 
 bool WebViewManager::focusWebView(WebView* selection)

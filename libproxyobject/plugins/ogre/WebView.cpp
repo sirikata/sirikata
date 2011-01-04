@@ -92,12 +92,15 @@ WebView::WebView(
     mBorderTop = border.mBorderTop;
     mBorderBottom = border.mBorderBottom;
 
-	createMaterial();
+    createMaterial();
 
-	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
-
-	if(compensateNPOT)
-		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
+#ifdef HAVE_BERKELIUM
+    overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
+    if(compensateNPOT)
+        overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
+#else
+    overlay = NULL;
+#endif
 }
 
 WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
