@@ -157,6 +157,11 @@ Entity::~Entity() {
      */
     mSceneNode->removeAllChildren();
     mScene->getSceneManager()->destroySceneNode(mSceneNode);
+
+    if (mActiveCDNArchive) {
+        CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
+        mActiveCDNArchive=false;
+    }
 }
 
 std::string Entity::ogreMeshName(const SpaceObjectReference&ref) {
@@ -382,12 +387,6 @@ void Entity::loadMesh(const String& meshname)
 
     init(new_entity);
     fixTextures();
-    if (mActiveCDNArchive) {
-        CDNArchiveFactory::getSingleton().removeArchive(mCDNArchive);
-        mActiveCDNArchive=false;
-    }else {
-        SILOG(ogre,error,"Archive deactivated early, texture data may be unavailable");
-    }
 }
 
 void Entity::unloadMesh() {
@@ -411,6 +410,8 @@ void Entity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1:
 
 void Entity::downloadMeshFile(Transfer::URI const& uri)
 {
+    assert( !uri.empty() );
+
     ResourceDownloadTask *dl = new ResourceDownloadTask(
         uri, getScene()->transferPool(),
         mProxy->priority,
@@ -431,16 +432,15 @@ void Entity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
 
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
-    Ogre::Entity * meshObj=getOgreEntity();
+    Ogre::Entity* meshObj = getOgreEntity();
 
-    if (meshObj && meshFile.filename() == "" ) {
-        setVisible(false);
+    if (meshFile.empty()) {
+        if (meshObj) setVisible(false);
         return;
     }
-    else if (meshObj) {
+
+    if (meshObj)
         setVisible(true);
-        return;
-    }
 
     mURI = meshFile;
     mURIString = meshFile.toString();
@@ -458,7 +458,7 @@ Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectIn
         SILOG(ogre,insane,"CLAMPING");
         return Ogre::TextureUnitState::TAM_CLAMP;
       case MaterialEffectInfo::Texture::WRAP_MODE_MIRROR:
-        SILOG(ogre,insane,"CLAMPING");
+        SILOG(ogre,insane,"MIRRORING");
         return Ogre::TextureUnitState::TAM_MIRROR;
       case MaterialEffectInfo::Texture::WRAP_MODE_WRAP:
       default:
