@@ -462,6 +462,10 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
 
+    // Initialize this first so we can get it to not spit out to stderr
+    Ogre::LogManager * lm = OGRE_NEW Ogre::LogManager();
+    lm->createLog(ogreLogFile->as<String>(), true, false, false);
+
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
                          &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig())
