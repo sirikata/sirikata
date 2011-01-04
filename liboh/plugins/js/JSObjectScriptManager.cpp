@@ -117,8 +117,8 @@ void JSObjectScriptManager::createTemplates()
     createHandlerTemplate();
     createVisibleTemplate();    
     createAddressableTemplate();
-    createJSInvokableObjectTemplate();
     
+    createJSInvokableObjectTemplate();
     createPresenceTemplate();    
     createSystemTemplate();
 }

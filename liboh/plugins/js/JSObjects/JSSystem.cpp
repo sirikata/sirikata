@@ -200,8 +200,6 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
     StringCheckAndExtract(native_filename, filename);
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    // target_script->debugPrintString("\n\nPrinting from scriptImport.  Works?\n\n");
-    // std::cout.flush();
 
     target_script->import(native_filename);
 
@@ -225,6 +223,7 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
     JSObjectScript* target = GetTargetJSObjectScript(args);
+    assert(target != NULL);
 
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {

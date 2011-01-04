@@ -190,7 +190,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // If we have a script to load, load it.
     //Always import the library
 
-    import("std/library.em");
+    //import("std/library.em");
 
     String script_name = init_script->as<String>();
     if (!script_name.empty())
