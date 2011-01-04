@@ -1051,7 +1051,25 @@ private:
     }
 
     static String convertAndEscapeJavascriptString(const String& in) {
-        return "'" + in + "'";
+        String result = "'";
+
+        for(int ii = 0; ii < in.size(); ii++) {
+            switch(in[ii]) {
+              case '\n':
+                result += "\\n"; break;
+              case '\r':
+                result += "\\r"; break;
+              case '\'':
+                result += "\'"; break;
+              case '\t':
+                result += "\\t"; break;
+              default:
+                result += in[ii]; break;
+            }
+        }
+
+        result += "'";
+        return result;
     }
 
     void handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload) {
