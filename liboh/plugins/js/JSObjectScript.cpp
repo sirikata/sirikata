@@ -91,11 +91,19 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 
     Handle<Value> result;
     if (target->IsNull() || target->IsUndefined())
+    {
+        JSLOG(debug,"ProtectedJSCallback without target given.");
         result = cb->Call(ctx->Global(), argc, argv);
+    }
     else
+    {
+        JSLOG(debug,"ProtectedJSCallback with target given.");
         result = cb->Call(target, argc, argv);
+    }
 
-    if (result.IsEmpty()) {
+
+    if (result.IsEmpty())
+    {
         // FIXME what should we do with this exception?
         v8::String::Utf8Value error(try_catch.Exception());
         const char* cMsg = ToCString(error);
@@ -142,7 +150,8 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
  : mParent(ho),
-   mManager(jMan)
+   mManager(jMan),
+   depth(0)
 {
     
     OptionValue* init_script;
@@ -212,20 +221,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
 }
-
-// void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
-// {
-//     SpaceID space = sporef.space();
-//     ObjectReference obj = sporef.object();
-
-//     HostedObject::SpaceObjRefVec proxyObjNeighbors;
-//     mParent->getProxySpaceObjRefs(sporef,proxyObjNeighbors);
-
-//     for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
-//     {
-//         addAddressable(*sporefIt);
-//     }
-// }
 
 
 //removes the object from the visible array if it exists (returns the object
@@ -340,10 +335,8 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
         return;
     }
 
-    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
-
 
     Local<Object>removedProxObj;
     removedProxObj= removeVisible(proximateObject,querier);
@@ -413,9 +406,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         }
         else
             JSLOG(info,"Ignoring addition of visible object because already had it in visible object array.");
-
     }
-
 }
 
 
@@ -589,13 +580,13 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 {
     ScopedEvalContext sec(this, new_ctx);
 
-    v8::Context::Scope context_scope(mContext);
+    //v8::Context::Scope context_scope(mContext);
+    mContext->Enter();
+    ++depth;
     v8::HandleScope handle_scope;
     TryCatch try_catch;
 
     // Special casing emerson compilation
-
-
     // #ifdef EMERSON_COMPILE
 
     // String em_script_str_new = em_script_str;
@@ -626,6 +617,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 
     // #endif
 
+    
     // assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
@@ -637,6 +629,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
         v8::String::Utf8Value error(try_catch.Exception());
         std::string msg = std::string("Compile error: ") + std::string(*error);
         JSLOG(error, msg);
+        --depth;
+        mContext->Exit();
         return v8::ThrowException( v8::Exception::Error(v8::String::New(msg.c_str())) );
     }
 
@@ -645,6 +639,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     if (result.IsEmpty()) {
         v8::String::Utf8Value error(try_catch.Exception());
         JSLOG(error, "Uncaught exception: " << *error);
+        --depth;
+        mContext->Exit();
         return try_catch.Exception();
     }
 
@@ -652,16 +648,26 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
         v8::String::AsciiValue ascii(result);
         JSLOG(info, "Script result: " << *ascii);
     }
-
+    --depth;
+    mContext->Exit();
     return result;
 }
 
 
-
-v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+/*
+  executeInContext takes in a context, 
+ */
+v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Persistent<v8::Object>& thisObject,v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
     JSLOG(info, "executing script in alternate context");
-    ProtectedJSCallback(contExecIn, v8::Handle<Object>::Cast(v8::Undefined()), funcToCall, argc, argv);
+    // mContext->Exit();
+    // mContext->Exit();
+//    v8::Handle<v8::Object> = v8::Context::GetCurrent()->DetachGlobal();
+    ProtectedJSCallback(contExecIn, thisObject, funcToCall, argc, argv);
+    // mContext->Enter();
+    // mContext->Enter();
+
+    JSLOG(info, "execution in alternate context complete");
     return v8::Undefined();
 }
 

@@ -93,7 +93,7 @@ public:
     virtual void onDestroyProxy(ProxyObjectPtr p);
 
 
-    v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
+    v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Persistent<v8::Object>& thisObject,v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
     v8::Handle<v8::Value> createContext();
@@ -219,7 +219,8 @@ private:
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-
+    int depth;
+    
     // Handlers for presence connection events
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
     v8::Persistent<v8::Function> mOnPresenceDisconnectedHandler;

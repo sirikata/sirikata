@@ -20,6 +20,13 @@ struct JSContextStruct
         : jsObjScript(parent),
           mContext(v8::Context::New())
         {
+            v8::HandleScope handle_scope;
+            thisObject = v8::Persistent<v8::Object>::New(v8::Object::New());  //this object
+                                                             //corresponds to
+                                                             //the this
+                                                             //parameter that
+                                                             //we'll be hanging
+                                                             //data off of.
         }
     
     ~JSContextStruct()
@@ -32,6 +39,7 @@ struct JSContextStruct
     //data
     JSObjectScript* jsObjScript;
     v8::Persistent<v8::Context> mContext;
+    v8::Persistent<v8::Object>  thisObject;
     
 };
 
