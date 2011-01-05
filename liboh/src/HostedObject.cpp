@@ -718,6 +718,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // get applied
                 proxy_obj->reset();
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh);
+                // Mark as valid again
+                proxy_obj->validate();
             }
 
             // Notify of any out of order loc updates
@@ -744,9 +746,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (mObjectScript)
                 mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
-            // FIXME this is *not* the right way to handle this
-            proxy_obj->setMesh(Transfer::URI(""), 0, true);
-
+            proxy_obj->invalidate();
 
             CONTEXT_OHTRACE(prox,
                 getUUID(),

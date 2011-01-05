@@ -255,6 +255,15 @@ void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedM
     updateScale( newBounds.radius() );
 }
 
+void Entity::validated() {
+    if (mOgreObject == NULL)
+        processMesh( mProxy->getMesh() );
+}
+
+void Entity::invalidated() {
+    unloadMesh();
+}
+
 void Entity::destroyed() {
     delete this;
 }
@@ -390,7 +399,7 @@ void Entity::loadMesh(const String& meshname)
 }
 
 void Entity::unloadMesh() {
-    Ogre::Entity * meshObj=getOgreEntity();
+    Ogre::Entity* meshObj = getOgreEntity();
     //init(getScene()->getSceneManager()->createEntity(ogreMovableName(), Ogre::SceneManager::PT_CUBE));
     init(NULL);
     if (meshObj) {
@@ -432,15 +441,8 @@ void Entity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
 
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
-    Ogre::Entity* meshObj = getOgreEntity();
-
-    if (meshFile.empty()) {
-        if (meshObj) setVisible(false);
+    if (meshFile.empty())
         return;
-    }
-
-    if (meshObj)
-        setVisible(true);
 
     mURI = meshFile;
     mURIString = meshFile.toString();

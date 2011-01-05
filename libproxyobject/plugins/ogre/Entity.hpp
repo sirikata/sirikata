@@ -116,7 +116,10 @@ public:
 
     void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
 
-    void destroyed();
+    // ProxyObjectListener
+    virtual void validated();
+    virtual void invalidated();
+    virtual void destroyed();
 
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;
