@@ -1480,7 +1480,7 @@ SET(EMERSON_SOURCES
   ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
   ${EMERSON_SOURCE_DIR}/EmersonTree.cpp
   ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp
-		${EMERSON_SOURCE_DIR}/main.cpp
+  ${EMERSON_SOURCE_DIR}/main.cpp
   )
 
 SET(JSCOMPILE_SOURCES
@@ -1873,12 +1873,14 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVisible.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
-
   ${EMERSON_SOURCES}
   )
 IF(V8_FOUND)

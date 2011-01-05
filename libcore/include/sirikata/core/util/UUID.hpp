@@ -33,13 +33,15 @@
 #ifndef _SIRIKATA_UUID_HPP_
 #define _SIRIKATA_UUID_HPP_
 
+#include <sirikata/core/util/Platform.hpp>
 
 namespace boost_{
 class uuid;
 }
 
 namespace Sirikata {
-class SIRIKATA_EXPORT UUID :public TotallyOrdered<UUID> {
+class SIRIKATA_EXPORT UUID : public TotallyOrdered<UUID>
+{
 public:
     enum {static_size=16};
     typedef unsigned char byte;

@@ -42,7 +42,7 @@
 namespace Sirikata {
 namespace JS {
 
-class JSObjectScriptManager : public ObjectScriptManager {
+class SIRIKATA_OH_EXPORT JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
 
@@ -58,6 +58,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mAddressableTemplate;
+    v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
     v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
     v8::Persistent<v8::ObjectTemplate> mMathTemplate;
@@ -67,6 +68,7 @@ public:
 private:
 
     void createAddressableTemplate();
+    void createVisibleTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();
     void createPresenceTemplate();
@@ -74,6 +76,11 @@ private:
     void createMathTemplate();
     void  createJSInvokableObjectTemplate();
 
+    void addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo);
+    void addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
+    void createTemplates();
+
+    
     
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.

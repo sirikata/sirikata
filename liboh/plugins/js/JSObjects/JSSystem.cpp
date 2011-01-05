@@ -17,11 +17,6 @@ namespace JS{
 namespace JSSystem{
 
 
-v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
-{
-    std::cout<<"\n\nERROR: ScriptCreateContext has not been built yet!\n\n";
-    assert(false);
-}
 
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
@@ -34,7 +29,19 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
   target_script->create_presence(new_space);
 
   return v8::Undefined();
+}
 
+
+v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
+{
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    if (target_script == NULL)
+    {
+        std::cout<<"\n\nError.  Receiving empty jsobjectsript fields when creating a context\n\n";
+        assert(false);
+    }
+
+    return target_script->createContext();
 }
 
 
@@ -98,7 +105,6 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
 
   eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
-
   eci.solid_angle = new_qa;
   eci.scale = scale;
 
@@ -152,6 +158,8 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
     // Function
     if (!cb_val->IsFunction())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
+
+    
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
@@ -192,8 +200,6 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
     StringCheckAndExtract(native_filename, filename);
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    // target_script->debugPrintString("\n\nPrinting from scriptImport.  Works?\n\n");
-    // std::cout.flush();
 
     target_script->import(native_filename);
 

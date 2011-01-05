@@ -10,13 +10,13 @@
     </style>
     <script language="javascript" type="text/javascript">
       
-    	function copyToClipboard()
+      function copyToClipboard()
       {
         var copiedTxt = document.selection.createRange();
         copiedTxt.execCommand("Copy");
       }
       
-			function pasteFromClipboard()
+      function pasteFromClipboard()
       {
 
         var command_area = document.getElementById('Command');
@@ -81,7 +81,7 @@
         command_area.value = '';
 
         addMessage(command);
-				appendMessage(command);
+	appendMessage(command);
 
         var arg_map = [
           'ExecScript',
