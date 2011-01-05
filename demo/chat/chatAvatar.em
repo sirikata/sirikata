@@ -1,5 +1,5 @@
 system.import("std/library.em");
-
+system.import('std/escape.em');
 
 simulator = undefined;
 chat = undefined;
@@ -33,7 +33,7 @@ function onChatFromNeighbor(msg, sender)
 {
     print("Got chat: " + msg.chat + ": from neigbor " + sender);
     // FIXME escape string
-    chat.invoke('eval', 'addMessage("' +  msg.chat + '")' );
+    chat.invoke('eval', 'addMessage(' +  Escape.escapeString(msg.chat, '"') + ')' );
 }
 
 function handleNewChatNeighbor(msg, sender)
