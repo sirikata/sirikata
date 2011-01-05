@@ -1480,7 +1480,7 @@ SET(EMERSON_SOURCES
   ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
   ${EMERSON_SOURCE_DIR}/EmersonTree.cpp
   ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp
-		${EMERSON_SOURCE_DIR}/main.cpp
+  ${EMERSON_SOURCE_DIR}/main.cpp
   )
 
 SET(JSCOMPILE_SOURCES

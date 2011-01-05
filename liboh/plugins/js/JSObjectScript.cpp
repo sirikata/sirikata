@@ -82,7 +82,12 @@ namespace JS {
 namespace {
 
 
-
+//This function just prints out all properties associated with context ctx has
+//additional parameter additionalMessage which prints out at the top of this
+//function's debugging message.  additionalMessage arose as a nice way to print
+//the context multiple times and still be able to keep straight which printout
+//was associated with which call to debug_checkCurrentContextX by specifying
+//unique additionalMessages each time the function was called.
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additionalMessage)
 {
     v8::HandleScope handle_scope;
@@ -116,12 +121,12 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
     Handle<Value> result;
     if (target->IsNull() || target->IsUndefined())
     {
-        JSLOG(debug,"ProtectedJSCallback without target given.");
+        JSLOG(insane,"ProtectedJSCallback without target given.");
         result = cb->Call(ctx->Global(), argc, argv);
     }
     else
     {
-        JSLOG(debug,"ProtectedJSCallback with target given.");
+        JSLOG(insane,"ProtectedJSCallback with target given.");
         result = cb->Call(target, argc, argv);
     }
 
@@ -136,7 +141,7 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 }
 
 
-bool recompileFunction(v8::Persistent<v8::Context>&ctx, v8::Handle<v8::Function>&cb)
+bool recompileFunction(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>cb)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
@@ -161,12 +166,11 @@ bool recompileFunction(v8::Persistent<v8::Context>&ctx, v8::Handle<v8::Function>
         return false;
     }
 
-
     return true;
 }
 
 
-void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> &ctx, v8::Handle<v8::Object>& target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
+void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
 
@@ -205,12 +209,12 @@ void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> &ctx, v8::Handle<v
     Handle<Value> result;
     if (target->IsNull() || target->IsUndefined())
     {
-        JSLOG(debug,"ProtectedJSCallback without target given.");
+        JSLOG(insane,"ProtectedJSCallback without target given.");
         result = funcInCtx->Call(ctx->Global(), argc, argv);
     }
     else
     {
-        JSLOG(debug,"ProtectedJSCallback with target given.");
+        JSLOG(insane,"ProtectedJSCallback with target given.");
         result = funcInCtx->Call(target, argc, argv);
     }
 
@@ -761,37 +765,39 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 
 
 /*
-  executeInContext takes in a context, 
+  executeInContext takes in a context, that you want to execute the function
+  funcToCall in.  argv are the arguments to funcToCall from the current context,
+  and are counted by argc.
  */
-v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Persistent<v8::Object>& thisObject,v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
     JSLOG(insane, "executing script in alternate context");
 
-
-    //std::cout<<"\n\n**********************************Peeling inner contexts off inside of executeInContext\n";
     std::vector<v8::Handle<v8::Context> >contextVec;
     while(v8::Context::InContext())
     {
-        std::cout<<"\n\nRemoving inContext\n\n";
+        JSLOG(insane, "peeling away previous context I was in.");
         contextVec.push_back(v8::Context::GetCurrent());
-        //debug_checkCurrentContextX(v8::Context::GetCurrent(),"externalcontext");
         v8::Context::GetCurrent()->Exit();
     }
 
-    // lkjs;
-    //std::cout<<"\n\n**********************************Entering new context and checking its properties inside of executeInContext\n";
+    //entering new context associated with
+    JSLOG(insane, "entering new context associated with JSContextStruct.");
     contExecIn->Enter();
-    //debug_checkCurrentContextX(v8::Context::GetCurrent(),"behram context");
-    
-    ProtectedJSFunctionInContext(contExecIn, thisObject, funcToCall, argc, argv);
 
+    JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");    
+    ProtectedJSFunctionInContext(contExecIn, v8::Handle<v8::Object>::Cast(v8::Undefined()),funcToCall, argc, argv);
     
+    JSLOG(insane, "Exiting new context associated with JSContextStruct.");    
     contExecIn->Exit();
     
     //restore previous contexts
     std::vector<v8::Handle<v8::Context> >::reverse_iterator revIt;
     for (revIt= contextVec.rbegin(); revIt != contextVec.rend(); ++revIt)
+    {
+        JSLOG(insane, "restoring previous context I was in.");
         (*revIt)->Enter();
+    }
     
     JSLOG(insane, "execution in alternate context complete");
     return v8::Undefined();

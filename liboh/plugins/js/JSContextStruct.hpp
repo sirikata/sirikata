@@ -17,24 +17,9 @@ class JSObjectScript;
 struct JSContextStruct
 {
     JSContextStruct(JSObjectScript* parent)
-        : jsObjScript(parent)
+     : jsObjScript(parent),
+       mContext(v8::Context::New())
         {
-            v8::HandleScope handle_scope;
-            thisObject = v8::Persistent<v8::Object>::New(v8::Object::New());  //this object
-                                                             //corresponds to
-                                                             //the this
-                                                             //parameter that
-                                                             //will be available
-                                                             //in the executed function.
-
-
-            v8::Handle<v8::ObjectTemplate> tmpglobal = v8::ObjectTemplate::New();
-            tmpglobal->Set(v8::String::New("debugBehramContext"),v8::String::New(" string for behram context"));
-            mContext= v8::Context::New(NULL,tmpglobal);
-            // bool setCorrect = mContext->Global()->SetInternalField(33, v8::String::New("another debugging string for you"));
-            // assert(setCorrect);
-            mContext->SetData(v8::String::New("Behram's data"));
-
         }
     
     ~JSContextStruct()
@@ -47,7 +32,6 @@ struct JSContextStruct
     //data
     JSObjectScript* jsObjScript;
     v8::Persistent<v8::Context> mContext;
-    v8::Persistent<v8::Object>  thisObject;
     
 };
 

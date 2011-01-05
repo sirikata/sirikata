@@ -10,7 +10,7 @@ namespace JS {
 
 v8::Handle<v8::Value> JSContextStruct::executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
-    return jsObjScript->executeInContext(mContext,thisObject,funcToCall, argc,argv);
+    return jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
 }
 
 

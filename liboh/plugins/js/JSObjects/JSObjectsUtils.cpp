@@ -3,7 +3,7 @@
 #include "JSObjectsUtils.hpp"
 #include "JSFields.hpp"
 #include <cassert>
-//#include "../JSPresenceStruct.hpp"
+
 
 
 namespace Sirikata{
