@@ -83,6 +83,43 @@ namespace {
 
 
 
+void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additionalMessage)
+{
+    v8::HandleScope handle_scope;
+
+    v8::Local<v8::Array> allProps = ctx->Global()->GetPropertyNames();
+
+    std::cout<<"\n\n\nDoing checkCurrentContext with value passed in of: "<<additionalMessage<<"\n\n";
+    std::vector<v8::Local<v8::Object> > propertyNames;
+    for (int s=0; s < allProps->Length(); ++s)
+    {
+        v8::Local<v8::Object>toPrint= v8::Local<v8::Object>::Cast(allProps->Get(s));
+        v8::String::Utf8Value value(toPrint);
+        const char* strVal = *value ? *value : "<string conversion failed>";
+
+        v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal));
+        v8::String::Utf8Value value2(valueToPrint->ToString());
+        const char* strVal2 = *value2 ? *value2 : "<string conversion failed>";
+        
+        std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
+    }
+
+    std::cout<<"\n\n";
+}
+    
+//     if (ctx->Global()->Has(v8::String::New("x")))
+//     {
+//         std::cout<<"\n\nAlready had x "<<additionalMessage<<"\n\n";
+//         std::cout.flush();
+//     }
+//     else
+//     {
+//         std::cout<<"\n\nDid not already have x "<<additionalMessage<<"\n\n";
+//         std::cout.flush();
+//     }
+// }
+
+
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
@@ -110,6 +147,56 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
         JSLOG(error, "Uncaught exception: " << cMsg);
     }
 }
+
+
+
+
+void ProtectedJSCallbackForce(v8::Persistent<v8::Context> &ctx, v8::Handle<v8::Object>& target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(ctx);
+
+
+    
+    TryCatch try_catch;
+
+    std::cout<<"\n\n**********************************Inside of ProtectedJSCallbackForce\n";
+    
+    Handle<Value> result;
+    if (target->IsNull() || target->IsUndefined())
+    {
+        JSLOG(debug,"ProtectedJSCallback without target given.");
+        result = cb->Call(ctx->Global(), argc, argv);
+    }
+    else
+    {
+        JSLOG(debug,"ProtectedJSCallback with target given.");
+        result = cb->Call(target, argc, argv);
+    }
+
+    debug_checkCurrentContextX(v8::Context::GetCurrent(),"*******inside of forced callback: before execution*******");
+    
+    v8::Local<v8::Value> contextAssociatedData = ctx->GetData();
+    if (!(contextAssociatedData->IsNull() || contextAssociatedData->IsUndefined()))
+    {
+        v8::String::Utf8Value value(contextAssociatedData);
+        const char* strVal = *value ? *value : "<string conversion failed>";
+
+        std::cout<<"\n\nDebug: this is strval: "<<strVal<<"\n\n";
+    }
+    else
+        assert(false);
+
+    debug_checkCurrentContextX(v8::Context::GetCurrent(),"*********inside of forced callback: after execution**********");
+    
+    if (result.IsEmpty())
+    {
+        // FIXME what should we do with this exception?
+        v8::String::Utf8Value error(try_catch.Exception());
+        const char* cMsg = ToCString(error);
+        JSLOG(error, "Uncaught exception: " << cMsg);
+    }
+}
+
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
     const int argc =
@@ -150,8 +237,7 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
  : mParent(ho),
-   mManager(jMan),
-   depth(0)
+   mManager(jMan)
 {
     
     OptionValue* init_script;
@@ -580,9 +666,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 {
     ScopedEvalContext sec(this, new_ctx);
 
-    //v8::Context::Scope context_scope(mContext);
-    mContext->Enter();
-    ++depth;
+    v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
     TryCatch try_catch;
 
@@ -629,8 +713,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
         v8::String::Utf8Value error(try_catch.Exception());
         std::string msg = std::string("Compile error: ") + std::string(*error);
         JSLOG(error, msg);
-        --depth;
-        mContext->Exit();
         return v8::ThrowException( v8::Exception::Error(v8::String::New(msg.c_str())) );
     }
 
@@ -639,8 +721,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     if (result.IsEmpty()) {
         v8::String::Utf8Value error(try_catch.Exception());
         JSLOG(error, "Uncaught exception: " << *error);
-        --depth;
-        mContext->Exit();
         return try_catch.Exception();
     }
 
@@ -648,10 +728,10 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
         v8::String::AsciiValue ascii(result);
         JSLOG(info, "Script result: " << *ascii);
     }
-    --depth;
-    mContext->Exit();
+
     return result;
 }
+
 
 
 /*
@@ -659,15 +739,34 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
  */
 v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Persistent<v8::Object>& thisObject,v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
-    JSLOG(info, "executing script in alternate context");
-    // mContext->Exit();
-    // mContext->Exit();
-//    v8::Handle<v8::Object> = v8::Context::GetCurrent()->DetachGlobal();
-    ProtectedJSCallback(contExecIn, thisObject, funcToCall, argc, argv);
-    // mContext->Enter();
-    // mContext->Enter();
+    JSLOG(insane, "executing script in alternate context");
 
-    JSLOG(info, "execution in alternate context complete");
+
+    std::cout<<"\n\n**********************************Peeling inner contexts off inside of executeInContext\n";
+    std::vector<v8::Handle<v8::Context> >contextVec;
+    while(v8::Context::InContext())
+    {
+        std::cout<<"\n\nRemoving inContext\n\n";
+        contextVec.push_back(v8::Context::GetCurrent());
+        debug_checkCurrentContextX(v8::Context::GetCurrent(),"externalcontext");
+        v8::Context::GetCurrent()->Exit();
+    }
+
+    // lkjs;
+    std::cout<<"\n\n**********************************Entering new context and checking its properties inside of executeInContext\n";
+    contExecIn->Enter();
+    debug_checkCurrentContextX(v8::Context::GetCurrent(),"behram context");
+    
+    ProtectedJSCallbackForce(contExecIn, thisObject, funcToCall, argc, argv);
+
+    contExecIn->Exit();
+    
+    //restore previous contexts
+    std::vector<v8::Handle<v8::Context> >::reverse_iterator revIt;
+    for (revIt= contextVec.rbegin(); revIt != contextVec.rend(); ++revIt)
+        (*revIt)->Enter();
+    
+    JSLOG(insane, "execution in alternate context complete");
     return v8::Undefined();
 }
 

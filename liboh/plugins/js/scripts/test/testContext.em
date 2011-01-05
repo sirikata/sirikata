@@ -18,6 +18,7 @@ function toExecute(argPassedIn, argPassedIn2)
 };
 
 newContext.execute(toExecute,32,system);
+newContext.execute(toExecute,32,system);
 
 function printXOnce()
 {

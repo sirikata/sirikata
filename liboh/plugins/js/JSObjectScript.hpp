@@ -219,7 +219,6 @@ private:
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-    int depth;
     
     // Handlers for presence connection events
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
