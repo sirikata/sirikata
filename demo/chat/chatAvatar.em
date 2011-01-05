@@ -1,23 +1,18 @@
-
 system.import("std/library.em");
+
 
 simulator = undefined;
 chat = undefined;
+chat_group = new Array();
+
 
 function sendAll(msg)
 {
-  for(var i = 0; i < addressable.length; i++)
+  for(var i = 0; i < chat_group.length; i++)
   {
-    if(addressable[i] != Self)
-    {
-      msg -> addressable[i];
-    }
+    msg -> chat_group[i];
   }
-
 }
-
-
-
 
 function ChatMsgObject(msg)
 {
@@ -40,9 +35,54 @@ function onChatFromNeighbor(msg, sender)
     chat.invoke("write", msg.chat );
 }
 
+function handleNewChatNeighbor(msg, sender)
+{
+  print("Got a new entity into the chat group");
+  // add this new member of the chat group
+  //check for duplicats
+  for(var i = 0; i < chat_group.length; i++)
+  {
+    if(chat_group[i].toString() == sender.toString())
+    {
+      return;
+    }
+  }
+
+  chat_group.push(sender);
+  var p = new system.Pattern("chat"); 
+  onChatFromNeighbor <- p <- sender;
+  
+}
+
+// arg here is an addressable object
+function proxAddedCallback(new_addr_obj)
+{
+  if(system.Self.toString() == new_addr_obj.toString())
+  {
+    print("\n\nGOT SELF in the proximity update\n\n");
+    return;
+  }
+  print("Got a new entity in proximity");
+  var test_msg = new Object();
+  test_msg.name = "get_protocol";
+  
+  //also register a callback
+  var p = new system.Pattern("protocol", "chat");
+  handleNewChatNeighbor <- p <- new_addr_obj;
+  test_msg -> new_addr_obj;
+}
+
+
+function onTestMessage(msg, sender)
+{
+  var reply = {"protocol":"chat"};
+  reply -> sender;
+}
 
 
 system.onPresenceConnected( function(pres) {
+                                system.print("\n\nGOT INTO ON PRESENCE CREATED\n\n");
+                                
     system.print("startupCamera connected " + pres);
     system.print(system.presences.length);
     if (system.presences.length == 1)
@@ -50,8 +90,10 @@ system.onPresenceConnected( function(pres) {
       simulator = pres.runSimulation("ogregraphics");
       chat = simulator.invoke("getChatWindow");
       chat.invoke("bind", "eventname", onChatMsgReceived);
-      p = new system.Pattern("chat");
-      onChatFromNeighbor <- p ;
+      var p  = new system.Pattern("name", "get_protocol");
+      onTestMessage <- p ;
+      system.presences[0].onProxAdded(proxAddedCallback);
+
     }
     else
     {
@@ -62,3 +104,7 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
+
+
+
+

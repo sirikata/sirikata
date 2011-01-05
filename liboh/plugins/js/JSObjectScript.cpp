@@ -218,8 +218,25 @@ void JSObjectScript::populateAddressable(const SpaceObjectReference& sporef)
 
     for (HostedObject::SpaceObjRefVec::iterator sporefIt = proxyObjNeighbors.begin(); sporefIt != proxyObjNeighbors.end(); ++ sporefIt)
     {
-        addAddressable(*sporefIt);
+        
+          addAddressable(*sporefIt);
+          
+          
     }
+    
+    HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    SpaceObjectReference* sp = new SpaceObjectReference(sporef);
+    //Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
+    Persistent<Object> newAddrObj = Persistent<Object>::New(mManager->mAddressableTemplate->NewInstance());
+    newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
+    newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sp));
+    getSystemObject()->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), newAddrObj);
+          
+
+
+
 }
 
 
