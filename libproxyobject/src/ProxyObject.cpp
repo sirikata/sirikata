@@ -129,7 +129,7 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
     ProxyObjectPtr ptr = getSharedPtr();
     assert(ptr);
-    MeshProvider::notify (&MeshListener::onSetScale, ptr, Vector3f(mBounds.radius(), mBounds.radius(), mBounds.radius()));
+    MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius());
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {

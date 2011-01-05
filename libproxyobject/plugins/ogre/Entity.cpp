@@ -126,6 +126,11 @@ Entity::Entity(OgreSystem *scene,
     mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
     unloadMesh();
+
+    mDestroyTimer = Network::IOTimer::create(
+        mScene->context()->ioService,
+        std::tr1::bind(&Entity::handleDestroyTimeout, this)
+    );
 }
 
 Entity::~Entity() {
@@ -256,11 +261,16 @@ void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedM
 }
 
 void Entity::validated() {
-    if (mOgreObject == NULL)
-        processMesh( mProxy->getMesh() );
+    mDestroyTimer->cancel();
+    processMesh( mProxy->getMesh() );
 }
 
 void Entity::invalidated() {
+    // To mask very quick removal/addition sequences, defer unloading
+    mDestroyTimer->wait(Duration::seconds(1));
+}
+
+void Entity::handleDestroyTimeout() {
     unloadMesh();
 }
 
@@ -442,6 +452,10 @@ void Entity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
     if (meshFile.empty())
+        return;
+
+    // If it's the same mesh *and* we still have it around just leave it alone
+    if (mURI == meshFile && mOgreObject)
         return;
 
     mURI = meshFile;
@@ -1182,9 +1196,9 @@ void Entity::handleMeshParsed(MeshdataPtr md) {
     }
 }
 
-void Entity::onSetScale (ProxyObjectPtr proxy, Vector3f const& scale )
+void Entity::onSetScale (ProxyObjectPtr proxy, float32 scale )
 {
-    mSceneNode->setScale ( toOgre ( scale ) );
+    updateScale(scale);
 }
 
 void Entity::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp )

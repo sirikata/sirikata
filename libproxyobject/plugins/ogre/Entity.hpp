@@ -38,6 +38,8 @@
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
 #include "OgreConversions.hpp"
+#include <sirikata/core/network/IOTimer.hpp>
+
 namespace Sirikata {
 namespace Graphics {
 class OgreSystem;
@@ -75,6 +77,7 @@ protected:
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
 
+    Network::IOTimerPtr mDestroyTimer;
 
     void fixTextures();
 
@@ -89,6 +92,7 @@ protected:
 
     void updateScale(float scale);
 
+    void handleDestroyTimeout();
 protected:
     void setOgrePosition(const Vector3d &pos);
 
@@ -167,7 +171,7 @@ public:
     // interface from MeshListener
     public:
         virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-        virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
+        virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     protected:
