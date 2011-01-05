@@ -1191,11 +1191,25 @@ objectLiteral
 	:^(OBJ_LITERAL 
 	   
 				{ APP("{ ");}
-	   (head=propertyNameAndValue)? 
-				( { APP(", "); } tail=propertyNameAndValue)*
-				{ APP(" } "); }
+	   
+		 
+		    head=propertyNameAndValue? 
+
+				( 
+				  { 
+					  APP(", "); 
+					} 
 				
+				  tail=propertyNameAndValue*
 				)
+			)
+
+				{ 
+				  APP(" } "); 
+				
+				}
+				
+				
 	;
 	
 propertyNameAndValue

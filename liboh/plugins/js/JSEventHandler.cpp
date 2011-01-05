@@ -42,11 +42,13 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
         
         if ( (*spref1)  != (*spref2))
         {
-            std::cout<<"\n\n\nThe senders do not match\n\n";
+            //std::cout<<"\n\n\nThe senders do not match\n\n";
             return false;
         }
         else
-            std::cout<<"\n\nThe senders match\n\n";
+				{
+            //std::cout<<"\n\nThe senders match\n\n";
+				}
     }
 
     
@@ -94,7 +96,9 @@ bool JSEventHandler::matches_old(v8::Handle<v8::Object> obj, v8::Handle<v8::Obje
         if (! (objRef1->getAsUUID() == objRef2->getAsUUID()))
             return false;
         else
-            std::cout<<"\n\nThe senders match\n\n";
+				{
+            //std::cout<<"\n\nThe senders match\n\n";
+				}
     }
         
 
