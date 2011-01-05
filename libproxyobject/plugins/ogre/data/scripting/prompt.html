@@ -1,7 +1,7 @@
 <html>
   <head>
     <style type="text/css">
-      p.command {
+      .command {
         border-width: 1px 1px 1px 1px;
         border-color: black;
         border-style: solid;
@@ -43,9 +43,26 @@
         var command_area = document.getElementById('Command');
         command_area.value = msg;
       }
+
+      function filterMessage(msg, node) {
+        // Filter a message for special characters and convert them to
+        // display nicely using html
+
+        // Convert tabs to 4 spaces
+        msg = msg.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;');
+
+        var sub_msgs = msg.split('\n');
+
+        for(var i = 0; i < sub_msgs.length; i++) {
+          var p = document.createElement('p');
+          node.appendChild( p );
+          p.appendChild( document.createTextNode(sub_msgs[i]) );
+        }
+      }
+
       function addMessage(msg) {
-        var new_p = document.createElement('p');
-        new_p.appendChild( document.createTextNode(msg) );
+        var new_p = document.createElement('div');
+        filterMessage(msg, new_p);
         new_p.className = 'command';
         var results_div = document.getElementById('Results');
         results_div.appendChild( new_p );
