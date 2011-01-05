@@ -1195,24 +1195,19 @@ arrayLiteral
 // objectLiteral definition.
 objectLiteral
   :^(OBJ_LITERAL 
-	    { APP("{ "); }
-		  (p1=propertyNameAndValue)?
-      { APP(" }"); }
+	    { APP("{ "); APP(" }"); }
     )
 	|^(OBJ_LITERAL 
 	   
 				{ APP("{ ");}
-	   
-		 
-		    head=propertyNameAndValue
-
+				propertyNameAndValue
 				( 
 				  { 
 					  APP(", "); 
 					} 
 				
-				  tail=propertyNameAndValue
-				)+
+				  propertyNameAndValue
+				)*
 
       	{ 
 				  APP(" } "); 

@@ -11,7 +11,7 @@ var MARKET_CHANNEL = undefined;
 
 /* Our pattern of interest is Books */
 //var patternOfInterest = new system.Pattern("pattern", "/*Books*/");
-var patternOfInterest = "/*Books*/";
+var patternOfInterest = "Books";
 
 /* create a subscription message */
 var subsObj = {"name":"subscribe", "pattern":patternOfInterest};

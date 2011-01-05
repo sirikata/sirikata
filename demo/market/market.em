@@ -75,7 +75,7 @@ function handleProtocolMessage(msg, sender)
 
 
 /* React to the advertisements */
-advReactor <- [new system.Pattern("name", "advertisement"), new system.Pattern("banner"), new system.Pattern("init_proto")];
+advReactor <- [new system.Pattern("name", "advertisement"), new system.Pattern("banner")];
 
 /* React to the subscriptions */
 subscriptionReactor <- [new system.Pattern("name", "subscribe"), new system.Pattern("pattern")];

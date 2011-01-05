@@ -10,7 +10,7 @@ var buy_proto = "get_books";
 
 
 /* fill in the banner object to send to the market */
-var bannerObj = {"name":"advertisement", "banner":"Books", "init_proto":"get_books"};
+var bannerObj = {"name":"advertisement", "banner":"Books"};
 
 
 var books_array = ["Introduction to Networking", "Harry Potter - 3"];

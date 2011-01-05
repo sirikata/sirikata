@@ -565,8 +565,8 @@ arrayLiteral
        
 // objectLiteral definition.
 objectLiteral
-  : '{' LTERM* (p1=propertyNameAndValue)? LTERM* '}' -> ^(OBJ_LITERAL $p1?)
-	| '{' LTERM* p1=propertyNameAndValue (LTERM* ',' (LTERM* p2=propertyNameAndValue))+ LTERM* '}' -> ^(OBJ_LITERAL $p1 $p2+)
+  : '{' LTERM*  '}' -> ^(OBJ_LITERAL)
+	| '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL $p1 $p2*) 
 	;
 	
 propertyNameAndValue
