@@ -106,19 +106,6 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additio
 
     std::cout<<"\n\n";
 }
-    
-//     if (ctx->Global()->Has(v8::String::New("x")))
-//     {
-//         std::cout<<"\n\nAlready had x "<<additionalMessage<<"\n\n";
-//         std::cout.flush();
-//     }
-//     else
-//     {
-//         std::cout<<"\n\nDid not already have x "<<additionalMessage<<"\n\n";
-//         std::cout.flush();
-//     }
-// }
-
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
@@ -149,45 +136,84 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 }
 
 
+bool recompileFunction(v8::Persistent<v8::Context>&ctx, v8::Handle<v8::Function>&cb)
+{
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(ctx);
+    
+    TryCatch try_catch;
+    v8::Local<v8::String> functionString = cb->ToString();
 
 
-void ProtectedJSCallbackForce(v8::Persistent<v8::Context> &ctx, v8::Handle<v8::Object>& target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
+    v8::Handle<v8::Script> script = v8::Script::Compile(functionString);
+    if (script.IsEmpty()) {
+        v8::String::Utf8Value error(try_catch.Exception());
+        std::string msg = std::string("Compile error: ") + std::string(*error);
+        JSLOG(error, msg);
+        return false;
+    }
+
+    // Execute
+    v8::Handle<v8::Value> result = script->Run();
+    if (result.IsEmpty()) {
+        v8::String::Utf8Value error(try_catch.Exception());
+        JSLOG(error, "Uncaught exception: " << *error);
+        return false;
+    }
+
+
+    return true;
+}
+
+
+void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> &ctx, v8::Handle<v8::Object>& target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
 
-
-    
     TryCatch try_catch;
 
-    std::cout<<"\n\n**********************************Inside of ProtectedJSCallbackForce\n";
+    bool compileCorrect = recompileFunction(ctx,cb);
+    if (! compileCorrect)
+        return;
+
+    v8::Handle<v8::Value> funcName = cb->GetName();
+    v8::String::Utf8Value v8funcNameString (funcName->ToString());
+    const char* funcNameCStr = ToCString(v8funcNameString);
+
+    if ( ! v8::Context::GetCurrent()->Global()->Has(funcName->ToString()))
+    {
+        JSLOG(error, "Uncaught exception: do not have the function name: "<< funcNameCStr <<" in current context.");
+        return;
+    }
+
+    v8::Handle<v8::Value> compiledFunctionValue = v8::Context::GetCurrent()->Global()->Get(funcName->ToString());
+    if (! compiledFunctionValue->IsObject())
+    {
+        JSLOG(error, "Uncaught exception: name is not associated with an object: "<< funcNameCStr <<" in current context.");        
+        return;
+    }
+
+    v8::Handle<v8::Object>  compiledFunction = compiledFunctionValue->ToObject();
+    if (! compiledFunction->IsFunction())
+    {
+        JSLOG(error, "Uncaught exception: name is not associated with a function: "<< funcNameCStr <<" in current context.");        
+        return;
+    }
+    
+    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
     
     Handle<Value> result;
     if (target->IsNull() || target->IsUndefined())
     {
         JSLOG(debug,"ProtectedJSCallback without target given.");
-        result = cb->Call(ctx->Global(), argc, argv);
+        result = funcInCtx->Call(ctx->Global(), argc, argv);
     }
     else
     {
         JSLOG(debug,"ProtectedJSCallback with target given.");
-        result = cb->Call(target, argc, argv);
+        result = funcInCtx->Call(target, argc, argv);
     }
 
-    debug_checkCurrentContextX(v8::Context::GetCurrent(),"*******inside of forced callback: before execution*******");
-    
-    v8::Local<v8::Value> contextAssociatedData = ctx->GetData();
-    if (!(contextAssociatedData->IsNull() || contextAssociatedData->IsUndefined()))
-    {
-        v8::String::Utf8Value value(contextAssociatedData);
-        const char* strVal = *value ? *value : "<string conversion failed>";
-
-        std::cout<<"\n\nDebug: this is strval: "<<strVal<<"\n\n";
-    }
-    else
-        assert(false);
-
-    debug_checkCurrentContextX(v8::Context::GetCurrent(),"*********inside of forced callback: after execution**********");
-    
     if (result.IsEmpty())
     {
         // FIXME what should we do with this exception?
@@ -742,23 +768,24 @@ v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Contex
     JSLOG(insane, "executing script in alternate context");
 
 
-    std::cout<<"\n\n**********************************Peeling inner contexts off inside of executeInContext\n";
+    //std::cout<<"\n\n**********************************Peeling inner contexts off inside of executeInContext\n";
     std::vector<v8::Handle<v8::Context> >contextVec;
     while(v8::Context::InContext())
     {
         std::cout<<"\n\nRemoving inContext\n\n";
         contextVec.push_back(v8::Context::GetCurrent());
-        debug_checkCurrentContextX(v8::Context::GetCurrent(),"externalcontext");
+        //debug_checkCurrentContextX(v8::Context::GetCurrent(),"externalcontext");
         v8::Context::GetCurrent()->Exit();
     }
 
     // lkjs;
-    std::cout<<"\n\n**********************************Entering new context and checking its properties inside of executeInContext\n";
+    //std::cout<<"\n\n**********************************Entering new context and checking its properties inside of executeInContext\n";
     contExecIn->Enter();
-    debug_checkCurrentContextX(v8::Context::GetCurrent(),"behram context");
+    //debug_checkCurrentContextX(v8::Context::GetCurrent(),"behram context");
     
-    ProtectedJSCallbackForce(contExecIn, thisObject, funcToCall, argc, argv);
+    ProtectedJSFunctionInContext(contExecIn, thisObject, funcToCall, argc, argv);
 
+    
     contExecIn->Exit();
     
     //restore previous contexts
