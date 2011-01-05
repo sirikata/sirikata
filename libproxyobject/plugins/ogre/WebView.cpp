@@ -1199,35 +1199,27 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
   }
 
   // This will write message from the script to the graphics window
-  if(name == "write")
+  if(name == "eval")
   {
-    // get the params[1] for the value of the message to be writte on the window
+      if (params.size() != 2) {
+          SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects 2 arguments." );
+          return boost::any();
+      }
+      if (params[1].empty()) return boost::any();
+      if (params[1].type() != typeid(std::string)) {
+          SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects string argument." );
+          return boost::any();
+      }
 
-    std::string msg="";
-    if(!params[1].empty() && params[1].type() == typeid(std::string) )
-    {
-      msg = boost::any_cast<std::string>(params[1]);
-    }
+      std::string jsscript = boost::any_cast<std::string>(params[1]);
+      if (jsscript.empty()) return boost::any();
 
-    if(msg.empty()) return boost::any();
+      // whenthe jsscript is not empty
+      evaluateJS(jsscript);
 
-    // whenthe msg is not empty
-    // FIXME: we need to escape strings
-    String jsScript = String("addMessage(\"") +msg + String("\")");
-    evaluateJS(jsScript);
-
-    //JSArguments args;
-    //args.push_back(JSArgument("ExecScript"));
-    //args.push_back(JSArgument("Command"));
-    //args.push_back(JSArgument(msg.data()));
-
-    //WebViewManager::getSingletonPtr()->onRaiseWebViewEvent(this, *const_cast<JSArguments*>(&args));
-
-
-    return boost::any();
-
+      // FIXME return value
+      return boost::any();
   }
-
 
   return boost::any();
 }

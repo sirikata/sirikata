@@ -32,7 +32,8 @@ function onChatMsgReceived(msg)
 function onChatFromNeighbor(msg, sender)
 {
     print("Got chat: " + msg.chat + ": from neigbor " + sender);
-    chat.invoke("write", msg.chat );
+    // FIXME escape string
+    chat.invoke('eval', 'addMessage("' +  msg.chat + '")' );
 }
 
 function handleNewChatNeighbor(msg, sender)
@@ -104,7 +105,3 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
-
-
-
-

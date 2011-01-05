@@ -41,7 +41,8 @@ function onChatMsgReceived(msg)
 function onChatFromNeighbor(msg, sender)
 {
     print("Got chat: " + msg.chat + ": from neigbor " + sender);
-    chat.invoke("write", msg.chat );
+    // FIXME escape string
+    chat.invoke("eval", 'addMessage("' + msg.chat + '")' );
 }
 
 
