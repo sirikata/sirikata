@@ -1,0 +1,12 @@
+#TO run the tests.
+
+sh run_test.sh
+
+Add a new test case as a foo.em file in the tests/ directory. Generate the reference file foo.ref 
+
+build/cmake/emerson foo.em >& foo.ref
+
+Check the generated code in foo.ref  against Javascript compiler at build/cmake/jscompile. If it compiles => foo.ref is correct
+
+copy this foo.ref into the refs/ directory.  Run the tests to make sure they are passing
+
