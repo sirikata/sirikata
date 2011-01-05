@@ -1164,51 +1164,62 @@ primaryExpression
 	
 // arrayLiteral definition.
 arrayLiteral
-	: ^(ARRAY_LITERAL
+  : ^(ARRAY_LITERAL 
+	     { APP("[ "); }
+       (head=assignmentExpression)?
+			 { APP(" ]"); }
+	   )
+
+	| ^(ARRAY_LITERAL
 	       {
 								  APP("[ ");
 			 	}
 
 
-	       head=assignmentExpression? 
+	       head=assignmentExpression
       	
 	       (
 				   {
 					   APP(", ");
 					 }
-				   tail=assignmentExpression*
-			   )
+				   tail=assignmentExpression
+			   )+
+         {
+				   APP(" ] ");
+				}
+
 			)
 
-        {
-								  APP(" ] ");
-
-								}
-	;
+       	;
        
 // objectLiteral definition.
 objectLiteral
-	:^(OBJ_LITERAL 
+  :^(OBJ_LITERAL 
+	    { APP("{ "); }
+		  (p1=propertyNameAndValue)?
+      { APP(" }"); }
+    )
+	|^(OBJ_LITERAL 
 	   
 				{ APP("{ ");}
 	   
 		 
-		    head=propertyNameAndValue? 
+		    head=propertyNameAndValue
 
 				( 
 				  { 
 					  APP(", "); 
 					} 
 				
-				  tail=propertyNameAndValue*
-				)
-			)
+				  tail=propertyNameAndValue
+				)+
 
-				{ 
+      	{ 
 				  APP(" } "); 
 				
 				}
-				
+
+			)
 				
 	;
 	
