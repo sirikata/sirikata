@@ -56,6 +56,8 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
     mDefaultPort = mParent->bindODPPort(owner_sor);
 
     reset();
+
+    validate();
 }
 
 
@@ -65,6 +67,14 @@ ProxyObject::~ProxyObject() {
 
 void ProxyObject::reset() {
     memset(mUpdateSeqno, 0, LOC_NUM_PART * sizeof(uint64));
+}
+
+void ProxyObject::validate() {
+    ProxyObjectProvider::notify(&ProxyObjectListener::validated);
+}
+
+void ProxyObject::invalidate() {
+    ProxyObjectProvider::notify(&ProxyObjectListener::invalidated);
 }
 
 void ProxyObject::destroy() {
@@ -119,7 +129,7 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
     ProxyObjectPtr ptr = getSharedPtr();
     assert(ptr);
-    MeshProvider::notify (&MeshListener::onSetScale, ptr, Vector3f(mBounds.radius(), mBounds.radius(), mBounds.radius()));
+    MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius());
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {

@@ -75,7 +75,16 @@ typedef Provider< MeshListener* > MeshProvider;
 /** Interface to listen for the destruction of a ProxyObject so one can discard any shared references to it. */
 class SIRIKATA_PROXYOBJECT_EXPORT ProxyObjectListener {
 public:
-    virtual ~ProxyObjectListener(){}
+    virtual ~ProxyObjectListener() {}
+    // Invoked when the object enters the result set.  Updates will start
+    // flowing in for this object. Note that this could be called as opposed to
+    // the actual creation of the ProxyObject, because the ProxyObject still
+    // exists but had already been invalidated.
+    virtual void validated() = 0;
+    // Invoked when the object falls out of the result set. No further updates
+    // will be received.
+    virtual void invalidated() = 0;
+    // Invoked when the ProxyObject is actually destroyed.
     virtual void destroyed() = 0;
 };
 
@@ -195,6 +204,16 @@ public:
 
     // Resets the state of this proxy as if it had been freshly created
     void reset();
+
+    /** Marks this ProxyObject as validated, which indicates that updates about
+     *  the object's properties will be provided by the system.
+     */
+    void validate();
+    /** Marks this ProxyObject as invalidated, which indicates that although
+     *  messages can still be sent and the last values of properties are
+     *  available, no further updates will be received.
+     */
+    void invalidate();
 
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;

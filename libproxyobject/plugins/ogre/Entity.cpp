@@ -126,6 +126,11 @@ Entity::Entity(OgreSystem *scene,
     mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
     unloadMesh();
+
+    mDestroyTimer = Network::IOTimer::create(
+        mScene->context()->ioService,
+        std::tr1::bind(&Entity::handleDestroyTimeout, this)
+    );
 }
 
 Entity::~Entity() {
@@ -253,6 +258,20 @@ void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedM
         setOgreOrientation(newOrient.position());
     }
     updateScale( newBounds.radius() );
+}
+
+void Entity::validated() {
+    mDestroyTimer->cancel();
+    processMesh( mProxy->getMesh() );
+}
+
+void Entity::invalidated() {
+    // To mask very quick removal/addition sequences, defer unloading
+    mDestroyTimer->wait(Duration::seconds(1));
+}
+
+void Entity::handleDestroyTimeout() {
+    unloadMesh();
 }
 
 void Entity::destroyed() {
@@ -390,7 +409,7 @@ void Entity::loadMesh(const String& meshname)
 }
 
 void Entity::unloadMesh() {
-    Ogre::Entity * meshObj=getOgreEntity();
+    Ogre::Entity* meshObj = getOgreEntity();
     //init(getScene()->getSceneManager()->createEntity(ogreMovableName(), Ogre::SceneManager::PT_CUBE));
     init(NULL);
     if (meshObj) {
@@ -432,15 +451,12 @@ void Entity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
 
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
-    Ogre::Entity* meshObj = getOgreEntity();
-
-    if (meshFile.empty()) {
-        if (meshObj) setVisible(false);
+    if (meshFile.empty())
         return;
-    }
 
-    if (meshObj)
-        setVisible(true);
+    // If it's the same mesh *and* we still have it around just leave it alone
+    if (mURI == meshFile && mOgreObject)
+        return;
 
     mURI = meshFile;
     mURIString = meshFile.toString();
@@ -1180,9 +1196,9 @@ void Entity::handleMeshParsed(MeshdataPtr md) {
     }
 }
 
-void Entity::onSetScale (ProxyObjectPtr proxy, Vector3f const& scale )
+void Entity::onSetScale (ProxyObjectPtr proxy, float32 scale )
 {
-    mSceneNode->setScale ( toOgre ( scale ) );
+    updateScale(scale);
 }
 
 void Entity::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp )
