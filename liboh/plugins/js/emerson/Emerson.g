@@ -458,7 +458,7 @@ equalityExpression
 equalityOps
 :  '==' -> ^(EQUALS)
 | '!=' -> ^(NOT_EQUALS)
-| '==' -> ^(IDENT)
+| '===' -> ^(IDENT)
 | '!==' -> ^(NOT_IDENT)
 ;
 
