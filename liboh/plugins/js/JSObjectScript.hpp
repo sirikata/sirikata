@@ -96,12 +96,12 @@ public:
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
 
-    
+
     //this function returns a context with
     v8::Handle<v8::Value> createContext();
 
 
-    
+
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -178,7 +178,7 @@ public:
 
     v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo);
     v8::Handle<v8::Value> printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo);
-    
+
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
@@ -221,7 +221,7 @@ private:
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-    
+
     // Handlers for presence connection events
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
     v8::Persistent<v8::Function> mOnPresenceDisconnectedHandler;
@@ -262,16 +262,19 @@ private:
     void initializeVisible(Handle<Object>&system_obj);
 
     void printVisibleArray();
-    
+
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
     void removePresence(const SpaceObjectReference& sporef);
+
+    // Adds the Self field
+    void addSelfField(const SpaceObjectReference& name);
 
     v8::Local<v8::Object> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     v8::Local<v8::Object> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
 
-    
+
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
