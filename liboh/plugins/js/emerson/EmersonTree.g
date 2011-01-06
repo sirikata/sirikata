@@ -293,12 +293,12 @@ ifStatement
      
 				statement 
 				 {
-					  //printf(" } \n");
+					  APP(" \n");
 					}
      
 				(
 				 {
-					  APP("else");
+					  APP(" else ");
 					}
 				 statement
 				 
@@ -960,7 +960,7 @@ equalityExpression
 	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
 	| ^(NOT_EQUALS e=equalityExpression {APP(" != ");} relationalExpression)
 	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {APP(" !=== ");} relationalExpression)
+	| ^(NOT_IDENT e=equalityExpression {APP(" !== ");} relationalExpression)
 ;
 
 equalityExpressionNoIn
