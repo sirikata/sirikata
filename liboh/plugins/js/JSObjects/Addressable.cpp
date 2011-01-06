@@ -27,7 +27,7 @@ v8::Handle<v8::Value> toString(const v8::Arguments& args)
         std::cout<<"This is args.Length(): "<<args.Length()<<"\n\n";
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to toString method of Addressable")));
     }
-    
+
     JSObjectScript*         caller;
     SpaceObjectReference*   sporef;
 
@@ -40,7 +40,7 @@ v8::Handle<v8::Value> toString(const v8::Arguments& args)
   //std::string s = oref->toString();
   std::string s = sporef->toString();
   v8::Local<v8::String> ret = v8::String::New(s.c_str(), s.length());
-  v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret); 
+  v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret);
 
   return pret;
 }
@@ -50,7 +50,7 @@ v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 {
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to __debugRef")) );
-    
+
     JSObjectScript* caller;
     SpaceObjectReference* sporef;
     if (! decodeAddressable(args[0],caller,sporef))
@@ -71,13 +71,13 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
     //first need to extract out the sending jsobjectscript and oref
     JSObjectScript* caller;
     SpaceObjectReference* sporef;
-        
+
     if (! decodeAddressable(args.This(),caller,sporef))
     {
         std::cout<<"\n\nInside of addressableSendMessageFunction\n\n";
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters: require you to send through an addressable object")) );
     }
-        
+
     //then need to read the object
     v8::Handle<v8::Value> messageBody = args[0];
     if(!messageBody->IsObject())
@@ -91,10 +91,10 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
     {
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Message not being sent from a valid presence in addressableSendMessage.")) );
     }
-    
+
     //actually send the message to the entity
     caller->sendMessageToEntity(sporef,jsps->sporef,serialized_message);
-    
+
     return v8::Undefined();
 }
 
@@ -115,7 +115,7 @@ bool decodeAddressable(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjSc
         std::cout<<"\n\nReturning false from decodeAddressable 1\n\n";
         return false;
     }
-    
+
     v8::Handle<v8::Object>senderer = v8::Handle<v8::Object>::Cast(senderVal);
     return decodeAddressable(senderer,jsObjScript,sporef);
 }
@@ -123,7 +123,7 @@ bool decodeAddressable(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjSc
 
 bool decodeAddressable(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef)
 {
-    if (senderVal->InternalFieldCount() == ADDRESSABLE_FIELD_COUNT)
+    if (senderVal->InternalFieldCount() == ADDRESSABLE_FIELD_COUNT || senderVal->InternalFieldCount() == VISIBLE_FIELD_COUNT)
     {
         //decode the jsobject script field
         v8::Local<v8::External> wrapJSObj;
@@ -141,7 +141,7 @@ bool decodeAddressable(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjS
         //decode the spaceobjectreference field
         v8::Local<v8::External> wrapSpaceObjRef;
         wrapSpaceObjRef = v8::Local<v8::External>::Cast(senderVal->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
-        
+
         void* ptr2 = wrapSpaceObjRef->Value();
 
         sporef = static_cast<SpaceObjectReference*>(ptr2);
@@ -169,5 +169,3 @@ bool decodeAddressable(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjS
 }//end jsaddressable namespace
 }//end js namespace
 }//end sirikata
-
-
