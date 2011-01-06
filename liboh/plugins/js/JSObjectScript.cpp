@@ -685,7 +685,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     if (!result->IsUndefined()) {
         v8::String::AsciiValue ascii(result);
-        JSLOG(info, "Script result: " << *ascii);
+        JSLOG(detailed, "Script result: " << *ascii);
     }
 
     return result;
