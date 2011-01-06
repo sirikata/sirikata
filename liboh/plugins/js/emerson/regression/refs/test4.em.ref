@@ -11,20 +11,14 @@ else if(a === b)
 {
   print("a === b");
 }
-
-
 else if(a != b)
 {
   print("a != b");
 }
-
-
 else if(a !== b)
 {
   print(" a !== b");
 }
-
-
 
 
 Emerson Tree after parsing 

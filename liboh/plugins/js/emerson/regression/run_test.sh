@@ -13,13 +13,15 @@ TESTS=`ls $TEST_DIR`
 
 
 $RM *.em.out
+$RM *.em.diff
 
 for file in $TESTS
  do
    $EMERSON_EXEC "$TEST_DIR/$file" 2> "$file.out"
-    if [ $? -ne 0 ]
+   $DIFF "$file.out" "$REF_DIR/$file.ref" > "$file.diff" 
+   size=`stat -c%s "$file.diff"`
+   if [ $size -ne 0 ]
       then
-         $DIFF "$file.out" "$REF_DIR/$file.ref" > "$file.diff" 
          $ECHO " $file FAILED" 
     else
       $ECHO "$file PASSED"

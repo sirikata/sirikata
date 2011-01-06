@@ -1,0 +1,41 @@
+Trying to compile 
+ 
+
+// testing object literals and the array literals
+
+
+//object
+
+var x = {};
+
+
+var x = {a:1}
+
+x = { a:1, b:2};
+
+x = {a:1, b:2 , c:3 }
+
+
+
+// arrays
+
+var y = [];
+
+y = [1, 2];
+
+y = [1, 2, 3];
+
+
+
+
+Emerson Tree after parsing 
+(PROG (VARLIST (VAR x (COND_EXPR (POSTEXPR )))) (VARLIST (VAR x (COND_EXPR (POSTEXPR (OBJ_LITERAL (NAME_VALUE a (COND_EXPR (POSTEXPR 1)))))))) (EXPR_LIST (ASSIGN x (COND_EXPR (POSTEXPR (OBJ_LITERAL (NAME_VALUE a (COND_EXPR (POSTEXPR 1))) (NAME_VALUE b (COND_EXPR (POSTEXPR 2)))))))) (EXPR_LIST (ASSIGN x (COND_EXPR (POSTEXPR (OBJ_LITERAL (NAME_VALUE a (COND_EXPR (POSTEXPR 1))) (NAME_VALUE b (COND_EXPR (POSTEXPR 2))) (NAME_VALUE c (COND_EXPR (POSTEXPR 3)))))))) (VARLIST (VAR y (COND_EXPR (POSTEXPR )))) (EXPR_LIST (ASSIGN y (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 1)) (COND_EXPR (POSTEXPR 2))))))) (EXPR_LIST (ASSIGN y (COND_EXPR (POSTEXPR (ARRAY_LITERAL (COND_EXPR (POSTEXPR 1)) (COND_EXPR (POSTEXPR 2)) (COND_EXPR (POSTEXPR 3))))))))
+The generated code is 
+ var x = { };
+var x = { a : 1 };
+x  =  { a : 1, b : 2 } ;
+x  =  { a : 1, b : 2, c : 3 } ;
+var y = [ ];
+y  =  [ 1, 2 ] ;
+y  =  [ 1, 2, 3 ] ;
+ 

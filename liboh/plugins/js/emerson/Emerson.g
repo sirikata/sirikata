@@ -414,7 +414,7 @@ logicalORExpression
 	: (logicalANDExpression -> logicalANDExpression)(LTERM* '||' LTERM* logicalANDExpression -> ^(OR $logicalORExpression logicalANDExpression) )*
 	;
 	
-	logicalANDExpression
+logicalANDExpression
 	: (bitwiseORExpression -> bitwiseORExpression)(LTERM* '&&' LTERM* bitwiseORExpression  -> ^(AND $logicalANDExpression bitwiseORExpression) )*
 	;
 	
@@ -559,14 +559,14 @@ primaryExpression
 	
 // arrayLiteral definition.
 arrayLiteral
-  : '[' LTERM* (e=assignmentExpression)? LTERM* ']' -> ^(ARRAY_LITERAL $e?)
-	| '[' LTERM* e1=assignmentExpression (LTERM* ',' (LTERM* e2=assignmentExpression))+ LTERM* ']' -> ^(ARRAY_LITERAL $e1 $e2+)
+  : '[' LTERM* (assignmentExpression)? LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression?)
+	| '[' LTERM* e1=assignmentExpression (',' LTERM* e2=assignmentExpression)* LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression assignmentExpression*)
 	;
        
 // objectLiteral definition.
 objectLiteral
-  : '{' LTERM*  '}' -> ^(OBJ_LITERAL)
-	| '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL $p1 $p2*) 
+  : '{' LTERM* propertyNameAndValue? LTERM* '}' -> ^(OBJ_LITERAL propertyNameAndValue?)
+	| '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
 	;
 	
 propertyNameAndValue
