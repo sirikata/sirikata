@@ -56,10 +56,6 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OH_OPTIONS,"",OptionValueType<String>(),"Options passed to the object host"))
         .addOption(new OptionValue(OPT_MAIN_SPACE,"12345678-1111-1111-1111-DEFA01759ACE",OptionValueType<UUID>(),"space which to connect default objects to"))
-        .addOption(new OptionValue(OPT_SPACEID_MAP,
-                "12345678-1111-1111-1111-DEFA01759ACE:{127.0.0.1:5943}",
-                OptionValueType<std::map<std::string,std::string> >(),
-                "Map between space ID's and TCPSST IPs."))
 
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
 
