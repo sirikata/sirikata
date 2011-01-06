@@ -1338,12 +1338,6 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
 v8::Handle<v8::Value> JSObjectScript::createContext()
 {
     v8::HandleScope handle_scope;
-//    v8::Context::Scope context_scope(mContext);
-
-
-    // v8::HandleScope handle_scope;
-    // mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
-    // Local<Object> global_obj = mContext->Global();
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this)));
@@ -1353,8 +1347,8 @@ v8::Handle<v8::Value> JSObjectScript::createContext()
 
 
 
-
-void JSObjectScript::removePresence(const SpaceObjectReference& sporef) {
+void JSObjectScript::removePresence(const SpaceObjectReference& sporef)
+{
     // Find and remove from internal storage
     PresenceMap::iterator internal_it = mPresences.find(sporef);
     if (internal_it == mPresences.end()) {

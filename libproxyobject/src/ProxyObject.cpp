@@ -109,7 +109,9 @@ void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, b
     if (seqno < mUpdateSeqno[LOC_POS_PART] && !predictive) return;
 
     if (!predictive) mUpdateSeqno[LOC_POS_PART] = seqno;
+
     mLoc = reqloc;
+
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 

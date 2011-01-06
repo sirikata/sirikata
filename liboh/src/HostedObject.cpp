@@ -617,8 +617,18 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (update.has_location()) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-        loc = TimedMotionVector3f(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
+        Time locTime = localTime(space,update_loc.t());
+//        loc = TimedMotionVector3f(localTime(space, update_loc.t()),
+//        MotionVector3f(update_loc.position(), update_loc.velocity()));
+        loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
 
+        //lkjs;
+        std::cout<<"\n\nbftm debug: \n";
+        std::cout<<"This is updated loc position: "<<update_loc.position()<<"\n";
+        std::cout<<"This is updated loc velocity: "<<update_loc.velocity()<<"\n";
+        std::cout<<"This is time associated with location updated: "<<update_loc.t().raw()<<"\n";
+        std::cout<<"This is the time associated with localTime stuff: "<<locTime.raw()<<"\n\n";
+        
         CONTEXT_OHTRACE(objectLoc,
             getUUID(),
             update.object(),
@@ -910,7 +920,9 @@ void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectRefer
 void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos)
 {
     Vector3f curVel = requestCurrentVelocity(space,oref);
-    TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(pos,curVel));
+    //TimedMotionVector3f tmv
+    //(currentSpaceTime(space),MotionVector3f(pos,curVel));
+    TimedMotionVector3f tmv (currentLocalTime(),MotionVector3f(pos,curVel));
     requestLocationUpdate(space,oref,tmv);
 }
 
@@ -919,7 +931,15 @@ void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectRefer
 void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectReference& oref, const Vector3f& vel)
 {
     Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
-    TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(curPos,vel));
+
+    std::cout<<"\n\nbftm debug This is my current position: "<<curPos<<"\n";
+    //std::cout<<"time:"<<currentSpaceTime(space).raw()<<"\n\n";
+    std::cout<<"time:"<<currentLocalTime().raw()<<"\n\n";
+    //lkjs;
+    
+    //TimedMotionVector3f
+    //tmv(currentSpaceTime(space),MotionVector3f(curPos,vel));
+    TimedMotionVector3f tmv(currentLocalTime(),MotionVector3f(curPos,vel));
     requestLocationUpdate(space,oref,tmv);
 }
 
@@ -927,7 +947,9 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
 void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref,const Quaternion& quat)
 {
     Quaternion curQuatVel = requestCurrentQuatVel(space,oref);
-    TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(quat,curQuatVel));
+    //TimedMotionQuaternion tmq
+    //(Time::local(),MotionQuaternion(quat,curQuatVel));
+    TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(quat,curQuatVel));
     requestOrientationUpdate(space,oref, tmq);
 }
 

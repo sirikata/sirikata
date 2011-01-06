@@ -180,6 +180,8 @@ void LocationService::notifyLocalLocationUpdated(const UUID& uuid, bool agg, con
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
             it->listener->localLocationUpdated(uuid, agg, newval);
+
+    std::cout<<"\n\nbftm debug in LocationService.cpp.  local location updated.  this is new val: "<<newval.position()<<"\n";
 }
 
 void LocationService::notifyLocalOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval) const {

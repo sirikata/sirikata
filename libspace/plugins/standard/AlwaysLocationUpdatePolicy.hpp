@@ -289,6 +289,9 @@ private:
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
+
+                    std::cout<<"\nbftm debug in AlwaysLocationUpdatePolicy.hpp.  This is the new position that I'm going to update with: "<<up_it->second.location.position()<<"\n\n";
+                    
                     location.set_velocity(up_it->second.location.velocity());
 
                     Sirikata::Protocol::ITimedMotionQuaternion orientation = update.mutable_orientation();

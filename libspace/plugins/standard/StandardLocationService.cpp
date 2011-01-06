@@ -72,7 +72,8 @@ TimedMotionVector3f StandardLocationService::location(const UUID& uuid) {
 
 Vector3f StandardLocationService::currentPosition(const UUID& uuid) {
     TimedMotionVector3f loc = location(uuid);
-    return loc.extrapolate(mContext->simTime()).position();
+    Vector3f returner = loc.extrapolate(mContext->simTime()).position();
+    return returner;
 }
 
 TimedMotionQuaternion StandardLocationService::orientation(const UUID& uuid) {
@@ -120,6 +121,9 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     LocationInfo& locinfo = it->second;
     locinfo.location = loc;
+    std::cout<<"\nbftm debug in addLocalObject of StandardLocationService.cpp  this is the time associated with the time: "<<locinfo.location.time().raw();
+    std::cout<<"    at simtime: "<< mContext->simTime().raw()<<"\n\n";
+    //lkjs;
     locinfo.orientation = orient;
     locinfo.bounds = bnds;
     locinfo.mesh = msh;
@@ -351,6 +355,14 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
 
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
 
+                std::cout<<"\n\nbftm debug in StandardLocationService.cpp.  Asked for a locationUpdate with time: "<<request.location().t().raw();
+                std::cout<<" postion: "<<request.location().position();
+                std::cout<<"   velocity: "<<request.location().velocity();
+                std::cout<<"    at simtime: "<< mContext->simTime().raw()<<"\n\n";
+                std::cout<<"\n\n";
+                //lkjs;
+
+                
             }
 
             if (request.has_bounds()) {
