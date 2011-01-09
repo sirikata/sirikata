@@ -446,6 +446,7 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& name) {
     // Add the Self variable
     SpaceObjectReference* sp = new SpaceObjectReference(name);
     Handle<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
+    newAddrObj->SetInternalField(TYPEID_FIELD, External::New(new std::string("addressable")));
     newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
     newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sp));
     getSystemObject()->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), newAddrObj);
@@ -832,7 +833,8 @@ void JSObjectScript::addAddressable(const SpaceObjectReference& sporefToAdd)
 
     //create the addressable object associated with the new proxy object
     Local<Object> newAddrObj = mManager->mAddressableTemplate->NewInstance();
-
+    
+    newAddrObj->SetInternalField(TYPEID_FIELD,External::New(new std::string("addressable")));
     newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
     newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(toAdd));
 
@@ -1034,6 +1036,8 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
     SpaceObjectReference* sporef = new SpaceObjectReference(src.space(),src.object());
 
     Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
+    
+    tmpObj->SetInternalField(TYPEID_FIELD,External::New(new std::string("addressable")));
     tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
     tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sporef));
     return tmpObj;

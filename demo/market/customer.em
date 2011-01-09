@@ -25,12 +25,11 @@ function handleMarket(msg, sender)
     MARKET_CHANNEL = sender;    
     print("\n\nGot a new market\n\n");
 
-    handleMarketReply <- [new system.Pattern("vendor"), new system.Pattern("banner")] <- MARKET_CHANNEL;
-		//send the subscription
+    handleMarketReply <- [new system.Pattern("vendor"), new system.Pattern("banner"), new system.Pattern("init_proto")] <- MARKET_CHANNEL;
+    //send the subscription
 
-		subsObj -> MARKET_CHANNEL;
-
-		print("\n\n Subscription for books sent to market \n\n");
+    subsObj -> MARKET_CHANNEL;
+    print("\n\n Subscription for books sent to market \n\n");
   }
 }
 
@@ -48,15 +47,35 @@ function proxAddedCallback(new_addr_obj)
   test_msg -> new_addr_obj;
 }
 
+function handleBookList(msg, sender)
+{
+  print("\n\nGot a book List\n\n");    
+}
+
 // This is the callback for the reply from the market
 
 function handleMarketReply(msg, sender)
 {
-  print("\n\n\n\n\\n\n\n\n Got a reply from the market \n\n\n\n\n\n\n\n\n"); 
+  print("\n\n Got a reply from the market . The vendor is " + vendor + "\n\n");
   var vendor = msg.vendor;
-	var banner = msg.banner;
+  var banner = msg.banner;
+  var init_proto = msg.init_proto;
 
-  print("Got a vendor " + vendor + "with banner " + banner);
+  var req_obj = new Object();
+  req_obj.name = init_proto;
+  
+  req_obj.replyFunction = function(list_of_books, wrapped_reply)
+                          {
+                            wrapped_reply = new Object();
+                            wrapped_reply.reply = list_of_books;
+                            wrapped_reply.seq_no = 1;
+                          }
+
+  
+  //handleBookList <- [new system.Pattern("reply"), new system.Pattern("seq_no", 1)] <- vendor;
+  req_obj -> vendor;
+  print("Sent book list request to the vendor " + vendor);  
+
 }
 
 
