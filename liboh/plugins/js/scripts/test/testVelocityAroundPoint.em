@@ -1,7 +1,7 @@
 
 var turnLeft = true;
-var amountToMoveLeft  = -1;
-var amountToMoveRight = 1;
+var amountToMoveLeft  = -5;
+var amountToMoveRight = 5;
 
 function leftCallback()
 {
@@ -28,11 +28,11 @@ function stopCallback()
 
     if (turnLeft)
     {
-        system.timeout(2,null,leftCallback);
+        system.timeout(1,null,leftCallback);
     }
     else
     {
-        system.timeout(2,null,rightCallback);                        
+        system.timeout(1,null,rightCallback);                        
     }
 }
 

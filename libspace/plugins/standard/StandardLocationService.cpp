@@ -121,9 +121,6 @@ void StandardLocationService::addLocalObject(const UUID& uuid, const TimedMotion
 
     LocationInfo& locinfo = it->second;
     locinfo.location = loc;
-    std::cout<<"\nbftm debug in addLocalObject of StandardLocationService.cpp  this is the time associated with the time: "<<locinfo.location.time().raw();
-    std::cout<<"    at simtime: "<< mContext->simTime().raw()<<"\n\n";
-    //lkjs;
     locinfo.orientation = orient;
     locinfo.bounds = bnds;
     locinfo.mesh = msh;
@@ -354,15 +351,6 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                 notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
 
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
-
-                std::cout<<"\n\nbftm debug in StandardLocationService.cpp.  Asked for a locationUpdate with time: "<<request.location().t().raw();
-                std::cout<<" postion: "<<request.location().position();
-                std::cout<<"   velocity: "<<request.location().velocity();
-                std::cout<<"    at simtime: "<< mContext->simTime().raw()<<"\n\n";
-                std::cout<<"\n\n";
-                //lkjs;
-
-                
             }
 
             if (request.has_bounds()) {

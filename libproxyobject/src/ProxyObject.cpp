@@ -111,9 +111,6 @@ void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, b
     if (!predictive) mUpdateSeqno[LOC_POS_PART] = seqno;
 
     mLoc = reqloc;
-
-    std::cout<<"\nbftm debug inside of setLocation.  Setting location to "<<mLoc.position()<<"\n\n";
-    
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
 

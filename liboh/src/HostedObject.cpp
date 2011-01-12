@@ -618,16 +618,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
     if (update.has_location()) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
         Time locTime = localTime(space,update_loc.t());
-//        loc = TimedMotionVector3f(localTime(space, update_loc.t()),
-//        MotionVector3f(update_loc.position(), update_loc.velocity()));
         loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
-
-        //lkjs;
-        std::cout<<"\n\nbftm debug: \n";
-        std::cout<<"This is updated loc position: "<<update_loc.position()<<"\n";
-        std::cout<<"This is updated loc velocity: "<<update_loc.velocity()<<"\n";
-        std::cout<<"This is time associated with location updated: "<<update_loc.t().raw()<<"\n";
-        std::cout<<"This is the time associated with localTime stuff: "<<locTime.raw()<<"\n\n";
         
         CONTEXT_OHTRACE(objectLoc,
             getUUID(),
@@ -836,14 +827,12 @@ ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
 }
 ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match object!!!\n\n";
     ObjectReference oref = mPresenceData->begin()->first.object();
     return  getProxy(space, oref);
 }
 
 ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyManager: should try to match object!!!\n\n";
     ObjectReference oref = mPresenceData->begin()->first.object();
     return  getProxyManager(space, oref);
 }
@@ -932,13 +921,6 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
 {
     Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
 
-    std::cout<<"\n\nbftm debug This is my current position: "<<curPos<<"\n";
-    //std::cout<<"time:"<<currentSpaceTime(space).raw()<<"\n\n";
-    std::cout<<"time:"<<currentLocalTime().raw()<<"\n\n";
-    //lkjs;
-    
-    //TimedMotionVector3f
-    //tmv(currentSpaceTime(space),MotionVector3f(curPos,vel));
     TimedMotionVector3f tmv(currentLocalTime(),MotionVector3f(curPos,vel));
     requestLocationUpdate(space,oref,tmv);
 }
@@ -1201,10 +1183,6 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
     if (poptr == nullPtr)
         assert (false);
 
-    std::cout<<"\n\n";
-    std::cout<<poptr->getMesh();
-    std::cout<<"\n\n";
-    std::cout.flush();
 
     es->mesh = poptr->getMesh().toString();
 
