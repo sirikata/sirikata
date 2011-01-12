@@ -351,7 +351,11 @@ namespace Sirikata {
           
 
           COLLADASW::Triangles triangles(streamWriter);
-          triangles.setCount(meshdata.geometry[i].primitives[j].indices.size()/3);
+          if (meshdata.geometry[i].texUVs.size() > 0) {
+              triangles.setCount(meshdata.geometry[i].primitives[j].indices.size()/3);
+          } else {
+              triangles.setCount(meshdata.geometry[i].primitives[j].indices.size()/2);
+          }
 
 
           char materialName[256];
@@ -362,15 +366,22 @@ namespace Sirikata {
           int offset = 0;
           triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::VERTEX, "#" + geometryName+"-vertex", offset++ ) );
           triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::NORMAL, "#" + geometryName+"-normal", offset++ ) );
-          triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::TEXCOORD, "#" + geometryName+"-uv", offset++ ) );
+          if (meshdata.geometry[i].texUVs.size() > 0) {
+              triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::TEXCOORD, "#" + geometryName+"-uv", offset++ ) );
+          }
 
           triangles.prepareToAppendValues();
 
           for( int k = 0; k < meshdata.geometry[i].primitives[j].indices.size(); k++ )
           {
-            triangles.appendValues(meshdata.geometry[i].primitives[j].indices[k],
-                                   0,
-                                   meshdata.geometry[i].primitives[j].indices[k] );
+              if (meshdata.geometry[i].texUVs.size() > 0) {
+                triangles.appendValues(meshdata.geometry[i].primitives[j].indices[k],
+                                       meshdata.geometry[i].primitives[j].indices[k],
+                                       meshdata.geometry[i].primitives[j].indices[k] );
+              } else {
+                  triangles.appendValues(meshdata.geometry[i].primitives[j].indices[k],
+                                         meshdata.geometry[i].primitives[j].indices[k] );
+              }
           }
 
 
