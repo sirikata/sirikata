@@ -992,8 +992,9 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
     //BFTM_FIXME: need to decide whether want the extrapolated position or last
     //known position.  (Right now, we're going with last known position.)
 
-
-    Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    //lkjs;
+    //Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     Vector3d currentPosition = curLoc.getPosition();
     return currentPosition;
 }
