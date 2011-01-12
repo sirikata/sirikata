@@ -929,8 +929,6 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
 void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref,const Quaternion& quat)
 {
     Quaternion curQuatVel = requestCurrentQuatVel(space,oref);
-    //TimedMotionQuaternion tmq
-    //(Time::local(),MotionQuaternion(quat,curQuatVel));
     TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(quat,curQuatVel));
     requestOrientationUpdate(space,oref, tmq);
 }
@@ -946,7 +944,7 @@ Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const Objec
 Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     return curLoc.getOrientation();
 }
 
@@ -959,7 +957,7 @@ Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, cons
 void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat)
 {
     Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
-    TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(curOrientQuat,quat));
+    TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(curOrientQuat,quat));
     requestOrientationUpdate(space, oref,tmq);
 }
 
