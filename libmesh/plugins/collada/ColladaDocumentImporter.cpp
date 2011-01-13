@@ -615,8 +615,15 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                     }
 
 
+                    // This makes sure that we've allocated enough
+                    // texture sets for the current primitive. This is
+                    // necessary because primitive 0 may have 0
+                    // texture coordinate arrays, but primitive 1 may
+                    // have 3. We don't precompute the max so we need
+                    // to fill them in here.
                     if (submesh->texUVs.size()<uniqueIndexSet.uvIndices.size())
                         submesh->texUVs.resize(uniqueIndexSet.uvIndices.size());
+                    // Add in these texture coordinates.
                     if (uvdata) {
                         for (size_t uvSet=0;uvSet<uniqueIndexSet.uvIndices.size();++uvSet) {
                             unsigned int stride=UVs.getStride(uvSet);
@@ -633,6 +640,31 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                                 submesh->texUVs[uvSet].uvs.push_back(uvdatad->getData()[uniqueIndexSet.uvIndices[uvSet]*stride+s]);//FIXME: is stride k or k*sizeof(float)
                             }
                         }
+                    }
+                    // Then, we need to make sure that we have values
+                    // for all the existing vertices or the offsets
+                    // get screwed up. From the example above, if the
+                    // first vertex of primitive 1 has index 200, we
+                    // need to make sure that the lack of TCs in
+                    // primitive 0 doesn't make first TC for primitive
+                    // 1 end up in index 0 -- it needs to end up in
+                    // 200.  For each TC set we should have numverts *
+                    // stride entries at this point The values we
+                    // insert don't matter since nobody will access
+                    // them.
+                    //
+                    // Note that we do this as the final step since we
+                    // want to protect against out of bounds errors
+                    // and the last primitive might have fewer than
+                    // the maximum number of texture coordinates.
+                    //
+                    // Finally, note that we're careful not to use
+                    // uniqueIndexSet here since it doesn't reflect
+                    // the maximum number of
+                    // TCs. submesh->texUVs.size() is a must.
+                    for (size_t uvSet = 0; uvSet < submesh->texUVs.size(); ++uvSet) {
+                        while (submesh->texUVs[uvSet].uvs.size() < (submesh->positions.size() * submesh->texUVs[uvSet].stride))
+                            submesh->texUVs[uvSet].uvs.push_back(0.f);
                     }
                 }else {
                     outputPrim->indices.push_back(where->second);
@@ -830,7 +862,7 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         mat.textures.back().color.z=effect->getStandardColor().getBlue();
         mat.textures.back().color.w=effect->getStandardColor().getAlpha();
     }
-    COLLADA_LOG(insane, "ColladaDocumentImporter::writeEffect(" << effect << ") entered");
+    COLLADA_LOG(insane, "ColladaDocumentImporter::finishEffect(" << effect << ") entered");
     return retval;
 }
 
