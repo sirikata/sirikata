@@ -176,7 +176,8 @@ public:
         mOnPresenceDisconnectedHandler = cb;
     }
 
-    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo);
+    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* );
+    bool updatePosition(SpaceObjectReference* whatIsVisible, SpaceObjectReference* visibleToWhom,Vector3d* position);
     v8::Handle<v8::Value> printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo);
 
 
@@ -270,8 +271,8 @@ private:
     // Adds the Self field
     void addSelfField(const SpaceObjectReference& name);
 
-    v8::Local<v8::Object> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
-    v8::Local<v8::Object> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
+    v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+    v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
 
 
