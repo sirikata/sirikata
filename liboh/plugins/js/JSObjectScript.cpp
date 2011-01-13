@@ -308,7 +308,7 @@ v8::Handle<v8::Value> JSObjectScript::removeVisible(ProxyObjectPtr proximateObje
         getSystemObject()->Set(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME), newVis);
     }
 
-    jsvis->stillVisible = false;
+    *jsvis->stillVisible = false;
     //removedProxObj->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(false));
     return removedProxObj;
 }
