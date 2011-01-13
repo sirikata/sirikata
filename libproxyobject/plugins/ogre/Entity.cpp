@@ -839,6 +839,8 @@ public:
 
                 // FIXME select proper texture/material
                 GeometryInstance::MaterialBindingMap::const_iterator whichMaterial = geoinst.materialBindingMap.find(prim.materialId);
+                if (whichMaterial == geoinst.materialBindingMap.end())
+                    SILOG(ogre, error, "[OGRE] Invalid MaterialBindingMap: couldn't find " << prim.materialId << " for " << md.uri);
                 std::string matname = whichMaterial!=geoinst.materialBindingMap.end()?hash+"_mat_"+boost::lexical_cast<std::string>(whichMaterial->second):"baseogremat";
                 Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
 
@@ -927,9 +929,15 @@ public:
                                 memset(pData, 0, sizeof(float)*stride);
                             }
 
-                            float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
-                            UVHACK=1.0-UVHACK;
-                            memcpy(pData+sizeof(float),&UVHACK,sizeof(float));
+                            if (submesh.texUVs[tc].stride > 1) {
+                                // Apparently we need to invert the V
+                                // coordinate... perhaps somebody could document
+                                // why we need this.
+                                float UVHACK = submesh.texUVs[tc].uvs[i*stride+1];
+                                UVHACK=1.0-UVHACK;
+                                memcpy(pData+sizeof(float),&UVHACK,sizeof(float));
+                            }
+
                             pData += VertexElement::getTypeSize(vet);
                         }
                     }
