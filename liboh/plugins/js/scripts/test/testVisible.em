@@ -24,6 +24,18 @@ function proxCallback(calledBack)
 
 system.presences[0].onProxAdded(proxCallback);
 
+function distanceFromMeToIt(it)
+{
+    var myPosition  = system.presences[0].getPosition();
+    var itsPosition = it.getPosition();
+
+    var diffXSquared = (myPosition.x - itsPosition.x)*(myPosition.x - itsPosition.x);
+    var diffYSquared = (myPosition.y - itsPosition.y)*(myPosition.y - itsPosition.y);
+    var diffZSquared = (myPosition.z - itsPosition.z)*(myPosition.z - itsPosition.z);
+    
+    return system.math.sqrt(diffXSquared + diffYSquared + diffZSquared);
+}
+
 
 function moveTowards(toMoveTowards)
 {

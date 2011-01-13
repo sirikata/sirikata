@@ -48,8 +48,8 @@ v8::Handle<v8::Value> toString(const v8::Arguments& args)
 
 v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 {
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to __debugRef")) );
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to __debugRef.  Requires 0 arguments.")) );
 
     std::string errorMessage = "In __debugRef function of visible.  ";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
@@ -83,6 +83,20 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
 
 
     return jsvis->visibleSendMessage(serialized_message);
+}
+
+v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to getStillVisible.  Requires 0 arguments.")) );
+
+    std::string errorMessage = "In getStillVisible function of visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsvis->getStillVisible();
+    
 }
 
 
