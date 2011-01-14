@@ -36,6 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Sha256.hpp>
 #include "LightInfo.hpp"
+#include <sirikata/core/util/UUID.hpp>
 
 
 namespace Sirikata {
@@ -43,11 +44,6 @@ namespace Sirikata {
 struct SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
-
-  //used only during simplification
-  std::vector< Matrix4x4f  > positionQs;
-
-
 
 
     std::vector<Sirikata::Vector3f> normals;
@@ -82,6 +78,12 @@ struct SubMeshGeometry {
     double radius;
     std::vector<Primitive> primitives;
 
+    //used only during simplification
+    std::vector< Matrix4x4f  > positionQs;
+    uint32 numInstances;
+    std::tr1::unordered_map<uint32, std::vector< std::pair<uint32, uint32> > > neighborPrimitives; // maps positionIdx to list of primitiveIdxes
+    /////////////////////////////////
+
 };
 struct GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
@@ -89,8 +91,7 @@ struct GeometryInstance {
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
     BoundingBox3f3f aabb;//transformed aabb
-    double radius;//transformed radius
-
+    double radius;//transformed radius    
 };
 
 struct LightInstance {
@@ -197,9 +198,7 @@ struct Meshdata {
     long id;
 
     GeometryInstanceList instances;
-    LightInstanceList lightInstances;
-
-
+    LightInstanceList lightInstances; 
 
 };
 

@@ -34,6 +34,7 @@
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
+
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
 #define snprintf _snprintf
 #endif
@@ -193,22 +194,23 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       if (meshName != "") {
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         if (mMeshStore.find(meshName) == mMeshStore.end()) {
-          std::cout << meshName << " = meshName requesting download\n";
+
           Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
-                                       &AggregateManager::metadataFinished, this, uuid, child_uuid, meshName,
+                                       &AggregateManager::metadataFinished, this, curTime, uuid, child_uuid, meshName,
                                        std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
-          mTransferPool->addRequest(req);
-
-          std::cout << uuid.toString() <<" : child mesh: "<< meshName  <<" not found locally\n";
+          mTransferPool->addRequest(req);          
           
           allMeshesAvailable = false;
 
           mMeshStore[meshName] = std::tr1::shared_ptr<Meshdata>();
+
+          break;
         }
         else if (!mMeshStore[meshName]) {
           allMeshesAvailable = false;
+          break;
         }
       }
     }
@@ -216,6 +218,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
   if (!allMeshesAvailable) return false;
 
+  //Time agg_time_start = Timer::now();
 
   std::tr1::shared_ptr<Meshdata> agg_mesh =  std::tr1::shared_ptr<Meshdata>( new Meshdata() );
   BoundingSphere3f bnds = mLoc->bounds(uuid);
@@ -223,11 +226,13 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   float32 bndsY = bnds.center().y;
   float32 bndsZ = bnds.center().z;
 
+  
+
+  std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
+  std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
   uint32   numAddedSubMeshGeometries = 0;
-  double totalVertices = 0;
   for (uint32 i= 0; i < children.size(); i++) {
-    UUID child_uuid = children[i];
-    Time insideLoopCurTime = Timer::now();
+    UUID child_uuid = children[i];    
 
     Vector3f location = mLoc->currentPosition(child_uuid);
     float32 locationX = location.x;
@@ -242,10 +247,9 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
     std::tr1::shared_ptr<Meshdata> m = mAggregateObjects[child_uuid]->mMeshdata;
 
+    std::string meshName = mLoc->mesh(child_uuid);
     if (!m) {
       //request a download or generation of the mesh
-      std::string meshName = mLoc->mesh(child_uuid);
-
       if (meshName != "") {
 
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
@@ -261,19 +265,17 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     lock.unlock();
 
-    std::cout << aggObject->mTreeLevel << " aggObject->mTreeLevel\n";
-    
-
     agg_mesh->lightInstances.insert(agg_mesh->lightInstances.end(),
                                     m->lightInstances.begin(),
                                     m->lightInstances.end() );
     agg_mesh->lights.insert(agg_mesh->lights.end(),
                             m->lights.begin(),
-                            m->lights.end());
+                            m->lights.end());    
 
     for (Meshdata::URIMap::const_iterator tex_it = m->textureMap.begin();
          tex_it != m->textureMap.end(); tex_it++)
       {
+        //FIXME: CLient cannot deal with absolute URL paths specified as a texture in a collada file
         agg_mesh->textureMap[tex_it->first+"-"+child_uuid.toString()] = tex_it->second;
       }
 
@@ -312,61 +314,69 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /** End: find scaling factor **/
 
-    uint32 geometrySize = agg_mesh->geometry.size();
- 
-    
     std::vector<GeometryInstance> instances;
+    uint32 submeshGeomOffset;
+    uint32 submeshMaterialsOffset;
+    bool addingNewSMGs = false;
+    if (  meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
+      meshToStartIdxMapping[ meshName ] = agg_mesh->geometry.size();
+      meshToStartMaterialsIdxMapping[ meshName ] = agg_mesh->materials.size();
+      submeshGeomOffset = agg_mesh->geometry.size();
+      submeshMaterialsOffset = agg_mesh->materials.size();
+      addingNewSMGs = true;
+    }
+    else {
+      submeshGeomOffset = meshToStartIdxMapping[meshName];
+      submeshMaterialsOffset = meshToStartMaterialsIdxMapping[ meshName ];
+    }
+
+    
     for (uint32 i = 0; i < m->instances.size(); i++) {
       GeometryInstance geomInstance = m->instances[i];
 
       assert (geomInstance.geometryIndex < m->geometry.size());
-      SubMeshGeometry smg = m->geometry[geomInstance.geometryIndex];
-
-      geomInstance.geometryIndex =  numAddedSubMeshGeometries;
-
-      smg.aabb = BoundingBox3f3f::null();
-
-      uint32 smgPositionsSize = smg.positions.size();
-
-      firstUpdate = true;
-
-      for (uint32 j = 0; j < smgPositionsSize; j++) {
-
-        Vector3f& jth_vertex = smg.positions[j];
-
-        Vector4f jth_vertex_4f = geomInstance.transform*Vector4f(jth_vertex.x,
-                                                                  jth_vertex.y,
-                                                                  jth_vertex.z,
-                                                                  1.0f);
-
-        jth_vertex = Vector3f(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);              
-
-        jth_vertex *= scalingfactor;
-
-        jth_vertex = orientation * jth_vertex ;
-
-        jth_vertex.x += (locationX - bndsX);
-        jth_vertex.y += (locationY - bndsY);
-        jth_vertex.z += (locationZ - bndsZ);
-
-        if (firstUpdate) {
-          smg.aabb = BoundingBox3f3f(jth_vertex, 0);
-          firstUpdate = false;
-        }
-        else {
-          smg.aabb.mergeIn(jth_vertex);
-        }
-      }
-
-      if (smgPositionsSize > 0) {
-        instances.push_back(geomInstance);
-        agg_mesh->geometry.push_back(smg);
       
-        numAddedSubMeshGeometries++;
-      }
+      geomInstance.geometryIndex = submeshGeomOffset + i;      
 
-      totalVertices = totalVertices + smgPositionsSize;
+      //translation
+      Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0,locationX - bndsX), 
+                                   Vector4f(0,1,0,locationY - bndsY), 
+                                   Vector4f(0,0,1,locationZ - bndsZ), 
+                                   Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
+
+      //rotate
+      float ox = orientation.normal().x;
+      float oy = orientation.normal().y;
+      float oz = orientation.normal().z;
+      float ow = orientation.normal().w;
+      
+      trs *= Matrix4x4f( Vector4f(1-2*oy*oy - 2*oz*oz , 2*ox*oy - 2*ow*oz, 2*ox*oz + 2*ow*oy, 0),
+                         Vector4f(2*ox*oy + 2*ow*oz, 1-2*ox*ox-2*oz*oz, 2*oy*oz-2*ow*ox, 0),
+                         Vector4f(2*ox*oz-2*ow*oy, 2*oy*oz + 2*ow*ox, 1-2*ox*ox - 2*oy*oy,0),
+                         Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
+
+      //scaling
+      trs *= Matrix4x4f( Vector4f(scalingfactor,0,0,0), 
+                         Vector4f(0,scalingfactor,0,0), 
+                         Vector4f(0,0,scalingfactor,0), 
+                         Vector4f(0,0,0,1),                Matrix4x4f::ROWS());
+      
+      geomInstance.transform = trs * geomInstance.transform;
+ 
+      //Push the instance into the Meshdata data structure
+      instances.push_back(geomInstance);
+
+      if (addingNewSMGs) {
+        SubMeshGeometry smg = m->geometry[ m->instances[i].geometryIndex ];
+        smg.numInstances = 1;
+        agg_mesh->geometry.push_back(smg);
+      }
+      else {
+        SubMeshGeometry& smgRef = agg_mesh->geometry[geomInstance.geometryIndex];
+        smgRef.numInstances++;
+      }
     }
+
 
     for (uint32 i = 0; i < instances.size(); i++) {
       GeometryInstance geomInstance = instances[i];
@@ -374,15 +384,19 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       for (GeometryInstance::MaterialBindingMap::iterator mat_it = geomInstance.materialBindingMap.begin();
            mat_it != geomInstance.materialBindingMap.end(); mat_it++)
         {
-          (mat_it->second) += agg_mesh->materials.size();
+          (mat_it->second) += submeshMaterialsOffset;
         }
 
       agg_mesh->instances.push_back(geomInstance);
     }
 
-    agg_mesh->materials.insert(agg_mesh->materials.end(),
-                               m->materials.begin(),
-                               m->materials.end());
+    if (addingNewSMGs) {
+      agg_mesh->materials.insert(agg_mesh->materials.end(),
+                                 m->materials.begin(),
+                                 m->materials.end());
+    }
+
+
 
     uint32 lightsSize = agg_mesh->lights.size();
     agg_mesh->lights.insert(agg_mesh->lights.end(),
@@ -393,13 +407,21 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       lightInstance.lightIndex += lightsSize;
       agg_mesh->lightInstances.push_back(lightInstance);
     }
-
+    
     for (Meshdata::URIMap::const_iterator it = m->textureMap.begin();
          it != m->textureMap.end(); it++)
       {
-        agg_mesh->textureMap[it->first] = it->second;
+        agg_mesh->textureMap[it->first] =   it->second;
       }
+  }
 
+  std::map<String,int> texturesList;
+  for (Meshdata::URIMap::const_iterator it = agg_mesh->textureMap.begin() ; it!= agg_mesh->textureMap.end(); it++) {
+      texturesList[it->second] = 1;
+  }
+
+  for (std::map<String,int>::iterator it = texturesList.begin(); it != texturesList.end(); it++ ) {
+    agg_mesh->textures.push_back( it->first );
   }
 
   for (uint32 i= 0; i < children.size(); i++) {
@@ -411,55 +433,74 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
 
-  //Simplify the mesh...
+  //  std::cout << "Time spent aggregating: "  <<  (Timer::now() - agg_time_start) << "\n";
+  //Time simpl_time_start = Timer::now();
 
+  //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 40000);
+  //std::cout << "Time spent simplifying: " << (Timer::now() - simpl_time_start) << "\n";
+  fflush(stdout);
+
   
-  //... and now upload the mesh to the CDN
+  Time upload_time_start = Timer::now();
+  
+  //... and now create the collada file, upload to the CDN and update LOC.
   const int MESHNAME_LEN = 1024;
   char localMeshName[MESHNAME_LEN];
-  snprintf(localMeshName, MESHNAME_LEN, "aggregate_mesh_%s.dae", uuid.toString().c_str());
-
-  mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
-        
+  snprintf(localMeshName, MESHNAME_LEN, "%d_aggregate_mesh_%s.dae", aggObject->mTreeLevel, uuid.toString().c_str());
+  mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);  
+  
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
-  system( cmdline.c_str()  );      
+  system( cmdline.c_str()  );
+
+  std::cout << "Time spent uploading: " << (Timer::now() - upload_time_start) << "\n";
 
   //Update loc
   std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
-  mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);  
-  
+  mLoc->updateLocalAggregateMesh(uuid, cdnMeshName); 
+
+  /* // Code to generate scene files for each level of the tree.
+  char scenefilename[MESHNAME_LEN];
+  snprintf(scenefilename, MESHNAME_LEN, "%d_scene.db", aggObject->mTreeLevel);
+  std::fstream scenefile(scenefilename, fstream::out | fstream::app);
+  char sceneline[MESHNAME_LEN];
+  snprintf(sceneline, MESHNAME_LEN, 
+           "\"mesh\",\"graphiconly\",\"tetrahedron\",,,,%f,%f,%f,%f,%f,%f,%f,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,\"%s\",,,,,,,,,,,,,,,,,,%f,,,,\n", 
+           bndsX, bndsY, bndsZ, 0.0, 0.0, 0.0, 1.0, cdnMeshName.c_str(), bnds.radius());
+  scenefile.write(sceneline,strlen(sceneline));
+  scenefile.close();*/
 
   //Keep the meshstore's memory usage under control.
   boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
-  if (mMeshStore.size() > 100) {
-    mMeshStore.erase(mMeshStore.begin());
-  }
+  if (mMeshStore.size() > 20)
+    mMeshStore.clear();
 
   return true;
 }
 
-void AggregateManager::metadataFinished(const UUID uuid, const UUID child_uuid, std::string meshName,
+void AggregateManager::metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,
                                           std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                                           std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)
 {
   if (response != NULL) {
+    std::cout << ( Timer::now() - t )  << " : metadataFinished SUCCESS\n";
+
     const Transfer::RemoteFileMetadata metadata = *response;
 
     Transfer::TransferRequestPtr req(new Transfer::ChunkRequest(response->getURI(), metadata,
                                                response->getChunkList().front(), 1.0,
-                                               std::tr1::bind(&AggregateManager::chunkFinished, this, uuid, child_uuid, meshName,
+                                             std::tr1::bind(&AggregateManager::chunkFinished, this, t,uuid, child_uuid, meshName,
                                                               std::tr1::placeholders::_1,
                                                               std::tr1::placeholders::_2) ) );
 
     mTransferPool->addRequest(req);
   }
   else {
-    std::cout<<"Failed metadata download: Retrying..."   <<std::endl;
+    std::cout<<"Failed metadata download: Retrying...: Response time: "   << ( Timer::now() - t )   << std::endl;
     Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
-                                       &AggregateManager::metadataFinished, this, uuid, child_uuid, meshName,
+                                       &AggregateManager::metadataFinished, this, t, uuid, child_uuid, meshName,
                                        std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
     mTransferPool->addRequest(req);
@@ -467,11 +508,13 @@ void AggregateManager::metadataFinished(const UUID uuid, const UUID child_uuid, 
   }
 }
 
-void AggregateManager::chunkFinished(const UUID uuid, const UUID child_uuid, std::string meshName,
+void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,
                                        std::tr1::shared_ptr<Transfer::ChunkRequest> request,
                                        std::tr1::shared_ptr<const Transfer::DenseData> response)
 {
     if (response != NULL) {
+      std::cout << "Time spent downloading: " << (Timer::now() - t)  << "\n";
+
       boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
       if (mAggregateObjects[child_uuid]->mMeshdata == std::tr1::shared_ptr<Meshdata>() ) {
 
@@ -487,14 +530,14 @@ void AggregateManager::chunkFinished(const UUID uuid, const UUID child_uuid, std
           mMeshStore[request->getURI().toString()] = m;
           
           std::cout << "Stored mesh in mesh store for: " <<  request->getURI().toString()  << "\n";
-        }        
+        }
       }
     }
     else {
       std::cout << "ChunkFinished fail... retrying\n";
       Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
-                                       &AggregateManager::metadataFinished, this, uuid, child_uuid, meshName,
+                                       &AggregateManager::metadataFinished, this, t, uuid, child_uuid, meshName,
                                        std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
       mTransferPool->addRequest(req);
@@ -519,8 +562,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     if (postTime < mAggregateGenerationStartTime) {
       return;
     }
-
-    std::cout << "generateMeshesFromQueue called\n";
+    
 
     for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
@@ -534,8 +576,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     {
       if (it->second.size() > 0) {
         std::tr1::shared_ptr<AggregateObject> aggObject = it->second.front();       
-
-        std::cout << "generateMeshesFromQueue loop called\n";
+        
         if (aggObject->generatedLastRound) continue;        
 
         returner=generateAggregateMeshAsync(aggObject->mUUID, Timer::now(), false);
