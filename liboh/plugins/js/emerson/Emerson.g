@@ -109,6 +109,7 @@ tokens
 		EMPTY_FUNC_BODY;
 		MESSAGE_SEND;
 		MESSAGE_RECV;
+                PAREN;
 }
 
 @header
@@ -554,7 +555,7 @@ primaryExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
-	| '(' LTERM* expression LTERM* ')' -> expression
+	| '(' LTERM* expression LTERM* ')' -> ^( PAREN expression )
 	;
 	
 // arrayLiteral definition.

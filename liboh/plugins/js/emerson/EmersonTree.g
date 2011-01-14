@@ -1159,7 +1159,7 @@ primaryExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
-	| expression
+	| ^(PAREN { APP("( "); } expression { APP(" )");}) 
 	;
 	
 // arrayLiteral definition.
