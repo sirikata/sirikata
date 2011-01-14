@@ -33,14 +33,15 @@
 #ifndef _SQLITE_HPP_
 #define _SQLITE_HPP_
 
+#include <sirikata/sqlite/Platform.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/tss.hpp>
 #include <sqlite3.h>
 
-namespace Sirikata { namespace Persistence {
+namespace Sirikata {
 
 /** Represents a SQLite database connection. */
-class SQLiteDB {
+class SIRIKATA_SQLITE_EXPORT SQLiteDB {
 public:
     SQLiteDB(const String& name);
     ~SQLiteDB();
@@ -56,7 +57,7 @@ typedef std::tr1::weak_ptr<SQLiteDB> WeakSQLiteDBPtr;
 /** Class to manage SQLite connections so they can be shared by multiple classes
  *  or objects.
  */
-class SQLite :public AutoSingleton<SQLite>{
+class SIRIKATA_SQLITE_EXPORT SQLite : public AutoSingleton<SQLite> {
 public:
     SQLite();
     ~SQLite();
@@ -69,6 +70,9 @@ public:
      */
     SQLiteDBPtr open(const String& name);
     static void check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg);
+
+    static SQLite& getSingleton();
+    static void destroy();
 private:
     typedef boost::thread_specific_ptr<WeakSQLiteDBPtr> ThreadDBPtr;
     typedef std::map<String, std::tr1::shared_ptr<ThreadDBPtr> > DBMap;
@@ -83,6 +87,6 @@ private:
     SharedMutex mDBMutex;
 };
 
-} }// namespace Sirikata::Persistence
+} // namespace Sirikata
 
 #endif //_SQLITE_HPP_
