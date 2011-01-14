@@ -96,8 +96,11 @@ v8::Handle<v8::Value> JSVisibleStruct::getStillVisible()
 }
 
 
-
-
+v8::Handle<v8::Value> JSVisibleStruct::checkEqual(JSVisibleStruct* jsvis)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+    return v8::Boolean::New(  *whatIsVisible == *(jsvis->whatIsVisible));
+}
 
 
 }//js namespace

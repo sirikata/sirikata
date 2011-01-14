@@ -449,6 +449,7 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& name) {
     newAddrObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
     newAddrObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sp));
     getSystemObject()->Set(v8::String::New(JSSystemNames::ADDRESSABLE_SELF_NAME), newAddrObj);
+    
 }
 
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
@@ -647,6 +648,8 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     emerson_init();
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+    std::cout<<"\n\n Compiled JS script = \n" <<js_script_str<<"\n";
+    std::cout.flush();
 
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
@@ -656,6 +659,8 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     #endif
 
+    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+    
 
     // Compile
     //note, because using compile command, will run in the mContext context

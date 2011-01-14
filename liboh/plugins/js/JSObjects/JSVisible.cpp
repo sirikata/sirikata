@@ -100,6 +100,26 @@ v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to checkEqual.  Requires 1 argument: another JSVisibleStruct.")) );
+
+    
+    std::string errorMessage = "In checkEqual function of visible.  Decoding caller.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+
+    errorMessage = "In checkEqual function of visible.  Decoding argument.  ";
+    JSVisibleStruct* jsvis2 = JSVisibleStruct::decodeVisible(args[0],errorMessage);
+    if (jsvis2 == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    
+    return jsvis->checkEqual(jsvis2);
+}
 
 
 }//end jsvisible namespace
