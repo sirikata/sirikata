@@ -354,12 +354,12 @@ newExpression
 	
 
 indexSuffix1
-	: '[' LTERM* expression LTERM* ']' -> ^(expression)
+	: '[' LTERM* expression LTERM* ']' -> expression
 	;	
 
 
 propertyReferenceSuffix1
-	: '.' LTERM* Identifier -> ^(Identifier)
+	: '.' LTERM* Identifier -> Identifier
 	;
 	
 
