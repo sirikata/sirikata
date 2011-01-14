@@ -23,7 +23,7 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
     //get sender as obj reference
     v8::Local<v8::External> wrap;
     if (sender->InternalFieldCount() > 0)
-        wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
+        wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(VISIBLE_SPACEOBJREF_FIELD));
 
     void* ptr = wrap->Value();
     //ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
@@ -34,7 +34,7 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
         
         //have a sender to match.  see if it does
         if (this->sender->InternalFieldCount() > 0)
-            wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
+            wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(VISIBLE_SPACEOBJREF_FIELD));
 
         ptr = wrap->Value();
 

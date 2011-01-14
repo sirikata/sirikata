@@ -23,6 +23,7 @@ message JSFieldValue
 {
 	optional string s_value = 1;
 	optional int32 i_value = 2;
+        optional JSMessage o_value = 3;
 
 }
 
@@ -37,6 +38,7 @@ message JSField
 	optional string prototype = 3;
 
 }
+
 message JSMessage
 {
 	repeated JSField fields = 1;

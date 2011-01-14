@@ -61,6 +61,7 @@ v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 
 v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
 {
+    SILOG(js, detailed, "\nAddressable: Entering __addressableSendMessage\n");
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sendMessage(<object>)")) );
 
@@ -103,12 +104,14 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
 //jsObjScript, SpaceObjectReference*& sporef)
 bool decodeAddressable(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef)
 {
+    
 
-    if ((!senderVal->IsFunction()) ||  (!senderVal->IsObject()) || (senderVal->IsUndefined()))
+    //if ((!senderVal->IsFunction()) ||  (!senderVal->IsObject()) || (senderVal->IsUndefined()))
+    if(senderVal->IsUndefined() || !(senderVal->IsObject() || senderVal->IsFunction()))
     {
         jsObjScript = NULL;
         sporef = NULL;
-        std::cout<<"\n\nReturning false from decodeAddressable 1\n\n";
+        SILOG(js, debug, "\n\nReturning false from decodeAddressable 1. SenderVal->IsFunction() = " << senderVal->IsFunction() << ", senderVal->IsObject() = " << senderVal->IsObject() << ", senderVal->IsUndefined() = " << senderVal->IsUndefined() << "\n\n");
         return false;
     }
 
@@ -124,19 +127,22 @@ bool decodeAddressable(v8::Handle<v8::Object> senderVal, JSObjectScript*& jsObjS
     
     
     v8::Local<v8::Value> typeidVal = senderVal->GetInternalField(TYPEID_FIELD);
-    if(typeidVal->IsUndefined() || !typeidVal->IsString())
+    if(typeidVal->IsUndefined())
     {
-      SILOG(js, error, "\n\nAddressable: Returning false from decodeAddressable 2. No typeidVal found \n\n");
+      SILOG(js, debug, "\n\nAddressable: Returning false from decodeAddressable 2. typeidVal->IsUndefined() = " << typeidVal->IsUndefined() << ", typeidVal->IsString() = " << typeidVal->IsString() << " \n\n");
       jsObjScript = NULL;
       sporef = NULL;
 
       return false;
     }
-
-    v8::String::Utf8Value u(typeidVal);
-    const char* c = ToCString(u);
-    std::string typeIdString(c);
     
+    v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);
+    void* ptr = wrapped->Value();
+    std::string* typeId = static_cast<std::string*>(ptr);
+    std::string typeIdString = *typeId;    
+
+    SILOG(js, debug, "\n\n The typeIdString is " << typeIdString << " \n");
+
     if(typeIdString != "addressable")
     {
       SILOG(js, error, "\n\nAddressable: Returning false from decodeAddressable 2: The typeId field is not addressable\n\n");

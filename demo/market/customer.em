@@ -37,14 +37,19 @@ function handleMarket(msg, sender)
 function proxAddedCallback(new_addr_obj)
 {
   print("\n\n\n\n\n\n\n\n  Got a proxAdded Callback \n\n\n\n\n\n\n");
-
+  print("The new addressable is " + new_addr_obj);
+  
   var test_msg = new Object();
   test_msg.name = "get_protocol";
   
   //also register a callback
   var p = new system.Pattern("protocol", "Market");
+  
+  print("\n\nRegistering  a pattern\n\n");
   handleMarket <- p <- new_addr_obj;
+  print("\n\nRegistered a pattern\n\n");
   test_msg -> new_addr_obj;
+  print("\n\nOut of the prox added callback\n\n");
 }
 
 function handleBookList(msg, sender)
@@ -87,7 +92,7 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-      simulator = pres.runSimulation("ogregraphics");
+      //simulator = pres.runSimulation("ogregraphics");
       system.presences[0].onProxAdded(proxAddedCallback);
     }
 });

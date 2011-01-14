@@ -848,6 +848,7 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
+    // Do check if the visible already exists..
     v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
     std::string errorMessage = "In addVisible of JSObjectScript.  ";
     JSVisibleStruct* jsvis   = NULL;
@@ -878,6 +879,15 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
 
     JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, proximateObject->getPosition());
+    SpaceObjectReference* sporefToAdd     = new SpaceObjectReference(proximateObject->getObjectReference());
+    SpaceObjectReference* sporefVisibleTo = new SpaceObjectReference(querier);
+
+    newVisObj->SetInternalField(TYPEID_FIELD, External::New(new std::string(VISIBLE_TYPEID_STRING)));
+    newVisObj->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD,External::New(this));
+    newVisObj->SetInternalField(VISIBLE_SPACEOBJREF_FIELD,External::New(sporefToAdd));
+    newVisObj->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD,External::New(sporefVisibleTo));
+
+    newVisObj->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(true));
 
     newVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(toAdd));
     
@@ -1035,11 +1045,16 @@ v8::Local<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src)
 
     SpaceObjectReference* sporef = new SpaceObjectReference(src.space(),src.object());
 
-    Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
     
-    tmpObj->SetInternalField(TYPEID_FIELD,External::New(new std::string("addressable")));
-    tmpObj->SetInternalField(ADDRESSABLE_JSOBJSCRIPT_FIELD,External::New(this));
-    tmpObj->SetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD,External::New(sporef));
+    Local<Object> tmpObj = mManager->mVisibleTemplate->NewInstance();
+
+    //Local<Object> tmpObj = mManager->mAddressableTemplate->NewInstance();
+     
+    tmpObj->SetInternalField(TYPEID_FIELD,External::New(new std::string(VISIBLE_TYPEID_STRING)));
+    tmpObj->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD,External::New(this));
+    tmpObj->SetInternalField(VISIBLE_SPACEOBJREF_FIELD,External::New(sporef));
+    // We need to get rid of this sometime
+    tmpObj->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD, External::New(NULL));
     return tmpObj;
 }
 
@@ -1065,7 +1080,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
         assert(false);
     }
 
-    bool deserializeWorks = JSSerializer::deserializeObject( js_msg,obj);
+    bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
     if (! deserializeWorks)
         return;
