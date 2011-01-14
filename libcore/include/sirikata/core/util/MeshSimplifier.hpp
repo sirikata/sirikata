@@ -76,7 +76,7 @@ private:
 
 
 public:
-  void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, uint32 numVerticesLeft);
+  void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, int32 numVerticesLeft);
 
 };
 

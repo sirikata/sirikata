@@ -77,13 +77,15 @@ private:
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID) :
       mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
-      mTreeLevel(0)
+      mTreeLevel(0),  mNumObservers(0)
     {
       mMeshdata = std::tr1::shared_ptr<Meshdata>();
       generatedLastRound = false;
     }    
     
     uint16 mTreeLevel;
+
+    uint32 mNumObservers;
 
   } AggregateObject;
 
@@ -127,16 +129,17 @@ public:
   void addChild(const UUID& uuid, const UUID& child_uuid) ;
 
   void removeChild(const UUID& uuid, const UUID& child_uuid);
+
   
   
 
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
-  void metadataFinished(const UUID uuid, const UUID child_uuid, std::string meshName,
+  void metadataFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName,
                         std::tr1::shared_ptr<Transfer::MetadataRequest> request,
                         std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response)  ;
 
-  void chunkFinished(const UUID uuid, const UUID child_uuid, std::string meshName, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+  void chunkFinished(Time t, const UUID uuid, const UUID child_uuid, std::string meshName, std::tr1::shared_ptr<Transfer::ChunkRequest> request,
                       std::tr1::shared_ptr<const Transfer::DenseData> response);
 
 

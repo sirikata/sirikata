@@ -141,28 +141,36 @@ double MeshSimplifier::invert(Matrix4x4f& inv, Matrix4x4f& orig)
 }
 
 
-void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh, uint32 numVerticesLeft) {
+void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh, int32 numVerticesLeft) {
   //Go through all the triangles, getting the vertices they consist of.
   //Calculate the Q for all the vertices.  
 
+  std::cout << "Starting simplification\n";
   int totalVertices = 0;
 
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
-    totalVertices += curGeometry.positions.size();
+    totalVertices += curGeometry.positions.size() * curGeometry.numInstances;
 
     for (uint32 j = 0; j < curGeometry.positions.size(); j++) {
         curGeometry.positionQs.push_back( Matrix4x4f::nil());
     }
 
+    //std::cout << "Geometry " << i << " \n";
 
-    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {      
       for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
 
         unsigned short idx = curGeometry.primitives[j].indices[k];
         unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
         unsigned short idx3 = curGeometry.primitives[j].indices[k+2];
 
+        curGeometry.neighborPrimitives[idx].push_back( std::pair<uint32, uint32> (j,k) );
+        curGeometry.neighborPrimitives[idx2].push_back( std::pair<uint32, uint32> (j,k+1) );
+        curGeometry.neighborPrimitives[idx3].push_back( std::pair<uint32, uint32> (j,k+2)  );
+
+        //std::cout << idx << " " << idx2 << " " << idx3 << "\n";
+        
         Vector3f& pos1 = curGeometry.positions[idx];
         Vector3f& pos2 = curGeometry.positions[idx2];
         Vector3f& pos3 = curGeometry.positions[idx3];
@@ -192,6 +200,8 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
       }
     }
   }
+
+
 
   //Iterate through all vertex pairs. Calculate the cost, v'(Q1+Q2)v, for each vertex pair.
   std::priority_queue<QSlimStruct> vertexPairs;
@@ -234,7 +244,7 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
           vbar4f = Qbarinv * Vector4f(0,0,0,1);
           Vector3f vbar = Vector3f(vbar4f.x, vbar4f.y, vbar4f.z);
           if ( !boundingSphere.contains(vbar) ) {
-            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" <<  Q << "\n";
+            
             Vector3f vbar = (pos1+pos2)/2;
             vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
           }
@@ -275,9 +285,9 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
         //vectors 1 and 3
         Q = curGeometry.positionQs[idx] + curGeometry.positionQs[idx3];
         Qbar =Matrix4x4f(Vector4f(Q(0,0), Q(0,1), Q(0,2), Q(0,3)),
-                        Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
-                        Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
-                        Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
+                         Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
+                         Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
+                         Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
 
         det = invert(Qbarinv, Qbar);
         //std::cout << Qbar << " " << Qbarinv << " : inverted?\n";
@@ -303,21 +313,19 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
     }
   }
 
-
+  std::cout << "totalVertices: " << totalVertices << "\n";
 
   //Remove the least cost pair from the list of vertex pairs. Replace it with a new vertex.
   //Modify all triangles that had either of the two vertices to point to the new vertex.
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
 
   int remainingVertices = totalVertices;
-  uint numSimplified = 0;
+  
   while (remainingVertices > numVerticesLeft && vertexPairs.size() > 0) {
     const QSlimStruct& top = vertexPairs.top();
 
     SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
     std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[top.mGeomIdx];
-
-    
 
     uint32 j = top.mPrimitiveIdx;
     uint32 k1 = top.mPrimitiveIndicesIdx;
@@ -337,16 +345,21 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
     case QSlimStruct::ONE_THREE:
       k2 = k1 + 2;
       break;
-
     }
     
     unsigned short idx = curGeometry.primitives[j].indices[k1];
     unsigned short idx2 = curGeometry.primitives[j].indices[k2];
-
+    
     while (vertexMapping.find(idx) != vertexMapping.end()) {
+      if (idx == vertexMapping[idx]) {        
+        break;
+      }
       idx = vertexMapping[idx];
     }
     while (vertexMapping.find(idx2) != vertexMapping.end()) {
+      if (idx2 == vertexMapping[idx2]) {        
+        break;
+      }
       idx2 = vertexMapping[idx2];
     }
 
@@ -356,23 +369,55 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
       pos1.x = top.mReplacementVector.x;
       pos1.y = top.mReplacementVector.y;
       pos1.z = top.mReplacementVector.z;
+      
+      
+      std::map<unsigned short, int> posIndexes;
+      int numVerticesRemoved = 0;
+      for (int primIdx = top.mPrimitiveIndicesIdx; primIdx < top.mPrimitiveIndicesIdx + 3; primIdx++) {
 
-      remainingVertices--;
-     
+        unsigned short posIdx = curGeometry.primitives[j].indices[primIdx];
+        while (vertexMapping.find(posIdx) != vertexMapping.end() ) {
+          if (posIdx == vertexMapping[posIdx]) break;
+          posIdx = vertexMapping[posIdx];          
+        }
+
+        posIndexes[posIdx] = 1;
+        int numNeighbors = curGeometry.neighborPrimitives[posIdx].size();
+        
+        // std::cout << idx2 << " : idx2, "  << posIdx << " : posIdx, " << numNeighbors <<  " : numNeighbors\n";
+
+        if (numNeighbors >= 1)
+          curGeometry.neighborPrimitives[posIdx].erase(curGeometry.neighborPrimitives[posIdx].begin());
+        
+        if (posIdx != idx2) {
+          //std::cout << numNeighbors << " : curGeometry.neighborPrimitives[posIdx].size\n";
+          if (numNeighbors == 1) {
+            numVerticesRemoved += curGeometry.numInstances;
+            vertexMapping[posIdx] = posIdx;
+          }
+        }
+      }
+
+      if (posIndexes.size() == 3) {
+        remainingVertices -= curGeometry.numInstances;
+        remainingVertices -= numVerticesRemoved;
+      } 
+
+      
       vertexMapping[idx2] = idx;
-
-      numSimplified++;
     }
-    
 
     vertexPairs.pop();
+
+      
   }
 
+  //std::cout << "1. remainingVertices: " << remainingVertices << "\n";
+
+  remainingVertices = 0;
 
   //remove unused vertices; get new mapping from previous vertex indices to new vertex indices in vertexMapping2;
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping2;
-
-  totalVertices = 0;
 
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
@@ -396,49 +441,60 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
         texUVs.push_back(curGeometry.texUVs[j]);
       }
     }
-    
 
     curGeometry.positions = positions;
     curGeometry.normals = normals;
     curGeometry.texUVs = texUVs;
+
+    remainingVertices += curGeometry.positions.size() * curGeometry.numInstances;
   }
+
+  //std::cout << "2. remainingVertices: " << remainingVertices << "\n";
+
+  remainingVertices = 0;
 
   //remove degenerate triangles.
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
-    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
-
-    curGeometry.positionQs.clear(); //no longer need these.
+    SubMeshGeometry& curGeometry = agg_mesh->geometry[i];    
 
     std::tr1::unordered_map<int, int>& vertexMapping =  vertexMapping1[i];
     std::tr1::unordered_map<int, int>& oldToNewMap = vertexMapping2[i];
 
     bool hasTriangles = false;
-
     
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
       std::vector<unsigned short> newPrimitiveList;
       for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
         unsigned short idx = curGeometry.primitives[j].indices[k];
         unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
-        unsigned short idx3 = curGeometry.primitives[j].indices[k+2];
+        unsigned short idx3 = curGeometry.primitives[j].indices[k+2];        
 
+        
         while  (vertexMapping.find(idx) != vertexMapping.end()) {
+          if (idx == vertexMapping[idx]) {
+            break;
+          }
           idx = vertexMapping[idx];
         }
         while (vertexMapping.find(idx2) != vertexMapping.end()) {
+          if (idx2 == vertexMapping[idx2]) {
+            break;
+          }
           idx2 = vertexMapping[idx2];
         }
         while (vertexMapping.find(idx3) != vertexMapping.end()) {
+          if (idx3 == vertexMapping[idx3]) {
+            break;            
+          }
           idx3 = vertexMapping[idx3];
         }
+       
 
-
-        if (idx!=idx2 && idx2 != idx3 && idx3!=idx){
+        if ( idx!=idx2 && idx2 != idx3 && idx3!=idx){
           newPrimitiveList.push_back( oldToNewMap[idx]);
           newPrimitiveList.push_back( oldToNewMap[idx2]);
           newPrimitiveList.push_back( oldToNewMap[idx3]);
         }
-
       }
       curGeometry.primitives[j].indices = newPrimitiveList;
 
@@ -447,18 +503,27 @@ void MeshSimplifier::simplify(std::tr1::shared_ptr<Sirikata::Meshdata> agg_mesh,
         hasTriangles = true;
       }
     }
-  
-
     if (!hasTriangles) {
+      //std::cout << curGeometry.positionQs.size() << " : " << vertexMapping.size() << " and " << "!hasTriangles\n"; 
+
       curGeometry.positions.clear();
       curGeometry.texUVs.clear();
       curGeometry.normals.clear();
     }
 
-    totalVertices += curGeometry.positions.size();
+    remainingVertices += curGeometry.positions.size() * curGeometry.numInstances;
+
+    curGeometry.positionQs.clear(); //no longer need these.
   }
 
+  
+
+  //std::cout << "3. remainingVertices: " << remainingVertices << "\n";
+
+  //std::cout << "Simplification ended\n";
 
 }
 
 }
+
+

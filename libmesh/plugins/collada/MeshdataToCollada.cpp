@@ -54,7 +54,7 @@ namespace Sirikata {
     //TODO: do we only use meters as our units?
     asset.setUnit ( "meters", 1.0 );
 
-    asset.setUpAxisType ( COLLADASW::Asset::UpAxisType(/*meshdata.up_axis+1*/COLLADASW::Asset::Y_UP) );
+    asset.setUpAxisType ( COLLADASW::Asset::UpAxisType(COLLADASW::Asset::Y_UP) );
 
     asset.add();
 
@@ -71,29 +71,42 @@ namespace Sirikata {
 
     }
 
-    void exportMaterial(const Meshdata& meshdata, std::map<std::string, int>& textureURIToEffectIndexMap) {
+    void exportMaterial(const Meshdata& meshdata, std::map<std::string, int>& textureURIToEffectIndexMap, std::map<int, int>& materialRedirectionMap) {     
       openLibrary();
 
       for (uint32 i=0; i < meshdata.materials.size(); i++) {
+        //FIXME: this assumes all the texture URIs are the same in materials[i].textures
+        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];      
+        if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end() &&
+            textureURIToEffectIndexMap[texture.uri] != i
+           )
+          {   
+            materialRedirectionMap[i] = textureURIToEffectIndexMap[texture.uri];
+            continue;
+          }
+
+        if (texture.uri == "") {
+          char colorEncodingStr[256];
+          snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
+                   texture.color.z, texture.color.w, texture.affecting);
+          String colorEncoding = colorEncodingStr;
+          
+          if (textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end() &&
+              textureURIToEffectIndexMap[colorEncoding] != i
+              )
+            {   
+              materialRedirectionMap[i] = textureURIToEffectIndexMap[colorEncoding];
+              continue;
+            }
+        }
+        
+
+        materialRedirectionMap[i] = i;
         char effectNameStr[256];
         snprintf(effectNameStr, 256, "material%d", i);
         std::string effectName = effectNameStr;
         std::string materialName = effectName + "ID";
         openMaterial(materialName, COLLADABU::Utils::checkNCName(materialName) );
-
-        //FIXME: this assumes all the texture URIs are the same in materials[i].textures
-        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];
-        
-        if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end()) {          
-          
-          snprintf(effectNameStr, 256, "material%d", textureURIToEffectIndexMap[texture.uri] );
-          std::string effectName = effectNameStr;
-          addInstanceEffect("#" + effectName + "-effect");
-          
-          closeMaterial();
-          
-          continue;
-        }
 
         addInstanceEffect("#" + effectName + "-effect");        
 
@@ -123,14 +136,15 @@ namespace Sirikata {
           //dealing with texture.
           for (uint32 j=0; j<meshdata.materials[i].textures.size(); j++) {
             const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[j];
-            
-            if (  textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end()) {
-              continue;
-            }            
 
             COLLADASW::ColorOrTexture colorOrTexture;
+            String colorEncoding = "";
 
             if (texture.uri != "") {
+               if (  textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end()) {
+                 continue;
+               }
+
               std::string nonAlphaNumericTextureURI = removeNonAlphaNumeric(texture.uri);
 
               COLLADASW::Texture colladaTexture = COLLADASW::Texture(nonAlphaNumericTextureURI);
@@ -160,13 +174,25 @@ namespace Sirikata {
               colladaTexture.setTexcoord("TEX0");
 
               colorOrTexture = COLLADASW::ColorOrTexture(colladaTexture);
-
-              //std::cout << "TEXTURE.URI=" << texture.uri << "\n";
             }
             else {
+              char colorEncodingStr[256];
+              snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
+                       texture.color.z, texture.color.w, texture.affecting);
+              colorEncoding = colorEncodingStr;
+              std::cout << colorEncoding << " : colorEncoding 1\n";
+              if (  textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end()) {
+                 continue;
+              }
+              std::cout << colorEncoding << " : colorEncoding 2\n";
+              std::cout << texture.affecting << " : texture.affecting 2\n";
+              
+              
               colorOrTexture = COLLADASW::ColorOrTexture( COLLADASW::Color(texture.color.x, texture.color.y,
                                                                            texture.color.z, texture.color.w));
             }
+
+            
 
             switch(texture.affecting) {
               case MaterialEffectInfo::Texture::DIFFUSE:
@@ -182,6 +208,9 @@ namespace Sirikata {
             if (texture.uri != "") {
               textureURIToEffectIndexMap[texture.uri] = i;              
             }
+            else {              
+              textureURIToEffectIndexMap[colorEncoding] = i;
+            }
           }
 
           if (!effectProfileEmpty) {
@@ -193,8 +222,7 @@ namespace Sirikata {
           
             effectProfile.setShininess(meshdata.materials[i].shininess);
             effectProfile.setReflectivity(meshdata.materials[i].reflectivity);
-            effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
-          
+            effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);          
 
             //
             addEffectProfile(effectProfile);
@@ -218,9 +246,10 @@ namespace Sirikata {
     {
     }
 
-    void exportGeometry(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata) {
+    void exportGeometry(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, 
+                        std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap) 
+    {
       openLibrary();
-
 
       for (uint32 i=0; i<meshdata.geometry.size(); i++) {
         char geometryNameStr[256];
@@ -236,11 +265,11 @@ namespace Sirikata {
           }
         }
 
-
         bool hasTriangles = false;
-        for(uint32 j = 0; geoInst != NULL && j < meshdata.geometry[i].primitives.size(); ++j )
+        for(uint32 j = 0; geoInst != NULL && meshdata.geometry[i].positions.size() > 0  && j < meshdata.geometry[i].primitives.size(); ++j )
         {
           if (meshdata.geometry[i].primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
+          
           if (meshdata.geometry[i].primitives[j].indices.size() > 0) {
             hasTriangles = true;
             break;
@@ -248,8 +277,11 @@ namespace Sirikata {
         }
 
         if (!hasTriangles) {
+          std::cout << "Skipping this one in generation: " << geometryName   << "\n";
           continue;
         }
+
+        addedGeometriesList[i] = true;
 
         openMesh(geometryName);
 
@@ -360,7 +392,7 @@ namespace Sirikata {
 
           char materialName[256];
           GeometryInstance::MaterialBindingMap::const_iterator mbm_it = geoInst->materialBindingMap.find(meshdata.geometry[i].primitives[j].materialId);
-          snprintf(materialName, 256, "material%d", mbm_it->second);
+          snprintf(materialName, 256, "material%d", materialRedirectionMap[mbm_it->second]);
           triangles.setMaterial(std::string(materialName));
 
           int offset = 0;
@@ -405,17 +437,26 @@ public:
     {
     }
 
-  void exportVisualScene(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata) {
+  void exportVisualScene(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, 
+                         std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap) 
+  {
     openLibrary();
     openVisualScene( "Space_Aggregated_Scene" );
 
 
     for(uint32 i = 0; i < meshdata.instances.size(); i++)
     {
-      char geometryNameStr[256];
-      snprintf(geometryNameStr, 256, "mesh%d-geometry", i);
-      std::string geometryName = geometryNameStr;
 
+      if (   addedGeometriesList.find(meshdata.instances[i].geometryIndex) == addedGeometriesList.end() 
+             || addedGeometriesList[meshdata.instances[i].geometryIndex] == false)
+      {
+        continue;
+      }
+
+      char geometryNameStr[256];
+      snprintf(geometryNameStr, 256, "mesh-geometry-%d", i );
+      std::string geometryName = geometryNameStr;
+      
       COLLADASW::Node colladaNode( streamWriter );
 
       colladaNode.setNodeId( "node-" + geometryName );
@@ -427,15 +468,18 @@ public:
       colladaNode.start();
 
       COLLADASW::InstanceGeometry instanceGeometry ( streamWriter );
-      instanceGeometry.setUrl ( "#" + geometryName );
+
+      char geometryUrlStr[256];
+      snprintf(geometryUrlStr, 256, "mesh%d-geometry", meshdata.instances[i].geometryIndex);
+      std::string geometryUrl = geometryUrlStr;
+      instanceGeometry.setUrl ( "#" + geometryUrl );
 
       COLLADASW::BindMaterial& bindMaterial = instanceGeometry.getBindMaterial();
       for (std::map<SubMeshGeometry::Primitive::MaterialId,size_t>::const_iterator it =
              meshdata.instances[i].materialBindingMap.begin();
            it != meshdata.instances[i].materialBindingMap.end(); it++)
       {
-
-        uint32 materialIdx = it->second;
+        uint32 materialIdx = materialRedirectionMap[it->second];
 
         char effectNameStr[256];
         snprintf(effectNameStr, 256, "material%d", materialIdx);
@@ -450,6 +494,15 @@ public:
       }
 
       instanceGeometry.add();
+
+      Matrix4x4f mat = meshdata.instances[i].transform;
+
+      double matrix[4][4] = { { mat(0,0), mat(0,1), mat(0,2), mat(0,3) },
+                              { mat(1,0), mat(1,1), mat(1,2), mat(1,3)  },
+                              { mat(2,0), mat(2,1), mat(2,2), mat(2,3)  },
+                              { mat(3,0), mat(3,1), mat(3,2), mat(3,3)  }
+                            };
+      colladaNode.addMatrix( matrix );
 
       colladaNode.end();
     }
@@ -517,15 +570,17 @@ public:
     effectExporter.exportEffect(&streamWriter, meshdata, texturesList, textureURIToEffectIndexMap);
 
 
+    std::map<int, int> materialRedirectionMap;
     MaterialExporter materialExporter(&streamWriter);
-    materialExporter.exportMaterial( meshdata, textureURIToEffectIndexMap);
+    materialExporter.exportMaterial( meshdata, textureURIToEffectIndexMap, materialRedirectionMap);
 
- 
+
+    std::map<int,bool> addedGeometriesList;
     GeometryExporter geometryExporter(&streamWriter);
-    geometryExporter.exportGeometry(&streamWriter, meshdata);
+    geometryExporter.exportGeometry(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap);
 
     VisualSceneExporter visualSceneExporter(&streamWriter);
-    visualSceneExporter.exportVisualScene(&streamWriter, meshdata);
+    visualSceneExporter.exportVisualScene(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap);
 
     exportScene(&streamWriter, meshdata);
 
