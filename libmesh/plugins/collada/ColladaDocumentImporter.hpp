@@ -84,8 +84,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         String documentURI() const;
 
-        std::tr1::shared_ptr<Meshdata> getMeshdata() {
-          return std::tr1::shared_ptr<Meshdata>(mMesh);
+        Mesh::MeshdataPtr getMeshdata() {
+          return mMesh;
         }
 
     protected:
@@ -102,13 +102,13 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
-        bool makeTexture (MaterialEffectInfo::Texture::Affecting type,
+        bool makeTexture (Mesh::MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding * binding,
                           const COLLADAFW::EffectCommon * effect,
                           const COLLADAFW::ColorOrTexture & color,
                           size_t geom_index,
                           size_t prim_index,
-                          MaterialEffectInfo::TextureList&output, bool forceBlack=false);
+                          Mesh::MaterialEffectInfo::TextureList&output, bool forceBlack=false);
         size_t finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geom_index, size_t prim_index);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter
@@ -191,7 +191,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, AnimationBindings, UniqueIdHash> AnimationBindingsMap;
         AnimationBindingsMap mAnimationBindings;
 
-        Meshdata::SubMeshGeometryList mGeometries;
+        Mesh::SubMeshGeometryList mGeometries;
+
         IndicesMultimap mGeometryMap;
         struct ExtraPrimitiveData {
             std::map<size_t, size_t> uvSetMap;
@@ -199,12 +200,12 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         struct ExtraGeometryData {
             std::vector<ExtraPrimitiveData> primitives;
         };
-        void setupPrim(SubMeshGeometry::Primitive* outputPrim,
+        void setupPrim(Mesh::SubMeshGeometry::Primitive* outputPrim,
                        ExtraPrimitiveData&outputPrimExtra,
                        const COLLADAFW::MeshPrimitive*prim);
         std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
         IndicesMap mLightMap;
-        Meshdata::LightInfoList mLights;
+        Mesh::LightInfoList mLights;
 
         IdMap mMaterialMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::Effect, UniqueIdHash> ColladaEffectMap;
@@ -215,9 +216,9 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         std::vector <COLLADAFW::EffectCommon*> mColladaClonedCommonEffects;
         //IndicesMap mEffectMap;
-        Meshdata::MaterialEffectInfoList mEffects;
+        Mesh::MaterialEffectInfoList mEffects;
 
-        Meshdata * mMesh;
+        Mesh::MeshdataPtr mMesh;
 };
 
 

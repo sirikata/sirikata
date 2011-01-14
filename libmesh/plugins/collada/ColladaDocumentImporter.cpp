@@ -57,19 +57,14 @@
 
 namespace Sirikata { namespace Models {
 
+using namespace Mesh;
+
 ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash )
     :   mDocument ( new ColladaDocument ( uri ) ),
-        mState ( IDLE )
+        mState ( IDLE ),
+        mMesh(new Mesh::Meshdata())
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri);
-
-//    SHA256 hash = SHA256::computeDigest(uri.toString());    /// rest of system uses hash
-//    lastURIString = hash.convertToHexString();
-
-//    lastURIString = uri.toString();
-
-    Meshdata* meshdata = new Meshdata();
-    mMesh = meshdata;
 
     mMesh->uri = uri.toString();
     mMesh->hash = hash;

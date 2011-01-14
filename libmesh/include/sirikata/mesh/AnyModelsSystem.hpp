@@ -54,11 +54,11 @@ class SIRIKATA_MESH_EXPORT AnyModelsSystem : public ModelsSystem
     virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data);
 
     /** Load a mesh into a Meshdata object. */
-    virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+    virtual Mesh::MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
         std::tr1::shared_ptr<const Transfer::DenseData> data);
 
     /** Convert a Meshdata to the format for this ModelsSystem. */
-    virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename);
+    virtual bool convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename);
 
     static ModelsSystem* create(const String& args);
   private:

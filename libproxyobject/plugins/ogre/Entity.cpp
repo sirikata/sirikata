@@ -45,6 +45,8 @@ using namespace Sirikata::Transfer;
 namespace Sirikata {
 namespace Graphics {
 
+using namespace Sirikata::Mesh;
+
 static void fixOgreURI(String &uri) {
     for (String::iterator i=uri.begin();i!=uri.end();++i) {
         if(*i=='.') *i='{';
@@ -757,7 +759,7 @@ public:
         String hash = sha.convertToHexString();
         bool useSharedBuffer = true;
         size_t totalVertexCount=0;
-        for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+        for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
 
             // Get the instanced submesh
@@ -796,7 +798,7 @@ public:
 
         if (totalVertexCount>65535)
             useSharedBuffer=false;
-        Mesh* mesh= dynamic_cast <Mesh*> (r);
+        Ogre::Mesh* mesh= dynamic_cast <Ogre::Mesh*> (r);
 
         if (totalVertexCount==0 || mesh==NULL)
             return;
@@ -808,7 +810,7 @@ public:
             mesh->sharedVertexData = createVertexData(md.geometry[md.instances[0].geometryIndex],totalVertexCount, vbuf);
             pData=(char*)vbuf->lock(HardwareBuffer::HBL_DISCARD);
         }
-        for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+        for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
 
             Matrix4x4f pos_xform = geoinst.transform;
@@ -1030,7 +1032,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
     if (!md.instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
-        for (Meshdata::MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
+        for (MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
             std::string matname = hash+"_mat_"+boost::lexical_cast<string>(index);
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
@@ -1043,7 +1045,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
             }
         }
         Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
-        for(Meshdata::TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++){
+        for(TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++){
           std::string matname = hash + "_texture_" + (*tex_it);
             Ogre::MaterialPtr mat = base_mat->clone(matname);
             String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*tex_it);
@@ -1062,7 +1064,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
             Ogre::ManualObject mo(hash);
             mo.clear();
 
-            for(Meshdata::GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
+            for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
                 const GeometryInstance& geoinst = *geoinst_it;
 
                 Matrix4x4f pos_xform = geoinst.transform;
@@ -1136,7 +1138,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
     }
     // Lights
     int light_idx = 0;
-    for(Meshdata::LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
+    for(LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
         const LightInstance& lightinst = *lightinst_it;
 
         Matrix4x4f pos_xform = lightinst.transform;
@@ -1193,7 +1195,7 @@ void Entity::handleMeshParsed(MeshdataPtr md) {
         return;
     }
 
-    for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+    for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
       String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
 
         ResourceDownloadTask *dl = new ResourceDownloadTask(

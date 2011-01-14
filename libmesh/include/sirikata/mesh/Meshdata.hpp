@@ -36,9 +36,14 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Sha256.hpp>
 #include "LightInfo.hpp"
+#include <sirikata/core/util/UUID.hpp>
 
 
 namespace Sirikata {
+namespace Mesh {
+
+typedef std::vector<LightInfo> LightInfoList;
+typedef std::vector<std::string> TextureList;
 
 /** Represents a skinned animation. A skinned animation is directly associated
  *  with a SubMeshGeometry.
@@ -60,11 +65,6 @@ typedef std::vector<SkinController> SkinControllerList;
 struct SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
-
-  //used only during simplification
-  std::vector< Matrix4x4f  > positionQs;
-
-
 
 
     std::vector<Sirikata::Vector3f> normals;
@@ -101,7 +101,16 @@ struct SubMeshGeometry {
 
     SkinControllerList skinControllers;
 
+
+    //used only during simplification
+    std::vector< Matrix4x4f  > positionQs;
+    uint32 numInstances;
+    std::tr1::unordered_map<uint32, std::vector< std::pair<uint32, uint32> > > neighborPrimitives; // maps positionIdx to list of primitiveIdxes
+    /////////////////////////////////
 };
+typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
+
+
 struct GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
     MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
@@ -109,13 +118,14 @@ struct GeometryInstance {
     Matrix4x4f transform;
     BoundingBox3f3f aabb;//transformed aabb
     double radius;//transformed radius
-
 };
+typedef std::vector<GeometryInstance> GeometryInstanceList;
 
 struct LightInstance {
     int lightIndex; // Index in LightInfoList
     Matrix4x4f transform;
 };
+typedef std::vector<LightInstance> LightInstanceList;
 
 struct MaterialEffectInfo {
     struct Texture {
@@ -192,19 +202,15 @@ struct MaterialEffectInfo {
     float shininess;
     float reflectivity;
 };
+typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
+
 
 struct InstanceSkinAnimation {
 };
 
 struct Meshdata {
-    typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
-    typedef std::vector<LightInfo> LightInfoList;
-    typedef std::vector<std::string> TextureList;
     typedef std::tr1::unordered_map<std::string, std::string> URIMap;
 
-    typedef std::vector<GeometryInstance> GeometryInstanceList;
-    typedef std::vector<LightInstance> LightInstanceList;
-    typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
     SubMeshGeometryList geometry;
     TextureList textures;
     URIMap textureMap;
@@ -218,12 +224,11 @@ struct Meshdata {
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
-
-
 };
 
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
 
+} // namespace Mesh
 } // namespace Sirikata
 
 #endif //_SIRIKATA_MESH_MESHDATA_HPP_

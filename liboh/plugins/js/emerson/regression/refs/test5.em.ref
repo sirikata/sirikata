@@ -7,8 +7,8 @@ Trying to compile
 
 
 Emerson Tree after parsing 
-(PROG (EXPR_LIST (ASSIGN a (COND_EXPR (TYPEOF (POSTEXPR (EXPR_LIST (COND_EXPR (POSTEXPR x)))))))) (EXPR_LIST (ASSIGN b (COND_EXPR (TYPEOF (POSTEXPR (EXPR_LIST (COND_EXPR (POSTEXPR z)))))))))
+(PROG (EXPR_LIST (ASSIGN a (COND_EXPR (TYPEOF (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (POSTEXPR x))))))))) (EXPR_LIST (ASSIGN b (COND_EXPR (TYPEOF (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (POSTEXPR z))))))))))
 The generated code is 
- a  =  typeOf x;
-b  =  typeOf z;
+ a  =  typeOf ( x );
+b  =  typeOf ( z );
  

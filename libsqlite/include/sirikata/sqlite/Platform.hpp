@@ -1,7 +1,7 @@
 /*  Sirikata
- *  MeshSimplifier.hpp
+ *  Platform.hpp
  *
- *  Copyright (c) 2010, Tahir Azim.
+ *  Copyright (c) 2011, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,54 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _SIRIKATA_SQLITE_PLATFORM_HPP_
+#define _SIRIKATA_SQLITE_PLATFORM_HPP_
+
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/UUID.hpp>
 
-#include <sirikata/core/transfer/TransferData.hpp>
-#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/core/transfer/TransferMediator.hpp>
+#ifndef SIRIKATA_SQLITE_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_SQLITE_EXPORT
+#   else
+#     if defined(SIRIKATA_SQLITE_BUILD)
+#       define SIRIKATA_SQLITE_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_SQLITE_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_SQLITE_PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_SQLITE_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_SQLITE_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_SQLITE_EXPORT
+#     define SIRIKATA_SQLITE_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
 
-#include <sirikata/space/LocationService.hpp>
+#ifndef SIRIKATA_SQLITE_EXPORT_C
+# define SIRIKATA_SQLITE_EXPORT_C extern "C" SIRIKATA_SQLITE_EXPORT
+#endif
 
+#ifndef SIRIKATA_SQLITE_PLUGIN_EXPORT_C
+# define SIRIKATA_SQLITE_PLUGIN_EXPORT_C extern "C" SIRIKATA_SQLITE_PLUGIN_EXPORT
+#endif
 
-#include <sirikata/mesh/Meshdata.hpp>
-
-namespace Sirikata {
-
-class SIRIKATA_EXPORT MeshSimplifier {
-private:
-
-  double invert(Matrix4x4f& inv, Matrix4x4f& orig);
-
-  typedef struct QSlimStruct {
-    float mCost;
-    int mGeomIdx, mPrimitiveIdx, mPrimitiveIndicesIdx;
-    enum VectorCombination {ONE_TWO, TWO_THREE, ONE_THREE} ;
-
-    VectorCombination mCombination;
-
-    Vector3f mReplacementVector;
-
-    QSlimStruct(float cost, int i, int j, int k, VectorCombination c, Vector3f v) {
-      mCost = cost;
-      mGeomIdx = i;
-      mPrimitiveIdx = j;
-      mPrimitiveIndicesIdx = k;
-      mCombination = c;
-      mReplacementVector = v;
-    }
-
-    bool operator < (const QSlimStruct& qs) const {
-      return mCost < qs.mCost;
-    }
-
-  } QSlimStruct;
-
-
-public:
-  void simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft);
-
-};
-
-}
+#endif //_SIRIKATA_SQLITE_PLATFORM_HPP_

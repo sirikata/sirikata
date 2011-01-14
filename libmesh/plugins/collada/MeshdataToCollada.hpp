@@ -6,7 +6,7 @@
 #include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
-int meshdataToCollada(const Meshdata& meshdata, const std::string& fileName);
+int meshdataToCollada(const Mesh::Meshdata& meshdata, const std::string& fileName);
 
 }
 

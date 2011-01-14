@@ -100,7 +100,9 @@ void JSObjectScriptManager::createMathTemplate()
     mMathTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSMath::ScriptCosFunction));
     mMathTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
     mMathTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
-
+    mMathTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
+    mMathTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
+    
 }
 
 //these templates involve vec, quat, pattern, etc.
@@ -247,8 +249,8 @@ void JSObjectScriptManager::createVisibleTemplate()
     mVisibleTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
     mVisibleTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
     mVisibleTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
-    mVisibleTemplate->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(true));
-
+    mVisibleTemplate->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));
+    mVisibleTemplate->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
 }
 
 void JSObjectScriptManager::createPresenceTemplate()

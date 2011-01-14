@@ -49,12 +49,12 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     printf("Hash: %s\n", md->hash.toString().c_str());
 
     printf("Texture List:\n");
-    for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+    for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
         printf("   %s\n", it->c_str());
     }
 
     printf("Submesh Geometry List:\n");
-    for(Meshdata::SubMeshGeometryList::const_iterator it = md->geometry.begin(); it != md->geometry.end(); it++) {
+    for(SubMeshGeometryList::const_iterator it = md->geometry.begin(); it != md->geometry.end(); it++) {
         printf("   Name: %s, Positions: %d Normals: %d Primitives: %d\n", it->name.c_str(),
                 (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size());
 
@@ -69,17 +69,17 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     }
 
     printf("Lights:\n");
-    for(Meshdata::LightInfoList::const_iterator it = md->lights.begin(); it != md->lights.end(); it++) {
+    for(LightInfoList::const_iterator it = md->lights.begin(); it != md->lights.end(); it++) {
         printf("   Type: %d Power: %f\n", it->mType, it->mPower);
     }
 
     printf("Material Effects:\n");
-    for(Meshdata::MaterialEffectInfoList::const_iterator it = md->materials.begin(); it != md->materials.end(); it++) {
+    for(MaterialEffectInfoList::const_iterator it = md->materials.begin(); it != md->materials.end(); it++) {
         printf("   Textures: %d Shininess: %f Reflectivity: %f\n", (int)it->textures.size(), it->shininess, it->reflectivity);
     }
 
     printf("Geometry Instances:\n");
-    for(Meshdata::GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
+    for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
         printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, it->materialBindingMap.size());
         for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
             printf("      map from: %d to: %d\n", (int)m->first, (int)m->second);
@@ -87,7 +87,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     }
 
     printf("Light Instances:\n");
-    for(Meshdata::LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
+    for(LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
         printf("   Index: %d Matrix: %s\n", it->lightIndex, it->transform.toString().c_str());
     }
 

@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/sqlite/SQLite.hpp>
 #include <boost/thread.hpp>
-#include "SQLite.hpp"
-AUTO_SINGLETON_INSTANCE(Sirikata::Persistence::SQLite);
 
-namespace Sirikata { namespace Persistence {
+AUTO_SINGLETON_INSTANCE(Sirikata::SQLite);
+
+namespace Sirikata {
 void SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg)
 {
 	if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
@@ -76,6 +76,14 @@ SQLite::SQLite() {
 }
 
 SQLite::~SQLite() {
+}
+
+SQLite& SQLite::getSingleton() {
+    return AutoSingleton<SQLite>::getSingleton();
+}
+
+void SQLite::destroy() {
+    AutoSingleton<SQLite>::destroy();
 }
 
 SQLiteDBPtr SQLite::open(const String& name) {
@@ -127,4 +135,4 @@ SQLiteDBPtr SQLite::open(const String& name) {
     return db;
 }
 
-} } // namespace Sirikata::Persistence
+} // namespace Sirikata

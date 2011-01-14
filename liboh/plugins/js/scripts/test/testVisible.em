@@ -8,36 +8,82 @@ system.print("\n\n Testing visible calls.\n\n");
 
 var haveCallback = false;
 var objToMvTowards;
-var inverseSpeed = 100;
-var CALLBACK_PERIOD = 5;
+var inverseSpeed = 1;
+var CALLBACK_PERIOD = .5;
+var CALLBACK_MAX_DISTANCE = 10;
+
 
 function proxCallback(calledBack)
 {
     system.print("\n\nHave prox callback\n\n");
     if (! haveCallback)
     {
-        haveCallback   = true;
-        objToMvTowards = calledBack;
+        var distToIt = distanceFromMeToIt(calledBack);
+        system.print("\n\nThis is dist to it " + distToIt.toString());
+        if ((distToIt < CALLBACK_MAX_DISTANCE) && (distToIt != 0 ) )
+        {
+            system.print("\n\nSetting haveCallback\n\n");
+            haveCallback   = true;
+            objToMvTowards = calledBack;        
+        }
+    }
+    else
+    {
+        if (calledBack.checkEqual(objToMvTowards))
+        {
+            objToMvTowards =   calledBack;
+        }
     }
 }
 
 
 system.presences[0].onProxAdded(proxCallback);
 
+function distanceFromMeToIt(it)
+{
+    var myPosition  = system.presences[0].getPosition();
+    var itsPosition = it.getPosition();
+
+
+    var diffX =     (myPosition.x - itsPosition.x);
+    var diffY =     (myPosition.y - itsPosition.y);
+    var diffZ =     (myPosition.z - itsPosition.z);
+    
+    var diffXSquared = diffX * diffX;
+    var diffYSquared = diffY * diffY;
+    var diffZSquared = diffZ * diffZ;
+    var sumOfSquares = diffXSquared + diffYSquared + diffZSquared;
+
+    
+    var distance = system.math.sqrt(sumOfSquares);
+    
+    return distance;
+}
+
 
 function moveTowards(toMoveTowards)
 {
+    if (! toMoveTowards.getStillVisible())
+    {
+        system.presences[0].setVelocity(new system.Vec3(0,0,0) );
+        return;
+    }
+    
     var posToMoveTowards = toMoveTowards.getPosition();
     var myPosition  = system.presences[0].getPosition();
 
-    var mNewVelocity = system.Vec3(
-        (posToMoveTowards.x - myPosition.x)/inverseSpeed,
-        (posToMoveTowards.y - myPosition.y)/inverseSpeed,
-        (posToMoveTowards.z - myPosition.z)/inverseSpeed
-    );
+    var xComponent = posToMoveTowards.x - myPosition.x;
+    var yComponent = posToMoveTowards.y - myPosition.y;
+    var zComponent = posToMoveTowards.z - myPosition.z;
     
+    var mNewVelocity = new system.Vec3(
+        xComponent/inverseSpeed,
+        yComponent/inverseSpeed,
+        zComponent/inverseSpeed
+    );
+
+    system.print("\nMoving towards object with velocity: " +  mNewVelocity.toString() +  "\n");
     system.presences[0].setVelocity(mNewVelocity);
-    system.print("\nMoving towards object tango-tango-niner-niner.\n");
 }
 
 function printStatement(toMoveTowards)
@@ -69,4 +115,4 @@ function timerCallback()
 //establish timer to move towards.
 system.timeout(1,null,timerCallback);
 
-system.presences[0].setQueryAngle(.5);
+system.presences[0].setQueryAngle(.2);
