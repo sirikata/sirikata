@@ -167,6 +167,9 @@ public:
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();
 
+    VWObjectPtr getViewer() const { return mViewer; }
+    SpaceObjectReference getViewerPresence() const { return mPresenceID; }
+
     Transfer::TransferPoolPtr transferPool();
 
     String getResourcesDir() const { return mResourcesDir; }

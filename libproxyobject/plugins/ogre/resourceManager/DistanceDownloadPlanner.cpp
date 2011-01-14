@@ -80,11 +80,12 @@ void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
 void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
 {
     vector<Resource>::iterator it = findResource(proxy);
-    it->file = &(URI&)meshFile;
+    URI last_file = it->file;
+    it->file = meshFile;
     it->ready = true;
     proxy->priority = calculatePriority(proxy);
-    it->mesh->processMesh(meshFile);
-
+    if (it->file != last_file)
+        it->mesh->processMesh(it->file);
 }
 
 double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)

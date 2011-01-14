@@ -1853,6 +1853,12 @@ private:
       }
       else {
 	mState = CONNECTED;
+        // Schedule another servicing immediately in case any other operations
+        // should occur, e.g. sending data which was added after the initial
+        // connection request.
+        std::tr1::shared_ptr<Connection<EndPointType> > conn =  mConnection.lock();
+        if (conn)
+            getContext()->mainStrand->post(std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn) );
       }
     }
     else {

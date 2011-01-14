@@ -16,7 +16,7 @@ namespace JSInvokableObject
 
 v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 {
- /* Decode the args array and send the call to the internal object  */ 
+ /* Decode the args array and send the call to the internal object  */
   JSObjectScript* caller;
   JSInvokableObjectInt* invokableObj;
 
@@ -25,7 +25,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 
   assert(invokableObj);
 
-  /* 
+  /*
   create a vector of boost::any params here
   For now just take the first param and see that
 
@@ -43,7 +43,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
     {
       v8::String::AsciiValue str(args[i]);
       string s = string(*str);
-      params.push_back(boost::any(s));  
+      params.push_back(boost::any(s));
     }
     else if(args[i]->IsFunction())
     {
@@ -55,7 +55,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
       params.push_back( boost::any(in));
     }
   }
-  
+
   /* This is just a trampoline pattern */
 
   boost::any b = invokableObj->invoke(params);
@@ -65,25 +65,25 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
   }
   Invokable* newInvokableObj = boost::any_cast<Invokable*>(b);
   //Invokable* newInvokableObj = (boost::unsafe_any_cast<Invokable>(&b) );  //boost::any_cast<*>( invokableObj->invoke(params) );
-  
+
   Local<Object> tmpObj = caller->manager()->mInvokableObjectTemplate->NewInstance();
   Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
   tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(caller));
   tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD,External::New(  new JSInvokableObjectInt(newInvokableObj) ));
-            
+
   return tmpObj;
 }
 
 boost::any JSInvokableObjectInt::invoke(std::vector<boost::any> &params)
 {
   /* Invoke the invokable version */
-  std::cout << "\n\n invokable_ type is " << typeid(invokable_).name() << "\n\n";
+    SILOG(js,detailed,"JSInvokableObjectInt::invoke(): invokable_ type is " << typeid(invokable_).name());
   return invokable_->invoke(params);
 }
 
 bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, JSInvokableObjectInt*& simObj)
 {
-   
+
    if ((!senderVal->IsObject()) || (senderVal->IsUndefined()))
     {
         jsObjScript = NULL;
@@ -91,10 +91,10 @@ bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, JSObjectScript*& j
         return false;
     }
 
-    
-     
+
+
     v8::Handle<v8::Object>sender = v8::Handle<v8::Object>::Cast(senderVal);
-    
+
     if (sender->InternalFieldCount() != JSINVOKABLE_OBJECT_TEMPLATE_FIELD_COUNT)
     {
       return false;
@@ -105,13 +105,13 @@ bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, JSObjectScript*& j
 
     void* ptr = wrapJSObj->Value();
     jsObjScript = static_cast<JSObjectScript*>(ptr);
-      
+
     if (jsObjScript == NULL)
     {
         simObj = NULL;
         return false;
     }
-    
+
     v8::Local<v8::External> wrapSimObjRef;
     wrapSimObjRef = v8::Local<v8::External>::Cast(sender->GetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD));
     void* ptr2 = wrapSimObjRef->Value();

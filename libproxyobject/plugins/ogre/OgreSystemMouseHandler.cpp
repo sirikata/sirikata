@@ -136,6 +136,8 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
     // extract it from the webview ID.
     typedef std::map<WebView*, ProxyObjectWPtr> ScriptingUIObjectMap;
     ScriptingUIObjectMap mScriptingUIObjects;
+    typedef std::map<SpaceObjectReference, WebView*> ScriptingUIWebViewMap;
+    ScriptingUIWebViewMap mScriptingUIWebViews;
 
     SpaceObjectReference mLastShiftSelected;
     IntersectResult mMouseDownTri;
@@ -174,6 +176,10 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
     float mNewQueryAngle;
     Network::IOTimerPtr mQueryAngleTimer;
 
+    // Port for sending scripting requests and receiving scripting
+    // responses. *Not* used for receiving scripting requests, so it is randomly
+    // selected.
+    ODP::Port* mScriptingRequestPort;
 
     class SubObjectIterator {
         typedef Entity* value_type;
@@ -237,7 +243,7 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
     Entity *hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0) {
         Location location(cam->following()->getProxy().globalLocation(time));
         Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
-        SILOG(input,info,"X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
+        SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
 
         double dist;
         Vector3f normal;
@@ -675,7 +681,6 @@ private:
         HostedObject.
      */
     void createScriptingUIAction() {
-
         static bool onceInitialized = false;
 
         // Ask all the objects to initialize scripting
@@ -700,42 +705,20 @@ private:
                 ui_info.scripting->show();
             }
             else {
-                if (onceInitialized)
-                {
-                    WebView* new_scripting_ui =
-                        WebViewManager::getSingleton().createWebView(
-                            String("__scripting") + objid.toString(), "__scripting", 300, 300,
-                            OverlayPosition(RP_BOTTOMCENTER)
-                        );
-                    new_scripting_ui->loadFile("scripting/prompt.html");
+                OverlayPosition op = onceInitialized ? RP_BOTTOMCENTER : RP_TOPLEFT;
+                onceInitialized = true;
 
-                    ui_info.scripting = new_scripting_ui;
-                    mScriptingUIObjects[new_scripting_ui] = obj;
-                    //new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript,this,_1,_2));
-                    //        lkjs;
-
-                    new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript, this, _1, _2));
-
-            //lkjs;
-                    return;
-                }
-
-
-                //name it something else, and put it in a different place
                 WebView* new_scripting_ui =
                     WebViewManager::getSingleton().createWebView(
                         String("__scripting") + objid.toString(), "__scripting", 300, 300,
-                        OverlayPosition(RP_TOPLEFT)
+                        OverlayPosition(RP_BOTTOMCENTER)
                     );
                 new_scripting_ui->loadFile("scripting/prompt.html");
 
                 ui_info.scripting = new_scripting_ui;
                 mScriptingUIObjects[new_scripting_ui] = obj;
+                mScriptingUIWebViews[obj->getObjectReference()] = new_scripting_ui;
                 new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript, this, _1, _2));
-                //lkjs
-                //new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript,this,_1,_2));
-                onceInitialized = true;
-
             }
         }
     }
@@ -745,11 +728,11 @@ private:
     {
       /*
       static bool onceInitialized = false;
-      initScriptOnSelectedObjects(); 
+      initScriptOnSelectedObjects();
       for(SelectedObjectSet::iterator sel_it = mSelectedObjects.begin(); sel_it != mSelectedObjects.end(); sel_it++) {
         ProxyObjectPtr obj(sel_it->lock());
         if(!obj) continue;
-        
+
          SpaceObjectReference objid = obj->getObjectReference();
 
         ObjectUIMap::iterator ui_it = mObjectUIs.find(objid);
@@ -808,24 +791,24 @@ private:
       ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
         if (objit == mScriptingUIObjects.end())
             return;
-        std::cout << "\n\nHERE 1\n\n";    
-            
+        std::cout << "\n\nHERE 1\n\n";
+
         ProxyObjectPtr target_obj(objit->second.lock());
 
         if (!target_obj) return;
 
-        std::cout << "\n\nHERE 2\n\n";    
+        std::cout << "\n\nHERE 2\n\n";
 
         JSIter command_it;
         for (command_it = args.begin(); command_it != args.end(); ++command_it)
         {
-            
-            std::cout << "\n\n Inside for \n\n";    
+
+            std::cout << "\n\n Inside for \n\n";
             std::string strcmp (command_it->begin());
             if (strcmp == "Command")
             {
-                
-                 std::cout << "\n\n got Command \n\n";    
+
+                 std::cout << "\n\n got Command \n\n";
                 //Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
                 //Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
                 //scripting_req.set_id(0);
@@ -833,7 +816,7 @@ private:
 
                 JSIter nexter = command_it + 1;
                 String msgBody = String(nexter->begin());
-                
+
                 std::cout << "Chat Message: " << msgBody;
                 scripting_req.set_body(msgBody);
                 std::string serialized_scripting_request;
@@ -842,10 +825,14 @@ private:
                     Services::SCRIPTING,
                     MemoryReference(serialized_scripting_request)
                 );
-             
+=======
+                //new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript,this,_1,_2));
+                onceInitialized = true;
+>>>>>>> Trying to fix turning and moving simultaneously.  I think that the position code is broken.
+
             }
         }
-     */ 
+     */
     }
 
     void LOCAL_createWebviewAction() {
@@ -1045,6 +1032,9 @@ private:
         for (command_it = args.begin(); command_it != args.end(); ++command_it)
         {
             std::string strcmp (command_it->begin());
+
+
+
             if (strcmp == "Command")
             {
                 Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
@@ -1056,12 +1046,47 @@ private:
                 scripting_req.set_body(msgBody);
                 std::string serialized_scripting_request;
                 scripting_msg.SerializeToString(&serialized_scripting_request);
-                target_obj->sendMessage(
-                    Services::SCRIPTING,
+                mScriptingRequestPort->send(
+                    ODP::Endpoint(target_obj->getObjectReference(), Services::SCRIPTING),
                     MemoryReference(serialized_scripting_request)
                 );
-
             }
+        }
+    }
+
+    static String convertAndEscapeJavascriptString(const String& in) {
+        String result = "'";
+
+        for(int ii = 0; ii < in.size(); ii++) {
+            switch(in[ii]) {
+              case '\n':
+                result += "\\n"; break;
+              case '\r':
+                result += "\\r"; break;
+              case '\'':
+                result += "\'"; break;
+              case '\t':
+                result += "\\t"; break;
+              default:
+                result += in[ii]; break;
+            }
+        }
+
+        result += "'";
+        return result;
+    }
+
+    void handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload) {
+        Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
+        bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
+        if (!parsed) return;
+
+
+        if (mScriptingUIWebViews.find(src.spaceObject()) == mScriptingUIWebViews.end()) return;
+        WebView* wv = mScriptingUIWebViews[src.spaceObject()];
+
+        for(int32 ii = 0; ii < scripting_msg.replies_size(); ii++) {
+            wv->evaluateJS("addMessage( " + convertAndEscapeJavascriptString(scripting_msg.replies(ii).body()) + " )");
         }
     }
 
@@ -1134,11 +1159,9 @@ private:
         return camProxy;
     }
 
-    void moveAction(Vector3f dir, float amount) {
-
-
+    void moveAction(Vector3f dir, float amount)
+    {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
 
         if (!mParent||!mParent->mPrimaryCamera)
         {
@@ -1176,7 +1199,9 @@ private:
         cam->setLocation(newloc, 0, true);
     }
 
-    void rotateAction(Vector3f about, float amount) {
+
+    void rotateAction(Vector3f about, float amount)
+    {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
@@ -1200,14 +1225,22 @@ private:
         const Quaternion &orient = loc.getOrientation();
 
         // Request updates from spcae
+        //previous
+        // TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
+        // cam_vwobj->requestOrientationUpdate(space, oref,neworient);
+        // And update our local Proxy's information, assuming the move will be
+        // successful
+
         TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
         cam_vwobj->requestOrientationUpdate(space, oref,neworient);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setOrientation(neworient, 0, true);
+
     }
 
-    void stableRotateAction(float dir, float amount) {
 
+    void stableRotateAction(float dir, float amount)
+    {
         float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
         if (!mParent||!mParent->mPrimaryCamera) return;
         ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
@@ -1717,7 +1750,8 @@ public:
        mQueryAngleWidgetView(NULL),
        mNewQueryAngle(0.f),
        mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&OgreSystemMouseHandler::handleSetQueryAngleTimeout, this)) ),
-       mWhichRayObject(0)
+       mWhichRayObject(0),
+       mScriptingRequestPort(NULL)
     {
         mLastHitCount=0;
         mLastHitX=0;
@@ -1785,7 +1819,7 @@ public:
         mInputResponses["createWebview"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createWebviewAction, this));
 
 
-      
+
         mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptingUIAction, this));
         mInputResponses["openChatUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createChatUIAction, this));
 
@@ -1793,7 +1827,6 @@ public:
 
 
         mInputResponses["createScriptedObject"] = new StringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptedObjectAction, this, _1));
-        //lkjs;
         //mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::executeScript, this, _1, _2));
 
         mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::enterObjectAction, this));
@@ -1861,9 +1894,13 @@ public:
 
         //mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
 
+        // Allocate a random port for scripting requests
+        mScriptingRequestPort = mParent->getViewer()->bindODPPort(mParent->getViewerPresence());
+        mScriptingRequestPort->receive( std::tr1::bind(&OgreSystemMouseHandler::handleScriptReply, this, _1, _2, _3) );
     }
 
     ~OgreSystemMouseHandler() {
+        delete mScriptingRequestPort;
 
         if(mUploadWebView) {
             WebViewManager::getSingleton().destroyWebView(mUploadWebView);

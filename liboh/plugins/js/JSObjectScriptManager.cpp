@@ -37,6 +37,7 @@
 
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
+#include "JSObjects/JSVisible.hpp"
 #include "JSObjects/JSSystem.hpp"
 #include "JSObjects/JSMath.hpp"
 #include "JSObjects/JSHandler.hpp"
@@ -51,6 +52,8 @@
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSSystemNames.hpp"
+#include "JSObjects/JSContext.hpp"
+
 
 
 namespace Sirikata {
@@ -78,13 +81,10 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mOptions = OptionSet::getOptions("jsobjectscriptmanager",this);
     mOptions->parse(arguments);
 
-    createSystemTemplate();
-    createAddressableTemplate();
-    createHandlerTemplate();
-    createPresenceTemplate();
-    createMathTemplate();
-    createJSInvokableObjectTemplate();
+    createTemplates(); //these templates involve vec, quat, pattern, etc.
 }
+
+
 
 void JSObjectScriptManager::createMathTemplate()
 {
@@ -101,6 +101,26 @@ void JSObjectScriptManager::createMathTemplate()
     mMathTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
     mMathTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
 
+}
+
+//these templates involve vec, quat, pattern, etc.
+void JSObjectScriptManager::createTemplates()
+{
+    v8::HandleScope handle_scope;
+    mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
+    mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
+    mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
+
+    createMathTemplate();
+    createContextTemplate();
+    
+    createHandlerTemplate();
+    createVisibleTemplate();    
+    createAddressableTemplate();
+    
+    createJSInvokableObjectTemplate();
+    createPresenceTemplate();    
+    createSystemTemplate();
 }
 
 
@@ -121,24 +141,34 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->SetInternalFieldCount(CONTEXT_TEMPLATE_FIELD_COUNT);
 
     // Functions / types
-    mContextTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
-    mContextTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
-    mContextTemplate->Set(v8::String::New("__test"), v8::FunctionTemplate::New(JSSystem::__ScriptGetTest));
-    mContextTemplate->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
+    mContextTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSContext::ScriptTimeout));
+    mContextTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSContext::Print));
 
-
-    //these are mutable fields
-    mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
-    mContextTemplate->Set(v8::String::New("Vec3"), mVec3Template);
-
-    mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
-    mContextTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
-
-    mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
-    mContextTemplate->Set(JS_STRING(Pattern), mPatternTemplate);
-
+    //suspend,kill,resume,execute
+    mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
+    
+    //add basic templates: vec3, quat, etc.
+    addBaseTemplates(mContextTemplate);
+    
 }
 
+//takes in a template (likely either the context template or the system template)
+void JSObjectScriptManager::addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo)
+{
+    tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
+    tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
+    tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
+    tempToAddTo->Set(v8::String::New("Math"),mMathTemplate);
+}
+
+//should be the same as the previous function.
+void JSObjectScriptManager::addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo)
+{
+    tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
+    tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
+    tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
+    tempToAddTo->Set(v8::String::New("Math"),mMathTemplate);
+}
 
 
 //it looks like I can't figure out how to inherit system template functionality
@@ -155,7 +185,6 @@ void JSObjectScriptManager::createSystemTemplate()
     // An internal field holds the JSObjectScript*
     system_templ->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
-
     // Functions / types
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
@@ -165,22 +194,16 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
+
     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
 
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
-
-    mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
-    system_templ->Set(v8::String::New("Vec3"), mVec3Template);
-
-    mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
-    system_templ->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
-
-    mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
-    system_templ->Set(JS_STRING(Pattern), mPatternTemplate);
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
 
-
+    //math, vec, quaternion, etc.
+    addBaseTemplates(system_templ);
+    //add the system template to the global template
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
 }
 
@@ -199,6 +222,7 @@ void JSObjectScriptManager::createAddressableTemplate()
     mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
 }
 
+
 void JSObjectScriptManager::createJSInvokableObjectTemplate()
 {
   v8::HandleScope handle_scope;
@@ -206,6 +230,25 @@ void JSObjectScriptManager::createJSInvokableObjectTemplate()
   mInvokableObjectTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
   mInvokableObjectTemplate->SetInternalFieldCount(JSSIMOBJECT_TEMPLATE_FIELD_COUNT);
   mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke)); 
+}
+
+
+
+void JSObjectScriptManager::createVisibleTemplate()
+{
+    v8::HandleScope handle_scope;
+    mVisibleTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    // An internal field holds the external address of the addressable object
+    mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
+
+    
+    //these function calls are defined in JSObjects/JSVisible.hpp
+    mVisibleTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
+    mVisibleTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
+    mVisibleTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
+    mVisibleTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
+    mVisibleTemplate->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(true));
+
 }
 
 void JSObjectScriptManager::createPresenceTemplate()

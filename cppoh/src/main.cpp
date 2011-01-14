@@ -38,7 +38,6 @@
 #include <sirikata/mesh/LightInfo.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-#include <sirikata/oh/SpaceIDMap.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
@@ -119,36 +118,16 @@ int main (int argc, char** argv) {
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
-    SpaceIDMap *spaceMap = new SpaceIDMap;
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
-    typedef std::map<std::string,std::string> SimpleSpaceIDMap;
-    SimpleSpaceIDMap spaceIdMap(GetOptionValue<SimpleSpaceIDMap>(OPT_SPACEID_MAP));
-    for (SimpleSpaceIDMap::iterator i = spaceIdMap.begin(),
-             ie=spaceIdMap.end();
-         i!=ie;
-         ++i) {
-        SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
-        spaceMap->insert(newSpace, Network::Address::lexical_cast(i->second).as<Network::Address>());
-    }
 
     String oh_options = GetOptionValue<String>(OPT_OH_OPTIONS);
-    ObjectHost *oh = new ObjectHost(ctx, spaceMap, ios, oh_options);
+    ObjectHost *oh = new ObjectHost(ctx, ios, oh_options);
 
-    // Add all the spaces to the ObjectHost.
-    // FIXME we're adding all spaces and having them use the same ServerIDMap
-    // because its difficult to encode this in the options.
-    // FIXME once this is working, the above SpaceIDMap (spaceMap) shouldn't be
-    // used the same way -- it was only mapping to a single address instead of
-    // an entire ServerIDMap.
-    for (SimpleSpaceIDMap::iterator i = spaceIdMap.begin(),
-             ie=spaceIdMap.end();
-         i!=ie;
-         ++i) {
-        SpaceID newSpace(UUID(i->first,UUID::HumanReadable()));
-        oh->addServerIDMap(newSpace, server_id_map);
-    }
-
-
+    // Add all the spaces to the ObjectHost.  We used to have SpaceIDMap and
+    // fill in the same ServerIDMap for all these. Now we just add the
+    // ServerIDMap for the main space. We need a better way of handling multiple
+    // spaces.
+    oh->addServerIDMap(mainSpace, server_id_map);
 
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
@@ -186,8 +165,6 @@ int main (int argc, char** argv) {
 
     plugins.gc();
     SimulationFactory::destroy();
-
-    delete spaceMap;
 
     delete sstConnMgr;
 

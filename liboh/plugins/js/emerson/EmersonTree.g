@@ -293,12 +293,12 @@ ifStatement
      
 				statement 
 				 {
-					  //printf(" } \n");
+					  APP(" \n");
 					}
      
 				(
 				 {
-					  APP("else");
+					  APP(" else ");
 					}
 				 statement
 				 
@@ -960,7 +960,7 @@ equalityExpression
 	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
 	| ^(NOT_EQUALS e=equalityExpression {APP(" != ");} relationalExpression)
 	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {APP(" !=== ");} relationalExpression)
+	| ^(NOT_IDENT e=equalityExpression {APP(" !== ");} relationalExpression)
 ;
 
 equalityExpressionNoIn
@@ -1121,7 +1121,7 @@ unaryExpression
 	    (
 				   DELETE          {  APP("delete");}
        | VOID          {   APP("void");}
-       | TYPEOF        {  APP("typeOf");}
+       | TYPEOF        {  APP("typeOf ");}
        | PLUSPLUS      {  APP("++");}
        | MINUSMINUS    {  APP("--");}
        | UNARY_PLUS    {  APP("+");}
@@ -1164,38 +1164,62 @@ primaryExpression
 	
 // arrayLiteral definition.
 arrayLiteral
-	: ^(ARRAY_LITERAL
+  : ^(ARRAY_LITERAL {APP("[ ]"); })
+  | ^(ARRAY_LITERAL 
+
+	     { APP("[ "); }
+       (assignmentExpression)
+			 { APP(" ]"); }
+      )
+
+  | ^(ARRAY_LITERAL
 	       {
-								  APP("[ ");
-			 	}
-
-
-	       head=assignmentExpression? 
+                 APP("[ ");
+		}
+                assignmentExpression
       	
 	       (
-				   {
-					   APP(", ");
-					 }
-				   tail=assignmentExpression*
-			   )
-			)
+                 {
+                   APP(", ");
+                 }
+                 assignmentExpression
+		)*
+                {
+                  APP(" ] ");
+                }
+      )
 
-        {
-								  APP(" ] ");
-
-								}
-	;
+       	;
        
 // objectLiteral definition.
 objectLiteral
-	:^(OBJ_LITERAL 
+  :^(OBJ_LITERAL {APP("{ }");} )
+  |^(OBJ_LITERAL 
+	    { APP("{ "); } 
+            
+            (propertyNameAndValue)
+
+           {  APP(" }"); }
+    )
+	|^(OBJ_LITERAL 
 	   
 				{ APP("{ ");}
-	   (head=propertyNameAndValue)? 
-				( { APP(", "); } tail=propertyNameAndValue)*
-				{ APP(" } "); }
+				propertyNameAndValue
+				( 
+				  { 
+					  APP(", "); 
+					} 
 				
-				)
+				  propertyNameAndValue
+				)*
+
+      	{ 
+				  APP(" } "); 
+				
+				}
+
+			)
+				
 	;
 	
 propertyNameAndValue

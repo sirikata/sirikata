@@ -83,11 +83,11 @@ void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogr
   if (where!=CDNArchiveFiles.end()) {
     SILOG(resource,error,"File "<<uri<<" Already exists in CDNArchive!!!");
   }
-  SILOG(resource,debug,"File "<<uri<<" Adding to CDNArchive "<<(size_t)this);
+  SILOG(resource,detailed,"File "<<uri<<" Adding to CDNArchive "<<(size_t)this);
   CDNArchiveFiles[uri]=rbuffer;
 
   CDNArchivePackages[archiveName].push_back(uri);
-  SILOG(resource,debug,"File "<<uri<<" Added to CDNArchive "<<(size_t)this<< " success "<<(CDNArchiveFiles.find(uri)!=CDNArchiveFiles.end())<<" archive size "<<CDNArchiveFiles.size());
+  SILOG(resource,detailed,"File "<<uri<<" Added to CDNArchive "<<(size_t)this<< " success "<<(CDNArchiveFiles.find(uri)!=CDNArchiveFiles.end())<<" archive size "<<CDNArchiveFiles.size());
 }
 
 void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer)

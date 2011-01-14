@@ -382,7 +382,7 @@ void DiskCacheLayer::unserialize() {
 				}
 			}
 
-			SILOG(transfer,debug,"Cached fingerprint: " << fingerprintName <<
+			SILOG(transfer,detailed,"Cached fingerprint: " << fingerprintName <<
 				"(" << totalLength << ")");
 
 			Fingerprint fprint;

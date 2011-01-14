@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/mesh/Filter.hpp>
 
@@ -71,6 +73,24 @@ int main(int argc, char** argv) {
         }
     }
 
+    //Check for options
+    InitOptions();
+    for(int argi = 1; argi < argc; argi++) {
+        std::string arg_str(argv[argi]);
+        if(arg_str.substr(0, 9) == "--options") {
+            int equal_idx = arg_str.find('=');
+            if (equal_idx != std::string::npos) {
+                std::string options_args = arg_str.substr(equal_idx+1);
+                char * buff = new char[1000];
+                assert(options_args.length() < 1000);
+                strcpy(buff, options_args.c_str());
+                char * newargv [] = {argv[0], buff};
+                ParseOptions(2, newargv);
+                delete buff;
+            }
+        }
+    }
+
     FilterDataPtr current_data(new FilterData);
     for(int argi = 1; argi < argc; argi++) {
         std::string arg_str(argv[argi]);
@@ -90,6 +110,8 @@ int main(int argc, char** argv) {
             filter_name = arg_str;
             filter_args = "";
         }
+        if(filter_name == "options")
+               continue;
         // Verify
         if (!FilterFactory::getSingleton().hasConstructor(filter_name)) {
             std::cout << "Couldn't find filter: " << filter_name << std::endl;

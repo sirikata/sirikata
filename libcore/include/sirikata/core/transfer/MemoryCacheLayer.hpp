@@ -59,7 +59,7 @@ protected:
 			if (mData.alloc(respondData->length(), writer)) {
 				bool newentry = writer.insert(fileId, respondData->length());
 				if (newentry) {
-					SILOG(transfer,debug,fileId << " created " << *respondData);
+					SILOG(transfer,detailed,fileId << " created " << *respondData);
 					CacheData *cdata = new CacheData;
 					*writer = cdata;
 					cdata->mSparse.addValidData(respondData);
@@ -67,13 +67,13 @@ protected:
 				} else {
 					CacheData *cdata = static_cast<CacheData*>(*writer);
 					cdata->mSparse.addValidData(respondData);
-                    if (SILOGP(transfer,debug)) {
-                        SILOGNOCR(transfer,debug,fileId << " already exists: ");
+                    if (SILOGP(transfer,detailed)) {
+                        SILOGNOCR(transfer,detailed,fileId << " already exists: ");
                         std::stringstream rangeListStream;
                         Range::printRangeList(rangeListStream,
                             static_cast<DenseDataList&>(cdata->mSparse),
                             static_cast<Range>(*respondData));
-                        SILOGNOCR(transfer,debug,rangeListStream.str());
+                        SILOGNOCR(transfer,detailed,rangeListStream.str());
                     }
 					writer.update(cdata->mSparse.getSpaceUsed());
 				}
@@ -111,13 +111,13 @@ public:
 			MemoryMap::read_iterator iter(mData);
 			if (iter.find(uri.fingerprint())) {
 				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
-                if (SILOGP(transfer,debug)) {
-                    SILOGNOCR(transfer,debug,"Found " << uri.fingerprint() << "; ranges=");
+                if (SILOGP(transfer,detailed)) {
+                    SILOGNOCR(transfer,detailed,"Found " << uri.fingerprint() << "; ranges=");
                         std::stringstream rangeListStream;
                         Range::printRangeList(rangeListStream,
                             static_cast<const DenseDataList&>(sparseData),
                             requestedRange);
-                    SILOG(transfer,debug,rangeListStream.str());
+                    SILOG(transfer,detailed,rangeListStream.str());
                 }
 				if (sparseData.contains(requestedRange)) {
 					haveData = true;

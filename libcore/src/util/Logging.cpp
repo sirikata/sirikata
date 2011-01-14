@@ -51,6 +51,8 @@ class LogLevelParser {public:
             return fatal;
         if (value=="debug")
             return debug;
+        if (value=="detailed")
+            return detailed;
         return insane;
     }
     Any operator()(const std::string&value) {

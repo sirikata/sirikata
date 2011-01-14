@@ -51,11 +51,10 @@
 
 namespace Sirikata {
 
-ObjectHost::ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceMap, Network::IOService *ioServ, const String&options)
+ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const String&options)
  : mContext(ctx)
 {
     mScriptPlugins=new PluginManager;
-    mSpaceIDMap = spaceMap;
     OptionValue *protocolOptions;
     OptionValue *scriptManagers;
     InitializeClassOptions ico("objecthost",this,

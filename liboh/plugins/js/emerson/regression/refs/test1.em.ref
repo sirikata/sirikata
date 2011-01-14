@@ -1,0 +1,33 @@
+Trying to compile 
+ 
+
+if ( a )
+{
+  printf("\nExecuting IF\n");
+}
+else if( b )
+{
+  printf("\nExecuting IF ELSE\n");
+}
+else
+{
+  printf("\nExecuting ELSE\n");
+}
+
+
+Emerson Tree after parsing 
+(PROG (IF (EXPR_LIST (COND_EXPR (POSTEXPR a))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL printf (ARGLIST (COND_EXPR (POSTEXPR "\nExecuting IF\n")))))))) (IF (EXPR_LIST (COND_EXPR (POSTEXPR b))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL printf (ARGLIST (COND_EXPR (POSTEXPR "\nExecuting IF ELSE\n")))))))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL printf (ARGLIST (COND_EXPR (POSTEXPR "\nExecuting ELSE\n")))))))))))
+The generated code is 
+  if  ( a )  {
+ printf ( "\nExecuting IF\n" ) ; 
+ }
+ 
+ else  if  ( b )  {
+ printf ( "\nExecuting IF ELSE\n" ) ; 
+ }
+ 
+ else  {
+ printf ( "\nExecuting ELSE\n" ) ; 
+ }
+;
+ 

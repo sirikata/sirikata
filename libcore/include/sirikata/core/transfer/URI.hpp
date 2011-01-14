@@ -373,12 +373,16 @@ public:
 		return !((*this) == other);
 	}
 
-    operator bool() const {
+    bool empty() const {
         return
-            !mDirectory.empty() ||
-            !mUser.empty() ||
-            !mHost.empty() ||
-            !mProto.empty();
+            mDirectory.empty() &&
+            mUser.empty() &&
+            mHost.empty() &&
+            mProto.empty();
+    }
+
+    operator bool() const {
+        return !empty();
     }
 };
 
@@ -532,8 +536,12 @@ public:
 		return !((*this) == other);
 	}
 
+    bool empty() const {
+        return mContext.empty() && mPath.empty();
+    }
+
     operator bool() const {
-        return ((bool)mContext) || !mPath.empty();
+        return !empty();
     }
 };
 

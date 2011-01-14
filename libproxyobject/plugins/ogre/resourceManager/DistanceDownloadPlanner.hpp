@@ -66,10 +66,10 @@ public:
     struct Resource {
         Resource(Graphics::Entity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
             ready = false;
-            file = NULL;
-        }        virtual ~Resource(){}
+        }
+        virtual ~Resource(){}
 
-        Transfer::URI *file;
+        Transfer::URI file;
         Graphics::Entity *mesh;
         ProxyObjectPtr proxy;
         bool ready;

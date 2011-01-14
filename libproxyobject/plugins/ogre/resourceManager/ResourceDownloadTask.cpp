@@ -69,7 +69,7 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> requ
         cb(request, response);
     }
     else {
-        cout<<"Failed chunk download"<<endl;
+        SILOG(ogre,error,"Failed chunk download");
     }
 }
 
@@ -88,7 +88,7 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest
     mTransferPool->addRequest(req);
   }
   else {
-    cout<<"Failed metadata download"<<endl;
+      SILOG(ogre,error,"Failed metadata download");
   }
  }
 

@@ -74,7 +74,7 @@ void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFil
 
 }
 
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, Vector3f const &scale)
+void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
 {
 
 }

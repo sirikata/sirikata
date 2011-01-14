@@ -462,6 +462,10 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
 
+    // Initialize this first so we can get it to not spit out to stderr
+    Ogre::LogManager * lm = OGRE_NEW Ogre::LogManager();
+    lm->createLog(ogreLogFile->as<String>(), true, false, false);
+
     static bool success=((sRoot=OGRE_NEW Ogre::Root(pluginFile->as<String>(),configFile->as<String>(),ogreLogFile->as<String>()))!=NULL
                          &&loadBuiltinPlugins()
                          &&((purgeConfig->as<bool>()==false&&getRoot()->restoreConfig())
@@ -740,7 +744,7 @@ OgreSystem::~OgreSystem() {
 }
 
 static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
-    std::cout << "Killing WebView!"<<std::endl;
+    SILOG(ogre,detailed,"Killing WebView!");
     p->getProxyManager()->destroyObject(p);
 }
 
@@ -1035,7 +1039,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     name = boost::any_cast<std::string>(params[0]);
   }
 
-  std::cout << "\n\n\n Invoking the function " << name << "\n\n\n";
+  SILOG(ogre,detailed,"Invoking the function " << name);
 
   if(name == "getChatWindow")
   {
@@ -1045,7 +1049,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
     WebView* ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
     ui_wv->loadFile("chat/prompt.html");
-    std::cout << "\n\n Returning a chat window\n\n";
+    SILOG(ogre,detailed,"Returning a chat window.");
     Invokable* inn = ui_wv;
     boost::any result(inn);
     return result;

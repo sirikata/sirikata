@@ -94,25 +94,25 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-        SILOG(transfer, error, "Request parsing failed during an HTTP name lookup");
+        SILOG(transfer, error, "Request parsing failed during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-        SILOG(transfer, error, "Response parsing failed during an HTTP name lookup");
+        SILOG(transfer, error, "Response parsing failed during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-        SILOG(transfer, error, "A boost error happened during an HTTP name lookup. Boost error = " << boost_error.message());
+        SILOG(transfer, error, "A boost error happened during an HTTP name lookup (" << request->getURI() << "). Boost error = " << boost_error.message());
         callback(bad);
         return;
     } else if (error != HttpManager::SUCCESS) {
-        SILOG(transfer, error, "An unknown error happened during an HTTP name lookup.");
+        SILOG(transfer, error, "An unknown error happened during an HTTP name lookup. (" << request->getURI() << ")");
         callback(bad);
         return;
     }
 
     if (response->getHeaders().size() == 0) {
-        SILOG(transfer, error, "There were no headers returned during an HTTP name lookup");
+        SILOG(transfer, error, "There were no headers returned during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     }
@@ -120,20 +120,20 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
     std::map<std::string, std::string>::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it != response->getHeaders().end()) {
-        SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP name lookup");
+        SILOG(transfer, error, "Content-Length header was present when it shouldn't be during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     }
 
     if (response->getStatusCode() != 200) {
-        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP name lookup");
+        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     }
 
     it = response->getHeaders().find("File-Size");
     if (it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Expected File-Size header not present during an HTTP name lookup");
+        SILOG(transfer, error, "Expected File-Size header not present during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     }
@@ -141,14 +141,14 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
 
     it = response->getHeaders().find("Hash");
     if (it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Expected Hash header not present during an HTTP name lookup");
+        SILOG(transfer, error, "Expected Hash header not present during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     }
     std::string hash = it->second;
 
     if (response->getData()) {
-        SILOG(transfer, error, "Body present during an HTTP name lookup");
+        SILOG(transfer, error, "Body present during an HTTP name lookup (" << request->getURI() << ")");
         callback(bad);
         return;
     }
@@ -157,7 +157,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
     try {
         fp = Fingerprint::convertFromHex(hash);
     } catch(std::invalid_argument e) {
-        SILOG(transfer, error, "Hash header didn't contain a valid Fingerprint string");
+        SILOG(transfer, error, "Hash header didn't contain a valid Fingerprint string (" << request->getURI() << ")");
         callback(bad);
         return;
     }
@@ -168,7 +168,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
     std::ostringstream ostream;
     ostream << file_size;
     if(ostream.str() != file_size_str) {
-        SILOG(transfer, error, "Error converting File-Size header string to integer");
+        SILOG(transfer, error, "Error converting File-Size header string to integer (" << request->getURI() << ")");
         callback(bad);
         return;
     }
@@ -183,7 +183,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
             file_size, chunkList, response->getHeaders()));
 
     callback(met);
-    SILOG(transfer, debug, "done http name handler request_finished");
+    SILOG(transfer, detailed, "done http name handler request_finished");
 }
 
 HttpChunkHandler::HttpChunkHandler()
@@ -289,25 +289,25 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
     if(chunkReq) reqType = "chunk request";
 
     if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
-        SILOG(transfer, error, "Request parsing failed during an HTTP " << reqType);
+        SILOG(transfer, error, "Request parsing failed during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
-        SILOG(transfer, error, "Response parsing failed during an HTTP " << reqType);
+        SILOG(transfer, error, "Response parsing failed during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     } else if (error == Transfer::HttpManager::BOOST_ERROR) {
-        SILOG(transfer, error, "A boost error happened during an HTTP " << reqType << ". Boost error = " << boost_error.message());
+        SILOG(transfer, error, "A boost error happened during an HTTP " << reqType << ". Boost error = " << boost_error.message() << " (" << file->getURI() << ")");
         callback(bad);
         return;
     } else if (error != HttpManager::SUCCESS) {
-        SILOG(transfer, error, "An unknown error happened during an HTTP " << reqType);
+        SILOG(transfer, error, "An unknown error happened during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     }
 
     if (response->getHeaders().size() == 0) {
-        SILOG(transfer, error, "There were no headers returned during an HTTP " << reqType);
+        SILOG(transfer, error, "There were no headers returned during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     }
@@ -315,26 +315,26 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
     std::map<std::string, std::string>::const_iterator it;
     it = response->getHeaders().find("Content-Length");
     if (it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Content-Length header was not present when it should be during an HTTP " << reqType);
+        SILOG(transfer, error, "Content-Length header was not present when it should be during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     }
 
     if (response->getStatusCode() != 200) {
-        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP " << reqType);
+        SILOG(transfer, error, "HTTP status code = " << response->getStatusCode() << " instead of 200 during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     }
 
     if (!response->getData()) {
-        SILOG(transfer, error, "Body not present during an HTTP " << reqType);
+        SILOG(transfer, error, "Body not present during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     }
 
     it = response->getHeaders().find("Range");
     if (chunkReq && it == response->getHeaders().end()) {
-        SILOG(transfer, error, "Expected Range header not present during an HTTP " << reqType);
+        SILOG(transfer, error, "Expected Range header not present during an HTTP " << reqType << " (" << file->getURI() << ")");
         callback(bad);
         return;
     } else if (chunkReq) {
@@ -361,7 +361,7 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         }
 
         if(!range_parsed) {
-            SILOG(transfer, error, "Range header has invalid format during an HTTP " << reqType << " header='" << it->second << "'");
+            SILOG(transfer, error, "Range header has invalid format during an HTTP " << reqType << " header='" << it->second << "'" << " (" << file->getURI() << ")");
             callback(bad);
             return;
         }
@@ -372,11 +372,11 @@ void HttpChunkHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRe
         return;
     }
 
-    SILOG(transfer, debug, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
+    SILOG(transfer, detailed, "about to call addToCache with fingerprint ID = " << file->getFingerprint().convertToHexString());
     mCache->addToCache(file->getFingerprint(), response->getData());
 
     callback(response->getData());
-    SILOG(transfer, debug, "done http chunk handler request_finished");
+    SILOG(transfer, detailed, "done http chunk handler request_finished");
 }
 
 }

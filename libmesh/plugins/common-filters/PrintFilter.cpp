@@ -55,7 +55,12 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     printf("Submesh Geometry List:\n");
     for(Meshdata::SubMeshGeometryList::const_iterator it = md->geometry.begin(); it != md->geometry.end(); it++) {
-        printf("   Name: %s, Positions: %d\n", it->name.c_str(), (int)it->positions.size());
+        printf("   Name: %s, Positions: %d Normals: %d Primitives: %d\n", it->name.c_str(),
+                (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size());
+
+        for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
+            printf("      Primitive id: %d, indices: %d\n", (int)p->materialId, (int)p->indices.size());
+        }
     }
 
     printf("URI Map:\n");
@@ -75,13 +80,18 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     printf("Geometry Instances:\n");
     for(Meshdata::GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
-        printf("   Index: %d Radius: %f\n", it->geometryIndex, it->radius);
+        printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, it->materialBindingMap.size());
+        for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
+            printf("      map from: %d to: %d\n", (int)m->first, (int)m->second);
+        }
     }
 
     printf("Light Instances:\n");
     for(Meshdata::LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
         printf("   Index: %d Matrix: %s\n", it->lightIndex, it->transform.toString().c_str());
     }
+
+    printf("Material Effect size: %d\n", (int)md->materials.size());
 
     return input;
 }

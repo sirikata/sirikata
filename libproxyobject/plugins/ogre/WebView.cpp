@@ -92,12 +92,15 @@ WebView::WebView(
     mBorderTop = border.mBorderTop;
     mBorderBottom = border.mBorderBottom;
 
-	createMaterial();
+    createMaterial();
 
-	overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
-
-	if(compensateNPOT)
-		overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
+#ifdef HAVE_BERKELIUM
+    overlay = new ViewportOverlay(name + "_overlay", viewport, width, height, viewPosition, getMaterialName(), zOrder, tier);
+    if(compensateNPOT)
+        overlay->panel->setUV(0, 0, (Real)viewWidth/(Real)texWidth, (Real)viewHeight/(Real)texHeight);
+#else
+    overlay = NULL;
+#endif
 }
 
 WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
@@ -371,7 +374,7 @@ void WebView::createMaterial()
          UTF8String::point_to(utf8js.data(), utf8js.length()));
      UTF8String uJS = Berkelium::WideToUTF8(
          WideString::point_to(wideJS.data(), wideJS.length()));
-     SILOG(webview,debug,"Eval JS: "<<uJS);
+     SILOG(webview,detailed,"Eval JS: "<<uJS);
      webView->executeJavascript(wideJS);
      Berkelium::stringUtil_free(uJS);
      Berkelium::stringUtil_free(wideJS);
@@ -798,26 +801,26 @@ void WebView::resize(int width, int height)
 #ifdef HAVE_BERKELIUM
 ///////// Berkelium Callbacks...
 void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
-    SILOG(webview,debug,"onAddressBarChanged"<<newURL);
+    SILOG(webview,detailed,"onAddressBarChanged"<<newURL);
 }
 void WebView::onStartLoading(Berkelium::Window*, URLString newURL) {
-    SILOG(webview,debug,"onStartLoading"<<newURL);
+    SILOG(webview,detailed,"onStartLoading"<<newURL);
 }
 void WebView::onTitleChanged(Berkelium::Window*, WideString wtitle) {
     UTF8String textString = Berkelium::WideToUTF8(wtitle);
     std::string title (textString.data(), textString.length());
     Berkelium::stringUtil_free(textString);
-    SILOG(webview,debug,"onTitleChanged"<<title);
+    SILOG(webview,detailed,"onTitleChanged"<<title);
 }
 void WebView::onTooltipChanged(Berkelium::Window*, WideString wtext) {
     UTF8String textString = Berkelium::WideToUTF8(wtext);
     std::string tooltip (textString.data(), textString.length());
     Berkelium::stringUtil_free(textString);
-    SILOG(webview,debug,"onTooltipChanged"<<tooltip);
+    SILOG(webview,detailed,"onTooltipChanged"<<tooltip);
 }
 
 void WebView::onLoad(Berkelium::Window*) {
-    SILOG(webview,debug,"onLoad");
+    SILOG(webview,detailed,"onLoad");
 }
 
 void WebView::onConsoleMessage(Berkelium::Window *win, WideString wmessage,
@@ -828,14 +831,14 @@ void WebView::onConsoleMessage(Berkelium::Window *win, WideString wmessage,
     std::string sourceId (sourceString.data(), sourceString.length());
     Berkelium::stringUtil_free(textString);
     Berkelium::stringUtil_free(sourceString);
-    SILOG(webview,debug,"onConsoleMessage " << message << " at file " << sourceId << ":" << line_no);
+    SILOG(webview,detailed,"onConsoleMessage " << message << " at file " << sourceId << ":" << line_no);
 }
 void WebView::onScriptAlert(Berkelium::Window *win, WideString message,
                             WideString defaultValue, URLString url,
                             int flags, bool &success, WideString &value) {
     // FIXME: C++ string conversion functions are a pile of garbage.
     UTF8String textString = Berkelium::WideToUTF8(message);
-    SILOG(webview,debug,"onScriptAlert "<<textString);
+    SILOG(webview,detailed,"onScriptAlert "<<textString);
 }
 
 Berkelium::Rect WebView::getBorderlessRect(Ogre::HardwarePixelBufferSharedPtr pixelBuffer) const {
@@ -956,13 +959,13 @@ void WebView::onPaint(Berkelium::Window*win,
         compositeWidgets(win);
 }
 void WebView::onCrashed(Berkelium::Window*) {
-    SILOG(webview,debug,"onCrashed");
+    SILOG(webview,detailed,"onCrashed");
 }
 void WebView::onResponsive(Berkelium::Window*) {
-    SILOG(webview,debug,"onResponsive");
+    SILOG(webview,detailed,"onResponsive");
 }
 void WebView::onUnresponsive(Berkelium::Window*) {
-    SILOG(webview,debug,"onUnresponsive");
+    SILOG(webview,detailed,"onUnresponsive");
 }
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     std::string name;
@@ -973,7 +976,7 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
         os << "_blank" << i;
         name = os.str();
     }
-    SILOG(webview,debug,"onCreatedWindow "<<name);
+    SILOG(webview,detailed,"onCreatedWindow "<<name);
 
     Berkelium::Rect r;
     r.mLeft = 0;
@@ -992,7 +995,7 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
 }
 
 void WebView::onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex) {
-    SILOG(webview,debug,"onWidgetCreated");
+    SILOG(webview,detailed,"onWidgetCreated");
 }
 void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *wid) {
     std::map<Berkelium::Widget*,TexturePtr>::iterator where=widgetTextures.find(wid);
@@ -1012,7 +1015,7 @@ void WebView::onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *wid) 
         backingTexture.setNull();
         TextureManager::getSingleton().remove(mfd);
     }
-    SILOG(webview,debug,"onWidgetDestroyed");
+    SILOG(webview,detailed,"onWidgetDestroyed");
 }
 void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h) {
     TexturePtr tmp (TextureManager::getSingleton().createManual(
@@ -1035,10 +1038,10 @@ void WebView::onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, in
         old.setNull();
         TextureManager::getSingleton().remove(mfd);
     }
-    SILOG(webview,debug,"onWidgetResize");
+    SILOG(webview,detailed,"onWidgetResize");
 }
 void WebView::onWidgetMove(Berkelium::Window *win, Berkelium::Widget *widg, int x, int y) {
-    SILOG(webview,debug,"onWidgetMove");
+    SILOG(webview,detailed,"onWidgetMove");
     if (!backingTexture.isNull()) {
         compositeWidgets(win);
     }
@@ -1121,7 +1124,7 @@ void WebView::onWidgetPaint(
         blitNewImage(pixelBuffer, srcBuffer, srcRect, copy_rects[i], false);
 
     compositeWidgets(win);
-    SILOG(webview,debug,"onWidgetPaint");
+    SILOG(webview,detailed,"onWidgetPaint");
 }
 
 void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLString origin, WideString funcName, Berkelium::Script::Variant *args, size_t numArgs) {
@@ -1141,15 +1144,20 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
     if(i != delegateMap.end())
     {
         JSArguments argVector;
-        std::vector<UTF8String> argStorage;
+        std::vector<std::string*> argStorage;
+
         for (size_t j=0;j!=numArgs;++j) {
+
             UTF8String temp = Berkelium::WideToUTF8(args[j].toString());
-            argStorage.push_back(temp);
-            argVector.push_back(JSArgument(temp.data(), temp.length()));
+						std::string* s = new std::string(temp.get<std::string>());
+            argStorage.push_back(s);
+            //argVector.push_back(JSArgument(temp.data(), temp.length()));
+            argVector.push_back(JSArgument(s->data(), s->length()));
         }
-		i->second(this, argVector);
+		    i->second(this, argVector);
         for (size_t j=0;j<argStorage.size();j++) {
-            Berkelium::stringUtil_free(argStorage[j]);
+            //Berkelium::stringUtil_free(argStorage[j]);
+						delete(argStorage[j]);
         }
 	}
     if (replyMsg)
@@ -1158,7 +1166,7 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
 
 boost::any WebView::invoke(std::vector<boost::any>& params)
 {
-  std::cout << "\n\n\n Inside WebView::invoke() \n\n\n" ;
+    SILOG(ogre,detailed,"Inside WebView::invoke()");
   std::string name="";
   /*Check the first param */
 
@@ -1172,7 +1180,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
   {
     // we need to bind a function to some event.
     // second argument is the event name
-    std::cout << "\n\nIn WebView::invoke\n\n";
+      SILOG(ogre,detailed,"In WebView::invoke");
     std::string event = "";
     if(!params[1].empty() && params[1].type() == typeid(std::string) )
     {
@@ -1183,7 +1191,6 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
     //This function would take any
 
     //just _1, _2 for now
-    std::cout << "\n\n Trying to get the param[2] \n\n";
     Invokable* invokable = boost::any_cast<Invokable*>(params[2]);
     bind("event", std::tr1::bind(&WebView::translateParamsAndInvoke, this, invokable, _1, _2));
     Invokable* inv_result = this;
@@ -1192,38 +1199,27 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
   }
 
   // This will write message from the script to the graphics window
-  if(name == "write")
+  if(name == "eval")
   {
-    std::cout << "\n\n In WebView::invoke \n\n";
+      if (params.size() != 2) {
+          SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects 2 arguments." );
+          return boost::any();
+      }
+      if (params[1].empty()) return boost::any();
+      if (params[1].type() != typeid(std::string)) {
+          SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects string argument." );
+          return boost::any();
+      }
 
-    // get the params[1] for the value of the message to be writte on the window
+      std::string jsscript = boost::any_cast<std::string>(params[1]);
+      if (jsscript.empty()) return boost::any();
 
-    std::string msg="";
-    if(!params[1].empty() && params[1].type() == typeid(std::string) )
-    {
-      msg = boost::any_cast<std::string>(params[1]);
-    }
+      // whenthe jsscript is not empty
+      evaluateJS(jsscript);
 
-    if(msg.empty()) return boost::any();
-
-    std::cout << "msg is " << msg << "\n\n";
-    // whenthe msg is not empty
-    // FIXME: we need to escape strings
-    String jsScript = String("addMessage(\"") +msg + String("\")");
-    evaluateJS(jsScript);
-
-    //JSArguments args;
-    //args.push_back(JSArgument("ExecScript"));
-    //args.push_back(JSArgument("Command"));
-    //args.push_back(JSArgument(msg.data()));
-
-    //WebViewManager::getSingletonPtr()->onRaiseWebViewEvent(this, *const_cast<JSArguments*>(&args));
-
-
-    return boost::any();
-
+      // FIXME return value
+      return boost::any();
   }
-
 
   return boost::any();
 }

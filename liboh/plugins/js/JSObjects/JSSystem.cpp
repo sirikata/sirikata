@@ -17,11 +17,6 @@ namespace JS{
 namespace JSSystem{
 
 
-v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
-{
-    std::cout<<"\n\nERROR: ScriptCreateContext has not been built yet!\n\n";
-    assert(false);
-}
 
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
@@ -34,7 +29,19 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
   target_script->create_presence(new_space);
 
   return v8::Undefined();
+}
 
+
+v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
+{
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    if (target_script == NULL)
+    {
+        std::cout<<"\n\nError.  Receiving empty jsobjectsript fields when creating a context\n\n";
+        assert(false);
+    }
+
+    return target_script->createContext();
 }
 
 
@@ -60,7 +67,7 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
   v8::String::Utf8Value strScriptType(args[1]);
   const char* cstrType = ToCString(strScriptType);
   String scriptType(cstrType);
-  
+
   // get the script to attach from the args
   //script is a string args
   v8::String::Utf8Value scriptOpters(args[2]);
@@ -72,12 +79,12 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
   v8::String::Utf8Value mesh_str(args[3]);
   const char* mesh_cstr = ToCString(mesh_str);
   String mesh(mesh_cstr);
-  
+
   //get the scale
   Handle<Object> scale_arg = ObjectCast(args[4]);
   if (!NumericValidate(scale_arg))
       return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
-  
+
   float scale  =  NumericExtract(scale_arg);
 
   //get the solid angle
@@ -95,14 +102,13 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
   eci.mesh = mesh;
   eci.scriptOpts = scriptOpts;
 
-  
+
   eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
-  
   eci.solid_angle = new_qa;
   eci.scale = scale;
-  
-  
+
+
   //target_script->create_entity(pos, script,mesh);
   target_script->create_entity(eci);
 
@@ -152,6 +158,8 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
     // Function
     if (!cb_val->IsFunction())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
+
+    
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
@@ -192,9 +200,7 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
     StringCheckAndExtract(native_filename, filename);
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    // target_script->debugPrintString("\n\nPrinting from scriptImport.  Works?\n\n");
-    // std::cout.flush();
-    
+
     target_script->import(native_filename);
 
     return v8::Undefined();
@@ -216,6 +222,8 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
+    JSObjectScript* target = GetTargetJSObjectScript(args);
+    assert(target != NULL);
 
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {
@@ -223,14 +231,12 @@ v8::Handle<v8::Value> Print(const v8::Arguments& args)
         if (first) {
             first = false;
         } else {
-            printf(" ");
+            target->print(" ");
         }
         v8::String::Utf8Value str(args[i]);
         const char* cstr = ToCString(str);
-        printf("%s", cstr);
+        target->print(cstr);
     }
-    printf("\n");
-    fflush(stdout);
     return v8::Undefined();
 }
 
@@ -378,7 +384,7 @@ v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args) {
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
     target_script->registerOnPresenceConnectedHandler(cb_persist);
-    
+
     return v8::Undefined();
 }
 

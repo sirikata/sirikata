@@ -196,6 +196,9 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 }
 
 
+
+
+
 //returns all the spaceobjrefs associated with all presences of this object.
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
@@ -224,6 +227,25 @@ const ProxyObjectPtr &HostedObject::getProxyConst(const SpaceID &space, const Ob
     }
     return iter->second.mProxyObject;
 }
+
+
+//first checks to see if have a presence associated with spVisTo.  If do, then
+//checks if have a proxy object associated with sporef, sets p to the associated
+//proxy object, and returns true.  Otherwise, returns false.
+bool HostedObject::getProxyObjectFrom(const SpaceObjectReference*   spVisTo, const SpaceObjectReference*   sporef, ProxyObjectPtr& p)
+{
+    ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
+    if (ohpmp.get() == NULL)
+        return false;
+        
+    p = ohpmp->getProxyObject(*sporef);
+
+    if (p.get() == NULL)
+        return false;
+
+    return true;
+}
+
 
 static ProxyManagerPtr nullManPtr;
 ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReference& oref)
@@ -595,8 +617,9 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (update.has_location()) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-        loc = TimedMotionVector3f(localTime(space, update_loc.t()), MotionVector3f(update_loc.position(), update_loc.velocity()));
-
+        Time locTime = localTime(space,update_loc.t());
+        loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
+        
         CONTEXT_OHTRACE(objectLoc,
             getUUID(),
             update.object(),
@@ -718,6 +741,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // get applied
                 proxy_obj->reset();
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh);
+                // Mark as valid again
+                proxy_obj->validate();
             }
 
             // Notify of any out of order loc updates
@@ -744,9 +769,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (mObjectScript)
                 mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
-            // FIXME this is *not* the right way to handle this
-            proxy_obj->setMesh(Transfer::URI(""), 0, true);
-
+            proxy_obj->invalidate();
 
             CONTEXT_OHTRACE(prox,
                 getUUID(),
@@ -796,28 +819,28 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
     proxy_manager->createObject(proxy_obj);
     return proxy_obj;
 }
-
-ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
+ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyManager: should try to match object!!!\n\n";
-    ObjectReference oref = mPresenceData->begin()->first.object();
-    return  getProxyManager(space, oref);
+    //    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(),sor.object());
+    //  return proxyManPtr;
+    return getProxyManager(sor.space(), sor.object());
 }
-
 ProxyObjectPtr HostedObject::getDefaultProxyObject(const SpaceID& space)
 {
-    std::cout<<"\n\nINCORRECT in getDefaultProxyObject: should try to match object!!!\n\n";
     ObjectReference oref = mPresenceData->begin()->first.object();
     return  getProxy(space, oref);
 }
 
-
-ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor) {
-    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(), sor.object());
-    return proxyManPtr;
+ProxyManagerPtr HostedObject::getDefaultProxyManager(const SpaceID& space)
+{
+    ObjectReference oref = mPresenceData->begin()->first.object();
+    return  getProxyManager(space, oref);
 }
 
-ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor) {
+
+
+ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
+{
     ProxyManagerPtr proxy_man = presence(sor);
     if (!proxy_man) return ProxyObjectPtr();
     ProxyObjectPtr proxy_obj = proxy_man->getProxyObject(sor);
@@ -826,7 +849,8 @@ ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor) {
 
 
 // ODP::Service Interface
-ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port) {
+ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port)
+{
     return mDelegateODPService->bindODPPort(space, objref, port);
 }
 
@@ -885,7 +909,9 @@ void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectRefer
 void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& pos)
 {
     Vector3f curVel = requestCurrentVelocity(space,oref);
-    TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(pos,curVel));
+    //TimedMotionVector3f tmv
+    //(currentSpaceTime(space),MotionVector3f(pos,curVel));
+    TimedMotionVector3f tmv (currentLocalTime(),MotionVector3f(pos,curVel));
     requestLocationUpdate(space,oref,tmv);
 }
 
@@ -894,7 +920,8 @@ void HostedObject::requestPositionUpdate(const SpaceID& space, const ObjectRefer
 void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectReference& oref, const Vector3f& vel)
 {
     Vector3f curPos = Vector3f(requestCurrentPosition(space,oref));
-    TimedMotionVector3f tmv (currentSpaceTime(space),MotionVector3f(curPos,vel));
+
+    TimedMotionVector3f tmv(currentLocalTime(),MotionVector3f(curPos,vel));
     requestLocationUpdate(space,oref,tmv);
 }
 
@@ -902,7 +929,7 @@ void HostedObject::requestVelocityUpdate(const SpaceID& space,  const ObjectRefe
 void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const ObjectReference& oref,const Quaternion& quat)
 {
     Quaternion curQuatVel = requestCurrentQuatVel(space,oref);
-    TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(quat,curQuatVel));
+    TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(quat,curQuatVel));
     requestOrientationUpdate(space,oref, tmq);
 }
 
@@ -917,7 +944,7 @@ Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const Objec
 Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     return curLoc.getOrientation();
 }
 
@@ -930,7 +957,7 @@ Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, cons
 void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat)
 {
     Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
-    TimedMotionQuaternion tmq (Time::local(),MotionQuaternion(curOrientQuat,quat));
+    TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(curOrientQuat,quat));
     requestOrientationUpdate(space, oref,tmq);
 }
 
@@ -945,8 +972,9 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
     //BFTM_FIXME: need to decide whether want the extrapolated position or last
     //known position.  (Right now, we're going with last known position.)
 
-
-    Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    //lkjs;
+    //Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     Vector3d currentPosition = curLoc.getPosition();
     return currentPosition;
 }
@@ -1153,14 +1181,8 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
     if (poptr == nullPtr)
         assert (false);
 
-    std::cout<<"\n\n";
-    std::cout<<poptr->getMesh();
-    std::cout<<"\n\n";
-    std::cout.flush();
 
     es->mesh = poptr->getMesh().toString();
-
-
 
     /* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
     es->scale = poptr->getBounds().radius();
@@ -1172,11 +1194,10 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
         es->script_opts = mObjectScript->scriptOptions();
     }
     return es;
+}
 
 }
 
 
 
 
-
-}

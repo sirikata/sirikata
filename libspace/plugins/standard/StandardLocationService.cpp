@@ -72,7 +72,8 @@ TimedMotionVector3f StandardLocationService::location(const UUID& uuid) {
 
 Vector3f StandardLocationService::currentPosition(const UUID& uuid) {
     TimedMotionVector3f loc = location(uuid);
-    return loc.extrapolate(mContext->simTime()).position();
+    Vector3f returner = loc.extrapolate(mContext->simTime()).position();
+    return returner;
 }
 
 TimedMotionQuaternion StandardLocationService::orientation(const UUID& uuid) {
@@ -350,7 +351,6 @@ void StandardLocationService::locationUpdate(UUID source, void* buffer, uint32 l
                 notifyLocalLocationUpdated( source, loc_it->second.aggregate, newloc );
 
                 CONTEXT_SPACETRACE(serverLoc, mContext->id(), mContext->id(), source, newloc );
-
             }
 
             if (request.has_bounds()) {

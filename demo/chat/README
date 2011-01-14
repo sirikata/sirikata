@@ -1,12 +1,12 @@
 This is a simple chat application built on Sirikata and the Emerson
 scripting plugin.  To run, run a space server
 
- > ../../build/cmake/space_d
+ > ../../build/cmake/space_d [--servermap-options=--port=1234]
 
 and run the object host using the supplied configuration, which will
 connect to localhost and provide you an avatar scripted for chat
 
- > ../../build/cmake/cppoh_d --cfg=chat.cfg
+ > ../../build/cmake/cppoh_d --cfg=chat.cfg ["--servermap-options=[--host=example.com] [--port=1234]"]
 
 
 To run the "rest" of the world, i.e. the static part, run an object
@@ -15,4 +15,14 @@ by the owner of the space to provide a barebones environment.  This
 part does not start an avatar (and therefore doesn't start the
 graphical display).
 
- > ../../build/cmake/cppoh_d --cfg=chat-static.cfg
+ > ../../build/cmake/cppoh_d --cfg=chat-static.cfg ["--servermap-options=[--host=example.com] [--port=1234]"]
+
+
+These are wrapped in some simple helper scripts for the server and client.
+The server script wraps the space server and static content:
+
+ > ./server.py [--host=example.com] [--port=1234]
+
+And the client just runs the avatar object host:
+
+ > ./client.py [--debug] [--host=example.com] [--port=1234]

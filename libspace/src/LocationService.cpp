@@ -213,7 +213,6 @@ void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
 }
 
 void LocationService::notifyReplicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval) const {
-    std::cout<<"\n\nInside of notifyreplicalocationupdated\n";
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         it->listener->replicaLocationUpdated(uuid, newval);
 }

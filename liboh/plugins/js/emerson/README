@@ -1,0 +1,9 @@
+You need java for antlr. Make sure you have it in the PATH . Also, make sure the antlr lib is uptodate
+
+After changing .g files, do
+
+run antlr.sh
+cd build/cmake
+make emerson
+
+

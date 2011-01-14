@@ -88,11 +88,21 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    
     //note: may want to remove these calls.
     virtual void onCreateProxy(ProxyObjectPtr p);
     virtual void onDestroyProxy(ProxyObjectPtr p);
-    
+
+
+    v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
+
+
+
+    //this function returns a context with
+    v8::Handle<v8::Value> createContext();
+
+
+
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
@@ -102,10 +112,13 @@ public:
     void test() const;
     void testSendMessageBroadcast(const std::string& msgToBCast) const;
     void debugPrintString(std::string cStrMsgBody) const;
-    void sendMessageToEntity(SpaceObjectReference* reffer, const std::string& msgBody) const;
-    void sendMessageToEntity(int numIndex, const std::string& msgBody) const;
+    void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
+    void sendMessageToEntity(int numIndex, SpaceObjectReference* from, const std::string& msgBody) const;
     int  getAddressableSize();
 
+    /** Print the given string to the current output. */
+    void print(const String& str);
+    v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
 
     /** Set a timeout with a callback. */
     void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
@@ -120,7 +133,7 @@ public:
     Handle<v8::Context> context() { return mContext;}
     /** create a new entity at the run time */
     void create_entity(EntityCreateInfo& eci);
-    
+
     /** create a new presence of this entity */
     //void create_presence(const SpaceID&);
     void create_presence(const SpaceID& new_space,std::string new_mesh);
@@ -163,6 +176,9 @@ public:
         mOnPresenceDisconnectedHandler = cb;
     }
 
+    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo);
+    v8::Handle<v8::Value> printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo);
+
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
@@ -178,7 +194,11 @@ private:
     // way the system defines actions (e.g. import searches the current script's
     // directory before trying other import paths).
     struct EvalContext {
+        EvalContext();
+        EvalContext(const EvalContext& rhs);
+
         boost::filesystem::path currentScriptDir;
+        std::ostream* currentOutputStream;
     };
     // This is a helper which adds an EvalContext to the stack and ensures that
     // when it goes out of scope it is removed. This will almost always be the
@@ -211,6 +231,8 @@ private:
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
+    void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
     void addAddressable(const SpaceObjectReference& sporefToAdd);
     void populateAddressable(const SpaceObjectReference& sporef);
 
@@ -237,15 +259,25 @@ private:
     void initializeAddressable(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
     void initializeMath(Handle<Object>& system_obj);
+    void initializeVisible(Handle<Object>&system_obj);
+
+    void printVisibleArray();
 
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
     void removePresence(const SpaceObjectReference& sporef);
 
+    // Adds the Self field
+    void addSelfField(const SpaceObjectReference& name);
+
+    v8::Local<v8::Object> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
+    v8::Local<v8::Object> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
+
+
+
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
-
 
     JSObjectScriptManager* mManager;
 

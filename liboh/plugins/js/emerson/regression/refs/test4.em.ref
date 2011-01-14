@@ -1,0 +1,44 @@
+Trying to compile 
+ 
+
+// Testing the equality operations
+
+if( a == b)
+{
+  print("a == b");
+}
+else if(a === b)
+{
+  print("a === b");
+}
+else if(a != b)
+{
+  print("a != b");
+}
+else if(a !== b)
+{
+  print(" a !== b");
+}
+
+
+Emerson Tree after parsing 
+(PROG (IF (EXPR_LIST (COND_EXPR (EQUALS (POSTEXPR a) (POSTEXPR b)))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL print (ARGLIST (COND_EXPR (POSTEXPR "a == b")))))))) (IF (EXPR_LIST (COND_EXPR (IDENT (POSTEXPR a) (POSTEXPR b)))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL print (ARGLIST (COND_EXPR (POSTEXPR "a === b")))))))) (IF (EXPR_LIST (COND_EXPR (NOT_EQUALS (POSTEXPR a) (POSTEXPR b)))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL print (ARGLIST (COND_EXPR (POSTEXPR "a != b")))))))) (IF (EXPR_LIST (COND_EXPR (NOT_IDENT (POSTEXPR a) (POSTEXPR b)))) (SLIST (EXPR_LIST (COND_EXPR (POSTEXPR (CALL print (ARGLIST (COND_EXPR (POSTEXPR " a !== b")))))))))))))
+The generated code is 
+  if  ( a == b )  {
+ print ( "a == b" ) ; 
+ }
+ 
+ else  if  ( a === b )  {
+ print ( "a === b" ) ; 
+ }
+ 
+ else  if  ( a != b )  {
+ print ( "a != b" ) ; 
+ }
+ 
+ else  if  ( a !== b )  {
+ print ( " a !== b" ) ; 
+ }
+ 
+;
+ 

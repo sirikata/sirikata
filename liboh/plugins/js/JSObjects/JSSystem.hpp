@@ -26,15 +26,14 @@ v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args);
 v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> Print(const v8::Arguments& args);
 
-
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args);
-
-
 v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args);
 
-}}}
+}//jssystem namespace
+}//js namespace
+}//sirikata namespace
 
 #endif

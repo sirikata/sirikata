@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sstream>
+
 #ifndef _SIRIKATA_TIME_HPP_
 #define _SIRIKATA_TIME_HPP_
 #include "../task/Time.hpp"
@@ -54,6 +56,7 @@ class Time : private Task::LocalTime{
     inline bool operator!= (const Time& other) const {
 		return *static_cast<const LocalTime*>(this)!=other;
     }
+
 
 	/// Ordering comparison (same as (*this - other) < 0)
 	inline bool operator< (const Time &other) const {

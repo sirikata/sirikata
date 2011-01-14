@@ -339,7 +339,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
             respPtr->mData.reset();
         }
 
-        SILOG(transfer, debug, "Finished http transfer with content length of " << respPtr->getContentLength());
+        SILOG(transfer, detailed, "Finished http transfer with content length of " << respPtr->getContentLength());
         req->cb(respPtr, SUCCESS, ec);
 
         //If this is Connection: Close or we reached EOF, then close connection, otherwise recycle
@@ -474,7 +474,7 @@ int HttpManager::on_message_complete(http_parser* _) {
 
 void HttpManager::print_flags(std::tr1::shared_ptr<HttpResponse> resp) {
     char flags = resp->mHttpParser.flags;
-    SILOG(transfer, debug, "Flags are: "
+    SILOG(transfer, detailed, "Flags are: "
             << (flags & F_CHUNKED ? "F_CHUNKED " : "")
             << (flags & F_CONNECTION_KEEP_ALIVE ? "F_CONNECTION_KEEP_ALIVE " : "")
             << (flags & F_CONNECTION_CLOSE ? "F_CONNECTION_CLOSE " : "")

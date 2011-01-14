@@ -289,6 +289,8 @@ private:
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
+
+                    
                     location.set_velocity(up_it->second.location.velocity());
 
                     Sirikata::Protocol::ITimedMotionQuaternion orientation = update.mutable_orientation();

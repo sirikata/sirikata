@@ -44,7 +44,6 @@
 namespace Sirikata {
 class ProxyManager;
 class PluginManager;
-class SpaceIDMap;
 class SpaceConnection;
 class ConnectionEventListener;
 class ObjectScriptManager;
@@ -64,7 +63,6 @@ typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
 
     ObjectHostContext* mContext;
-    SpaceIDMap *mSpaceIDMap;
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
@@ -107,11 +105,10 @@ public:
 
     /** Caller is responsible for starting a thread
      *
-     * @param spaceIDMap space ID map used to resolve space IDs to servers
      * @param ioServ IOService to run this object host on
      * @param options a string containing the options to pass to the object host
      */
-    ObjectHost(ObjectHostContext* ctx, SpaceIDMap *spaceIDMap, Network::IOService*ioServ, const String&options);
+    ObjectHost(ObjectHostContext* ctx, Network::IOService*ioServ, const String&options);
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
 
@@ -166,10 +163,6 @@ public:
     typedef Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
     SSTStreamPtr getSpaceStream(const SpaceID& space, const UUID& internalID);
-
-    /// Returns the SpaceID -> Network::Address lookup map.
-    SpaceIDMap*spaceIDMap(){return mSpaceIDMap;}
-
 
     virtual void start();
     virtual void stop();
