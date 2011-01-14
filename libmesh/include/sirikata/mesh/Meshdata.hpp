@@ -40,6 +40,23 @@
 
 namespace Sirikata {
 
+/** Represents a skinned animation. A skinned animation is directly associated
+ *  with a SubMeshGeometry.
+ */
+struct SkinController {
+    // FIXME Joints point to nodes in the scene, which aren't currently
+    // represented properly. This vector will not currently be filled in.
+    std::vector<uint32> jointNodes;
+
+    Matrix4x4f bindShapeMatrix;
+    ///n+1 elements where n is the number of vertices, so that we can do simple subtraction to find out how many joints influence each vertex
+    std::vector<unsigned int> weightStartIndices;
+    std::vector<float> weights;
+    std::vector<unsigned int>jointIndices;
+    std::vector<Matrix4x4f> inverseBindMatrices;
+};
+typedef std::vector<SkinController> SkinControllerList;
+
 struct SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
@@ -81,6 +98,8 @@ struct SubMeshGeometry {
     BoundingBox3f3f aabb;
     double radius;
     std::vector<Primitive> primitives;
+
+    SkinControllerList skinControllers;
 
 };
 struct GeometryInstance {
@@ -174,8 +193,8 @@ struct MaterialEffectInfo {
     float reflectivity;
 };
 
-
-
+struct InstanceSkinAnimation {
+};
 
 struct Meshdata {
     typedef std::vector<SubMeshGeometry> SubMeshGeometryList;

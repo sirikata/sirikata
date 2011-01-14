@@ -91,10 +91,10 @@ ColladaDocumentImporter::~ColladaDocumentImporter ()
     for (ColladaEffectMap::iterator i=mColladaEffects.begin();i!=mColladaEffects.end();i++) {
         delete i->second;
     }
-    for (SkinControllerMap::iterator i=mSkinController.begin();i!=mSkinController.end();i++) {
+    for (OCSkinControllerMap::iterator i=mSkinController.begin();i!=mSkinController.end();i++) {
         delete i->second;
     }
-    for (SkinControllerDataMap::iterator i=mSkinControllerData.begin();i!=mSkinControllerData.end();i++) {
+    for (OCSkinControllerDataMap::iterator i=mSkinControllerData.begin();i!=mSkinControllerData.end();i++) {
         delete i->second;
     }
 */
@@ -118,6 +118,35 @@ void ColladaDocumentImporter::postProcess ()
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::postProcess() entered");
 
+    // Copy SkinController data into the corresponding mesh. We need to do this
+    // now because the skin and geometry may not occur in order.
+    for(OCSkinControllerMap::iterator skin_it = mSkinControllers.begin(); skin_it != mSkinControllers.end(); skin_it++) {
+        COLLADAFW::UniqueId skin_id = skin_it->first;
+        OCSkinController& skin = skin_it->second;
+
+        // Look up the skin's data
+        OCSkinControllerDataMap::iterator skindata_it = mSkinControllerData.find(skin.skinControllerData);
+        OCSkinControllerData& skindata = skindata_it->second;
+
+        // And lookup the mesh that the animation belongs to
+        IndicesMultimap::iterator geom_it = mGeometryMap.find(skin.source);
+        uint32 mesh_idx = geom_it->second;
+        SubMeshGeometry& mesh = mGeometries[mesh_idx];
+
+        // Copy data into SubMeshGeometry
+        mesh.skinControllers.push_back(SkinController());
+        SkinController& mesh_skin = mesh.skinControllers.back();
+        for(std::vector<COLLADAFW::UniqueId>::iterator jointid_it = skin.joints.begin(); jointid_it != skin.joints.end(); jointid_it++) {
+            // FIXME joints reference nodes in the collada hierarchy and these
+            //aren't currently represented, so we can't fill them in.
+            //scene_graph.find(*jointid_it);
+        }
+        mesh_skin.bindShapeMatrix = skindata.bindShapeMatrix;
+        mesh_skin.weightStartIndices = skindata.weightStartIndices;
+        mesh_skin.weights = skindata.weights;
+        mesh_skin.jointIndices = skindata.jointIndices;
+        mesh_skin.inverseBindMatrices = skindata.inverseBindMatrices;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -199,11 +228,8 @@ void ColladaDocumentImporter::finish ()
 
     // Add geometries
     // FIXME only store the geometries we need
-
-
     mMesh->geometry.swap(mGeometries);
     mMesh->lights.swap( mLights);
-
 
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
@@ -262,8 +288,8 @@ void ColladaDocumentImporter::finish ()
                 for(size_t geo_idx = 0; geo_idx < curnode.node->getInstanceControllers().getCount(); geo_idx++) {
                     const COLLADAFW::InstanceController* geo_inst = curnode.node->getInstanceControllers()[geo_idx];
                     // FIXME handle child nodes, such as materials
-                    SkinControllerMap::const_iterator skin_it = mSkinController.find(geo_inst->getInstanciatedObjectId());
-                    if (skin_it != mSkinController.end()) {
+                    OCSkinControllerMap::const_iterator skin_it = mSkinControllers.find(geo_inst->getInstanciatedObjectId());
+                    if (skin_it != mSkinControllers.end()) {
 
                         COLLADAFW::UniqueId geo_inst_geometry_name=skin_it->second.source;
                         IndicesMultimap::const_iterator geo_it = mGeometryMap.find(geo_inst_geometry_name);
@@ -991,7 +1017,7 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered");
 
-    SkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
+    OCSkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
     copy->bindShapeMatrix = Matrix4x4f(skinControllerData->getBindShapeMatrix(),Matrix4x4f::ROW_MAJOR());
     std::vector<float> xweights;
     convertColladaFloatDoubleArray(skinControllerData->getWeights(), xweights);
@@ -1029,7 +1055,7 @@ bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* con
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
 
     if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {
-        SkinController * copy = &mSkinController[controller->getUniqueId()];
+        OCSkinController * copy = &mSkinControllers[controller->getUniqueId()];
         const COLLADAFW::SkinController * skinController = dynamic_cast<const COLLADAFW::SkinController*>(controller);
         copy->source = skinController->getSource();
         copy->skinControllerData = skinController->getSkinControllerData();
