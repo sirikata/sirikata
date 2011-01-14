@@ -1,0 +1,13 @@
+Trying to compile 
+ 
+
+a = ( 5 + (6)  <<  ( 5 * 3 )); 
+system.print(2 * ( 5 + (6 * 5) ));
+
+
+Emerson Tree after parsing 
+(PROG (EXPR_LIST (ASSIGN a (COND_EXPR (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (LEFT_SHIFT (ADD (POSTEXPR 5) (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (POSTEXPR 6)))))) (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (MULT (POSTEXPR 5) (POSTEXPR 3)))))))))))))) (EXPR_LIST (COND_EXPR (POSTEXPR (CALL (DOT system print) (ARGLIST (COND_EXPR (MULT (POSTEXPR 2) (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (ADD (POSTEXPR 5) (POSTEXPR (PAREN (EXPR_LIST (COND_EXPR (MULT (POSTEXPR 6) (POSTEXPR 5)))))))))))))))))))
+The generated code is 
+ a  =  ( 5 + ( 6 ) << ( 5 * 3 ) );
+system.print ( 2 * ( 5 + ( 6 * 5 ) ) ) ;
+ 

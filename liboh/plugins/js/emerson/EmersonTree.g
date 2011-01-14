@@ -763,6 +763,7 @@ newExpression
 	| ^( NEW newExpression)
 	;
 	
+/*
 memberExpression
  : primaryExpression
 	| functionExpression
@@ -798,6 +799,24 @@ memberExpression
 
 	;
 
+*/
+
+propertyReferenceSuffix1
+: Identifier { APP((const char*)$Identifier.text->chars);} 
+;
+
+indexSuffix1
+: expression
+;
+
+memberExpression
+: primaryExpression
+|functionExpression
+| ^(DOT memberExpression { printf("\n\nafafasfasf\n\n"); APP("."); } propertyReferenceSuffix1 )
+| ^(ARRAY_INDEX memberExpression { APP("[ "); } indexSuffix1 { APP(" ] "); })
+| ^(NEW { APP("new "); } memberExpression arguments)
+| ^(DOT { APP(".");} memberExpression) 
+;
 
 memberExpressionSuffix
 	: indexSuffix
@@ -806,8 +825,9 @@ memberExpressionSuffix
 
 callExpression
  : ^(CALL memberExpression arguments) 
-	//|^(callExpressionSuffix callExpression callExpression)
-	;
+ | ^(ARRAY_INDEX callExpression {APP("[ "); } indexSuffix1 { APP(" ]"); })
+ | ^(DOT callExpression { APP(".");} propertyReferenceSuffix1)
+;
 	
 
 
@@ -1144,17 +1164,8 @@ postfixExpression
 primaryExpression
 	: 'this' {APP("this");}
 	| Identifier 
-	  {
-					if(emerson_isAKeyword((char*)$Identifier.text->chars))
-					{
-							APP("system.");
-							APP((const char*)$Identifier.text->chars);
-					}
-					else
-					{
-	      APP((const char*)$Identifier.text->chars);
-	    }
-
+	  { 
+            APP((const char*)$Identifier.text->chars);
 	  }
 	| literal
 	| arrayLiteral
