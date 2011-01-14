@@ -812,7 +812,7 @@ indexSuffix1
 memberExpression
 : primaryExpression
 |functionExpression
-| ^(DOT memberExpression { printf("\n\nafafasfasf\n\n"); APP("."); } propertyReferenceSuffix1 )
+| ^(DOT memberExpression { APP("."); } propertyReferenceSuffix1 )
 | ^(ARRAY_INDEX memberExpression { APP("[ "); } indexSuffix1 { APP(" ] "); })
 | ^(NEW { APP("new "); } memberExpression arguments)
 | ^(DOT { APP(".");} memberExpression) 
