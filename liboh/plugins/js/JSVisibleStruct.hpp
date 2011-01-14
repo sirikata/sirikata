@@ -43,6 +43,8 @@ struct JSVisibleStruct
     v8::Handle<v8::Value> printData();
     v8::Handle<v8::Value> getStillVisible();
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
+    v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
+    
     
     //data
     JSObjectScript* jsObjScript;
