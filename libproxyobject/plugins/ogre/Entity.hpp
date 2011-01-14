@@ -82,9 +82,9 @@ protected:
     void fixTextures();
 
     // Wrapper for createMesh which allows us to use a WorkQueue
-    bool createMeshWork(MeshdataPtr md);
+    bool createMeshWork(Mesh::MeshdataPtr md);
 
-    void createMesh(MeshdataPtr md);
+    void createMesh(Mesh::MeshdataPtr md);
 
     void init(Ogre::Entity *obj);
 
@@ -157,7 +157,7 @@ public:
     void processMesh(Transfer::URI const& newMesh);
 
     void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<const Transfer::DenseData> response, MeshdataPtr md);
+        std::tr1::shared_ptr<const Transfer::DenseData> response, Mesh::MeshdataPtr md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -176,7 +176,7 @@ public:
 
     protected:
 
-    void handleMeshParsed(MeshdataPtr md);
+    void handleMeshParsed(Mesh::MeshdataPtr md);
 
     void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
     // After a mesh is downloaded, try instantiating it from an existing mesh,

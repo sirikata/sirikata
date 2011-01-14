@@ -81,7 +81,7 @@ ColladaDocumentPtr ColladaDocumentLoader::getDocument () const
     return mDocumentImporter->getDocument ();
 }
 
-std::tr1::shared_ptr<Meshdata> ColladaDocumentLoader::getMeshdata() const
+Mesh::MeshdataPtr ColladaDocumentLoader::getMeshdata() const
 {
   return mDocumentImporter->getMeshdata();
 }

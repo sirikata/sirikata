@@ -73,16 +73,16 @@ private:
 
     bool generatedLastRound;
 
-    std::tr1::shared_ptr<Meshdata> mMeshdata;
+      Mesh::MeshdataPtr mMeshdata;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID) :
       mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
       mTreeLevel(0),  mNumObservers(0)
     {
-      mMeshdata = std::tr1::shared_ptr<Meshdata>();
+      mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
-    }    
-    
+    }
+
     uint16 mTreeLevel;
 
     uint32 mNumObservers;
@@ -94,7 +94,7 @@ private:
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher > mAggregateObjects;
 
   boost::mutex mMeshStoreMutex;
-  std::tr1::unordered_map<String, MeshdataPtr> mMeshStore;
+  std::tr1::unordered_map<String, Mesh::MeshdataPtr> mMeshStore;
 
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
@@ -112,7 +112,7 @@ private:
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
 
   void generateMeshesFromQueue(Time postTime);
-  
+
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
 
@@ -130,8 +130,8 @@ public:
 
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
-  
-  
+
+
 
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
