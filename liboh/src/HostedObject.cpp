@@ -641,7 +641,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
     }
 
     if (update.has_mesh()) {
-        std::string mesh = update.mesh();
+        mesh = update.mesh();
         meshptr = &mesh;
     }
 
