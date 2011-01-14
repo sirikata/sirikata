@@ -40,6 +40,10 @@
 
 
 namespace Sirikata {
+namespace Mesh {
+
+typedef std::vector<LightInfo> LightInfoList;
+typedef std::vector<std::string> TextureList;
 
 struct SubMeshGeometry {
     std::string name;
@@ -85,19 +89,24 @@ struct SubMeshGeometry {
     /////////////////////////////////
 
 };
+typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
+
+
 struct GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
     MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     Matrix4x4f transform;
     BoundingBox3f3f aabb;//transformed aabb
-    double radius;//transformed radius    
+    double radius;//transformed radius
 };
+typedef std::vector<GeometryInstance> GeometryInstanceList;
 
 struct LightInstance {
     int lightIndex; // Index in LightInfoList
     Matrix4x4f transform;
 };
+typedef std::vector<LightInstance> LightInstanceList;
 
 struct MaterialEffectInfo {
     struct Texture {
@@ -174,19 +183,13 @@ struct MaterialEffectInfo {
     float shininess;
     float reflectivity;
 };
-
+typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
 
 
 
 struct Meshdata {
-    typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
-    typedef std::vector<LightInfo> LightInfoList;
-    typedef std::vector<std::string> TextureList;
     typedef std::tr1::unordered_map<std::string, std::string> URIMap;
 
-    typedef std::vector<GeometryInstance> GeometryInstanceList;
-    typedef std::vector<LightInstance> LightInstanceList;
-    typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
     SubMeshGeometryList geometry;
     TextureList textures;
     URIMap textureMap;
@@ -198,12 +201,13 @@ struct Meshdata {
     long id;
 
     GeometryInstanceList instances;
-    LightInstanceList lightInstances; 
+    LightInstanceList lightInstances;
 
 };
 
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
 
+} // namespace Mesh
 } // namespace Sirikata
 
 #endif //_SIRIKATA_MESH_MESHDATA_HPP_

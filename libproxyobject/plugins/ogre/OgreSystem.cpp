@@ -775,7 +775,7 @@ void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
     dlPlanner->removeObject(p);
 }
 
-MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+Mesh::MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
     return mModelParser->load(orig_uri, fp, data);
 }
 

@@ -110,7 +110,7 @@ bool ColladaSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data
     return false;
 }
 
-MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+Mesh::MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data)
 {
     ColladaDocumentLoader loader(uri, fp);
@@ -127,7 +127,7 @@ MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Finger
       return loader.getMeshdata();
 }
 
-bool ColladaSystem::convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) {
+bool ColladaSystem::convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) {
     // format is ignored, we only know one format
     int result = meshdataToCollada(meshdata, filename);
     return (result == 0);

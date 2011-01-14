@@ -231,7 +231,7 @@ public:
      *            through to the resulting mesh data
      *  \param data the contents of the
      */
-    MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    Mesh::MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
