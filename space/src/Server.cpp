@@ -37,6 +37,7 @@
 #include <sirikata/space/ServerMessage.hpp>
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
+#include <sirikata/space/Authenticator.hpp>
 #include "Forwarder.hpp"
 #include "LocalForwarder.hpp"
 #include "MigrationMonitor.hpp"
@@ -59,9 +60,10 @@
 namespace Sirikata
 {
 
-Server::Server(SpaceContext* ctx, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
+Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
    mContext(ctx),
+   mAuthenticator(auth),
    mLocationService(loc_service),
    mCSeg(cseg),
    mProximity(prox),
@@ -433,6 +435,25 @@ void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID&
 
     }
 }
+
+void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id) {
+    Sirikata::Protocol::Session::Container response_container;
+    Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    response.set_response( Sirikata::Protocol::Session::ConnectResponse::Error );
+
+    Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
+        mContext->id(),
+        UUID::null(), OBJECT_PORT_SESSION,
+        obj_id, OBJECT_PORT_SESSION,
+        serializePBJMessage(response_container)
+    );
+
+    // Sent directly via object host connection manager because we don't have an ObjectConnection
+    if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
+        mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
+    }
+}
+
 // Handle Connect message from object
 void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const Sirikata::Protocol::Object::ObjectMessage& container, const Sirikata::Protocol::Session::Connect& connect_msg) {
     UUID obj_id = container.source_object();
@@ -456,22 +477,8 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         else if (loc_server == mContext->id() && !in_server_region)
             SILOG(cbr,warn,"[SPACE] Connecting object was incorrectly determined to be in our region.");
 
-        // Create and send redirect reply
-        Sirikata::Protocol::Session::Container response_container;
-        Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
-        response.set_response( Sirikata::Protocol::Session::ConnectResponse::Error );
-
-        Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
-            mContext->id(),
-            UUID::null(), OBJECT_PORT_SESSION,
-            obj_id, OBJECT_PORT_SESSION,
-            serializePBJMessage(response_container)
-        );
-
-        // Sent directly via object host connection manager because we don't have an ObjectConnection
-        if (!mObjectHostConnectionManager->send( oh_conn_id, obj_response )) {
-            mContext->mainStrand->post(Duration::seconds(0.05),std::tr1::bind(&Server::retryHandleConnect,this,oh_conn_id,obj_response));
-        }
+        // Create and send error reply
+        sendConnectError(oh_conn_id, obj_id);
         return;
     }
 
@@ -499,19 +506,32 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         }
         return;
     }
+
     // FIXME sanity check the new connection
-    // -- authentication
     // -- verify object may connect, i.e. not already in system (e.g. check oseg)
 
+    String auth_data = "";
+    if (connect_msg.has_auth())
+        auth_data = connect_msg.auth();
+    mAuthenticator->authenticate(
+        obj_id, MemoryReference(auth_data),
+        std::tr1::bind(&Server::handleConnectAuthResponse, this, oh_conn_id, obj_id, connect_msg, std::tr1::placeholders::_1)
+    );
+}
+
+void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id, const Sirikata::Protocol::Session::Connect& connect_msg, bool authenticated) {
+    if (!authenticated) {
+        sendConnectError(oh_conn_id, obj_id);
+        return;
+    }
+
     //update our oseg to show that we know that we have this object now.
-    //    mOSeg->addObject(obj_id, mContext->id(), false); //don't need to generate an acknowledge message to myself, of course
     StoredConnection sc;
     sc.conn_id = oh_conn_id;
     sc.conn_msg = connect_msg;
     mStoredConnectionData[obj_id] = sc;
 
     mOSeg->addNewObject(obj_id,connect_msg.bounds().radius());
-
 }
 
 void Server::finishAddObject(const UUID& obj_id)

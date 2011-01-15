@@ -41,7 +41,7 @@ void InitSpaceOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-local,space-standard,colladamodels",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,colladamodels",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("spacestreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("spacestreamoptions","--send-buffer-size=32768 --parallel-sockets=1 --no-delay=true",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -77,6 +77,9 @@ void InitSpaceOptions() {
         .addOption(new OptionValue(CSEG, "uniform", Sirikata::OptionValueType<String>(), "Type of Coordinate Segmentation implementation to use."))
         .addOption(new OptionValue("cseg-service-host", "meru00", Sirikata::OptionValueType<String>(), "Hostname of machine running the CSEG service (running with --cseg=distributed)"))
         .addOption(new OptionValue("cseg-service-tcp-port", "2234", Sirikata::OptionValueType<String>(), "TCP listening port number on host running the CSEG service (running with --cseg=distributed)"))
+
+        .addOption(new OptionValue(SPACE_OPT_AUTH, "null", Sirikata::OptionValueType<String>(), "Type of authenticator to authenticate object connections."))
+        .addOption(new OptionValue(SPACE_OPT_AUTH_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to authenticator constructor."))
 
         .addOption(new OptionValue(LOC, "standard", Sirikata::OptionValueType<String>(), "Type of location service to run."))
         .addOption(new OptionValue(LOC_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options to pass to Loc constructor."))
