@@ -40,7 +40,7 @@ namespace Sirikata {
 
 class SQLiteAuthenticator : public Authenticator {
 public:
-    SQLiteAuthenticator(SpaceContext* ctx, const String& dbfile, const String& select_stmt);
+    SQLiteAuthenticator(SpaceContext* ctx, const String& dbfile, const String& select_stmt, const String& delete_stmt);
     virtual ~SQLiteAuthenticator() {}
 
     virtual void start();
@@ -49,11 +49,17 @@ public:
     virtual void authenticate(const UUID& obj_id, MemoryReference auth, Callback cb);
 
 private:
+    // Check if the ticket is valid
+    bool checkTicket(const String& ticket);
+    // Delete a ticket from the db
+    void deleteTicket(const String& ticket);
+    // Generate the response to the auth request
     void respond(Callback cb, bool result);
 
     SpaceContext* mContext;
     String mDBFile;
     String mDBGetSessionStmt;
+    String mDBDeleteSessionStmt;
 
     SQLiteDBPtr mDB;
 };

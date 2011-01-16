@@ -34,10 +34,11 @@
 
 namespace Sirikata {
 
-SQLiteAuthenticator::SQLiteAuthenticator(SpaceContext* ctx, const String& dbfile, const String& select_stmt)
+SQLiteAuthenticator::SQLiteAuthenticator(SpaceContext* ctx, const String& dbfile, const String& select_stmt, const String& delete_stmt)
  : mContext(ctx),
    mDBFile(dbfile),
-   mDBGetSessionStmt(select_stmt)
+   mDBGetSessionStmt(select_stmt),
+   mDBDeleteSessionStmt(delete_stmt)
 {
 }
 
@@ -47,6 +48,64 @@ void SQLiteAuthenticator::start() {
 
 void SQLiteAuthenticator::stop() {
     mDB.reset();
+}
+
+bool SQLiteAuthenticator::checkTicket(const String& ticket) {
+    bool found_ticket = false;
+
+    int rc;
+    char* remain;
+    sqlite3_stmt* value_query_stmt;
+    rc = sqlite3_prepare_v2(mDB->db(), mDBGetSessionStmt.c_str(), -1, &value_query_stmt, (const char**)&remain);
+    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value query statement");
+    if (rc != SQLITE_OK)
+        return false;
+
+    rc = sqlite3_bind_text(value_query_stmt, 1, ticket.data(), (int)ticket.size(), SQLITE_TRANSIENT);
+    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding key name to value query statement");
+    if (rc != SQLITE_OK)
+        return false;
+
+    int step_rc = sqlite3_step(value_query_stmt);
+    while(step_rc == SQLITE_ROW) {
+        found_ticket = true;
+        step_rc = sqlite3_step(value_query_stmt);
+    }
+    if (step_rc != SQLITE_DONE) {
+        // reset the statement so it'll clean up properly
+        rc = sqlite3_reset(value_query_stmt);
+        SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
+    }
+
+    rc = sqlite3_finalize(value_query_stmt);
+    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
+
+    return found_ticket;
+}
+
+void SQLiteAuthenticator::deleteTicket(const String& ticket) {
+    int rc;
+    char* remain;
+    sqlite3_stmt* value_query_stmt;
+    rc = sqlite3_prepare_v2(mDB->db(), mDBDeleteSessionStmt.c_str(), -1, &value_query_stmt, (const char**)&remain);
+    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value query statement");
+    if (rc != SQLITE_OK)
+        return;
+
+    rc = sqlite3_bind_text(value_query_stmt, 1, ticket.data(), (int)ticket.size(), SQLITE_TRANSIENT);
+    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding key name to value query statement");
+    if (rc != SQLITE_OK)
+        return;
+
+    int step_rc = sqlite3_step(value_query_stmt);
+    if (step_rc != SQLITE_DONE) {
+        // reset the statement so it'll clean up properly
+        rc = sqlite3_reset(value_query_stmt);
+        SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
+    }
+
+    rc = sqlite3_finalize(value_query_stmt);
+    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
 }
 
 void SQLiteAuthenticator::respond(Callback cb, bool result) {
@@ -64,38 +123,8 @@ void SQLiteAuthenticator::authenticate(const UUID& obj_id, MemoryReference auth,
     // Treat the auth data as just a string. We should have some encoding and .
     String auth_ticket((const char*)auth.data(), (size_t)auth.size());
 
-    bool found_ticket = false;
-
-    int rc;
-    char* remain;
-    sqlite3_stmt* value_query_stmt;
-    rc = sqlite3_prepare_v2(mDB->db(), mDBGetSessionStmt.c_str(), -1, &value_query_stmt, (const char**)&remain);
-    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error preparing value query statement");
-    if (rc != SQLITE_OK) {
-        respond(cb, false);
-        return;
-    }
-
-    rc = sqlite3_bind_text(value_query_stmt, 1, auth_ticket.data(), (int)auth_ticket.size(), SQLITE_TRANSIENT);
-    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding key name to value query statement");
-    if (rc != SQLITE_OK) {
-        respond(cb, false);
-        return;
-    }
-
-    int step_rc = sqlite3_step(value_query_stmt);
-    while(step_rc == SQLITE_ROW) {
-        found_ticket = true;
-        step_rc = sqlite3_step(value_query_stmt);
-    }
-    if (step_rc != SQLITE_DONE) {
-        // reset the statement so it'll clean up properly
-        rc = sqlite3_reset(value_query_stmt);
-        SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
-    }
-
-    rc = sqlite3_finalize(value_query_stmt);
-    SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value query statement");
+    bool found_ticket = checkTicket(auth_ticket);
+    if (found_ticket) deleteTicket(auth_ticket);
 
     respond(cb, found_ticket);
 }

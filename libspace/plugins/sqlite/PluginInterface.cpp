@@ -39,6 +39,7 @@ static int space_sqlite_plugin_refcount = 0;
 
 #define OPT_DB_FILE "db"
 #define OPT_DB_GET_SESSION_SQL "get-session-sql"
+#define OPT_DB_DELETE_SESSION_SQL "delete-session-sql"
 
 namespace Sirikata {
 
@@ -46,6 +47,7 @@ static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("space_sqlite", NULL,
         new OptionValue(OPT_DB_FILE, "", Sirikata::OptionValueType<String>(), "The path to the database file."),
         new OptionValue(OPT_DB_GET_SESSION_SQL, "select ticket from session_auth where ticket == ?", Sirikata::OptionValueType<String>(), "The SQL statement which, given a ticket identifier, extracts at least one column from the table that matches the ticket. If any matches are found, the user will be authenticated."),
+        new OptionValue(OPT_DB_DELETE_SESSION_SQL, "delete from session_auth where ticket == ?", Sirikata::OptionValueType<String>(), "The SQL statement which, given a ticket identifier, deletes that session from the database so it can't be reused."),
         NULL);
 }
 
@@ -56,7 +58,8 @@ static Authenticator* createSQLiteAuthenticator(SpaceContext* ctx, const String&
     return new SQLiteAuthenticator(
         ctx,
         optionsSet->referenceOption(OPT_DB_FILE)->as<String>(),
-        optionsSet->referenceOption(OPT_DB_GET_SESSION_SQL)->as<String>()
+        optionsSet->referenceOption(OPT_DB_GET_SESSION_SQL)->as<String>(),
+        optionsSet->referenceOption(OPT_DB_DELETE_SESSION_SQL)->as<String>()
     );
 }
 
