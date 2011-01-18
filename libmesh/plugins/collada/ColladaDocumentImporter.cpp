@@ -59,6 +59,29 @@ namespace Sirikata { namespace Models {
 
 using namespace Mesh;
 
+namespace Collada {
+// Struct for tracking node information during traversal
+struct NodeState {
+    enum Modes {
+        Fresh = 1, // Newly created. Needs to be inserted into Meshdata
+        Geo = 2, // Geometry (and lights, cameras, etc)
+        InstNodes = 3, // Instance nodes (requires indirection)
+        Nodes = 4 // Normal child nodes
+    };
+
+    NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, COLLADABU::Math::Matrix4 _matrix, int _child = -1, Modes _mode = Fresh)
+     : node(_node), parent(_parent), matrix(_matrix), child(_child), mode(_mode)
+    {}
+
+    const COLLADAFW::Node* node;
+    const COLLADAFW::Node* parent;
+    COLLADABU::Math::Matrix4 matrix;
+    unsigned int child;
+    Modes mode;
+};
+} // namespace Collada
+
+
 ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash )
     :   mDocument ( new ColladaDocument ( uri ) ),
         mState ( IDLE ),
@@ -112,7 +135,115 @@ String ColladaDocumentImporter::documentURI() const {
 void ColladaDocumentImporter::postProcess ()
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::postProcess() entered");
+    translateNodes();
+    translateSkinControllers();
+}
 
+void ColladaDocumentImporter::translateNodes() {
+    using namespace Sirikata::Models::Collada;
+
+    // We need to replicate all nodes into the Meshdata. We also store UniqueID
+    // -> index for all nodes.
+
+    // Also, for instanced nodes, we may try to instantiate them before we
+    // actually process them. We store up this information, parent unique ids ->
+    // list of children's unique ids, and fill it all in at the end.
+    typedef std::vector<COLLADAFW::UniqueId> UniqueIdList;
+    typedef std::map<COLLADAFW::UniqueId, UniqueIdList> UniqueChildrenListMap;
+    UniqueChildrenListMap instance_children;
+
+    // Try to find the instanciated VisualScene
+    VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
+    assert(vis_scene_it != mVisualScenes.end()); // FIXME
+    const COLLADAFW::VisualScene* vis_scene = vis_scene_it->second;
+    // Iterate through nodes.
+    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
+        const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
+
+        std::stack<NodeState> node_stack;
+        node_stack.push( NodeState(rn, NULL, COLLADABU::Math::Matrix4::IDENTITY) );
+
+        while(!node_stack.empty()) {
+            NodeState curnode = node_stack.top();
+            node_stack.pop();
+
+            if (curnode.mode == NodeState::Fresh) {
+                COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
+
+                // Get node indices
+                NodeIndex nindex = mMesh->nodes.size();
+                NodeIndex parent_idx = NullNodeIndex;
+                if (curnode.parent != NULL) {
+                    parent_idx = mNodeIndices[curnode.parent->getUniqueId()];
+                    // Add the node to it's parent as a child
+                    mMesh->nodes[parent_idx].children.push_back(nindex);
+                }
+                // Create the new node
+                Node rnode(parent_idx, Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR()));
+                mNodeIndices[rn->getUniqueId()] = nindex;
+                mMesh->nodes.push_back(rnode);
+                // If there is no parent, add as a root node
+                if (curnode.parent == NULL)
+                    mMesh->rootNodes.push_back(nindex);
+
+                curnode.mode = NodeState::Geo;
+            }
+
+            if (curnode.mode == NodeState::Geo) {
+                // This path doesn't deal with geometry, just nodes. Do minimal
+                // processing and continue.
+
+                // Transformation
+                COLLADABU::Math::Matrix4 additional_xform = curnode.node->getTransformationMatrix();
+                curnode.matrix = curnode.matrix * additional_xform;
+
+                // Tell the remaining code to start processing children nodes
+                curnode.child = 0;
+                curnode.mode = NodeState::InstNodes;
+            }
+
+            if (curnode.mode == NodeState::InstNodes) {
+                // Instance nodes are just added to the current node. However,
+                // we need to defer this because the instanced nodes may not
+                // have been processed yet, so we wouldn't be able to lookup an
+                // index.
+
+                // Instance Nodes
+                if ((size_t)curnode.child >= (size_t)curnode.node->getInstanceNodes().getCount()) {
+                    curnode.child = 0;
+                    curnode.mode = NodeState::Nodes;
+                }
+                else {
+                    COLLADAFW::UniqueId child_id = curnode.node->getInstanceNodes()[curnode.child]->getInstanciatedObjectId();
+                    COLLADAFW::UniqueId node_id = curnode.node->getUniqueId();
+
+                    instance_children[node_id].push_back(child_id);
+                }
+            }
+            if (curnode.mode == NodeState::Nodes) {
+                // Process the next child if there are more
+                if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
+                    // updated version of this node
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
+                    // And the child node
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.matrix) );
+                }
+            }
+        }
+    }
+
+    // Fill in instance node children information
+    for(UniqueChildrenListMap::const_iterator parent_it = instance_children.begin(); parent_it != instance_children.end(); parent_it++) {
+        NodeIndex parent_idx = mNodeIndices[parent_it->first];
+        const UniqueIdList& inst_children = parent_it->second;
+
+        for(UniqueIdList::const_iterator child_it = inst_children.begin(); child_it != inst_children.end(); child_it++) {
+            mMesh->nodes[parent_idx].instanceChildren.push_back( mNodeIndices[*child_it] );
+        }
+    }
+}
+
+void ColladaDocumentImporter::translateSkinControllers() {
     // Copy SkinController data into the corresponding mesh. We need to do this
     // now because the skin and geometry may not occur in order.
     for(OCSkinControllerMap::iterator skin_it = mSkinControllers.begin(); skin_it != mSkinControllers.end(); skin_it++) {
@@ -126,7 +257,7 @@ void ColladaDocumentImporter::postProcess ()
         // And lookup the mesh that the animation belongs to
         IndicesMultimap::iterator geom_it = mGeometryMap.find(skin.source);
         uint32 mesh_idx = geom_it->second;
-        SubMeshGeometry& mesh = mGeometries[mesh_idx];
+        SubMeshGeometry& mesh = mMesh->geometry[mesh_idx];
 
         // Copy data into SubMeshGeometry
         mesh.skinControllers.push_back(SkinController());
@@ -160,26 +291,6 @@ void ColladaDocumentImporter::start ()
 
     mState = STARTED;
 }
-
-// We need this to be a non-local definition, so hide it in a namespace
-namespace Collada {
-struct NodeState {
-    enum Modes {
-        Geo = 1, // Geometry (and lights, cameras, etc)
-        InstNodes = 2, // Instance nodes (requires indirection)
-        Nodes = 3 // Normal child nodes
-    };
-
-    NodeState(const COLLADAFW::Node* _node, COLLADABU::Math::Matrix4 _matrix, int _child = -1, Modes _mode = Geo)
-     : node(_node), matrix(_matrix), child(_child), mode(_mode)
-    {}
-
-    const COLLADAFW::Node* node;
-    COLLADABU::Math::Matrix4 matrix;
-    unsigned int child;
-    Modes mode;
-};
-} // namespace Collada
 
 double computeRadiusAndBounds(const SubMeshGeometry&geometry, const Matrix4x4f &new_geo_inst_transform, BoundingBox3f3f&new_geo_inst_aabb) {
     double new_geo_inst_radius=0;
@@ -217,8 +328,6 @@ void ColladaDocumentImporter::finish ()
 
     COLLADA_LOG(insane, "ColladaDocumentImporter::finish() entered");
 
-    postProcess ();
-
     // Generate the Meshdata from all our parsed data
 
     // Add geometries
@@ -228,6 +337,9 @@ void ColladaDocumentImporter::finish ()
 
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
+
+    // NOTE: postProcess expects geometry and lights to have been filled in.
+    postProcess ();
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -239,11 +351,17 @@ void ColladaDocumentImporter::finish ()
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
         std::stack<NodeState> node_stack;
-        node_stack.push( NodeState(rn, COLLADABU::Math::Matrix4::IDENTITY) );
+        node_stack.push( NodeState(rn, NULL, COLLADABU::Math::Matrix4::IDENTITY) );
 
         while(!node_stack.empty()) {
             NodeState curnode = node_stack.top();
             node_stack.pop();
+
+            if (curnode.mode == NodeState::Fresh) {
+                // In this traversal we don't need to do anything when the node
+                // is just added
+                curnode.mode = NodeState::Geo;
+            }
 
             if (curnode.mode == NodeState::Geo) {
 
@@ -352,18 +470,18 @@ void ColladaDocumentImporter::finish ()
                     assert(node_it != mLibraryNodes.end());
                     const COLLADAFW::Node* instanced_node = node_it->second;
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(instanced_node, curnode.matrix) );
+                    node_stack.push( NodeState(instanced_node, curnode.node, curnode.matrix) );
                 }
             }
             if (curnode.mode == NodeState::Nodes) {
                 // Process the next child if there are more
                 if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.matrix) );
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.matrix) );
                 }
             }
         }

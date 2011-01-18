@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_MESH_MESHDATA_HPP_
 #define _SIRIKATA_MESH_MESHDATA_HPP_
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/mesh/Platform.hpp>
 #include <sirikata/core/util/Sha256.hpp>
 #include "LightInfo.hpp"
 #include <sirikata/core/util/UUID.hpp>
@@ -208,6 +208,30 @@ typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
 struct InstanceSkinAnimation {
 };
 
+// A scene graph node. Contains a transformation, set of children nodes,
+// camera instances, geometry instances, skin controller instances, light
+// instances, and instances of other nodes.
+typedef int32 NodeIndex;
+extern NodeIndex NullNodeIndex;
+typedef std::vector<NodeIndex> NodeIndexList;
+struct SIRIKATA_MESH_EXPORT Node {
+    Node();
+    Node(NodeIndex par, const Matrix4x4f& xform);
+
+    // Parent node in the actual hierarchy (not instantiated).
+    NodeIndex parent;
+    // Transformation to apply when traversing this node.
+    Matrix4x4f transform;
+    // Direct children, i.e. they are contained by this node directly and their
+    // parent NodeIndex will reflect that.
+    NodeIndexList children;
+    // Instantiations of other nodes (and their children) into this
+    // subtree. Because they are instantiations, their
+    // instanceChildren[i]->parent != this node's index.
+    NodeIndexList instanceChildren;
+};
+typedef std::vector<Node> NodeList;
+
 struct Meshdata {
     typedef std::tr1::unordered_map<std::string, std::string> URIMap;
 
@@ -224,6 +248,12 @@ struct Meshdata {
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
+    // We track two sets of nodes: roots and the full list. (Obviously the roots
+    // are a subset of the full list). The node list is just the full set,
+    // usually only used to look up children/parents.  The roots list is just a
+    // set of indices into the full list.
+    NodeList nodes;
+    NodeIndexList rootNodes;
 };
 
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;

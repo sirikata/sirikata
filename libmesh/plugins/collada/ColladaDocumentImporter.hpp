@@ -96,6 +96,14 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
 
         void postProcess ();
 
+        // Translates scene graph nodes into our runtime format. Part
+        // of post processing step.
+        void translateNodes();
+        // Translates skin controllers into our runtime format and resolves
+        // their various dependencies (jointes, meshes). Part of post processing
+        // step.
+        void translateSkinControllers();
+
         ColladaDocumentPtr mDocument;
 
         enum State { CANCELLED = -1, IDLE, STARTED, FINISHED };
@@ -217,6 +225,12 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         std::vector <COLLADAFW::EffectCommon*> mColladaClonedCommonEffects;
         //IndicesMap mEffectMap;
         Mesh::MaterialEffectInfoList mEffects;
+
+
+        typedef std::tr1::unordered_map<COLLADAFW::UniqueId, size_t, UniqueIdHash> IndexMap;
+        // Indices for the nodes by UniqueId. Used to find the right index after
+        // the first pass has translated all nodes into the Meshdata data structure.
+        IndexMap mNodeIndices;
 
         Mesh::MeshdataPtr mMesh;
 };
