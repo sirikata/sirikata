@@ -123,8 +123,32 @@ void JSObjectScriptManager::createTemplates()
     createJSInvokableObjectTemplate();
     createPresenceTemplate();    
     createSystemTemplate();
+
+    createTriggerableTemplate();
 }
 
+
+//solution for managing doing more intelligent query matching
+void JSObjectScriptManager::createTriggerableTemplate()
+{
+    v8::HandleScope handle_scope;
+    mTriggerableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+    // An internal field holds the JSObjectScript*
+    mTriggerableTemplate->SetInternalFieldCount(TRIGGERABLE_TEMPLATE_FIELD_COUNT);
+
+    mTriggerableTemplate->Set(v8::String::New("trigger"), v8::FunctionTemplate::New(JSTriggerable::__trigger));
+    mTriggerableTemplate->Set(v8::String::New("register"), v8::FunctionTemplate::New(JSTriggerable::__register));
+    
+    
+    mTriggerableTemplate->SetInternalField(JS);
+    
+    triggerPredicate();
+    onTriggerCallback();
+    
+    
+    lkjs;
+}
 
 
 //no reboot.
