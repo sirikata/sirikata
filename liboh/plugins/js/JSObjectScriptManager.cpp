@@ -115,7 +115,7 @@ void JSObjectScriptManager::createTemplates()
 
     createMathTemplate();
     createContextTemplate();
-    createFakeRootTemplate();
+    createFakerootTemplate();
     
     createHandlerTemplate();
     createVisibleTemplate();    
@@ -149,8 +149,22 @@ void JSObjectScriptManager::createTriggerableTemplate()
     lkjs;
 }
 
-void JSObjectScriptManager::createFakeRootTemplate()
+
+void JSObjectScriptManager::createFakerootTemplate()
 {
+    lkjs;
+    v8::HandleScope handle_scope;
+    mFakerootTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+    mFakerootTemplate->SetInternalFieldCount(FAKEROOT_TEMPLATE_FIELD_COUNT);
+    
+    
+    mFakerootTemplate->Set(v8::String::New("sendHome"));
+    mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::ScriptRegisterHandler));
+    mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::ScriptTimeout));
+    mFakerootTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSFakeroot::ScriptCreateEntity));
+    mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::Print));
+    
     lkjs;
 }
 
