@@ -66,6 +66,23 @@ JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
 }
 
 
+//returns whether the decode operation was successful or not.  if successful,
+//updates the value in decodeValue to the decoded value, errorMessage contains
+//string associated with failure if decoding fales
+bool decodeBool(v8::Handle<v8::Value> toDeocde, bool& decodedValue, std::string& errorMessage)
+{
+    if (! toDecode->IsBoolean())
+    {
+        errorMessage += "  Error in decodeBool in JSObjectUtils.cpp.  Not given a boolean emerson object to decode.";
+        return false;
+    }
+
+    v8::Handle<v8::Boolean> boolean = toDecode->ToBoolean();
+    decodedValue = boolean->Value();
+    return true;
+}
+
+
 }//namespace js
 }//namespace sirikata
 

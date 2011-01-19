@@ -16,10 +16,13 @@ class JSObjectScript;
 
 struct JSContextStruct
 {
-    JSContextStruct(JSObjectScript* parent)
+    JSContextStruct(JSObjectScript* parent, bool sendEveryone, bool recvEveryone, bool proxQueries)
      : jsObjScript(parent),
        mContext(v8::Context::New())
         {
+            lkjs;
+            add to global an object that can do all these things;
+            lkjs;
         }
     
     ~JSContextStruct()

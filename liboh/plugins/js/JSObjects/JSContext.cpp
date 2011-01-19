@@ -82,7 +82,7 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
     
     JSContextStruct* jscontstruct = getContStructFromArgs(args);
     if (jscontstruct == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("\nInvalid call to ScriptExecute.  Cannot decode JSContextStruct.\n")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("\nInvalid call to ScriptExecute.  Cannot decode4 JSContextStruct.\n")));
 
     //first argument is a function
     //subsequent arguments are the arguments to that function

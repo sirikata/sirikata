@@ -68,6 +68,9 @@ struct EntityCreateInfo
 };
 
 
+static const uint32 MAX_MESSAGE_CODE     = 1000;
+static const uint32 MAX_SEARCH_OPEN_CODE =   20;
+
 
 class JSObjectScript : public ObjectScript,
                        public SessionEventListener,
@@ -95,12 +98,8 @@ public:
 
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
-
-
     //this function returns a context with
-    v8::Handle<v8::Value> createContext();
-
-
+    v8::Handle<v8::Value> createContext(bool sendEveryone, bool recvEveryone, bool proxQueries);
 
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
@@ -159,7 +158,9 @@ public:
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
 
     void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
-
+    uint32 registerUniqueMessageCode();
+    bool unregisterUniqueMessageCode(uint32 toUnregister);
+    
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
@@ -274,7 +275,10 @@ private:
     v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
-
+    bool uniqueMessageCodeExists(uint32 code);
+    typedef std::map<uint32,bool> ScriptMessageCodes;
+    ScriptMessageCodes mMessageCodes;
+    
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;

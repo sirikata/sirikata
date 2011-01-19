@@ -63,6 +63,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
     v8::Persistent<v8::ObjectTemplate> mMathTemplate;
     v8::Persistent<v8::ObjectTemplate> mInvokableObjectTemplate;
+    v8::Persistent<v8::ObjectTemplate> mFakeRootTemplate;
     void testPrint();
 
 private:
@@ -74,8 +75,9 @@ private:
     void createPresenceTemplate();
     void createContextTemplate();
     void createMathTemplate();
-    void  createJSInvokableObjectTemplate();
-
+    void createJSInvokableObjectTemplate();
+    void createFakeRootTemplate();
+    
     void addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo);
     void addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();

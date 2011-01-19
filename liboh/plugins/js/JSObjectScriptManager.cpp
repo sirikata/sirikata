@@ -115,6 +115,7 @@ void JSObjectScriptManager::createTemplates()
 
     createMathTemplate();
     createContextTemplate();
+    createFakeRootTemplate();
     
     createHandlerTemplate();
     createVisibleTemplate();    
@@ -145,10 +146,14 @@ void JSObjectScriptManager::createTriggerableTemplate()
     
     triggerPredicate();
     onTriggerCallback();
-    
-    
     lkjs;
 }
+
+void JSObjectScriptManager::createFakeRootTemplate()
+{
+    lkjs;
+}
+
 
 
 //no reboot.
@@ -170,8 +175,10 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSContext::ScriptTimeout));
     mContextTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSContext::Print));
 
+    
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
+
     
     //add basic templates: vec3, quat, etc.
     addBaseTemplates(mContextTemplate);
@@ -226,7 +233,8 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-
+    system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
+    
     //math, vec, quaternion, etc.
     addBaseTemplates(system_templ);
     //add the system template to the global template

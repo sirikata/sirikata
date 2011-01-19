@@ -179,6 +179,8 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 }
 
 
+
+
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
  : mParent(ho),
    mManager(jMan)
@@ -1310,14 +1312,55 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
     return js_pres;
 }
 
+//Generates a non-colliding 
+uint32 JSObjectScript::registerUniqueMessageCode()
+{
+    uint32 returner = randInt(0,MAX_MESSAGE_CODE);
+
+    uint32 counter = 0;
+    while( uniqueMessageCodeExists(returner))
+    {
+        returner = randInt(0,MAX_MESSAGE_CODE);
+        ++counter;
+        if (counter > MAX_SEARCH_OPEN_CODE)
+            break; //give up and just overload an object message.
+    }
+
+    mMessageCodes[returner] = true;
+    return returner;
+}
+
+bool JSObjectScript::unregisterUniqueMessageCode(uint32 toUnregister)
+{
+    ScriptMessageCodes::iterator iter = mMessageCodes.find(toUnregister);
+    if (iter == mMessageCodes.end())
+        return false;
+
+    mMessageCodes.erase(iter);
+    return true;
+}
 
 
-v8::Handle<v8::Value> JSObjectScript::createContext()
+bool JSObjectScript::uniqueMessageCodeExists(uint32 code)
+{
+    ScriptMessageCodes::iterator iter = mMessageCodes.find(code);
+    return iter != mMessageCodes.end();
+}
+
+
+
+//sendEveryone creates fakeroot that can send messages to everyone besides just
+//who created you.
+//recvEveryone means that you can receive messages from everyone besides just
+//who created you.
+//proxQueries means that you can issue proximity queries yourself, and latch on
+//callbacks for them.
+v8::Handle<v8::Value> JSObjectScript::createContext(bool sendEveryone, bool recvEveryone, bool proxQueries)
 {
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this)));
+    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this,sendEveryone,recvEveryone,proxQueries)));
 
     return returner;
 }

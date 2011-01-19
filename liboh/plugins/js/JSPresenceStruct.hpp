@@ -29,7 +29,42 @@ struct JSPresenceStruct
     
     void registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb)
     {
-    mOnProxRemovedEventHandler = cb;
+        mOnProxRemovedEventHandler = cb;
+    }
+
+
+    static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage)
+    {
+        v8::HandleScope handle_scope;  //for garbage collection.
+    
+        if (! toDecode->IsObject())
+        {
+            errorMessage += "Error in decode of JSPresneceStruct.  Should have received an object to decode.";
+            return NULL;
+        }
+        
+        v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+        
+        //now check internal field count
+        if (toDecodeObject->InternalFieldCount() != PRESENCE_FIELD_COUNT)
+        {
+            errorMessage += "Error in decode of JSPresneceStruct.  Object given does not have adequate number of internal fields for decode.";
+            return NULL;
+        }
+        
+        //now actually try to decode each.
+        //decode the jsVisibleStruct field
+        v8::Local<v8::External> wrapJSVisibleObj;
+        wrapJSPresStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(PRESENCE_FIELD_PRESENCE));
+        void* ptr = wrapJSPresStructObj->Value();
+        
+        JSPresenceStruct* returner;
+        returner = static_cast<JSPresenceStruct*>(ptr);
+        if (returner == NULL)
+            errorMessage += "Error in decode of JSPresneceStruct.  Internal field of object given cannot be casted to a JSPresenceStruct.";
+
+        return returner;
+
     }
 
 

@@ -32,17 +32,58 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 }
 
 
+
+//fake root in context can already send messages to who instantiated it and
+//receive messages from who instantiated it.
+//messages sent out of it get stamped with a port number automatically
+
+//argument 0: the presence that the context is associated with.  (will use
+//this as sender of messages).
+//argument 1: true/false.  can I send messages to everyone?
+//argument 2: true/false.  can I receive messages from everyone?
+//argument 3: true/false.  can I make my own prox queries
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 {
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    if (target_script == NULL)
-    {
-        std::cout<<"\n\nError.  Receiving empty jsobjectsript fields when creating a context\n\n";
-        assert(false);
-    }
+    if (args.Length() != 4)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
 
-    return target_script->createContext();
+
+    bool sendEveryone,recvEveryone,proxQueries;    
+    String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
+    String errorMessageWhichArg,errorMessage;
+
+    
+    //jspresstruct decode
+    errorMessageWhichArg= " 1.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    JSPresenceStruct* jsPresStruct = JSPresenceStruct::decodePresenceStruct(args[0],errorMessage);
+    if (jsPresStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+    
+    
+    //send everyone decode
+    errorMessageWhichArg= " 2.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[1],sendEveryone, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+    //recv everyone decode
+    errorMessageWhichArg= " 3.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[2],recvEveryone, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+
+    //recv everyone decode
+    errorMessageWhichArg= " 4.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[2],proxQueries, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+    
+    
+    return jsPresStruct->jsObjScript->createContext(sendEveryone,recvEveryone,proxQueries);
 }
+
 
 
 //first argument is the position of the new entity
@@ -291,15 +332,6 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Handle<v8::Value> pattern = args[2];
     v8::Handle<v8::Value> sender_val = args[3];
 
-
-    /*
-
-    v8::Handle<v8::Value> pattern = args[0];
-    v8::Handle<v8::Value> target_val = args[1];
-    v8::Handle<v8::Value> cb_val = args[2];
-    v8::Handle<v8::Value> sender_val = args[3];
-
-    */
 
     // Pattern
     PatternList native_patterns;
