@@ -9,8 +9,8 @@ system.print("\n\n Testing visible calls.\n\n");
 var haveCallback = false;
 var objToMvTowards;
 var inverseSpeed = 1;
-var CALLBACK_PERIOD = .5;
-var CALLBACK_MAX_DISTANCE = 10;
+var CALLBACK_PERIOD = .2;
+var CALLBACK_MAX_DISTANCE = 40;
 
 
 function proxCallback(calledBack)
