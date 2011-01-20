@@ -49,5 +49,31 @@ Node::Node(NodeIndex par, const Matrix4x4f& xform)
 {
 }
 
+Node::Node(const Matrix4x4f& xform)
+ : parent(NullNodeIndex),
+   transform(xform)
+{
+}
+
+Matrix4x4f Meshdata::getTransform(NodeIndex index) const {
+    // Just trace up the tree, multiplying in transforms
+    Matrix4x4f xform(Matrix4x4f::identity());
+
+    while(index != NullNodeIndex) {
+        xform = nodes[index].transform * xform;
+        index = nodes[index].parent;
+    }
+
+    return globalTransform * xform;
+}
+
+Matrix4x4f Meshdata::getTransform(const GeometryInstance& geo) const {
+    return getTransform(geo.parentNode);
+}
+
+Matrix4x4f Meshdata::getTransform(const LightInstance& light) const {
+    return getTransform(light.parentNode);
+}
+
 } // namespace Mesh
 } // namespace Sirikata

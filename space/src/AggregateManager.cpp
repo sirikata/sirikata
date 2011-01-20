@@ -232,16 +232,13 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
   std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
   std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
+  std::tr1::unordered_map<std::string, uint32> meshToStartLightIdxMapping;
+  std::tr1::unordered_map<std::string, uint32> meshToStartNodeIdxMapping;
+
   uint32   numAddedSubMeshGeometries = 0;
+  // Make sure we've got all the Meshdatas
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
-
-    Vector3f location = mLoc->currentPosition(child_uuid);
-    float32 locationX = location.x;
-    float32 locationY = location.y;
-    float32 locationZ = location.z;
-
-    Quaternion orientation = mLoc->currentOrientation(child_uuid);
 
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
@@ -264,26 +261,23 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
         return false;
       }
     }
+  }
 
+  // And finally, when we do, perform the merge
+  std::tr1::unordered_set<String> textureSet; // Tracks textures so we can fill in
+                                         // agg_mesh->textures when we're done
+                                         // copying data in.
+  for (uint32 i= 0; i < children.size(); i++) {
+    UUID child_uuid = children[i];
+    boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+    if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
+      continue;
+    }
+    MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
+    std::string meshName = mLoc->mesh(child_uuid);
     lock.unlock();
 
-    agg_mesh->lightInstances.insert(agg_mesh->lightInstances.end(),
-                                    m->lightInstances.begin(),
-                                    m->lightInstances.end() );
-    agg_mesh->lights.insert(agg_mesh->lights.end(),
-                            m->lights.begin(),
-                            m->lights.end());
-
-    for (Meshdata::URIMap::const_iterator tex_it = m->textureMap.begin();
-         tex_it != m->textureMap.end(); tex_it++)
-      {
-        //FIXME: CLient cannot deal with absolute URL paths specified as a texture in a collada file
-        agg_mesh->textureMap[tex_it->first+"-"+child_uuid.toString()] = tex_it->second;
-      }
-
-
     /** Find scaling factor **/
-
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
     bool firstUpdate = true;
     for (uint32 i = 0; i < m->instances.size(); i++) {
@@ -294,7 +288,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       for (uint32 j = 0; j < smgPositionsSize; j++) {
         const Vector3f& v = smg.positions[j];
 
-        Vector4f jth_vertex_4f = geomInstance.transform*Vector4f(v.x,
+        Vector4f jth_vertex_4f = m->getTransform(geomInstance)*Vector4f(v.x,
                                                                   v.y,
                                                                   v.z,
                                                                   1.0f);
@@ -316,29 +310,83 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /** End: find scaling factor **/
 
-    std::vector<GeometryInstance> instances;
-    uint32 submeshGeomOffset;
-    uint32 submeshMaterialsOffset;
-    bool addingNewSMGs = false;
+    // We me reuse more than one of the same mesh, e.g. the aggregate may have
+    // two identical trees that are at different locations. In that case,
+    // SubMeshGeometry, Textures, LightInfos, MaterialEffectInfos, and Nodes can
+    // all be shared, and can therefore reuse offsets.
+    // If necessary, add the offset in.
     if (  meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
       meshToStartIdxMapping[ meshName ] = agg_mesh->geometry.size();
       meshToStartMaterialsIdxMapping[ meshName ] = agg_mesh->materials.size();
-      submeshGeomOffset = agg_mesh->geometry.size();
-      submeshMaterialsOffset = agg_mesh->materials.size();
-      addingNewSMGs = true;
-    }
-    else {
-      submeshGeomOffset = meshToStartIdxMapping[meshName];
-      submeshMaterialsOffset = meshToStartMaterialsIdxMapping[ meshName ];
+      meshToStartNodeIdxMapping[ meshName ] = agg_mesh->nodes.size();
+      meshToStartLightIdxMapping[ meshName ] = agg_mesh->lights.size();
+
+      // Copy SubMeshGeometries. We loop through so we can reset the numInstances
+      for(uint32 smgi = 0; smgi < m->geometry.size(); smgi++) {
+          SubMeshGeometry smg = m->geometry[smgi];
+          smg.numInstances = 0;
+          agg_mesh->geometry.push_back(smg);
+      }
+      // Copy Materials
+      agg_mesh->materials.insert(agg_mesh->materials.end(),
+          m->materials.begin(),
+          m->materials.end());
+      // Copy names of textures from the materials into a set so we can fill in
+      // the texture list when we finish adding all subobjects
+      for(MaterialEffectInfoList::const_iterator mat_it = m->materials.begin(); mat_it != m->materials.end(); mat_it++) {
+          for(MaterialEffectInfo::TextureList::const_iterator tex_it = mat_it->textures.begin(); tex_it != mat_it->textures.end(); tex_it++)
+              if (!tex_it->uri.empty()) textureSet.insert(tex_it->uri);
+      }
+      // Copy Lights
+      agg_mesh->lights.insert(agg_mesh->lights.end(),
+          m->lights.begin(),
+          m->lights.end());
+      // Copy Nodes. Loop through to adjust node indices.
+      uint32 noff = agg_mesh->nodes.size();
+      for(uint32 ni = 0; ni < m->nodes.size(); ni++) {
+          Node n = m->nodes[ni];
+          n.parent += noff;
+          for(uint32 ci = 0; ci < n.children.size(); ci++)
+              n.children[ci] += noff;
+          for(uint32 ci = 0; ci < n.instanceChildren.size(); ci++)
+              n.instanceChildren[ci] += noff;
+          agg_mesh->nodes.push_back(n);
+      }
     }
 
+    // And alwasy extract into convenience variables
+    uint32 submeshGeomOffset = meshToStartIdxMapping[meshName];
+    uint32 submeshMaterialsOffset = meshToStartMaterialsIdxMapping[meshName];
+    uint32 submeshLightOffset = meshToStartLightIdxMapping[meshName];
+    uint32 submeshNodeOffset = meshToStartNodeIdxMapping[meshName];
+
+    // Extract the loc information we need for this object.
+    Vector3f location = mLoc->currentPosition(child_uuid);
+    float32 locationX = location.x;
+    float32 locationY = location.y;
+    float32 locationZ = location.z;
+    Quaternion orientation = mLoc->currentOrientation(child_uuid);
 
     for (uint32 i = 0; i < m->instances.size(); i++) {
+      // Copy the instance data.
       GeometryInstance geomInstance = m->instances[i];
+      Matrix4x4f orig_geo_inst_xform = m->getTransform(geomInstance);
 
+      // Shift indices for
+      //  Materials
+      for(GeometryInstance::MaterialBindingMap::iterator mbit = geomInstance.materialBindingMap.begin(); mbit != geomInstance.materialBindingMap.end(); mbit++)
+          mbit->second += submeshMaterialsOffset;
+      //  Geometry
+      geomInstance.geometryIndex += submeshGeomOffset;
+      //  Parent node
+      //  FIXME see note below to understand why this ultimately has no
+      //  effect. parentNode ends up getting overwritten with a new parent nodes
+      //  index that flattens the node hierarchy.
+      geomInstance.parentNode += submeshNodeOffset;
+
+      // Sanity check
       assert (geomInstance.geometryIndex < m->geometry.size());
 
-      geomInstance.geometryIndex = submeshGeomOffset + i;
 
       //translation
       Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0,locationX - bndsX),
@@ -358,73 +406,44 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                          Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
 
       //scaling
-      trs *= Matrix4x4f( Vector4f(scalingfactor,0,0,0),
-                         Vector4f(0,scalingfactor,0,0),
-                         Vector4f(0,0,scalingfactor,0),
-                         Vector4f(0,0,0,1),                Matrix4x4f::ROWS());
+      trs *= Matrix4x4f::scale(scalingfactor);
 
-      geomInstance.transform = trs * geomInstance.transform;
+      // Generate a node for this instance
+      NodeIndex geom_node_idx = agg_mesh->nodes.size();
+      // FIXME because we need to have trs * original_transform (i.e., left
+      // instead of right multiply), the trs transform has to be at the
+      // root. This means we can't trivially handle this with additional nodes
+      // since the new node would have to be inserted at the root (and therefore
+      // some may end up conflicting). For now, we just flatten these by
+      // creating a new root node.
+      agg_mesh->nodes.push_back( Node(trs * orig_geo_inst_xform) );
+      agg_mesh->rootNodes.push_back(geom_node_idx);
+      // Overwrite the parent node to make this new one with the correct
+      // transform the one we use.
+      geomInstance.parentNode = geom_node_idx;
+
+
+      // Increase ref count on instanced geometry
+      SubMeshGeometry& smgRef = agg_mesh->geometry[geomInstance.geometryIndex];
+      smgRef.numInstances++;
 
       //Push the instance into the Meshdata data structure
-      instances.push_back(geomInstance);
-
-      if (addingNewSMGs) {
-        SubMeshGeometry smg = m->geometry[ m->instances[i].geometryIndex ];
-        smg.numInstances = 1;
-        agg_mesh->geometry.push_back(smg);
-      }
-      else {
-        SubMeshGeometry& smgRef = agg_mesh->geometry[geomInstance.geometryIndex];
-        smgRef.numInstances++;
-      }
-    }
-
-
-    for (uint32 i = 0; i < instances.size(); i++) {
-      GeometryInstance geomInstance = instances[i];
-
-      for (GeometryInstance::MaterialBindingMap::iterator mat_it = geomInstance.materialBindingMap.begin();
-           mat_it != geomInstance.materialBindingMap.end(); mat_it++)
-        {
-          (mat_it->second) += submeshMaterialsOffset;
-        }
-
       agg_mesh->instances.push_back(geomInstance);
     }
 
-    if (addingNewSMGs) {
-      agg_mesh->materials.insert(agg_mesh->materials.end(),
-                                 m->materials.begin(),
-                                 m->materials.end());
-    }
-
-
-
-    uint32 lightsSize = agg_mesh->lights.size();
-    agg_mesh->lights.insert(agg_mesh->lights.end(),
-                            m->lights.begin(),
-                            m->lights.end());
     for (uint32 j = 0; j < m->lightInstances.size(); j++) {
       LightInstance& lightInstance = m->lightInstances[j];
-      lightInstance.lightIndex += lightsSize;
+      lightInstance.lightIndex += submeshLightOffset;
       agg_mesh->lightInstances.push_back(lightInstance);
     }
 
-    for (Meshdata::URIMap::const_iterator it = m->textureMap.begin();
-         it != m->textureMap.end(); it++)
-      {
-        agg_mesh->textureMap[it->first] =   it->second;
-      }
   }
 
-  std::map<String,int> texturesList;
-  for (Meshdata::URIMap::const_iterator it = agg_mesh->textureMap.begin() ; it!= agg_mesh->textureMap.end(); it++) {
-      texturesList[it->second] = 1;
-  }
+  // We should have all the textures in our textureSet since we looped through
+  // all the materials, just fill in the list now.
+  for (std::tr1::unordered_set<String>::iterator it = textureSet.begin(); it != textureSet.end(); it++)
+      agg_mesh->textures.push_back( *it );
 
-  for (std::map<String,int>::iterator it = texturesList.begin(); it != texturesList.end(); it++ ) {
-    agg_mesh->textures.push_back( it->first );
-  }
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];

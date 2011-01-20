@@ -42,6 +42,12 @@
 namespace Sirikata {
 namespace Mesh {
 
+// Typedefs for NodeIndices, which refer to scene graph nodes in the model
+typedef int32 NodeIndex;
+extern NodeIndex NullNodeIndex;
+typedef std::vector<NodeIndex> NodeIndexList;
+
+
 typedef std::vector<LightInfo> LightInfoList;
 typedef std::vector<std::string> TextureList;
 
@@ -115,7 +121,7 @@ struct GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
     MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
     unsigned int geometryIndex; // Index in SubMeshGeometryList
-    Matrix4x4f transform;
+    NodeIndex parentNode; // Index of node holding this instance
     BoundingBox3f3f aabb;//transformed aabb
     double radius;//transformed radius
 };
@@ -123,7 +129,7 @@ typedef std::vector<GeometryInstance> GeometryInstanceList;
 
 struct LightInstance {
     int lightIndex; // Index in LightInfoList
-    Matrix4x4f transform;
+    NodeIndex parentNode; // Index of node holding this instance
 };
 typedef std::vector<LightInstance> LightInstanceList;
 
@@ -211,12 +217,10 @@ struct InstanceSkinAnimation {
 // A scene graph node. Contains a transformation, set of children nodes,
 // camera instances, geometry instances, skin controller instances, light
 // instances, and instances of other nodes.
-typedef int32 NodeIndex;
-extern NodeIndex NullNodeIndex;
-typedef std::vector<NodeIndex> NodeIndexList;
 struct SIRIKATA_MESH_EXPORT Node {
     Node();
     Node(NodeIndex par, const Matrix4x4f& xform);
+    Node(const Matrix4x4f& xform);
 
     // Parent node in the actual hierarchy (not instantiated).
     NodeIndex parent;
@@ -232,12 +236,9 @@ struct SIRIKATA_MESH_EXPORT Node {
 };
 typedef std::vector<Node> NodeList;
 
-struct Meshdata {
-    typedef std::tr1::unordered_map<std::string, std::string> URIMap;
-
+struct SIRIKATA_MESH_EXPORT Meshdata {
     SubMeshGeometryList geometry;
     TextureList textures;
-    URIMap textureMap;
     LightInfoList lights;
     MaterialEffectInfoList materials;
 
@@ -248,12 +249,18 @@ struct Meshdata {
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
+    // The global transform should be applied to all nodes and instances
+    Matrix4x4f globalTransform;
     // We track two sets of nodes: roots and the full list. (Obviously the roots
     // are a subset of the full list). The node list is just the full set,
     // usually only used to look up children/parents.  The roots list is just a
     // set of indices into the full list.
     NodeList nodes;
     NodeIndexList rootNodes;
+
+    Matrix4x4f getTransform(NodeIndex index) const;
+    Matrix4x4f getTransform(const GeometryInstance& geo) const;
+    Matrix4x4f getTransform(const LightInstance& light) const;
 };
 
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;

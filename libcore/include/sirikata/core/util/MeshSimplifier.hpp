@@ -38,9 +38,6 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
-#include <sirikata/space/LocationService.hpp>
-
-
 #include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {

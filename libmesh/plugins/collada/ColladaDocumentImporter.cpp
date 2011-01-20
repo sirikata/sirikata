@@ -335,6 +335,10 @@ void ColladaDocumentImporter::finish ()
     mMesh->geometry.swap(mGeometries);
     mMesh->lights.swap( mLights);
 
+    // The global transform is a scaling factor for making the object unit sized
+    // and a rotation to get Y-up
+    mMesh->globalTransform = mUnitScale * mChangeUp;
+
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
 
@@ -380,7 +384,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         GeometryInstance new_geo_inst;
                         new_geo_inst.geometryIndex = geo_it->second;
-                        new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                        new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
                         new_geo_inst.radius=0;
                         new_geo_inst.aabb=BoundingBox3f3f::null();
                         const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -390,7 +394,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                            new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
+                            new_geo_inst.radius = computeRadiusAndBounds(geometry, mMesh->getTransform(new_geo_inst), new_geo_inst.aabb);
 
                             mMesh->instances.push_back(new_geo_inst);
                         }
@@ -413,7 +417,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             GeometryInstance new_geo_inst;
                             new_geo_inst.geometryIndex = geo_it->second;
-                            new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                            new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
                             new_geo_inst.radius=0;
                             new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -425,7 +429,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             if (geo_it->second<mMesh->geometry.size()) {
                                 const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                                new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
+                                new_geo_inst.radius = computeRadiusAndBounds(geometry, mMesh->getTransform(new_geo_inst), new_geo_inst.aabb);
 
                                 mMesh->instances.push_back(new_geo_inst);
                             }
@@ -446,7 +450,7 @@ void ColladaDocumentImporter::finish ()
                     }
                     LightInstance new_light_inst;
                     new_light_inst.lightIndex = light_it->second;
-                    new_light_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    new_light_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
                     mMesh->lightInstances.push_back(new_light_inst);
                 }
 
@@ -1028,7 +1032,6 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
     std::string imageUri = image->getImageURI().getURIString();
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeImage(" << imageUri << ") entered");
     mTextureMap[image->getUniqueId()]=imageUri;
-    mMesh->textureMap[image->getUniqueId().toAscii()] = imageUri;
     mMesh->textures.push_back(imageUri);
     return true;
 }

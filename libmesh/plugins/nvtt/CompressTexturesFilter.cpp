@@ -130,10 +130,6 @@ FilterDataPtr CompressTexturesFilter::apply(FilterDataPtr input) {
 
             // And replace the texture
             *tex_it = new_relative_texfile;
-            for(Meshdata::URIMap::iterator tex_map_it = mesh->textureMap.begin(); tex_map_it != mesh->textureMap.end(); tex_map_it++) {
-                if (tex_map_it->second == relative_texfile)
-                    tex_map_it->second = new_relative_texfile;
-            }
             for(MaterialEffectInfoList::iterator mat_it = mesh->materials.begin(); mat_it != mesh->materials.end(); mat_it++) {
                 for(MaterialEffectInfo::TextureList::iterator tex_it = mat_it->textures.begin(); tex_it != mat_it->textures.end(); tex_it++) {
                     if (tex_it->uri == relative_texfile)

@@ -497,7 +497,7 @@ public:
 
       instanceGeometry.add();
 
-      Matrix4x4f mat = meshdata.instances[i].transform;
+      Matrix4x4f mat = meshdata.getTransform(meshdata.instances[i].parentNode);
 
       double matrix[4][4] = { { mat(0,0), mat(0,1), mat(0,2), mat(0,3) },
                               { mat(1,0), mat(1,1), mat(1,2), mat(1,3)  },
@@ -559,8 +559,8 @@ public:
     exportAsset(&streamWriter, meshdata);
 
     std::map<String,int> texturesList;
-    for (Meshdata::URIMap::const_iterator it = meshdata.textureMap.begin() ; it!= meshdata.textureMap.end(); it++) {
-      texturesList[it->second] = 1;
+    for (TextureList::const_iterator it = meshdata.textures.begin() ; it!= meshdata.textures.end(); it++) {
+      texturesList[*it] = 1;
     }
 
     ImageExporter imageExporter(&streamWriter);

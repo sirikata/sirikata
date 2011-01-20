@@ -813,7 +813,7 @@ public:
         for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
 
-            Matrix4x4f pos_xform = geoinst.transform;
+            Matrix4x4f pos_xform = md.getTransform(geoinst);
             Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
 
             // Get the instanced submesh
@@ -1067,7 +1067,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
             for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
                 const GeometryInstance& geoinst = *geoinst_it;
 
-                Matrix4x4f pos_xform = geoinst.transform;
+                Matrix4x4f pos_xform = md.getTransform(geoinst);
                 Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
 
                 // Get the instanced submesh
@@ -1141,7 +1141,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
     for(LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
         const LightInstance& lightinst = *lightinst_it;
 
-        Matrix4x4f pos_xform = lightinst.transform;
+        Matrix4x4f pos_xform = md.getTransform(lightinst);
 
         // Get the instanced submesh
         if(lightinst.lightIndex >= (int)md.lights.size()){

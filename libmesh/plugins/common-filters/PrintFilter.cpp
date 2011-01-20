@@ -63,11 +63,6 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
         }
     }
 
-    printf("URI Map:\n");
-    for(Meshdata::URIMap::const_iterator it = md->textureMap.begin(); it != md->textureMap.end(); it++) {
-        printf("   From: %s To: %s\n", it->first.c_str(), it->second.c_str());
-    }
-
     printf("Lights:\n");
     for(LightInfoList::const_iterator it = md->lights.begin(); it != md->lights.end(); it++) {
         printf("   Type: %d Power: %f\n", it->mType, it->mPower);
@@ -76,6 +71,8 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     printf("Material Effects:\n");
     for(MaterialEffectInfoList::const_iterator it = md->materials.begin(); it != md->materials.end(); it++) {
         printf("   Textures: %d Shininess: %f Reflectivity: %f\n", (int)it->textures.size(), it->shininess, it->reflectivity);
+        for(MaterialEffectInfo::TextureList::const_iterator t_it = it->textures.begin(); t_it != it->textures.end(); t_it++)
+            printf("     Texture: %s\n", t_it->uri.c_str());
     }
 
     printf("Geometry Instances:\n");
@@ -88,7 +85,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     printf("Light Instances:\n");
     for(LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
-        printf("   Index: %d Matrix: %s\n", it->lightIndex, it->transform.toString().c_str());
+        printf("   Index: %d Matrix: %s\n", it->lightIndex, md->getTransform(it->parentNode).toString().c_str());
     }
 
     printf("Material Effect size: %d\n", (int)md->materials.size());
