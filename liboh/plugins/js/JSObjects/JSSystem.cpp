@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
-#include "../JSVisibleStruct.hpp"
+#include "../JSObjectStructs/JSVisibleStruct.hpp"
 
 namespace Sirikata{
 namespace JS{

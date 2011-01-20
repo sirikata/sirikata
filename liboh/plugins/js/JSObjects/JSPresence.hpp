@@ -2,7 +2,7 @@
 #define __SIRIKATA_JS_PRESENCE_HPP__
 
 #include <sirikata/oh/Platform.hpp>
-
+#include "../JSObjectStructs/JSPresenceStruct.hpp"
 #include "../JSObjectScriptManager.hpp"
 #include "../JSObjectScript.hpp"
 #include <sirikata/core/transfer/URI.hpp>
@@ -45,13 +45,8 @@ namespace Sirikata
     v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args);
     v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args);
     
-    template<typename WithHolderType>
-    JSPresenceStruct* GetTargetPresenceStruct(const WithHolderType&);
 
-
-    //Transfer::URI* getURI(const v8::Arguments& args);
     bool getURI(const v8::Arguments& args,std::string& returner);
-
     v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);
 
 

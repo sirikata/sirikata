@@ -8,8 +8,8 @@
 #include <v8.h>
 #include <vector>
 #include "JSFakerootStruct.hpp"
-#include "JSSystemNames.hpp"
-#include "JSObjects/JSFields.hpp"
+#include "../JSSystemNames.hpp"
+#include "../JSObjects/JSFields.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -33,6 +33,9 @@ struct JSContextStruct
     void jsscript_print(const String& msg);
 
     void presenceDied();
+
+
+    static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
     
     
     //********data

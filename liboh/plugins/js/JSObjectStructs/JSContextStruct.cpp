@@ -1,6 +1,6 @@
 
 #include "JSContextStruct.hpp"
-#include "JSObjectScript.hpp"
+#include "../JSObjectScript.hpp"
 #include <v8.h>
 #include "JSPresenceStruct.hpp"
 
@@ -53,6 +53,39 @@ v8::Handle<v8::Value> JSContextStruct::sendHome(String& toSend)
     return v8::Undefined();
 }
 
+
+JSContextStruct* JSContextStruct::decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+    
+    if (! toDecode->IsObject())
+    {
+        errorMessage += "Error in decode of JSContextStruct.  Should have received an object to decode.";
+        return NULL;
+    }
+        
+    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+        
+    //now check internal field count
+    if (toDecodeObject->InternalFieldCount() != CONTEXT_FIELD_CONTEXT_STRUCT)
+    {
+        errorMessage += "Error in decode of JSContextStruct.  Object given does not have adequate number of internal fields for decode.";
+        return NULL;
+    }
+        
+    //now actually try to decode each.
+    //decode the jsVisibleStruct field
+    v8::Local<v8::External> wrapJSContextStructObj;
+    wrapJSContextStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT));
+    void* ptr = wrapJSContextStructObj->Value();
+    
+    JSContextStruct* returner;
+    returner = static_cast<JSContextStruct*>(ptr);
+    if (returner == NULL)
+        errorMessage += "Error in decode of JSContextStruct.  Internal field of object given cannot be casted to a JSContextStruct.";
+
+    return returner;
+}
 
 
 v8::Handle<v8::Value> JSContextStruct::executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)

@@ -7,7 +7,7 @@
 
 #include "../JSSerializer.hpp"
 #include "../JSPattern.hpp"
-#include "../JSVisibleStruct.hpp"
+#include "../JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSFields.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>

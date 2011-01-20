@@ -1,6 +1,6 @@
 #include "JSPresence.hpp"
 #include "JSFields.hpp"
-#include "../JSPresenceStruct.hpp"
+#include "../JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
 #include "JSInvokableObject.hpp"
@@ -14,25 +14,6 @@ namespace JS
 {
 namespace JSPresence
 {
-
-        template<typename WithHolderType>
-        JSPresenceStruct* GetTargetPresenceStruct(const WithHolderType& with_holder)
-        {
-            v8::Local<v8::Object> self = with_holder.Holder();
-            // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
-            // The template actually generates the root objects prototype, not the root
-            // itself.
-            v8::Local<v8::External> wrap;
-            if (self->InternalFieldCount() > 0)
-                wrap = v8::Local<v8::External>::Cast(self->GetInternalField(PRESENCE_FIELD_PRESENCE));
-            else
-                wrap = v8::Local<v8::External>::Cast(v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(PRESENCE_FIELD_PRESENCE));
-
-            void* ptr = wrap->Value();
-            return static_cast<JSPresenceStruct*>(ptr);
-        }
-
-
         //changine this function to actually do something
         //args should contain a string that can be converted to a uri
         //FIXME: Should maybe also have a callback function inside
@@ -41,10 +22,11 @@ namespace JSPresence
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setMesh function.")) );
 
-            //get the jspresencestruct object from arguments
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in setMesh while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setMesh function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
             //get the uri object from args
             std::string uriLocation;
@@ -63,10 +45,13 @@ namespace JSPresence
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runSimulation function. (It should probably be 'ogregraphics'.)\n\n")) );
 
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in runSimulation while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in runSimulation function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
+            
             v8::String::Utf8Value str(args[0]);
             const char* cstr = ToCString(str);
             String simname(cstr);
@@ -82,8 +67,17 @@ namespace JSPresence
             return tmpObjP;
         }
 
-v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args) {
-    JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+
+v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
+{
+
+    String errorMessage = "Error in ScriptOnProxAddedEvent while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded.")) );
 
@@ -101,7 +95,13 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args) {
 
 v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 {
-    JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+
+    String errorMessage = "Error in ScriptOnProxRemovedEvent while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
     
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved.")) );
@@ -124,11 +124,13 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         //FIXME: Should maybe also have a callback function inside
         Handle<v8::Value> getMesh(const v8::Arguments& args)
         {
-            //get the jspresencestruct object from arguments
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
 
+            String errorMessage = "Error in getMesh while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getMesh function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             return mStruct->jsObjScript->getVisualFunction(mStruct->sporef);
         }
@@ -139,10 +141,13 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setPosition function.")) );
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in getMesh while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
+            
             //get first args
             Handle<Object> posArg = ObjectCast(args[0]);
 
@@ -160,10 +165,14 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
         Handle<v8::Value>      getPosition(const v8::Arguments& args)
         {
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getPosition function.  Invalid presence struct.")) );
 
+            String errorMessage = "Error in getPosition while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+            
             return mStruct->script_getPosition();
         }
 
@@ -174,9 +183,12 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setVelocity function.")) );
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in setVelocity while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setVelocity function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             //get first args
             Handle<Object> velArg = ObjectCast(args[0]);
@@ -194,9 +206,13 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
         Handle<v8::Value>      getVelocity(const v8::Arguments& args)
         {
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+
+            String errorMessage = "Error in getVelocity while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getVelocity function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             return mStruct->jsObjScript->getVelocityFunction(mStruct->sporef);
         }
@@ -205,9 +221,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
         Handle<v8::Value>      getOrientation(const v8::Arguments& args)
         {
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in getOrientation while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getOrientation function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
             return mStruct->jsObjScript->getOrientationFunction(mStruct->sporef);
         }
@@ -217,9 +235,12 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setOrientation function.")) );
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in setOrientation while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             //get first args
             Handle<Object> orientationArg = ObjectCast(args[0]);
@@ -238,10 +259,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
         Handle<v8::Value>      getOrientationVel(const v8::Arguments& args)
         {
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in getOrientationVel while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getOrientation function.  Invalid presence struct.")) );
-
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
             return mStruct->jsObjScript->getOrientationVelFunction(mStruct->sporef);
         }
@@ -251,10 +273,14 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setOrientationVel function.")) );
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Invalid presence struct.")) );
 
+            String errorMessage = "Error in setOrientationVel while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+            
             //get first args
             Handle<Object> orientationVelArg = ObjectCast(args[0]);
 
@@ -272,9 +298,12 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setQueryAngle.")) );
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in setQueryAngle while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryAngle function. Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             Handle<Object> qa_arg = ObjectCast(args[0]);
             if (!NumericValidate(qa_arg))
@@ -290,9 +319,12 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
         Handle<v8::Value> getScale(const v8::Arguments& args)
         {
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in getScale while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getScale function.  Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             return mStruct->jsObjScript->getVisualScaleFunction(mStruct->sporef);
         }
@@ -302,9 +334,12 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (args.Length() != 1)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setScale.")) );
 
-            JSPresenceStruct* mStruct = getPresStructFromArgs(args);
+            String errorMessage = "Error in setScale while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
             if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Invalid presence struct.")) );
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
 
             Handle<Object> scale_arg = ObjectCast(args[0]);
             if (!NumericValidate(scale_arg))
@@ -338,25 +373,20 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
-
-
-
-
-
         Handle<v8::Value> toString(const v8::Arguments& args)
         {
+            String errorMessage = "Error in setScale while decoding presence.  ";
+            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+            if (mStruct == NULL)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            JSPresenceStruct* jspres_struct = getPresStructFromArgs(args);
-
-            if (jspres_struct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in toString of presence function.  Invalid presence struct.")) );
-
+            
 
             // Look up for the per space data
             //for now just print the space id
-            String s = jspres_struct->sporef->toString();
+            String s = mStruct->sporef->toString();
             return v8::String::New(s.c_str(), s.length());
-
         }
 
 

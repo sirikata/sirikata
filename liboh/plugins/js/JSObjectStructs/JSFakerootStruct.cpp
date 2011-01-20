@@ -1,10 +1,11 @@
 
 
-#include "JSFakerootStruct.hpp"
+
 #include <v8.h>
+#include "JSFakerootStruct.hpp"
 #include "JSContextStruct.hpp"
-#include "JSObjects/JSFields.hpp"
-#include "JSObjectScript.hpp"
+#include "../JSObjects/JSFields.hpp"
+#include "../JSObjectScript.hpp"
 
 
 namespace Sirikata{
@@ -88,7 +89,7 @@ JSFakerootStruct* JSFakerootStruct::decodeRootStruct(v8::Handle<v8::Value> toDec
     JSFakerootStruct* returner;
     returner = static_cast<JSFakerootStruct*>(ptr);
     if (returner == NULL)
-        errorMessage += "Error in decode of JSFakerootStruct.  Internal field of object given cannot be casted to a JSPresenceStruct.";
+        errorMessage += "Error in decode of JSFakerootStruct.  Internal field of object given cannot be casted to a JSFakerootStruct.";
 
     return returner;
 }

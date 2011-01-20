@@ -1,7 +1,7 @@
 
 #include "JSVisibleStruct.hpp"
-#include "JSObjectScript.hpp"
-#include "JSObjects/JSFields.hpp"
+#include "../JSObjectScript.hpp"
+#include "../JSObjects/JSFields.hpp"
 #include <v8.h>
 
 

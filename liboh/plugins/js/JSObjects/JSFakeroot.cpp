@@ -7,7 +7,7 @@
 
 #include "../JSSerializer.hpp"
 #include "../JSPattern.hpp"
-#include "../JSContextStruct.hpp"
+#include "../JSObjectStructs/JSContextStruct.hpp"
 #include "JSFields.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
@@ -125,6 +125,8 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 }
 v8::Handle<v8::Value> root_toString(const v8::Arguments& args)
 {
+    //note to string probably should not serialize fakeroot object, but instead
+    //should just be a keyword for you should do this on your end
     std::cout<<"\n\nIn JSFakeroot.cpp.  Haven't finished root_toString.\n\n";
     assert(false);
     return v8::Undefined();

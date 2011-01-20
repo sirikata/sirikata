@@ -11,7 +11,7 @@
 #include "JSFields.hpp"
 #include "JSObjectsUtils.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-#include "../JSPresenceStruct.hpp"
+#include "../JSObjectStructs/JSPresenceStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -86,10 +86,14 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
     //serialize the object to send
     v8::Local<v8::Object> v8Object = messageBody->ToObject();
     std::string serialized_message = JSSerializer::serializeObject(v8Object);
-    JSPresenceStruct* jsps = getPresStructFromArgs(args);
-    if (jsps == NULL)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message not being sent from a valid presence in addressableSendMessage.")) );
 
+
+    String errorMessage = "Error in __addressableSendMessage while decoding presence.  ";
+    JSPresenceStruct* jsps = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+    if (jsps == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    
 
     //actually send the message to the entity
     caller->sendMessageToEntity(sporef,jsps->sporef,serialized_message);

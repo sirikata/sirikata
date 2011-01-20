@@ -41,7 +41,6 @@
 #include "JSLogging.hpp"
 
 #include "JSSerializer.hpp"
-
 #include "JSEventHandler.hpp"
 #include <string>
 #include "JSUtil.hpp"
@@ -60,9 +59,10 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
 #include "JSSystemNames.hpp"
-#include "JSPresenceStruct.hpp"
-#include "JSContextStruct.hpp"
-#include "JSVisibleStruct.hpp"
+
+#include "JSObjectStructs/JSPresenceStruct.hpp"
+#include "JSObjectStructs/JSContextStruct.hpp"
+#include "JSObjectStructs/JSVisibleStruct.hpp"
 
 //#define __EMERSON_COMPILE_ON__
 

@@ -1,7 +1,7 @@
 
-#include "JSPresenceStruct.hpp"
 #include <v8.h>
-#include "JSObjectScript.hpp"
+#include "JSPresenceStruct.hpp"
+#include "../JSObjectScript.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -54,7 +54,7 @@ v8::Handle<v8::Value> JSPresenceStruct::script_setVelocity(const Vector3f& newVe
     return v8::Undefined();
 }
 
-JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage)
+JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     

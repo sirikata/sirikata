@@ -48,7 +48,7 @@
 #include "JSPattern.hpp"
 #include "JSEventHandler.hpp"
 #include "JSObjectScriptManager.hpp"
-#include "JSPresenceStruct.hpp"
+#include "JSObjectStructs/JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
 
