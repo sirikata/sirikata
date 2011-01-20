@@ -84,13 +84,12 @@ v8::Handle<v8::Value> __addressableSendMessage (const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object.")) );
 
     //serialize the object to send
-    Local<v8::Object> v8Object = messageBody->ToObject();
+    v8::Local<v8::Object> v8Object = messageBody->ToObject();
     std::string serialized_message = JSSerializer::serializeObject(v8Object);
     JSPresenceStruct* jsps = getPresStructFromArgs(args);
     if (jsps == NULL)
-    {
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Message not being sent from a valid presence in addressableSendMessage.")) );
-    }
+
 
     //actually send the message to the entity
     caller->sendMessageToEntity(sporef,jsps->sporef,serialized_message);

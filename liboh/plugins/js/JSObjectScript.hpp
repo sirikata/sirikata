@@ -99,9 +99,9 @@ public:
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
-    v8::Handle<v8::Value> createContext(bool sendEveryone, bool recvEveryone, bool proxQueries);
+    v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
 
-
+    
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */

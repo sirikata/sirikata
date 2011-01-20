@@ -38,6 +38,7 @@
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
 #include "JSObjects/JSVisible.hpp"
+#include "JSObjects/JSFakeroot.hpp"
 #include "JSObjects/JSSystem.hpp"
 #include "JSObjects/JSMath.hpp"
 #include "JSObjects/JSHandler.hpp"
@@ -114,8 +115,9 @@ void JSObjectScriptManager::createTemplates()
     mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
     createMathTemplate();
-    createContextTemplate();
     createFakerootTemplate();
+    createContextTemplate();
+
     
     createHandlerTemplate();
     createVisibleTemplate();    
@@ -125,47 +127,55 @@ void JSObjectScriptManager::createTemplates()
     createPresenceTemplate();    
     createSystemTemplate();
 
-    createTriggerableTemplate();
+    //createTriggerableTemplate();
 }
 
 
 //solution for managing doing more intelligent query matching
-void JSObjectScriptManager::createTriggerableTemplate()
-{
-    v8::HandleScope handle_scope;
-    mTriggerableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+// void JSObjectScriptManager::createTriggerableTemplate()
+// {
+//     v8::HandleScope handle_scope;
+//     mTriggerableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
-    // An internal field holds the JSObjectScript*
-    mTriggerableTemplate->SetInternalFieldCount(TRIGGERABLE_TEMPLATE_FIELD_COUNT);
+//     // An internal field holds the JSObjectScript*
+//     mTriggerableTemplate->SetInternalFieldCount(TRIGGERABLE_TEMPLATE_FIELD_COUNT);
 
-    mTriggerableTemplate->Set(v8::String::New("trigger"), v8::FunctionTemplate::New(JSTriggerable::__trigger));
-    mTriggerableTemplate->Set(v8::String::New("register"), v8::FunctionTemplate::New(JSTriggerable::__register));
+//     mTriggerableTemplate->Set(v8::String::New("trigger"), v8::FunctionTemplate::New(JSTriggerable::__trigger));
+//     mTriggerableTemplate->Set(v8::String::New("register"), v8::FunctionTemplate::New(JSTriggerable::__register));
     
     
-    mTriggerableTemplate->SetInternalField(JS);
+//     mTriggerableTemplate->SetInternalField(JS);
     
-    triggerPredicate();
-    onTriggerCallback();
-    lkjs;
-}
+//     triggerPredicate();
+//     onTriggerCallback();
+//     lkjs;
+// }
 
 
 void JSObjectScriptManager::createFakerootTemplate()
 {
-    lkjs;
     v8::HandleScope handle_scope;
     mFakerootTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     mFakerootTemplate->SetInternalFieldCount(FAKEROOT_TEMPLATE_FIELD_COUNT);
     
     
-    mFakerootTemplate->Set(v8::String::New("sendHome"));
-    mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::ScriptRegisterHandler));
-    mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::ScriptTimeout));
-    mFakerootTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSFakeroot::ScriptCreateEntity));
-    mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::Print));
+    mFakerootTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSFakeroot::root_sendHome));
+    mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::root_registerHandler));
+    mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::root_timeout));
+    mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::root_print));
+
+        
+    //check what permissions fake root is loaded with
+    mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
+    mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
+    mFakerootTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSFakeroot::root_canProx));
+
+    mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
+    mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
     
-    lkjs;
+    //add basic templates: vec3, quat, math
+    addBaseTemplates(mFakerootTemplate);
 }
 
 
@@ -186,17 +196,9 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->SetInternalFieldCount(CONTEXT_TEMPLATE_FIELD_COUNT);
 
     // Functions / types
-    mContextTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSContext::ScriptTimeout));
-    mContextTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSContext::Print));
-
-    
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
 
-    
-    //add basic templates: vec3, quat, etc.
-    addBaseTemplates(mContextTemplate);
-    
 }
 
 //takes in a template (likely either the context template or the system template)
@@ -242,17 +244,19 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
 
+
+    //when creating a context, should also optionally take in a callback for what should happen if presence associated gets disconnected from space;
     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
 
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-    system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
+    //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
     
     //math, vec, quaternion, etc.
     addBaseTemplates(system_templ);
     //add the system template to the global template
-    mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
 }
 
 

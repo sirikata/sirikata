@@ -14,7 +14,7 @@ const char* ToCString(const v8::String::Utf8Value& value);
 JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args);
 JSContextStruct* getContStructFromArgs(const v8::Arguments& args);
 
-bool decodeBool(v8::Handle<v8::Value> toDeocde, bool& decodedValue, std::string& errorMessage);
+bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, std::string& errorMessage);
 
 
 

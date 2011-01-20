@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
+#include "../JSVisibleStruct.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -39,13 +40,15 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 
 //argument 0: the presence that the context is associated with.  (will use
 //this as sender of messages).
-//argument 1: true/false.  can I send messages to everyone?
-//argument 2: true/false.  can I receive messages from everyone?
-//argument 3: true/false.  can I make my own prox queries
+//argument 1: a visible object that can always send messages to.  if null, will
+//use same spaceobjectreference as one passed in for arg0.
+//argument 2: true/false.  can I send messages to everyone?
+//argument 3: true/false.  can I receive messages from everyone?
+//argument 4: true/false.  can I make my own prox queries
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 {
-    if (args.Length() != 4)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
+    if (args.Length() != 5)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <visible object that can always send messages to, or null if want to send messages to self><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
 
 
     bool sendEveryone,recvEveryone,proxQueries;    
@@ -59,29 +62,47 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     JSPresenceStruct* jsPresStruct = JSPresenceStruct::decodePresenceStruct(args[0],errorMessage);
     if (jsPresStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+    
+    //getting who can sendTo
+    SpaceObjectReference* canSendTo = NULL;
+    if (args[2]->IsNull())
+        canSendTo = jsPresStruct->sporef;
+    else
+    {
+        //should try to decode as visible.  if decoding fails, throw error
+        errorMessageWhichArg= " 2.  ";
+        errorMessage= errorMessageBase + errorMessageWhichArg;
+
+        JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args[1],errorMessage);
+        if (jsPresStruct == NULL)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+        canSendTo = jsvis->whatIsVisible;
+    }
     
     
     //send everyone decode
-    errorMessageWhichArg= " 2.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[1],sendEveryone, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
-
-    //recv everyone decode
     errorMessageWhichArg= " 3.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[2],recvEveryone, errorMessage))
+    if (! decodeBool(args[2],sendEveryone, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
-
 
     //recv everyone decode
     errorMessageWhichArg= " 4.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[2],proxQueries, errorMessage))
+    if (! decodeBool(args[3],recvEveryone, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+
+    //recv everyone decode
+    errorMessageWhichArg= " 5.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[4],proxQueries, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
     
-    
-    return jsPresStruct->jsObjScript->createContext(sendEveryone,recvEveryone,proxQueries);
+    return jsPresStruct->script_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries);
 }
 
 

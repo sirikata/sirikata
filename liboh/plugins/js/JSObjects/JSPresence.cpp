@@ -164,7 +164,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in getPosition function.  Invalid presence struct.")) );
 
-            return mStruct->jsObjScript->getPositionFunction(mStruct->sporef);
+            return mStruct->script_getPosition();
         }
 
 
@@ -187,8 +187,8 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             Vector3f newVel (Vec3Extract(velArg));
 
-            mStruct->jsObjScript->setVelocityFunction(mStruct->sporef,newVel);
-            return v8::Undefined();
+            return mStruct->script_setVelocity(newVel);
+            //return v8::Undefined();
         }
 
 

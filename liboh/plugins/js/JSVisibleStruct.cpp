@@ -83,7 +83,6 @@ v8::Handle<v8::Value> JSVisibleStruct::visibleSendMessage (std::string& msgToSen
 {
     //actually send the message to the entity
     jsObjScript->sendMessageToEntity(whatIsVisible,visibleToWhom,msgToSend);
-    
     return v8::Undefined();
 }
 

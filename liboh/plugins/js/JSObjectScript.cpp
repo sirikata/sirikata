@@ -51,6 +51,7 @@
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/util/Random.hpp>
 
 #include <sirikata/core/odp/Defs.hpp>
 #include <vector>
@@ -216,7 +217,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
-    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
+    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
     system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
 
     //hangs math, presences, and addressable off of system_obj
@@ -539,7 +540,7 @@ void JSObjectScript::reboot()
   Local<Object> global_obj = mContext->Global();
   Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
   global_proto->SetInternalField(0, External::New(this));
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
 
   populateSystemObject(system_obj);
 
@@ -1251,7 +1252,7 @@ Handle<Object> JSObjectScript::getSystemObject()
   // And we add an internal field to the system object as well to make it
   // easier to find the pointer in different calls. Note that in this case we
   // don't use the prototype -- non-global objects work as we would expect.
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME)));
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
 
   Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
   return ret_obj;
@@ -1315,12 +1316,12 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
 //Generates a non-colliding 
 uint32 JSObjectScript::registerUniqueMessageCode()
 {
-    uint32 returner = randInt(0,MAX_MESSAGE_CODE);
+    uint32 returner = randInt<uint32>(0,MAX_MESSAGE_CODE);
 
     uint32 counter = 0;
     while( uniqueMessageCodeExists(returner))
     {
-        returner = randInt(0,MAX_MESSAGE_CODE);
+        returner = randInt<uint32>(0,MAX_MESSAGE_CODE);
         ++counter;
         if (counter > MAX_SEARCH_OPEN_CODE)
             break; //give up and just overload an object message.
@@ -1349,18 +1350,21 @@ bool JSObjectScript::uniqueMessageCodeExists(uint32 code)
 
 
 
+//presAssociatedWith: who the messages that this context's fakeroot sends will
+//be from
+//canMessage: who you can always send messages to.
 //sendEveryone creates fakeroot that can send messages to everyone besides just
 //who created you.
 //recvEveryone means that you can receive messages from everyone besides just
 //who created you.
 //proxQueries means that you can issue proximity queries yourself, and latch on
 //callbacks for them.
-v8::Handle<v8::Value> JSObjectScript::createContext(bool sendEveryone, bool recvEveryone, bool proxQueries)
+v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries)
 {
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this,sendEveryone,recvEveryone,proxQueries)));
+    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries)));
 
     return returner;
 }

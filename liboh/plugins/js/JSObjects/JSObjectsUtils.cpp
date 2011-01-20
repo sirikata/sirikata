@@ -69,7 +69,7 @@ JSPresenceStruct* getPresStructFromArgs(const v8::Arguments& args)
 //returns whether the decode operation was successful or not.  if successful,
 //updates the value in decodeValue to the decoded value, errorMessage contains
 //string associated with failure if decoding fales
-bool decodeBool(v8::Handle<v8::Value> toDeocde, bool& decodedValue, std::string& errorMessage)
+bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, std::string& errorMessage)
 {
     if (! toDecode->IsBoolean())
     {
