@@ -348,10 +348,11 @@ using namespace Mesh;
           colladaSource.setId(geometryName + "-uv");
           colladaSource.setArrayId(geometryName + "-uv-array");
 
-          colladaSource.setAccessorStride(2);
-
+          int32 stride = meshdata.geometry[i].texUVs[j].stride;
+          colladaSource.setAccessorStride(stride);
           colladaSource.getParameterNameList().push_back( "S" );
-          colladaSource.getParameterNameList().push_back( "T" );
+          if (stride >= 2) colladaSource.getParameterNameList().push_back( "T" );
+          if (stride >= 3) colladaSource.getParameterNameList().push_back( "P" );
 
           colladaSource.setAccessorCount(meshdata.geometry[i].texUVs[j].uvs.size()/2);
           colladaSource.prepareToAppendValues();
