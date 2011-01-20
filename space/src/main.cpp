@@ -37,6 +37,8 @@
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 
+#include <sirikata/space/Authenticator.hpp>
+
 #include "SpaceNetwork.hpp"
 
 #include "Forwarder.hpp"
@@ -114,6 +116,10 @@ int main(int argc, char** argv) {
 
     srand( GetOptionValue<uint32>("rand-seed") );
 
+    String auth_type = GetOptionValue<String>(SPACE_OPT_AUTH);
+    String auth_opts = GetOptionValue<String>(SPACE_OPT_AUTH_OPTIONS);
+    Authenticator* auth =
+        AuthenticatorFactory::getSingleton().getConstructor(auth_type)(space_context, auth_opts);
 
     String servermap_type = GetOptionValue<String>("servermap");
     String servermap_options = GetOptionValue<String>("servermap-options");
@@ -211,7 +217,7 @@ int main(int argc, char** argv) {
     Proximity* prox = new Proximity(space_context, loc_service);
 
 
-    Server* server = new Server(space_context, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));
+    Server* server = new Server(space_context, auth, forwarder, loc_service, cseg, prox, oseg, server_id_map->lookupExternal(space_context->id()));
 
       prox->initialize(cseg);
 
@@ -233,6 +239,7 @@ int main(int argc, char** argv) {
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
     space_context->add(space_context);
+    space_context->add(auth);
     space_context->add(gNetwork);
     space_context->add(cseg);
     space_context->add(loc_service);

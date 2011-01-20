@@ -46,6 +46,9 @@
 
 #define CSEG                "cseg"
 
+#define SPACE_OPT_AUTH                        "auth"
+#define SPACE_OPT_AUTH_OPTIONS                "auth-options"
+
 #define LOC                        "loc"
 #define LOC_OPTIONS                "loc-options"
 #define LOC_UPDATE                 "loc-update"

@@ -6,6 +6,9 @@
 # > god -c /path/to/space.god.rb
 #
 
+# Some defaults, which can be overriden in the config
+SIRIKATA_ARGS = ''
+
 # Fill in a configuration file, e.g. config.god.rb that looks something like this:
 #
 #SIRIKATA_ROOT = "/path/to/sirikata"
@@ -51,7 +54,7 @@ end
 God.watch do |w|
   w.name = "sirikata-space-server"
   w.interval = 60.seconds
-  w.start = "#{SIRIKATA_SPACE_BIN} --servermap=local --servermap-options=--port=#{SPACE_PORT}"
+  w.start = "#{SIRIKATA_SPACE_BIN} --servermap=local --servermap-options=--port=#{SPACE_PORT} #{SIRIKATA_ARGS}"
   w.grace = 20.seconds # 5 more than the default kill timer
   w.stop_timeout = 20.seconds # 5 more than the default kill timer
   w.uid = SIRIKATA_UID
