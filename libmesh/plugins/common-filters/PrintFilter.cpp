@@ -36,13 +36,24 @@ namespace Sirikata {
 namespace Mesh {
 
 PrintFilter::PrintFilter(const String& args) {
-
+	if(args == "textures") {
+		mTexturesOnly = true;
+	} else {
+		mTexturesOnly = false;
+	}
 }
 
 FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     assert(input->single());
 
     MeshdataPtr md = input->get();
+
+    if(mTexturesOnly) {
+        for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+            printf("%s\n", it->c_str());
+        }
+        return input;
+    }
 
     printf("URI: %s\n", md->uri.c_str());
     printf("ID: %ld\n", md->id);
