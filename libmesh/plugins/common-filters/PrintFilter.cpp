@@ -31,12 +31,22 @@
  */
 
 #include "PrintFilter.hpp"
+#include <stack>
 
 namespace Sirikata {
 namespace Mesh {
 
 PrintFilter::PrintFilter(const String& args) {
 
+}
+
+namespace {
+struct NodeState {
+    NodeState(NodeIndex idx) : node(idx), curChild(-1) {}
+
+    NodeIndex node;
+    int32 curChild;
+};
 }
 
 FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
@@ -77,7 +87,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     printf("Geometry Instances:\n");
     for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
-        printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, it->materialBindingMap.size());
+        printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, (int)it->materialBindingMap.size());
         for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
             printf("      map from: %d to: %d\n", (int)m->first, (int)m->second);
         }
@@ -89,6 +99,36 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     }
 
     printf("Material Effect size: %d\n", (int)md->materials.size());
+
+    printf("Nodes size: %d (%d roots)\n", (int)md->nodes.size(), (int)md->rootNodes.size());
+    for(uint32 ri = 0; ri < md->rootNodes.size(); ri++) {
+        std::stack<NodeState> node_stack;
+        node_stack.push( NodeState(md->rootNodes[ri]) );
+        String indent = "";
+
+        while(!node_stack.empty()) {
+            NodeState& curnode = node_stack.top();
+
+            if (curnode.curChild == -1) {
+                // First time we've seen this node, print info and move it
+                // forward to start procesing children
+                printf("%s %d\n", indent.c_str(), curnode.node);
+                curnode.curChild++;
+                indent += " ";
+            }
+            else if (curnode.curChild >= (int)md->nodes[curnode.node].children.size()) {
+                // We finished with this node
+                node_stack.pop();
+                indent = indent.substr(1); // reduce indent
+            }
+            else {
+                // Normal iteration, process next child
+                int32 childindex = curnode.curChild;
+                curnode.curChild++;
+                node_stack.push( NodeState(md->nodes[curnode.node].children[childindex]) );
+            }
+        }
+    }
 
     return input;
 }
