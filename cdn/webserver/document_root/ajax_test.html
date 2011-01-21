@@ -1,0 +1,86 @@
+ <html>
+
+<head>
+<title>Meru Ajax Tester</title>
+
+<style type="text/css">
+div {
+	border: 1px solid #cccccc;
+	width: 900px;
+}
+div input, div button, div h2, div h3, div label, div span, hr {
+	margin: 10px;
+}
+div button, div span {
+	display: block;
+}
+div span {
+	font-weight: bold;
+}
+div input {
+	width: 300px;
+}
+hr {
+	color: #cccccc;
+	background-color: #cccccc;
+	height: 1px;
+	border: none;
+}
+</style>
+
+<script type="text/javascript" src="js/jquery.js"></script>
+
+<script type = "text/javascript">
+
+function setSuccess(selector, msg) {
+	$(selector).html(msg);
+	$(selector).show();
+	$(selector).css('color', '#006600');
+}
+
+function setError(selector, msg) {
+	$(selector).html(msg);
+	$(selector).show();
+	$(selector).css('color', '#660000');
+}
+
+function headClicked() {
+	$.ajax({
+		url: $('#headFile').val(),
+		type: 'HEAD',
+		success: function(data, status, xhr) {
+			if(status == 'success') {
+		    	setSuccess('#headResult', 'Got response: ' + xhr.getResponseHeader('Hash'));
+			} else {
+				setError('#headResult', 'Response was not success. Instead was: ' + status);
+			}
+		},
+		error: function(xhr, txtStatus, errorThrown) {
+			setError('#headResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+		}
+	});
+}
+
+$(document).ready(function() {
+	$('#headButton').click(headClicked);
+});
+</script>
+
+</head>
+
+<body>
+
+<div id='headTest'>
+<h2>Name Lookup - HEAD Request</h2>
+<label for="headFile">File:</label>
+<input id="headFile" type="text" value="/dns/global/jkusnerz/Boulder_Spire_01.mesh"></input>
+<button id="headButton" type="button">Test</button>
+<hr>
+<h3>Result</h3>
+<span id="headResult">-</span>
+</div>
+
+</body>
+
+</html>
+ 
