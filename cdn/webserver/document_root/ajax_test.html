@@ -5,8 +5,10 @@
 
 <style type="text/css">
 div {
-	border: 1px solid #cccccc;
+	border: 1px solid #999999;
 	width: 900px;
+	margin-bottom: 20px;
+	background-color: #eeddff;
 }
 div input, div button, div h2, div h3, div label, div span, hr {
 	margin: 10px;
@@ -18,11 +20,11 @@ div span {
 	font-weight: bold;
 }
 div input {
-	width: 300px;
+	width: 500px;
 }
 hr {
-	color: #cccccc;
-	background-color: #cccccc;
+	color: #999999;
+	background-color: #999999;
 	height: 1px;
 	border: none;
 }
@@ -44,25 +46,62 @@ function setError(selector, msg) {
 	$(selector).css('color', '#660000');
 }
 
-function headClicked() {
+function nameLookup() {
 	$.ajax({
-		url: $('#headFile').val(),
+		url: $('#nameLookupFile').val(),
 		type: 'HEAD',
 		success: function(data, status, xhr) {
 			if(status == 'success') {
-		    	setSuccess('#headResult', 'Got response: ' + xhr.getResponseHeader('Hash'));
+		    	setSuccess('#nameLookupResult', 'File Hash: ' + xhr.getResponseHeader('Hash')
+				    	+ '<br>File Size: ' + xhr.getResponseHeader('File-Size'));
 			} else {
-				setError('#headResult', 'Response was not success. Instead was: ' + status);
+				setError('#nameLookupResult', 'Response was not success. Instead was: ' + status);
 			}
 		},
 		error: function(xhr, txtStatus, errorThrown) {
-			setError('#headResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+			setError('#nameLookupResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+		}
+	});
+}
+
+function metadataLookup() {
+	$.ajax({
+		url: $('#metadataLookupFile').val(),
+		type: 'HEAD',
+		success: function(data, status, xhr) {
+			if(status == 'success') {
+		    	setSuccess('#metadataLookupResult', 'Content Length: ' + xhr.getResponseHeader('Content-Length'));
+			} else {
+				setError('#metadataLookupResult', 'Response was not success. Instead was: ' + status);
+			}
+		},
+		error: function(xhr, txtStatus, errorThrown) {
+			setError('#metadataLookupResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+		}
+	});
+}
+
+function fileDownload() {
+	$.ajax({
+		url: $('#fileDownloadFile').val(),
+		type: 'GET',
+		success: function(data, status, xhr) {
+			if(status == 'success') {
+		    	setSuccess('#fileDownloadResult', 'Data size: ' + data.length);
+			} else {
+				setError('#fileDownloadResult', 'Response was not success. Instead was: ' + status);
+			}
+		},
+		error: function(xhr, txtStatus, errorThrown) {
+			setError('#fileDownloadResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
 		}
 	});
 }
 
 $(document).ready(function() {
-	$('#headButton').click(headClicked);
+	$('#nameLookupButton').click(nameLookup);
+	$('#metadataLookupButton').click(metadataLookup);
+	$('#fileDownloadButton').click(fileDownload);
 });
 </script>
 
@@ -70,14 +109,34 @@ $(document).ready(function() {
 
 <body>
 
-<div id='headTest'>
-<h2>Name Lookup - HEAD Request</h2>
-<label for="headFile">File:</label>
-<input id="headFile" type="text" value="/dns/global/jkusnerz/Boulder_Spire_01.mesh"></input>
-<button id="headButton" type="button">Test</button>
+<div id="nameLookup">
+<h2>Name Lookup</h2>
+<label for="nameLookupFile">File:</label>
+<input id="nameLookupFile" type="text" value="/dns/global/jkusnerz/Boulder_Spire_01.mesh"></input>
+<button id="nameLookupButton" type="button">Test</button>
 <hr>
 <h3>Result</h3>
-<span id="headResult">-</span>
+<span id="nameLookupResult">-</span>
+</div>
+
+<div id="metadataLookup">
+<h2>File Metadata Lookup</h2>
+<label for="metadataLookupFile">File:</label>
+<input id="metadataLookupFile" type="text" value="/files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4"></input>
+<button id="metadataLookupButton" type="button">Test</button>
+<hr>
+<h3>Result</h3>
+<span id="metadataLookupResult">-</span>
+</div>
+
+<div id="fileDownload">
+<h2>File Download</h2>
+<label for="fileDownloadFile">File:</label>
+<input id="fileDownloadFile" type="text" value="/files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4"></input>
+<button id="fileDownloadButton" type="button">Test</button>
+<hr>
+<h3>Result</h3>
+<span id="fileDownloadResult">-</span>
 </div>
 
 </body>
