@@ -9,6 +9,29 @@ namespace Sirikata {
 namespace JS {
 
 
+
+
+
+JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition)
+ : jsObjScript(parent),
+   whatIsVisible(new SpaceObjectReference(whatsVisible)),
+   visibleToWhom(new SpaceObjectReference( toWhom)),
+   stillVisible(new bool(visibleCurrently)),
+   mPosition(new Vector3d(currentPosition))
+{
+}
+
+
+
+JSVisibleStruct::~JSVisibleStruct()
+{
+    //do not delete jsObjScript: someone else is responsible for that.
+    delete whatIsVisible;
+    delete stillVisible;
+    delete mPosition;
+}
+
+
 //if can decode senderVal as a visible struct, returns the pointer to that
 //visible struct.  Otherwise, returns null.  the error message field allows
 //decodeVisible to pass back any error messages to be thrown from the methods

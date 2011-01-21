@@ -8,7 +8,7 @@
 #include <sirikata/core/odp/Defs.hpp>
 
 #include "JSObjects/JSFields.hpp"
-#include "JSObjectStructs/JSVisibleStruct.cpp"
+#include "JSObjectStructs/JSVisibleStruct.hpp"
 
 
 namespace Sirikata {

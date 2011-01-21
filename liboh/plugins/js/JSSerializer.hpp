@@ -4,17 +4,12 @@
 #include <string>
 #include "JS_JSMessage.pbj.hpp"
 
-//#include <sirikata/core/util/RoutableMessageHeader.hpp>
-//#include <sirikata/core/util/RoutableMessageBody.hpp>
-//#include <sirikata/core/util/RoutableMessageBody.hpp>
+
 #include <v8.h>
 
 namespace Sirikata {
 namespace JS {
 
-/*
-  FIXME: Need to Re-name these files to JSSerializer
- */
 
 class JSSerializer
 {

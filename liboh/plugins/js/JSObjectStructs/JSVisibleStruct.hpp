@@ -1,8 +1,7 @@
 
 
-
-#ifndef _SIRIKATA_JS_VISIBLE_STRUCT_HPP_
-#define _SIRIKATA_JS_VISIBLE_STRUCT_HPP_
+#ifndef __SIRIKATA_JS_VISIBLE_STRUCT_HPP__
+#define __SIRIKATA_JS_VISIBLE_STRUCT_HPP__
 
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
@@ -16,27 +15,14 @@ class JSObjectScript;
 
 struct JSVisibleStruct
 {
-    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition)
-     : jsObjScript(parent),
-       whatIsVisible(new SpaceObjectReference(whatsVisible)),
-       visibleToWhom(new SpaceObjectReference( toWhom)),
-       stillVisible(new bool(visibleCurrently)),
-       mPosition(new Vector3d(currentPosition))
-    {
-    }
+    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition);
     
-    
-    ~JSVisibleStruct()
-    {
-        //do not delete jsObjScript: someone else is responsible for that.
-        delete whatIsVisible;
-        delete stillVisible;
-        delete mPosition;
-    }
+    ~JSVisibleStruct();
 
     //for decoding
     static JSVisibleStruct* decodeVisible(v8::Handle<v8::Value> senderVal,std::string& errorMessage);
 
+    
     //methods mapped to javascript's visible object 
     v8::Handle<v8::Value> returnProxyPosition();
     v8::Handle<v8::Value> toString();
