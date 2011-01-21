@@ -8,64 +8,63 @@
 #include "JSObjectsUtils.hpp"
 
 using namespace v8;
-namespace Sirikata
+
+namespace Sirikata{
+namespace JS{
+namespace JSPresence{
+
+//changine this function to actually do something
+//args should contain a string that can be converted to a uri
+//FIXME: Should maybe also have a callback function inside
+Handle<v8::Value> setMesh(const v8::Arguments& args)
 {
-namespace JS
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setMesh function.")) );
+
+    String errorMessage = "Error in setMesh while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    //get the uri object from args
+    std::string uriLocation;
+    bool uriArgValid = getURI(args,uriLocation);
+    if (! uriArgValid)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
+
+    mStruct->jsObjScript->setVisualFunction(mStruct->sporef, uriLocation);
+
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
 {
-namespace JSPresence
-{
-        //changine this function to actually do something
-        //args should contain a string that can be converted to a uri
-        //FIXME: Should maybe also have a callback function inside
-        Handle<v8::Value> setMesh(const v8::Arguments& args)
-        {
-            if (args.Length() != 1)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setMesh function.")) );
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runSimulation function. (It should probably be 'ogregraphics'.)\n\n")) );
 
-            String errorMessage = "Error in setMesh while decoding presence.  ";
-            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    String errorMessage = "Error in runSimulation while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
             
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-            //get the uri object from args
-            std::string uriLocation;
-            bool uriArgValid = getURI(args,uriLocation);
-            if (! uriArgValid)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
-
-            mStruct->jsObjScript->setVisualFunction(mStruct->sporef, uriLocation);
-
-	    return v8::Undefined();
-        }
-
-        v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
-        {
-            if (args.Length() != 1)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runSimulation function. (It should probably be 'ogregraphics'.)\n\n")) );
-
-
-            String errorMessage = "Error in runSimulation while decoding presence.  ";
-            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
             
-            v8::String::Utf8Value str(args[0]);
-            const char* cstr = ToCString(str);
-            String simname(cstr);
-            v8::HandleScope scope;
+    v8::String::Utf8Value str(args[0]);
+    const char* cstr = ToCString(str);
+    String simname(cstr);
+    v8::HandleScope scope;
 
-            JSInvokableObject::JSInvokableObjectInt* invokableObj = mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
+    JSInvokableObject::JSInvokableObjectInt* invokableObj = mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
 
-            Local<Object> tmpObj = mStruct->jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
-            Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
+    Local<Object> tmpObj = mStruct->jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
+    Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
 
-            tmpObjP->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mStruct->jsObjScript));
-            tmpObjP->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
-            return tmpObjP;
-        }
+    tmpObjP->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mStruct->jsObjScript));
+    tmpObjP->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
+    return tmpObjP;
+}
 
 
 v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)

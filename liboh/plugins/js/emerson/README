@@ -6,4 +6,7 @@ run antlr.sh
 cd build/cmake
 make emerson
 
+-------------------------
+Additional documentation is available in regression/README
+
 

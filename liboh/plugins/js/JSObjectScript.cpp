@@ -380,7 +380,6 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
 
-
     // Invoke user callback
     PresenceMap::iterator iter = mPresences.find(querier);
     if (iter == mPresences.end())
@@ -388,16 +387,11 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
         return;
     }
-
-
     
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
-
-        
-
 
         v8::Handle<v8::Value> newVisibleVal = addVisible(proximateObject,querier);
 
@@ -407,7 +401,6 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         if (! newVisibleVal->IsObject())
             return;
 
-
         v8::Local<v8::Object> newVisibleObj = newVisibleVal->ToObject();
 
         int argc = 1;
@@ -416,7 +409,6 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object.");
         ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
-
     }
 }
 
@@ -473,7 +465,8 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
 {
     v8::HandleScope handle_scope;
-
+    v8::Context::Scope context_scope(mContext);
+    
     Local<Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
 
     JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()));

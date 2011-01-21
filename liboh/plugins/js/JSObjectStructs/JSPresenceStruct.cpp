@@ -35,12 +35,12 @@ void JSPresenceStruct::addAssociatedContext(JSContextStruct* toAdd)
 
 void JSPresenceStruct::registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb)
 {
-    mOnProxAddedEventHandler = cb;
+    mOnProxRemovedEventHandler = cb;
 }
     
 void JSPresenceStruct::registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb)
 {
-    mOnProxRemovedEventHandler = cb;
+    mOnProxAddedEventHandler = cb;
 }
 
 
@@ -63,7 +63,7 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_broadcastVisible(v8::Handle<v8::O
     return v8::Undefined();
 }
 
-JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)
+JSPresenceStruct* JSPresenceStruct::decodePresenceStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     
