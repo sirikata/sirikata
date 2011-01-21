@@ -35,6 +35,8 @@
 #include <boost/bind.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include "CraqEntry.hpp"
+#include <boost/regex.hpp>
+
 namespace Sirikata
 {
 
