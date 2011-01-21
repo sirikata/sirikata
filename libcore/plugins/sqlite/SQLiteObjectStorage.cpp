@@ -102,24 +102,19 @@ SQLiteObjectStorage::SQLiteObjectStorage(bool transactional, const String& pl)
    mRetries(5),
    mBusyTimeout(1000)
 {
-    OptionValue*databaseFile;
-    OptionValue*workQueueInstance;
     unsigned char * epoch=NULL;
     static AtomicValue<int> counter(0);
     int handle_offset=counter++;
     InitializeClassOptions("sqlite",epoch+handle_offset,
-                           databaseFile=new OptionValue("databasefile","",OptionValueType<String>(),"Sets the database to be used for storage"),
-                           workQueueInstance=new OptionValue("workqueue","0",OptionValueType<void*>(),"Sets the work queue to be used for disk reads to a common work queue"),NULL);
+                           new OptionValue("databasefile","",OptionValueType<String>(),"Sets the database to be used for storage"),
+        NULL);
     (mOptions=OptionSet::getOptions("sqlite",epoch+handle_offset))->parse(pl);
 
-    mDiskWorkQueue=(Task::WorkQueue*)workQueueInstance->as<void*>();
-    mWorkQueueThread=NULL;
-    if(mDiskWorkQueue==NULL) {
-        mDiskWorkQueue=&_mLocalWorkQueue;
-        mWorkQueueThread=mDiskWorkQueue->createWorkerThreads(1);
-    }
+    mDiskWorkQueue=&_mLocalWorkQueue;
+    mWorkQueueThread=mDiskWorkQueue->createWorkerThreads(1);
 
-    mDBName = databaseFile->as<String>();
+    OptionValue* dbfile = mOptions->referenceOption("databasefile");
+    mDBName = dbfile->as<String>();
     assert( !mDBName.empty() );
 
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBName);
