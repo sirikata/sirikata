@@ -102,7 +102,7 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
     
-    return jsPresStruct->script_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries);
+    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries);
 }
 
 
@@ -269,14 +269,6 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 }
 
 
-v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args)
-{
-    JSObjectScript* target = GetTargetJSObjectScript(args);
-
-    target->test();
-    return v8::Undefined();
-}
-
 
 
 // The callback that is invoked by v8 whenever the JavaScript 'print'
@@ -302,33 +294,6 @@ v8::Handle<v8::Value> Print(const v8::Arguments& args)
     return v8::Undefined();
 }
 
-
-
-
-v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args)
-{
-    //check args to make sure they're okay.
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to broadcast(<object>)")) );
-
-    v8::Handle<v8::Value> messageBody = args[0];
-
-    if(!messageBody->IsObject())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object")) );
-
-    Local<v8::Object> v8Object = messageBody->ToObject();
-
-    //serialize the object to send
-
-    std::string serialized_message = JSSerializer::serializeObject(v8Object);
-
-
-    //sender
-    JSObjectScript* target = GetTargetJSObjectScript(args);
-    target->testSendMessageBroadcast(serialized_message);
-
-    return v8::Undefined();
-}
 
 
 /** Registers a handler to be invoked for events that match the

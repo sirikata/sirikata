@@ -173,7 +173,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
             
-            return mStruct->script_getPosition();
+            return mStruct->struct_getPosition();
         }
 
 
@@ -199,8 +199,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             Vector3f newVel (Vec3Extract(velArg));
 
-            return mStruct->script_setVelocity(newVel);
-            //return v8::Undefined();
+            return mStruct->struct_setVelocity(newVel);
         }
 
 
@@ -329,67 +328,91 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             return mStruct->jsObjScript->getVisualScaleFunction(mStruct->sporef);
         }
 
-        v8::Handle<v8::Value> setScale(const v8::Arguments& args)
-        {
-            if (args.Length() != 1)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to setScale.")) );
 
-            String errorMessage = "Error in setScale while decoding presence.  ";
-            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+v8::Handle<v8::Value> setScale(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale of JSPresence.cpp.  You need to specify exactly one argument to setScale.")) );
+
+    String errorMessage = "Error in setScale while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
             
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-            Handle<Object> scale_arg = ObjectCast(args[0]);
-            if (!NumericValidate(scale_arg))
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Wrong argument: require a number for query angle.")) );
+    Handle<Object> scale_arg = ObjectCast(args[0]);
+    if (!NumericValidate(scale_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Wrong argument: require a number for query angle.")) );
 
-            float new_scale = NumericExtract(scale_arg);
-
-            mStruct->jsObjScript->setVisualScaleFunction(mStruct->sporef, new_scale);
-            return v8::Undefined();
-        }
-
-        //Takes in args, tries to get out the first argument, which should be a
-        //string that we convert to a TransferURI object.  If anything fails,
-        //then we just return null
-        bool getURI(const v8::Arguments& args,std::string& returner)
-        {
-            //assumes that the URI object is in the first 0th arg field
-            Handle<Object> newVis = Handle<Object>::Cast(args[0]);
-
-            //means that the argument passed was not a string identifying where
-            //we could get the uri
-            if (!newVis->IsString())
-                return false;
-
-            v8::String::Utf8Value newvis_str(newVis);
-            if (! *newvis_str)
-                return false;
-
-            returner= std::string(*newvis_str);
-            return true;
-        }
-
-
-        Handle<v8::Value> toString(const v8::Arguments& args)
-        {
-            String errorMessage = "Error in setScale while decoding presence.  ";
-            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-            
-
-            // Look up for the per space data
-            //for now just print the space id
-            String s = mStruct->sporef->toString();
-            return v8::String::New(s.c_str(), s.length());
-        }
-
-
-    }
-  }
+    float new_scale = NumericExtract(scale_arg);
+    
+    mStruct->jsObjScript->setVisualScaleFunction(mStruct->sporef, new_scale);
+    return v8::Undefined();
 }
+
+
+//Takes in args, tries to get out the first argument, which should be a
+//string that we convert to a TransferURI object.  If anything fails,
+//then we just return null
+bool getURI(const v8::Arguments& args,std::string& returner)
+{
+    //assumes that the URI object is in the first 0th arg field
+    Handle<Object> newVis = Handle<Object>::Cast(args[0]);
+    
+    //means that the argument passed was not a string identifying where
+    //we could get the uri
+    if (!newVis->IsString())
+        return false;
+    
+    v8::String::Utf8Value newvis_str(newVis);
+    if (! *newvis_str)
+        return false;
+    
+    returner= std::string(*newvis_str);
+    return true;
+}
+
+
+Handle<v8::Value> toString(const v8::Arguments& args)
+{
+    String errorMessage = "Error in toString of JSPresence while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+
+    // Look up for the per space data
+    //for now just print the space id
+    String s = mStruct->sporef->toString();
+    return v8::String::New(s.c_str(), s.length());
+}
+
+
+
+v8::Handle<v8::Value> broadcastVisible(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in broadcastVisible of JSPresence.cpp.  You need to specify exactly one argument to broadcastVisible (an object that is the message you were going to send).")) );
+
+
+    if (! args[0]->IsObject())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in broadcastVisible of JSPresence.cpp.  You need to pass in an object to broadcast to everyone else.")) );
+
+        
+    String errorMessage = "Error in broadcastVisible while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+            
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return mStruct->struct_broadcastVisible(args[0]->ToObject());
+}
+
+
+
+
+} //end jspresence namespace
+} //end js namespace
+} //end sirikata namespace

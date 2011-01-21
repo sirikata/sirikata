@@ -24,8 +24,6 @@ v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info);
 void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
-v8::Handle<v8::Value> __ScriptGetTest(const v8::Arguments& args);
-v8::Handle<v8::Value> __ScriptTestBroadcastMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> Print(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args);

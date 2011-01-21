@@ -21,12 +21,12 @@ struct JSFakerootStruct
     static JSFakerootStruct* decodeRootStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
 
     //regular members
-    v8::Handle<v8::Value> script_canSendMessage();
-    v8::Handle<v8::Value> script_canRecvMessage();
-    v8::Handle<v8::Value> script_canProx();
-    v8::Handle<v8::Value> script_getPosition();
-    v8::Handle<v8::Value> script_print(const String& msg);    
-    v8::Handle<v8::Value> script_sendHome(String& toSend);
+    v8::Handle<v8::Value> struct_canSendMessage();
+    v8::Handle<v8::Value> struct_canRecvMessage();
+    v8::Handle<v8::Value> struct_canProx();
+    v8::Handle<v8::Value> struct_getPosition();
+    v8::Handle<v8::Value> struct_print(const String& msg);    
+    v8::Handle<v8::Value> struct_sendHome(String& toSend);
     
     //associated data 
     JSContextStruct* associatedContext;

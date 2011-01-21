@@ -1,18 +1,34 @@
 #include <v8.h>
 
 #include "JSObjectsUtils.hpp"
-#include "JSFields.hpp"
 #include <cassert>
-
+#include <sirikata/core/util/Platform.hpp>
 
 
 namespace Sirikata{
 namespace JS{
 
 
-const char* ToCString(const v8::String::Utf8Value& value)
+// const char* ToCString(const v8::String::Utf8Value& value)
+// {
+//     return *value ? *value : "<string conversion failed>";
+// }
+
+
+
+bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)
 {
-    return *value ? *value : "<string conversion failed>";
+    v8::String::Utf8Value str(toDecode);
+
+    //can decode string
+    if (*str)
+    {
+        decodedValue = String(*str);
+        return true;
+    }
+
+    errorMessage += "Error decoding string in decodeString of JSObjectUtils.cpp.  ";
+    return false;
 }
 
 

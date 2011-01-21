@@ -25,9 +25,11 @@ struct JSPresenceStruct
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
 
 
-    v8::Handle<v8::Value> script_getPosition();
-    v8::Handle<v8::Value> script_setVelocity(const Vector3f& newVel);
-    v8::Handle<v8::Value> script_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries);
+    v8::Handle<v8::Value> struct_getPosition();
+    v8::Handle<v8::Value> struct_setVelocity(const Vector3f& newVel);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries);
+
+    v8::Handle<v8::Value> struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast);
     
     void addAssociatedContext(JSContextStruct*);
 

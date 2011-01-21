@@ -50,7 +50,7 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 
     v8::Handle<v8::Function> exec_func = v8::Handle<v8::Function>::Cast(args[0]);
 
-    v8::Handle<v8::Value> returner = jscontstruct->executeScript(exec_func,argc, argv);
+    v8::Handle<v8::Value> returner = jscontstruct->struct_executeScript(exec_func,argc, argv);
 
 
     //freeing args here

@@ -2,6 +2,8 @@
 #include <v8.h>
 #include "JSPresenceStruct.hpp"
 #include "../JSObjectScript.hpp"
+#include "../JSSerializer.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -20,7 +22,7 @@ JSPresenceStruct::~JSPresenceStruct()
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::script_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries)
+v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries)
 {
     return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries);
 }
@@ -42,15 +44,22 @@ void JSPresenceStruct::registerOnProxAddedEventHandler(v8::Persistent<v8::Functi
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::script_getPosition()
+v8::Handle<v8::Value> JSPresenceStruct::struct_getPosition()
 {
     return jsObjScript->getPositionFunction(sporef);
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::script_setVelocity(const Vector3f& newVel)
+v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {
     jsObjScript->setVelocityFunction(sporef,newVel);
+    return v8::Undefined();
+}
+
+
+v8::Handle<v8::Value> JSPresenceStruct::struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast)
+{
+    jsObjScript->broadcastVisible(sporef,JSSerializer::serializeObject(toBroadcast));
     return v8::Undefined();
 }
 

@@ -16,12 +16,9 @@
 namespace Sirikata{
 namespace JS{
 
-// static const char* ToCString(const v8::String::Utf8Value& value) {
-//   return *value ? *value : "<string conversion failed>";
-// }
 
 
-std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
+std:: string JSSerializer::serializeFunction(v8::Handle<v8::Function> v8Func)
 {
   Sirikata::JS::Protocol::JSMessage jsmessage ;
   Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
@@ -57,12 +54,11 @@ std:: string JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func)
   return serialized_message;
 }
 
-std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
+std::string JSSerializer::serializeObject(v8::Handle<v8::Value> v8Val)
 {
     if( v8Val->IsFunction())
-    {
-        return serializeFunction( v8::Local<v8::Function>::Cast(v8Val));
-    }
+        return serializeFunction( v8::Handle<v8::Function>::Cast(v8Val));
+
 
     v8::HandleScope handle_scope;
     //otherwise assuming it is a v8 object for now
@@ -104,7 +100,7 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
 }
 
 
-bool JSSerializer::deserializeObject( std::string strDecode,v8::Local<v8::Object>& deserializeTo)
+bool JSSerializer::deserializeObject( std::string strDecode,v8::Handle<v8::Object>& deserializeTo)
 {
     Sirikata::JS::Protocol::JSMessage jsmessage;
     bool parseWorked = jsmessage.ParseFromString(strDecode);
@@ -140,7 +136,7 @@ bool JSSerializer::deserializeObject( std::string strDecode,v8::Local<v8::Object
 }
 
 
-bool JSSerializer::deserializeObject( Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+bool JSSerializer::deserializeObject( Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
@@ -170,16 +166,6 @@ bool JSSerializer::deserializeObject( Sirikata::JS::Protocol::JSMessage jsmessag
 
 
 
-// bool JSSerializer::deserializeObject( MemoryReference payload,v8::Local<v8::Object>& deserializeTo)
-// {
-//     RoutableMessageBody body;
-//     body.ParseFromArray(payload.data(), payload.size());
-//     std::string msgString(body.payload());
 
-//     return deserializeObject(msgString,deserializeTo);
-// }
-
-
-
-
-}}//end namespaces
+} //end namespace js
+} //end namespace sirikata

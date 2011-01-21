@@ -117,11 +117,10 @@ void JSObjectScriptManager::createTemplates()
     createMathTemplate();
     createFakerootTemplate();
     createContextTemplate();
-
     
     createHandlerTemplate();
     createVisibleTemplate();    
-    createAddressableTemplate();
+
     
     createJSInvokableObjectTemplate();
     createPresenceTemplate();    
@@ -130,26 +129,6 @@ void JSObjectScriptManager::createTemplates()
     //createTriggerableTemplate();
 }
 
-
-//solution for managing doing more intelligent query matching
-// void JSObjectScriptManager::createTriggerableTemplate()
-// {
-//     v8::HandleScope handle_scope;
-//     mTriggerableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-
-//     // An internal field holds the JSObjectScript*
-//     mTriggerableTemplate->SetInternalFieldCount(TRIGGERABLE_TEMPLATE_FIELD_COUNT);
-
-//     mTriggerableTemplate->Set(v8::String::New("trigger"), v8::FunctionTemplate::New(JSTriggerable::__trigger));
-//     mTriggerableTemplate->Set(v8::String::New("register"), v8::FunctionTemplate::New(JSTriggerable::__register));
-    
-    
-//     mTriggerableTemplate->SetInternalField(JS);
-    
-//     triggerPredicate();
-//     onTriggerCallback();
-//     lkjs;
-// }
 
 
 void JSObjectScriptManager::createFakerootTemplate()
@@ -238,8 +217,6 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::ScriptImport));
-    system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(JSSystem::__ScriptGetTest));
-    system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
@@ -260,19 +237,6 @@ void JSObjectScriptManager::createSystemTemplate()
 }
 
 
-//creating the addressable template.  addressable is an array within system that
-void JSObjectScriptManager::createAddressableTemplate()
-{
-    v8::HandleScope handle_scope;
-    mAddressableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    // An internal field holds the external address of the addressable object
-    mAddressableTemplate->SetInternalFieldCount(ADDRESSABLE_FIELD_COUNT);
-
-    //these function calls are defined in JSObjects/Addressable.hpp
-    mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
-    mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
-    mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
-}
 
 
 void JSObjectScriptManager::createJSInvokableObjectTemplate()
@@ -290,7 +254,7 @@ void JSObjectScriptManager::createVisibleTemplate()
 {
     v8::HandleScope handle_scope;
     mVisibleTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    // An internal field holds the external address of the addressable object
+    // An internal field holds the external address of the visible object
     mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 
     
@@ -306,9 +270,6 @@ void JSObjectScriptManager::createVisibleTemplate()
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
-
-  // Ideally we want the addressable template to be a prototype of presencetemplate
-  //All that can be done to presences can be done to the addressble too
 
   mPresenceTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
   mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
@@ -354,10 +315,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   //set up graphics
   mPresenceTemplate->Set(v8::String::New("runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
+  //send broadcast message
+  mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
-  //FIXME:
-  //add function to check if presences are equal (point to same underlying object);
-  //add function to see if presence is valid (has been declared null);
 }
 
 

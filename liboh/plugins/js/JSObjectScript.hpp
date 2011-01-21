@@ -73,8 +73,7 @@ static const uint32 MAX_SEARCH_OPEN_CODE =   20;
 
 
 class JSObjectScript : public ObjectScript,
-                       public SessionEventListener,
-                       public ProxyCreationListener
+                       public SessionEventListener
 {
 
 public:
@@ -91,9 +90,6 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    //note: may want to remove these calls.
-    virtual void onCreateProxy(ProxyObjectPtr p);
-    virtual void onDestroyProxy(ProxyObjectPtr p);
 
 
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
@@ -108,12 +104,10 @@ public:
     bool valid() const;
 
     /** Dummy callback for testing exposing new functionality to scripts. */
-    void test() const;
-    void testSendMessageBroadcast(const std::string& msgToBCast) const;
     void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
-    void sendMessageToEntity(int numIndex, SpaceObjectReference* from, const std::string& msgBody) const;
-    int  getAddressableSize();
+
+    void broadcastVisible(SpaceObjectReference* visibleTo,const std::string& msgToBCast);
 
     /** Print the given string to the current output. */
     void print(const String& str);
@@ -217,8 +211,6 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
-    typedef std::vector<SpaceObjectReference*> AddressableList;
-    AddressableList mAddressableList;
 
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
@@ -235,12 +227,13 @@ private:
     v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
     void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
-    void addAddressable(const SpaceObjectReference& sporefToAdd);
-    void populateAddressable(const SpaceObjectReference& sporef);
 
+    v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
+    v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 
-    v8::Local<v8::Object> getMessageSender(const ODP::Endpoint& src);
-
+    void addSelfField(const SpaceObjectReference& myName);
+    
+    
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
@@ -255,10 +248,8 @@ private:
 
     Handle<Object> getSystemObject();
     Handle<Object> getGlobalObject();
-    void populateAddressable(Handle<Object>& system_obj );
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);
-    void initializeAddressable(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
     void initializeMath(Handle<Object>& system_obj);
     void initializeVisible(Handle<Object>&system_obj);
@@ -270,7 +261,6 @@ private:
     void removePresence(const SpaceObjectReference& sporef);
 
     // Adds the Self field
-    void addSelfField(const SpaceObjectReference& name);
 
     v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);

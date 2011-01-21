@@ -47,7 +47,7 @@ JSContextStruct::~JSContextStruct()
 //this function asks the jsObjScript to send a message from the presence associated
 //with associatedPresence to the object with spaceobjectreference mHomeObject.
 //The message contains the object toSend.
-v8::Handle<v8::Value> JSContextStruct::sendHome(String& toSend)
+v8::Handle<v8::Value> JSContextStruct::struct_sendHome(String& toSend)
 {
     jsObjScript->sendMessageToEntity(mHomeObject,associatedPresence->sporef,toSend);
     return v8::Undefined();
@@ -88,14 +88,14 @@ JSContextStruct* JSContextStruct::decodeContextStruct(v8::Handle<v8::Value> toDe
 }
 
 
-v8::Handle<v8::Value> JSContextStruct::executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
     return jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
 }
 
-v8::Handle<v8::Value> JSContextStruct::getAssociatedPresPosition()
+v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
 {
-    return associatedPresence->script_getPosition();
+    return associatedPresence->struct_getPosition();
 }
 
 void JSContextStruct::jsscript_print(const String& msg)

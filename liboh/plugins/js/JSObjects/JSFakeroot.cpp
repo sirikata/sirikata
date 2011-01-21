@@ -25,7 +25,7 @@ v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->script_canSendMessage();
+    return jsfake->struct_canSendMessage();
 }
 
 
@@ -37,7 +37,7 @@ v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->script_canRecvMessage();    
+    return jsfake->struct_canRecvMessage();    
 }
 
 
@@ -49,7 +49,7 @@ v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->script_canProx();
+    return jsfake->struct_canProx();
 }
 
 
@@ -61,7 +61,7 @@ v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->script_getPosition();
+    return jsfake->struct_getPosition();
 }
 
 v8::Handle<v8::Value> root_print(const v8::Arguments& args)
@@ -79,7 +79,7 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args)
     v8::String::Utf8Value str(args[0]);
     String toPrint( ToCString(str));
     
-    return jsfake->script_print(toPrint);    
+    return jsfake->struct_print(toPrint);    
 }
 
 
@@ -107,7 +107,7 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->script_sendHome(serialized_message);
+    return jsfake->struct_sendHome(serialized_message);
 }
 
 

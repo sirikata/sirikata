@@ -3,14 +3,14 @@
 #define __SIRIKATA_JS_JSOBJECTUTILS_HPP__
 
 #include <v8.h>
-#include "../JSObjectStructs/JSContextStruct.hpp"
+#include <sirikata/core/util/Platform.hpp>
 
 namespace Sirikata{
 namespace JS{
 
-class JSPresenceStruct;
 
-const char* ToCString(const v8::String::Utf8Value& value);
+//const char* ToCString(const v8::String::Utf8Value& value);
+bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage);
 bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, std::string& errorMessage);
 
 

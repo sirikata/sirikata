@@ -26,38 +26,38 @@ JSFakerootStruct::~JSFakerootStruct()
 }
 
 
-v8::Handle<v8::Value> JSFakerootStruct::script_canSendMessage()
+v8::Handle<v8::Value> JSFakerootStruct::struct_canSendMessage()
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(canSend);
 }
 
-v8::Handle<v8::Value> JSFakerootStruct::script_canRecvMessage()
+v8::Handle<v8::Value> JSFakerootStruct::struct_canRecvMessage()
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(canRecv);
 }
 
-v8::Handle<v8::Value> JSFakerootStruct::script_canProx()
+v8::Handle<v8::Value> JSFakerootStruct::struct_canProx()
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(canProx);
 }
 
-v8::Handle<v8::Value> JSFakerootStruct::script_getPosition()
+v8::Handle<v8::Value> JSFakerootStruct::struct_getPosition()
 {
-    return associatedContext->getAssociatedPresPosition();
+    return associatedContext->struct_getAssociatedPresPosition();
 }
 
-v8::Handle<v8::Value> JSFakerootStruct::script_print(const String& msg)
+v8::Handle<v8::Value> JSFakerootStruct::struct_print(const String& msg)
 {
     associatedContext->jsscript_print(msg);
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> JSFakerootStruct::script_sendHome(String& toSend)
+v8::Handle<v8::Value> JSFakerootStruct::struct_sendHome(String& toSend)
 {
-    return associatedContext->sendHome(toSend);
+    return associatedContext->struct_sendHome(toSend);
 }
 
 //decodes fakeroot object
