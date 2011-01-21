@@ -174,13 +174,14 @@ void ColladaDocumentImporter::translateNodes() {
                 NodeIndex nindex = mMesh->nodes.size();
                 NodeIndex parent_idx = NullNodeIndex;
                 if (curnode.parent != NULL) {
+                    assert(mNodeIndices.find(curnode.parent->getUniqueId()) != mNodeIndices.end());
                     parent_idx = mNodeIndices[curnode.parent->getUniqueId()];
                     // Add the node to it's parent as a child
                     mMesh->nodes[parent_idx].children.push_back(nindex);
                 }
                 // Create the new node
                 Node rnode(parent_idx, Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR()));
-                mNodeIndices[rn->getUniqueId()] = nindex;
+                mNodeIndices[curnode.node->getUniqueId()] = nindex;
                 mMesh->nodes.push_back(rnode);
                 // If there is no parent, add as a root node
                 if (curnode.parent == NULL)
@@ -208,17 +209,15 @@ void ColladaDocumentImporter::translateNodes() {
                 // have been processed yet, so we wouldn't be able to lookup an
                 // index.
 
-                // Instance Nodes
-                if ((size_t)curnode.child >= (size_t)curnode.node->getInstanceNodes().getCount()) {
-                    curnode.child = 0;
-                    curnode.mode = NodeState::Nodes;
-                }
-                else {
-                    COLLADAFW::UniqueId child_id = curnode.node->getInstanceNodes()[curnode.child]->getInstanciatedObjectId();
+                for(int inst_idx = 0; inst_idx < curnode.node->getInstanceNodes().getCount(); inst_idx++) {
+                    COLLADAFW::UniqueId child_id = curnode.node->getInstanceNodes()[inst_idx]->getInstanciatedObjectId();
                     COLLADAFW::UniqueId node_id = curnode.node->getUniqueId();
 
                     instance_children[node_id].push_back(child_id);
                 }
+
+                curnode.child = 0;
+                curnode.mode = NodeState::Nodes;
             }
             if (curnode.mode == NodeState::Nodes) {
                 // Process the next child if there are more
@@ -234,10 +233,12 @@ void ColladaDocumentImporter::translateNodes() {
 
     // Fill in instance node children information
     for(UniqueChildrenListMap::const_iterator parent_it = instance_children.begin(); parent_it != instance_children.end(); parent_it++) {
+        assert(mNodeIndices.find(parent_it->first) != mNodeIndices.end());
         NodeIndex parent_idx = mNodeIndices[parent_it->first];
         const UniqueIdList& inst_children = parent_it->second;
 
         for(UniqueIdList::const_iterator child_it = inst_children.begin(); child_it != inst_children.end(); child_it++) {
+            assert(mNodeIndices.find(*child_it) != mNodeIndices.end());
             mMesh->nodes[parent_idx].instanceChildren.push_back( mNodeIndices[*child_it] );
         }
     }
