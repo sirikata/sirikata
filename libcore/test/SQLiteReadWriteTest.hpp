@@ -52,8 +52,8 @@ public:
         return Sirikata::Persistence::ReadWriteHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
     }
     Sirikata::Persistence::ReadWriteHandler*mDatabase;
+    Sirikata::PluginManager plugins;
     SQLiteReadWriteTest() {
-        Sirikata::PluginManager plugins;
         plugins.load("sqlite");
         mDatabase=createReadWritealHandlerFunction("");
     }
