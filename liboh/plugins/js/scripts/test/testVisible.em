@@ -60,15 +60,20 @@ function distanceFromMeToIt(it)
     return distance;
 }
 
-
+firstNoLongerVisible = true;
 function moveTowards(toMoveTowards)
 {
     if (! toMoveTowards.getStillVisible())
     {
-        system.presences[0].setVelocity(new system.Vec3(0,0,0) );
+        if (firstNoLongerVisible)
+        {
+            system.presences[0].setVelocity(new system.Vec3(0,0,0) );
+            firstNoLongerVisible = false;
+        }
         return;
     }
-    
+
+    firstNoLongerVisible = true;    
     var posToMoveTowards = toMoveTowards.getPosition();
     var myPosition  = system.presences[0].getPosition();
 
@@ -82,7 +87,7 @@ function moveTowards(toMoveTowards)
         zComponent/inverseSpeed
     );
 
-    system.print("\nMoving towards object with velocity: " +  mNewVelocity.toString() +  "\n");
+    system.print("\nMoving towards object at position: " +  posToMoveTowards.toString() + "     with velocity: " +  mNewVelocity.toString() +  "\n");
     system.presences[0].setVelocity(mNewVelocity);
 }
 

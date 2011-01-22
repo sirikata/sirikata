@@ -16,7 +16,6 @@ class JSObjectScript;
 struct JSVisibleStruct
 {
     JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition);
-    
     ~JSVisibleStruct();
 
     //for decoding

@@ -824,7 +824,8 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     //create the visible object associated with the new proxy object
     Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
 
-    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, proximateObject->getPosition());
+    
+    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, mParent->requestCurrentPosition(proximateObject));
 
     newVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(toAdd));
     
@@ -1481,7 +1482,8 @@ bool JSObjectScript::updatePosition(SpaceObjectReference* sporef, SpaceObjectRef
     bool succeeded =  mParent->getProxyObjectFrom(spVisTo,sporef,p);
 
     if (succeeded)
-        *position = p->getPosition();
+        *position = mParent->requestCurrentPosition(p);
+
 
     return succeeded;
 }
