@@ -182,12 +182,10 @@ using namespace Mesh;
               snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
                        texture.color.z, texture.color.w, texture.affecting);
               colorEncoding = colorEncodingStr;
-              std::cout << colorEncoding << " : colorEncoding 1\n";
+
               if (  textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end()) {
                  continue;
               }
-              std::cout << colorEncoding << " : colorEncoding 2\n";
-              std::cout << texture.affecting << " : texture.affecting 2\n";
 
 
               colorOrTexture = COLLADASW::ColorOrTexture( COLLADASW::Color(texture.color.x, texture.color.y,

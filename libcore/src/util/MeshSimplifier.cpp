@@ -147,12 +147,16 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
   //Go through all the triangles, getting the vertices they consist of.
   //Calculate the Q for all the vertices.
 
-  std::cout << "Starting simplification\n";
+  //std::cout << "Starting simplification\n";
   int totalVertices = 0;
+
+  std:tr1::unordered_map<uint32, uint32> numVerticesMap;
 
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     totalVertices += curGeometry.positions.size() * curGeometry.numInstances;
+
+    numVerticesMap[i] = (curGeometry.positions.size() * curGeometry.numInstances);
 
     for (uint32 j = 0; j < curGeometry.positions.size(); j++) {
         curGeometry.positionQs.push_back( Matrix4x4f::nil());
@@ -315,7 +319,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     }
   }
 
-  std::cout << "totalVertices: " << totalVertices << "\n";
+  //std::cout << "totalVertices: " << totalVertices << "\n";
 
   //Remove the least cost pair from the list of vertex pairs. Replace it with a new vertex.
   //Modify all triangles that had either of the two vertices to point to the new vertex.
@@ -376,6 +380,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
       std::map<unsigned short, int> posIndexes;
       int numVerticesRemoved = 0;
       for (int primIdx = top.mPrimitiveIndicesIdx; primIdx < top.mPrimitiveIndicesIdx + 3; primIdx++) {
+        
 
         unsigned short posIdx = curGeometry.primitives[j].indices[primIdx];
         while (vertexMapping.find(posIdx) != vertexMapping.end() ) {
@@ -384,15 +389,12 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         }
 
         posIndexes[posIdx] = 1;
-        int numNeighbors = curGeometry.neighborPrimitives[posIdx].size();
-
-        // std::cout << idx2 << " : idx2, "  << posIdx << " : posIdx, " << numNeighbors <<  " : numNeighbors\n";
+        int numNeighbors = curGeometry.neighborPrimitives[posIdx].size();    
 
         if (numNeighbors >= 1)
           curGeometry.neighborPrimitives[posIdx].erase(curGeometry.neighborPrimitives[posIdx].begin());
 
         if (posIdx != idx2) {
-          //std::cout << numNeighbors << " : curGeometry.neighborPrimitives[posIdx].size\n";
           if (numNeighbors == 1) {
             numVerticesRemoved += curGeometry.numInstances;
             vertexMapping[posIdx] = posIdx;
@@ -405,13 +407,21 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         remainingVertices -= numVerticesRemoved;
       }
 
-
       vertexMapping[idx2] = idx;
     }
+    
+    uint32 numDiffVertices = numVerticesMap[top.mGeomIdx] -
+                             (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
+
+    
+    numVerticesMap[top.mGeomIdx] = (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
+
+    totalVertices -= numDiffVertices;    
+
+    if (totalVertices <= numVerticesLeft)
+      remainingVertices = numVerticesLeft;
 
     vertexPairs.pop();
-
-
   }
 
   //std::cout << "1. remainingVertices: " << remainingVertices << "\n";
@@ -518,12 +528,9 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     curGeometry.positionQs.clear(); //no longer need these.
   }
 
-
-
   //std::cout << "3. remainingVertices: " << remainingVertices << "\n";
 
   //std::cout << "Simplification ended\n";
-
 }
 
 }
