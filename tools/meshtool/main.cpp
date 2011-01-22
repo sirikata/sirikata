@@ -46,6 +46,11 @@ int main(int argc, char** argv) {
     using namespace Sirikata;
     using namespace Sirikata::Mesh;
 
+    if(argc < 2) {
+    	usage();
+    	return 0;
+    }
+
     // Check for help request
     for(int argi = 1; argi < argc; argi++) {
         std::string arg_str(argv[argi]);
