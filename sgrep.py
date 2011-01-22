@@ -11,11 +11,13 @@ DIRECTORIES_SEARCH = ['analysis/', 'bench/','cdn/','cppoh/','cseg/','demo/','doc
 
 if __name__ == "__main__":
 
-    if (len (sys.argv) != 2):
+    if (len (sys.argv) < 2):
         print("\n\nIncorrect usage: add in what you're grepping for\n\n");
 
     
-    cmd = ['grep','-R', sys.argv[1]];
+    #cmd = ['grep','-R', sys.argv[1]];
+    cmd = ['grep','-R'];
+    cmd += sys.argv[1:];
     cmd += DIRECTORIES_SEARCH;
     
     subprocess.call(cmd);
