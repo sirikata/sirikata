@@ -48,7 +48,6 @@
 
 #include "JS_JSMessage.pbj.hpp"
 
-#include "JSObjects/Addressable.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSInvokableObject.hpp"

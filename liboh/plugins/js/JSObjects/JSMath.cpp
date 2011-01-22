@@ -6,7 +6,6 @@
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
-#include "Addressable.hpp"
 #include <math.h>
 
 #include <sirikata/core/util/Random.hpp>

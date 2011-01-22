@@ -6,7 +6,6 @@
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
-#include "Addressable.hpp"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -352,23 +351,18 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
 
     // Sender
-    JSObjectScript* dummy_jsscript      = NULL;
-    SpaceObjectReference* dummy_sporef  = NULL;
+    JSVisibleStruct* jsvis = NULL;
     if (! sender_val->IsNull())  //means that it's a valid sender
     {
-        if (! JSAddressable::decodeAddressable(sender_val,dummy_jsscript,dummy_sporef))
-        {
-            std::cout<<"\n\nWarning: did not receive a valid sender: will match any sender\n\n";
-            return v8::ThrowException( v8::Exception::Error(v8::String::New("Not a valid sender.")) );
-        }
+        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding JSVisibleStruct.  ";
+        JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(sender_val,errorMessage);
+        if (jsvis == NULL)
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
     }
 
+    
     v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
     v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
-
-    //originally
-    //v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
-    //v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
 
 
     // Function

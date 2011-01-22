@@ -6,7 +6,6 @@
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
-#include "Addressable.hpp"
 #include "../JSObjectStructs/JSContextStruct.hpp"
 #include <math.h>
 #include <stdlib.h>
