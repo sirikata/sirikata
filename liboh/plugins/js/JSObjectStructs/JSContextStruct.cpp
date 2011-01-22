@@ -3,6 +3,8 @@
 #include "../JSObjectScript.hpp"
 #include <v8.h>
 #include "JSPresenceStruct.hpp"
+#include "../JSSystemNames.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -88,10 +90,45 @@ JSContextStruct* JSContextStruct::decodeContextStruct(v8::Handle<v8::Value> toDe
 }
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+//first argument of args is a function (funcToCall), which we skip
+v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args)
 {
-    return jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
+    int argc = args.Length(); //args to function.  first argument is going to be
+                              //a 
+    Handle<Value>* argv = new Handle<Value>[argc];
+
+
+    //putting fakeroot in argv0
+    argv[0] = struct_getFakeroot();
+    for (int s=1; s < args.Length(); ++s)
+        argv[s-1] = args[s];
+    
+    v8::Handle<v8::Value> returner =  jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
+
+    delete argv; //free additional memory.
+    return returner;
 }
+
+
+//returns the fakeroot object that is associated with the global context.
+v8::Handle<v8::Object> JSContextStruct::struct_getFakeroot()
+{
+    v8::Handle<v8::Object> globObject = mContext->Global();
+
+    if (! globObject->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+    {
+        SILOG(js,error,"[JS] error.  can't find fakeroot in new context.  error.  error.  returning global object instead.");
+        return globObject;
+    }
+
+    v8::Handle<v8::Value> returner = globObject->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
+
+    if (! returner->IsObject())
+        return globObject;
+    
+    return returner->ToObject();
+}
+
 
 v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
 {

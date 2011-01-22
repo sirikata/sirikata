@@ -2,7 +2,7 @@
 system.print("\n\nRunning a test of fakeroot for context \n\n");
 
 
-function functionToExecuteInContext()
+function functionToExecuteInContext(fakeroot)
 {
     fakeroot.print("\n\nExecuting print in context\n\n");
 }

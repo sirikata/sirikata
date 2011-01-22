@@ -18,8 +18,6 @@ namespace JSContext{
 
 
 
-
-
 v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 {
     if (args.Length() == 0)
@@ -41,21 +39,8 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
     //first argument is a function
     //subsequent arguments are the arguments to that function
 
-
-    int argc = args.Length() - 1; //args to function.
-    Handle<Value>* argv = new Handle<Value>[argc];
-    for (int s=1; s < args.Length(); ++s)
-        argv[s-1] = args[s];
-
-
     v8::Handle<v8::Function> exec_func = v8::Handle<v8::Function>::Cast(args[0]);
-
-    v8::Handle<v8::Value> returner = jscontstruct->struct_executeScript(exec_func,argc, argv);
-
-
-    //freeing args here
-    delete argv;
-    return returner;
+    return jscontstruct->struct_executeScript(exec_func,args);
 }
 
 

@@ -22,11 +22,11 @@ struct JSContextStruct
     ~JSContextStruct();
 
     
-
-    v8::Handle<v8::Value> struct_executeScript(v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
+    v8::Handle<v8::Value> struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
     v8::Handle<v8::Value> struct_getAssociatedPresPosition();
     v8::Handle<v8::Value> struct_sendHome(String& toSend);
-
+    v8::Handle<v8::Object> struct_getFakeroot();
+    
     void jsscript_print(const String& msg);
     void presenceDied();
 

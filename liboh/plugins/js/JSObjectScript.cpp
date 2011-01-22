@@ -760,8 +760,6 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
 }
 
 
-
-
 /*
   executeInContext takes in a context, that you want to execute the function
   funcToCall in.  argv are the arguments to funcToCall from the current context,
