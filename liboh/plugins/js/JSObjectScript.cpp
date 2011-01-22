@@ -63,6 +63,7 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
+#include "JSObjects/JSObjectsUtils.hpp"
 
 //#define __EMERSON_COMPILE_ON__
 
@@ -100,12 +101,23 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additio
     for (int s=0; s < (int)allProps->Length(); ++s)
     {
         v8::Local<v8::Object>toPrint= v8::Local<v8::Object>::Cast(allProps->Get(s));
-        v8::String::Utf8Value value(toPrint);
-        const char* strVal = *value ? *value : "<string conversion failed>";
-
-        v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal));
-        v8::String::Utf8Value value2(valueToPrint->ToString());
-        const char* strVal2 = *value2 ? *value2 : "<string conversion failed>";
+        String errorMessage = "Error: error decoding first string in debug_checkCurrentContextX.  ";
+        String strVal, strVal2;
+        bool stringDecoded = decodeString(toPrint, errorMessage, strVal);
+        if (!stringDecoded)
+        {
+            JSLOG(error,errorMessage);
+            return;
+        }
+        
+        v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal.c_str(), strVal.length()));
+        errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
+        stringDecoded =  decodeString(valueToPrint, errorMessage, strVal2);
+        if (!stringDecoded)
+        {
+            JSLOG(error,errorMessage);
+            return;
+        }
 
         std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
     }

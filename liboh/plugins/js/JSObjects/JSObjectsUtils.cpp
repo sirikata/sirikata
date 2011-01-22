@@ -9,11 +9,6 @@ namespace Sirikata{
 namespace JS{
 
 
-// const char* ToCString(const v8::String::Utf8Value& value)
-// {
-//     return *value ? *value : "<string conversion failed>";
-// }
-
 
 
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)

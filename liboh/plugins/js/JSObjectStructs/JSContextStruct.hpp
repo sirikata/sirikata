@@ -1,6 +1,3 @@
-
-//#include "JSObjectScript.hpp"
-
 #ifndef _SIRIKATA_JS_CONTEXT_STRUCT_HPP_
 #define _SIRIKATA_JS_CONTEXT_STRUCT_HPP_
 

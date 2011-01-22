@@ -176,7 +176,6 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 {
     PresenceDataMap::iterator smapIter = mPresenceData->find(sporef);
 
-
     if (smapIter != mPresenceData->end())
     {
         //means that we actually did have a connection with this sporef

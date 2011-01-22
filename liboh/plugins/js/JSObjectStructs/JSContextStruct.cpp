@@ -67,7 +67,7 @@ JSContextStruct* JSContextStruct::decodeContextStruct(v8::Handle<v8::Value> toDe
     v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
         
     //now check internal field count
-    if (toDecodeObject->InternalFieldCount() != CONTEXT_FIELD_CONTEXT_STRUCT)
+    if (toDecodeObject->InternalFieldCount() != CONTEXT_TEMPLATE_FIELD_COUNT)
     {
         errorMessage += "Error in decode of JSContextStruct.  Object given does not have adequate number of internal fields for decode.";
         return NULL;

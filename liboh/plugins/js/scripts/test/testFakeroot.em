@@ -2,23 +2,23 @@
 system.print("\n\nRunning a test of fakeroot for context \n\n");
 
 
-// function functionToExecuteInContext()
-// {
-//     fakeroot.print("\n\nExecuting print in context\n\n");
-// }
+function functionToExecuteInContext()
+{
+    fakeroot.print("\n\nExecuting print in context\n\n");
+}
 
 
 function proxCallback(visibleBack)
 {
-    // var newContext = system.createContext(system.presences[0],
-    //                                       visibleBack,
-    //                                       true,
-    //                                       true,
-    //                                       true);
+    var newContext = system.create_context(system.presences[0],
+                                          visibleBack,
+                                          true,
+                                          true,
+                                          true);
 
-    // newContext.execute(functionToExecuteInContext);
+    newContext.execute(functionToExecuteInContext);
 
-    system.print("\n\nGot into prox callback\n\n");
+
     
 }
 

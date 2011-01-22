@@ -8,8 +8,6 @@
 namespace Sirikata{
 namespace JS{
 
-
-//const char* ToCString(const v8::String::Utf8Value& value);
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage);
 bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, std::string& errorMessage);
 
