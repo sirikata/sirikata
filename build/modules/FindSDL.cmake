@@ -64,32 +64,12 @@ IF(WIN32)  # Windows
 
   ENDIF(sdl_ROOT AND EXISTS "${sdl_ROOT}")
 
-ELSEIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")  # OS X
-
-  SET(sdl_FOUND FALSE)
-
-  #INCLUDE(CMakeFindFrameworks)
-  #CMAKE_FIND_FRAMEWORKS(sdl) 
-  SET(sdl_FRAMEWORKS ${sdl_ROOT}/Frameworks/SDL.framework)
-  IF(EXISTS ${sdl_FRAMEWORKS})
-    LIST(GET sdl_FRAMEWORKS 0 sdl_LIBRARIES)
-    SET(sdl_INCLUDE_DIRS ${sdl_LIBRARIES}/Headers)
-    
-    # Unset other variables
-    SET(sdl_LDFLAGS -F${sdl_LIBRARIES}/.. -framework SDL)
-
-    SET(sdl_LIBRARY_DIRS)
-    SET(sdl_LIBRARIES)
-    SET(sdl_CFLAGS)
-    SET(sdl_FOUND TRUE)
-  ENDIF(EXISTS ${sdl_FRAMEWORKS})
-
 ELSE(WIN32)  # Linux etc
   FIND_PACKAGE(PkgConfig)
   IF(NOT PKG_CONFIG_FOUND)
     MESSAGE("Could not find pkg-config (to search for sdl)")
   ELSE(NOT PKG_CONFIG_FOUND)
-    SET(ENV{PKG_CONFIG_PATH} ${sdl_ROOT}/../lib/pkgconfig:${sdl_ROOT}/lib/pkgconfig)
+    SET(ENV{PKG_CONFIG_PATH} ${sdl_ROOT}/lib/pkgconfig:${sdl_ROOT}/../lib/pkgconfig)
     IF(sdl_MINIMUM_VERSION)
       PKG_CHECK_MODULES( sdl sdl>=${sdl_MINIMUM_VERSION})  # will set sdl_FOUND
     ELSE(sdl_MINIMUM_VERSION)
@@ -103,11 +83,11 @@ ENDIF(WIN32)
 
 IF(sdl_FOUND)
   IF(NOT sdl_FIND_QUIETLY)
-    IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-      MESSAGE(STATUS "Found sdl: ${sdl_LDFLAGS}")
-    ELSE(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-      MESSAGE(STATUS "Found sdl: headers at ${sdl_INCLUDE_DIRS}, libraries at ${sdl_LIBRARY_DIRS}")
-    ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+#    IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+#      MESSAGE(STATUS "Found sdl: ${sdl_LDFLAGS}")
+#    ELSE(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    MESSAGE(STATUS "Found sdl: headers at ${sdl_INCLUDE_DIRS}, libraries at ${sdl_LIBRARY_DIRS}")
+#    ENDIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
   ENDIF(NOT sdl_FIND_QUIETLY)
 ELSE(sdl_FOUND)
   IF(sdl_FIND_REQUIRED)

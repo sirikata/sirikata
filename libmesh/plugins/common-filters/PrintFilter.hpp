@@ -43,7 +43,8 @@ public:
     virtual ~PrintFilter() {}
 
     virtual FilterDataPtr apply(FilterDataPtr input);
-
+private:
+    bool mTexturesOnly;
 };
 
 }

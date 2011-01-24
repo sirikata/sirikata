@@ -40,6 +40,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/regex.hpp>
 
 namespace Sirikata
 {
@@ -106,7 +107,7 @@ namespace Sirikata
   {
       //don't do anything in this function any longer
       return;
-      
+
     MultiOutstandingQueries::iterator it;
     Duration dur = Time::local() - Time::epoch();
     uint64 currentTime = dur.toMilliseconds();
@@ -375,7 +376,7 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
   //traceToken->getConnectionNetworkGetBegin = beginningDur.toMicroseconds();
   traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_GET_BEGIN);
 
-  
+
   assert(mReady==PROCESSING);
 
   IndividualQueryData* iqd = new IndividualQueryData;
@@ -386,10 +387,10 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
   strncpy(iqd->currentlySearchingFor,tmpString.c_str(),tmpString.size() + 1);
   iqd->gs = IndividualQueryData::GET;
 
-  
+
   iqd->time_admitted = 0;
-  
-  
+
+
   //need to add the individual query data to allOutstandingQueries.
   allOutstandingQueries.insert(std::pair<std::string, IndividualQueryData*> (tmpString, iqd));
 
@@ -401,7 +402,7 @@ void AsyncConnectionGet::get(const CraqDataKey& dataToGet, OSegLookupTraceToken*
 
   iqd->traceToken = traceToken;
 
-  
+
   getQuery(dataToGet);
 
 
@@ -716,7 +717,7 @@ void AsyncConnectionGet::processValueNotFound(std::string dataKey)
       ++mOSeg->mOSegQueueLen;
       outQueriesIter->second->traceToken->osegQLenPostReturn = mOSeg->mOSegQueueLen;
 
-      
+
       //says that this is a get.
       CraqOperationResult* cor  = new CraqOperationResult (CraqEntry(NullServerID,0),
                                                            outQueriesIter->second->currentlySearchingFor,
@@ -864,7 +865,7 @@ void AsyncConnectionGet::processValueFound(std::string dataKey, const CraqEntry&
         //Duration gotItDur = Time::local() - Time::epoch();
         //outQueriesIter->second->traceToken->getConnectionNetworkReceived = gotItDur.toMicroseconds();
         outQueriesIter->second->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_GET_CONNECTION_NETWORK_RECEIVED);
-        
+
       //ugly: this should not be here.
       ++mOSeg->mOSegQueueLen;
       outQueriesIter->second->traceToken->osegQLenPostReturn = mOSeg->mOSegQueueLen;

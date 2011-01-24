@@ -103,7 +103,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
               << "\n";
     fflush(stdout);
 
-    mContext->mainStrand->post(Duration::seconds(60), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+    mContext->mainStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 }
 
@@ -121,7 +121,7 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     mAggregateObjects[uuid]->generatedLastRound = false;
     mAggregateGenerationStartTime =  Timer::now();
 
-    mContext->mainStrand->post(Duration::seconds(60), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+    mContext->mainStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 }
 
@@ -223,6 +223,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   //Time agg_time_start = Timer::now();
 
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
+  agg_mesh->globalTransform = Matrix4x4f::identity();
   BoundingSphere3f bnds = mLoc->bounds(uuid);
   float32 bndsX = bnds.center().x;
   float32 bndsY = bnds.center().y;
@@ -250,10 +251,9 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     if (!m) {
       //request a download or generation of the mesh
       if (meshName != "") {
-
         boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
         if (mMeshStore.find(meshName) != mMeshStore.end()) {
-          m = mMeshStore[meshName];
+          mAggregateObjects[child_uuid]->mMeshdata = mMeshStore[meshName];
         }
       }
       else {
@@ -276,6 +276,8 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     MeshdataPtr m = mAggregateObjects[child_uuid]->mMeshdata;
     std::string meshName = mLoc->mesh(child_uuid);
     lock.unlock();
+
+    assert(m);
 
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
@@ -372,6 +374,9 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       GeometryInstance geomInstance = m->instances[i];
       Matrix4x4f orig_geo_inst_xform = m->getTransform(geomInstance);
 
+      // Sanity check
+      assert (geomInstance.geometryIndex < m->geometry.size());
+
       // Shift indices for
       //  Materials
       for(GeometryInstance::MaterialBindingMap::iterator mbit = geomInstance.materialBindingMap.begin(); mbit != geomInstance.materialBindingMap.end(); mbit++)
@@ -383,10 +388,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       //  effect. parentNode ends up getting overwritten with a new parent nodes
       //  index that flattens the node hierarchy.
       geomInstance.parentNode += submeshNodeOffset;
-
-      // Sanity check
-      assert (geomInstance.geometryIndex < m->geometry.size());
-
 
       //translation
       Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0,locationX - bndsX),
@@ -416,6 +417,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // since the new node would have to be inserted at the root (and therefore
       // some may end up conflicting). For now, we just flatten these by
       // creating a new root node.
+
       agg_mesh->nodes.push_back( Node(trs * orig_geo_inst_xform) );
       agg_mesh->rootNodes.push_back(geom_node_idx);
       // Overwrite the parent node to make this new one with the correct
@@ -463,8 +465,8 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   fflush(stdout);
 
 
-  Time upload_time_start = Timer::now();
-
+  //Time upload_time_start = Timer::now();
+  
   //... and now create the collada file, upload to the CDN and update LOC.
   const int MESHNAME_LEN = 1024;
   char localMeshName[MESHNAME_LEN];
@@ -475,14 +477,15 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
   system( cmdline.c_str()  );
 
-  std::cout << "Time spent uploading: " << (Timer::now() - upload_time_start) << "\n";
+  //std::cout << "Time spent uploading: " << (Timer::now() - upload_time_start) << "\n";
 
   //Update loc
+
   std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
   mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
 
-  /* // Code to generate scene files for each level of the tree.
-  char scenefilename[MESHNAME_LEN];
+  // Code to generate scene files for each level of the tree.
+  /*char scenefilename[MESHNAME_LEN];
   snprintf(scenefilename, MESHNAME_LEN, "%d_scene.db", aggObject->mTreeLevel);
   std::fstream scenefile(scenefilename, fstream::out | fstream::app);
   char sceneline[MESHNAME_LEN];
@@ -583,7 +586,8 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     if (postTime < mAggregateGenerationStartTime) {
       return;
     }
-
+    
+    Time curTime = Timer::now();
 
     for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
@@ -600,7 +604,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
         if (aggObject->generatedLastRound) continue;
 
-        returner=generateAggregateMeshAsync(aggObject->mUUID, Timer::now(), false);
+        returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);
 
         if (returner) it->second.pop_front();
 
@@ -612,7 +616,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
     if (mObjectsByPriority.size() > 0) {
       Duration dur = (returner) ? Duration::milliseconds(1.0) : Duration::milliseconds(200.0);
-      mContext->mainStrand->post(dur, std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, Timer::now()));
+      mContext->mainStrand->post(dur, std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime));
     }
 }
 

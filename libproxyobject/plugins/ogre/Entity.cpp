@@ -997,7 +997,10 @@ public:
 
             vbuf->unlock();
         }
-        mesh->load();
+        // This doesn't seem to be required in Ogre 1.7, and in fact seems to
+        // trigger a recursive dead-lock. Since I can't find documentation about
+        // this change, I'm leaving this in for the time being.
+        // mesh->load();
     }
 };
 

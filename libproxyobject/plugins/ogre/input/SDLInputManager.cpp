@@ -118,8 +118,8 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
         SILOG(ogre,error,"Couldn't initialize SDL: "<<SDL_GetError());
     }
-#if 1//defined(WIN32)
-//||defined(__APPLE__)
+
+#if 1
     if (currentWindow) {
         mWindowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
         SDL_RaiseWindow(mWindowID);

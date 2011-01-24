@@ -265,8 +265,10 @@ public:
     Chunk ToChunk(const std::string &input) {
         return Chunk(input.begin(),input.end());
     }
+
+    Sirikata::PluginManager plugins;
+
     SstTest():mCount(0),mDisconCount(0),mEndCount(0),ENDSTRING("T end"),mAbortTest(false) {
-        Sirikata::PluginManager plugins;
         plugins.load( "tcpsst" );
 
         uint32 randport = 3000 + (uint32)(Sirikata::Task::LocalTime::now().raw() % 20000);
