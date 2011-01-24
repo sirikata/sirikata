@@ -63,6 +63,7 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
+#include "JSObjectStructs/JSTimerStruct.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"
 
 //#define __EMERSON_COMPILE_ON__
@@ -692,8 +693,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 
 
 
-
-
 /*
   This function grabs the string associated with cb, and recompiles it in the
   context ctx.  It then calls the newly recompiled function from within ctx with
@@ -853,25 +852,55 @@ void JSObjectScript::print(const String& str) {
     (*os) << str;
 }
 
-void JSObjectScript::timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+
+// void JSObjectScript::prev_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, JSContextStruct* jscont)
+// {
+//     // FIXME using the raw pointer isn't safe
+//     FIXME_GET_SPACE_OREF();
+
+//     Network::IOService* ioserve = mParent->getIOService();
+
+//     ioserve->post(
+//         dur,
+//         std::tr1::bind(&JSObjectScript::handleTimeout,
+//             this,
+//             target,
+//             cb
+//         ));
+// }
+
+
+
+v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
 {
-    // FIXME using the raw pointer isn't safe
-    FIXME_GET_SPACE_OREF();
-
+    //create timerstruct
     Network::IOService* ioserve = mParent->getIOService();
+    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,target,cb,jscont,ioserve);
+    
+    
+    v8::HandleScope handle_scope;
 
-    ioserve->post(
-        dur,
-        std::tr1::bind(&JSObjectScript::handleTimeout,
-            this,
-            target,
-            cb
-        ));
+    //create an object
+    v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
+    
+    returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
+
+    return returner;
 }
 
-void JSObjectScript::handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb) {
-    ProtectedJSCallback(mContext, target, cb);
+
+
+
+//third arg may be null to evaluate in global context
+void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
+{
+    if (jscontext == NULL)
+        ProtectedJSCallback(mContext, target, cb);
+    else
+        ProtectedJSCallback(jscontext->mContext, target, cb);
 }
+
+
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     v8::HandleScope handle_scope;

@@ -8,13 +8,15 @@
 #include "../JSSystemNames.hpp"
 #include "../JSObjects/JSFields.hpp"
 
+
+
 namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 class JSPresenceStruct;
-
+class JSTimerStruct;
 
 struct JSContextStruct
 {
@@ -26,6 +28,9 @@ struct JSContextStruct
     v8::Handle<v8::Value> struct_getAssociatedPresPosition();
     v8::Handle<v8::Value> struct_sendHome(String& toSend);
     v8::Handle<v8::Object> struct_getFakeroot();
+
+    void struct_registerTimeout(JSTimerStruct* jsts);
+    void struct_deregisterTimeout(JSTimerStruct* jsts);
     
     void jsscript_print(const String& msg);
     void presenceDied();
@@ -53,7 +58,11 @@ struct JSContextStruct
     JSFakerootStruct* mFakeroot;
 
     //this is the context that any and all objects will be run in.
-    v8::Persistent<v8::Context> mContext; 
+    v8::Persistent<v8::Context> mContext;
+
+    //all
+    typedef std::map<JSTimerStruct*,bool>  TimerMap;
+    TimerMap associatedTimers;
     
 };
 

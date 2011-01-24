@@ -9,6 +9,7 @@
 #include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSContextStruct.hpp"
 #include "JSFields.hpp"
+#include "JSSystem.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
@@ -111,18 +112,27 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 }
 
 
+
+v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
+{
+    //just returns the ScriptTimeout function
+    String errorMessage      =  "Error decoding fakeroot in root_timeout of JSFakeroot.cpp.  ";
+    JSFakerootStruct* jsfake = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+    
+    return JSSystem::ScriptTimeoutContext(args, jsfake->associatedContext);
+}
+
+
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 {
     std::cout<<"\n\nIn JSFakeroot.cpp.  Haven't finished root_registerHandler.\n\n";
     assert(false);
     return v8::Undefined();
 }
-v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
-{
-    std::cout<<"\n\nIn JSFakeroot.cpp.  Haven't finished root_timeout.\n\n";
-    assert(false);
-    return v8::Undefined();
-}
+
 v8::Handle<v8::Value> root_toString(const v8::Arguments& args)
 {
     //note to string probably should not serialize fakeroot object, but instead

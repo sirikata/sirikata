@@ -20,12 +20,12 @@ namespace JSContext{
 v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 {
     if (args.Length() == 0)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("\nInvalid arguments to ScriptExecute through context.  Require first argument to be a function.  Later arguments should be arguments for that function.\n")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptExecute through context.  Require first argument to be a function.  Later arguments should be arguments for that function.")));
 
     //ensure first argument is function.
     v8::Handle<v8::Value> func_args = args[0];
     if (! func_args->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("\nInvalid arguments to ScriptExecute through context.  Require first argument to be a function\n")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptExecute through context.  Require first argument to be a function")));
 
     //FIXME: need to check if the arguments passed on the scriptexecute call match the arguments required by the function;
 

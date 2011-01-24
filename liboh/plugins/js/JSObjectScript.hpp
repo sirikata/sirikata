@@ -53,6 +53,7 @@
 #include "JSObjects/JSInvokableObject.hpp"
 
 
+
 namespace Sirikata {
 namespace JS {
 
@@ -90,6 +91,7 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
+    void handleTimeoutContext(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
 
 
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
@@ -114,8 +116,8 @@ public:
     v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
 
     /** Set a timeout with a callback. */
-    void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
-
+    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
+    
 
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
@@ -220,7 +222,7 @@ private:
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
     v8::Persistent<v8::Function> mOnPresenceDisconnectedHandler;
 
-    void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
+
 
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
@@ -228,6 +230,8 @@ private:
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
     void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
 
+
+    
     v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 

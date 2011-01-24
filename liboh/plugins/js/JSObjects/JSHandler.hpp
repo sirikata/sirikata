@@ -22,4 +22,6 @@ v8::Handle<v8::Value> makeEventHandler(JSObjectScript* target_script, JSEventHan
 void setNullHandler(const v8::Arguments& args);
 
 
-}}}//end namespaces
+}  //end jshandler namespace
+}  //end js namespace
+}  //end sirikata namespace

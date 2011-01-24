@@ -193,12 +193,20 @@ v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args)
 
 v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
 {
-    if (args.Length() != 3)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
+    return ScriptTimeoutContext(args,NULL);
+}
 
-    v8::Handle<v8::Value> dur = args[0];
-    v8::Handle<v8::Value> target_val = args[1];
-    v8::Handle<v8::Value> cb_val = args[2];
+
+
+v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextStruct* jscont)
+{
+    
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second is target val, and third argumnet is callback")) );
+
+    v8::Handle<v8::Value> dur         = args[0];
+    v8::Handle<v8::Value> target_val  = args[1];
+    v8::Handle<v8::Value> cb_val      = args[2];
 
     // Duration
     double native_dur = 0;
@@ -207,28 +215,27 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
     else if (dur->IsInt32())
         native_dur = dur->Int32Value();
     else
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Duration cannot be cast to float.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  First argument incorrect: duration cannot be cast to float.")) );
 
     // Target
     if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Second argument incorrect: target isn't null or valid object.")) );
 
     v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
     v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
 
+    
     // Function
     if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to timeout().")) );
-
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Third argument incorrect: callback isn't a function.")) );
+    
     
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     JSObjectScript* target_script = GetTargetJSObjectScript(args);
-    target_script->timeout(Duration::seconds(native_dur), target_persist, cb_persist);
 
-
-    return v8::Undefined();
+    return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);
 }
 
 

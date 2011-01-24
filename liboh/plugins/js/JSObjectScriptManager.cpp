@@ -42,6 +42,7 @@
 #include "JSObjects/JSSystem.hpp"
 #include "JSObjects/JSMath.hpp"
 #include "JSObjects/JSHandler.hpp"
+#include "JSObjects/JSTimer.hpp"
 
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
@@ -120,6 +121,7 @@ void JSObjectScriptManager::createTemplates()
     createHandlerTemplate();
     createVisibleTemplate();    
 
+    createTimerTemplate();
     
     createJSInvokableObjectTemplate();
     createPresenceTemplate();    
@@ -128,6 +130,17 @@ void JSObjectScriptManager::createTemplates()
     //createTriggerableTemplate();
 }
 
+
+void JSObjectScriptManager::createTimerTemplate()
+{
+    v8::HandleScope handle_scope;
+
+    mTimerTemplate->SetInternalFieldCount(TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
+    
+    mTimerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mTimerTemplate->Set(v8::String::New("resetTimer"),v8::FunctionTemplate::New(JSTimer::resetTimer));
+    mTimerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSTimer::clear));
+}
 
 
 void JSObjectScriptManager::createFakerootTemplate()

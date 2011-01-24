@@ -4,7 +4,7 @@
 #include <v8.h>
 #include "JSPresenceStruct.hpp"
 #include "../JSSystemNames.hpp"
-
+#include "JSTimerStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -20,6 +20,7 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    mContext(v8::Context::New())
 {
     v8::HandleScope handle_scope;
+
     
     v8::Local<v8::Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
@@ -30,10 +31,6 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
-    v8::Local<v8::Object> system_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
-    //system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
-    
-        
     v8::Local<v8::Object> fakeroot_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
     fakeroot_obj->SetInternalField(FAKEROOT_TEMAPLATE_FIELD, v8::External::New(mFakeroot));
 }
@@ -107,6 +104,21 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
     delete argv; //free additional memory.
     return returner;
+}
+
+
+void JSContextStruct::struct_deregisterTimeout(JSTimerStruct* jsts)
+{
+    TimerMap::iterator iter = associatedTimers.find(jsts);
+
+    if (iter != associatedTimers.end())
+        associatedTimers.erase(iter);
+}
+
+
+void JSContextStruct::struct_registerTimeout(JSTimerStruct* jsts)
+{
+    associatedTimers[jsts] = true;
 }
 
 
