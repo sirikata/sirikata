@@ -65,7 +65,7 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     
     //getting who can sendTo
     SpaceObjectReference* canSendTo = NULL;
-    if (args[2]->IsNull())
+    if (args[1]->IsNull())
         canSendTo = jsPresStruct->sporef;
     else
     {

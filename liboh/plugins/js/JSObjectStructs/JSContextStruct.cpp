@@ -130,6 +130,7 @@ v8::Handle<v8::Object> JSContextStruct::struct_getFakeroot()
     if (! globObject->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
     {
         SILOG(js,error,"[JS] error.  can't find fakeroot in new context.  error.  error.  returning global object instead.");
+        assert(false);
         return globObject;
     }
 

@@ -66,7 +66,6 @@
 #include "JSObjectStructs/JSTimerStruct.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"
 
-//#define __EMERSON_COMPILE_ON__
 
 
 #define FIXME_GET_SPACE_OREF() \
@@ -244,7 +243,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // If we have a script to load, load it.
     //Always import the library
 
-    import("std/library.em");
+
 
     String script_name = init_script->as<String>();
     if (!script_name.empty())
@@ -479,17 +478,18 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
+
     
-    Local<Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
+    v8::Local<v8::Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
 
     JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()));
-    selfVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(mySelf));
+
+    
+    selfVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(mySelf));
     
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
 }
-
-
 
 
 
@@ -629,33 +629,36 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     TryCatch try_catch;
 
     // Special casing emerson compilation
-    #ifdef EMERSON_COMPILE
+    //lkjs;
+    // #ifdef EMERSON_COMPILE
 
-    String em_script_str_new = em_script_str;
+    // String em_script_str_new = em_script_str;
 
-    if(em_script_str.empty())
-        return v8::Undefined();
+    // if(em_script_str.empty())
+    //     return v8::Undefined();
 
-    if(em_script_str.at(em_script_str.size() -1) != '\n')
-    {
-        em_script_str_new.push_back('\n');
-    }
+    // if(em_script_str.at(em_script_str.size() -1) != '\n')
+    // {
+    //     em_script_str_new.push_back('\n');
+    // }
 
-    emerson_init();
-    String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-    JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
-    std::cout<<"\n\n Compiled JS script = \n" <<js_script_str<<"\n";
-    std::cout.flush();
+    // emerson_init();
+    // String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+    // JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+    // std::cout<<"\n\n Compiled JS script = \n" <<js_script_str<<"\n";
+    // std::cout.flush();
 
-    v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
-    #else
+    // v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+    // #else
 
-    // assume the input string to be a valid js rather than emerson
+    // // assume the input string to be a valid js rather than emerson
+    // v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
+    // #endif
+
+
+    
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
-    #endif
-
-    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
     
 
     // Compile

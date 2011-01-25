@@ -134,7 +134,7 @@ void JSObjectScriptManager::createTemplates()
 void JSObjectScriptManager::createTimerTemplate()
 {
     v8::HandleScope handle_scope;
-
+    mTimerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     mTimerTemplate->SetInternalFieldCount(TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
     
     mTimerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
