@@ -523,16 +523,19 @@ public:
       std::map<int,bool>& addedLightsList
   )
   {
-      // Generate a reverse index for instance lights and geometries so we can
-      // determine which instances need to be inserted for each node.
+      // Generate a reverse index for instance lights, instance geometries and
+      // joints so we can determine which instances need to be inserted for each node.
       typedef std::multimap<NodeIndex, uint32> InstanceNodeIndex;
       InstanceNodeIndex nodeGeoInstances;
       InstanceNodeIndex nodeLightInstances;
+      InstanceNodeIndex nodeJoints;
 
       for(uint32 geo_it = 0; geo_it < meshdata.instances.size(); geo_it++)
           nodeGeoInstances.insert( std::make_pair(meshdata.instances[geo_it].parentNode, geo_it) );
       for(uint32 light_it = 0; light_it < meshdata.lightInstances.size(); light_it++)
           nodeLightInstances.insert( std::make_pair(meshdata.lightInstances[light_it].parentNode, light_it) );
+      for(uint32 joint_it = 0; joint_it < meshdata.joints.size(); joint_it++)
+          nodeJoints.insert( std::make_pair(meshdata.joints[joint_it], joint_it) );
 
       openLibrary();
       openVisualScene( "Space_Aggregated_Scene" );
@@ -575,7 +578,8 @@ public:
                   String node_name = "node-" + boost::lexical_cast<String>(current.node);
                   current.colladaNode->setNodeId(node_name);
                   current.colladaNode->setNodeName( COLLADASW::Utils::checkNCName( COLLADABU::NativeString(node_name) ) );
-                  current.colladaNode->setType(COLLADASW::Node::NODE);
+                  bool is_joint = (nodeJoints.find(current.node) != nodeJoints.end());
+                  current.colladaNode->setType(is_joint ? COLLADASW::Node::JOINT : COLLADASW::Node::NODE);
 
                   current.colladaNode->start();
                   double mat[4][4];

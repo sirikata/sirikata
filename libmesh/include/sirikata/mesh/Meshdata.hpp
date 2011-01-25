@@ -261,6 +261,9 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     Matrix4x4f getTransform(NodeIndex index) const;
     Matrix4x4f getTransform(const GeometryInstance& geo) const;
     Matrix4x4f getTransform(const LightInstance& light) const;
+
+    // Joints are tracked as indices of the nodes they are associated with.
+    NodeIndexList joints;
 };
 
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;

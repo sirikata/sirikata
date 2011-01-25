@@ -186,6 +186,11 @@ void ColladaDocumentImporter::translateNodes() {
                 if (curnode.parent == NULL)
                     mMesh->rootNodes.push_back(nindex);
 
+                // If the node is a joint, add a corresponding joint
+                if (curnode.node->getType() == COLLADAFW::Node::JOINT) {
+                    mMesh->joints.push_back(nindex);
+                }
+
                 curnode.mode = NodeState::Geo;
             }
 
