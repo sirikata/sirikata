@@ -69,13 +69,12 @@ struct NodeState {
         Nodes = 4 // Normal child nodes
     };
 
-    NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, COLLADABU::Math::Matrix4 _matrix, int _child = -1, Modes _mode = Fresh)
-     : node(_node), parent(_parent), matrix(_matrix), child(_child), mode(_mode)
+    NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, int _child = -1, Modes _mode = Fresh)
+     : node(_node), parent(_parent), child(_child), mode(_mode)
     {}
 
     const COLLADAFW::Node* node;
     const COLLADAFW::Node* parent;
-    COLLADABU::Math::Matrix4 matrix;
     unsigned int child;
     Modes mode;
 };
@@ -161,7 +160,7 @@ void ColladaDocumentImporter::translateNodes() {
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
         std::stack<NodeState> node_stack;
-        node_stack.push( NodeState(rn, NULL, COLLADABU::Math::Matrix4::IDENTITY) );
+        node_stack.push( NodeState(rn, NULL) );
 
         while(!node_stack.empty()) {
             NodeState curnode = node_stack.top();
@@ -194,10 +193,6 @@ void ColladaDocumentImporter::translateNodes() {
                 // This path doesn't deal with geometry, just nodes. Do minimal
                 // processing and continue.
 
-                // Transformation
-                COLLADABU::Math::Matrix4 additional_xform = curnode.node->getTransformationMatrix();
-                curnode.matrix = curnode.matrix * additional_xform;
-
                 // Tell the remaining code to start processing children nodes
                 curnode.child = 0;
                 curnode.mode = NodeState::InstNodes;
@@ -223,9 +218,9 @@ void ColladaDocumentImporter::translateNodes() {
                 // Process the next child if there are more
                 if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.matrix) );
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node) );
                 }
             }
         }
@@ -356,7 +351,7 @@ void ColladaDocumentImporter::finish ()
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
         std::stack<NodeState> node_stack;
-        node_stack.push( NodeState(rn, NULL, COLLADABU::Math::Matrix4::IDENTITY) );
+        node_stack.push( NodeState(rn, NULL) );
 
         while(!node_stack.empty()) {
             NodeState curnode = node_stack.top();
@@ -369,11 +364,6 @@ void ColladaDocumentImporter::finish ()
             }
 
             if (curnode.mode == NodeState::Geo) {
-
-                // Transformation
-                COLLADABU::Math::Matrix4 additional_xform = curnode.node->getTransformationMatrix();
-                curnode.matrix = curnode.matrix * additional_xform;
-
                 // Instance Geometries
                 for(size_t geo_idx = 0; geo_idx < curnode.node->getInstanceGeometries().getCount(); geo_idx++) {
                     const COLLADAFW::InstanceGeometry* geo_inst = curnode.node->getInstanceGeometries()[geo_idx];
@@ -475,18 +465,18 @@ void ColladaDocumentImporter::finish ()
                     assert(node_it != mLibraryNodes.end());
                     const COLLADAFW::Node* instanced_node = node_it->second;
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(instanced_node, curnode.node, curnode.matrix) );
+                    node_stack.push( NodeState(instanced_node, curnode.node) );
                 }
             }
             if (curnode.mode == NodeState::Nodes) {
                 // Process the next child if there are more
                 if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.matrix) );
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node) );
                 }
             }
         }
