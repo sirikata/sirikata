@@ -150,7 +150,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
   //std::cout << "Starting simplification\n";
   int totalVertices = 0;
 
-  std:tr1::unordered_map<uint32, uint32> numVerticesMap;
+  std::tr1::unordered_map<uint32, uint32> numVerticesMap;
 
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
@@ -380,7 +380,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
       std::map<unsigned short, int> posIndexes;
       int numVerticesRemoved = 0;
       for (int primIdx = top.mPrimitiveIndicesIdx; primIdx < top.mPrimitiveIndicesIdx + 3; primIdx++) {
-        
+
 
         unsigned short posIdx = curGeometry.primitives[j].indices[primIdx];
         while (vertexMapping.find(posIdx) != vertexMapping.end() ) {
@@ -389,7 +389,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         }
 
         posIndexes[posIdx] = 1;
-        int numNeighbors = curGeometry.neighborPrimitives[posIdx].size();    
+        int numNeighbors = curGeometry.neighborPrimitives[posIdx].size();
 
         if (numNeighbors >= 1)
           curGeometry.neighborPrimitives[posIdx].erase(curGeometry.neighborPrimitives[posIdx].begin());
@@ -409,14 +409,14 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
       vertexMapping[idx2] = idx;
     }
-    
+
     uint32 numDiffVertices = numVerticesMap[top.mGeomIdx] -
                              (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
 
-    
+
     numVerticesMap[top.mGeomIdx] = (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
 
-    totalVertices -= numDiffVertices;    
+    totalVertices -= numDiffVertices;
 
     if (totalVertices <= numVerticesLeft)
       remainingVertices = numVerticesLeft;
