@@ -55,9 +55,9 @@ typedef std::vector<std::string> TextureList;
  *  with a SubMeshGeometry.
  */
 struct SkinController {
-    // FIXME Joints point to nodes in the scene, which aren't currently
-    // represented properly. This vector will not currently be filled in.
-    std::vector<uint32> jointNodes;
+    // Joints for this controls Indexes into the Meshdata.joints array
+    // (which indexes into Meshdata.nodes).
+    std::vector<uint32> joints;
 
     Matrix4x4f bindShapeMatrix;
     ///n+1 elements where n is the number of vertices, so that we can do simple subtraction to find out how many joints influence each vertex

@@ -188,7 +188,9 @@ void ColladaDocumentImporter::translateNodes() {
 
                 // If the node is a joint, add a corresponding joint
                 if (curnode.node->getType() == COLLADAFW::Node::JOINT) {
+                    uint32 joint_idx = mMesh->joints.size();
                     mMesh->joints.push_back(nindex);
+                    mJointIndices[curnode.node->getUniqueId()] = joint_idx;
                 }
 
                 curnode.mode = NodeState::Geo;
@@ -264,9 +266,9 @@ void ColladaDocumentImporter::translateSkinControllers() {
         mesh.skinControllers.push_back(SkinController());
         SkinController& mesh_skin = mesh.skinControllers.back();
         for(std::vector<COLLADAFW::UniqueId>::iterator jointid_it = skin.joints.begin(); jointid_it != skin.joints.end(); jointid_it++) {
-            // FIXME joints reference nodes in the collada hierarchy and these
-            //aren't currently represented, so we can't fill them in.
-            //scene_graph.find(*jointid_it);
+            IndexMap::iterator jidx_it = mJointIndices.find(*jointid_it);
+            assert(jidx_it != mJointIndices.end());
+            mesh_skin.joints.push_back(jidx_it->second);
         }
         mesh_skin.bindShapeMatrix = skindata.bindShapeMatrix;
         mesh_skin.weightStartIndices = skindata.weightStartIndices;

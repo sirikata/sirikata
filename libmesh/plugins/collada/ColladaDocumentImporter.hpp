@@ -232,6 +232,12 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         // the first pass has translated all nodes into the Meshdata data structure.
         IndexMap mNodeIndices;
 
+        // Indices for joints by UniqueID. Used to find right joints
+        // for node controllers. Note that these are *joint* indices,
+        // not *node* indices, i.e. if we store the value x, then the
+        // associate node is mesh.nodes[mesh.joints[x]].
+        IndexMap mJointIndices;
+
         Mesh::MeshdataPtr mMesh;
 };
 
