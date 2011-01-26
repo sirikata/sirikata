@@ -117,7 +117,7 @@ void JSObjectScriptManager::createTemplates()
     createMathTemplate();
     createFakerootTemplate();
     createContextTemplate();
-    
+    createContextGlobalTemplate();
     createHandlerTemplate();
     createVisibleTemplate();    
 
@@ -190,7 +190,18 @@ void JSObjectScriptManager::createContextTemplate()
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
 
+ 
 }
+
+void JSObjectScriptManager::createContextGlobalTemplate()
+{
+    v8::HandleScope handle_scope;
+    // And we expose some functionality directly
+    mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME),mFakerootTemplate);
+}
+
+
 
 //takes in a template (likely either the context template or the system template)
 void JSObjectScriptManager::addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo)

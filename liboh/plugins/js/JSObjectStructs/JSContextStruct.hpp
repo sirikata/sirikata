@@ -20,7 +20,7 @@ class JSTimerStruct;
 
 struct JSContextStruct
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl);
     ~JSContextStruct();
 
     

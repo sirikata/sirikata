@@ -5,6 +5,7 @@
 #include "JSPresenceStruct.hpp"
 #include "../JSSystemNames.hpp"
 #include "JSTimerStruct.hpp"
+#include "../JSObjects/JSObjectsUtils.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -12,12 +13,12 @@ namespace JS {
 
 
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl)
  : jsObjScript(parent),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
    mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries)),
-   mContext(v8::Context::New())
+   mContext(v8::Context::New(NULL, contGlobTempl))
 {
     v8::HandleScope handle_scope;
 
@@ -33,7 +34,15 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     // don't use the prototype -- non-global objects work as we would expect.
     v8::Local<v8::Object> fakeroot_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
     fakeroot_obj->SetInternalField(FAKEROOT_TEMAPLATE_FIELD, v8::External::New(mFakeroot));
+
+    if (global_obj->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+        std::cout<<"\n\ndebug!  global object has a fakeroot object\n\n";
+    else
+        std::cout<<"\n\nBig error.  do not have a global fakeroot object in context\n\n";
+    
 }
+
+
 
 JSContextStruct::~JSContextStruct()
 {

@@ -84,46 +84,6 @@ namespace JS {
 namespace {
 
 
-//This function just prints out all properties associated with context ctx has
-//additional parameter additionalMessage which prints out at the top of this
-//function's debugging message.  additionalMessage arose as a nice way to print
-//the context multiple times and still be able to keep straight which printout
-//was associated with which call to debug_checkCurrentContextX by specifying
-//unique additionalMessages each time the function was called.
-void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additionalMessage)
-{
-    v8::HandleScope handle_scope;
-
-    v8::Local<v8::Array> allProps = ctx->Global()->GetPropertyNames();
-
-    std::cout<<"\n\n\nDoing checkCurrentContext with value passed in of: "<<additionalMessage<<"\n\n";
-    std::vector<v8::Local<v8::Object> > propertyNames;
-    for (int s=0; s < (int)allProps->Length(); ++s)
-    {
-        v8::Local<v8::Object>toPrint= v8::Local<v8::Object>::Cast(allProps->Get(s));
-        String errorMessage = "Error: error decoding first string in debug_checkCurrentContextX.  ";
-        String strVal, strVal2;
-        bool stringDecoded = decodeString(toPrint, errorMessage, strVal);
-        if (!stringDecoded)
-        {
-            JSLOG(error,errorMessage);
-            return;
-        }
-        
-        v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal.c_str(), strVal.length()));
-        errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
-        stringDecoded =  decodeString(valueToPrint, errorMessage, strVal2);
-        if (!stringDecoded)
-        {
-            JSLOG(error,errorMessage);
-            return;
-        }
-
-        std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
-    }
-
-    std::cout<<"\n\n";
-}
 
 void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
@@ -1372,7 +1332,9 @@ v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries)));
+    returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, mManager->mContextTemplate
+
+            )));
 
     return returner;
 }
