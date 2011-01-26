@@ -21,7 +21,6 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    mContext(v8::Context::New(NULL, contGlobTempl))
 {
     v8::HandleScope handle_scope;
-
     
     v8::Local<v8::Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
@@ -35,10 +34,16 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     v8::Local<v8::Object> fakeroot_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
     fakeroot_obj->SetInternalField(FAKEROOT_TEMAPLATE_FIELD, v8::External::New(mFakeroot));
 
-    if (global_obj->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
-        std::cout<<"\n\ndebug!  global object has a fakeroot object\n\n";
-    else
-        std::cout<<"\n\nBig error.  do not have a global fakeroot object in context\n\n";
+    
+    // if (global_obj->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+    //     std::cout<<"\n\ndebug!  global object has a fakeroot object\n\n";
+    // else
+    // {
+    //     debug_checkCurrentContextX(mContext,"this is debugging from current context");
+    //     std::cout<<"\n\nBig error.  do not have a global fakeroot object in context\n\n";
+    // }
+
+    // std::cout.flush();
     
 }
 
@@ -104,13 +109,18 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
     Handle<Value>* argv = new Handle<Value>[argc];
 
 
+//    assert(false);
+    
     //putting fakeroot in argv0
     argv[0] = struct_getFakeroot();
     for (int s=1; s < args.Length(); ++s)
         argv[s-1] = args[s];
+
+//    assert(false);
     
     v8::Handle<v8::Value> returner =  jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
-
+    //assert(false);
+    
     delete argv; //free additional memory.
     return returner;
 }
@@ -131,8 +141,65 @@ void JSContextStruct::struct_registerTimeout(JSTimerStruct* jsts)
 }
 
 
-//returns the fakeroot object that is associated with the global context.
-v8::Handle<v8::Object> JSContextStruct::struct_getFakeroot()
+v8::Handle<Object> JSContextStruct::struct_getFakeroot()
+{
+  HandleScope handle_scope;
+  Local<Object> global_obj = mContext->Global();
+  // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+  // The template actually generates the root objects prototype, not the root
+  // itself.
+  Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+  // And we add an internal field to the system object as well to make it
+  // easier to find the pointer in different calls. Note that in this case we
+  // don't use the prototype -- non-global objects work as we would expect.
+  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
+
+  Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
+  return ret_obj;
+}
+
+
+
+// //returns the fakeroot object that is associated with the global context.
+// v8::Handle<v8::Object> JSContextStruct::struct_getFakeroot()
+// {
+//     v8::Handle<v8::Object> global_obj = mContext->Global();
+//     v8::Handle<v8::Object> global_proto = v8::Handle<v8::Object>::Cast(global_obj->GetPrototype());
+    
+//     // And we add an internal field to the system object as well to make it
+//     // easier to find the pointer in different calls. Note that in this case we
+//     // don't use the prototype -- non-global objects work as we would expect.
+
+//     if (!global_proto->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+//     {
+//         SILOG(js,error,"[JS] error.  can't find fakeroot in new context.  error.  error.  returning global object instead.");
+//         assert(false);
+//         return global_obj;
+//     }
+    
+//     //v8::Handle<v8::Object> fakeroot_obj = v8::Handle<v8::Object>::Cast(global_proto->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+    
+//     v8::Handle<v8::Object> fakeroot_obj = v8::Handle<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
+    
+//     return fakeroot_obj;
+
+//     // if (! globObject->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+//     // {
+//     //     SILOG(js,error,"[JS] error.  can't find fakeroot in new context.  error.  error.  returning global object instead.");
+//     //     assert(false);
+//     //     return globObject;
+//     // }
+
+//     // v8::Handle<v8::Value> returner = globObject->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
+
+//     // if (! returner->IsObject())
+//     //     return globObject;
+    
+//     // return returner->ToObject();
+// }
+
+//incorrect version.
+v8::Handle<v8::Object> JSContextStruct::struct_getFakeroot_old()
 {
     v8::Handle<v8::Object> globObject = mContext->Global();
 
@@ -150,6 +217,8 @@ v8::Handle<v8::Object> JSContextStruct::struct_getFakeroot()
     
     return returner->ToObject();
 }
+
+
 
 
 v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
