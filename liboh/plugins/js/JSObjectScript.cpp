@@ -739,14 +739,14 @@ v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Contex
         v8::Context::GetCurrent()->Exit();
     }
 
+    
     //assert(false);
     
     //entering new context associated with
     JSLOG(insane, "entering new context associated with JSContextStruct.");
     contExecIn->Enter();
 
-    assert(false);
-    
+    //assert(false);
     JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");
     ProtectedJSFunctionInContext(contExecIn, v8::Handle<v8::Object>::Cast(v8::Undefined()),funcToCall, argc, argv);
 
@@ -853,7 +853,7 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 
     //create an object
     v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
-    
+
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
 
     return returner;
@@ -1340,7 +1340,7 @@ v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, mManager->mContextTemplate);
+    JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, mManager->mContextGlobalTemplate);
     
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     

@@ -108,13 +108,12 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
                               //a 
     Handle<Value>* argv = new Handle<Value>[argc];
 
-
-//    assert(false);
+    std::cout<<"\n\nThis is number of arguments that will be passing\n\n";
     
     //putting fakeroot in argv0
     argv[0] = struct_getFakeroot();
     for (int s=1; s < args.Length(); ++s)
-        argv[s-1] = args[s];
+        argv[s] = args[s];
 
 //    assert(false);
     
@@ -152,9 +151,10 @@ v8::Handle<Object> JSContextStruct::struct_getFakeroot()
   // And we add an internal field to the system object as well to make it
   // easier to find the pointer in different calls. Note that in this case we
   // don't use the prototype -- non-global objects work as we would expect.
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
+  Local<Object> froot_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
 
-  Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
+  Persistent<Object> ret_obj = Persistent<Object>::New(froot_obj);
+  
   return ret_obj;
 }
 

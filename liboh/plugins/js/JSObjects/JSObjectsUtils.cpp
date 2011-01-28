@@ -53,10 +53,45 @@ bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, std::string&
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additionalMessage)
 {
     v8::HandleScope handle_scope;
-
-    v8::Local<v8::Array> allProps = ctx->Global()->GetPropertyNames();
-
     std::cout<<"\n\n\nDoing checkCurrentContext with value passed in of: "<<additionalMessage<<"\n\n";
+    printAllPropertyNames(ctx->Global());
+    
+    // v8::Local<v8::Array> allProps = ctx->Global()->GetPropertyNames();
+
+    // std::cout<<"\n\n\nDoing checkCurrentContext with value passed in of: "<<additionalMessage<<"\n\n";
+    // std::vector<v8::Local<v8::Object> > propertyNames;
+    // for (int s=0; s < (int)allProps->Length(); ++s)
+    // {
+    //     v8::Local<v8::Object>toPrint= v8::Local<v8::Object>::Cast(allProps->Get(s));
+    //     String errorMessage = "Error: error decoding first string in debug_checkCurrentContextX.  ";
+    //     String strVal, strVal2;
+    //     bool stringDecoded = decodeString(toPrint, errorMessage, strVal);
+    //     if (!stringDecoded)
+    //     {
+    //         SILOG(js,error,errorMessage);
+    //         return;
+    //     }
+        
+    //     v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal.c_str(), strVal.length()));
+    //     errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
+    //     stringDecoded =  decodeString(valueToPrint, errorMessage, strVal2);
+    //     if (!stringDecoded)
+    //     {
+    //         SILOG(js,error,errorMessage);
+    //         return;
+    //     }
+
+    //     std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
+    // }
+
+    std::cout<<"\n\n";
+}
+
+
+void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
+{
+   v8::Local<v8::Array> allProps = objToPrint->GetPropertyNames();
+
     std::vector<v8::Local<v8::Object> > propertyNames;
     for (int s=0; s < (int)allProps->Length(); ++s)
     {
@@ -70,7 +105,7 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additio
             return;
         }
         
-        v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal.c_str(), strVal.length()));
+        v8::Local<v8::Value> valueToPrint = objToPrint->Get(v8::String::New(strVal.c_str(), strVal.length()));
         errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
         stringDecoded =  decodeString(valueToPrint, errorMessage, strVal2);
         if (!stringDecoded)
@@ -82,9 +117,9 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additio
         std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
     }
 
-    std::cout<<"\n\n";
+ 
+    
 }
-
 
 
 
