@@ -180,6 +180,7 @@ public:
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
+    v8::Handle<v8::Value> getContextPosition(v8::Handle<v8::Context> cont,const SpaceObjectReference* sporef);
     void setPosition(SpaceID&, v8::Local<v8::Value>& newval);
 
     v8::Handle<v8::Value> getVelocity(SpaceID&);

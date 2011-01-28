@@ -1425,8 +1425,13 @@ void JSObjectScript::setPositionFunction(const SpaceObjectReference* sporef, con
 
 v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceObjectReference* sporef)
 {
+    return getContextPosition(mContext,sporef);
+}
+
+v8::Handle<v8::Value> JSObjectScript::getContextPosition(v8::Handle<v8::Context> cont,const SpaceObjectReference* sporef)
+{
     Vector3d vec3 = mParent->requestCurrentPosition(sporef->space(),sporef->object());
-    return CreateJSResult(mContext,vec3);
+    return CreateJSResult(cont,vec3);
 }
 
 

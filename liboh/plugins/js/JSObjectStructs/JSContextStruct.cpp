@@ -148,7 +148,8 @@ v8::Handle<Object> JSContextStruct::struct_getFakeroot()
 
 v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
 {
-    return associatedPresence->struct_getPosition();
+    return jsObjScript->getContextPosition(mContext,associatedPresence->sporef );
+    //return associatedPresence->struct_getPosition();
 }
 
 void JSContextStruct::jsscript_print(const String& msg)
