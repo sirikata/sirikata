@@ -193,7 +193,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
 
     //hangs math, presences, and addressable off of system_obj
-    initializeMath(system_obj);
     initializePresences(system_obj);
     initializeVisible(system_obj);
 
@@ -740,22 +739,18 @@ v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Contex
     }
 
     
-    //assert(false);
-    
     //entering new context associated with
     JSLOG(insane, "entering new context associated with JSContextStruct.");
     contExecIn->Enter();
 
-    //assert(false);
+
     JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");
     ProtectedJSFunctionInContext(contExecIn, v8::Handle<v8::Object>::Cast(v8::Undefined()),funcToCall, argc, argv);
 
-    //assert(false);
     
     JSLOG(insane, "Exiting new context associated with JSContextStruct.");
     contExecIn->Exit();
 
-    //assert(false);
     
     //restore previous contexts
     std::vector<v8::Handle<v8::Context> >::reverse_iterator revIt;
@@ -822,24 +817,6 @@ void JSObjectScript::print(const String& str) {
     assert(os != NULL);
     (*os) << str;
 }
-
-
-// void JSObjectScript::prev_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, JSContextStruct* jscont)
-// {
-//     // FIXME using the raw pointer isn't safe
-//     FIXME_GET_SPACE_OREF();
-
-//     Network::IOService* ioserve = mParent->getIOService();
-
-//     ioserve->post(
-//         dur,
-//         std::tr1::bind(&JSObjectScript::handleTimeout,
-//             this,
-//             target,
-//             cb
-//         ));
-// }
-
 
 
 v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
@@ -1394,17 +1371,6 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
     DEPRECATED(js);
 }
 
-
-void JSObjectScript::initializeMath(Handle<Object>& system_obj)
-{
-    v8::Context::Scope context_scope(mContext);
-
-    Local<Object> mathObject = mManager->mMathTemplate->NewInstance();
-    //no internal field to set for math object
-
-    //attach math object to system object.
-    system_obj->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME),mathObject);
-}
 
 
 void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)

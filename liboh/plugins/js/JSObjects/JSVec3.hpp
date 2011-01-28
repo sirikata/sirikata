@@ -53,7 +53,8 @@ void Vec3Fill(Handle<Object>& dest, const VecType& src) {
 }
 
 template<typename VecType>
-Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src) {
+Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src)
+{
     Handle<Object> result = orig->Clone();
     Vec3Fill(result, src);
     return result;

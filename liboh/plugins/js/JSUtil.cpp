@@ -70,33 +70,47 @@ double NumericExtract(const Handle<Value>& val) {
 //FIXME: may need to add a vec3 versioin of CreateJSResult so that can return
 //positions and velocities
 
-Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src) {
+Handle<Value> CreateJSResult(Handle<Object>& orig, const double& src)
+{
+    HandleScope handle_scope;
     return Number::New(src);
 }
 
-Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const double& src) {
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const double& src)
+{
+    HandleScope handle_scope;
     return Number::New(src);
 }
 
-Handle<Value> CreateJSResult(Handle<Object>& orig, const float& src) {
+Handle<Value> CreateJSResult(Handle<Object>& orig, const float& src)
+{
+    HandleScope handle_scope;
     return Number::New(src);
 }
 
-Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const float& src) {
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const float& src)
+{
+    HandleScope handle_scope;
     return Number::New(src);
 }
 
-v8::Handle<v8::Object> ObjectCast(const v8::Handle<v8::Value>& v) {
+v8::Handle<v8::Object> ObjectCast(const v8::Handle<v8::Value>& v)
+{
+    HandleScope handle_scope;
     return v8::Handle<v8::Object>::Cast(v);
 }
 
-v8::Handle<v8::Function> FunctionCast(const v8::Handle<v8::Value>& v) {
+v8::Handle<v8::Function> FunctionCast(const v8::Handle<v8::Value>& v)
+{
+    HandleScope handle_scope;
     return v8::Handle<v8::Function>::Cast(v);
 }
 
 
 
-Handle<Value> GetGlobal(v8::Handle<v8::Context>& ctx, const char* obj_name) {
+Handle<Value> GetGlobal(v8::Handle<v8::Context>& ctx, const char* obj_name)
+{
+    HandleScope handle_scope;
     return ctx->Global()->Get(v8::String::New(obj_name));
 }
 

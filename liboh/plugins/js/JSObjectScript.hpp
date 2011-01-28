@@ -255,7 +255,6 @@ private:
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
-    void initializeMath(Handle<Object>& system_obj);
     void initializeVisible(Handle<Object>&system_obj);
 
     void printVisibleArray();

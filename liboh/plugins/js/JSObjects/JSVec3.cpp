@@ -41,15 +41,19 @@ namespace JS {
 
 static Persistent<FunctionTemplate> Vec3ConstructorTemplate;
 
-Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src) {
+Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src)
+//Handle<Value> CreateJSResult_Vec3Impl(JSObjectScriptManager* jsobman, const Vector3d& src)
+{
+    HandleScope handle_scope;
     Handle<Function> vec3_constructor = FunctionCast(
         ObjectCast(GetGlobal(ctx, "system"))->Get(JS_STRING(Vec3))
     );
-
+    
     Handle<Object> result = vec3_constructor->NewInstance();
     Vec3Fill(result, src);
     return result;
 }
+
 
 bool Vec3Validate(Handle<Object>& src) {
     return (

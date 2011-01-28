@@ -28,7 +28,6 @@ struct JSContextStruct
     v8::Handle<v8::Value> struct_getAssociatedPresPosition();
     v8::Handle<v8::Value> struct_sendHome(String& toSend);
     v8::Handle<v8::Object> struct_getFakeroot();
-    v8::Handle<v8::Object> struct_getFakeroot_old();
     
     void struct_registerTimeout(JSTimerStruct* jsts);
     void struct_deregisterTimeout(JSTimerStruct* jsts);

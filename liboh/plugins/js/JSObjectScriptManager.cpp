@@ -208,7 +208,7 @@ void JSObjectScriptManager::addBaseTemplates(v8::Persistent<v8::ObjectTemplate> 
     tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-    tempToAddTo->Set(v8::String::New("Math"),mMathTemplate);
+    tempToAddTo->Set(v8::String::New("math"),mMathTemplate);
 }
 
 //should be the same as the previous function.
@@ -217,7 +217,7 @@ void JSObjectScriptManager::addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tem
     tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-    tempToAddTo->Set(v8::String::New("Math"),mMathTemplate);
+    tempToAddTo->Set(v8::String::New("math"),mMathTemplate);
 }
 
 

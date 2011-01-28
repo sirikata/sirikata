@@ -55,35 +55,6 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additio
     v8::HandleScope handle_scope;
     std::cout<<"\n\n\nDoing checkCurrentContext with value passed in of: "<<additionalMessage<<"\n\n";
     printAllPropertyNames(ctx->Global());
-    
-    // v8::Local<v8::Array> allProps = ctx->Global()->GetPropertyNames();
-
-    // std::cout<<"\n\n\nDoing checkCurrentContext with value passed in of: "<<additionalMessage<<"\n\n";
-    // std::vector<v8::Local<v8::Object> > propertyNames;
-    // for (int s=0; s < (int)allProps->Length(); ++s)
-    // {
-    //     v8::Local<v8::Object>toPrint= v8::Local<v8::Object>::Cast(allProps->Get(s));
-    //     String errorMessage = "Error: error decoding first string in debug_checkCurrentContextX.  ";
-    //     String strVal, strVal2;
-    //     bool stringDecoded = decodeString(toPrint, errorMessage, strVal);
-    //     if (!stringDecoded)
-    //     {
-    //         SILOG(js,error,errorMessage);
-    //         return;
-    //     }
-        
-    //     v8::Local<v8::Value> valueToPrint = ctx->Global()->Get(v8::String::New(strVal.c_str(), strVal.length()));
-    //     errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
-    //     stringDecoded =  decodeString(valueToPrint, errorMessage, strVal2);
-    //     if (!stringDecoded)
-    //     {
-    //         SILOG(js,error,errorMessage);
-    //         return;
-    //     }
-
-    //     std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
-    // }
-
     std::cout<<"\n\n";
 }
 
@@ -116,9 +87,6 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
 
         std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
     }
-
- 
-    
 }
 
 
