@@ -15,7 +15,7 @@ static const char* VISIBLE_ARRAY_NAME           =     "visible";
 static const char* VISIBLE_SELF_NAME            =        "Self";
 static const char* PRESENCES_ARRAY_NAME         =   "presences";
 static const char* PRES_KEYWORD_NAME            =        "pres";
-static const char* MATH_OBJECT_NAME             =        "math";
+static const char* UTIL_OBJECT_NAME             =        "util";
 
 //static const char* VISIBLE_OBJECT_STILL_VISIBLE_FIELD = "stillVisible";
 

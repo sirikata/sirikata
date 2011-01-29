@@ -60,7 +60,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
     v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
-    v8::Persistent<v8::ObjectTemplate> mMathTemplate;
+    v8::Persistent<v8::ObjectTemplate> mUtilTemplate;
     v8::Persistent<v8::ObjectTemplate> mInvokableObjectTemplate;
     v8::Persistent<v8::ObjectTemplate> mFakerootTemplate;
     v8::Persistent<v8::ObjectTemplate> mTimerTemplate;
@@ -74,14 +74,14 @@ private:
     void createHandlerTemplate();
     void createPresenceTemplate();
     void createContextTemplate();
-    void createMathTemplate();
+    void createUtilTemplate();
     void createJSInvokableObjectTemplate();
     void createFakerootTemplate();
     void createTimerTemplate();
     void createContextGlobalTemplate();
+
     
-    void addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo);
-    void addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
+    void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();
 
     

@@ -319,9 +319,9 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     // Changing the sequence of the arguments so as to get the same
     // as is generated in emerson
 
-    v8::Handle<v8::Value> cb_val = args[0];
+    v8::Handle<v8::Value> cb_val     = args[0];
     v8::Handle<v8::Value> target_val = args[1];
-    v8::Handle<v8::Value> pattern = args[2];
+    v8::Handle<v8::Value> pattern    = args[2];
     v8::Handle<v8::Value> sender_val = args[3];
 
 

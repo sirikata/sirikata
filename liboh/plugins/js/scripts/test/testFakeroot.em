@@ -7,25 +7,26 @@ function functionToExecuteInContext(fakeroot)
     //testing print
     fakeroot.print("\n\nExecuting print in context\n\n");
 
-    //testing math
+    //testing util
     var x;
     fakeroot.print("Test power\n");
-    x = math.pow(2,2);
+    x = util.pow(2,2);
     x = x.toString();
     fakeroot.print("Should be 4: " + x + "\n");
-    x = math.pow(2,5);
+    x = util.pow(2,5);
     x = x.toString();
     fakeroot.print("Should be 32: " + x + "\n");
-    x = math.pow(3,.5);
+    x = util.pow(3,.5);
     x = x.toString();
     fakeroot.print("Should be 1.732...: " + x + "\n");
-    x = math.pow(5.5,5.5);
+    x = util.pow(5.5,5.5);
     x = x.toString();
     fakeroot.print("Should be 11803.06...: " + x + "\n");
 
     //testing getposition
     x = fakeroot.getPosition();
     fakeroot.print("\nThis is getposition: " + x + "\n\n");
+
     
 }
 

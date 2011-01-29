@@ -47,6 +47,7 @@ namespace JS {
 Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handle<v8::Value> _proto)
  :mName(_name), mValue(v8::Persistent<v8::Value>::New(_value)), mPrototype(v8::Persistent<v8::Value>::New(_proto))
 {
+    lksj;
 }
 
 
@@ -162,9 +163,10 @@ Handle<Value> PatternConstructor(const Arguments& args) {
     if (args.Length() == 0)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern requires at least a name argument.")) );
 
+    
     StringCheckAndExtract(name, args[0]);
 
-    Handle<Value> val = (args.Length() > 1) ? args[1] : Handle<Value>();
+    Handle<Value> val = (args.Length() > 1)   ? args[1] : Handle<Value>();
     Handle<Value> proto = (args.Length() > 2) ? args[2] : Handle<Value>();
     PatternFill(self, Pattern(name, val, proto));
 

@@ -87,35 +87,36 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
 
 
-void JSObjectScriptManager::createMathTemplate()
+void JSObjectScriptManager::createUtilTemplate()
 {
     v8::HandleScope handle_scope;
-    mMathTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mUtilTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     // An internal field holds the JSObjectScript*
-    mMathTemplate->SetInternalFieldCount(MATH_TEMPLATE_FIELD_COUNT);
+    mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
-    mMathTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSMath::ScriptSqrtFunction));
-    mMathTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSMath::ScriptAcosFunction));
-    mMathTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSMath::ScriptAsinFunction));
-    mMathTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSMath::ScriptCosFunction));
-    mMathTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
-    mMathTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
-    mMathTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
-    mMathTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
+    mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSMath::ScriptSqrtFunction));
+    mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSMath::ScriptAcosFunction));
+    mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSMath::ScriptAsinFunction));
+    mUtilTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSMath::ScriptCosFunction));
+    mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
+    mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
+    mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
+    mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
 
-    addBaseTemplates(mMathTemplate);
+
+    addTypeTemplates(mUtilTemplate);
 }
 
 //these templates involve vec, quat, pattern, etc.
 void JSObjectScriptManager::createTemplates()
 {
     v8::HandleScope handle_scope;
-    mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
-    mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
-    mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
+    mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
+    mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
+    mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
-    createMathTemplate();
+    createUtilTemplate();
     
     createFakerootTemplate();
     createContextTemplate();
@@ -199,26 +200,19 @@ void JSObjectScriptManager::createContextGlobalTemplate()
     // And we expose some functionality directly
     mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME),mFakerootTemplate);
-    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME), mMathTemplate);
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
 }
 
 
 
 //takes in a template (likely either the context template or the system template)
-void JSObjectScriptManager::addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo)
+void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> tempToAddTo)
 {
     tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
 }
 
-//should be the same as the previous function.
-void JSObjectScriptManager::addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo)
-{
-    tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
-    tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
-    tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-}
 
 
 //it looks like I can't figure out how to inherit system template functionality
@@ -255,7 +249,7 @@ void JSObjectScriptManager::createSystemTemplate()
     //math, vec, quaternion, etc.
     //add the system template to the global template
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
-    mGlobalTemplate->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME), mMathTemplate);
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
 }
 
 

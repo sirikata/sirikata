@@ -55,7 +55,7 @@ function distanceFromMeToIt(it)
     var sumOfSquares = diffXSquared + diffYSquared + diffZSquared;
 
     
-    var distance = math.sqrt(sumOfSquares);
+    var distance = util.sqrt(sumOfSquares);
     
     return distance;
 }

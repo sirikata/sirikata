@@ -46,7 +46,7 @@ Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector
 {
     HandleScope handle_scope;
     Handle<Function> vec3_constructor = FunctionCast(
-        ObjectCast(GetGlobal(ctx, JSSystemNames::MATH_OBJECT_NAME))->Get(JS_STRING(Vec3))
+        ObjectCast(GetGlobal(ctx, JSSystemNames::UTIL_OBJECT_NAME))->Get(JS_STRING(Vec3))
     );
 
     Handle<Object> result = vec3_constructor->NewInstance();
