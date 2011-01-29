@@ -10,16 +10,16 @@ function functionToExecuteInContext(fakeroot)
     //testing math
     var x;
     fakeroot.print("Test power\n");
-    x = fakeroot.math.pow(2,2);
+    x = math.pow(2,2);
     x = x.toString();
     fakeroot.print("Should be 4: " + x + "\n");
-    x = fakeroot.math.pow(2,5);
+    x = math.pow(2,5);
     x = x.toString();
     fakeroot.print("Should be 32: " + x + "\n");
-    x = fakeroot.math.pow(3,.5);
+    x = math.pow(3,.5);
     x = x.toString();
     fakeroot.print("Should be 1.732...: " + x + "\n");
-    x = fakeroot.math.pow(5.5,5.5);
+    x = math.pow(5.5,5.5);
     x = x.toString();
     fakeroot.print("Should be 11803.06...: " + x + "\n");
 

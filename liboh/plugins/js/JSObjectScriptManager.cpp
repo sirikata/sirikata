@@ -103,7 +103,8 @@ void JSObjectScriptManager::createMathTemplate()
     mMathTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
     mMathTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
     mMathTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
-    
+
+    addBaseTemplates(mMathTemplate);
 }
 
 //these templates involve vec, quat, pattern, etc.
@@ -115,6 +116,7 @@ void JSObjectScriptManager::createTemplates()
     mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
     createMathTemplate();
+    
     createFakerootTemplate();
     createContextTemplate();
     createContextGlobalTemplate();
@@ -165,7 +167,7 @@ void JSObjectScriptManager::createFakerootTemplate()
     mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
     
     //add basic templates: vec3, quat, math
-    addBaseTemplates(mFakerootTemplate);
+
 }
 
 
@@ -188,7 +190,6 @@ void JSObjectScriptManager::createContextTemplate()
     // Functions / types
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
-
  
 }
 
@@ -198,6 +199,7 @@ void JSObjectScriptManager::createContextGlobalTemplate()
     // And we expose some functionality directly
     mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME),mFakerootTemplate);
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME), mMathTemplate);
 }
 
 
@@ -208,7 +210,6 @@ void JSObjectScriptManager::addBaseTemplates(v8::Persistent<v8::ObjectTemplate> 
     tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-    tempToAddTo->Set(v8::String::New("math"),mMathTemplate);
 }
 
 //should be the same as the previous function.
@@ -217,7 +218,6 @@ void JSObjectScriptManager::addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tem
     tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-    tempToAddTo->Set(v8::String::New("math"),mMathTemplate);
 }
 
 
@@ -253,9 +253,9 @@ void JSObjectScriptManager::createSystemTemplate()
     //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
     
     //math, vec, quaternion, etc.
-    addBaseTemplates(system_templ);
     //add the system template to the global template
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::MATH_OBJECT_NAME), mMathTemplate);
 }
 
 

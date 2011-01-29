@@ -4,6 +4,6 @@ system.print("\n\nThis script prints 10 random numbers from the math object of s
 for (var s=0; s < 10; ++s)
 {
     system.print("\n\n");
-    system.print(system.math.rand());
+    system.print(math.rand());
     system.print("\n\n");
 }

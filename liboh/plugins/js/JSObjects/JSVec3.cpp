@@ -32,6 +32,7 @@
 
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
+#include "../JSSystemNames.hpp"
 
 using namespace v8;
 
@@ -45,11 +46,18 @@ Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector
 {
     HandleScope handle_scope;
     Handle<Function> vec3_constructor = FunctionCast(
-        ObjectCast(GetGlobal(ctx, "system"))->Get(JS_STRING(Vec3))
+        ObjectCast(GetGlobal(ctx, JSSystemNames::MATH_OBJECT_NAME))->Get(JS_STRING(Vec3))
     );
 
-    should also have a fakeroot version;
+    Handle<Object> result = vec3_constructor->NewInstance();
+    Vec3Fill(result, src);
+    return result;
     
+    
+}
+Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Function>& vec3_constructor, const Vector3d& src)
+{
+    HandleScope handle_scope;
     Handle<Object> result = vec3_constructor->NewInstance();
     Vec3Fill(result, src);
     return result;

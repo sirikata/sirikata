@@ -196,7 +196,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     initializePresences(system_obj);
     initializeVisible(system_obj);
 
-
     mHandlingEvent = false;
 
     // If we have a script to load, load it.
