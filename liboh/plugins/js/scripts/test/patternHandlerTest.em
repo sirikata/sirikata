@@ -2,7 +2,7 @@ cb = function(){ system.print("\n\n\nPrint Test\n\n")};
 
 mPat = new system.Pattern("m","o");
 
-handler = system.registerHandler(mPat,null,cb,null);
+handler = system.registerHandler(cb,null,mPat,null);
 
 handler.printContents();
 

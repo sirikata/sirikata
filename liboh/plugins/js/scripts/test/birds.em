@@ -122,7 +122,7 @@ function getLocationCallback(object,sender)
 
 
 var getLocationPattern = new system.Pattern("command","getLocation");
-var getLocationHandler = system.registerHandler(getLocationPattern,null,getLocationCallback,null);
+var getLocationHandler = system.registerHandler(getLocationCallback,null,getLocationPattern,null);
 
 
 
@@ -181,7 +181,7 @@ function copyLocationResponseObject(object)
 
 
 var locationResponsePattern = new system.Pattern("command","locationResponse");
-var locationResponseHandler = system.registerHandler(locationResponsePattern,null,locationResponseCallback,null);
+var locationResponseHandler = system.registerHandler(locationResponseCallback,null,locationResponsePattern,null);
 
 
 // lkjs;
