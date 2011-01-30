@@ -60,7 +60,6 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
             return false;
     }
 
-
     return true;
 }
 

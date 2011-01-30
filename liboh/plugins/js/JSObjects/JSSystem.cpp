@@ -233,9 +233,15 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
 
-    return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);
+    if (jscont == NULL)
+    {
+        JSObjectScript* target_script = GetTargetJSObjectScript(args);
+        return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
+    }
+
+    //means that this is the 
+    jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
 }
 
 

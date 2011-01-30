@@ -28,6 +28,7 @@ function functionToExecuteInContext(fakeroot)
     fakeroot.print("\nThis is getposition: " + x + "\n\n");
 
     
+    
 }
 
 

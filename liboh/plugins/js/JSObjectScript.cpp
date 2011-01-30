@@ -823,8 +823,7 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
     //create timerstruct
     Network::IOService* ioserve = mParent->getIOService();
     JSTimerStruct* jstimer = new JSTimerStruct(this,dur,target,cb,jscont,ioserve);
-    
-    
+
     v8::HandleScope handle_scope;
 
     //create an object

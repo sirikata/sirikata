@@ -12,9 +12,9 @@ function allMessagesCallback(msg,sender)
 }
 
 
-//var allMessagesPattern = new util.Pattern("myPattern");
+
 var allMessagesPattern = new util.Pattern();
-//var allMessagesPattern = new util.Pattern("msg","msg");
+
 
 var allMessagesHandler = system.registerHandler(allMessagesCallback,null,allMessagesPattern,null);
 
