@@ -34,7 +34,7 @@
 #include "JSUtil.hpp"
 #include <iostream>
 #include <iomanip>
-
+#include "JSObjects/JSObjectsUtils.hpp"
 
 using namespace v8;
 
@@ -47,21 +47,22 @@ namespace JS {
 Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handle<v8::Value> _proto)
  :mName(_name), mValue(v8::Persistent<v8::Value>::New(_value)), mPrototype(v8::Persistent<v8::Value>::New(_proto))
 {
-    lksj;
 }
 
 
 bool Pattern::matches(v8::Handle<v8::Object> obj) const
 {
+    if (mName == "")
+        return true;
+    
     if (!obj->Has(v8::String::New(mName.c_str())))
     {
         return false;
     }
-
+    
     if (hasValue())
     {
         Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
-
 
         if (!field->Equals(mValue))
             return false;
@@ -137,9 +138,12 @@ bool PatternValidate(Handle<Value>& src) {
     Handle<Object> src_obj = src->ToObject();
     return PatternValidate(src_obj);
 }
-bool PatternValidate(Handle<Object>& src_obj) {
+
+bool PatternValidate(Handle<Object>& src_obj)
+{
     if (!src_obj->Has(JS_STRING(name)) || !StringValidate(src_obj->Get(JS_STRING(name))))
         return false;
+    
     return true;
 }
 
@@ -148,30 +152,35 @@ Pattern PatternExtract(Handle<Value>& src) {
     return PatternExtract(src_obj);
 }
 Pattern PatternExtract(Handle<Object>& src_obj) {
-    std::string name = StringExtract( src_obj->Get(JS_STRING(name)) );
-    Handle<Value> val = src_obj->Has(JS_STRING(value)) ? src_obj->Get(JS_STRING(value)) : Handle<Value>();
+    std::string   name  = StringExtract( src_obj->Get(JS_STRING(name)) );
+    Handle<Value> val   = src_obj->Has(JS_STRING(value)) ? src_obj->Get(JS_STRING(value)) : Handle<Value>();
     Handle<Value> proto = src_obj->Has(JS_STRING(proto)) ? src_obj->Get(JS_STRING(proto)) : Handle<Value>();
 
     return Pattern(name, val, proto);
 }
 
 // And this is the real implementation
-
 Handle<Value> PatternConstructor(const Arguments& args) {
     Handle<Object> self = args.This();
 
-    if (args.Length() == 0)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern requires at least a name argument.")) );
+    String name = "";
+    if (args.Length() > 0)
+    {
+        //check that the first argument is a string
+        String errorMessage  = "Error decoding first arg string of pattern.  ";
+        bool decodeSuccessful =  decodeString(args[0],name,errorMessage);
+        if (! decodeSuccessful)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+    }
+    
+
+    Handle<Value> val   =  (args.Length() > 1) ? args[1] : Handle<Value>();
+    Handle<Value> proto =  (args.Length() > 2) ? args[2] : Handle<Value>();
 
     
-    StringCheckAndExtract(name, args[0]);
-
-    Handle<Value> val = (args.Length() > 1)   ? args[1] : Handle<Value>();
-    Handle<Value> proto = (args.Length() > 2) ? args[2] : Handle<Value>();
     PatternFill(self, Pattern(name, val, proto));
 
     return v8::Undefined();
-    //return self;
 }
 
 Handle<Value> PatternToString(const Arguments& args) {

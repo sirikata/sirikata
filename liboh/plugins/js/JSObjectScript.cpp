@@ -923,7 +923,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
     JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
-
+    
     if ( mHandlingEvent)
     {
         //means that we're in the process of handling an event, and therefore
