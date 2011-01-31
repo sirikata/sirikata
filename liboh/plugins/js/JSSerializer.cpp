@@ -90,12 +90,14 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
   SpaceObjectReference* sporef;
   SpaceObjectReference* sporefVisTo;
   
+  /*
   if( !JSVisible::decodeVisible(jsVisible, jsObjectScript, sporef, sporefVisTo))
   {
     SILOG(js, error, "\n\nCould not decode Visible\n\n");
     std::cout << "\n\nhereereraew\n\n";
     return ; 
   }
+  */
   
   // we don't want to serialize jsobjectscript for now
 
@@ -190,10 +192,12 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
         const char* cMsgBody1 = ToCString(msgBodyArgs1);
         std::string cStrMsgBody1(cMsgBody1);
         
+        /*
         if(JSVisible::isVisibleObject(value2))
         {
           //Take out the spaceobjectreference
         }
+        */
 
         v8::String::Utf8Value msgBodyArgs2(value2);
         const char* cMsgBody2 = ToCString(msgBodyArgs2);

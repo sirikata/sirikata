@@ -340,11 +340,13 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     SpaceObjectReference* dummy_sporefVisTo = NULL;
     if (! sender_val->IsNull())  //means that it's a valid sender
     {
+        /*
         if (!JSVisible::decodeVisible(sender_val, dummy_jsscript, dummy_sporef, dummy_sporefVisTo)) 
         {
             SILOG(js, warn, "\n\nWarning: did not receive a valid sender: will match any sender\n\n");
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Not a valid sender.")) );
         }
+        */
     }
 
     v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
