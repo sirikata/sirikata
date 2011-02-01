@@ -155,9 +155,20 @@ void ColladaDocumentImporter::translateNodes() {
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
     assert(vis_scene_it != mVisualScenes.end()); // FIXME
     const COLLADAFW::VisualScene* vis_scene = vis_scene_it->second;
+
+    // Create set of nodes. Because of the way Collada works, we need
+    // to deal with a) nodes from the library_nodes tag and b) nodes
+    // from the visual_scene tags. Collect all the nodes into a single
+    // list.
+    std::vector<const COLLADAFW::Node*> root_nodes;
+    for(NodeMap::const_iterator it = mLibraryNodes.begin(); it != mLibraryNodes.end(); it++)
+        root_nodes.push_back(it->second);
+    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++)
+        root_nodes.push_back( vis_scene->getRootNodes()[i] );
+
     // Iterate through nodes.
-    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
-        const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
+    for(size_t i = 0; i < root_nodes.size(); i++) {
+        const COLLADAFW::Node* rn = root_nodes[i];
 
         std::stack<NodeState> node_stack;
         node_stack.push( NodeState(rn, NULL) );
