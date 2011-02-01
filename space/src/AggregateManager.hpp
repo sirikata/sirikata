@@ -130,13 +130,8 @@ public:
 
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
-<<<<<<< HEAD
-  
-  
-=======
 
 
->>>>>>> origin/master
 
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 

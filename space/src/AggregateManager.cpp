@@ -202,19 +202,11 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
                                        &AggregateManager::metadataFinished, this, curTime, uuid, child_uuid, meshName,
                                        std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
-<<<<<<< HEAD
-          mTransferPool->addRequest(req);          
-          
-          allMeshesAvailable = false;
-
-          mMeshStore[meshName] = std::tr1::shared_ptr<Meshdata>();
-=======
           mTransferPool->addRequest(req);
 
           allMeshesAvailable = false;
 
           mMeshStore[meshName] = MeshdataPtr();
->>>>>>> origin/master
 
           break;
         }
@@ -237,22 +229,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   float32 bndsY = bnds.center().y;
   float32 bndsZ = bnds.center().z;
 
-<<<<<<< HEAD
-  
-
-  std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
-  std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
-  uint32   numAddedSubMeshGeometries = 0;
-  for (uint32 i= 0; i < children.size(); i++) {
-    UUID child_uuid = children[i];    
-
-    Vector3f location = mLoc->currentPosition(child_uuid);
-    float32 locationX = location.x;
-    float32 locationY = location.y;
-    float32 locationZ = location.z;
-
-    Quaternion orientation = mLoc->currentOrientation(child_uuid);
-=======
 
 
   std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
@@ -264,7 +240,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   // Make sure we've got all the Meshdatas
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
->>>>>>> origin/master
 
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
     if ( mAggregateObjects.find(child_uuid) == mAggregateObjects.end()) {
@@ -302,24 +277,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     std::string meshName = mLoc->mesh(child_uuid);
     lock.unlock();
 
-<<<<<<< HEAD
-    agg_mesh->lightInstances.insert(agg_mesh->lightInstances.end(),
-                                    m->lightInstances.begin(),
-                                    m->lightInstances.end() );
-    agg_mesh->lights.insert(agg_mesh->lights.end(),
-                            m->lights.begin(),
-                            m->lights.end());    
-
-    for (Meshdata::URIMap::const_iterator tex_it = m->textureMap.begin();
-         tex_it != m->textureMap.end(); tex_it++)
-      {
-        //FIXME: CLient cannot deal with absolute URL paths specified as a texture in a collada file
-        agg_mesh->textureMap[tex_it->first+"-"+child_uuid.toString()] = tex_it->second;
-      }
-
-=======
     assert(m);
->>>>>>> origin/master
 
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
@@ -354,80 +312,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     /** End: find scaling factor **/
 
-<<<<<<< HEAD
-    std::vector<GeometryInstance> instances;
-    uint32 submeshGeomOffset;
-    uint32 submeshMaterialsOffset;
-    bool addingNewSMGs = false;
-    if (  meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
-      meshToStartIdxMapping[ meshName ] = agg_mesh->geometry.size();
-      meshToStartMaterialsIdxMapping[ meshName ] = agg_mesh->materials.size();
-      submeshGeomOffset = agg_mesh->geometry.size();
-      submeshMaterialsOffset = agg_mesh->materials.size();
-      addingNewSMGs = true;
-    }
-    else {
-      submeshGeomOffset = meshToStartIdxMapping[meshName];
-      submeshMaterialsOffset = meshToStartMaterialsIdxMapping[ meshName ];
-    }
-
-    
-    for (uint32 i = 0; i < m->instances.size(); i++) {
-      GeometryInstance geomInstance = m->instances[i];
-
-      assert (geomInstance.geometryIndex < m->geometry.size());
-      
-      geomInstance.geometryIndex = submeshGeomOffset + i;      
-
-      //translation
-      Matrix4x4f trs = Matrix4x4f( Vector4f(1,0,0,locationX - bndsX), 
-                                   Vector4f(0,1,0,locationY - bndsY), 
-                                   Vector4f(0,0,1,locationZ - bndsZ), 
-                                   Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
-
-      //rotate
-      float ox = orientation.normal().x;
-      float oy = orientation.normal().y;
-      float oz = orientation.normal().z;
-      float ow = orientation.normal().w;
-      
-      trs *= Matrix4x4f( Vector4f(1-2*oy*oy - 2*oz*oz , 2*ox*oy - 2*ow*oz, 2*ox*oz + 2*ow*oy, 0),
-                         Vector4f(2*ox*oy + 2*ow*oz, 1-2*ox*ox-2*oz*oz, 2*oy*oz-2*ow*ox, 0),
-                         Vector4f(2*ox*oz-2*ow*oy, 2*oy*oz + 2*ow*ox, 1-2*ox*ox - 2*oy*oy,0),
-                         Vector4f(0,0,0,1),                 Matrix4x4f::ROWS());
-
-      //scaling
-      trs *= Matrix4x4f( Vector4f(scalingfactor,0,0,0), 
-                         Vector4f(0,scalingfactor,0,0), 
-                         Vector4f(0,0,scalingfactor,0), 
-                         Vector4f(0,0,0,1),                Matrix4x4f::ROWS());
-      
-      geomInstance.transform = trs * geomInstance.transform;
- 
-      //Push the instance into the Meshdata data structure
-      instances.push_back(geomInstance);
-
-      if (addingNewSMGs) {
-        SubMeshGeometry smg = m->geometry[ m->instances[i].geometryIndex ];
-        smg.numInstances = 1;
-        agg_mesh->geometry.push_back(smg);
-      }
-      else {
-        SubMeshGeometry& smgRef = agg_mesh->geometry[geomInstance.geometryIndex];
-        smgRef.numInstances++;
-      }
-    }
-
-
-    for (uint32 i = 0; i < instances.size(); i++) {
-      GeometryInstance geomInstance = instances[i];
-
-      for (GeometryInstance::MaterialBindingMap::iterator mat_it = geomInstance.materialBindingMap.begin();
-           mat_it != geomInstance.materialBindingMap.end(); mat_it++)
-        {
-          (mat_it->second) += submeshMaterialsOffset;
-        }
-=======
     // We me reuse more than one of the same mesh, e.g. the aggregate may have
     // two identical trees that are at different locations. In that case,
     // SubMeshGeometry, Textures, LightInfos, MaterialEffectInfos, and Nodes can
@@ -492,7 +376,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       // Sanity check
       assert (geomInstance.geometryIndex < m->geometry.size());
->>>>>>> origin/master
 
       // Shift indices for
       //  Materials
@@ -550,45 +433,12 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       agg_mesh->instances.push_back(geomInstance);
     }
 
-<<<<<<< HEAD
-    if (addingNewSMGs) {
-      agg_mesh->materials.insert(agg_mesh->materials.end(),
-                                 m->materials.begin(),
-                                 m->materials.end());
-    }
-
-
-
-    uint32 lightsSize = agg_mesh->lights.size();
-    agg_mesh->lights.insert(agg_mesh->lights.end(),
-                            m->lights.begin(),
-                            m->lights.end());
-=======
->>>>>>> origin/master
     for (uint32 j = 0; j < m->lightInstances.size(); j++) {
       LightInstance& lightInstance = m->lightInstances[j];
       lightInstance.lightIndex += submeshLightOffset;
       agg_mesh->lightInstances.push_back(lightInstance);
     }
-<<<<<<< HEAD
-    
-    for (Meshdata::URIMap::const_iterator it = m->textureMap.begin();
-         it != m->textureMap.end(); it++)
-      {
-        agg_mesh->textureMap[it->first] =   it->second;
-      }
-  }
 
-  std::map<String,int> texturesList;
-  for (Meshdata::URIMap::const_iterator it = agg_mesh->textureMap.begin() ; it!= agg_mesh->textureMap.end(); it++) {
-      texturesList[it->second] = 1;
-  }
-
-  for (std::map<String,int>::iterator it = texturesList.begin(); it != texturesList.end(); it++ ) {
-    agg_mesh->textures.push_back( it->first );
-=======
-
->>>>>>> origin/master
   }
 
   // We should have all the textures in our textureSet since we looped through
@@ -614,49 +464,24 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   //std::cout << "Time spent simplifying: " << (Timer::now() - simpl_time_start) << "\n";
   fflush(stdout);
 
-<<<<<<< HEAD
-  
-  Time upload_time_start = Timer::now();
-=======
 
   //Time upload_time_start = Timer::now();
->>>>>>> origin/master
   
   //... and now create the collada file, upload to the CDN and update LOC.
   const int MESHNAME_LEN = 1024;
   char localMeshName[MESHNAME_LEN];
   snprintf(localMeshName, MESHNAME_LEN, "%d_aggregate_mesh_%s.dae", aggObject->mTreeLevel, uuid.toString().c_str());
-<<<<<<< HEAD
-  mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);  
-  
-=======
   mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
 
->>>>>>> origin/master
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
   system( cmdline.c_str()  );
 
-<<<<<<< HEAD
-  std::cout << "Time spent uploading: " << (Timer::now() - upload_time_start) << "\n";
-=======
   //std::cout << "Time spent uploading: " << (Timer::now() - upload_time_start) << "\n";
->>>>>>> origin/master
 
   //Update loc
 
   std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
-<<<<<<< HEAD
-  mLoc->updateLocalAggregateMesh(uuid, cdnMeshName); 
-
-  /* // Code to generate scene files for each level of the tree.
-  char scenefilename[MESHNAME_LEN];
-  snprintf(scenefilename, MESHNAME_LEN, "%d_scene.db", aggObject->mTreeLevel);
-  std::fstream scenefile(scenefilename, fstream::out | fstream::app);
-  char sceneline[MESHNAME_LEN];
-  snprintf(sceneline, MESHNAME_LEN, 
-           "\"mesh\",\"graphiconly\",\"tetrahedron\",,,,%f,%f,%f,%f,%f,%f,%f,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,\"%s\",,,,,,,,,,,,,,,,,,%f,,,,\n", 
-=======
   mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
 
   // Code to generate scene files for each level of the tree.
@@ -666,7 +491,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   char sceneline[MESHNAME_LEN];
   snprintf(sceneline, MESHNAME_LEN,
            "\"mesh\",\"graphiconly\",\"tetrahedron\",,,,%f,%f,%f,%f,%f,%f,%f,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,\"%s\",,,,,,,,,,,,,,,,,,%f,,,,\n",
->>>>>>> origin/master
            bndsX, bndsY, bndsZ, 0.0, 0.0, 0.0, 1.0, cdnMeshName.c_str(), bnds.radius());
   scenefile.write(sceneline,strlen(sceneline));
   scenefile.close();*/
@@ -763,10 +587,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
       return;
     }
     
-<<<<<<< HEAD
-=======
     Time curTime = Timer::now();
->>>>>>> origin/master
 
     for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
@@ -779,15 +600,9 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
          it != mObjectsByPriority.rend(); it++)
     {
       if (it->second.size() > 0) {
-<<<<<<< HEAD
-        std::tr1::shared_ptr<AggregateObject> aggObject = it->second.front();       
-        
-        if (aggObject->generatedLastRound) continue;        
-=======
         std::tr1::shared_ptr<AggregateObject> aggObject = it->second.front();
 
         if (aggObject->generatedLastRound) continue;
->>>>>>> origin/master
 
         returner=generateAggregateMeshAsync(aggObject->mUUID, curTime, false);
 
