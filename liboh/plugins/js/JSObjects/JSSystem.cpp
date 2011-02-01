@@ -20,15 +20,15 @@ namespace JSSystem{
 
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
-  JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    JSObjectScript* target_script = GetTargetJSObjectScript(args);
 
-  v8::String::Utf8Value str(args[0]);
-  const char* cstr = ToCString(str);
-  const String s(cstr);
-  const SpaceID new_space(s);
-  target_script->create_presence(new_space);
+    v8::String::Utf8Value str(args[0]);
+    const char* cstr = ToCString(str);
+    const String s(cstr);
+    const SpaceID new_space(s);
+    target_script->create_presence(new_space);
 
-  return v8::Undefined();
+    return v8::Undefined();
 }
 
 
@@ -254,11 +254,11 @@ JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder) {
     v8::Local<v8::External> wrap;
     if (self->InternalFieldCount() > 0)
         wrap = v8::Local<v8::External>::Cast(
-            self->GetInternalField(0)
+            self->GetInternalField(1)
         );
     else
         wrap = v8::Local<v8::External>::Cast(
-            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(0)
+            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(1)
         );
     void* ptr = wrap->Value();
     return static_cast<JSObjectScript*>(ptr);

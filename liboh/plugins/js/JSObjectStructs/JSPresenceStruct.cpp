@@ -59,6 +59,7 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVe
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast)
 {
+    
     jsObjScript->broadcastVisible(sporef,JSSerializer::serializeObject(toBroadcast));
     return v8::Undefined();
 }

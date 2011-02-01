@@ -78,6 +78,7 @@ class JSObjectScript : public ObjectScript,
 {
 
 public:
+    
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 

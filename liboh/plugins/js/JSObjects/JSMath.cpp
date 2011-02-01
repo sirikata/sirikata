@@ -26,11 +26,11 @@ JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder) {
     v8::Local<v8::External> wrap;
     if (self->InternalFieldCount() > 0)
         wrap = v8::Local<v8::External>::Cast(
-            self->GetInternalField(0)
+            self->GetInternalField(1)
         );
     else
         wrap = v8::Local<v8::External>::Cast(
-            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(0)
+            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(1)
         );
     void* ptr = wrap->Value();
     return static_cast<JSObjectScript*>(ptr);

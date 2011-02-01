@@ -5,7 +5,7 @@
 #include "JSUtil.hpp"
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSVisible.hpp"
-
+#include "JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSObjectScript.hpp"
 
 
@@ -78,7 +78,6 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
   // we don't want to serialize jsobjectscript for now
 
   // serialize SpaceObjectReference
-  std::cout << "\n\nJSSerializer: Decoded visible\n\n";  
 
   Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
   jsf.set_name(VISIBLE_SPACEOBJREF_STRING); 
@@ -130,9 +129,7 @@ void JSSerializer::serializeInternalFields(v8::Local<v8::Object> v8Obj, Sirikata
 }
 
 
-
-
-std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
+std::string JSSerializer::serializeObject(v8::Handle<v8::Value> v8Val)
 {
     if( v8Val->IsFunction())
         return serializeFunction( v8::Handle<v8::Function>::Cast(v8Val));
@@ -198,7 +195,6 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
 }
 
 /*
-
 bool JSSerializer::deserializeObject( std::string strDecode,v8::Handle<v8::Object>& deserializeTo)
 {
     Sirikata::JS::Protocol::JSMessage jsmessage;
@@ -237,72 +233,63 @@ bool JSSerializer::deserializeObject( std::string strDecode,v8::Handle<v8::Objec
 */
 
 
-
-bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+bool JSSerializer::deserializeObject(JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
 {
-    //check if there is a typeid field and what is the value for it
-    bool isAddressable = false;
-    bool isVisible = false;
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
         if(jsf.name() == TYPEID_FIELD_NAME)
         {
-        
           if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
-          {
-            std::cout << "\n\nGot JSVisible\n\n";
-            isVisible = true;
-            break;
-          }
+              return deserializeVisible(jsObjScript,jsmessage,deserializeTo);
 
         }
-    } 
-
-    
-    if(isVisible)
-    {
-      deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
-      deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new std::string(VISIBLE_TYPEID_STRING)));
-      deserializeTo->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD, External::New(jsObjScript));
     }
+    return deserializeRegularObject(jsObjScript,jsmessage,deserializeTo);
+}
+
+bool JSSerializer::deserializeVisible(JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+{
+    deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
+    deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new String(VISIBLE_TYPEID_STRING)));
+    //deserializeTo->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD, External::New(jsObjScript));
+
+    SpaceObjectReference visibleObj,visibleTo;
     
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
 
-        if(jsf.name() == TYPEID_FIELD_NAME) { continue; }
+        if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
+            visibleObj = SpaceObjectReference(jsvalue.s_value());
+        else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
+            visibleTo = SpaceObjectReference(jsvalue.s_value());
 
+    }
+
+    JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d());
+    deserializeTo->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD, External::New(visStruct));
+    
+    return deserializeRegularObject(jsObjScript,jsmessage,deserializeTo);
+}
+
+
+bool JSSerializer::deserializeRegularObject(JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+{
+    for(int i = 0; i < jsmessage.fields_size(); i++)
+    {
+        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
+        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
         const char* str = jsf.name().c_str();
-
         v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
-        
+
         if(jsvalue.has_s_value())
         {
-          if(isVisible)
-          {
-            if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
-            {
-              SpaceObjectReference* sporef = new SpaceObjectReference(jsvalue.s_value());  
-              deserializeTo->SetInternalField(VISIBLE_SPACEOBJREF_FIELD, External::New(sporef));
-    
-            }
-            else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
-            {
-              SpaceObjectReference* sporefVisTo = new SpaceObjectReference(jsvalue.s_value());  
-              deserializeTo->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD, External::New(sporefVisTo));
-            }
-          }
-          else
-          {
             const char* str1 = jsvalue.s_value().c_str();
             v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
             deserializeTo->Set(key, val);
-          }
-
         }
         else if(jsvalue.has_i_value())
         {
@@ -310,9 +297,89 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
             deserializeTo->Set(key, intval);
         }
     }
-
     return true;
 }
+
+
+// bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+// {
+//     //check if there is a typeid field and what is the value for it
+//     bool isAddressable = false;
+//     bool isVisible = false;
+//     for(int i = 0; i < jsmessage.fields_size(); i++)
+//     {
+//         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
+//         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
+//         if(jsf.name() == TYPEID_FIELD_NAME)
+//         {
+        
+//           if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
+//           {
+//             isVisible = true;
+//             break;
+//           }
+
+//         }
+//     } 
+
+    
+//     if(isVisible)
+//     {
+//       deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
+//       deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new std::string(VISIBLE_TYPEID_STRING)));
+//       deserializeTo->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD, External::New(jsObjScript));
+//     }
+    
+//     for(int i = 0; i < jsmessage.fields_size(); i++)
+//     {
+//         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
+
+//         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
+
+//         if(jsf.name() == TYPEID_FIELD_NAME) { continue; }
+
+//         const char* str = jsf.name().c_str();
+
+//         v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
+
+//         SpaceObjectReference visibleSpace,visibleTo;
+        
+//         if(jsvalue.has_s_value())
+//         {
+//           if(isVisible)
+//           {
+//             if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
+//             {
+
+//                 visibleSpace = jsvalue.s_value();
+//                 SpaceObjectReference* sporef = new SpaceObjectReference(jsvalue.s_value());  
+//                 deserializeTo->SetInternalField(VISIBLE_SPACEOBJREF_FIELD, External::New(sporef));
+//                 lkjs;
+//             }
+//             else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
+//             {
+//                 visibleTo = jsvalue.s_value();
+//                 SpaceObjectReference* sporefVisTo = new SpaceObjectReference(jsvalue.s_value());  
+//                 deserializeTo->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD, External::New(sporefVisTo));
+//             }
+//           }
+//           else
+//           {
+//             const char* str1 = jsvalue.s_value().c_str();
+//             v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
+//             deserializeTo->Set(key, val);
+//           }
+
+//         }
+//         else if(jsvalue.has_i_value())
+//         {
+//             v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
+//             deserializeTo->Set(key, intval);
+//         }
+//     }
+
+//     return true;
+// }
 
 
 
