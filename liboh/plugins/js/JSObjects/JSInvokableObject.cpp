@@ -20,7 +20,8 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
   JSObjectScript* caller;
   JSInvokableObjectInt* invokableObj;
 
-  assert(decodeJSInvokableObject(args.This(), caller, invokableObj));
+  bool decoded = decodeJSInvokableObject(args.This(), caller, invokableObj);
+  assert(decoded);
 
 
   assert(invokableObj);
