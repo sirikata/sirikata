@@ -108,7 +108,7 @@ v8::Handle<v8::Value> __clear(const v8::Arguments& args)
 
 void setNullHandler(const v8::Arguments& args)
 {
-    v8::Local<v8::Object> mHand = args.This();
+    v8::Handle<v8::Object> mHand = args.This();
 
    //grabs the internal pattern
    //(which has been saved as a pointer to JSEventHandler

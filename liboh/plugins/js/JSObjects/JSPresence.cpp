@@ -61,8 +61,11 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
     Local<Object> tmpObj = mStruct->jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
     Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
 
+
     tmpObjP->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mStruct->jsObjScript));
     tmpObjP->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
+    tmpObjP->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
+
     return tmpObjP;
 }
 

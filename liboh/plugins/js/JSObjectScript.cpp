@@ -190,7 +190,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // don't use the prototype -- non-global objects work as we would expect.
     Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
     system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+    system_obj->SetInternalField(TYPEID_FIELD,External::New(new String(SYSTEM_TYPEID_STRING)));
 
+    
     //hangs math, presences, and addressable off of system_obj
     initializePresences(system_obj);
     initializeVisible(system_obj);
@@ -444,9 +446,10 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
     v8::Local<v8::Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
 
     JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()));
-
     
     selfVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(mySelf));
+    selfVisObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
+
     
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
@@ -775,6 +778,7 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
+    // Do check if the visible already exists..
     v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
     std::string errorMessage = "In addVisible of JSObjectScript.  ";
     JSVisibleStruct* jsvis   = NULL;
@@ -806,8 +810,9 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
 
     
     JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, mParent->requestCurrentPosition(proximateObject));
-
     newVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(toAdd));
+    newVisObj->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
+
     
     vis_array->Set(v8::Number::New(new_pos),newVisObj);
     return newVisObj;
@@ -836,7 +841,9 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
     v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
 
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
+    returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
+    
     return returner;
 }
 
@@ -1006,7 +1013,11 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
 
     JSVisibleStruct* visStruct = new JSVisibleStruct(this, from, to, false, Vector3d());
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(visStruct));
+    returner->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
+
+    
     return returner;
+
 }
 
 
@@ -1031,7 +1042,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
         assert(false);
     }
 
-    bool deserializeWorks = JSSerializer::deserializeObject( js_msg,obj);
+    bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
     if (! deserializeWorks)
         return;
@@ -1194,7 +1205,8 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* ev
 
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
-
+    returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
+    
     return returner;
 }
 
@@ -1260,7 +1272,9 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
     Local<Object> js_pres = mManager->mPresenceTemplate->NewInstance();
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef);
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
+    js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 
+    
     // Add to our internal map
     mPresences[sporef] = presToAdd;
 
@@ -1324,6 +1338,8 @@ v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, mManager->mContextGlobalTemplate);
     
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
+    returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
+
     
     return returner;
 }

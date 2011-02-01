@@ -10,7 +10,7 @@ var buy_proto = "get_books";
 
 
 /* fill in the banner object to send to the market */
-var bannerObj = {"name":"advertisement", "banner":"Books"};
+var bannerObj = {"name":"advertisement", "banner":"Books", "init_proto":"get_books"};
 
 
 var books_array = ["Introduction to Networking", "Harry Potter - 3"];
@@ -18,6 +18,9 @@ var books_array = ["Introduction to Networking", "Harry Potter - 3"];
 function handleBookRequest(msg, sender)
 {
   print("Sending the list of the books available at the store to the Customer : " + sender);  
+  var my_reply;
+  msg.replyFunction(books_array, my_reply);
+  my_reply -> sender;
   return books_array;  
 }
 
@@ -31,12 +34,9 @@ function handleMarket(msg, sender)
     MARKET_CHANNEL = sender;    
     print("\n\nGot a new market\n\n");
 
-    var p  = new system.Pattern("name", "get_books");
-		handleBookRequest <- p ;
-		
-		bannerObj -> MARKET_CHANNEL;
-
-		print("\n\n Banner Sent to the market\n\n");
+    handleBookRequest <- [ new system.Pattern("name", "get_books"), new system.Pattern("replyFunction")];
+    bannerObj -> MARKET_CHANNEL;
+    print("\n\n Banner Sent to the market\n\n");
 
   }
 }
@@ -63,7 +63,8 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-      simulator = pres.runSimulation("ogregraphics");
+      system.print("Printing ..." + system.Self.prototype);
+      //simulator = pres.runSimulation("ogregraphics");
       system.presences[0].onProxAdded(proxAddedCallback);
     }
 });
@@ -71,4 +72,6 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
+
+
 
