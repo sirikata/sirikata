@@ -20,7 +20,8 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
   JSObjectScript* caller;
   JSInvokableObjectInt* invokableObj;
 
-  assert(decodeJSInvokableObject(args.This(), caller, invokableObj));
+  bool decoded = decodeJSInvokableObject(args.This(), caller, invokableObj);
+  assert(decoded);
 
 
   assert(invokableObj);
@@ -70,6 +71,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
   Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
   tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(caller));
   tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD,External::New(  new JSInvokableObjectInt(newInvokableObj) ));
+  tmpObjP->SetInternalField(TYPEID_FIELD,External::New(  new String (JSINVOKABLE_TYPEID_STRING)));
 
   return tmpObj;
 }

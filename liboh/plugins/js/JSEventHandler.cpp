@@ -8,7 +8,7 @@
 #include <sirikata/core/odp/Defs.hpp>
 
 #include "JSObjects/JSFields.hpp"
-
+#include "JSObjectStructs/JSVisibleStruct.hpp"
 
 
 namespace Sirikata {
@@ -19,36 +19,37 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
 {
     if (suspended)
         return false; //cannot match a suspended handler
-    
-    //get sender as obj reference
-    v8::Local<v8::External> wrap;
-    if (sender->InternalFieldCount() > 0)
-        wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
 
-    void* ptr = wrap->Value();
-    //ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
-    SpaceObjectReference* spref1 = static_cast<SpaceObjectReference*>(ptr);
+    //decode the sender of the message
+    String errorMessage = "[JS] Error encountered in matches of JSEventHandler.  Failed to decode sender of message as a visible object.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(sender, errorMessage);
+    if (jsvis == NULL)
+    {
+        SILOG(js,error,errorMessage);
+        return false;
+    }
     
+    SpaceObjectReference* spref1 =  jsvis->whatIsVisible;
+
+
+    //decode the expected sender
     if (! this->sender->IsNull())
     {
-        
-        //have a sender to match.  see if it does
-        if (this->sender->InternalFieldCount() > 0)
-            wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(ADDRESSABLE_SPACEOBJREF_FIELD));
+        String errorMessageExpectedSender = "[JS] Error encountered in matches of JSEventHandler.  Failed to decode expected sender of event handler.  ";
+        JSVisibleStruct* jsvisExpectedSender = JSVisibleStruct::decodeVisible(this->sender, errorMessageExpectedSender);
 
-        ptr = wrap->Value();
-
-        SpaceObjectReference* spref2 = static_cast<SpaceObjectReference*>(ptr);
-        
-        if ( (*spref1)  != (*spref2))
+        if (jsvisExpectedSender == NULL)
         {
-            //std::cout<<"\n\n\nThe senders do not match\n\n";
+            SILOG(js,error,errorMessageExpectedSender);
             return false;
         }
-        else
-				{
-            //std::cout<<"\n\nThe senders match\n\n";
-				}
+
+        SpaceObjectReference* spref2 = jsvisExpectedSender->whatIsVisible;
+
+        //check if the senders match
+        if ( (*spref1)  != (*spref2))  //the senders do not match.  do not fire
+            return false;
+
     }
 
     
@@ -57,59 +58,11 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
     {
         if (! pat_it->matches(obj))
             return false;
-        
-        // if (pat_it->matches(obj))
-        //     return true;
     }
 
-    //return false;
     return true;
 }
 
-
-bool JSEventHandler::matches_old(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
-{
-    if (suspended)
-        return false; //cannot match a suspended handler
-
-    
-    //get sender as obj reference
-    v8::Local<v8::External> wrap;
-    if (sender->InternalFieldCount() > 0)
-        wrap = v8::Local<v8::External>::Cast(sender->GetInternalField(0));
-
-
-    
-    void* ptr = wrap->Value();
-    ObjectReference* objRef1 = static_cast<ObjectReference*>(ptr);
-    
-    if (! this->sender->IsNull())
-    {
-        //have a sender to match.  see if it does
-        if (this->sender->InternalFieldCount() > 0)
-            wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(0));
-
-        ptr = wrap->Value();
-        ObjectReference* objRef2 = static_cast<ObjectReference*> (ptr);
-
-
-        if (! (objRef1->getAsUUID() == objRef2->getAsUUID()))
-            return false;
-        else
-				{
-            //std::cout<<"\n\nThe senders match\n\n";
-				}
-    }
-        
-
-    //check if the pattern matches the obj
-    for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
-    {
-        if (!pat_it->matches(obj))
-            return false;
-    }
-    return true;
-}
 
 
 

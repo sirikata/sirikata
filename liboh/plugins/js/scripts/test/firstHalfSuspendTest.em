@@ -2,7 +2,7 @@ cb = function(){ system.print("\n\n\nPrint Test\n\n")};
 
 mPat = new system.Pattern("m");
 
-handler = system.registerHandler(mPat,null,cb,null);
+handler = system.registerHandler(cb, null,mPat,null);
 system.print("\n\nBefore suspended\n");
 handler.printContents();
 

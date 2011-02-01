@@ -1,12 +1,35 @@
 
 #include "JSVisibleStruct.hpp"
-#include "JSObjectScript.hpp"
-#include "JSObjects/JSFields.hpp"
+#include "../JSObjectScript.hpp"
+#include "../JSObjects/JSFields.hpp"
 #include <v8.h>
 
 
 namespace Sirikata {
 namespace JS {
+
+
+
+
+
+JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition)
+ : jsObjScript(parent),
+   whatIsVisible(new SpaceObjectReference(whatsVisible)),
+   visibleToWhom(new SpaceObjectReference( toWhom)),
+   stillVisible(new bool(visibleCurrently)),
+   mPosition(new Vector3d(currentPosition))
+{
+}
+
+
+
+JSVisibleStruct::~JSVisibleStruct()
+{
+    //do not delete jsObjScript: someone else is responsible for that.
+    delete whatIsVisible;
+    delete stillVisible;
+    delete mPosition;
+}
 
 
 //if can decode senderVal as a visible struct, returns the pointer to that
@@ -83,7 +106,6 @@ v8::Handle<v8::Value> JSVisibleStruct::visibleSendMessage (std::string& msgToSen
 {
     //actually send the message to the entity
     jsObjScript->sendMessageToEntity(whatIsVisible,visibleToWhom,msgToSend);
-    
     return v8::Undefined();
 }
 

@@ -6,7 +6,6 @@
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
-#include "Addressable.hpp"
 #include <math.h>
 
 #include <sirikata/core/util/Random.hpp>
@@ -17,25 +16,6 @@ namespace Sirikata{
 namespace JS{
 namespace JSMath{
 
-
-template<typename WithHolderType>
-JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder) {
-    v8::Local<v8::Object> self = with_holder.Holder();
-    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
-    // The template actually generates the root objects prototype, not the root
-    // itself.
-    v8::Local<v8::External> wrap;
-    if (self->InternalFieldCount() > 0)
-        wrap = v8::Local<v8::External>::Cast(
-            self->GetInternalField(0)
-        );
-    else
-        wrap = v8::Local<v8::External>::Cast(
-            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(0)
-        );
-    void* ptr = wrap->Value();
-    return static_cast<JSObjectScript*>(ptr);
-}
 
 
 

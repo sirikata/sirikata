@@ -23,7 +23,7 @@ message JSFieldValue
 {
 	optional string s_value = 1;
 	optional int32 i_value = 2;
-
+        optional JSMessage o_value = 3;
 }
 
 message JSField
@@ -32,11 +32,12 @@ message JSField
 	// attributes: 1. name 2. value 3. prototype( or type)
 	// name is required while other two are optional
 
-	required string name = 1;
+        required string name = 1;
 	optional JSFieldValue value = 2; // could be a blank value
 	optional string prototype = 3;
 
 }
+
 message JSMessage
 {
 	repeated JSField fields = 1;

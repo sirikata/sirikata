@@ -105,14 +105,15 @@ struct SubMeshGeometry {
     double radius;
     std::vector<Primitive> primitives;
 
-    SkinControllerList skinControllers;
 
+    SkinControllerList skinControllers;
 
     //used only during simplification
     std::vector< Matrix4x4f  > positionQs;
     uint32 numInstances;
     std::tr1::unordered_map<uint32, std::vector< std::pair<uint32, uint32> > > neighborPrimitives; // maps positionIdx to list of primitiveIdxes
     /////////////////////////////////
+
 };
 typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
 

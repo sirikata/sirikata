@@ -1138,7 +1138,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
         ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
-  ${LIBCORE_SOURCE_DIR}/util/MeshSimplifier.cpp
+        ${LIBCORE_SOURCE_DIR}/util/MeshSimplifier.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
@@ -1725,7 +1725,9 @@ ADD_DEPENDENCIES(${SIRIKATA_SQLITE_LIB} ${SIRIKATA_CORE_LIB})
 IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to core for their respective modules
   SET_TARGET_PROPERTIES(${SIRIKATA_SQLITE_LIB} PROPERTIES LINK_FLAGS ${sirikata_core_LDFLAGS})
 ENDIF()
+
 TARGET_LINK_LIBRARIES(${SIRIKATA_SQLITE_LIB} ${SIRIKATA_CORE_LIB} ${SQLite3_LIBRARIES})
+
 
 ADD_PLUGIN_TARGET(sqlite
                     SOURCES ${LIBCORE_PLUGIN_SQLITE_SOURCES}
@@ -1916,16 +1918,20 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSMath.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSContextStruct.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSFakerootStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/Addressable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVisible.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFakeroot.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
   ${EMERSON_SOURCES}
   )

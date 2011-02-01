@@ -18,7 +18,6 @@ struct JSEventHandler
 
 
     bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const;
-    bool matches_old(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const;
     
     void printHandler();
     void suspend();

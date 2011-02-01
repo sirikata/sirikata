@@ -43,7 +43,7 @@ namespace JS {
 v8::Handle<v8::FunctionTemplate> CreateVec3Template();
 void DestroyVec3Template();
 
-
+class JSObjectScriptManager;
 
 template<typename VecType>
 void Vec3Fill(Handle<Object>& dest, const VecType& src) {
@@ -53,17 +53,23 @@ void Vec3Fill(Handle<Object>& dest, const VecType& src) {
 }
 
 template<typename VecType>
-Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src) {
+Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src)
+{
     Handle<Object> result = orig->Clone();
     Vec3Fill(result, src);
     return result;
 }
 
 Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
+//Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Function>& vec3_constructor, const Vector3d& src);
 template<typename VecType>
-Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const VecType& src) {
+Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const VecType& src)
+{
     return CreateJSResult_Vec3Impl(ctx, Vector3d(src));
 }
+
+
+
 
 bool Vec3Validate(Handle<Object>& src);
 Vector3d Vec3Extract(Handle<Object>& src);

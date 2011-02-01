@@ -1,5 +1,4 @@
-
-/* This is the Market Script  */
+ /*This is the Market Script  */
 
 /* vendors must send their banner to the market to attract customers */
 /*Customers must send subscription to get the vendors of their interest */
@@ -25,6 +24,7 @@ function advReactor(msg, sender)
       var reply_obj = new Object();
       reply_obj.vendor = sender;
       reply_obj.banner = vendor[sender].banner;
+      reply_obj.init_proto = vendor[sender].init_proto;
       //send this reply to this customer
       reply_obj -> s;
     }
@@ -55,6 +55,7 @@ function subscriptionReactor(msg, sender)
       var reply_obj = new Object();
       reply_obj.vendor = s;
       reply_obj.banner = vendor[s].banner;
+      reply_obj.init_proto = vendor[s].init_proto;
       // send this reply to this customer
       reply_obj -> sender;
     }
@@ -75,12 +76,11 @@ function handleProtocolMessage(msg, sender)
 
 
 /* React to the advertisements */
-advReactor <- [new system.Pattern("name", "advertisement"), new system.Pattern("banner")];
+advReactor <- [new system.Pattern("name", "advertisement"), new system.Pattern("banner"), new system.Pattern("init_proto")];
 
 /* React to the subscriptions */
 subscriptionReactor <- [new system.Pattern("name", "subscribe"), new system.Pattern("pattern")];
 
 handleProtocolMessage <- new system.Pattern("name", "get_protocol");
-
 
 

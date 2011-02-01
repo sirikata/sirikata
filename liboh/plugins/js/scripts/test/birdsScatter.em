@@ -88,7 +88,7 @@ function regularOperationCallback()
 
 //listenging for camera location
 var cameraLocationPattern = new system.Pattern("command","locationCamera");
-var cameraLocationHandler = system.registerHandler(cameraLocationPattern,null,cameraLocationCallback,null);
+var cameraLocationHandler = system.registerHandler(cameraLocationCallback,null,cameraLocationPattern,null);
 
 
 

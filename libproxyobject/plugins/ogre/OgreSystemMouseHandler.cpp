@@ -1193,12 +1193,16 @@ private:
 
         // Request updates from spcae
         TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
-        SILOG(ogre,fatal,"Req loc: " << loc.getPosition() << loc.getVelocity());
+        //SILOG(ogre,fatal,"Req loc: " << loc.getPosition() <<
+        //loc.getVelocity());
+        SILOG(ogre,fatal,"Req loc: " << newloc.position() << newloc.velocity());
         cam_vwobj->requestLocationUpdate(space, oref,newloc);
         // And update our local Proxy's information, assuming the move will be successful
         cam->setLocation(newloc, 0, true);
     }
 
+
+    
 
     void rotateAction(Vector3f about, float amount)
     {

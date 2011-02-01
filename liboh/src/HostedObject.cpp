@@ -163,15 +163,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
     PresenceDataMap::const_iterator it = mPresenceData->find(SpaceObjectReference(space,oref));
     if (it == mPresenceData->end())
     {
-        // SpaceDataMap::const_iterator twoIt = mSpaceData->begin();
-        // // for (twoIt = mSpaceData->begin(); twoIt != mSpaceData->end(); ++twoIt)
-        // // {
-        // //     SpaceObjectReference tmp = twoIt->first;
-        // //     std::cout<<"values: "<<tmp<<"\n";
-        // // }
-        // it = mSpaceData->insert(
-        //     SpaceDataMap::value_type( SpaceObjectReference(space,oref), PerPresenceData(this, space,oref) )
-        // ).first;
         ProxyManagerPtr returner;
         return returner;
 
@@ -184,7 +175,6 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
 void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const
 {
     PresenceDataMap::iterator smapIter = mPresenceData->find(sporef);
-
 
     if (smapIter != mPresenceData->end())
     {
@@ -969,11 +959,19 @@ Vector3d HostedObject::requestCurrentPosition (const SpaceID& space, const Objec
 {
     ProxyObjectPtr proxy_obj  = getProxy(space,oref);
 
-    //BFTM_FIXME: need to decide whether want the extrapolated position or last
-    //known position.  (Right now, we're going with last known position.)
+    if (proxy_obj == nullPtr)
+    {
+        SILOG(cppoh,error,"[HO] Unknown space object reference looking for position for for  " << space<< "-"<<oref<<".");
+        return Vector3d::nil();
+    }
 
-    //lkjs;
-    //Location curLoc = proxy_obj->extrapolateLocation(Time::local());
+    return requestCurrentPosition(proxy_obj);
+}
+
+//skips the proxymanager.  can directly extrapolate position using current
+//simulation time.
+Vector3d HostedObject::requestCurrentPosition(ProxyObjectPtr proxy_obj)
+{
     Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     Vector3d currentPosition = curLoc.getPosition();
     return currentPosition;

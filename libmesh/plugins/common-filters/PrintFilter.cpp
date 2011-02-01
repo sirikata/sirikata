@@ -79,6 +79,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
         printf("   Name: %s, Positions: %d Normals: %d Primitives: %d\n", it->name.c_str(),
                 (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size());
 
+
         for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
             printf("      Primitive id: %d, indices: %d\n", (int)p->materialId, (int)p->indices.size());
         }

@@ -1,4 +1,3 @@
-
 #include "MeshdataToCollada.hpp"
 
 #include "COLLADASWStreamWriter.h"
@@ -765,3 +764,5 @@ public:
   }
 
 }
+
+

@@ -33,6 +33,7 @@
 #include "JSQuaternion.hpp"
 #include "../JSUtil.hpp"
 #include "JSVec3.hpp"
+#include "../JSSystemNames.hpp"
 
 using namespace v8;
 
@@ -61,7 +62,7 @@ Handle<Value> CreateJSResult(Handle<Object>& orig, const Quaternion& src) {
 
 Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Quaternion& src) {
     Handle<Function> quat_constructor = FunctionCast(
-        ObjectCast(GetGlobal(ctx, "system"))->Get(JS_STRING(Quaternion))
+        ObjectCast(GetGlobal(ctx, JSSystemNames::UTIL_OBJECT_NAME))->Get(JS_STRING(Quaternion))
     );
 
     Handle<Object> result = quat_constructor->NewInstance();

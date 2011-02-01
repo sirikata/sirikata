@@ -262,7 +262,6 @@ public:
         return Location(Vector3d(mLoc.position(current)), mOrientation.position(current).normal(), mLoc.velocity(), angaxis, angvel);
     }
 
-
     // interface from MeshObject
     virtual void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
     virtual Transfer::URI const& getMesh () const;

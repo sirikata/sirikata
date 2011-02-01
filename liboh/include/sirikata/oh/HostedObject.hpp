@@ -321,6 +321,7 @@ public:
     virtual void requestVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Vector3f& vel);
 
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
+    virtual Vector3d requestCurrentPosition(ProxyObjectPtr proxy_obj);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
 
 

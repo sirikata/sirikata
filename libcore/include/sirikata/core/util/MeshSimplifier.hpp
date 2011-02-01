@@ -73,7 +73,9 @@ private:
 
 
 public:
+
   void simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft);
+
 
 };
 

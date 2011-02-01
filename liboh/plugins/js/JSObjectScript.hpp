@@ -48,9 +48,10 @@
 #include "JSPattern.hpp"
 #include "JSEventHandler.hpp"
 #include "JSObjectScriptManager.hpp"
-#include "JSPresenceStruct.hpp"
+#include "JSObjectStructs/JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
+
 
 
 namespace Sirikata {
@@ -68,13 +69,18 @@ struct EntityCreateInfo
 };
 
 
+static const uint32 MAX_MESSAGE_CODE     = 1000;
+static const uint32 MAX_SEARCH_OPEN_CODE =   20;
+
 
 class JSObjectScript : public ObjectScript,
-                       public SessionEventListener,
-                       public ProxyCreationListener
+                       public SessionEventListener
 {
 
 public:
+
+    static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
+    
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 
@@ -88,41 +94,33 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    //note: may want to remove these calls.
-    virtual void onCreateProxy(ProxyObjectPtr p);
-    virtual void onDestroyProxy(ProxyObjectPtr p);
+    void handleTimeoutContext(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
 
 
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
-
-
     //this function returns a context with
-    v8::Handle<v8::Value> createContext();
+    v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
 
-
-
-
+    
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
     bool valid() const;
 
     /** Dummy callback for testing exposing new functionality to scripts. */
-    void test() const;
-    void testSendMessageBroadcast(const std::string& msgToBCast) const;
     void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
-    void sendMessageToEntity(int numIndex, SpaceObjectReference* from, const std::string& msgBody) const;
-    int  getAddressableSize();
+
+    void broadcastVisible(SpaceObjectReference* visibleTo,const std::string& msgToBCast);
 
     /** Print the given string to the current output. */
     void print(const String& str);
     v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
 
     /** Set a timeout with a callback. */
-    void timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
-
+    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
+    
 
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
@@ -159,7 +157,9 @@ public:
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
 
     void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
-
+    uint32 registerUniqueMessageCode();
+    bool unregisterUniqueMessageCode(uint32 toUnregister);
+    
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
@@ -183,6 +183,7 @@ public:
 
     // Presence version of the access handlers
     v8::Handle<v8::Value> getPosition(SpaceID&);
+    v8::Handle<v8::Value> getContextPosition(v8::Handle<v8::Context> cont,const SpaceObjectReference* sporef);
     void setPosition(SpaceID&, v8::Local<v8::Value>& newval);
 
     v8::Handle<v8::Value> getVelocity(SpaceID&);
@@ -216,8 +217,6 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
-    typedef std::vector<SpaceObjectReference*> AddressableList;
-    AddressableList mAddressableList;
 
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
@@ -227,19 +226,22 @@ private:
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
     v8::Persistent<v8::Function> mOnPresenceDisconnectedHandler;
 
-    void handleTimeout(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb);
+
 
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
     void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
-    void addAddressable(const SpaceObjectReference& sporefToAdd);
-    void populateAddressable(const SpaceObjectReference& sporef);
 
 
-    v8::Local<v8::Object> getMessageSender(const ODP::Endpoint& src);
+    
+    v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
+    v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 
+    void addSelfField(const SpaceObjectReference& myName);
+    
+    
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
@@ -254,12 +256,9 @@ private:
 
     Handle<Object> getSystemObject();
     Handle<Object> getGlobalObject();
-    void populateAddressable(Handle<Object>& system_obj );
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);
-    void initializeAddressable(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
-    void initializeMath(Handle<Object>& system_obj);
     void initializeVisible(Handle<Object>&system_obj);
 
     void printVisibleArray();
@@ -269,12 +268,14 @@ private:
     void removePresence(const SpaceObjectReference& sporef);
 
     // Adds the Self field
-    void addSelfField(const SpaceObjectReference& name);
 
     v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
-
+    bool uniqueMessageCodeExists(uint32 code);
+    typedef std::map<uint32,bool> ScriptMessageCodes;
+    ScriptMessageCodes mMessageCodes;
+    
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;

@@ -38,16 +38,17 @@
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
 #include "JSObjects/JSVisible.hpp"
+#include "JSObjects/JSFakeroot.hpp"
 #include "JSObjects/JSSystem.hpp"
 #include "JSObjects/JSMath.hpp"
 #include "JSObjects/JSHandler.hpp"
+#include "JSObjects/JSTimer.hpp"
 
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
 
-#include "JSObjects/Addressable.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSInvokableObject.hpp"
@@ -86,43 +87,90 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
 
 
-void JSObjectScriptManager::createMathTemplate()
+void JSObjectScriptManager::createUtilTemplate()
 {
     v8::HandleScope handle_scope;
-    mMathTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mUtilTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     // An internal field holds the JSObjectScript*
-    mMathTemplate->SetInternalFieldCount(MATH_TEMPLATE_FIELD_COUNT);
+    mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
-    mMathTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSMath::ScriptSqrtFunction));
-    mMathTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSMath::ScriptAcosFunction));
-    mMathTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSMath::ScriptAsinFunction));
-    mMathTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSMath::ScriptCosFunction));
-    mMathTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
-    mMathTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
-    mMathTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
-    mMathTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
-    
+
+    mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSMath::ScriptSqrtFunction));
+    mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSMath::ScriptAcosFunction));
+    mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSMath::ScriptAsinFunction));
+    mUtilTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSMath::ScriptCosFunction));
+    mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
+    mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
+    mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
+    mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
+
+
+    addTypeTemplates(mUtilTemplate);
+
 }
 
 //these templates involve vec, quat, pattern, etc.
 void JSObjectScriptManager::createTemplates()
 {
     v8::HandleScope handle_scope;
-    mVec3Template = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
-    mQuaternionTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
-    mPatternTemplate = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
+    mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
+    mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
+    mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
-    createMathTemplate();
-    createContextTemplate();
+    createUtilTemplate();
     
+    createFakerootTemplate();
+    createContextTemplate();
+    createContextGlobalTemplate();
     createHandlerTemplate();
     createVisibleTemplate();    
-    createAddressableTemplate();
+
+    createTimerTemplate();
     
     createJSInvokableObjectTemplate();
     createPresenceTemplate();    
     createSystemTemplate();
+
+    //createTriggerableTemplate();
+}
+
+
+void JSObjectScriptManager::createTimerTemplate()
+{
+    v8::HandleScope handle_scope;
+    mTimerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mTimerTemplate->SetInternalFieldCount(TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
+
+    mTimerTemplate->Set(v8::String::New("resetTimer"),v8::FunctionTemplate::New(JSTimer::resetTimer));
+    mTimerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSTimer::clear));
+}
+
+
+void JSObjectScriptManager::createFakerootTemplate()
+{
+    v8::HandleScope handle_scope;
+    mFakerootTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+    mFakerootTemplate->SetInternalFieldCount(FAKEROOT_TEMPLATE_FIELD_COUNT);
+    
+    
+    mFakerootTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSFakeroot::root_sendHome));
+    mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::root_registerHandler));
+    mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::root_timeout));
+    mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::root_print));
+
+        
+    //check what permissions fake root is loaded with
+    mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
+    mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
+    mFakerootTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSFakeroot::root_canProx));
+
+    mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
+    mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
+    
+    //add basic templates: vec3, quat, math
+
 }
 
 
@@ -143,34 +191,30 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->SetInternalFieldCount(CONTEXT_TEMPLATE_FIELD_COUNT);
 
     // Functions / types
-    mContextTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSContext::ScriptTimeout));
-    mContextTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSContext::Print));
-
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
-    
-    //add basic templates: vec3, quat, etc.
-    addBaseTemplates(mContextTemplate);
-    
+ 
 }
+
+void JSObjectScriptManager::createContextGlobalTemplate()
+{
+    v8::HandleScope handle_scope;
+    // And we expose some functionality directly
+    mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME),mFakerootTemplate);
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
+}
+
+
 
 //takes in a template (likely either the context template or the system template)
-void JSObjectScriptManager::addBaseTemplates(v8::Persistent<v8::ObjectTemplate> tempToAddTo)
+void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> tempToAddTo)
 {
     tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-    tempToAddTo->Set(v8::String::New("Math"),mMathTemplate);
 }
 
-//should be the same as the previous function.
-void JSObjectScriptManager::addBaseTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo)
-{
-    tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
-    tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
-    tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-    tempToAddTo->Set(v8::String::New("Math"),mMathTemplate);
-}
 
 
 //it looks like I can't figure out how to inherit system template functionality
@@ -191,38 +235,26 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::ScriptImport));
-    system_templ->Set(v8::String::New("__test"), v8::FunctionTemplate::New(JSSystem::__ScriptGetTest));
-    system_templ->Set(v8::String::New("__broadcast"),v8::FunctionTemplate::New(JSSystem::__ScriptTestBroadcastMessage));
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
 
+
+    //when creating a context, should also optionally take in a callback for what should happen if presence associated gets disconnected from space;
     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
 
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-
+    //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
+    
     //math, vec, quaternion, etc.
-    addBaseTemplates(system_templ);
     //add the system template to the global template
-    mGlobalTemplate->Set(v8::String::New(JSSystemNames::ROOT_OBJECT_NAME), system_templ);
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
+    mGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
 }
 
 
-//creating the addressable template.  addressable is an array within system that
-void JSObjectScriptManager::createAddressableTemplate()
-{
-    v8::HandleScope handle_scope;
-    mAddressableTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    // An internal field holds the external address of the addressable object
-    mAddressableTemplate->SetInternalFieldCount(ADDRESSABLE_FIELD_COUNT);
-
-    //these function calls are defined in JSObjects/Addressable.hpp
-    mAddressableTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSAddressable::__debugRef));
-    mAddressableTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSAddressable::__addressableSendMessage));
-    mAddressableTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSAddressable::toString));
-}
 
 
 void JSObjectScriptManager::createJSInvokableObjectTemplate()
@@ -240,7 +272,7 @@ void JSObjectScriptManager::createVisibleTemplate()
 {
     v8::HandleScope handle_scope;
     mVisibleTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    // An internal field holds the external address of the addressable object
+    // An internal field holds the external address of the visible object
     mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 
     
@@ -256,9 +288,6 @@ void JSObjectScriptManager::createVisibleTemplate()
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
-
-  // Ideally we want the addressable template to be a prototype of presencetemplate
-  //All that can be done to presences can be done to the addressble too
 
   mPresenceTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
   mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
@@ -304,10 +333,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   //set up graphics
   mPresenceTemplate->Set(v8::String::New("runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
+  //send broadcast message
+  mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
-  //FIXME:
-  //add function to check if presences are equal (point to same underlying object);
-  //add function to see if presence is valid (has been declared null);
 }
 
 
