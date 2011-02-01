@@ -32,12 +32,14 @@
 "pbj-0.0.3"
 package Sirikata.PB;
 message ExternalMessage {
+
   message SubMessage {
      optional uuid subuuid=1;
      optional vector3d subvector=2;
      optional duration subduration=3;
      optional normal subnormal=4;
   }
+
   optional bool is_true=40 [default=true];
   optional vector2f v2f=2;
   optional SubMessage sub_mes=30;
@@ -47,6 +49,8 @@ message ExternalMessage {
   required vector3f v3f=4;
   repeated vector3f v3ff=5;
 }
+
+
 message TestMessage {
   optional double xxd =20 [default=10.3];
   optional float xxf=21;
@@ -96,13 +100,14 @@ message TestMessage {
   optional boundingbox3f3f bbf=17;
   optional boundingbox3d3f bbd=18;
   optional Enum32 e32=19;
-
+  
   message SubMessage {
      optional uuid subuuid=1;
      optional vector3d subvector=2;
      optional duration subduration=3;
      optional normal subnormal=4;
   }
+  
   optional SubMessage submes=30;
   repeated SubMessage submessers=31;
   optional sha256 sha=32; 
@@ -117,3 +122,5 @@ extend TestMessage {
   optional boundingbox3f3f extensionbbox=100;
   optional vector3f extensionvector=101;
 }
+
+

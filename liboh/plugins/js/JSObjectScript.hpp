@@ -190,6 +190,9 @@ public:
     void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
 
     JSObjectScriptManager* manager() const { return mManager; }
+    
+
+    v8::Handle<v8::Function> functionValue(const String& em_script_str);
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the

@@ -1425,6 +1425,25 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
     DEPRECATED(js);
 }
 
+v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_str)
+{
+  v8::HandleScope handle_scope;
+  
+  std::cout << "Got the function string as \n" << em_script_str << "\n\n";
+  
+  //const std::string new_code = std::string("(function () { return ") + em_script_str + "}());";
+  const std::string new_code = std::string(" __emerson_deserialized_function__ = ") + em_script_str + ";";
+  
+
+  std::cout << "The  new function string is \n" << new_code<< "\n\n";
+
+  
+  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));  
+  v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
+  v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f); 
+  return pf;
+}
+
 
 
 void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)

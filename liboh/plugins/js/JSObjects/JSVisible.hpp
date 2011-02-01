@@ -22,6 +22,7 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args);
 v8::Handle<v8::Value> getPosition(const v8::Arguments& args);
 v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args);
 v8::Handle<v8::Value> checkEqual(const v8::Arguments& args);
+bool decodeVisible(v8::Handle<v8::Value>, JSObjectScript*&, SpaceObjectReference*& , SpaceObjectReference*&);
 
 
 }//end jsvisible namespace

@@ -75,7 +75,6 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
 
     //serialize the object to send
     Local<v8::Object> v8Object = messageBody->ToObject();
-    std::cout << "\n\nTrying to serialize visible\n\n";
     std::string serialized_message = JSSerializer::serializeObject(v8Object);
 
     //decode the visible struct associated with this object
