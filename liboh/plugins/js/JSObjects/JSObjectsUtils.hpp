@@ -14,12 +14,6 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additio
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 
 
-// class JSObjectScript;
-// template<typename WithHolderType>
-// JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder);
-
-
-
 } //end namespace js
 } //end namespace sirikata
 
