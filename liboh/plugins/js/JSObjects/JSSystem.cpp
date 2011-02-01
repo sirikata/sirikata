@@ -20,8 +20,12 @@ namespace JSSystem{
 
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptCreatePresence of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
+    
     v8::String::Utf8Value str(args[0]);
     const char* cstr = ToCString(str);
     const String s(cstr);
@@ -114,67 +118,74 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
     if (args.Length() != 6)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script filename>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
 
-  JSObjectScript* target_script = GetTargetJSObjectScript(args);
-  // get the location from the args
-
-  //get position
-  Handle<Object> val_obj = ObjectCast(args[0]);
-  if( !Vec3Validate(val_obj))
-      return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
-
-  Vector3d pos(Vec3Extract(val_obj));
-
-  //getting script type
-  v8::String::Utf8Value strScriptType(args[1]);
-  const char* cstrType = ToCString(strScriptType);
-  String scriptType(cstrType);
-
-  // get the script to attach from the args
-  //script is a string args
-  v8::String::Utf8Value scriptOpters(args[2]);
-  const char* cstrOpts = ToCString(scriptOpters);
-  String scriptOpts(cstrOpts);
-  scriptOpts = "--init-script="+scriptOpts;
-
-  //get the mesh to represent as
-  v8::String::Utf8Value mesh_str(args[3]);
-  const char* mesh_cstr = ToCString(mesh_str);
-  String mesh(mesh_cstr);
-
-  //get the scale
-  Handle<Object> scale_arg = ObjectCast(args[4]);
-  if (!NumericValidate(scale_arg))
-      return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
-
-  float scale  =  NumericExtract(scale_arg);
-
-  //get the solid angle
-  Handle<Object> qa_arg = ObjectCast(args[5]);
-  if (!NumericValidate(qa_arg))
-      return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
-
-  SolidAngle new_qa(NumericExtract(qa_arg));
+    //try to decode the object script
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptCreateEntity of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
 
+    
+    // get the location from the args
 
-  //parse a bunch of arguments here
-  EntityCreateInfo eci;
-  eci.scriptType = scriptType;
-  eci.mesh = mesh;
-  eci.scriptOpts = scriptOpts;
+    //get position
+    Handle<Object> val_obj = ObjectCast(args[0]);
+    if( !Vec3Validate(val_obj))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
+
+    Vector3d pos(Vec3Extract(val_obj));
+
+    //getting script type
+    v8::String::Utf8Value strScriptType(args[1]);
+    const char* cstrType = ToCString(strScriptType);
+    String scriptType(cstrType);
+
+    // get the script to attach from the args
+    //script is a string args
+    v8::String::Utf8Value scriptOpters(args[2]);
+    const char* cstrOpts = ToCString(scriptOpters);
+    String scriptOpts(cstrOpts);
+    scriptOpts = "--init-script="+scriptOpts;
+
+    //get the mesh to represent as
+    v8::String::Utf8Value mesh_str(args[3]);
+    const char* mesh_cstr = ToCString(mesh_str);
+    String mesh(mesh_cstr);
+
+    //get the scale
+    Handle<Object> scale_arg = ObjectCast(args[4]);
+    if (!NumericValidate(scale_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
+
+    float scale  =  NumericExtract(scale_arg);
+
+    //get the solid angle
+    Handle<Object> qa_arg = ObjectCast(args[5]);
+    if (!NumericValidate(qa_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
+
+    SolidAngle new_qa(NumericExtract(qa_arg));
 
 
-  eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
-  eci.solid_angle = new_qa;
-  eci.scale = scale;
-
-
-  //target_script->create_entity(pos, script,mesh);
-  target_script->create_entity(eci);
+    //parse a bunch of arguments here
+    EntityCreateInfo eci;
+    eci.scriptType = scriptType;
+    eci.mesh = mesh;
+    eci.scriptOpts = scriptOpts;
 
 
-  return v8::Undefined();
+    eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
+
+    eci.solid_angle = new_qa;
+    eci.scale = scale;
+
+
+    //target_script->create_entity(pos, script,mesh);
+    target_script->create_entity(eci);
+
+
+    return v8::Undefined();
 }
 
 v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args)
@@ -184,7 +195,12 @@ v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args)
      return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to reboot()")) );
   }
    // get the c++ object out from the js object
-   JSObjectScript* target_script = GetTargetJSObjectScript(args);
+   String errorMessage = "Error decoding JSObjectScript from system object in ScriptReboot of JSSystem.cpp.  ";
+   JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+   if (target_script == NULL)
+       return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+   
    // invoke the reboot in the script
    target_script->reboot();
 
@@ -236,7 +252,11 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
 
     if (jscont == NULL)
     {
-        JSObjectScript* target_script = GetTargetJSObjectScript(args);
+        String errorMessage = "Error decoding JSObjectScript from system object in ScriptTimeoutContext of JSSystem.cpp.  ";
+        JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+        if (target_script == NULL)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+        
         return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
     }
 
@@ -244,25 +264,6 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
     jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
 }
 
-
-template<typename WithHolderType>
-JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder) {
-    v8::Local<v8::Object> self = with_holder.Holder();
-    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
-    // The template actually generates the root objects prototype, not the root
-    // itself.
-    v8::Local<v8::External> wrap;
-    if (self->InternalFieldCount() > 0)
-        wrap = v8::Local<v8::External>::Cast(
-            self->GetInternalField(1)
-        );
-    else
-        wrap = v8::Local<v8::External>::Cast(
-            v8::Handle<v8::Object>::Cast(self->GetPrototype())->GetInternalField(1)
-        );
-    void* ptr = wrap->Value();
-    return static_cast<JSObjectScript*>(ptr);
-}
 
 
 v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
@@ -273,7 +274,12 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
     v8::Handle<v8::Value> filename = args[0];
 
     StringCheckAndExtract(native_filename, filename);
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptImport of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    
 
     target_script->import(native_filename);
 
@@ -288,8 +294,12 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 // spaces and ending with a newline.
 v8::Handle<v8::Value> Print(const v8::Arguments& args)
 {
-    JSObjectScript* target = GetTargetJSObjectScript(args);
-    assert(target != NULL);
+
+    String errorMessage = "Error decoding JSObjectScript from system object in Print of JSSystem.cpp.  ";
+    JSObjectScript* target = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
 
     bool first = true;
     for (int i = 0; i < args.Length(); i++) {
@@ -389,7 +399,12 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptRegisterHandler of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    
     JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
     
     return target_script->makeEventHandlerObject(evHand);
@@ -411,7 +426,13 @@ v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceConnected of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    
     target_script->registerOnPresenceConnectedHandler(cb_persist);
 
     return v8::Undefined();
@@ -428,7 +449,12 @@ v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args) {
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    JSObjectScript* target_script = GetTargetJSObjectScript(args);
+
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceDisconnected of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
     target_script->registerOnPresenceDisconnectedHandler(cb_persist);
 
     return v8::Undefined();

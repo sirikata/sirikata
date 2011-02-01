@@ -226,6 +226,40 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 }
 
 
+JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+    
+    if (! toDecode->IsObject())
+    {
+        errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Should have received an object to decode.";
+        return NULL;
+    }
+
+    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+
+    //now check internal field count
+    if (toDecodeObject->InternalFieldCount() != SYSTEM_TEMPLATE_FIELD_COUNT)
+    {
+        errorMessage += "Error in decode of system object in JSObjectScript.  Object given does not have adequate number of internal fields for decode.";
+        return NULL;
+    }
+
+    //now actually try to decode each.
+    //decode the jsVisibleStruct field
+    v8::Local<v8::External> wrapJSObjScript;
+    wrapJSObjScript = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD));
+    void* ptr = wrapJSObjScript->Value();
+
+    JSObjectScript* returner;
+    returner = static_cast<JSObjectScript*>(ptr);
+    if (returner == NULL)
+        errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Internal field of object given cannot be casted to a JSObjectScript.";
+
+    return returner;
+}
+
+
 //removes the object from the visible array if it exists (returns the object
 //itself so it can be passed into any user callbacks).  Otherwise asserts false.
 v8::Handle<v8::Value> JSObjectScript::removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)

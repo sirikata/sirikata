@@ -10,9 +10,6 @@ namespace JS {
 namespace JSMath{
 
 
-template<typename WithHolderType>
-JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder);
-
 v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAsinFunction(const v8::Arguments& args);

@@ -78,6 +78,8 @@ class JSObjectScript : public ObjectScript,
 {
 
 public:
+
+    static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
     
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();

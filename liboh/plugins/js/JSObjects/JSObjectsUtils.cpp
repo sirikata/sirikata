@@ -91,6 +91,55 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
 
 
 
+// template<typename WithHolderType>
+// JSObjectScript* GetTargetJSObjectScript(const WithHolderType& with_holder) {
+//     v8::Local<v8::Object> self = with_holder.Holder();
+//     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+//     // The template actually generates the root objects prototype, not the root
+//     // itself.
+//     v8::Local<v8::External> wrap;
+//     if (self->InternalFieldCount() > 0)
+//     {
+//         if (self->InternalFieldCount() <2)
+//         {
+//             SILOG(js, error, "Error in GetTargetJSObjectScript of JSObjectUtils.cpp.  Trying to decode jsobjectscript, but not enough fields.");
+//             return NULL;
+//         }
+        
+//         wrap = v8::Local<v8::External>::Cast(
+//             self->GetInternalField(1)
+//         );
+//     }
+//     else
+//     {
+//         if (!self->GetPrototype()->IsObject())
+//         {
+//             SILOG(js, error, "Error in GetTargetJSObjectScript of JSObjectUtils.cpp.  Trying to decode jsobjectscript, but proto is not an obj.");
+//             return NULL;
+//         }
+
+//         v8::Handle<v8::Object> protoObj = self->GetPrototype()->ToObject();
+        
+//         if (protoObj->InternalFieldCount() <2)
+//         {
+//             SILOG(js, error, "Error in GetTargetJSObjectScript of JSObjectUtils.cpp.  Trying to decode jsobjectscript, but not enough fields.");
+//             return NULL;
+//         }
+        
+//         wrap = v8::Local<v8::External>::Cast(protoObj->GetInternalField(1));
+//     }
+    
+//     void* ptr = wrap->Value();
+//     JSObjectScript* returner = static_cast<JSObjectScript*>(ptr);
+
+//     if (returner == NULL)
+//         SILOG(js, error, "Error in GetTargetJSObjectScript of JSObjectUtils.cpp.  Trying to decode jsobjectscript, but cannot statically cast to JSObjectScript.");
+        
+//     return returner;
+// }
+
+
+
 }//namespace js
 }//namespace sirikata
 
