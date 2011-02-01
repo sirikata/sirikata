@@ -322,7 +322,7 @@ class BulletObj : public MeshListener, Noncopyable {
     bool mPIDControlEnabled;
     btVector3 mDesiredLinearVelocity;
     btVector3 mDesiredAngularVelocity;
-    Meshdata* mMeshdata;
+    Mesh::Meshdata* mMeshdata;
 
 public:
     /// public members -- yes, I use 'em.  No, I don't always thicken my code with gettr/settr's
@@ -369,7 +369,7 @@ public:
         virtual void onSetPhysical ( PhysicalParameters const& pp );*/
 
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-        virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md);
+    virtual void onMeshParsed (ProxyObjectPtr proxy, String const& hash, Mesh::Meshdata& md);
         virtual void onSetScale (ProxyObjectPtr proxy, Vector3f const& newScale );
         virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 

@@ -1,0 +1,145 @@
+ <html>
+
+<head>
+<title>Meru Ajax Tester</title>
+
+<style type="text/css">
+div {
+	border: 1px solid #999999;
+	width: 900px;
+	margin-bottom: 20px;
+	background-color: #eeddff;
+}
+div input, div button, div h2, div h3, div label, div span, hr {
+	margin: 10px;
+}
+div button, div span {
+	display: block;
+}
+div span {
+	font-weight: bold;
+}
+div input {
+	width: 500px;
+}
+hr {
+	color: #999999;
+	background-color: #999999;
+	height: 1px;
+	border: none;
+}
+</style>
+
+<script type="text/javascript" src="js/jquery.js"></script>
+
+<script type = "text/javascript">
+
+function setSuccess(selector, msg) {
+	$(selector).html(msg);
+	$(selector).show();
+	$(selector).css('color', '#006600');
+}
+
+function setError(selector, msg) {
+	$(selector).html(msg);
+	$(selector).show();
+	$(selector).css('color', '#660000');
+}
+
+function nameLookup() {
+	$.ajax({
+		url: $('#nameLookupFile').val(),
+		type: 'HEAD',
+		success: function(data, status, xhr) {
+			if(status == 'success') {
+		    	setSuccess('#nameLookupResult', 'File Hash: ' + xhr.getResponseHeader('Hash')
+				    	+ '<br>File Size: ' + xhr.getResponseHeader('File-Size'));
+			} else {
+				setError('#nameLookupResult', 'Response was not success. Instead was: ' + status);
+			}
+		},
+		error: function(xhr, txtStatus, errorThrown) {
+			setError('#nameLookupResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+		}
+	});
+}
+
+function metadataLookup() {
+	$.ajax({
+		url: $('#metadataLookupFile').val(),
+		type: 'HEAD',
+		success: function(data, status, xhr) {
+			if(status == 'success') {
+		    	setSuccess('#metadataLookupResult', 'Content Length: ' + xhr.getResponseHeader('Content-Length'));
+			} else {
+				setError('#metadataLookupResult', 'Response was not success. Instead was: ' + status);
+			}
+		},
+		error: function(xhr, txtStatus, errorThrown) {
+			setError('#metadataLookupResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+		}
+	});
+}
+
+function fileDownload() {
+	$.ajax({
+		url: $('#fileDownloadFile').val(),
+		type: 'GET',
+		success: function(data, status, xhr) {
+			if(status == 'success') {
+		    	setSuccess('#fileDownloadResult', 'Data size: ' + data.length);
+			} else {
+				setError('#fileDownloadResult', 'Response was not success. Instead was: ' + status);
+			}
+		},
+		error: function(xhr, txtStatus, errorThrown) {
+			setError('#fileDownloadResult', 'Error (' + xhr.status + '): ' + xhr.statusText);
+		}
+	});
+}
+
+$(document).ready(function() {
+	$('#nameLookupButton').click(nameLookup);
+	$('#metadataLookupButton').click(metadataLookup);
+	$('#fileDownloadButton').click(fileDownload);
+});
+</script>
+
+</head>
+
+<body>
+
+<div id="nameLookup">
+<h2>Name Lookup</h2>
+<label for="nameLookupFile">File:</label>
+<input id="nameLookupFile" type="text" value="/dns/global/jkusnerz/Boulder_Spire_01.mesh"></input>
+<button id="nameLookupButton" type="button">Test</button>
+<hr>
+<h3>Result</h3>
+<span id="nameLookupResult">-</span>
+</div>
+
+<div id="metadataLookup">
+<h2>File Metadata Lookup</h2>
+<label for="metadataLookupFile">File:</label>
+<input id="metadataLookupFile" type="text" value="/files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4"></input>
+<button id="metadataLookupButton" type="button">Test</button>
+<hr>
+<h3>Result</h3>
+<span id="metadataLookupResult">-</span>
+</div>
+
+<div id="fileDownload">
+<h2>File Download</h2>
+<label for="fileDownloadFile">File:</label>
+<input id="fileDownloadFile" type="text" value="/files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4"></input>
+<button id="fileDownloadButton" type="button">Test</button>
+<hr>
+<h3>Result</h3>
+<span id="fileDownloadResult">-</span>
+</div>
+
+</body>
+
+</html>
+ 

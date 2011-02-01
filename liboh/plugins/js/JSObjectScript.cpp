@@ -59,7 +59,6 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
 #include "JSSystemNames.hpp"
-
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
@@ -327,6 +326,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
     if (! removedProxVal->IsObject())
         return;
 
+
     v8::Local<v8::Object>removedProxObj;
     removedProxObj = removedProxVal->ToObject();
 
@@ -363,13 +363,16 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
 
+
         v8::Handle<v8::Value> newVisibleVal = addVisible(proximateObject,querier);
 
         if (newVisibleVal->IsUndefined())
             return;
 
+
         if (! newVisibleVal->IsObject())
             return;
+
 
         v8::Local<v8::Object> newVisibleObj = newVisibleVal->ToObject();
 
@@ -613,6 +616,8 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     #endif
 
+    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+    
 
     
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
@@ -776,6 +781,7 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     
     for (int s=0; s < (int) vis_array->Length(); ++s)
     {
+
         jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s),errorMessage);
         if (jsvis == NULL)
         {
@@ -793,6 +799,7 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     JSLOG(info, "Did not already have the associated object in visible array.  Creating new one.");
     //means that we don't already have this object in visible array.
     uint32 new_pos = vis_array->Length();
+
 
     //create the visible object associated with the new proxy object
     Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
@@ -1464,10 +1471,8 @@ bool JSObjectScript::updatePosition(SpaceObjectReference* sporef, SpaceObjectRef
     if (succeeded)
         *position = mParent->requestCurrentPosition(p);
 
-
     return succeeded;
 }
-
 
 v8::Handle<v8::Value> JSObjectScript::printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo)
 {

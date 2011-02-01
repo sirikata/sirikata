@@ -38,9 +38,6 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 
-#include <sirikata/space/LocationService.hpp>
-
-
 #include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
@@ -76,7 +73,9 @@ private:
 
 
 public:
-  void simplify(std::tr1::shared_ptr<Meshdata> agg_mesh, int32 numVerticesLeft);
+
+  void simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft);
+
 
 };
 

@@ -95,6 +95,7 @@ void JSObjectScriptManager::createUtilTemplate()
     // An internal field holds the JSObjectScript*
     mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
+
     mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSMath::ScriptSqrtFunction));
     mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSMath::ScriptAcosFunction));
     mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSMath::ScriptAsinFunction));
@@ -106,6 +107,7 @@ void JSObjectScriptManager::createUtilTemplate()
 
 
     addTypeTemplates(mUtilTemplate);
+
 }
 
 //these templates involve vec, quat, pattern, etc.

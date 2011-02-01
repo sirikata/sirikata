@@ -60,8 +60,8 @@ using namespace std;
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
 #include "WebViewManager.hpp"
 
-volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
-volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
+//volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
+//volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
 //volatile char assert_malloc_is_gequal_1[OGRE_MEMORY_ALLOCATOR*2-1]={0};
 //volatile char assert_malloc_is_lequal_1[3-OGRE_MEMORY_ALLOCATOR*2]={0};
@@ -493,7 +493,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==>
                                                                                       /// setupResources("/home/daniel/clipmapterrain/trunk/resources.cfg");
             bool ogreCreatedWindow=
-#if defined(__APPLE__)||defined(_WIN32)
+#if defined(_WIN32) || defined(__APPLE__)
                 true
 #else
                 doAutoWindow
@@ -515,6 +515,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                     sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
                     rw->setVisible(true);
                 }
+                printf("RW: %s\n", typeid(*rw).name());
                 rw->getCustomAttribute("WINDOW",&hWnd);
 #ifdef _WIN32
                 {
@@ -545,7 +546,8 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                     if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
                         misc["macAPI"] = String("cocoa");
                         //misc["macAPICocoaUseNSView"] = String("true");
-                        misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+//                        misc["externalWindowHandle"] = Ogre::StringConverter::toString((size_t)hWnd);
+                        misc["currentGLContext"] = String("True");
                     }
                 }
 #else
@@ -607,13 +609,12 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     return true;
 }
 namespace {
-bool ogreLoadPlugin(const String& filename, const String& root = "") {
+bool ogreLoadPlugin(const String& _filename, const String& root = "") {
     using namespace boost::filesystem;
 
+    String filename = _filename;
 #if SIRIKATA_PLATFORM == PLATFORM_MAC
-    // Ogre Framework handles this differently than other platforms
-    Ogre::Root::getSingleton().loadPlugin(filename);
-    return true;
+    filename += ".dylib";
 #endif
 
     // FIXME there probably need to be more of these
@@ -626,6 +627,7 @@ bool ogreLoadPlugin(const String& filename, const String& root = "") {
         path("dependencies/ogre-1.6.1/lib/OGRE") / filename,
         path("dependencies/ogre-1.6.x/lib/OGRE") / filename,
         path("dependencies/lib/OGRE") / filename,
+        path("dependencies/installed-ogre/OgrePlugins") / filename, // Mac
         path("lib/OGRE") / filename,
         path("OGRE") / filename,
         path("Debug") / filename,
@@ -637,7 +639,11 @@ bool ogreLoadPlugin(const String& filename, const String& root = "") {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    path plugin_path = path(findResource(search_paths, nsearch_paths, false, root));
+    path not_found;
+    path plugin_path = path(findResource(search_paths, nsearch_paths, false, root, not_found));
+    if (plugin_path == not_found)
+        return false;
+
     String plugin_str = plugin_path.string();
 
     FILE *fp=fopen(plugin_str.c_str(),"rb");
@@ -657,7 +663,7 @@ bool OgreSystem::loadBuiltinPlugins () {
 
 #ifdef __APPLE__
     retval = ogreLoadPlugin("RenderSystem_GL", exeDir);
-    retval = ogreLoadPlugin("Plugin_CgProgramManager", exeDir) && retval;
+    //retval = ogreLoadPlugin("Plugin_CgProgramManager", exeDir) && retval;
     retval = ogreLoadPlugin("Plugin_ParticleFX", exeDir) && retval;
     retval = ogreLoadPlugin("Plugin_OctreeSceneManager", exeDir) && retval;
 	if (!retval) {
@@ -775,7 +781,7 @@ void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
     dlPlanner->removeObject(p);
 }
 
-MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+Mesh::MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
     return mModelParser->load(orig_uri, fp, data);
 }
 

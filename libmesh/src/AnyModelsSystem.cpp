@@ -89,9 +89,9 @@ bool AnyModelsSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> da
     return false;
 }
 
-MeshdataPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+Mesh::MeshdataPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
     std::tr1::shared_ptr<const Transfer::DenseData> data) {
-    MeshdataPtr result;
+    Mesh::MeshdataPtr result;
     for(SystemsMap::iterator it = mModelsSystems.begin(); it != mModelsSystems.end(); it++) {
         ModelsSystem* ms = it->second;
         if (ms->canLoad(data)) {
@@ -102,7 +102,7 @@ MeshdataPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer::Fing
     return result;
 }
 
-bool AnyModelsSystem::convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) {
+bool AnyModelsSystem::convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) {
     SystemsMap::iterator it = mModelsSystems.find(format);
     if (it == mModelsSystems.end()) {
         SILOG(AnyModelsSystem,error,"AnyModelsSystem couldn't find format " << format << " during mesh conversion.");

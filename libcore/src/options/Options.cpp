@@ -277,7 +277,7 @@ public:
                                   i->second->description());
         }
     }
-    static bool update_options(std::map<std::string,OptionValue*>&names, boost::program_options::options_description &options_description, const boost::program_options::variables_map options, bool use_defaults) {
+    static bool update_options(std::map<std::string,OptionValue*>&names, boost::program_options::options_description &options_description, const boost::program_options::variables_map& options, bool use_defaults) {
         if (options.count("help")){
             try {
                 std::cout << options_description;
@@ -352,7 +352,10 @@ void OptionSet::parse(int argc, const char * const *argv, bool use_defaults){
         OptionRegistration::register_options(mNames,options);
     }
     options.add_options()("help","Print available options");
-    boost::program_options::store( parse_command_line(argc, const_cast<char**>(argv), options), output);
+    boost::program_options::store(
+        parse_command_line(argc, const_cast<char**>(argv), options, (boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)),
+        output
+    );
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());
@@ -396,7 +399,13 @@ void OptionSet::parse(const std::string&args, bool use_defaults){
     }
     options.add_options()("help","Print available options");
     std::vector<std::string> args_vec = splice_winmain(args);
-    boost::program_options::store( boost::program_options::command_line_parser(args_vec).options(options).run(),output);
+    boost::program_options::store(
+        boost::program_options::command_line_parser(args_vec)
+        .options(options)
+        .style(boost::program_options::command_line_style::default_style ^ boost::program_options::command_line_style::allow_guessing)
+        .run(),
+        output
+    );
     bool dienow=false;
     {
         boost::unique_lock<boost::mutex> lock(OptionRegistration::OptionSetMutex());

@@ -68,7 +68,7 @@ class SIRIKATA_MESH_EXPORT ModelsSystem
         virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
 
         /** Load a mesh into a Meshdata object. */
-        virtual MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+        virtual Mesh::MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
             std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
 
 
@@ -78,7 +78,7 @@ class SIRIKATA_MESH_EXPORT ModelsSystem
          *  \param filename the file to save the serialized mesh to
          *  \returns true if the conversion was successful, false otherwise
          */
-        virtual bool convertMeshdata(const Meshdata& meshdata, const String& format, const String& filename) = 0;
+        virtual bool convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) = 0;
 
     protected:
 

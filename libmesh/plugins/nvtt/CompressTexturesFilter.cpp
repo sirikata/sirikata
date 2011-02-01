@@ -78,7 +78,7 @@ FilterDataPtr CompressTexturesFilter::apply(FilterDataPtr input) {
         String uri_dir = mesh->uri.substr(7);
         uri_dir = uri_dir.substr(0, uri_dir.rfind("/")+1);
 
-        for(Meshdata::TextureList::iterator tex_it = mesh->textures.begin(); tex_it != mesh->textures.end(); tex_it++) {
+        for(TextureList::iterator tex_it = mesh->textures.begin(); tex_it != mesh->textures.end(); tex_it++) {
             String relative_texfile = *tex_it;
             String new_relative_texfile = relative_texfile + ".dds";
             String texfile = uri_dir + relative_texfile;
@@ -130,11 +130,7 @@ FilterDataPtr CompressTexturesFilter::apply(FilterDataPtr input) {
 
             // And replace the texture
             *tex_it = new_relative_texfile;
-            for(Meshdata::URIMap::iterator tex_map_it = mesh->textureMap.begin(); tex_map_it != mesh->textureMap.end(); tex_map_it++) {
-                if (tex_map_it->second == relative_texfile)
-                    tex_map_it->second = new_relative_texfile;
-            }
-            for(Meshdata::MaterialEffectInfoList::iterator mat_it = mesh->materials.begin(); mat_it != mesh->materials.end(); mat_it++) {
+            for(MaterialEffectInfoList::iterator mat_it = mesh->materials.begin(); mat_it != mesh->materials.end(); mat_it++) {
                 for(MaterialEffectInfo::TextureList::iterator tex_it = mat_it->textures.begin(); tex_it != mat_it->textures.end(); tex_it++) {
                     if (tex_it->uri == relative_texfile)
                         tex_it->uri = new_relative_texfile;

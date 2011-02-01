@@ -42,6 +42,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <sirikata/core/network/Asio.hpp>
 #include <functional>
+#include <boost/regex.hpp>
 
 namespace Sirikata
 {

@@ -1,4 +1,3 @@
-
 #include "MeshdataToCollada.hpp"
 
 #include "COLLADASWStreamWriter.h"
@@ -27,6 +26,8 @@
 
 
 namespace Sirikata {
+
+using namespace Mesh;
 
   std::string removeNonAlphaNumeric(std::string str) {
     for (uint32 i = 0; i < str.size(); i++) {
@@ -71,16 +72,16 @@ namespace Sirikata {
 
     }
 
-    void exportMaterial(const Meshdata& meshdata, std::map<std::string, int>& textureURIToEffectIndexMap, std::map<int, int>& materialRedirectionMap) {     
+    void exportMaterial(const Meshdata& meshdata, std::map<std::string, int>& textureURIToEffectIndexMap, std::map<int, int>& materialRedirectionMap) {
       openLibrary();
 
       for (uint32 i=0; i < meshdata.materials.size(); i++) {
         //FIXME: this assumes all the texture URIs are the same in materials[i].textures
-        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];      
+        const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];
         if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end() &&
             textureURIToEffectIndexMap[texture.uri] != i
            )
-          {   
+          {
             materialRedirectionMap[i] = textureURIToEffectIndexMap[texture.uri];
             continue;
           }
@@ -90,16 +91,16 @@ namespace Sirikata {
           snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
                    texture.color.z, texture.color.w, texture.affecting);
           String colorEncoding = colorEncodingStr;
-          
+
           if (textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end() &&
               textureURIToEffectIndexMap[colorEncoding] != i
               )
-            {   
+            {
               materialRedirectionMap[i] = textureURIToEffectIndexMap[colorEncoding];
               continue;
             }
         }
-        
+
 
         materialRedirectionMap[i] = i;
         char effectNameStr[256];
@@ -108,7 +109,7 @@ namespace Sirikata {
         std::string materialName = effectName + "ID";
         openMaterial(materialName, COLLADABU::Utils::checkNCName(materialName) );
 
-        addInstanceEffect("#" + effectName + "-effect");        
+        addInstanceEffect("#" + effectName + "-effect");
 
         closeMaterial();
       }
@@ -124,12 +125,12 @@ namespace Sirikata {
       {
       }
 
-    void exportEffect(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, std::map<String,int>& textureList, 
+    void exportEffect(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, std::map<String,int>& textureList,
                       std::map<std::string, int>& textureURIToEffectIndexMap)
     {
-        openLibrary();        
+        openLibrary();
 
-        for (uint32 i=0; i < meshdata.materials.size(); i++) {          
+        for (uint32 i=0; i < meshdata.materials.size(); i++) {
           COLLADASW::EffectProfile effectProfile(streamWriter);
 
           bool effectProfileEmpty = true;
@@ -149,7 +150,7 @@ namespace Sirikata {
 
               COLLADASW::Texture colladaTexture = COLLADASW::Texture(nonAlphaNumericTextureURI);
 
-              COLLADASW::Sampler colladaSampler(COLLADASW::Sampler::SAMPLER_TYPE_2D, 
+              COLLADASW::Sampler colladaSampler(COLLADASW::Sampler::SAMPLER_TYPE_2D,
                                                 std::string("sampler-")+ nonAlphaNumericTextureURI,
                                                 std::string("surface-")+ nonAlphaNumericTextureURI);
 
@@ -180,19 +181,17 @@ namespace Sirikata {
               snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
                        texture.color.z, texture.color.w, texture.affecting);
               colorEncoding = colorEncodingStr;
-              std::cout << colorEncoding << " : colorEncoding 1\n";
+
               if (  textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end()) {
                  continue;
               }
-              std::cout << colorEncoding << " : colorEncoding 2\n";
-              std::cout << texture.affecting << " : texture.affecting 2\n";
-              
-              
+
+
               colorOrTexture = COLLADASW::ColorOrTexture( COLLADASW::Color(texture.color.x, texture.color.y,
                                                                            texture.color.z, texture.color.w));
             }
 
-            
+
 
             switch(texture.affecting) {
               case MaterialEffectInfo::Texture::DIFFUSE:
@@ -206,9 +205,9 @@ namespace Sirikata {
             }
 
             if (texture.uri != "") {
-              textureURIToEffectIndexMap[texture.uri] = i;              
+              textureURIToEffectIndexMap[texture.uri] = i;
             }
-            else {              
+            else {
               textureURIToEffectIndexMap[colorEncoding] = i;
             }
           }
@@ -217,22 +216,22 @@ namespace Sirikata {
             char effectNameStr[256];
             snprintf(effectNameStr, 256, "material%d", i);
             std::string effectName = effectNameStr;
-          
-            openEffect(effectName+"-effect");          
-          
+
+            openEffect(effectName+"-effect");
+
             effectProfile.setShininess(meshdata.materials[i].shininess);
             effectProfile.setReflectivity(meshdata.materials[i].reflectivity);
-            effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);          
+            effectProfile.setShaderType(COLLADASW::EffectProfile::PHONG);
 
             //
             addEffectProfile(effectProfile);
-          
+
             closeEffect();
           }
           else {
-            
+
           }
-          
+
         }
 
         closeLibrary();
@@ -246,8 +245,8 @@ namespace Sirikata {
     {
     }
 
-    void exportGeometry(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, 
-                        std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap) 
+    void exportGeometry(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata,
+                        std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap)
     {
       openLibrary();
 
@@ -269,7 +268,7 @@ namespace Sirikata {
         for(uint32 j = 0; geoInst != NULL && meshdata.geometry[i].positions.size() > 0  && j < meshdata.geometry[i].primitives.size(); ++j )
         {
           if (meshdata.geometry[i].primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
-          
+
           if (meshdata.geometry[i].primitives[j].indices.size() > 0) {
             hasTriangles = true;
             break;
@@ -346,10 +345,11 @@ namespace Sirikata {
           colladaSource.setId(geometryName + "-uv");
           colladaSource.setArrayId(geometryName + "-uv-array");
 
-          colladaSource.setAccessorStride(2);
-
+          int32 stride = meshdata.geometry[i].texUVs[j].stride;
+          colladaSource.setAccessorStride(stride);
           colladaSource.getParameterNameList().push_back( "S" );
-          colladaSource.getParameterNameList().push_back( "T" );
+          if (stride >= 2) colladaSource.getParameterNameList().push_back( "T" );
+          if (stride >= 3) colladaSource.getParameterNameList().push_back( "P" );
 
           colladaSource.setAccessorCount(meshdata.geometry[i].texUVs[j].uvs.size()/2);
           colladaSource.prepareToAppendValues();
@@ -375,12 +375,12 @@ namespace Sirikata {
           vertices.add();
         }
 
-        //triangles        
+        //triangles
         for(uint32 j = 0; geoInst != NULL && j < meshdata.geometry[i].primitives.size(); ++j )
         {
           if (meshdata.geometry[i].primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
           if (meshdata.geometry[i].primitives[j].indices.size() == 0) continue;
-          
+
 
           COLLADASW::Triangles triangles(streamWriter);
           if (meshdata.geometry[i].texUVs.size() > 0) {
@@ -437,8 +437,8 @@ public:
     {
     }
 
-  void exportVisualScene(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata, 
-                         std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap) 
+  void exportVisualScene(COLLADASW::StreamWriter*  streamWriter, const Meshdata& meshdata,
+                         std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap)
   {
     openLibrary();
     openVisualScene( "Space_Aggregated_Scene" );
@@ -447,7 +447,7 @@ public:
     for(uint32 i = 0; i < meshdata.instances.size(); i++)
     {
 
-      if (   addedGeometriesList.find(meshdata.instances[i].geometryIndex) == addedGeometriesList.end() 
+      if (   addedGeometriesList.find(meshdata.instances[i].geometryIndex) == addedGeometriesList.end()
              || addedGeometriesList[meshdata.instances[i].geometryIndex] == false)
       {
         continue;
@@ -456,7 +456,7 @@ public:
       char geometryNameStr[256];
       snprintf(geometryNameStr, 256, "mesh-geometry-%d", i );
       std::string geometryName = geometryNameStr;
-      
+
       COLLADASW::Node colladaNode( streamWriter );
 
       colladaNode.setNodeId( "node-" + geometryName );
@@ -495,7 +495,7 @@ public:
 
       instanceGeometry.add();
 
-      Matrix4x4f mat = meshdata.instances[i].transform;
+      Matrix4x4f mat = meshdata.getTransform(meshdata.instances[i].parentNode);
 
       double matrix[4][4] = { { mat(0,0), mat(0,1), mat(0,2), mat(0,3) },
                               { mat(1,0), mat(1,1), mat(1,2), mat(1,3)  },
@@ -557,8 +557,8 @@ public:
     exportAsset(&streamWriter, meshdata);
 
     std::map<String,int> texturesList;
-    for (Meshdata::URIMap::const_iterator it = meshdata.textureMap.begin() ; it!= meshdata.textureMap.end(); it++) {
-      texturesList[it->second] = 1;
+    for (TextureList::const_iterator it = meshdata.textures.begin() ; it!= meshdata.textures.end(); it++) {
+      texturesList[*it] = 1;
     }
 
     ImageExporter imageExporter(&streamWriter);
@@ -590,3 +590,5 @@ public:
   }
 
 }
+
+

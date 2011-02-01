@@ -271,6 +271,11 @@ char * findMem(char *data, size_t howmuch, const char * target, size_t targlen)
 
 Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename) const
 {
+  return open(filename, true);
+}
+
+Ogre::DataStreamPtr CDNArchive::open(const Ogre::String& filename, bool readOnly) const
+{
   boost::mutex::scoped_lock lok(mOwner->CDNArchiveMutex);
   std::string canonicalName = canonicalizeHash(filename);
   std::tr1::unordered_map<std::string,Transfer::SparseData>::iterator where =

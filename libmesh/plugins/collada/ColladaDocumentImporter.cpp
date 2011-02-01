@@ -39,10 +39,16 @@
 
 #include "COLLADAFWScene.h"
 #include "COLLADAFWVisualScene.h"
+#include "COLLADAFWKinematicsScene.h"
 #include "COLLADAFWInstanceVisualScene.h"
+#include "COLLADAFWInstanceKinematicsScene.h"
 #include "COLLADAFWLibraryNodes.h"
 #include "COLLADAFWLight.h"
 #include "COLLADAFWEffect.h"
+#include "COLLADAFWFormulas.h"
+#include "COLLADAFWAnimation.h"
+#include "COLLADAFWAnimationList.h"
+#include "COLLADAFWAnimationCurve.h"
 
 #include "MeshdataToCollada.hpp"
 
@@ -51,19 +57,37 @@
 
 namespace Sirikata { namespace Models {
 
+using namespace Mesh;
+
+namespace Collada {
+// Struct for tracking node information during traversal
+struct NodeState {
+    enum Modes {
+        Fresh = 1, // Newly created. Needs to be inserted into Meshdata
+        Geo = 2, // Geometry (and lights, cameras, etc)
+        InstNodes = 3, // Instance nodes (requires indirection)
+        Nodes = 4 // Normal child nodes
+    };
+
+    NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, COLLADABU::Math::Matrix4 _matrix, int _child = -1, Modes _mode = Fresh)
+     : node(_node), parent(_parent), matrix(_matrix), child(_child), mode(_mode)
+    {}
+
+    const COLLADAFW::Node* node;
+    const COLLADAFW::Node* parent;
+    COLLADABU::Math::Matrix4 matrix;
+    unsigned int child;
+    Modes mode;
+};
+} // namespace Collada
+
+
 ColladaDocumentImporter::ColladaDocumentImporter ( Transfer::URI const& uri, const SHA256& hash )
     :   mDocument ( new ColladaDocument ( uri ) ),
-        mState ( IDLE )
+        mState ( IDLE ),
+        mMesh(new Mesh::Meshdata())
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered, uri: " << uri);
-
-//    SHA256 hash = SHA256::computeDigest(uri.toString());    /// rest of system uses hash
-//    lastURIString = hash.convertToHexString();
-
-//    lastURIString = uri.toString();
-
-    Meshdata* meshdata = new Meshdata();
-    mMesh = meshdata;
 
     mMesh->uri = uri.toString();
     mMesh->hash = hash;
@@ -85,10 +109,10 @@ ColladaDocumentImporter::~ColladaDocumentImporter ()
     for (ColladaEffectMap::iterator i=mColladaEffects.begin();i!=mColladaEffects.end();i++) {
         delete i->second;
     }
-    for (SkinControllerMap::iterator i=mSkinController.begin();i!=mSkinController.end();i++) {
+    for (OCSkinControllerMap::iterator i=mSkinController.begin();i!=mSkinController.end();i++) {
         delete i->second;
     }
-    for (SkinControllerDataMap::iterator i=mSkinControllerData.begin();i!=mSkinControllerData.end();i++) {
+    for (OCSkinControllerDataMap::iterator i=mSkinControllerData.begin();i!=mSkinControllerData.end();i++) {
         delete i->second;
     }
 */
@@ -111,7 +135,144 @@ String ColladaDocumentImporter::documentURI() const {
 void ColladaDocumentImporter::postProcess ()
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::postProcess() entered");
+    translateNodes();
+    translateSkinControllers();
+}
 
+void ColladaDocumentImporter::translateNodes() {
+    using namespace Sirikata::Models::Collada;
+
+    // We need to replicate all nodes into the Meshdata. We also store UniqueID
+    // -> index for all nodes.
+
+    // Also, for instanced nodes, we may try to instantiate them before we
+    // actually process them. We store up this information, parent unique ids ->
+    // list of children's unique ids, and fill it all in at the end.
+    typedef std::vector<COLLADAFW::UniqueId> UniqueIdList;
+    typedef std::map<COLLADAFW::UniqueId, UniqueIdList> UniqueChildrenListMap;
+    UniqueChildrenListMap instance_children;
+
+    // Try to find the instanciated VisualScene
+    VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
+    assert(vis_scene_it != mVisualScenes.end()); // FIXME
+    const COLLADAFW::VisualScene* vis_scene = vis_scene_it->second;
+    // Iterate through nodes.
+    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
+        const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
+
+        std::stack<NodeState> node_stack;
+        node_stack.push( NodeState(rn, NULL, COLLADABU::Math::Matrix4::IDENTITY) );
+
+        while(!node_stack.empty()) {
+            NodeState curnode = node_stack.top();
+            node_stack.pop();
+
+            if (curnode.mode == NodeState::Fresh) {
+                COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
+
+                // Get node indices
+                NodeIndex nindex = mMesh->nodes.size();
+                NodeIndex parent_idx = NullNodeIndex;
+                if (curnode.parent != NULL) {
+                    parent_idx = mNodeIndices[curnode.parent->getUniqueId()];
+                    // Add the node to it's parent as a child
+                    mMesh->nodes[parent_idx].children.push_back(nindex);
+                }
+                // Create the new node
+                Node rnode(parent_idx, Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR()));
+                mNodeIndices[rn->getUniqueId()] = nindex;
+                mMesh->nodes.push_back(rnode);
+                // If there is no parent, add as a root node
+                if (curnode.parent == NULL)
+                    mMesh->rootNodes.push_back(nindex);
+
+                curnode.mode = NodeState::Geo;
+            }
+
+            if (curnode.mode == NodeState::Geo) {
+                // This path doesn't deal with geometry, just nodes. Do minimal
+                // processing and continue.
+
+                // Transformation
+                COLLADABU::Math::Matrix4 additional_xform = curnode.node->getTransformationMatrix();
+                curnode.matrix = curnode.matrix * additional_xform;
+
+                // Tell the remaining code to start processing children nodes
+                curnode.child = 0;
+                curnode.mode = NodeState::InstNodes;
+            }
+
+            if (curnode.mode == NodeState::InstNodes) {
+                // Instance nodes are just added to the current node. However,
+                // we need to defer this because the instanced nodes may not
+                // have been processed yet, so we wouldn't be able to lookup an
+                // index.
+
+                // Instance Nodes
+                if ((size_t)curnode.child >= (size_t)curnode.node->getInstanceNodes().getCount()) {
+                    curnode.child = 0;
+                    curnode.mode = NodeState::Nodes;
+                }
+                else {
+                    COLLADAFW::UniqueId child_id = curnode.node->getInstanceNodes()[curnode.child]->getInstanciatedObjectId();
+                    COLLADAFW::UniqueId node_id = curnode.node->getUniqueId();
+
+                    instance_children[node_id].push_back(child_id);
+                }
+            }
+            if (curnode.mode == NodeState::Nodes) {
+                // Process the next child if there are more
+                if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
+                    // updated version of this node
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
+                    // And the child node
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.matrix) );
+                }
+            }
+        }
+    }
+
+    // Fill in instance node children information
+    for(UniqueChildrenListMap::const_iterator parent_it = instance_children.begin(); parent_it != instance_children.end(); parent_it++) {
+        NodeIndex parent_idx = mNodeIndices[parent_it->first];
+        const UniqueIdList& inst_children = parent_it->second;
+
+        for(UniqueIdList::const_iterator child_it = inst_children.begin(); child_it != inst_children.end(); child_it++) {
+            mMesh->nodes[parent_idx].instanceChildren.push_back( mNodeIndices[*child_it] );
+        }
+    }
+}
+
+void ColladaDocumentImporter::translateSkinControllers() {
+    // Copy SkinController data into the corresponding mesh. We need to do this
+    // now because the skin and geometry may not occur in order.
+    for(OCSkinControllerMap::iterator skin_it = mSkinControllers.begin(); skin_it != mSkinControllers.end(); skin_it++) {
+        COLLADAFW::UniqueId skin_id = skin_it->first;
+        OCSkinController& skin = skin_it->second;
+
+        // Look up the skin's data
+        OCSkinControllerDataMap::iterator skindata_it = mSkinControllerData.find(skin.skinControllerData);
+        OCSkinControllerData& skindata = skindata_it->second;
+
+        // And lookup the mesh that the animation belongs to
+        IndicesMultimap::iterator geom_it = mGeometryMap.find(skin.source);
+        uint32 mesh_idx = geom_it->second;
+        SubMeshGeometry& mesh = mMesh->geometry[mesh_idx];
+
+        // Copy data into SubMeshGeometry
+        mesh.skinControllers.push_back(SkinController());
+        SkinController& mesh_skin = mesh.skinControllers.back();
+        for(std::vector<COLLADAFW::UniqueId>::iterator jointid_it = skin.joints.begin(); jointid_it != skin.joints.end(); jointid_it++) {
+            // FIXME joints reference nodes in the collada hierarchy and these
+            //aren't currently represented, so we can't fill them in.
+            //scene_graph.find(*jointid_it);
+        }
+        mesh_skin.bindShapeMatrix = skindata.bindShapeMatrix;
+        mesh_skin.weightStartIndices = skindata.weightStartIndices;
+        mesh_skin.weights = skindata.weights;
+        mesh_skin.jointIndices = skindata.jointIndices;
+        mesh_skin.inverseBindMatrices = skindata.inverseBindMatrices;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -130,26 +291,6 @@ void ColladaDocumentImporter::start ()
 
     mState = STARTED;
 }
-
-// We need this to be a non-local definition, so hide it in a namespace
-namespace Collada {
-struct NodeState {
-    enum Modes {
-        Geo = 1, // Geometry (and lights, cameras, etc)
-        InstNodes = 2, // Instance nodes (requires indirection)
-        Nodes = 3 // Normal child nodes
-    };
-
-    NodeState(const COLLADAFW::Node* _node, COLLADABU::Math::Matrix4 _matrix, int _child = -1, Modes _mode = Geo)
-     : node(_node), matrix(_matrix), child(_child), mode(_mode)
-    {}
-
-    const COLLADAFW::Node* node;
-    COLLADABU::Math::Matrix4 matrix;
-    unsigned int child;
-    Modes mode;
-};
-} // namespace Collada
 
 double computeRadiusAndBounds(const SubMeshGeometry&geometry, const Matrix4x4f &new_geo_inst_transform, BoundingBox3f3f&new_geo_inst_aabb) {
     double new_geo_inst_radius=0;
@@ -187,21 +328,22 @@ void ColladaDocumentImporter::finish ()
 
     COLLADA_LOG(insane, "ColladaDocumentImporter::finish() entered");
 
-    postProcess ();
-
     // Generate the Meshdata from all our parsed data
 
     // Add geometries
     // FIXME only store the geometries we need
-
-
     mMesh->geometry.swap(mGeometries);
     mMesh->lights.swap( mLights);
 
+    // The global transform is a scaling factor for making the object unit sized
+    // and a rotation to get Y-up
+    mMesh->globalTransform = mUnitScale * mChangeUp;
 
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
 
+    // NOTE: postProcess expects geometry and lights to have been filled in.
+    postProcess ();
 
     // Try to find the instanciated VisualScene
     VisualSceneMap::iterator vis_scene_it = mVisualScenes.find(mVisualSceneId);
@@ -213,11 +355,17 @@ void ColladaDocumentImporter::finish ()
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
         std::stack<NodeState> node_stack;
-        node_stack.push( NodeState(rn, COLLADABU::Math::Matrix4::IDENTITY) );
+        node_stack.push( NodeState(rn, NULL, COLLADABU::Math::Matrix4::IDENTITY) );
 
         while(!node_stack.empty()) {
             NodeState curnode = node_stack.top();
             node_stack.pop();
+
+            if (curnode.mode == NodeState::Fresh) {
+                // In this traversal we don't need to do anything when the node
+                // is just added
+                curnode.mode = NodeState::Geo;
+            }
 
             if (curnode.mode == NodeState::Geo) {
 
@@ -236,7 +384,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         GeometryInstance new_geo_inst;
                         new_geo_inst.geometryIndex = geo_it->second;
-                        new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                        new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
                         new_geo_inst.radius=0;
                         new_geo_inst.aabb=BoundingBox3f3f::null();
                         const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -246,7 +394,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                            new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
+                            new_geo_inst.radius = computeRadiusAndBounds(geometry, mMesh->getTransform(new_geo_inst), new_geo_inst.aabb);
 
                             mMesh->instances.push_back(new_geo_inst);
                         }
@@ -257,8 +405,8 @@ void ColladaDocumentImporter::finish ()
                 for(size_t geo_idx = 0; geo_idx < curnode.node->getInstanceControllers().getCount(); geo_idx++) {
                     const COLLADAFW::InstanceController* geo_inst = curnode.node->getInstanceControllers()[geo_idx];
                     // FIXME handle child nodes, such as materials
-                    SkinControllerMap::const_iterator skin_it = mSkinController.find(geo_inst->getInstanciatedObjectId());
-                    if (skin_it != mSkinController.end()) {
+                    OCSkinControllerMap::const_iterator skin_it = mSkinControllers.find(geo_inst->getInstanciatedObjectId());
+                    if (skin_it != mSkinControllers.end()) {
 
                         COLLADAFW::UniqueId geo_inst_geometry_name=skin_it->second.source;
                         IndicesMultimap::const_iterator geo_it = mGeometryMap.find(geo_inst_geometry_name);
@@ -269,7 +417,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             GeometryInstance new_geo_inst;
                             new_geo_inst.geometryIndex = geo_it->second;
-                            new_geo_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                            new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
                             new_geo_inst.radius=0;
                             new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
@@ -281,7 +429,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             if (geo_it->second<mMesh->geometry.size()) {
                                 const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                                new_geo_inst.radius=computeRadiusAndBounds(geometry,new_geo_inst.transform,new_geo_inst.aabb);
+                                new_geo_inst.radius = computeRadiusAndBounds(geometry, mMesh->getTransform(new_geo_inst), new_geo_inst.aabb);
 
                                 mMesh->instances.push_back(new_geo_inst);
                             }
@@ -302,7 +450,7 @@ void ColladaDocumentImporter::finish ()
                     }
                     LightInstance new_light_inst;
                     new_light_inst.lightIndex = light_it->second;
-                    new_light_inst.transform = mUnitScale * mChangeUp * Matrix4x4f(curnode.matrix, Matrix4x4f::ROW_MAJOR());
+                    new_light_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
                     mMesh->lightInstances.push_back(new_light_inst);
                 }
 
@@ -326,18 +474,18 @@ void ColladaDocumentImporter::finish ()
                     assert(node_it != mLibraryNodes.end());
                     const COLLADAFW::Node* instanced_node = node_it->second;
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(instanced_node, curnode.matrix) );
+                    node_stack.push( NodeState(instanced_node, curnode.node, curnode.matrix) );
                 }
             }
             if (curnode.mode == NodeState::Nodes) {
                 // Process the next child if there are more
                 if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.matrix, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.matrix, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.matrix) );
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.matrix) );
                 }
             }
         }
@@ -369,6 +517,11 @@ bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 {
     const COLLADAFW::InstanceVisualScene* inst_vis_scene = scene->getInstanceVisualScene();
     mVisualSceneId = inst_vis_scene->getInstanciatedObjectId();
+
+    const COLLADAFW::InstanceKinematicsScene* inst_kin_scene = scene->getInstanceKinematicsScene();
+    if (inst_kin_scene) {
+        // This never seems to be true...
+    }
 
     return true;
 }
@@ -879,7 +1032,6 @@ bool ColladaDocumentImporter::writeImage ( COLLADAFW::Image const* image )
     std::string imageUri = image->getImageURI().getURIString();
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeImage(" << imageUri << ") entered");
     mTextureMap[image->getUniqueId()]=imageUri;
-    mMesh->textureMap[image->getUniqueId().toAscii()] = imageUri;
     mMesh->textures.push_back(imageUri);
     return true;
 }
@@ -927,17 +1079,51 @@ bool ColladaDocumentImporter::writeLight ( COLLADAFW::Light const* light )
     return true;
 }
 
+static void convertColladaFloatDoubleArray(const COLLADAFW::FloatOrDoubleArray& input, std::vector<float>& output) {
+    if (input.getType() == COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
+        const COLLADAFW::FloatArray* input_float = input.getFloatValues();
+        for (size_t i = 0; i < input_float->getCount(); ++i) {
+            output.push_back((*input_float)[i]);
+        }
+    }else {
+        const COLLADAFW::DoubleArray* input_double = input.getDoubleValues();
+        for (size_t i = 0; i < input_double->getCount(); ++i) {
+            output.push_back((*input_double)[i]);
+        }
+    }
+}
 
 bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* animation )
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimation(" << animation << ") entered");
+
+    if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {
+        const COLLADAFW::AnimationCurve* curveAnimation = dynamic_cast<const COLLADAFW::AnimationCurve*>(animation);
+        AnimationCurve* copy = &mAnimationCurves[animation->getUniqueId()];
+
+        convertColladaFloatDoubleArray(curveAnimation->getInputValues(), copy->inputs);
+        convertColladaFloatDoubleArray(curveAnimation->getOutputValues(), copy->outputs);
+        // FIXME interpolation types don't seem to be getting returned, only
+        // getInterpolationType() has a value. Currently always assuming linear.
+        // FIXME tangents
+    }
+    else {
+        COLLADA_LOG(error, "Unsupported animation type encountered: " << animation->getAnimationType());
+    }
+
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList const* animationList )
 {
-    COLLADA_LOG(insane, "ColladaDocumentImporter::ColladaDocumentImporter() entered");
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimationList(" << animationList << ") entered");
+
+    AnimationBindings* copy = &mAnimationBindings[animationList->getUniqueId()];
+    const COLLADAFW::AnimationList::AnimationBindings& orig = animationList->getAnimationBindings();
+    for(int i = 0; i < orig.getCount(); i++)
+        copy->push_back( orig[i] );
+
     return true;
 }
 
@@ -945,20 +1131,12 @@ bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList cons
 #define SKIN_COPY(target,source,name) ((source)->get##name().cloneArray((target)->get##name()))
 bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControllerData const* skinControllerData )
 {
-    SkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered");
+
+    OCSkinControllerData * copy = &mSkinControllerData[skinControllerData->getUniqueId()];
     copy->bindShapeMatrix = Matrix4x4f(skinControllerData->getBindShapeMatrix(),Matrix4x4f::ROW_MAJOR());
     std::vector<float> xweights;
-    if (skinControllerData->getWeights().getType()==COLLADAFW::FloatOrDoubleArray::DATA_TYPE_FLOAT) {
-        const COLLADAFW::FloatArray * weights=skinControllerData->getWeights().getFloatValues();
-        for (size_t i=0;i<weights->getCount();++i) {
-            xweights.push_back((*weights)[i]);
-        }
-    }else {
-        const COLLADAFW::DoubleArray * weights=skinControllerData->getWeights().getDoubleValues();
-        for (size_t i=0;i<weights->getCount();++i) {
-            xweights.push_back((*weights)[i]);
-        }
-    }
+    convertColladaFloatDoubleArray(skinControllerData->getWeights(), xweights);
     const COLLADAFW::Matrix4Array * inverseBind = &skinControllerData->getInverseBindMatrices();
     for (size_t i=0;i<inverseBind->getCount();++i) {
         copy->inverseBindMatrices.push_back(Matrix4x4f((*inverseBind)[i],Matrix4x4f::ROW_MAJOR()));
@@ -984,15 +1162,16 @@ bool ColladaDocumentImporter::writeSkinControllerData ( COLLADAFW::SkinControlle
         copy->jointIndices.push_back((*jointIndices)[i]);
     }
 
-    COLLADA_LOG(insane, "ColladaDocumentImporter::writeSkinControllerData(" << skinControllerData << ") entered");
     return true;
 }
 
 
 bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* controller )
 {
+    COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
+
     if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {
-        SkinController * copy = &mSkinController[controller->getUniqueId()];
+        OCSkinController * copy = &mSkinControllers[controller->getUniqueId()];
         const COLLADAFW::SkinController * skinController = dynamic_cast<const COLLADAFW::SkinController*>(controller);
         copy->source = skinController->getSource();
         copy->skinControllerData = skinController->getSkinControllerData();
@@ -1000,8 +1179,10 @@ bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* con
             copy->joints.push_back((skinController->getJoints())[i]);
         }
     }
+    else {
+        COLLADA_LOG(error, "Unsupported controller type encountered: " << controller->getControllerType());
+    }
 
-    COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
     return true;
 }
 
@@ -1014,6 +1195,10 @@ bool ColladaDocumentImporter::writeFormulas ( COLLADAFW::Formulas const* formula
 bool ColladaDocumentImporter::writeKinematicsScene ( COLLADAFW::KinematicsScene const* kinematicsScene )
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeKinematicsScene(" << kinematicsScene << ") entered");
+
+    // For some reason, unlike VisualScene, this doesn't use ObjectTemplate.
+    // Also, none of the data seems to be filled in... ignore it.
+
     return true;
 }
 

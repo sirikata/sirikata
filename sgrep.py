@@ -6,7 +6,7 @@ import sys
 #DIRECTORIES_SEARCH = ['analysis/', 'bench/','build/','cdn/','cppoh/','cseg/','demo/','doc/','externals/','libcore/','libproxyobject/','libspace/','pinto/','scripts/','simoh/','space/','tools/'];
 
 #Excludes build and externals and scripts
-DIRECTORIES_SEARCH = ['analysis/', 'bench/','cdn/','cppoh/','cseg/','demo/','doc/','libcore/','liboh','libproxyobject/','libspace/','pinto/','simoh/','space/','tools/'];
+DIRECTORIES_SEARCH = ['analysis/', 'bench/','cdn/','cppoh/','cseg/','demo/','doc/','libcore/','libmesh','liboh','libproxyobject/','libspace/','pinto/','simoh/','space/','tools/'];
 
 
 if __name__ == "__main__":

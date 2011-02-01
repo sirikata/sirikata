@@ -101,7 +101,7 @@ void BulletObj::onSetMesh (ProxyObjectPtr proxy, const Transfer::URI &newMesh) {
     mMeshname = newMesh;
 }
 
-void BulletObj::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Meshdata& md) {
+void BulletObj::onMeshParsed (ProxyObjectPtr proxy, String const& hash, Mesh::Meshdata& md) {
     mMeshdata = &md;
     if (!mActive) {
         if (mShape==BulletObj::ShapeMesh) {
@@ -253,21 +253,21 @@ void BulletObj::buildBulletShape(float &mass) {
 
         size_t offset=0;
         for (size_t i=0;i<mMeshdata->geometry.size();++i) {
-            const SubMeshGeometry& subm = mMeshdata->geometry[i];
+            const Mesh::SubMeshGeometry& subm = mMeshdata->geometry[i];
             for (size_t j=0; j<subm.positions.size();j++) {
                 mVertices.push_back((double)subm.positions[j][0]);
                 mVertices.push_back((double)subm.positions[j][1]);
                 mVertices.push_back((double)subm.positions[j][2]);
             }
             for(size_t j=0;j<subm.primitives.size();++j) {
-                const SubMeshGeometry::Primitive *prim=&subm.primitives[j];
+                const Mesh::SubMeshGeometry::Primitive *prim=&subm.primitives[j];
                 switch(prim->primitiveType) {
-                  case SubMeshGeometry::Primitive::TRIANGLES:
+                  case Mesh::SubMeshGeometry::Primitive::TRIANGLES:
                     for (size_t k=0; k<prim->indices.size(); ++k) {
                         mIndices.push_back(offset+prim->indices[k]);
                     }
                     break;
-                  case SubMeshGeometry::Primitive::LINES:
+                  case Mesh::SubMeshGeometry::Primitive::LINES:
                     for (size_t k=0; k<prim->indices.size(); ++k) {
                         mIndices.push_back(offset+prim->indices[k]);
                         if (k%2==1) {
@@ -275,14 +275,14 @@ void BulletObj::buildBulletShape(float &mass) {
                         }
                     }
                     break;
-                  case SubMeshGeometry::Primitive::POINTS:
+                  case Mesh::SubMeshGeometry::Primitive::POINTS:
                     for (size_t k=0; k<prim->indices.size(); ++k) {
                         mIndices.push_back(offset+prim->indices[k]);
                         mIndices.push_back(offset+prim->indices[k]);
                         mIndices.push_back(offset+prim->indices[k]);//degenerate
                     }
                     break;
-                  case SubMeshGeometry::Primitive::TRISTRIPS:
+                  case Mesh::SubMeshGeometry::Primitive::TRISTRIPS:
                     for (size_t k=2; k<prim->indices.size(); ++k) {
                         if (k%2==0) {
                             mIndices.push_back(offset+prim->indices[k-2]);
@@ -295,14 +295,14 @@ void BulletObj::buildBulletShape(float &mass) {
                         }
                     }
                     break;
-                  case SubMeshGeometry::Primitive::TRIFANS:
+                  case Mesh::SubMeshGeometry::Primitive::TRIFANS:
                     for (size_t k=2; k<prim->indices.size(); ++k) {
                         mIndices.push_back(offset+prim->indices[0]);
                         mIndices.push_back(offset+prim->indices[k-1]);
                         mIndices.push_back(offset+prim->indices[k]);
                     }
                     break;
-                  case SubMeshGeometry::Primitive::LINESTRIPS:
+                  case Mesh::SubMeshGeometry::Primitive::LINESTRIPS:
                     for (size_t k=1; k<prim->indices.size(); ++k) {
                         mIndices.push_back(offset+prim->indices[k-1]);
                         mIndices.push_back(offset+prim->indices[k]);

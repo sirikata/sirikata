@@ -36,7 +36,11 @@ namespace Sirikata {
 namespace Mesh {
 
 PrintFilter::PrintFilter(const String& args) {
-
+	if(args == "textures") {
+		mTexturesOnly = true;
+	} else {
+		mTexturesOnly = false;
+	}
 }
 
 FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
@@ -44,42 +48,48 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     MeshdataPtr md = input->get();
 
+    if(mTexturesOnly) {
+        for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+            printf("%s\n", it->c_str());
+        }
+        return input;
+    }
+
     printf("URI: %s\n", md->uri.c_str());
     printf("ID: %ld\n", md->id);
     printf("Hash: %s\n", md->hash.toString().c_str());
 
     printf("Texture List:\n");
-    for(Meshdata::TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+    for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
         printf("   %s\n", it->c_str());
     }
 
     printf("Submesh Geometry List:\n");
-    for(Meshdata::SubMeshGeometryList::const_iterator it = md->geometry.begin(); it != md->geometry.end(); it++) {
+    for(SubMeshGeometryList::const_iterator it = md->geometry.begin(); it != md->geometry.end(); it++) {
         printf("   Name: %s, Positions: %d Normals: %d Primitives: %d\n", it->name.c_str(),
                 (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size());
+
 
         for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
             printf("      Primitive id: %d, indices: %d\n", (int)p->materialId, (int)p->indices.size());
         }
     }
 
-    printf("URI Map:\n");
-    for(Meshdata::URIMap::const_iterator it = md->textureMap.begin(); it != md->textureMap.end(); it++) {
-        printf("   From: %s To: %s\n", it->first.c_str(), it->second.c_str());
-    }
-
     printf("Lights:\n");
-    for(Meshdata::LightInfoList::const_iterator it = md->lights.begin(); it != md->lights.end(); it++) {
+    for(LightInfoList::const_iterator it = md->lights.begin(); it != md->lights.end(); it++) {
         printf("   Type: %d Power: %f\n", it->mType, it->mPower);
     }
 
     printf("Material Effects:\n");
-    for(Meshdata::MaterialEffectInfoList::const_iterator it = md->materials.begin(); it != md->materials.end(); it++) {
+    for(MaterialEffectInfoList::const_iterator it = md->materials.begin(); it != md->materials.end(); it++) {
         printf("   Textures: %d Shininess: %f Reflectivity: %f\n", (int)it->textures.size(), it->shininess, it->reflectivity);
+        for(MaterialEffectInfo::TextureList::const_iterator t_it = it->textures.begin(); t_it != it->textures.end(); t_it++)
+            printf("     Texture: %s\n", t_it->uri.c_str());
     }
 
     printf("Geometry Instances:\n");
-    for(Meshdata::GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
+    for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
+
         printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, it->materialBindingMap.size());
         for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
             printf("      map from: %d to: %d\n", (int)m->first, (int)m->second);
@@ -87,8 +97,8 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     }
 
     printf("Light Instances:\n");
-    for(Meshdata::LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
-        printf("   Index: %d Matrix: %s\n", it->lightIndex, it->transform.toString().c_str());
+    for(LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
+        printf("   Index: %d Matrix: %s\n", it->lightIndex, md->getTransform(it->parentNode).toString().c_str());
     }
 
     printf("Material Effect size: %d\n", (int)md->materials.size());

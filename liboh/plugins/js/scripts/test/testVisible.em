@@ -9,8 +9,9 @@ system.print("\n\n Testing visible calls.\n\n");
 var haveCallback = false;
 var objToMvTowards;
 var inverseSpeed = 1;
-var CALLBACK_PERIOD = .2;
-var CALLBACK_MAX_DISTANCE = 40;
+var CALLBACK_PERIOD = .5;
+var CALLBACK_MAX_DISTANCE = 10;
+
 
 
 function proxCallback(calledBack)
@@ -55,16 +56,25 @@ function distanceFromMeToIt(it)
     var sumOfSquares = diffXSquared + diffYSquared + diffZSquared;
 
     
+<<<<<<< HEAD
     var distance = util.sqrt(sumOfSquares);
     
     return distance;
 }
+=======
+    var distance = system.math.sqrt(sumOfSquares);
+    
+    return distance;
+}
+
+>>>>>>> origin/master
 
 firstNoLongerVisible = true;
 function moveTowards(toMoveTowards)
 {
     if (! toMoveTowards.getStillVisible())
     {
+<<<<<<< HEAD
         if (firstNoLongerVisible)
         {
             system.presences[0].setVelocity(new system.Vec3(0,0,0) );
@@ -74,6 +84,12 @@ function moveTowards(toMoveTowards)
     }
 
     firstNoLongerVisible = true;    
+=======
+        system.presences[0].setVelocity(new system.Vec3(0,0,0) );
+        return;
+    }
+    
+>>>>>>> origin/master
     var posToMoveTowards = toMoveTowards.getPosition();
     var myPosition  = system.presences[0].getPosition();
 
@@ -87,7 +103,11 @@ function moveTowards(toMoveTowards)
         zComponent/inverseSpeed
     );
 
+<<<<<<< HEAD
     system.print("\nMoving towards object at position: " +  posToMoveTowards.toString() + "     with velocity: " +  mNewVelocity.toString() +  "\n");
+=======
+    system.print("\nMoving towards object with velocity: " +  mNewVelocity.toString() +  "\n");
+>>>>>>> origin/master
     system.presences[0].setVelocity(mNewVelocity);
 }
 
