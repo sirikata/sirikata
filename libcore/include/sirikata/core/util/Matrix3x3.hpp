@@ -106,7 +106,7 @@ public:
         return getCol(0)==other.getCol(0)&&getCol(1)==other.getCol(1)&&getCol(2)==other.getCol(2);
     }
     bool operator != (const Matrix3x3&other)const{
-        return getCol(0)!=other.getCol(0)&&getCol(1)!=other.getCol(1)&&getCol(2)!=other.getCol(2);
+        return getCol(0)!=other.getCol(0) || getCol(1)!=other.getCol(1) || getCol(2)!=other.getCol(2);
     }
     Matrix3x3 operator+ (const Matrix3x3&other)const {
         return Matrix3x3(getCol(0)+other.getCol(0),

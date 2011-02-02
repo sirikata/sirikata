@@ -176,7 +176,7 @@ public:
         return getCol(0)==other.getCol(0)&&getCol(1)==other.getCol(1)&&getCol(2)==other.getCol(2)&&getCol(3)==other.getCol(3);
     }
     bool operator != (const Matrix4x4&other)const{
-        return getCol(0)!=other.getCol(0)&&getCol(1)!=other.getCol(1)&&getCol(2)!=other.getCol(2)&&getCol(3)!=other.getCol(3);
+        return getCol(0)!=other.getCol(0) || getCol(1)!=other.getCol(1) || getCol(2)!=other.getCol(2) || getCol(3)!=other.getCol(3);
     }
     Matrix4x4 operator+ (const Matrix4x4&other)const {
         return Matrix4x4(getCol(0)+other.getCol(0),
