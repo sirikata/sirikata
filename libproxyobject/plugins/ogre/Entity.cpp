@@ -1100,10 +1100,11 @@ void Entity::createMesh(MeshdataPtr mdptr) {
     }
     // Lights
     int light_idx = 0;
-    for(LightInstanceList::const_iterator lightinst_it = md.lightInstances.begin(); lightinst_it != md.lightInstances.end(); lightinst_it++) {
-        const LightInstance& lightinst = *lightinst_it;
-
-        Matrix4x4f pos_xform = md.getTransform(lightinst);
+    Meshdata::LightInstanceIterator lightinst_it = md.getLightInstanceIterator();
+    uint32 lightinst_idx;
+    Matrix4x4f pos_xform;
+    while( lightinst_it.next(&lightinst_idx, &pos_xform) ) {
+        const LightInstance& lightinst = md.lightInstances[lightinst_idx];
 
         // Get the instanced submesh
         if(lightinst.lightIndex >= (int)md.lights.size()){

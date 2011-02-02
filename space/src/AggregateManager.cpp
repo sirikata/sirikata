@@ -282,18 +282,20 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     /** Find scaling factor **/
     BoundingBox3f3f originalMeshBoundingBox = BoundingBox3f3f::null();
     bool firstUpdate = true;
-    for (uint32 i = 0; i < m->instances.size(); i++) {
-      const GeometryInstance& geomInstance = m->instances[i];
+
+    Meshdata::GeometryInstanceIterator geoinst_it = m->getGeometryInstanceIterator();
+    uint32 geoinst_idx;
+    Matrix4x4f geoinst_pos_xform;
+
+    while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
+      const GeometryInstance& geomInstance = m->instances[geoinst_idx];
       const SubMeshGeometry& smg = m->geometry[geomInstance.geometryIndex];
 
       uint32 smgPositionsSize = smg.positions.size();
       for (uint32 j = 0; j < smgPositionsSize; j++) {
         const Vector3f& v = smg.positions[j];
 
-        Vector4f jth_vertex_4f = m->getTransform(geomInstance)*Vector4f(v.x,
-                                                                  v.y,
-                                                                  v.z,
-                                                                  1.0f);
+        Vector4f jth_vertex_4f = geoinst_pos_xform*Vector4f(v.x, v.y, v.z, 1.0f);
         Vector3f jth_vertex(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);
 
         if (firstUpdate) {
@@ -369,10 +371,13 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     float32 locationZ = location.z;
     Quaternion orientation = mLoc->currentOrientation(child_uuid);
 
-    for (uint32 i = 0; i < m->instances.size(); i++) {
+    // Reuse geoinst_it and geoinst_idx from earlier, but with a new iterator.
+    geoinst_it = m->getGeometryInstanceIterator();
+    Matrix4x4f orig_geo_inst_xform;
+
+    while( geoinst_it.next(&geoinst_idx, &orig_geo_inst_xform) ) {
       // Copy the instance data.
-      GeometryInstance geomInstance = m->instances[i];
-      Matrix4x4f orig_geo_inst_xform = m->getTransform(geomInstance);
+      GeometryInstance geomInstance = m->instances[geoinst_idx];
 
       // Sanity check
       assert (geomInstance.geometryIndex < m->geometry.size());
@@ -466,7 +471,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
 
   //Time upload_time_start = Timer::now();
-  
+
   //... and now create the collada file, upload to the CDN and update LOC.
   const int MESHNAME_LEN = 1024;
   char localMeshName[MESHNAME_LEN];
@@ -586,7 +591,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     if (postTime < mAggregateGenerationStartTime) {
       return;
     }
-    
+
     Time curTime = Timer::now();
 
     for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();

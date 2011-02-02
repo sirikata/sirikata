@@ -67,19 +67,17 @@ Matrix4x4f Meshdata::getTransform(NodeIndex index) const {
     return globalTransform * xform;
 }
 
-Matrix4x4f Meshdata::getTransform(const GeometryInstance& geo) const {
-    return getTransform(geo.parentNode);
-}
-
-Matrix4x4f Meshdata::getTransform(const LightInstance& light) const {
-    return getTransform(light.parentNode);
-}
-
-Meshdata::GeometryInstanceIterator Meshdata::getGeometryInstanceIterator() {
+Meshdata::GeometryInstanceIterator Meshdata::getGeometryInstanceIterator() const {
     return GeometryInstanceIterator(this);
 }
 
-Meshdata::GeometryInstanceIterator::GeometryInstanceIterator(Meshdata* mesh)
+Meshdata::LightInstanceIterator Meshdata::getLightInstanceIterator() const {
+    return LightInstanceIterator(this);
+}
+
+
+
+Meshdata::GeometryInstanceIterator::GeometryInstanceIterator(const Meshdata* const mesh)
  : mMesh(mesh),
    mRoot(-1)
 {
@@ -151,6 +149,92 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
                 continue;
             // Otherwise, just yield the information
             *geo_idx = node.currentChild;
+            *xform = node.transform;
+            return true;
+        }
+
+        if (node.step == NodeState::Done) {
+            // We're finished with the node, just pop it so parent will continue
+            // processing
+            mStack.pop();
+        }
+    }
+}
+
+
+
+Meshdata::LightInstanceIterator::LightInstanceIterator(const Meshdata* const mesh)
+ : mMesh(mesh),
+   mRoot(-1)
+{
+}
+
+bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform) {
+    while(true) { // Outer loop keeps us moving until we hit something to return
+
+        // First, if we emptied out, try to handle the next root.
+        if (mStack.empty()) {
+            mRoot++;
+            if (mRoot >= mMesh->rootNodes.size()) return false;
+
+            NodeState st;
+            st.index = mMesh->rootNodes[mRoot];
+            st.step = NodeState::Nodes;
+            st.currentChild = -1;
+            st.transform = mMesh->globalTransform;
+            mStack.push(st);
+        }
+
+        NodeState& node = mStack.top();
+
+        if (node.step == NodeState::Nodes) {
+            node.currentChild++;
+            if (node.currentChild >= mMesh->nodes[node.index].children.size()) {
+                node.step = NodeState::InstanceNodes;
+                node.currentChild = -1;
+                continue;
+            }
+
+            NodeState st;
+            st.index = mMesh->nodes[node.index].children[node.currentChild];
+            st.step = NodeState::Nodes;
+            st.currentChild = -1;
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            mStack.push(st);
+            continue;
+        }
+
+        if (node.step == NodeState::InstanceNodes) {
+            node.currentChild++;
+            if (node.currentChild >= mMesh->nodes[node.index].instanceChildren.size()) {
+                node.step = NodeState::InstanceLights;
+                node.currentChild = -1;
+                continue;
+            }
+
+            NodeState st;
+            st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
+            st.step = NodeState::Nodes;
+            st.currentChild = -1;
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            mStack.push(st);
+            continue;
+        }
+
+        if (node.step == NodeState::InstanceLights) {
+            // FIXME this step is inefficient because each node doesn't have a
+            // list of instance lights. Instead, we have to iterate over all
+            // instance lights for all nodes.
+            node.currentChild++;
+            if (node.currentChild >= mMesh->lightInstances.size()) {
+                node.step = NodeState::Done;
+                continue;
+            }
+            // Need this check since we're using the global instances list
+            if (node.index != mMesh->lightInstances[node.currentChild].parentNode)
+                continue;
+            // Otherwise, just yield the information
+            *light_idx = node.currentChild;
             *xform = node.transform;
             return true;
         }

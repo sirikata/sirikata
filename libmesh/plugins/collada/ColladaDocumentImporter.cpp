@@ -69,12 +69,13 @@ struct NodeState {
         Nodes = 4 // Normal child nodes
     };
 
-    NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, int _child = -1, Modes _mode = Fresh)
-     : node(_node), parent(_parent), child(_child), mode(_mode)
+    NodeState(const COLLADAFW::Node* _node, const COLLADAFW::Node* _parent, const Matrix4x4f& xform, int _child = -1, Modes _mode = Fresh)
+     : node(_node), parent(_parent), transform(xform), child(_child), mode(_mode)
     {}
 
     const COLLADAFW::Node* node;
     const COLLADAFW::Node* parent;
+    Matrix4x4f transform;
     unsigned int child;
     Modes mode;
 };
@@ -187,7 +188,7 @@ void ColladaDocumentImporter::translateNodes() {
         bool true_root = root_nodes[i].true_root;
 
         std::stack<NodeState> node_stack;
-        node_stack.push( NodeState(rn, NULL) );
+        node_stack.push( NodeState(rn, NULL, mMesh->globalTransform) );
 
         while(!node_stack.empty()) {
             NodeState curnode = node_stack.top();
@@ -195,6 +196,7 @@ void ColladaDocumentImporter::translateNodes() {
 
             if (curnode.mode == NodeState::Fresh) {
                 COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
+                curnode.transform = curnode.transform * Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR());
 
                 // Get node indices
                 NodeIndex nindex = mMesh->nodes.size();
@@ -252,9 +254,9 @@ void ColladaDocumentImporter::translateNodes() {
                 // Process the next child if there are more
                 if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.transform, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node) );
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.transform) );
                 }
             }
         }
@@ -385,7 +387,7 @@ void ColladaDocumentImporter::finish ()
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
         std::stack<NodeState> node_stack;
-        node_stack.push( NodeState(rn, NULL) );
+        node_stack.push( NodeState(rn, NULL, mMesh->globalTransform) );
 
         while(!node_stack.empty()) {
             NodeState curnode = node_stack.top();
@@ -394,6 +396,10 @@ void ColladaDocumentImporter::finish ()
             if (curnode.mode == NodeState::Fresh) {
                 // In this traversal we don't need to do anything when the node
                 // is just added
+
+                COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
+                curnode.transform = curnode.transform * Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR());
+
                 curnode.mode = NodeState::Geo;
             }
 
@@ -419,7 +425,7 @@ void ColladaDocumentImporter::finish ()
                         }
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                            new_geo_inst.radius = computeRadiusAndBounds(geometry, mMesh->getTransform(new_geo_inst), new_geo_inst.aabb);
+                            new_geo_inst.radius = computeRadiusAndBounds(geometry, curnode.transform, new_geo_inst.aabb);
 
                             mMesh->instances.push_back(new_geo_inst);
                         }
@@ -454,7 +460,7 @@ void ColladaDocumentImporter::finish ()
                             }
                             if (geo_it->second<mMesh->geometry.size()) {
                                 const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                                new_geo_inst.radius = computeRadiusAndBounds(geometry, mMesh->getTransform(new_geo_inst), new_geo_inst.aabb);
+                                new_geo_inst.radius = computeRadiusAndBounds(geometry, curnode.transform, new_geo_inst.aabb);
 
                                 mMesh->instances.push_back(new_geo_inst);
                             }
@@ -499,18 +505,18 @@ void ColladaDocumentImporter::finish ()
                     assert(node_it != mLibraryNodes.end());
                     const COLLADAFW::Node* instanced_node = node_it->second;
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.transform, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(instanced_node, curnode.node) );
+                    node_stack.push( NodeState(instanced_node, curnode.node, curnode.transform) );
                 }
             }
             if (curnode.mode == NodeState::Nodes) {
                 // Process the next child if there are more
                 if ((size_t)curnode.child < (size_t)curnode.node->getChildNodes().getCount()) {
                     // updated version of this node
-                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.child+1, curnode.mode) );
+                    node_stack.push( NodeState(curnode.node, curnode.parent, curnode.transform, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node) );
+                    node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.transform) );
                 }
             }
         }

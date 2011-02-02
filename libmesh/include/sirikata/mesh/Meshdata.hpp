@@ -272,37 +272,59 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     // these methods cannot correctly compute the transform when instance_nodes
     // are involved.
     Matrix4x4f getTransform(NodeIndex index) const;
-    Matrix4x4f getTransform(const GeometryInstance& geo) const;
-    Matrix4x4f getTransform(const LightInstance& light) const;
+
+  private:
+
+    // A stack of NodeState is used to track the current traversal state for
+    // instance iterators
+    struct NodeState {
+        enum Step {
+            Nodes,
+            InstanceNodes,
+            InstanceGeometries,
+            InstanceLights,
+            Done
+        };
+
+        NodeIndex index;
+        Matrix4x4f transform;
+        Step step;
+        int32 currentChild;
+    };
+
+  public:
 
     // Allows you to generate a list of GeometryInstances with their transformations.
     class GeometryInstanceIterator {
     public:
-        GeometryInstanceIterator(Meshdata* mesh);
+        GeometryInstanceIterator(const Meshdata* const mesh);
         // Get the next GeometryInstance and its transform. Returns true if
         // values were set, false if there were no more instances. The index
         // returned is of the geometry instance.
         bool next(uint32* geoinst_idx, Matrix4x4f* xform);
     private:
-        Meshdata* mMesh;
+        const Meshdata* mMesh;
 
-        struct NodeState {
-            enum Step {
-                Nodes,
-                InstanceNodes,
-                InstanceGeometries,
-                Done
-            };
-
-            NodeIndex index;
-            Matrix4x4f transform;
-            Step step;
-            int32 currentChild;
-        };
         int32 mRoot;
         std::stack<NodeState> mStack;
     };
-    GeometryInstanceIterator getGeometryInstanceIterator();
+    GeometryInstanceIterator getGeometryInstanceIterator() const;
+
+    // Allows you to generate a list of GeometryInstances with their transformations.
+    class LightInstanceIterator {
+    public:
+        LightInstanceIterator(const Meshdata* const mesh);
+        // Get the next LightInstance and its transform. Returns true if
+        // values were set, false if there were no more instances. The index
+        // returned is of the light instance.
+        bool next(uint32* lightinst_idx, Matrix4x4f* xform);
+    private:
+        const Meshdata* mMesh;
+
+        int32 mRoot;
+        std::stack<NodeState> mStack;
+    };
+    LightInstanceIterator getLightInstanceIterator() const;
 
 };
 
