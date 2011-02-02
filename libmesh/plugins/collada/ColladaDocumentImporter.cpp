@@ -138,6 +138,13 @@ void ColladaDocumentImporter::postProcess ()
     translateSkinControllers();
 }
 
+namespace {
+struct RootNodeTranslator {
+    const COLLADAFW::Node* node;
+    bool true_root; // Only include in Meshdata::rootNodes if it is a true root,
+                    // i.e. it is from a visual scene instead of from library_nodes
+};
+}
 void ColladaDocumentImporter::translateNodes() {
     using namespace Sirikata::Models::Collada;
 
@@ -160,15 +167,24 @@ void ColladaDocumentImporter::translateNodes() {
     // to deal with a) nodes from the library_nodes tag and b) nodes
     // from the visual_scene tags. Collect all the nodes into a single
     // list.
-    std::vector<const COLLADAFW::Node*> root_nodes;
-    for(NodeMap::const_iterator it = mLibraryNodes.begin(); it != mLibraryNodes.end(); it++)
-        root_nodes.push_back(it->second);
-    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++)
-        root_nodes.push_back( vis_scene->getRootNodes()[i] );
+    std::vector<RootNodeTranslator> root_nodes;
+    for(NodeMap::const_iterator it = mLibraryNodes.begin(); it != mLibraryNodes.end(); it++) {
+        RootNodeTranslator rt;
+        rt.node = it->second;
+        rt.true_root = false;
+        root_nodes.push_back(rt);
+    }
+    for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
+        RootNodeTranslator rt;
+        rt.node = vis_scene->getRootNodes()[i];
+        rt.true_root = true;
+        root_nodes.push_back(rt);
+    }
 
     // Iterate through nodes.
     for(size_t i = 0; i < root_nodes.size(); i++) {
-        const COLLADAFW::Node* rn = root_nodes[i];
+        const COLLADAFW::Node* rn = root_nodes[i].node;
+        bool true_root = root_nodes[i].true_root;
 
         std::stack<NodeState> node_stack;
         node_stack.push( NodeState(rn, NULL) );
@@ -194,7 +210,7 @@ void ColladaDocumentImporter::translateNodes() {
                 mNodeIndices[curnode.node->getUniqueId()] = nindex;
                 mMesh->nodes.push_back(rnode);
                 // If there is no parent, add as a root node
-                if (curnode.parent == NULL)
+                if (curnode.parent == NULL && true_root)
                     mMesh->rootNodes.push_back(nindex);
 
                 // If the node is a joint, add a corresponding joint

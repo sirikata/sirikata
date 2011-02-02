@@ -750,15 +750,22 @@ class MeshdataManualLoader : public Ogre::ManualResourceLoader {
 public:
 
     MeshdataManualLoader(const Meshdata&meshdata):md(meshdata) {
-
     }
-    void prepareResource(Ogre::Resource*r){}
+
+    void prepareResource(Ogre::Resource*r) {
+    }
+
     void loadResource(Ogre::Resource *r) {
+        size_t totalVertexCount;
+        bool useSharedBuffer;
+
+        getMeshStats(&useSharedBuffer, &totalVertexCount);
+        traverseNodes(r, useSharedBuffer, totalVertexCount);
+    }
+
+    void getMeshStats(bool* useSharedBufferOut, size_t* totalVertexCountOut) {
         using namespace Ogre;
-        SHA256 sha = md.hash;
-        String hash = sha.convertToHexString();
         bool useSharedBuffer = true;
-        size_t totalVertexCount=0;
         for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
 
@@ -767,7 +774,6 @@ public:
                 continue;
             size_t i = geoinst.geometryIndex;
 
-            totalVertexCount+=md.geometry[i].positions.size();
             if ((md.geometry[i].positions.size()==md.geometry[i].normals.size())
                 != (md.geometry[0].positions.size()==md.geometry[0].normals.size())) {
                 useSharedBuffer=false;
@@ -796,9 +802,30 @@ public:
             }
         }
 
+        // Be sure to compute over instantiated geometries. Otherwise
+        // we would count extra for uninstantiated ones and compute
+        // wrong for multiply instantiated geometries.
+        size_t totalVertexCount=0;
+        Meshdata::GeometryInstanceIterator geoinst_it = md.getGeometryInstanceIterator();
+        uint32 geoinst_idx;
+        Matrix4x4f pos_xform;
+        while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
+            totalVertexCount += md.geometry[ md.instances[geoinst_idx].geometryIndex ].positions.size();
+        }
+
         if (totalVertexCount>65535)
             useSharedBuffer=false;
-        Ogre::Mesh* mesh= dynamic_cast <Ogre::Mesh*> (r);
+
+        *useSharedBufferOut = useSharedBuffer;
+        *totalVertexCountOut = totalVertexCount;
+    }
+
+    void traverseNodes(Ogre::Resource* r, const bool useSharedBuffer, const size_t totalVertexCount) {
+        using namespace Ogre;
+        SHA256 sha = md.hash;
+        String hash = sha.convertToHexString();
+
+        Ogre::Mesh* mesh = dynamic_cast <Ogre::Mesh*> (r);
 
         if (totalVertexCount==0 || mesh==NULL)
             return;
@@ -810,10 +837,14 @@ public:
             mesh->sharedVertexData = createVertexData(md.geometry[md.instances[0].geometryIndex],totalVertexCount, vbuf);
             pData=(char*)vbuf->lock(HardwareBuffer::HBL_DISCARD);
         }
-        for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
-            const GeometryInstance& geoinst = *geoinst_it;
 
-            Matrix4x4f pos_xform = md.getTransform(geoinst);
+        Meshdata::GeometryInstanceIterator geoinst_it = md.getGeometryInstanceIterator();
+        uint32 geoinst_idx;
+        Matrix4x4f pos_xform;
+        while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
+            assert(geoinst_idx < md.instances.size());
+            const GeometryInstance& geoinst = md.instances[geoinst_idx];
+
             Matrix3x3f normal_xform = pos_xform.extract3x3().inverseTranspose();
 
             // Get the instanced submesh
@@ -825,7 +856,7 @@ public:
                 Graphics::toOgre(geoinst.aabb.max())
             );
             double rad=0;
-            if (geoinst_it != md.instances.begin()) {
+            if (geoinst_idx != 0) {
                 ogresubmeshaabb.merge(mesh->getBounds());
                 rad=mesh->getBoundingSphereRadius();
             }

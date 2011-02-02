@@ -37,7 +37,7 @@
 #include <sirikata/core/util/Sha256.hpp>
 #include "LightInfo.hpp"
 #include <sirikata/core/util/UUID.hpp>
-
+#include <stack>
 
 namespace Sirikata {
 namespace Mesh {
@@ -237,6 +237,9 @@ struct SIRIKATA_MESH_EXPORT Node {
 };
 typedef std::vector<Node> NodeList;
 
+struct SIRIKATA_MESH_EXPORT Meshdata;
+typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
+
 struct SIRIKATA_MESH_EXPORT Meshdata {
     SubMeshGeometryList geometry;
     TextureList textures;
@@ -259,15 +262,49 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     NodeList nodes;
     NodeIndexList rootNodes;
 
+    // Joints are tracked as indices of the nodes they are associated with.
+    NodeIndexList joints;
+
+
+
+    // Be careful using these methods. Since there are no "parent" links for
+    // instance nodes (and even if there were, there could be more than one),
+    // these methods cannot correctly compute the transform when instance_nodes
+    // are involved.
     Matrix4x4f getTransform(NodeIndex index) const;
     Matrix4x4f getTransform(const GeometryInstance& geo) const;
     Matrix4x4f getTransform(const LightInstance& light) const;
 
-    // Joints are tracked as indices of the nodes they are associated with.
-    NodeIndexList joints;
-};
+    // Allows you to generate a list of GeometryInstances with their transformations.
+    class GeometryInstanceIterator {
+    public:
+        GeometryInstanceIterator(Meshdata* mesh);
+        // Get the next GeometryInstance and its transform. Returns true if
+        // values were set, false if there were no more instances. The index
+        // returned is of the geometry instance.
+        bool next(uint32* geoinst_idx, Matrix4x4f* xform);
+    private:
+        Meshdata* mMesh;
 
-typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
+        struct NodeState {
+            enum Step {
+                Nodes,
+                InstanceNodes,
+                InstanceGeometries,
+                Done
+            };
+
+            NodeIndex index;
+            Matrix4x4f transform;
+            Step step;
+            int32 currentChild;
+        };
+        int32 mRoot;
+        std::stack<NodeState> mStack;
+    };
+    GeometryInstanceIterator getGeometryInstanceIterator();
+
+};
 
 } // namespace Mesh
 } // namespace Sirikata
