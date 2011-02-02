@@ -596,7 +596,7 @@ public:
                       inst_it != meshdata.nodes[current.node].instanceChildren.end();
                       inst_it++)
                   {
-                      String inst_node_url = "#node-" + boost::lexical_cast<String>(current.node);
+                      String inst_node_url = "#node-" + boost::lexical_cast<String>(*inst_it);
                       COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
                       instanceNode.add();
                   }
@@ -764,5 +764,3 @@ public:
   }
 
 }
-
-
