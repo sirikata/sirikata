@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_JS_VEC3_HPP_
-#define _SIRIKATA_JS_VEC3_HPP_
+#ifndef __SIRIKATA_JS_VEC3_HPP__
+#define __SIRIKATA_JS_VEC3_HPP__
 
 #include "../JSUtil.hpp"
 #include <v8.h>

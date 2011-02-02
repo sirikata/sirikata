@@ -1,8 +1,7 @@
 #ifndef __SIRIKATA_JS_TIMER_HPP__
-#define _SIRIKATA_JS_TIMER_HPP__
+#define __SIRIKATA_JS_TIMER_HPP__
 
-#include "../JSUtil.hpp"
-#include "../JSObjectScript.hpp"
+
 #include <v8.h>
 
 namespace Sirikata {

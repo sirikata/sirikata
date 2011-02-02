@@ -1,5 +1,5 @@
 #ifndef __SIRIKATA_JS_JSCONTEXT_HPP__
-#define _SIRIKATA_JS_JSCONTEXT_HPP__
+#define __SIRIKATA_JS_JSCONTEXT_HPP__
 
 #include "../JSUtil.hpp"
 #include "../JSObjectScript.hpp"

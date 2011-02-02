@@ -33,7 +33,12 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     // don't use the prototype -- non-global objects work as we would expect.
     v8::Local<v8::Object> fakeroot_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
     fakeroot_obj->SetInternalField(FAKEROOT_TEMAPLATE_FIELD, v8::External::New(mFakeroot));
+    fakeroot_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(FAKEROOT_TYPEID_STRING)));
 
+
+    Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
+    util_obj->SetInternalField(UTIL_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+    util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
     
 }
 

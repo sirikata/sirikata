@@ -261,7 +261,7 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
     }
 
     //means that this is the 
-    jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
+    return jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
 }
 
 

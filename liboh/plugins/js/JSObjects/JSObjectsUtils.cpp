@@ -3,12 +3,27 @@
 #include "JSObjectsUtils.hpp"
 #include <cassert>
 #include <sirikata/core/util/Platform.hpp>
-
+#include "../JSObjectStructs/JSWatchable.hpp"
+#include "../JSObjectStructs/JSVisibleStruct.hpp"
+#include "../JSObjectStructs/JSWatchedStruct.hpp"
+#include "../JSObjectStructs/JSWhenStruct.hpp"
 
 
 namespace Sirikata{
 namespace JS{
 
+
+JSWatchable* decodeWatchable(v8::Handle<v8::Value> toDecode, String & errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+
+    errorMessage += " Error in decodeWatchable of JSObjectsUtils.cpp.  ";
+    JSWatchable* returner = (JSWatchable*)(JSVisibleStruct::decodeVisible(toDecode, errorMessage));
+    if (returner == NULL)
+        returner = (JSWatchable*)(JSWhenStruct::decodeWhenStruct(toDecode, errorMessage));
+
+    return returner;
+}
 
 
 
@@ -84,7 +99,6 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
             SILOG(js,error,errorMessage);
             return;
         }
-
         std::cout<<"      property "<< s <<": "<<strVal <<": "<<strVal2<<"\n";
     }
 }

@@ -40,15 +40,15 @@
 #include "JSObjects/JSVisible.hpp"
 #include "JSObjects/JSFakeroot.hpp"
 #include "JSObjects/JSSystem.hpp"
-#include "JSObjects/JSMath.hpp"
+#include "JSObjects/JSUtilObj.hpp"
 #include "JSObjects/JSHandler.hpp"
 #include "JSObjects/JSTimer.hpp"
-
+#include "JSObjects/JSWatched.hpp"
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
-
+#include "JSObjects/JSWhen.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSInvokableObject.hpp"
@@ -87,6 +87,19 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
 
 
+//here's how watched objects work;
+//they have an internal field with an accessor.
+void JSObjectScriptManager::createWatchedTemplate()
+{
+    v8::HandleScope handle_scope;
+    mWatchedTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+    // An internal field holds the JSObjectScript*
+    mWatchedTemplate->SetInternalFieldCount(WATCHED_TEMPLATE_FIELD_COUNT);
+    mWatchedTemplate->SetNamedPropertyHandler(JSWatched::WatchedGet, JSWatched::WatchedSet);
+}
+
+
 void JSObjectScriptManager::createUtilTemplate()
 {
     v8::HandleScope handle_scope;
@@ -96,19 +109,39 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
 
-    mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSMath::ScriptSqrtFunction));
-    mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSMath::ScriptAcosFunction));
-    mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSMath::ScriptAsinFunction));
-    mUtilTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSMath::ScriptCosFunction));
-    mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSMath::ScriptSinFunction));
-    mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSMath::ScriptRandFunction));
-    mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSMath::ScriptPowFunction));
-    mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSMath::ScriptAbsFunction));
+    mUtilTemplate->Set(v8::String::New("create_when"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhen));
+    mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSUtilObj::ScriptSqrtFunction));
+    mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSUtilObj::ScriptAcosFunction));
+    mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSUtilObj::ScriptAsinFunction));
+    mUtilTemplate->Set(JS_STRING(cos),v8::FunctionTemplate::New(JSUtilObj::ScriptCosFunction));
+    mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSUtilObj::ScriptSinFunction));
+    mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
+    mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
+    mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
 
 
     addTypeTemplates(mUtilTemplate);
-
 }
+
+
+void JSObjectScriptManager::createWhenTemplate()
+{
+    v8::HandleScope handle_scope;
+    mWhenTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+    // An internal field holds the JSObjectScript*
+    mWhenTemplate->SetInternalFieldCount(WHEN_TEMPLATE_FIELD_COUNT);
+
+    mWhenTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSWhen::WhenSuspend));
+    mWhenTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSWhen::WhenResume));
+    mWhenTemplate->Set(v8::String::New("getPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetPeriod));
+    mWhenTemplate->Set(v8::String::New("setPeriod"),v8::FunctionTemplate::New(JSWhen::WhenSetPeriod));
+    mWhenTemplate->Set(v8::String::New("getWhenState"),v8::FunctionTemplate::New(JSWhen::WhenGetState));
+    mWhenTemplate->Set(v8::String::New("setWhenState"),v8::FunctionTemplate::New(JSWhen::WhenSetState));
+    mWhenTemplate->Set(v8::String::New("getWhenMinPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetMinPeriod));
+}
+
+
 
 //these templates involve vec, quat, pattern, etc.
 void JSObjectScriptManager::createTemplates()
@@ -117,8 +150,10 @@ void JSObjectScriptManager::createTemplates()
     mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
     mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
-
+    createWhenTemplate();
+    
     createUtilTemplate();
+
     
     createFakerootTemplate();
     createContextTemplate();
@@ -210,7 +245,9 @@ void JSObjectScriptManager::createContextGlobalTemplate()
 //takes in a template (likely either the context template or the system template)
 void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> tempToAddTo)
 {
-    tempToAddTo->Set(JS_STRING(Pattern), mPatternTemplate);
+    tempToAddTo->Set(v8::String::New("When"),mWhenTemplate);
+    tempToAddTo->Set(v8::String::New("Watched"), mWatchedTemplate);
+    tempToAddTo->Set(v8::String::New("Pattern"), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
 }

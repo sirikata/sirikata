@@ -21,7 +21,7 @@ struct JSTimerStruct{
     
     ~JSTimerStruct();
     
-    static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String errorMessage);
+    static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
     
     v8::Handle<v8::Value> struct_clear();
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);

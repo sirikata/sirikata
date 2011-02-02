@@ -132,12 +132,6 @@ v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
     return jsvis->getStillVisible();
 
 }
-//returns true if the object is a valid sender object
-//utility function for working with visible objects.  pass in args for a
-//call, get back the jsobjectscript that called it, and the space object
-//reference that was visible
-//bool decodeVisible(v8::Handle<v8::Value> sender_val, JSObjectScript*&
-//jsObjScript, SpaceObjectReference*& sporef)
 
 v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
 {

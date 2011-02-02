@@ -26,6 +26,39 @@ JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur,v8::Pers
         jscont->struct_registerTimeout(this);
 }
 
+JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+    
+    if (! toDecode->IsObject())
+    {
+        errorMessage += "Error in decode of timer object in JSTimerStruct.cpp.  Should have received an object to decode.";
+        return NULL;
+    }
+
+    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+
+    //now check internal field count
+    if (toDecodeObject->InternalFieldCount() != TIMER_JSTIMER_TEMPLATE_FIELD_COUNT)
+    {
+        errorMessage += "Error in decode of timer object in JSTimerStruct.  Object given does not have adequate number of internal fields for decode.";
+        return NULL;
+    }
+
+    //now actually try to decode each.
+    //decode the jsTimerStruct field
+    v8::Local<v8::External> wrapJSTimerStruct;
+    wrapJSTimerStruct = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(TIMER_JSTIMERSTRUCT_FIELD));
+    void* ptr = wrapJSTimerStruct->Value();
+
+    JSTimerStruct* returner;
+    returner = static_cast<JSTimerStruct*>(ptr);
+    if (returner == NULL)
+        errorMessage += "Error in decode of timer object in JSTimerStruct.cpp.  Internal field of object given cannot be casted to a JSTimerStruct.";
+
+    return returner;
+}
+
 
 JSTimerStruct::~JSTimerStruct()
 {

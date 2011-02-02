@@ -1,4 +1,4 @@
-#include "JSMath.hpp"
+#include "JSUtilObj.hpp"
 #include <v8.h>
 #include "../JSObjectScript.hpp"
 #include "../JSSerializer.hpp"
@@ -14,10 +14,61 @@
 
 namespace Sirikata{
 namespace JS{
-namespace JSMath{
+namespace JSUtilObj{
 
 
 
+
+//when:
+//1: a predicate function to check
+//2: a callback function to callback
+//3: null or a sampling period
+//4-end: list of watchable args this depends on
+//last few arguments are 
+v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args)
+{
+    if (args.Length() <4)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  Requires at least 4 args: <predicate function> <callback function> <sampling period (or null if no sampling)> <first watchable arg> <second watchable arg> ...")) );
+
+    //check can get jsobjscript passed in
+    String errorMessage = "Error in ScriptCreateWhen of JSUtilObj.  Cannot decode jsobjectscript associated with util object. ";
+    JSObjectScript* jsobj = JSObjectScript::decodeUtilObject(args.This(),errorMessage);
+    if (jsobj == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+    
+    //check args passed in
+    if (! args[0]->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  First argument should be a function (predicate of when statement).")));
+    if (! args[1]->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  Second argument should be a function (callback of when).")));
+    if ((! args[2]->IsNull()) && (! args[2]->IsNumber()))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  Third argument should be a number or null (min sampling period).")));
+
+    WatchableMap watchMap;
+    
+    //check all of the watchable args
+    for (int s=3; s < args.Length(); ++s)
+    {
+        String errorMessage = "Error decoding watchable arg of in ScriptWhenCreate of JSUtilObj.cpp.  ";
+        JSWatchable* watchableArg = decodeWatchable(args[s],errorMessage);
+        if (watchableArg ==NULL)
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+        watchMap[watchableArg] = true;
+    }
+    
+    v8::Persistent<v8::Function> per_pred = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(args[0]));
+    v8::Persistent<v8::Function> per_cb   = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(args[1]));
+
+    
+    float minPeriod = JSWhenStruct::WHEN_PERIOD_NOT_SET;
+    if (args[2]->IsNumber())
+        minPeriod = NumericExtract(args[2]);
+
+
+    //create new when object;
+    return jsobj->create_when(per_pred,per_cb,minPeriod,watchMap);
+}
 
 
 //returns a random float from 0 to 1
@@ -147,6 +198,6 @@ v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args)
 }
 
 
-}//JSMath namespace
+}//JSUtilObj namespace
 }//JS namespace
 }//sirikata namespace

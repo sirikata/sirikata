@@ -1,5 +1,5 @@
-#ifndef __SIRIKATA_JS_MATH_HPP__
-#define _SIRIKATA_JS_MATH_HPP__
+#ifndef __SIRIKATA_JS_UTILOBJ_HPP__
+#define __SIRIKATA_JS_UTILOBJ_HPP__
 
 #include "../JSUtil.hpp"
 #include "../JSObjectScript.hpp"
@@ -7,8 +7,9 @@
 
 namespace Sirikata {
 namespace JS {
-namespace JSMath{
+namespace JSUtilObj{
 
+v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args);
@@ -20,7 +21,7 @@ v8::Handle<v8::Value> ScriptRandFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptPowFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args);
 
-} //jsmath
+} //jsutilobj
 } //js
 } //sirikata
 

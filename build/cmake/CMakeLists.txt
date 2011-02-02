@@ -1915,15 +1915,18 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVec3.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSMath.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSUtilObj.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSWhen.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSFakerootStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchedStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp

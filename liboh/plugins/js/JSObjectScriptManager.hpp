@@ -65,6 +65,9 @@ public:
     v8::Persistent<v8::ObjectTemplate> mFakerootTemplate;
     v8::Persistent<v8::ObjectTemplate> mTimerTemplate;
     v8::Persistent<v8::ObjectTemplate> mContextGlobalTemplate;
+    v8::Persistent<v8::ObjectTemplate> mWatchedTemplate;
+    v8::Persistent<v8::ObjectTemplate> mWhenTemplate;
+    
     void testPrint();
 
 private:
@@ -79,7 +82,8 @@ private:
     void createFakerootTemplate();
     void createTimerTemplate();
     void createContextGlobalTemplate();
-
+    void createWatchedTemplate();
+    void createWhenTemplate();
     
     void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();

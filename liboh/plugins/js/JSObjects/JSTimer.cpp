@@ -1,6 +1,6 @@
-#include "JSMath.hpp"
+//#include "JSMath.hpp"
+
 #include <v8.h>
-#include "../JSObjectScript.hpp"
 #include "../JSSerializer.hpp"
 #include "JSObjectsUtils.hpp"
 #include "JSHandler.hpp"

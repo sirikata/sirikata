@@ -51,7 +51,7 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
-
+#include "JSObjectStructs/JSWatchable.hpp"
 
 
 namespace Sirikata {
@@ -80,6 +80,8 @@ class JSObjectScript : public ObjectScript,
 public:
 
     static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
+    static JSObjectScript* decodeUtilObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
+
     
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
@@ -102,6 +104,9 @@ public:
     //this function returns a context with
     v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
 
+    void addWatchable(JSWatchable* toAdd);
+    void removeWatchable(JSWatchable* toRemove);
+    v8::Handle<v8::Value> create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap);
     
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -220,10 +225,16 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
-
+    void checkWatchables();
+    void checkWhens(WhenMap& mapWhensToCheck);
+    
     typedef std::vector<JSEventHandler*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
+
+    WatchableMap mWatchables;
+    
+    
 
     // Handlers for presence connection events
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;

@@ -3,7 +3,7 @@
 #include "../JSObjectScript.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include <v8.h>
-
+#include "JSWatchable.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -13,7 +13,8 @@ namespace JS {
 
 
 JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition)
- : jsObjScript(parent),
+ : JSWatchable(),
+   jsObjScript(parent),
    whatIsVisible(new SpaceObjectReference(whatsVisible)),
    visibleToWhom(new SpaceObjectReference( toWhom)),
    stillVisible(new bool(visibleCurrently)),
@@ -75,6 +76,7 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
 
 v8::Handle<v8::Value> JSVisibleStruct::returnProxyPosition()
 {
+    setFlag();
     return jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
 }
 
@@ -124,6 +126,7 @@ v8::Handle<v8::Value> JSVisibleStruct::checkEqual(JSVisibleStruct* jsvis)
     v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(  *whatIsVisible == *(jsvis->whatIsVisible));
 }
+
 
 
 }//js namespace

@@ -6,6 +6,7 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 #include <vector>
+#include "JSWatchable.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -13,7 +14,7 @@ namespace JS {
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 
-struct JSVisibleStruct
+struct JSVisibleStruct : public JSWatchable
 {
     JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition);
     ~JSVisibleStruct();
@@ -29,14 +30,15 @@ struct JSVisibleStruct
     v8::Handle<v8::Value> getStillVisible();
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
-     
     
+
     //data
     JSObjectScript* jsObjScript;
     SpaceObjectReference* whatIsVisible;
     SpaceObjectReference* visibleToWhom;
     bool* stillVisible;
     Vector3d* mPosition;
+
 };
 
 

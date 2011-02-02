@@ -8,10 +8,15 @@
 namespace Sirikata{
 namespace JS{
 
+class JSWatchable;
+
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage);
-bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, std::string& errorMessage);
-void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, std::string additionalMessage);
+bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, String& errorMessage);
+void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMessage);
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
+JSWatchable* decodeWatchable(v8::Handle<v8::Value> toDecode, String & errorMessage);
+
+
 
 
 } //end namespace js

@@ -64,7 +64,8 @@
 #include "JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSObjectStructs/JSTimerStruct.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"
-
+#include "JSObjectStructs/JSWatchable.hpp"
+#include "JSObjectStructs/JSWhenStruct.hpp"
 
 
 #define FIXME_GET_SPACE_OREF() \
@@ -192,6 +193,12 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
     system_obj->SetInternalField(TYPEID_FIELD,External::New(new String(SYSTEM_TYPEID_STRING)));
 
+
+    Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
+    util_obj->SetInternalField(UTIL_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+    util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
+
+    
     
     //hangs math, presences, and addressable off of system_obj
     initializePresences(system_obj);
@@ -226,6 +233,60 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 }
 
 
+
+v8::Handle<v8::Value> JSObjectScript::create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap)
+{
+    v8::HandleScope handle_scope;
+
+    Network::IOService* ioserve = mParent->getIOService();
+    v8::Persistent<v8::Context> contexter = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+    JSWhenStruct* jswhen = new JSWhenStruct(this,ioserve,watchMap,pred,cb,contexter,minPeriod);
+    
+    
+    v8::Handle<v8::Object> whenObj = mManager->mWhenTemplate->NewInstance();
+    whenObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_TYPEID_STRING)));
+    whenObj->SetInternalField(WHEN_TEMPLATE_FIELD,v8::External::New(jswhen));
+    
+    return whenObj;
+}
+
+
+
+JSObjectScript* JSObjectScript::decodeUtilObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+    
+    if (! toDecode->IsObject())
+    {
+        errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Should have received an object to decode.";
+        return NULL;
+    }
+
+    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+
+    //now check internal field count
+    if (toDecodeObject->InternalFieldCount() != UTIL_TEMPLATE_FIELD_COUNT)
+    {
+        errorMessage += "Error in decode of util object in JSObjectScript.  Object given does not have adequate number of internal fields for decode.";
+        return NULL;
+    }
+
+    //now actually try to decode each.
+    //decode the jsObjectScript field
+    v8::Local<v8::External> wrapJSObjScript;
+    wrapJSObjScript = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(UTIL_TEMPLATE_JSOBJSCRIPT_FIELD));
+    void* ptr = wrapJSObjScript->Value();
+
+    JSObjectScript* returner;
+    returner = static_cast<JSObjectScript*>(ptr);
+    if (returner == NULL)
+        errorMessage += "Error in decode of util object in JSObjectScript.cpp.  Internal field of object given cannot be casted to a JSObjectScript.";
+
+    return returner;
+
+}
+
+
 JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
@@ -246,7 +307,7 @@ JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecod
     }
 
     //now actually try to decode each.
-    //decode the jsVisibleStruct field
+    //decode the jsObjectScript field
     v8::Local<v8::External> wrapJSObjScript;
     wrapJSObjScript = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD));
     void* ptr = wrapJSObjScript->Value();
@@ -355,6 +416,8 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
+
+    
     v8::Handle<v8::Value>removedProxVal = removeVisible(proximateObject,querier);
     if (removedProxVal->IsUndefined())
         return;
@@ -653,11 +716,6 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
     
-
-    
-    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-    
-
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
@@ -681,8 +739,31 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         JSLOG(detailed, "Script result: " << *ascii);
     }
 
+
+    checkWatchables();
     return result;
 }
+
+
+//this function runs through 
+void JSObjectScript::checkWatchables()
+{
+    WhenMap whensToCheck;
+    for (WatchableIter iter = mWatchables.begin(); iter!= mWatchables.end(); ++iter)
+        iter->first->checkAndClearFlag(whensToCheck);
+
+    checkWhens(whensToCheck);
+}
+
+//there's sort of an open question as to whether one when condition should be
+//able to trigger another.  As structured, the answer is yes.  May do something
+//to prevent this.
+void JSObjectScript::checkWhens(WhenMap& mapWhensToCheck)
+{
+    for (WhenMapIter iter = mapWhensToCheck.begin(); iter!= mapWhensToCheck.end(); ++iter)
+        iter->first->checkPredAndRun();
+}
+
 
 //defaults to internalEvaling with mContext, and does a ScopedEvalContext.
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
@@ -1020,6 +1101,49 @@ v8::Handle<v8::Value> JSObjectScript::getVisibleFromArray(const SpaceObjectRefer
 }
 
 
+//keeping a reference count of watched objects
+//at end of every executed bit of code, iterate through watchable list
+//when do this iteration, creates a list of associated when structs that
+//
+void JSObjectScript::addWatchable(JSWatchable* toAdd)
+{
+    WatchableIter iter = mWatchables.find(toAdd);
+    if (iter == mWatchables.end())
+    {
+        //didn't already exist, create it.
+        mWatchables[toAdd] = 1;
+        JSLOG(info,"Was not already watching this object.  Creating an entry for it in watched list");
+    }
+    else
+    {
+        //did already exist, increment reference count to watchable
+        mWatchables[toAdd] = mWatchables[toAdd] + 1;
+        JSLOG(info,"Was already watching this object.  Incrementing its reference count in JSObjectScript.cpp");
+    }
+    
+}
+void JSObjectScript::removeWatchable(JSWatchable* toRemove)
+{
+    WatchableIter iter = mWatchables.find(toRemove);
+
+    if (iter == mWatchables.end())
+    {
+        JSLOG(error,"Do not have a record of this watchable object associated with JSObjectScript.  Highly unusual, and likely an error.");
+        return;
+    }
+
+    mWatchables[toRemove] = mWatchables[toRemove] -1;
+    if (mWatchables[toRemove] == 0)
+    {
+        mWatchables.erase(iter);
+        JSLOG(insane,"No additional references to watchable object.  Removing it from watchable list.");
+    }
+
+    
+}
+
+
+
 /*
  * From the odp::endpoint & src and destination, checks if the corresponding
  * visible object already existed in the visible array.  If it does, return the
@@ -1321,7 +1445,8 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
     return js_pres;
 }
 
-//Generates a non-colliding 
+//Generates a non-colliding message code that we can stamp
+//exiting objects with.
 uint32 JSObjectScript::registerUniqueMessageCode()
 {
     uint32 returner = randInt<uint32>(0,MAX_MESSAGE_CODE);

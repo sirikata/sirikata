@@ -1,5 +1,5 @@
-#ifndef _SIRIKATA_JS_PRESENCE_STRUCT_HPP_
-#define _SIRIKATA_JS_PRESENCE_STRUCT_HPP_
+#ifndef __SIRIKATA_JS_PRESENCE_STRUCT_HPP__
+#define __SIRIKATA_JS_PRESENCE_STRUCT_HPP__
 
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
