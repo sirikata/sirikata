@@ -24,7 +24,8 @@ namespace JS{
 
 
 void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::JS::Protocol::JSMessage& jsmessage)
-  //Sirikata::JS::Protocol::JSMessage jsmessage ;
+{
+//Sirikata::JS::Protocol::JSMessage jsmessage ;
   Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
 
   v8::HandleScope handle_scope;
@@ -56,16 +57,19 @@ void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::J
 
 void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::JS::Protocol::IJSMessage& jsmessage)
 {
-  JSObjectScript* jsObjectScript;
-  SpaceObjectReference* sporef;
-  SpaceObjectReference* sporefVisTo;
-  
-
-  if( !JSVisible::decodeVisible(jsVisible, jsObjectScript, sporef, sporefVisTo))
+ 
+  std::string err_msg;
+  JSVisibleStruct* vstruct = JSVisibleStruct::decodeVisible(jsVisible, err_msg);
+  if(err_msg.size() > 0)
   {
-    SILOG(js, error, "\n\nCould not decode Visible\n\n");
+    SILOG(js, error, "\n\nCould not decode Visible: "+ err_msg + "\n\n");
     return ; 
   }
+
+  JSObjectScript* jsObjectScript = vstruct->jsObjScript;
+  SpaceObjectReference* sporef = vstruct->whatIsVisible;
+  SpaceObjectReference* sporefVisTo = vstruct->visibleToWhom;
+  
   
   // we don't want to serialize jsobjectscript for now
 
@@ -360,12 +364,7 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
         if(jsf.name() == TYPEID_FIELD_NAME)
         {
         
-          if(jsvalue.s_value() == ADDRESSABLE_TYPEID_STRING)
-          {
-            isAddressable = true;
-            break;
-          }
-          else if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
+          if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
           {
             std::cout << "\n\nGot JSVisible\n\n";
             isVisible = true;
@@ -377,9 +376,33 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
     
     if(isVisible)
     {
+
+      SpaceObjectReference visibleObj;
+      SpaceObjectReference visibleTo; 
       deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
+
       deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new std::string(VISIBLE_TYPEID_STRING)));
-      deserializeTo->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD, External::New(jsObjScript));
+      
+      std::cout << "\n\nset internal field for type id \n\n";
+      for(int i = 0; i < jsmessage.fields_size(); i++)
+      {
+        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
+        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
+        
+        if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
+        {
+          visibleObj = SpaceObjectReference(jsvalue.s_value());
+          std::cout << "\n\ngot visobj\n\n";
+        }
+        else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
+        {
+          visibleTo = SpaceObjectReference(jsvalue.s_value());
+          std::cout << "\n\n got vistoobj\n\n";
+        }
+      }
+
+      JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d());
+      deserializeTo->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD, External::New(visStruct));
 
       return true;
     }
@@ -413,7 +436,7 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
           v8::Local<v8::Object> intDesObj = v8::Object::New(); 
           Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
           JSSerializer::deserializeObject(jsObjScript, internal_js_message, intDesObj);
-          deserializeTo->Set(key, intDesObj);
+          deserializeTo->Set(key, v8::Persistent<v8::Object>(intDesObj));
         }
         else if(jsvalue.has_f_value())
         {

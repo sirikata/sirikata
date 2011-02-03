@@ -642,8 +642,6 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     emerson_init();
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
-    std::cout<<"\n\n Compiled JS script = \n" <<js_script_str<<"\n";
-    std::cout.flush();
 
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
@@ -1036,14 +1034,17 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     v8::Handle<v8::Value> visFromArrayVal = getVisibleFromArray(from, to);
 
     if (visFromArrayVal->IsObject())
+    {
+        JSLOG(info, "returning the value from the array");
         return visFromArrayVal->ToObject();  //we found the object that we were
-                                             //looking for in the visible
+     }                                        //looking for in the visible
                                              //array.  returning it here.
 
     
+    JSLOG(info, "message sender is a new one");
     //didn't find the object that we were looking for in the visible array.
     v8::HandleScope handle_scope;
-    v8::Handle<v8::Object> returner = mManager->mVisibleTemplate->NewInstance();
+    v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mVisibleTemplate->NewInstance());
 
     JSVisibleStruct* visStruct = new JSVisibleStruct(this, from, to, false, Vector3d());
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(visStruct));
@@ -1079,8 +1080,10 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
     if (! deserializeWorks)
+    {
+        JSLOG(error, "Deserialization Failed!!");
         return;
-
+    }
 
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
@@ -1425,17 +1428,21 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
     DEPRECATED(js);
 }
 
+
+
 v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_str)
 {
   v8::HandleScope handle_scope;
   
-  std::cout << "Got the function string as \n" << em_script_str << "\n\n";
-  
-  //const std::string new_code = std::string("(function () { return ") + em_script_str + "}());";
-  const std::string new_code = std::string(" __emerson_deserialized_function__ = ") + em_script_str + ";";
-  
+  static int32_t counter;  
+  std::stringstream sstream;
+  sstream <<  " __emerson_deserialized_function_" << counter << "__ = " << em_script_str << ";";
 
-  std::cout << "The  new function string is \n" << new_code<< "\n\n";
+  //const std::string new_code = std::string("(function () { return ") + em_script_str + "}());";
+  // The function name is not required. It is being put in because emerson is not compiling "( function() {} )"; correctly 
+  const std::string new_code = sstream.str();
+  counter++; 
+
 
   
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));  

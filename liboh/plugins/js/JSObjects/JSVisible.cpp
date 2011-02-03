@@ -138,19 +138,6 @@ v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
 //reference that was visible
 //bool decodeVisible(v8::Handle<v8::Value> sender_val, JSObjectScript*&
 //jsObjScript, SpaceObjectReference*& sporef)
-bool decodeVisible(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, SpaceObjectReference*& sporef, SpaceObjectReference*& p)
-{
-    if ((!senderVal->IsObject()) || (senderVal->IsUndefined()))
-    {
-        jsObjScript = NULL;
-        sporef = NULL;
-        SILOG(js, debug, "\n\nReturning false from decodeVisible 1. senderVal->IsObject() = " << senderVal->IsObject() << ", senderVal->IsUndefined() = " << senderVal->IsUndefined() << "\n\n");
-        //std::cout<<"\n\nReturning false from decodeVisible 1\n\n";
-        return false;
-    }
-    
-}
-
 
 v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
 {

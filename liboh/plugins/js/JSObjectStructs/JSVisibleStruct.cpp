@@ -49,6 +49,8 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
     v8::Handle<v8::Object> senderObject = senderVal->ToObject();
 
     //now check internal field count
+    std::cout << "internal field count is = " << senderObject->InternalFieldCount() << "\n\n";
+
     if (senderObject->InternalFieldCount() != VISIBLE_FIELD_COUNT)
     {
         errorMessage += "Error in decode of visible object.  Object given does not have adequate number of internal fields for decode.";
@@ -108,7 +110,6 @@ v8::Handle<v8::Value> JSVisibleStruct::visibleSendMessage (std::string& msgToSen
     jsObjScript->sendMessageToEntity(whatIsVisible,visibleToWhom,msgToSend);
     return v8::Undefined();
 }
-
 
 
 v8::Handle<v8::Value> JSVisibleStruct::getStillVisible()
