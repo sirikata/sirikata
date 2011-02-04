@@ -1920,6 +1920,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSWhen.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSWatched.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
@@ -1927,6 +1928,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchedStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchable.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp

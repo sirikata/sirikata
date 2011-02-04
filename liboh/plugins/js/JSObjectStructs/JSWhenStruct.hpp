@@ -30,14 +30,16 @@ struct JSWhenStruct{
 
     
     v8::Handle<v8::Value>struct_whenResume();
-    v8::Handle<v8::Value>struct_whenSetState(bool boolArg);
-    v8::Handle<v8::Value>struct_whenGetState();
+    //v8::Handle<v8::Value>struct_whenSetState(bool boolArg);
+    v8::Handle<v8::Value>struct_whenGetLastPredState();
     v8::Handle<v8::Value>struct_setPeriod(double newPeriod);
     v8::Handle<v8::Value>struct_whenGetPeriod();
     v8::Handle<v8::Value>struct_whenClear();
     v8::Handle<v8::Value>struct_whenSuspend();
     v8::Handle<v8::Value>struct_isSuspended();
 
+    void removeWatchablesFromScript();
+    void addWatchablesToScript();
     void runCallback();
     bool evalPred();
     bool checkPredAndRun();

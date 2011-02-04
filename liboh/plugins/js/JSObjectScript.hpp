@@ -104,6 +104,8 @@ public:
     //this function returns a context with
     v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
 
+    v8::Handle<v8::Value>createWatched();
+    
     void addWatchable(JSWatchable* toAdd);
     void removeWatchable(JSWatchable* toRemove);
     v8::Handle<v8::Value> create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap);

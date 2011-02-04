@@ -108,7 +108,7 @@ void JSObjectScriptManager::createUtilTemplate()
     // An internal field holds the JSObjectScript*
     mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
-
+    mUtilTemplate->Set(v8::String::New("create_watched"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWatched));
     mUtilTemplate->Set(v8::String::New("create_when"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhen));
     mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSUtilObj::ScriptSqrtFunction));
     mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSUtilObj::ScriptAcosFunction));
@@ -119,6 +119,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
 
+    
 
     addTypeTemplates(mUtilTemplate);
 }
@@ -136,8 +137,7 @@ void JSObjectScriptManager::createWhenTemplate()
     mWhenTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSWhen::WhenResume));
     mWhenTemplate->Set(v8::String::New("getPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetPeriod));
     mWhenTemplate->Set(v8::String::New("setPeriod"),v8::FunctionTemplate::New(JSWhen::WhenSetPeriod));
-    mWhenTemplate->Set(v8::String::New("getWhenState"),v8::FunctionTemplate::New(JSWhen::WhenGetState));
-    mWhenTemplate->Set(v8::String::New("setWhenState"),v8::FunctionTemplate::New(JSWhen::WhenSetState));
+    mWhenTemplate->Set(v8::String::New("getWhenLastPredState"),v8::FunctionTemplate::New(JSWhen::WhenGetLastPredState));
     mWhenTemplate->Set(v8::String::New("getWhenMinPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetMinPeriod));
 }
 
@@ -150,6 +150,8 @@ void JSObjectScriptManager::createTemplates()
     mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
     mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
+
+    createWatchedTemplate();
     createWhenTemplate();
     
     createUtilTemplate();

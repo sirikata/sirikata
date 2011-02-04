@@ -14,11 +14,8 @@ v8::Handle<v8::Value> WhenSuspend(const v8::Arguments& args);
 v8::Handle<v8::Value> WhenResume(const v8::Arguments& args);
 v8::Handle<v8::Value> WhenGetPeriod(const v8::Arguments& args);
 v8::Handle<v8::Value> WhenSetPeriod(const v8::Arguments& args);
-v8::Handle<v8::Value> WhenGetState(const v8::Arguments& args);
-v8::Handle<v8::Value> WhenSetState(const v8::Arguments& args);
+v8::Handle<v8::Value> WhenGetLastPredState(const v8::Arguments& args);
 v8::Handle<v8::Value> WhenGetMinPeriod(const v8::Arguments& args);
-
-
 
 
 } //jswhen

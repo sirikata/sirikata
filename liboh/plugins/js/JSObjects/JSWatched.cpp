@@ -3,7 +3,7 @@
 #include "../JSObjectScript.hpp"
 #include "JSObjectsUtils.hpp"
 #include "../JSUtil.hpp"
-
+#include "../JSObjectStructs/JSWatchedStruct.hpp"
 
 
 namespace Sirikata{
@@ -31,7 +31,7 @@ v8::Handle<v8::Value>WatchedSet(v8::Local<v8::String> name,v8::Local<v8::Value> 
     v8::Handle<v8::Object>actualObject = info.Holder();
 
     String errorMessage = "Error in WathcedSet of JSWatched.cpp: cannot decode jswatcedstruct.  ";
-    JSWatchedStruct* jswatched = JSWatchedStruct::decodeWatched(actualObject,errorMessage);
+    JSWatchedStruct* jswatched = JSWatchedStruct::decodeWatchedStruct(actualObject,errorMessage);
     if (jswatched == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 

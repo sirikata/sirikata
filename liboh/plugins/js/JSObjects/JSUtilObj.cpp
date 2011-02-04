@@ -19,6 +19,17 @@ namespace JSUtilObj{
 
 
 
+v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWatched of JSUtilObj.cpp.  Watched constructor takes no args.")));
+
+    String errorMessage = "Error in ScriptCreateWatched of JSUtilObj.cpp.  Cannot decode the jsobjscript field of the util object.  ";
+    JSObjectScript* jsobj = JSObjectScript::decodeUtilObject(args.This(),errorMessage);
+    
+    return jsobj->createWatched();
+}
+
 //when:
 //1: a predicate function to check
 //2: a callback function to callback

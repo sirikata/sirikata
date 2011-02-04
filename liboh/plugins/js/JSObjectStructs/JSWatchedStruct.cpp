@@ -13,9 +13,10 @@
 namespace Sirikata {
 namespace JS {
 
-JSWatchedStruct::JSWatchedStruct(v8::Persistent<v8::Object> toWatch)
+JSWatchedStruct::JSWatchedStruct(v8::Persistent<v8::Object> toWatch,JSObjectScript* jsobj)
  : JSWatchable(),
-   mWatchedObject(toWatch)
+   mWatchedObject(toWatch),
+   mJSObj(jsobj)
 {
 }
 

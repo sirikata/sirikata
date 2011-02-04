@@ -66,6 +66,7 @@
 #include "JSObjects/JSObjectsUtils.hpp"
 #include "JSObjectStructs/JSWatchable.hpp"
 #include "JSObjectStructs/JSWhenStruct.hpp"
+#include "JSObjectStructs/JSWatchedStruct.hpp"
 
 
 #define FIXME_GET_SPACE_OREF() \
@@ -232,6 +233,22 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
 }
 
+
+v8::Handle<v8::Value> JSObjectScript::createWatched()
+{
+    v8::HandleScope handle_scope;
+
+    v8::Handle<v8::Object> watchedObj = mManager->mWhenTemplate->NewInstance();
+    v8::Persistent<v8::Object> newWatchedObj = v8::Persistent<v8::Object>::New(watchedObj);
+
+    
+    JSWatchedStruct* jswatched = new JSWatchedStruct(newWatchedObj,this);
+    
+    newWatchedObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WATCHED_TYPEID_STRING)));
+    newWatchedObj->SetInternalField(WATCHED_TEMPLATE_FIELD,v8::External::New(jswatched));
+
+    return newWatchedObj;
+}
 
 
 v8::Handle<v8::Value> JSObjectScript::create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap)
