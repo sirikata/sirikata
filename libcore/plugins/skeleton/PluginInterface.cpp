@@ -38,8 +38,19 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
     core_plugin_refcount++;
 }
 
+SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
+    return ++core_plugin_refcount;
+}
+
+SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
+    assert(core_plugin_refcount>0);
+    return --core_plugin_refcount;
+}
+
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
-    core_plugin_refcount--;
+    if (core_plugin_refcount==0) {
+        // Do final cleanup, e.g. unregister constructors from Factories.
+    }
 }
 
 SIRIKATA_PLUGIN_EXPORT_C const char* name() {
