@@ -86,24 +86,30 @@ namespace {
 
 
 
-void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
+v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
 
     Handle<Value> result;
-    if (target->IsNull() || target->IsUndefined())
+    bool targetGiven = false;
+    if (target!=NULL)
+    {
+        if (((*target)->IsNull() || (*target)->IsUndefined()))
+        {
+            JSLOG(insane,"ProtectedJSCallback with target given.");
+            result = cb->Call(*target, argc, argv);
+            targetGiven = true;
+        }
+    }
+
+    if (!targetGiven)
     {
         JSLOG(insane,"ProtectedJSCallback without target given.");
         result = cb->Call(ctx->Global(), argc, argv);
     }
-    else
-    {
-        JSLOG(insane,"ProtectedJSCallback with target given.");
-        result = cb->Call(target, argc, argv);
-    }
-
+    
 
     if (result.IsEmpty())
     {
@@ -111,12 +117,15 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
         v8::String::Utf8Value error(try_catch.Exception());
         const char* cMsg = ToCString(error);
         JSLOG(error, "Uncaught exception: " << cMsg);
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
     }
+    return result;
+    
 }
 
 
 
-void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function> cb) {
+v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb) {
     const int argc =
 #ifdef _WIN32
 		1
@@ -125,7 +134,7 @@ void ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> tar
 #endif
 		;
     Handle<Value> argv[argc] = { };
-    ProtectedJSCallback(ctx, target, cb, argc, argv);
+    return ProtectedJSCallback(ctx, target, cb, argc, argv);
 }
 
 }
@@ -238,11 +247,11 @@ v8::Handle<v8::Value> JSObjectScript::createWatched()
 {
     v8::HandleScope handle_scope;
 
-    v8::Handle<v8::Object> watchedObj = mManager->mWhenTemplate->NewInstance();
+    v8::Handle<v8::Object>     watchedObj    = mManager->mWatchedTemplate->NewInstance();
     v8::Persistent<v8::Object> newWatchedObj = v8::Persistent<v8::Object>::New(watchedObj);
 
-    
     JSWatchedStruct* jswatched = new JSWatchedStruct(newWatchedObj,this);
+
     
     newWatchedObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WATCHED_TYPEID_STRING)));
     newWatchedObj->SetInternalField(WATCHED_TEMPLATE_FIELD,v8::External::New(jswatched));
@@ -263,6 +272,7 @@ v8::Handle<v8::Value> JSObjectScript::create_when(v8::Persistent<v8::Function>pr
     v8::Handle<v8::Object> whenObj = mManager->mWhenTemplate->NewInstance();
     whenObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_TYPEID_STRING)));
     whenObj->SetInternalField(WHEN_TEMPLATE_FIELD,v8::External::New(jswhen));
+
     
     return whenObj;
 }
@@ -457,7 +467,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
         //FIXME: Potential memory leak: when will removedProxObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxRemovedEventHandler, argc, argv);
+        ProtectedJSCallback(mContext, NULL, iter->second->mOnProxRemovedEventHandler, argc, argv);
     }
 }
 
@@ -497,7 +507,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         //FIXME: Potential memory leak: when will newAddrObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object.");
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), iter->second->mOnProxAddedEventHandler, argc, argv);
+        ProtectedJSCallback(mContext, NULL, iter->second->mOnProxAddedEventHandler, argc, argv);
     }
 }
 
@@ -546,7 +556,7 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() ) {
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { new_pres };
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceConnectedHandler, argc, argv);
+        ProtectedJSCallback(mContext, NULL, mOnPresenceConnectedHandler, argc, argv);
     }
 }
 
@@ -587,7 +597,7 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
 
     // FIXME this should get the presence but its already been deleted
     if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
-        ProtectedJSCallback(mContext, v8::Handle<Object>::Cast(v8::Undefined()), mOnPresenceDisconnectedHandler);
+        ProtectedJSCallback(mContext, NULL, mOnPresenceDisconnectedHandler);
 }
 
 
@@ -731,6 +741,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     #endif
 
+    
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
     
     // Compile
@@ -768,7 +779,7 @@ void JSObjectScript::checkWatchables()
     WhenMap whensToCheck;
     for (WatchableIter iter = mWatchables.begin(); iter!= mWatchables.end(); ++iter)
         iter->first->checkAndClearFlag(whensToCheck);
-
+    
     checkWhens(whensToCheck);
 }
 
@@ -796,7 +807,8 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
   context ctx.  It then calls the newly recompiled function from within ctx with
   args specified by argv and argc.
  */
-void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object> target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
+
+void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
@@ -836,15 +848,21 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
     v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
 
     Handle<Value> result;
-    if (target->IsNull() || target->IsUndefined())
+    bool targetGiven = false;
+    if (target!=NULL)
+    {
+        if (((*target)->IsNull() || (*target)->IsUndefined()))
+        {
+            JSLOG(insane,"ProtectedJSCallback with target given.");
+            result = funcInCtx->Call(*target, argc, argv);
+            targetGiven = true;
+        }
+    }
+
+    if (!targetGiven)
     {
         JSLOG(insane,"ProtectedJSCallback without target given.");
         result = funcInCtx->Call(ctx->Global(), argc, argv);
-    }
-    else
-    {
-        JSLOG(insane,"ProtectedJSCallback with target given.");
-        result = funcInCtx->Call(target, argc, argv);
     }
 
     if (result.IsEmpty())
@@ -854,6 +872,7 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
         const char* cMsg = ToCString(error);
         JSLOG(error, "Uncaught exception: " << cMsg);
     }
+    
 }
 
 
@@ -862,7 +881,7 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
   funcToCall in.  argv are the arguments to funcToCall from the current context,
   and are counted by argc.
  */
-v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
     JSLOG(insane, "executing script in alternate context");
 
@@ -881,7 +900,7 @@ v8::Handle<v8::Value> JSObjectScript::executeInContext(v8::Persistent<v8::Contex
 
 
     JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");
-    ProtectedJSFunctionInContext(contExecIn, v8::Handle<v8::Object>::Cast(v8::Undefined()),funcToCall, argc, argv);
+    ProtectedJSFunctionInContext(contExecIn, NULL,funcToCall, argc, argv);
 
     
     JSLOG(insane, "Exiting new context associated with JSContextStruct.");
@@ -981,13 +1000,24 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 
 
 //third arg may be null to evaluate in global context
-void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
+v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
 {
     if (jscontext == NULL)
-        ProtectedJSCallback(mContext, target, cb);
-    else
-        ProtectedJSCallback(jscontext->mContext, target, cb);
+        return ProtectedJSCallback(mContext, &target, cb);
+
+    
+    return ProtectedJSCallback(jscontext->mContext, &target, cb);
 }
+
+v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
+{
+    if (jscontext == NULL)
+        return ProtectedJSCallback(mContext, NULL,cb);
+
+    
+    return ProtectedJSCallback(jscontext->mContext,NULL, cb);
+}
+
 
 
 
@@ -1241,7 +1271,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
             int argc = 2;
 
             Handle<Value> argv[2] = { obj, msgSender };
-            ProtectedJSCallback(mContext, mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
+            ProtectedJSCallback(mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;
         }

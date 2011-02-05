@@ -16,12 +16,16 @@ namespace JS {
 
 struct JSWatchedStruct : public JSWatchable
 {
-    JSWatchedStruct(v8::Persistent<v8::Object> toWatch, JSObjectScript* jsobj);
+    JSWatchedStruct(v8::Persistent<v8::Object> toWatch,JSObjectScript* jsobj);
     ~JSWatchedStruct();
     
     static JSWatchedStruct* decodeWatchedStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
+    v8::Handle<v8::Value> setInternal(v8::Handle<v8::String>name,v8::Handle<v8::Value>toSetTo);;
+    v8::Handle<v8::Value>getInternal(v8::Handle<v8::String>name);
+    
     v8::Persistent<v8::Object> mWatchedObject;
+    v8::Persistent<v8::Object> mInternalObj;
     JSObjectScript* mJSObj;
 
 };

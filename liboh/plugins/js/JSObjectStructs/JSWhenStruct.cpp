@@ -19,6 +19,7 @@ namespace JS {
 JSWhenStruct::JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService* ioserve,std::map<JSWatchable*,int>predWatches,v8::Persistent<v8::Function> preder, v8::Persistent<v8::Function> callback,v8::Persistent<v8::Context> cont,float whenPeriod)
  : mObjScript(jsscript),
    mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
+   mWatchables(predWatches),
    mPred(preder),
    mCB(callback),
    mContext(cont),
@@ -28,6 +29,13 @@ JSWhenStruct::JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService
 {
     setPredTimer();
     addWatchablesToScript();
+    addWhenToWatchables();
+}
+
+void JSWhenStruct::addWhenToWatchables()
+{
+    for(WatchableIter iter = mWatchables.begin(); iter!= mWatchables.end(); ++iter)
+        iter->first->addWhen(this);
 }
 
 
@@ -71,7 +79,7 @@ bool JSWhenStruct::checkPredAndRun()
     //updateVisibles();
     bool prevPredState=predState;
 
-    bool predState = evalPred();
+    predState = evalPred();
     if (predState && !prevPredState)
     {
         runCallback();
@@ -88,11 +96,13 @@ bool JSWhenStruct::evalPred()
     v8::HandleScope handle_scope;
     
     //the function passed in shouldn't take any arguments
-    v8::Handle<v8::Value> predReturner = mObjScript->executeInContext(mContext,mPred,0,NULL);
-
+    //v8::Handle<v8::Value> predReturner = mObjScript->executeInContext(mContext,mPred,0,NULL);
+    v8::Handle<v8::Value>predReturner = mObjScript->handleTimeoutContext(mPred,NULL);
+    
     String dummyErrorMessage = "";
     bool decodedVal;
     bool returnedBool = decodeBool(predReturner,decodedVal,dummyErrorMessage);
+
     if (! returnedBool)
     {
         JSLOG(error,"Error in evalPred of JSWhenStruct.cpp.  Predicate did not return bool.  Suspending when statement");
@@ -100,7 +110,7 @@ bool JSWhenStruct::evalPred()
         return false;
     }
 
-    return returnedBool;
+    return decodedVal;
 }
 
 

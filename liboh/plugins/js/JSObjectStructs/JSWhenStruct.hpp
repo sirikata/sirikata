@@ -40,6 +40,7 @@ struct JSWhenStruct{
 
     void removeWatchablesFromScript();
     void addWatchablesToScript();
+    void addWhenToWatchables();
     void runCallback();
     bool evalPred();
     bool checkPredAndRun();

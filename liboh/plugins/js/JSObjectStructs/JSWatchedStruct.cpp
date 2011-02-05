@@ -16,12 +16,27 @@ namespace JS {
 JSWatchedStruct::JSWatchedStruct(v8::Persistent<v8::Object> toWatch,JSObjectScript* jsobj)
  : JSWatchable(),
    mWatchedObject(toWatch),
-   mJSObj(jsobj)
+   mJSObj(jsobj),
+   mInternalObj(v8::Persistent<v8::Object>::New(v8::Object::New()))
 {
 }
 
 JSWatchedStruct::~JSWatchedStruct()
 {
+}
+
+
+v8::Handle<v8::Value> JSWatchedStruct::getInternal(v8::Handle<v8::String>name)
+{
+    return mInternalObj->Get(name);
+}
+
+
+v8::Handle<v8::Value> JSWatchedStruct::setInternal(v8::Handle<v8::String>name,v8::Handle<v8::Value>toSetTo)
+{
+    mInternalObj->Set(name,toSetTo);
+    setFlag();
+    return toSetTo;
 }
 
 

@@ -10,7 +10,7 @@ var haveCallback = false;
 var objToMvTowards;
 var inverseSpeed = 1;
 var CALLBACK_PERIOD = .5;
-var CALLBACK_MAX_DISTANCE = 10;
+var CALLBACK_MAX_DISTANCE = 40;
 
 
 
@@ -20,7 +20,8 @@ function proxCallback(calledBack)
     if (! haveCallback)
     {
         var distToIt = distanceFromMeToIt(calledBack);
-        system.print("\n\nThis is dist to it " + distToIt.toString());
+        var distToItString = distToIt.toString();
+        system.print("\n\nThis is dist to it " + distToItString);
         if ((distToIt < CALLBACK_MAX_DISTANCE) && (distToIt != 0 ) )
         {
             system.print("\n\nSetting haveCallback\n\n");
@@ -55,41 +56,29 @@ function distanceFromMeToIt(it)
     var diffZSquared = diffZ * diffZ;
     var sumOfSquares = diffXSquared + diffYSquared + diffZSquared;
 
-    
-<<<<<<< HEAD
     var distance = util.sqrt(sumOfSquares);
     
     return distance;
 }
-=======
-    var distance = system.math.sqrt(sumOfSquares);
-    
-    return distance;
-}
 
->>>>>>> origin/master
+
 
 firstNoLongerVisible = true;
 function moveTowards(toMoveTowards)
 {
     if (! toMoveTowards.getStillVisible())
     {
-<<<<<<< HEAD
         if (firstNoLongerVisible)
         {
-            system.presences[0].setVelocity(new system.Vec3(0,0,0) );
+            var newVeloc = new util.Vec3(0,0,0);
+            system.presences[0].setVelocity(newVeloc);
             firstNoLongerVisible = false;
         }
         return;
     }
 
     firstNoLongerVisible = true;    
-=======
-        system.presences[0].setVelocity(new system.Vec3(0,0,0) );
-        return;
-    }
-    
->>>>>>> origin/master
+
     var posToMoveTowards = toMoveTowards.getPosition();
     var myPosition  = system.presences[0].getPosition();
 
@@ -97,17 +86,15 @@ function moveTowards(toMoveTowards)
     var yComponent = posToMoveTowards.y - myPosition.y;
     var zComponent = posToMoveTowards.z - myPosition.z;
     
-    var mNewVelocity = new system.Vec3(
+    var mNewVelocity = new util.Vec3(
         xComponent/inverseSpeed,
         yComponent/inverseSpeed,
         zComponent/inverseSpeed
     );
 
-<<<<<<< HEAD
-    system.print("\nMoving towards object at position: " +  posToMoveTowards.toString() + "     with velocity: " +  mNewVelocity.toString() +  "\n");
-=======
-    system.print("\nMoving towards object with velocity: " +  mNewVelocity.toString() +  "\n");
->>>>>>> origin/master
+    var posToMoveTowardsString = posToMoveTowards.toString();
+    var newVelocityString = mNewVelocity.toString();
+    system.print("\nMoving towards object at position: " +  posToMoveTowardsString + "     with velocity: " +  newVelocityString +  "\n");
     system.presences[0].setVelocity(mNewVelocity);
 }
 
@@ -117,9 +104,12 @@ function printStatement(toMoveTowards)
     var myPosition  = system.presences[0].getPosition();
 
     system.print("\n\nPrinting pos to move towards:\n");
-    system.print(posToMoveTowards.toString());
+    var posToMoveTowardsString = posToMoveTowards.toString();
+    system.print(posToMoveTowardsString);
     system.print("\n\nPrinting my pos:\n");
-    system.print(myPosition.toString());
+
+    var myPosString = myPosition.toString();
+    system.print(myPosString);
 }
 
 

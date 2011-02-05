@@ -10,21 +10,66 @@ x.health = 22;
 //2: a callback function to callback
 //3: null or a sampling period
 //4-end: list of watchable args this depends on
+function sometimesTrue()
+{
+    system.print("\n\nThis is x.health\n");
+    system.print(x.health);
+    system.print("\n\n");
+    
+    if (x.health < 3)
+    {
+        return true;            
+    }
+    
+    return false;
+}
+function whenCallback()
+{
+    system.print("\n\n\nGot into print function\n\n");
+}
 
 util.create_when(
-    function()
-    {
-        //if (x.health < 3)
-        //return true;
-
-        return true;
-    },
-    function ()
-    {
-        system.print("\n\nGot into print function\n\n");
-    },
-    5,
+    sometimesTrue,
+    whenCallback,
+    10,
     x);
+
+
+function distance(toWhom)
+{
+
+    lkjs;
+}
+
+function runTowards()
+{
+    
+}
+
+
+function onProxAdded(newVis)
+{
+    util.create_when(
+        function()
+        {
+            if (distance(newVis) < 5)
+            {
+                return true;
+            }
+            return false;
+        },
+        function()
+        {
+            runAway(newVis);
+        },
+        1,
+        newVis
+    );
+}
+
+system.presences[0].onProxAdded(onProxAdded);
+
+
 
 
 
