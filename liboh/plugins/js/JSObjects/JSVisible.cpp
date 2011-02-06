@@ -9,6 +9,7 @@
 #include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSFields.hpp"
+#include "JSVec3.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
@@ -17,6 +18,35 @@ namespace Sirikata {
 namespace JS {
 namespace JSVisible {
 
+
+v8::Handle<v8::Value> dist(const v8::Arguments& args)
+{
+    if ((args.Length() != 0) && (args.Length() != 1))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly zero or one argument to dist method of Visible")));
+
+    String errorMessage = "Error in dist method of JSVisible.cpp.  Cannot decode visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+
+    if (jsvis == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+        
+    if (args.Length() == 0)
+        return jsvis->dist(NULL);
+
+    if (! args[0]->IsObject())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in dist of JSVisible.cpp.  Argument should be an objet.")));
+
+    v8::Handle<v8::Object> argObj = args[0]->ToObject();
+    
+    bool isVec3 = Vec3Validate(argObj);
+    if (! isVec3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Visible needs to be a vec3")));
+
+    Vector3d vec3 = Vec3Extract(argObj);
+    
+    return jsvis->dist(&vec3);
+}
 
 
 
@@ -152,101 +182,6 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
 
     
     return jsvis->checkEqual(jsvis2);
-/*
-    v8::Local<v8::Value> typeidVal = senderVal->GetInternalField(TYPEID_FIELD);
-    if(typeidVal->IsUndefined())
-    {
-      SILOG(js, debug, "\n\nJSVisible: Returning false from decodeVisible 2. typeidVal->IsUndefined() = " << typeidVal->IsUndefined() << "\n\n");
-      jsObjScript = NULL;
-      sporef = NULL;
-      sporefVisTo = NULL;
-      return false;
-    }
-    
-    v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);
-    void* ptr = wrapped->Value();
-    std::string* typeId = static_cast<std::string*>(ptr);
-    std::string typeIdString = *typeId;    
-
-    SILOG(js, debug, "\n\nJSVisible: The typeIdString is " << typeIdString << " \n");
-    
-    if(typeIdString != VISIBLE_TYPEID_STRING)
-    {
-      SILOG(js, error, "\n\nJSVisible: Returning false from decodeVisible 2: The typeId field is not visible\n\n");
-
-      jsObjScript = NULL;
-      sporef = NULL;
-      sporefVisTo = NULL;
-      return false;
-    }
-
-    //if (senderVal->InternalFieldCount() == VISIBLE_FIELD_COUNT)
-    {
-        //decode the jsobject script field
-        v8::Local<v8::External> wrapJSObj;
-        wrapJSObj = v8::Local<v8::External>::Cast(senderVal->GetInternalField(VISIBLE_JSOBJSCRIPT_FIELD));
-        void* ptr = wrapJSObj->Value();
-
-        jsObjScript = static_cast<JSObjectScript*>(ptr);
-        
-        */
-        /* bug 187 : visible objects shipped across on the network will not have a jsobjectscript attached .*/
-      
-      /*
-        if (jsObjScript == NULL)
-        {
-
-            SILOG(js, info, "\n\nVisible: Decoded Visible with NULL JSObjectScript..Continuing.. \n\n");
-        }
-
-        //decode the spaceobjectreference field
-        v8::Local<v8::External> wrapSpaceObjRef;
-        wrapSpaceObjRef = v8::Local<v8::External>::Cast(senderVal->GetInternalField(VISIBLE_SPACEOBJREF_FIELD));
-        
-        void* ptr2 = wrapSpaceObjRef->Value();
-        sporef = static_cast<SpaceObjectReference*>(ptr2);
-        if (sporef == NULL)
-        {
-            jsObjScript = NULL;
-            sporefVisTo = NULL;
-            std::cout<<"\n\nReturning false from decodeVisible 2 sporef\n\n";
-            return false;
-        }
-
-
-        v8::Local<v8::External> wrapSPVisTo;
-        wrapSPVisTo = v8::Local<v8::External>::Cast(senderVal->GetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD));
-        
-        void* ptr3 = wrapSPVisTo->Value();
-        sporefVisTo = static_cast<SpaceObjectReference*>(ptr3);
-*/
-        /*
-        if (sporefVisTo == NULL)
-        {
-            jsObjScript = NULL;
-            sporef =  NULL;
-            std::cout<<"\n\nReturning false from decodeVisible 3 proxy object\n\n";
-            return false;
-        }
-
-        */
-/*
-        if(sporefVisTo == NULL)
-        {
-          SILOG(js, warn, "JSVisible: got a visible with no sporefVisTo field. Continuing...");
-        }
-
-
-        return true;
-    }
-
-    //std::cout<<"\n\nReturning false from decodeVisible 2 incorrect field count: "<<senderVal->InternalFieldCount()<<"\n\n";
-    SILOG(js, debug, "\n\nReturning false from decodeVisible 2 incorrect field count: "<<senderVal->InternalFieldCount()<<"\n\n");
-    jsObjScript = NULL;
-    sporef = NULL;
-    sporefVisTo = NULL;
-    return false;
-    */
 }
 
 

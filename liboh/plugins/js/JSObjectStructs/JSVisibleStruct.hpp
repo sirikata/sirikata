@@ -30,6 +30,7 @@ struct JSVisibleStruct : public JSWatchable
     v8::Handle<v8::Value> getStillVisible();
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
+    v8::Handle<v8::Value> dist(Vector3d* distTo);
     
 
     //data

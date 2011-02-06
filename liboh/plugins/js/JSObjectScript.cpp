@@ -1706,6 +1706,7 @@ v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(SpaceObjectReference*  
     bool updateSucceeded = updatePosition(sporef, spVisTo, position);
     if (! updateSucceeded)
         JSLOG(error, "No sporefs associated with position.  Returning undefined.");
+
     
     return CreateJSResult(mContext,*position);
 }

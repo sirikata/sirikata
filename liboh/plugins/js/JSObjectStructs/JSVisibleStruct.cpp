@@ -9,6 +9,20 @@ namespace Sirikata {
 namespace JS {
 
 
+v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+    setFlag();
+    
+    if (distTo == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in call to dist of jsvisible object in jsvisiblestruct.cpp.  Must provide a vector to dist function.")) );
+
+
+    float dist = (*mPosition - *distTo).length();
+
+    return v8::Number::New(dist);
+}
+
 
 
 
