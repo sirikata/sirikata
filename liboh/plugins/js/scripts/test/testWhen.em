@@ -35,41 +35,6 @@ util.create_when(
     x);
 
 
-function distance(toWhom)
-{
-
-    lkjs;
-}
-
-function runTowards()
-{
-    
-}
-
-
-function onProxAdded(newVis)
-{
-    util.create_when(
-        function()
-        {
-            if (distance(newVis) < 5)
-            {
-                return true;
-            }
-            return false;
-        },
-        function()
-        {
-            runAway(newVis);
-        },
-        1,
-        newVis
-    );
-}
-
-system.presences[0].onProxAdded(onProxAdded);
-
-
 
 
 
