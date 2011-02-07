@@ -17,15 +17,15 @@ namespace Sirikata {
 namespace JS {
 
 JSWhenStruct::JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService* ioserve,std::map<JSWatchable*,int>predWatches,v8::Persistent<v8::Function> preder, v8::Persistent<v8::Function> callback,v8::Persistent<v8::Context> cont,float whenPeriod)
- : mObjScript(jsscript),
-   mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
-   mWatchables(predWatches),
-   mPred(preder),
-   mCB(callback),
-   mContext(cont),
-   stateSuspended(false),
-   predState(false),
-   currentPeriod(whenPeriod)
+ :   stateSuspended(false),
+     predState(false),
+     currentPeriod(whenPeriod),
+     mObjScript(jsscript),
+     mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
+     mWatchables(predWatches),
+     mPred(preder),
+     mCB(callback),
+     mContext(cont)
 {
     setPredTimer();
     addWatchablesToScript();

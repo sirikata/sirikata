@@ -27,13 +27,12 @@ struct JSTimerStruct{
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
     void evaluateCallback();
     
-    Sirikata::Network::DeadlineTimer* mDeadlineTimer;
+
     JSObjectScript* jsObjScript;
     v8::Persistent<v8::Object> target;
     v8::Persistent<v8::Function> cb;
-
     JSContextStruct* jsContStruct;
-
+    Sirikata::Network::DeadlineTimer* mDeadlineTimer;
 
 };
 

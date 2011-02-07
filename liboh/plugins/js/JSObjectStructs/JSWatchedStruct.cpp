@@ -16,8 +16,8 @@ namespace JS {
 JSWatchedStruct::JSWatchedStruct(v8::Persistent<v8::Object> toWatch,JSObjectScript* jsobj)
  : JSWatchable(),
    mWatchedObject(toWatch),
-   mJSObj(jsobj),
-   mInternalObj(v8::Persistent<v8::Object>::New(v8::Object::New()))
+   mInternalObj(v8::Persistent<v8::Object>::New(v8::Object::New())),
+   mJSObj(jsobj)
 {
 }
 
