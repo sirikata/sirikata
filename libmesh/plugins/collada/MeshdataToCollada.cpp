@@ -513,6 +513,9 @@ public:
 };
 
 namespace {
+
+typedef std::multimap<NodeIndex, uint32> InstanceNodeIndex;
+
 void convertMatrixForCollada(const Matrix4x4f& mat, double output[4][4]) {
     for(int i = 0; i < 4; i++)
         for(int j = 0; j < 4; j++)
@@ -527,7 +530,176 @@ struct NodeState {
     int32 currentChild;
     COLLADASW::Node* colladaNode;
 };
+
+// Emits the elements of a node. Since these can exist in visual scene or
+// library_nodes, we factor it out here.
+void emitNodeElements(const Meshdata& meshdata, COLLADASW::StreamWriter* streamWriter, NodeState& current,
+    InstanceNodeIndex nodeGeoInstances, InstanceNodeIndex nodeLightInstances, InstanceNodeIndex nodeJoints,
+    std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap,
+    std::map<int,bool>& addedLightsList
+)
+{
+    // InstanceNodes
+    for(NodeIndexList::const_iterator inst_it = meshdata.nodes[current.node].instanceChildren.begin();
+        inst_it != meshdata.nodes[current.node].instanceChildren.end();
+        inst_it++)
+    {
+        String inst_node_url = "#node-" + boost::lexical_cast<String>(*inst_it);
+        COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
+        instanceNode.add();
+    }
+
+    // Geometry instances
+    InstanceNodeIndex::iterator geo_it = nodeGeoInstances.find(current.node);
+    while(geo_it != nodeGeoInstances.end() && geo_it->first == current.node) {
+        uint32 instanced_geo = geo_it->second;
+        const GeometryInstance& geo_inst = meshdata.instances[instanced_geo];
+        if (addedGeometriesList.find(geo_inst.geometryIndex) == addedGeometriesList.end() ||
+            addedGeometriesList[geo_inst.geometryIndex] == false)
+        {
+            geo_it++;
+            continue;
+        }
+
+        COLLADASW::InstanceGeometry instanceGeometry(streamWriter);
+        instanceGeometry.setUrl ( "#" + geometryId(geo_inst.geometryIndex));
+
+        COLLADASW::BindMaterial& bindMaterial = instanceGeometry.getBindMaterial();
+        for (GeometryInstance::MaterialBindingMap::const_iterator mat_it =
+                 geo_inst.materialBindingMap.begin();
+             mat_it != geo_inst.materialBindingMap.end(); mat_it++)
+        {
+            uint32 materialIdx = materialRedirectionMap[mat_it->second];
+
+            String effectName ="material" + boost::lexical_cast<String>(materialIdx);
+            String materialName = effectName + "ID";
+            COLLADASW::InstanceMaterial instanceMaterial( effectName, "#" + materialName );
+            // FIXME multiple textures?
+            instanceMaterial.push_back(COLLADASW::BindVertexInput("TEX0", "TEXCOORD", 0)  );
+            bindMaterial.getInstanceMaterialList().push_back( instanceMaterial );
+        }
+
+        instanceGeometry.add();
+
+        geo_it++;
+    }
+
+    // Light instances
+    InstanceNodeIndex::iterator light_it = nodeLightInstances.find(current.node);
+    while(light_it != nodeLightInstances.end() && light_it->first == current.node) {
+        uint32 instanced_light = light_it->second;
+        const LightInstance& light_inst = meshdata.lightInstances[instanced_light];
+        if (addedLightsList.find(light_inst.lightIndex) == addedLightsList.end() ||
+            addedLightsList[light_inst.lightIndex] == false)
+        {
+            light_it++;
+            continue;
+        }
+
+        COLLADASW::InstanceLight instanceLight(
+            streamWriter,
+            COLLADABU::URI("#light" + boost::lexical_cast<String>(light_inst.lightIndex) + "-light")
+        );
+        instanceLight.add();
+
+        light_it++;
+    }
 }
+
+} // namespace
+
+const COLLADASW::String CSW_ELEMENT_LIBRARY_NODES = "library_nodes";
+// We have to implement this one ourselves because opencollada doesn't seem to
+// have it.
+class NodeExporter : public COLLADASW::Library {
+public:
+    NodeExporter(COLLADASW::StreamWriter*  streamWriter)
+     : COLLADASW::Library ( streamWriter, CSW_ELEMENT_LIBRARY_NODES )
+    {
+    }
+
+    void exportNodes(const Meshdata& meshdata,
+        std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap,
+        std::map<int,bool>& addedLightsList)
+    {
+      // Generate a reverse index for instance lights, instance geometries and
+      // joints so we can determine which instances need to be inserted for each node.
+      InstanceNodeIndex nodeGeoInstances;
+      InstanceNodeIndex nodeLightInstances;
+      InstanceNodeIndex nodeJoints;
+
+      for(uint32 geo_it = 0; geo_it < meshdata.instances.size(); geo_it++)
+          nodeGeoInstances.insert( std::make_pair(meshdata.instances[geo_it].parentNode, geo_it) );
+      for(uint32 light_it = 0; light_it < meshdata.lightInstances.size(); light_it++)
+          nodeLightInstances.insert( std::make_pair(meshdata.lightInstances[light_it].parentNode, light_it) );
+      for(uint32 joint_it = 0; joint_it < meshdata.joints.size(); joint_it++)
+          nodeJoints.insert( std::make_pair(meshdata.joints[joint_it], joint_it) );
+
+      openLibrary();
+
+      // We need to emit:
+      //  1. The node hierarchy (this is the main part of the traversal).
+      //  2. Instance ndoes
+      //  3. Geometry instances
+      //  4. Light instances
+
+
+      // To emit the node *library* properly we emit hierarchically, but only
+      // start traversal from nodes without any parent pointer
+      std::stack<NodeState> node_stack;
+      for(uint32 root_i = 0; root_i < meshdata.nodes.size(); root_i++) {
+          if (meshdata.nodes[root_i].parent != NullNodeIndex) continue;
+
+          node_stack.push( NodeState(root_i) );
+
+          while(!node_stack.empty()) {
+              NodeState& current = node_stack.top();
+
+              // First, if this is the first time we're seeing this node, do
+              // node setup
+              if (current.currentChild == -1) {
+                  current.colladaNode = new COLLADASW::Node( mSW );
+                  String node_name = "node-" + boost::lexical_cast<String>(current.node);
+                  current.colladaNode->setNodeId(node_name);
+                  current.colladaNode->setNodeName( COLLADASW::Utils::checkNCName( COLLADABU::NativeString(node_name) ) );
+                  bool is_joint = (nodeJoints.find(current.node) != nodeJoints.end());
+                  current.colladaNode->setType(is_joint ? COLLADASW::Node::JOINT : COLLADASW::Node::NODE);
+
+                  current.colladaNode->start();
+                  double mat[4][4];
+                  convertMatrixForCollada(meshdata.nodes[current.node].transform, mat);
+                  current.colladaNode->addMatrix(mat);
+
+                  current.currentChild++;
+              }
+
+              // If we've finished handling all children, handle non-node
+              // children, i.e. instance nodes, instance lights, instance geometries
+              if (current.currentChild >= meshdata.nodes[current.node].children.size()) {
+                  emitNodeElements(
+                      meshdata, mSW, current,
+                      nodeGeoInstances, nodeLightInstances, nodeJoints,
+                      addedGeometriesList, materialRedirectionMap, addedLightsList
+                  );
+
+                  // And end the node
+                  current.colladaNode->end();
+                  delete current.colladaNode;
+                  node_stack.pop();
+
+                  continue;
+              }
+
+              // Otherwise, we're processing another child
+              int32 child_idx = current.currentChild;
+              current.currentChild++;
+              node_stack.push( NodeState( meshdata.nodes[current.node].children[child_idx] ) );
+          }
+      }
+
+      closeLibrary();
+    }
+};
 
 class VisualSceneExporter: public COLLADASW::LibraryVisualScenes {
 public:
@@ -582,113 +754,15 @@ public:
           globalNode->addMatrix(mat);
       }
 
-      std::stack<NodeState> node_stack;
+      // For the visual scene, we shouldn't be generating any real nodes
+      // here. We should only be instancing the root nodes.  All the other node
+      // data, and everything they contain (meshes, lights, etc), should have
+      // already been emitted in the library.
       for(uint32 root_i = 0; root_i < meshdata.rootNodes.size(); root_i++) {
-          node_stack.push( NodeState(meshdata.rootNodes[root_i]) );
-
-          while(!node_stack.empty()) {
-              NodeState& current = node_stack.top();
-
-              // First, if this is the first time we're seeing this node, do
-              // node setup
-              if (current.currentChild == -1) {
-                  current.colladaNode = new COLLADASW::Node( streamWriter );
-                  String node_name = "node-" + boost::lexical_cast<String>(current.node);
-                  current.colladaNode->setNodeId(node_name);
-                  current.colladaNode->setNodeName( COLLADASW::Utils::checkNCName( COLLADABU::NativeString(node_name) ) );
-                  bool is_joint = (nodeJoints.find(current.node) != nodeJoints.end());
-                  current.colladaNode->setType(is_joint ? COLLADASW::Node::JOINT : COLLADASW::Node::NODE);
-
-                  current.colladaNode->start();
-                  double mat[4][4];
-                  convertMatrixForCollada(meshdata.nodes[current.node].transform, mat);
-                  current.colladaNode->addMatrix(mat);
-
-                  current.currentChild++;
-              }
-
-              // If we've finished handling all children, handle non-node
-              // children, i.e. instance nodes, instance lights, instance geometries
-              if (current.currentChild >= meshdata.nodes[current.node].children.size()) {
-                  // InstanceNodes
-                  for(NodeIndexList::const_iterator inst_it = meshdata.nodes[current.node].instanceChildren.begin();
-                      inst_it != meshdata.nodes[current.node].instanceChildren.end();
-                      inst_it++)
-                  {
-                      String inst_node_url = "#node-" + boost::lexical_cast<String>(*inst_it);
-                      COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
-                      instanceNode.add();
-                  }
-
-                  // Geometry instances
-                  InstanceNodeIndex::iterator geo_it = nodeGeoInstances.find(current.node);
-                  while(geo_it != nodeGeoInstances.end() && geo_it->first == current.node) {
-                      uint32 instanced_geo = geo_it->second;
-                      const GeometryInstance& geo_inst = meshdata.instances[instanced_geo];
-                      if (addedGeometriesList.find(geo_inst.geometryIndex) == addedGeometriesList.end() ||
-                          addedGeometriesList[geo_inst.geometryIndex] == false)
-                      {
-                          geo_it++;
-                          continue;
-                      }
-
-                      COLLADASW::InstanceGeometry instanceGeometry(streamWriter);
-                      instanceGeometry.setUrl ( "#" + geometryId(geo_inst.geometryIndex));
-
-                      COLLADASW::BindMaterial& bindMaterial = instanceGeometry.getBindMaterial();
-                      for (GeometryInstance::MaterialBindingMap::const_iterator mat_it =
-                               geo_inst.materialBindingMap.begin();
-                           mat_it != geo_inst.materialBindingMap.end(); mat_it++)
-                      {
-                          uint32 materialIdx = materialRedirectionMap[mat_it->second];
-
-                          String effectName ="material" + boost::lexical_cast<String>(materialIdx);
-                          String materialName = effectName + "ID";
-                          COLLADASW::InstanceMaterial instanceMaterial( effectName, "#" + materialName );
-                          // FIXME multiple textures?
-                          instanceMaterial.push_back(COLLADASW::BindVertexInput("TEX0", "TEXCOORD", 0)  );
-                          bindMaterial.getInstanceMaterialList().push_back( instanceMaterial );
-                      }
-
-                      instanceGeometry.add();
-
-                      geo_it++;
-                  }
-
-                  // Light instances
-                  InstanceNodeIndex::iterator light_it = nodeLightInstances.find(current.node);
-                  while(light_it != nodeLightInstances.end() && light_it->first == current.node) {
-                      uint32 instanced_light = light_it->second;
-                      const LightInstance& light_inst = meshdata.lightInstances[instanced_light];
-                      if (addedLightsList.find(light_inst.lightIndex) == addedLightsList.end() ||
-                          addedLightsList[light_inst.lightIndex] == false)
-                      {
-                          light_it++;
-                          continue;
-                      }
-
-                      COLLADASW::InstanceLight instanceLight(
-                          streamWriter,
-                          COLLADABU::URI("#light" + boost::lexical_cast<String>(light_inst.lightIndex) + "-light")
-                      );
-                      instanceLight.add();
-
-                      light_it++;
-                  }
-
-                  // And end the node
-                  current.colladaNode->end();
-                  delete current.colladaNode;
-                  node_stack.pop();
-
-                  continue;
-              }
-
-              // Otherwise, we're processing another child
-              int32 child_idx = current.currentChild;
-              current.currentChild++;
-              node_stack.push( NodeState( meshdata.nodes[current.node].children[child_idx] ) );
-          }
+          // Create instance node
+          String inst_node_url = "#node-" + boost::lexical_cast<String>(meshdata.rootNodes[root_i]);
+          COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
+          instanceNode.add();
       }
 
       if (globalNode != NULL) {
@@ -697,8 +771,8 @@ public:
           globalNode = NULL;
       }
 
-    closeVisualScene();
-    closeLibrary();
+      closeVisualScene();
+      closeLibrary();
   }
 };
 
@@ -915,6 +989,9 @@ public:
         ControllerExporter controllerExporter(&streamWriter);
         controllerExporter.exportControllers(&streamWriter, meshdata);
     }
+
+    NodeExporter nodeExporter(&streamWriter);
+    nodeExporter.exportNodes(meshdata, addedGeometriesList, materialRedirectionMap, addedLightsList);
 
     VisualSceneExporter visualSceneExporter(&streamWriter);
     visualSceneExporter.exportVisualScene(&streamWriter, meshdata, addedGeometriesList, materialRedirectionMap, addedLightsList);
