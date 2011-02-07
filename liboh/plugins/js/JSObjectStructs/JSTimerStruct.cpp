@@ -17,9 +17,11 @@ JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur,v8::Pers
    target(targ),
    cb(callback),
    jsContStruct(jscont),
-   mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve))
+   mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
+   timeUntil(dur.toSeconds),
+   isCleared(false)
 {
-    mDeadlineTimer->expires_from_now(boost::posix_time::seconds(dur.toSeconds()));
+    mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
 
     if (jscont != NULL)
@@ -63,7 +65,7 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
 JSTimerStruct::~JSTimerStruct()
 {
     if (jsContStruct != NULL)
-        jsContStruct->struct_deregisterTimeout(this);
+        jsContStruct->struct_registerSuspendable(this);
     
     delete mDeadlineTimer;
 }
@@ -71,7 +73,44 @@ JSTimerStruct::~JSTimerStruct()
 
 void JSTimerStruct::evaluateCallback()
 {
+    if (isCleared)
+    {
+        JSLOG(error, "Error in evaluateCallback of JSTimerStruct.cpp.  Got a callback even though the timer should have been cleared.");
+        return;
+    }
+        
     jsObjScript->handleTimeoutContext(target,cb,jsContStruct);
+    if (jsContStruct != NULL)
+        jsContStruct->struct_deregisterSuspendable(this);
+}
+
+
+v8::Handle<v8::Value> JSTimerStruct::suspend()
+{
+    if (isCleared)
+    {
+        JSLOG(error, "Error in suspend of JSTimerStruct.cpp.  Called suspend even though the timer had previously been cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a timer that had already been cleared.")));
+
+        lkjs;
+    }
+    
+    mDeadlineTimer->cancel();
+    return JSSuspendable::suspend();
+}
+
+v8::Handle<v8::Value> JSTimerStruct::resume()
+{
+    if (! getIsSuspended())
+    {
+        JSLOG(error,"Error in JSTimerStruct.  Trying to resume a timer object that was not already suspended.");
+        return JSSuspendable::getIsSuspendedV8();
+    }
+
+    mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
+    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
+    
+    return JSSuspendable::resume();
 }
 
 
@@ -79,6 +118,10 @@ void JSTimerStruct::evaluateCallback()
 v8::Handle<v8::Value> JSTimerStruct::struct_clear()
 {
     mDeadlineTimer->cancel();
+
+    if (jsContStruct != NULL)
+        jsContStruct->struct_deregisterSuspendable(this);
+    
     return v8::Undefined();
 }
 

@@ -8,14 +8,14 @@
 #include <v8.h>
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
-
+#include "JSSuspendable.hpp"
 
 
 namespace Sirikata {
 namespace JS {
 
-struct JSTimerStruct{
-    
+struct JSTimerStruct : public JSSuspendable
+{
 
     JSTimerStruct(JSObjectScript* jsobj, const Duration& dur,v8::Persistent<v8::Object>& targ, v8::Persistent<v8::Function>& callback,JSContextStruct* jscont, Sirikata::Network::IOService* ioserve);
     
@@ -26,15 +26,22 @@ struct JSTimerStruct{
     v8::Handle<v8::Value> struct_clear();
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
     void evaluateCallback();
-    
+
+    virtual v8::Handle<v8::Value>suspend();
+    virtual v8::Handle<v8::Value>resume();
 
     JSObjectScript* jsObjScript;
     v8::Persistent<v8::Object> target;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
     Sirikata::Network::DeadlineTimer* mDeadlineTimer;
+    double timeUntil; //time until the timer fires
+    bool isCleared;
 
 };
+
+typedef std::map<JSTimerStruct*,int>  TimerMap;
+typedef TimerMap::iterator TimerIter;
 
 }  //end js namespace
 }  //end sirikata namespace

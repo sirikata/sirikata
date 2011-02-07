@@ -6,19 +6,19 @@
 #include "../JSSystemNames.hpp"
 #include "JSTimerStruct.hpp"
 #include "../JSObjects/JSObjectsUtils.hpp"
+#include "JSSuspendable.hpp"
+#include "../JSLogging.hpp"
 
 namespace Sirikata {
 namespace JS {
-
-
-
 
 JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl)
  : jsObjScript(parent),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
    mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries)),
-   mContext(v8::Context::New(NULL, contGlobTempl))
+   mContext(v8::Context::New(NULL, contGlobTempl)),
+   isSuspended(false)
 {
     v8::HandleScope handle_scope;
     
@@ -50,6 +50,57 @@ JSContextStruct::~JSContextStruct()
     delete mHomeObject;
     mContext.Dispose();
 }
+
+
+
+
+
+void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
+{
+    SuspendableIter iter = associatedSuspendables.find(toRegister);
+    if (iter != associatedSuspendables.end())
+    {
+        JSLOG(error,"Strangeness in registerSuspendable of JSContextStruct.  Trying to re-register a suspendable with the context that was already registered.  Likely an error.");
+        return;
+    }
+
+    associatedSuspendables[toRegister] = 1;
+}
+
+
+void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
+{
+    SuspendableIter iter = associatedSuspendables.find(toDeregister);
+    if (iter == associatedSuspendables.end())
+    {
+        JSLOG(error,"Error when deregistering suspendable in JSContextStruct.cpp.  Trying to deregister a suspendable that the context struct had not already registered.  Likely an error.");
+        return;
+    }
+
+    associatedSuspendables.erase(iter);
+}
+
+
+
+v8::Handle<v8::Value> JSContextStruct::suspend()
+{
+    JSLOG(insane,"Suspending all suspendable objects associated with context");
+    for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
+        iter->first->suspend();
+    
+    return JSSuspendable::suspend();
+}
+
+v8::Handle<v8::Value> JSContextStruct::resume()
+{
+    JSLOG(insane,"Resuming all suspendable objects associated with context");
+
+    for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
+        iter->first->resume();
+    
+    return JSSuspendable::resume();
+}
+    
 
 
 //this function asks the jsObjScript to send a message from the presence associated
@@ -117,19 +168,6 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 }
 
 
-void JSContextStruct::struct_deregisterTimeout(JSTimerStruct* jsts)
-{
-    TimerMap::iterator iter = associatedTimers.find(jsts);
-
-    if (iter != associatedTimers.end())
-        associatedTimers.erase(iter);
-}
-
-
-void JSContextStruct::struct_registerTimeout(JSTimerStruct* jsts)
-{
-    associatedTimers[jsts] = true;
-}
 
 
 v8::Handle<Object> JSContextStruct::struct_getFakeroot()

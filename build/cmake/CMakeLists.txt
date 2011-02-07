@@ -1930,6 +1930,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSuspendable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp

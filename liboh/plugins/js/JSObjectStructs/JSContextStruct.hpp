@@ -7,7 +7,7 @@
 #include "JSFakerootStruct.hpp"
 #include "../JSSystemNames.hpp"
 #include "../JSObjects/JSFields.hpp"
-
+#include "JSSuspendable.hpp"
 
 
 namespace Sirikata {
@@ -18,19 +18,28 @@ class JSObjectScript;
 class JSPresenceStruct;
 class JSTimerStruct;
 
-struct JSContextStruct
+struct JSContextStruct : public JSSuspendable
 {
     JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl);
     ~JSContextStruct();
 
     
-    v8::Handle<v8::Value> struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
-    v8::Handle<v8::Value> struct_getAssociatedPresPosition();
-    v8::Handle<v8::Value> struct_sendHome(String& toSend);
-    v8::Handle<v8::Object> struct_getFakeroot();
+    v8::Handle<v8::Value>  struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
+    v8::Handle<v8::Value>  struct_getAssociatedPresPosition();
+    v8::Handle<v8::Value>  struct_sendHome(String& toSend);
+
+    virtual v8::Handle<v8::Value> suspend();
+    virtual v8::Handle<v8::Value> resume();
     
-    void struct_registerTimeout(JSTimerStruct* jsts);
-    void struct_deregisterTimeout(JSTimerStruct* jsts);
+    v8::Handle<v8::Value>  struct_suspendContext();
+    v8::Handle<v8::Value>  struct_resumeContext();
+    
+    v8::Handle<v8::Object> struct_getFakeroot();
+
+
+    void struct_registerSuspendable   (JSSuspendable* toRegister);
+    void struct_deregisterSuspendable (JSSuspendable* toDeregister);
+    
     
     void jsscript_print(const String& msg);
     void presenceDied();
@@ -60,10 +69,11 @@ struct JSContextStruct
     //this is the context that any and all objects will be run in.
     v8::Persistent<v8::Context> mContext;
 
-    //all
-    typedef std::map<JSTimerStruct*,bool>  TimerMap;
-    TimerMap associatedTimers;
+    bool isSuspended;
     
+    //all associated objects that will need to be suspended/resumed if context
+    //is suspended/resumed
+    SuspendableMap associatedSuspendables;
 };
 
 

@@ -17,6 +17,37 @@ namespace JSContext{
 
 
 
+v8::Handle<v8::Value> ScriptSuspend(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptSuspend of JSContext.cpp through context.  Suspension takes zero arguments")));
+
+    String errorMessage = "Error decoding the context struct while calling suspend in JScontext.cpp.  ";
+    JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
+    if (jscont == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jscont->suspend();
+}
+
+
+v8::Handle<v8::Value> ScriptResume(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptResume of JSContext.cpp through context.  Resume takes zero arguments")));
+
+    String errorMessage = "Error decoding the context struct while calling resume in JScontext.cpp.  ";
+    JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
+    if (jscont == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jscont->resume();
+}
+    
+
+
+
+
 v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 {
     if (args.Length() == 0)
