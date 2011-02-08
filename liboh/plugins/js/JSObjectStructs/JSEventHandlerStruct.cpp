@@ -1,21 +1,21 @@
-#include "JSEventHandler.hpp"
+#include "JSEventHandlerStruct.hpp"
 #include <v8.h>
-#include "JSPattern.hpp"
+#include "../JSPattern.hpp"
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/odp/Defs.hpp>
 
-#include "JSObjects/JSFields.hpp"
-#include "JSObjectStructs/JSVisibleStruct.hpp"
+#include "../JSObjects/JSFields.hpp"
+#include "JSVisibleStruct.hpp"
 
 
 namespace Sirikata {
 namespace JS {
 
 //sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
-bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
+bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
 {
     if (suspended)
         return false; //cannot match a suspended handler
@@ -68,23 +68,23 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
 
 
 //changes state of handler to suspended
-void JSEventHandler::suspend()
+void JSEventHandlerStruct::suspend()
 {
     suspended = true;
 }
 
-void JSEventHandler::resume()
+void JSEventHandlerStruct::resume()
 {
     suspended = false;
 }
 
-bool JSEventHandler::isSuspended()
+bool JSEventHandlerStruct::isSuspended()
 {
     return suspended;
 }
 
 
-void JSEventHandler::printHandler()
+void JSEventHandlerStruct::printHandler()
 {
     //print patterns
     for (PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)

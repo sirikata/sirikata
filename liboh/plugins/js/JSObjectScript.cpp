@@ -41,7 +41,7 @@
 #include "JSLogging.hpp"
 
 #include "JSSerializer.hpp"
-#include "JSEventHandler.hpp"
+#include "JSObjectStructs/JSEventHandlerStruct.hpp"
 #include <string>
 #include "JSUtil.hpp"
 #include "JSObjects/JSVec3.hpp"
@@ -1094,9 +1094,9 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 
 // need to ensure that the sender object is an visible of type spaceobject reference rather than just having an object reference;
-JSEventHandler* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
+JSEventHandlerStruct* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
-    JSEventHandler* new_handler= new JSEventHandler(pattern, target, cb,sender);
+    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(pattern, target, cb,sender);
     
     if ( mHandlingEvent)
     {
@@ -1329,7 +1329,7 @@ void JSObjectScript::flushQueuedHandlerEvents()
 
 
 
-void JSObjectScript::removeHandler(JSEventHandler* toRemove)
+void JSObjectScript::removeHandler(JSEventHandlerStruct* toRemove)
 {
     JSEventHandlerList::iterator iter = mEventHandlers.begin();
     while (iter != mEventHandlers.end())
@@ -1344,7 +1344,7 @@ void JSObjectScript::removeHandler(JSEventHandler* toRemove)
 //takes in an event handler, if not currently handling an event, removes the
 //handler from the vector and deletes it.  Otherwise, adds the handler for
 //removal and deletion later.
-void JSObjectScript::deleteHandler(JSEventHandler* toDelete)
+void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 {
     if (mHandlingEvent)
     {
@@ -1406,7 +1406,7 @@ void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, c
 //This function takes in a jseventhandler, and wraps a javascript object with
 //it.  The function is called by registerEventHandler in JSSystem, which returns
 //the js object this function creates to the user.
-v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandler* evHand)
+v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand)
 {
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;

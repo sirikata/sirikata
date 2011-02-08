@@ -46,7 +46,7 @@
 #include <v8.h>
 
 #include "JSPattern.hpp"
-#include "JSEventHandler.hpp"
+#include "JSObjectStructs/JSEventHandlerStruct.hpp"
 #include "JSObjectScriptManager.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
@@ -171,10 +171,10 @@ public:
 
 
     /** Register an event pattern matcher and handler. */
-    JSEventHandler* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
-    v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandler* evHand);
+    JSEventHandlerStruct* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
+    v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand);
 
-    void deleteHandler(JSEventHandler* toDelete);
+    void deleteHandler(JSEventHandlerStruct* toDelete);
 
     void registerOnPresenceConnectedHandler(v8::Persistent<v8::Function>& cb) {
         mOnPresenceConnectedHandler = cb;
@@ -230,7 +230,7 @@ private:
     void checkWatchables();
     void checkWhens(WhenMap& mapWhensToCheck);
     
-    typedef std::vector<JSEventHandler*> JSEventHandlerList;
+    typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
 
@@ -261,7 +261,7 @@ private:
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
     JSEventHandlerList mQueuedHandlerEventsDelete;
-    void removeHandler(JSEventHandler* toRemove);
+    void removeHandler(JSEventHandlerStruct* toRemove);
 
 
     HostedObjectPtr mParent;

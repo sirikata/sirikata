@@ -405,7 +405,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
     
-    JSEventHandler* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
+    JSEventHandlerStruct* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
     
     return target_script->makeEventHandlerObject(evHand);
 }

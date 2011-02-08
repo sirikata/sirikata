@@ -2,7 +2,7 @@
 #include "../JSUtil.hpp"
 #include "../JSObjectScript.hpp"
 #include "JSHandler.hpp"
-#include "../JSEventHandler.hpp"
+#include "../JSObjectStructs/JSEventHandlerStruct.hpp"
 #include "JSFields.hpp"
 #include <v8.h>
 
@@ -15,7 +15,7 @@ v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
     //get the target object whose context owns it.
     //and the pattern and the callback associated with this
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
@@ -34,7 +34,7 @@ v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
 v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
@@ -52,7 +52,7 @@ v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
 v8::Handle<v8::Value> __resume(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
@@ -70,7 +70,7 @@ v8::Handle<v8::Value> __resume(const v8::Arguments& args)
 v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
@@ -87,7 +87,7 @@ v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args)
 v8::Handle<v8::Value> __clear(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
@@ -123,7 +123,7 @@ void setNullHandler(const v8::Arguments& args)
 //utility function for working with handler objects.  pass in args for a
 //call, get back the jsobjectscript that called it, and the matching pattern and
 //callback function that are associated with the handler objects.
-void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandler*& hand)
+void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandlerStruct*& hand)
 {
    v8::Local<v8::Object> mHand = args.This();
 
@@ -153,7 +153,7 @@ void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHand
            v8::Handle<v8::Object>::Cast(mHand->GetPrototype())->GetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD)
        );
    void* ptr2 = wrapEventHand->Value();
-   hand = static_cast<JSEventHandler*>(ptr2);
+   hand = static_cast<JSEventHandlerStruct*>(ptr2);
 }
 
 

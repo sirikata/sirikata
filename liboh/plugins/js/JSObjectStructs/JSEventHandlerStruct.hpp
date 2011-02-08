@@ -1,18 +1,18 @@
-#ifndef __SIRIKATA_JS_EVENT_HANDLER_HPP__
-#define __SIRIKATA_JS_EVENT_HANDLER_HPP__
+#ifndef __SIRIKATA_JS_EVENT_HANDLER_STRUCT_HPP__
+#define __SIRIKATA_JS_EVENT_HANDLER_STRUCT_HPP__
 
 #include <v8.h>
 #include <vector>
-#include "JSPattern.hpp"
-
+#include "../JSPattern.hpp"
+#include "JSSuspendable.hpp"
 
 namespace Sirikata{
 namespace JS{
 
 
-struct JSEventHandler
+struct JSEventHandlerStruct 
 {
-    JSEventHandler(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
+    JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
      : pattern(_pattern), target(_target), cb(_cb), sender(_sender), suspended(false)
     {}
 
