@@ -737,22 +737,20 @@ public:
       //  4. Light instances
 
       // We need one outer node to hold all the others to manage our
-      // global transform. Note that, in order to avoid inflating the
-      // file unnecessarily, we avoid adding this if the transform is
-      // just the identity.
+      // global transform. 
       COLLADASW::Node* globalNode = NULL;
-      if (meshdata.globalTransform != Matrix4x4f::identity()) {
-          globalNode = new COLLADASW::Node( streamWriter );
-          String node_name = "globalTransformNode";
-          globalNode->setNodeId(node_name);
-          globalNode->setNodeName( COLLADASW::Utils::checkNCName( COLLADABU::NativeString(node_name) ) );
-          globalNode->setType(COLLADASW::Node::NODE);
-
-          globalNode->start();
-          double mat[4][4];
-          convertMatrixForCollada(meshdata.globalTransform, mat);
-          globalNode->addMatrix(mat);
-      }
+      
+      globalNode = new COLLADASW::Node( streamWriter );
+      String node_name = "globalTransformNode";
+      globalNode->setNodeId(node_name);
+      globalNode->setNodeName( COLLADASW::Utils::checkNCName( COLLADABU::NativeString(node_name) ) );
+      globalNode->setType(COLLADASW::Node::NODE);
+      
+      globalNode->start();
+      double mat[4][4];
+      convertMatrixForCollada(meshdata.globalTransform, mat);
+      globalNode->addMatrix(mat);
+     
 
       // For the visual scene, we shouldn't be generating any real nodes
       // here. We should only be instancing the root nodes.  All the other node
@@ -765,11 +763,11 @@ public:
           instanceNode.add();
       }
 
-      if (globalNode != NULL) {
-          globalNode->end();
-          delete globalNode;
-          globalNode = NULL;
-      }
+      
+      globalNode->end();
+      delete globalNode;
+      globalNode = NULL;
+      
 
       closeVisualScene();
       closeLibrary();
