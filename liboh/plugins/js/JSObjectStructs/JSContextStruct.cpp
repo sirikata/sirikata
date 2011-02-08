@@ -13,7 +13,8 @@ namespace Sirikata {
 namespace JS {
 
 JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl)
- : jsObjScript(parent),
+ : JSSuspendable(),
+   jsObjScript(parent),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
    mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries)),
@@ -48,15 +49,34 @@ JSContextStruct::~JSContextStruct()
 {
     delete mFakeroot;
     delete mHomeObject;
-    mContext.Dispose();
+    if (! getIsCleared())
+        mContext.Dispose();
 }
 
+v8::Handle<v8::Value> JSContextStruct::clear()
+{
+    JSLOG(error,"Error.  Have not finished writing context clear's cleanup methods.  For instance, may want to delete fakeroot and homeobject.");
 
+    assert(false);
+    
+    for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
+        iter->first->clear();
+    
+    mContext.Dispose();
+    
+    return JSSuspendable::clear();
+}
 
 
 
 void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
 {
+    if (getIsCleared())
+    {
+        JSLOG(error,"Error when registering suspendable.  This context object was already cleared.");
+        return;
+    }
+    
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
     {
@@ -70,6 +90,12 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
 
 void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
 {
+    if (getIsCleared())
+    {
+        JSLOG(error,"Error when registering suspendable.  This context object was already cleared.");
+        return;
+    }
+    
     SuspendableIter iter = associatedSuspendables.find(toDeregister);
     if (iter == associatedSuspendables.end())
     {
@@ -84,6 +110,12 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
 
 v8::Handle<v8::Value> JSContextStruct::suspend()
 {
+    if (getIsCleared())
+    {
+        JSLOG(error,"Error when suspending.  This context object was already cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot suspend a context that has already been cleared.")) );
+    }
+    
     JSLOG(insane,"Suspending all suspendable objects associated with context");
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->suspend();
@@ -93,6 +125,13 @@ v8::Handle<v8::Value> JSContextStruct::suspend()
 
 v8::Handle<v8::Value> JSContextStruct::resume()
 {
+    if (getIsCleared())
+    {
+        JSLOG(error,"Error when resuming.  This context object was already cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot resume a context that has already been cleared.")) );
+    }
+
+    
     JSLOG(insane,"Resuming all suspendable objects associated with context");
 
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
@@ -108,6 +147,13 @@ v8::Handle<v8::Value> JSContextStruct::resume()
 //The message contains the object toSend.
 v8::Handle<v8::Value> JSContextStruct::struct_sendHome(String& toSend)
 {
+    if (getIsCleared())
+    {
+        JSLOG(error,"Error when sending home.  This context object was already cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot call sendHome from a context that has already been cleared.")) );
+    }
+
+    
     jsObjScript->sendMessageToEntity(mHomeObject,associatedPresence->sporef,toSend);
     return v8::Undefined();
 }
@@ -150,6 +196,13 @@ JSContextStruct* JSContextStruct::decodeContextStruct(v8::Handle<v8::Value> toDe
 //first argument of args is a function (funcToCall), which we skip
 v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args)
 {
+    if (getIsCleared())
+    {
+        JSLOG(error,"Error when executing.  This context object was already cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot call execute on a context that has already been cleared.")) );
+    }
+
+    
     int argc = args.Length(); //args to function.  first argument is going to be
                               //a 
     Handle<Value>* argv = new Handle<Value>[argc];

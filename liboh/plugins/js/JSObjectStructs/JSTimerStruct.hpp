@@ -23,20 +23,21 @@ struct JSTimerStruct : public JSSuspendable
     
     static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
     
-    v8::Handle<v8::Value> struct_clear();
+
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
     void evaluateCallback();
 
     virtual v8::Handle<v8::Value>suspend();
     virtual v8::Handle<v8::Value>resume();
+    virtual v8::Handle<v8::Value>clear();
 
+    
     JSObjectScript* jsObjScript;
     v8::Persistent<v8::Object> target;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
     Sirikata::Network::DeadlineTimer* mDeadlineTimer;
     double timeUntil; //time until the timer fires
-    bool isCleared;
 
 };
 

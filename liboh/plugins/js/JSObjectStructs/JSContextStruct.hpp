@@ -30,6 +30,7 @@ struct JSContextStruct : public JSSuspendable
 
     virtual v8::Handle<v8::Value> suspend();
     virtual v8::Handle<v8::Value> resume();
+    virtual v8::Handle<v8::Value> clear();
     
     v8::Handle<v8::Value>  struct_suspendContext();
     v8::Handle<v8::Value>  struct_resumeContext();

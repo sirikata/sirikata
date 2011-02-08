@@ -56,27 +56,37 @@ v8::Handle<v8::Value> clear(const v8::Arguments& args)
     if (jstimer == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
     
-    return jstimer->struct_clear();
+    return jstimer->clear();
 }
 
 v8::Handle<v8::Value> suspend(const v8::Arguments& args)
 {
-    lkjs;
     if (args.Length() != 0)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Incorrect number of arguments for suspend function of JSTimer.cpp.  Requires a single number for when timer should fire.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Incorrect number of arguments for suspend function of JSTimer.cpp.  Requires exactly zero arguments.")) );
 
     //decode associated timerstruct
-    String errorMessage = "Error in clear of JSTimer.cpp trying to decode jstimer.  ";
+    String errorMessage = "Error in suspend of JSTimer.cpp trying to decode jstimer.  ";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
     if (jstimer == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
     
-    return jstimer->struct_clear();
+    return jstimer->suspend();
     
 }
+
 v8::Handle<v8::Value> resume(const v8::Arguments& args)
 {
-    lkjs;
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Incorrect number of arguments for resume function of JSTimer.cpp.  Requires zero arguments.")) );
+
+    //decode associated timerstruct
+    String errorMessage = "Error in resume of JSTimer.cpp trying to decode jstimer.  ";
+    JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
+    if (jstimer == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+    
+    return jstimer->resume();
+
 }
 
 
