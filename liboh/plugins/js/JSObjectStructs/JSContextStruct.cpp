@@ -44,6 +44,28 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
 }
 
 
+//looks in the current context for a fakeroot object.
+//tries to decode that fakeroot object as a cpp fakeroot.
+//if successful, returns the JSContextStruct associated with that fakeroot
+//object.
+//if unsuccessful, returns NULL.
+JSContextStruct* JSContextStruct::getJSContextStruct()
+{
+    v8::HandleScope handle_scope;
+    
+    v8::Handle<v8::Context> currContext = v8::Context::GetCurrent();
+    if (currContext->Global()->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+    {
+        v8::Handle<v8::Value> fakerootVal = currContext->Global()->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
+        String errorMessage; //error message isn't important in this case.  Not
+                             //an error to not be within a js context struct.
+        JSFakerootStruct* jsfakeroot = JSFakerootStruct::decodeFakeroot(fakerootVal,errorMessage);
+        return jsfakeroot;
+    }
+
+    return NULL;
+}
+
 
 JSContextStruct::~JSContextStruct()
 {
@@ -52,6 +74,7 @@ JSContextStruct::~JSContextStruct()
     if (! getIsCleared())
         mContext.Dispose();
 }
+
 
 v8::Handle<v8::Value> JSContextStruct::clear()
 {

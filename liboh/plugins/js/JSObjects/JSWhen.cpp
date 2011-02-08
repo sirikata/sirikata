@@ -24,7 +24,7 @@ v8::Handle<v8::Value> WhenSuspend(const v8::Arguments& args)
     if (jswhen == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    return jswhen->struct_whenSuspend();
+    return jswhen->suspend();
 }
 
 v8::Handle<v8::Value> WhenResume(const v8::Arguments& args)
@@ -34,7 +34,7 @@ v8::Handle<v8::Value> WhenResume(const v8::Arguments& args)
     if (jswhen == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    return jswhen->struct_whenResume();
+    return jswhen->resume();
 }
 
 
@@ -60,9 +60,6 @@ v8::Handle<v8::Value> WhenSetPeriod(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
 
-    // //if receive a null argument, then that means don't fire a timer
-    // if (args[0]->IsNull())
-    //     return jswhen->clearPeriod();
         
     //otherwise, check to make sure that 
     if (! NumericValidate(args[0]))

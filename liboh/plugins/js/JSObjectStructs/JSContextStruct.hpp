@@ -23,6 +23,10 @@ struct JSContextStruct : public JSSuspendable
     JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl);
     ~JSContextStruct();
 
+
+    static JSContextStruct* getJSContextStruct();
+    static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
+
     
     v8::Handle<v8::Value>  struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
     v8::Handle<v8::Value>  struct_getAssociatedPresPosition();
@@ -38,6 +42,8 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Object> struct_getFakeroot();
 
 
+    
+
     void struct_registerSuspendable   (JSSuspendable* toRegister);
     void struct_deregisterSuspendable (JSSuspendable* toDeregister);
     
@@ -46,7 +52,7 @@ struct JSContextStruct : public JSSuspendable
     void presenceDied();
 
 
-    static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
+
     
     
     //********data

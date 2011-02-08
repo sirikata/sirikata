@@ -260,13 +260,15 @@ v8::Handle<v8::Value> JSObjectScript::createWatched()
 }
 
 
+
+
 v8::Handle<v8::Value> JSObjectScript::create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap)
 {
     v8::HandleScope handle_scope;
 
     Network::IOService* ioserve = mParent->getIOService();
     v8::Persistent<v8::Context> contexter = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-    JSWhenStruct* jswhen = new JSWhenStruct(this,ioserve,watchMap,pred,cb,contexter,minPeriod);
+    JSWhenStruct* jswhen = new JSWhenStruct(this,ioserve,watchMap,pred,cb,contexter,minPeriod, JSContextStruct::getJSContextStruct());
     
     
     v8::Handle<v8::Object> whenObj = mManager->mWhenTemplate->NewInstance();
