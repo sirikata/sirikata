@@ -531,10 +531,48 @@ struct NodeState {
     COLLADASW::Node* colladaNode;
 };
 
+bool isEmpty(const Meshdata& meshdata,
+             NodeIndex nodeIdx, const Sirikata::Mesh::Node& node, InstanceNodeIndex& nodeGeoInstances,
+             InstanceNodeIndex& nodeLightInstances, InstanceNodeIndex& nodeJoints,
+             std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap,
+             std::map<int,bool>& addedLightsList)
+{
+  if (node.children.size() > 0 ||
+      node.instanceChildren.size() > 0)
+    {
+      return false;
+    }
+
+  InstanceNodeIndex::iterator geo_it = nodeGeoInstances.find(nodeIdx);
+  while (geo_it != nodeGeoInstances.end() && geo_it->first == nodeIdx) {
+    uint32 instanced_geo = geo_it->second;
+    const GeometryInstance& geo_inst = meshdata.instances[instanced_geo];
+    if (addedGeometriesList.find(geo_inst.geometryIndex) != addedGeometriesList.end() &&
+        addedGeometriesList[geo_inst.geometryIndex] != false) {
+      return false;
+    }
+    geo_it++;
+  }
+
+  InstanceNodeIndex::iterator light_it = nodeLightInstances.find(nodeIdx);
+  while (light_it != nodeLightInstances.end() && light_it->first == nodeIdx) {
+    uint32 instanced_light = light_it->second;
+    const LightInstance& light_inst = meshdata.lightInstances[instanced_light];
+    if (addedLightsList.find(light_inst.lightIndex) != addedLightsList.end() &&
+        addedLightsList[light_inst.lightIndex] != false)
+      {
+        return false;
+      }
+    light_it++;
+  }
+
+   return true;
+}
+
 // Emits the elements of a node. Since these can exist in visual scene or
 // library_nodes, we factor it out here.
 void emitNodeElements(const Meshdata& meshdata, COLLADASW::StreamWriter* streamWriter, NodeState& current,
-    InstanceNodeIndex nodeGeoInstances, InstanceNodeIndex nodeLightInstances, InstanceNodeIndex nodeJoints,
+    InstanceNodeIndex& nodeGeoInstances, InstanceNodeIndex& nodeLightInstances, InstanceNodeIndex& nodeJoints,
     std::map<int,bool>& addedGeometriesList, std::map<int, int>& materialRedirectionMap,
     std::map<int,bool>& addedLightsList
 )
@@ -650,6 +688,13 @@ public:
       for(uint32 root_i = 0; root_i < meshdata.nodes.size(); root_i++) {
           if (meshdata.nodes[root_i].parent != NullNodeIndex) continue;
 
+          if (isEmpty(meshdata, root_i, meshdata.nodes[root_i], 
+                      nodeGeoInstances, nodeLightInstances, nodeJoints,
+                      addedGeometriesList, materialRedirectionMap, addedLightsList))
+            {
+              continue;
+            }
+
           node_stack.push( NodeState(root_i) );
 
           while(!node_stack.empty()) {
@@ -758,6 +803,17 @@ public:
       // already been emitted in the library.
       for(uint32 root_i = 0; root_i < meshdata.rootNodes.size(); root_i++) {
           // Create instance node
+          
+          const Sirikata::Mesh::Node& node = meshdata.nodes[meshdata.rootNodes[root_i]];          
+
+          if (isEmpty(meshdata, meshdata.rootNodes[root_i], node, 
+                      nodeGeoInstances, nodeLightInstances, nodeJoints,
+                      addedGeometriesList, materialRedirectionMap, addedLightsList))
+            {
+              continue;
+            }
+          
+
           String inst_node_url = "#node-" + boost::lexical_cast<String>(meshdata.rootNodes[root_i]);
           COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
           instanceNode.add();
