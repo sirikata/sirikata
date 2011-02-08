@@ -5,6 +5,7 @@
 #include <vector>
 #include "../JSPattern.hpp"
 #include "JSSuspendable.hpp"
+#include "JSContextStruct.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -14,7 +15,8 @@ struct JSEventHandlerStruct : public JSSuspendable
 {
     JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender);
 
-    bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const;
+    ~JSEventHandlerStruct();
+    bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender);
     
     void printHandler();
 
@@ -23,12 +25,11 @@ struct JSEventHandlerStruct : public JSSuspendable
     virtual v8::Handle<v8::Value> clear();
 
 
-    
     PatternList pattern;
     v8::Persistent<v8::Object> target;
     v8::Persistent<v8::Function> cb;
     v8::Persistent<v8::Object> sender;
-    bool suspended;
+    JSContextStruct* jscont;
 };
 
 

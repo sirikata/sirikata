@@ -73,7 +73,6 @@ public:
     void destroy();
 
 
-    //bftm
     void getAllObjectReferences(std::vector<SpaceObjectReference>& allObjReferences) const;
     void getAllObjectReferences(std::vector<SpaceObjectReference*>& allObjReferences) const;
 

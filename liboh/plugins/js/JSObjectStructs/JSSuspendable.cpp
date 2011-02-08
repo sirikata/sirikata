@@ -11,6 +11,10 @@ JSSuspendable::JSSuspendable()
 {
 }
 
+JSSuspendable::~JSSuspendable()
+{
+}
+
 v8::Handle<v8::Value> JSSuspendable::suspend()
 {
     isSuspended = true;

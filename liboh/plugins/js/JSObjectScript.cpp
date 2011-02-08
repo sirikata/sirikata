@@ -743,7 +743,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     #endif
 
-    
+
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
     
     // Compile
@@ -1335,7 +1335,10 @@ void JSObjectScript::removeHandler(JSEventHandlerStruct* toRemove)
     while (iter != mEventHandlers.end())
     {
         if ((*iter) == toRemove)
+        {
+            (*iter)->clear();
             iter = mEventHandlers.erase(iter);
+        }
         else
             ++iter;
     }

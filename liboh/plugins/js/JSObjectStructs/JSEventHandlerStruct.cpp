@@ -9,7 +9,9 @@
 
 #include "../JSObjects/JSFields.hpp"
 #include "JSVisibleStruct.hpp"
-
+#include "../JSLogging.hpp"
+#include "JSContextStruct.hpp"
+#include "JSSuspendable.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -22,23 +24,31 @@ JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Pers
    sender(_sender),
    jscont(NULL)
 {
-    lkjs;
-    lkjs;
-    addToContext;
-
     v8::HandleScope handle_scope;
     jscont = JSContextStruct::getJSContextStruct();
     if (jscont != NULL)
         jscont->struct_registerSuspendable(this);
-    
-    lkjs;
+
 }
 
 
-//sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
-bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
+JSEventHandlerStruct::~JSEventHandlerStruct()
 {
-    if (suspended)
+    if (! getIsCleared())
+    {
+        if (jscont != NULL)
+            jscont->struct_deregisterSuspendable(this);
+
+        target.Dispose();
+        cb.Dispose();
+        sender.Dispose();
+    }
+}
+
+//sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
+bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender)
+{
+    if (getIsSuspended() || getIsCleared())
         return false; //cannot match a suspended handler
 
     //decode the sender of the message
@@ -70,7 +80,6 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
         //check if the senders match
         if ( (*spref1)  != (*spref2))  //the senders do not match.  do not fire
             return false;
-
     }
 
     
@@ -88,28 +97,30 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
 
 v8::Handle<v8::Value> JSEventHandlerStruct::suspend()
 {
-    lkjs;
     if (getIsCleared())
     {
         JSLOG(info, "Error in suspend of JSEventHandlerStruct.cpp.  Called suspend even though the handler had previously been cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a handler that had already been cleared.")));
     }
 
-        
-    
     return JSSuspendable::suspend();
-    lkjs;
 }
+
 v8::Handle<v8::Value> JSEventHandlerStruct::resume()
 {
-    lkjs;
-
+    if (getIsCleared())
+    {
+        JSLOG(info, "Error in resume of JSEventHandlerStruct.cpp.  Called resume even though the handler had previously been cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called resume on a handler that had already been cleared.")));
+    }
+    
     return JSSuspendable::resume();
 }
 v8::Handle<v8::Value> JSEventHandlerStruct::clear()
 {
-    lkjs;
-
+    target.Dispose();
+    cb.Dispose();
+    sender.Dispose();
     return JSSuspendable::clear();
 }
 
@@ -118,10 +129,17 @@ v8::Handle<v8::Value> JSEventHandlerStruct::clear()
 
 void JSEventHandlerStruct::printHandler()
 {
+    if (getIsCleared())
+    {
+        std::cout<<"**Cleared.  No information.";
+        return;
+    }
+
+    
     //print patterns
     for (PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
     {
-        if (suspended)
+        if (getIsSuspended())
             std::cout<<"**Suspended  ";
         else
             std::cout<<"**Active     ";

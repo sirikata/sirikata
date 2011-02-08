@@ -7,6 +7,7 @@
 #include "../JSLogging.hpp"
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include "JSSuspendable.hpp"
 
 namespace Sirikata {
 namespace JS {

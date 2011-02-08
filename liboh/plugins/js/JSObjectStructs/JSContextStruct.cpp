@@ -9,6 +9,7 @@
 #include "JSSuspendable.hpp"
 #include "../JSLogging.hpp"
 
+
 namespace Sirikata {
 namespace JS {
 

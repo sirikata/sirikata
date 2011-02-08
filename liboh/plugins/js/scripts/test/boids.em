@@ -19,10 +19,10 @@ function getVelocityCallback(object,sender) {
 }
 
 //requires message to have field m with value o.
-var positionPattern = new system.Pattern("command","getPosition");
-var velocityPattern = new system.Pattern("command","getVelocity");
-var orientationPattern = new system.Pattern("command","getOrientation");
-var locationPattern = new system.Pattern("command","getLocation");
+var positionPattern = new util.Pattern("command","getPosition");
+var velocityPattern = new util.Pattern("command","getVelocity");
+var orientationPattern = new util.Pattern("command","getOrientation");
+var locationPattern = new util.Pattern("command","getLocation");
     
 var posHandler = system.registerHandler(getPositionCallback,null,positionPattern,null);
 var velHandler = system.registerHandler(getVelocityCallback,null,velocityPattern,null);
@@ -52,7 +52,7 @@ function positionPoller()
 
 function boidPoller()
 {
-   var centroid = new system.Vec3(0,0,0);
+   var centroid = new util.Vec3(0,0,0);
    var numAve=0;
    for (i in remoteLocations) {
      centroid[i] = addVec3(centroid,remoteLocations[i].position);
@@ -66,7 +66,7 @@ function boidPoller()
 
 
 
-var locationResponsePattern = new system.Pattern("command","getLocationResponse");
+var locationResponsePattern = new util.Pattern("command","getLocationResponse");
 var locResponseHandler = system.registerHandler(locationResponseCallback,null,locationResponsePattern,null);
 system.setTimeout(1,null,positionPoller);
 system.setTimeout(1,boidPoller);
@@ -79,7 +79,7 @@ function testSetHandler()
     };
 
     //requires message to have field m with value o.
-    var mPattern = new system.Pattern("m","o");
+    var mPattern = new util.Pattern("m","o");
     
     var handler = system.registerHandler(returnerCallBack,null,mPattern,null);
 }
@@ -103,12 +103,12 @@ function testForceHandler()
 
 function addVec3(a,b)
 {
-    var returner = system.Vec3(a.x+b.x,a.y+b.y,a.z+b.z);
+    var returner = util.Vec3(a.x+b.x,a.y+b.y,a.z+b.z);
     return returner;
 }
 function scaleVec3(a,b)
 {
-    var returner = system.Vec3(a.x/b,a.y/b,a.z/b);
+    var returner = util.Vec3(a.x/b,a.y/b,a.z/b);
     return returner;
 }
 

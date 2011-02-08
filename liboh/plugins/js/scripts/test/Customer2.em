@@ -9,7 +9,7 @@
 var MARKET_CHANNEL = undefined;
 
 /* Our pattern of interest is Books */
-var patternOfInterest = new system.Pattern("pattern", "/*Books*/");
+var patternOfInterest = new util.Pattern("pattern", "/*Books*/");
 
 /* create a subscription message */
 var subsObj = {"name":"subscribe", "pattern":patternOfInterest};
@@ -23,7 +23,7 @@ function handleMarket(msg, sender)
     MARKET_CHANNEL = sender;    
     print("\n\nGot a new market\n\n");
 
-    handleMarketReply <- [new system.Pattern("vendor"), new system.Pattern("banner")] <- MARKET_CHANNEL;
+    handleMarketReply <- [new util.Pattern("vendor"), new util.Pattern("banner")] <- MARKET_CHANNEL;
   }
 }
 
@@ -36,7 +36,7 @@ function proxAddedCallback(new_addr_obj)
   test_msg.name = "get_protocol";
   
   //also register a callback
-  var p = new system.Pattern("protocol", "Market");
+  var p = new util.Pattern("protocol", "Market");
   handleMarket <- p <- new_addr_obj;
   test_msg -> new_addr_obj;
 }

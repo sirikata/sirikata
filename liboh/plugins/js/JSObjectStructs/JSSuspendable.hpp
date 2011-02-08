@@ -13,7 +13,6 @@ namespace JS {
 
 struct JSSuspendable
 {
-    
     JSSuspendable();
     virtual ~JSSuspendable();
     virtual v8::Handle<v8::Value> suspend();
@@ -28,6 +27,7 @@ struct JSSuspendable
     v8::Handle<v8::Boolean> getIsClearedV8();
     bool getIsCleared();
 
+private:    
     bool isSuspended;
     bool isCleared;
 };
