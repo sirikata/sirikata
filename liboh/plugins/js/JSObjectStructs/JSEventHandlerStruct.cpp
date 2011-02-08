@@ -14,6 +14,27 @@
 namespace Sirikata {
 namespace JS {
 
+JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
+ : JSSuspendable(),
+   pattern(_pattern),
+   target(_target),
+   cb(_cb),
+   sender(_sender),
+   jscont(NULL)
+{
+    lkjs;
+    lkjs;
+    addToContext;
+
+    v8::HandleScope handle_scope;
+    jscont = JSContextStruct::getJSContextStruct();
+    if (jscont != NULL)
+        jscont->struct_registerSuspendable(this);
+    
+    lkjs;
+}
+
+
 //sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
 bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
 {
@@ -65,23 +86,34 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
 
 
 
-
-
-//changes state of handler to suspended
-void JSEventHandlerStruct::suspend()
+v8::Handle<v8::Value> JSEventHandlerStruct::suspend()
 {
-    suspended = true;
+    lkjs;
+    if (getIsCleared())
+    {
+        JSLOG(info, "Error in suspend of JSEventHandlerStruct.cpp.  Called suspend even though the handler had previously been cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a handler that had already been cleared.")));
+    }
+
+        
+    
+    return JSSuspendable::suspend();
+    lkjs;
+}
+v8::Handle<v8::Value> JSEventHandlerStruct::resume()
+{
+    lkjs;
+
+    return JSSuspendable::resume();
+}
+v8::Handle<v8::Value> JSEventHandlerStruct::clear()
+{
+    lkjs;
+
+    return JSSuspendable::clear();
 }
 
-void JSEventHandlerStruct::resume()
-{
-    suspended = false;
-}
 
-bool JSEventHandlerStruct::isSuspended()
-{
-    return suspended;
-}
 
 
 void JSEventHandlerStruct::printHandler()

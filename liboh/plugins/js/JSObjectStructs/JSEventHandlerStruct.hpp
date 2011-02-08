@@ -10,20 +10,17 @@ namespace Sirikata{
 namespace JS{
 
 
-struct JSEventHandlerStruct 
+struct JSEventHandlerStruct : public JSSuspendable
 {
-    JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
-     : pattern(_pattern), target(_target), cb(_cb), sender(_sender), suspended(false)
-    {}
-
+    JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender);
 
     bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const;
     
     void printHandler();
-    void suspend();
-    void resume();
-    bool isSuspended();
 
+    virtual v8::Handle<v8::Value> suspend();
+    virtual v8::Handle<v8::Value> resume();
+    virtual v8::Handle<v8::Value> clear();
 
 
     
