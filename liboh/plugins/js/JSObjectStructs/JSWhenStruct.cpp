@@ -44,7 +44,7 @@ JSWhenStruct::~JSWhenStruct()
         mCB.Dispose();
 
         if (jscont != NULL)
-            jscont->deregisterSuspendable(this);
+            jscont->struct_deregisterSuspendable(this);
     }
 
     delete mDeadlineTimer;
@@ -54,7 +54,7 @@ JSWhenStruct::~JSWhenStruct()
 void JSWhenStruct::addWhenToContext()
 {
     if (jscont != NULL)
-        jscont->registerSuspendable(this);
+        jscont->struct_registerSuspendable(this);
 }
 
 void JSWhenStruct::addWhenToWatchables()
@@ -130,7 +130,7 @@ bool JSWhenStruct::evalPred()
     if (! returnedBool)
     {
         JSLOG(error,"Error in evalPred of JSWhenStruct.cpp.  Predicate did not return bool.  Suspending when statement");
-        struct_whenSuspend();
+        suspend();
         return false;
     }
 
@@ -173,11 +173,6 @@ v8::Handle<v8::Value>JSWhenStruct::struct_whenGetPeriod()
     return v8::Number::New(currentPeriod);
 }
 
-v8::Handle<v8::Value>JSWhenStruct::struct_isSuspended()
-{
-    v8::HandleScope handle_scope;
-    return v8::Boolean::New(stateSuspended);
-}
 
 void JSWhenStruct::removeWatchablesFromScript()
 {
@@ -222,11 +217,11 @@ v8::Handle<v8::Value>JSWhenStruct::resume()
     if (currentPeriod == WHEN_PERIOD_NOT_SET)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Please set the when period before continuing (via setPeriod)")));
 
-    if (stateSuspended)
+    if (getIsSuspended())
         addWatchablesToScript();  //add watchables to script if we were
                                   //previously in the state suspended state
         
-    stateSuspended = false;
+
     setPredTimer();
 
     return JSSuspendable::resume();

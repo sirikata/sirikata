@@ -59,8 +59,12 @@ JSContextStruct* JSContextStruct::getJSContextStruct()
         v8::Handle<v8::Value> fakerootVal = currContext->Global()->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
         String errorMessage; //error message isn't important in this case.  Not
                              //an error to not be within a js context struct.
-        JSFakerootStruct* jsfakeroot = JSFakerootStruct::decodeFakeroot(fakerootVal,errorMessage);
-        return jsfakeroot;
+        JSFakerootStruct* jsfakeroot = JSFakerootStruct::decodeRootStruct(fakerootVal,errorMessage);
+
+        if (jsfakeroot == NULL)
+            return NULL;
+        
+        return jsfakeroot->associatedContext;
     }
 
     return NULL;
