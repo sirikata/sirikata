@@ -41,6 +41,7 @@
 #include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
+namespace Mesh {
 
 class SIRIKATA_EXPORT MeshSimplifier {
 private:
@@ -79,4 +80,5 @@ public:
 
 };
 
+}
 }

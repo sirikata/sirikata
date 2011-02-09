@@ -30,9 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/MeshSimplifier.hpp>
+#include <sirikata/mesh/MeshSimplifier.hpp>
 
 namespace Sirikata {
+
+namespace Mesh {
 
 /* Code from an Intel matrix inversion optimization report
    (ftp://download.intel.com/design/pentiumiii/sml/24504301.pdf) */
@@ -140,29 +142,90 @@ double MeshSimplifier::invert(Matrix4x4f& inv, Matrix4x4f& orig)
   return det;
 }
 
-
+Vector3f applyTransform(const Matrix4x4f& transform, const Vector3f& v) {
+  Vector4f jth_vertex_4f = transform*Vector4f(v.x, v.y, v.z, 1.0f);
+  return Vector3f(jth_vertex_4f.x, jth_vertex_4f.y, jth_vertex_4f.z);
+}
+  /*
 void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft) {
-    using namespace Mesh;
+  using namespace Mesh;
+
+  //Maps a position to its Q value
+  std::tr1::unordered_map<String, Matrix4x4f> positionQs;
+
+  //Maps a position in space with a list of vertex indices from the submesh geometries.
+  std::tr1::unordered_map<String, std::vector<std::pair<uint32, uint32> > > positionIndices;
+
+  Meshdata::GeometryInstanceIterator geoinst_it = agg_mesh->getGeometryInstanceIterator();
+  uint32 geoinst_idx;
+  Matrix4x4f geoinst_pos_xform;
+
+  while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
+    const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
+    const SubMeshGeometry& curGeometry = agg_mesh->geometry[geomInstance.geometryIndex];
+
+    for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
+      for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
+
+        unsigned short idx = curGeometry.primitives[j].indices[k];
+        unsigned short idx2 = curGeometry.primitives[j].indices[k+1];
+        unsigned short idx3 = curGeometry.primitives[j].indices[k+2];           
+
+        Vector3f pos1 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx]);
+        Vector3f pos2 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx2]);
+        Vector3f pos3 = applyTransform(geoinst_pos_xform, curGeometry.positions[idx3]);
+
+        String pos1String = pos1.toString();
+        String pos2String = pos2.toString();
+        String pos3String = pos3.toString();
+
+
+        positionIndices[pos1String].push_back(std::pair<uint32,uint32>(geomInstance.geometryIndex,idx));
+        positionIndices[pos2String].push_back(std::pair<uint32,uint32>(geomInstance.geometryIndex,idx2));
+        positionIndices[pos3String].push_back(std::pair<uint32,uint32>(geomInstance.geometryIndex,idx3));
+
+        double A = pos1.y*(pos2.z - pos3.z) + pos2.y*(pos3.z - pos1.z) + pos3.y*(pos1.z - pos2.z);
+        double B = pos1.z*(pos2.x - pos3.x) + pos2.z*(pos3.x - pos1.x) + pos3.z*(pos1.x - pos2.x);
+        double C = pos1.x*(pos2.y - pos3.y) + pos2.x*(pos3.y - pos1.y) + pos3.x*(pos1.y - pos2.y);
+        double D = -1 *( pos1.x*(pos2.y*pos3.z - pos3.y*pos2.z) + pos2.x*(pos3.y*pos1.z - pos1.y*pos3.z) + pos3.x*(pos1.y*pos2.z - pos2.y*pos1.z) );
+
+        double normalizer = sqrt(A*A+B*B+C*C);
+
+        //normalize...
+        A /= normalizer;
+        B /= normalizer;
+        C /= normalizer;
+        D /= normalizer;
+        
+        Matrix4x4f mat ( Vector4f(A*A, A*B, A*C, A*D),
+                         Vector4f(A*B, B*B, B*C, B*D),
+                         Vector4f(A*C, B*C, C*C, C*D),
+                         Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );
+
+        positionQs[pos1String] += mat;
+        positionQs[pos2String] += mat;
+        positionQs[pos3String] += mat;
+      }
+    }
+  }
+}
+  */
+void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft) {
+  using namespace Mesh;
 
   //Go through all the triangles, getting the vertices they consist of.
   //Calculate the Q for all the vertices.
-
-  //std::cout << "Starting simplification\n";
+ 
   int totalVertices = 0;
 
   std::tr1::unordered_map<uint32, uint32> numVerticesMap;
+  std::map< String, Matrix4x4f  > positionQs;
 
   for (uint32 i = 0; i < agg_mesh->geometry.size(); i++) {
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     totalVertices += curGeometry.positions.size() * curGeometry.numInstances;
 
     numVerticesMap[i] = (curGeometry.positions.size() * curGeometry.numInstances);
-
-    for (uint32 j = 0; j < curGeometry.positions.size(); j++) {
-        curGeometry.positionQs.push_back( Matrix4x4f::nil());
-    }
-
-    //std::cout << "Geometry " << i << " \n";
 
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
       for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
@@ -173,9 +236,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
         curGeometry.neighborPrimitives[idx].push_back( std::pair<uint32, uint32> (j,k) );
         curGeometry.neighborPrimitives[idx2].push_back( std::pair<uint32, uint32> (j,k+1) );
-        curGeometry.neighborPrimitives[idx3].push_back( std::pair<uint32, uint32> (j,k+2)  );
-
-        //std::cout << idx << " " << idx2 << " " << idx3 << "\n";
+        curGeometry.neighborPrimitives[idx3].push_back( std::pair<uint32, uint32> (j,k+2)  );        
 
         Vector3f& pos1 = curGeometry.positions[idx];
         Vector3f& pos2 = curGeometry.positions[idx2];
@@ -200,14 +261,14 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
                          Vector4f(A*C, B*C, C*C, C*D),
                          Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );
 
-        curGeometry.positionQs[idx] += mat;
-        curGeometry.positionQs[idx2] += mat;
-        curGeometry.positionQs[idx3] += mat;
+        positionQs[pos1.toString()] += mat;
+        positionQs[pos2.toString()] += mat;
+        positionQs[pos3.toString()] += mat;
       }
     }
   }
 
-
+  std::cout << totalVertices << " : totalVertices\n";
 
   //Iterate through all vertex pairs. Calculate the cost, v'(Q1+Q2)v, for each vertex pair.
   std::priority_queue<QSlimStruct> vertexPairs;
@@ -215,6 +276,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     SubMeshGeometry& curGeometry = agg_mesh->geometry[i];
     BoundingSphere3f boundingSphere = curGeometry.aabb.toBoundingSphere();
     boundingSphere.mergeIn( BoundingSphere3f(boundingSphere.center(), boundingSphere.radius()*11.0/10.0));
+
 
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
       for (uint32 k = 0; k+2 < curGeometry.primitives[j].indices.size(); k+=3) {
@@ -228,19 +290,22 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         Vector3f& pos2 = curGeometry.positions[idx2];
         Vector3f& pos3 = curGeometry.positions[idx3];
 
+        assert(positionQs.find(pos1.toString()) != positionQs.end() &&
+               positionQs.find(pos2.toString()) != positionQs.end() &&
+               positionQs.find(pos3.toString()) != positionQs.end() );
+
         //vectors 1 and 2
-        Matrix4x4f Q = curGeometry.positionQs[idx] + curGeometry.positionQs[idx2];
+        Matrix4x4f Q = positionQs[pos1.toString()] + positionQs[pos2.toString()];
         Matrix4x4f Qbar(Vector4f(Q(0,0), Q(0,1), Q(0,2), Q(0,3)),
                         Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
                         Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
-                        Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
+                        Vector4f(0,0,0,1), Matrix4x4f::ROWS());
 
 
         Matrix4x4f Qbarinv;
         double det = invert(Qbarinv, Qbar);
 
         Vector4f vbar4f ;
-        //std::cout << Qbar << " " << Qbarinv << " : inverted?\n";
 
         if (det == 0 ) {
           Vector3f vbar = (pos1+pos2)/2;
@@ -255,17 +320,21 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
             vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
           }
         }
-        float cost = 1.0/vbar4f.dot(  Q * vbar4f );  // cost is inverted because priority-queue pops the maximum first (instead of the minimum).
-        QSlimStruct qs(cost, i, j, k, QSlimStruct::ONE_TWO, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
+        
+        float cost = abs(vbar4f.dot(  Q * vbar4f )) * curGeometry.numInstances;  
+          // cost has to be inverted because priority-queue pops the maximum first (instead of the minimum).
+
+        QSlimStruct qs( ((cost == 0) ? 1e15 : 1.0/cost), i, j, k, QSlimStruct::ONE_TWO, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
 
         vertexPairs.push(qs);
 
         //vectors 2 and 3
-        Q = curGeometry.positionQs[idx3] + curGeometry.positionQs[idx2];
+        Q = positionQs[pos3.toString()] + positionQs[pos2.toString()];
+        
         Qbar =Matrix4x4f(Vector4f(Q(0,0), Q(0,1), Q(0,2), Q(0,3)),
                         Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
                         Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
-                        Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
+                        Vector4f(0,0,0,1), Matrix4x4f::ROWS());
 
         det = invert(Qbarinv, Qbar);
 
@@ -278,22 +347,23 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
           vbar4f = Qbarinv * Vector4f(0,0,0,1);
           Vector3f vbar = Vector3f(vbar4f.x, vbar4f.y, vbar4f.z);
           if ( !boundingSphere.contains(vbar) ) {
-            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" <<  Q << "\n";
+            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" << Q << "\n";
             vbar = (pos1+pos2)/2;
             vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
           }
         }
-        cost = 1.0/vbar4f.dot(  Q * vbar4f );
+        cost = 1.0/vbar4f.dot( Q * vbar4f );
         qs = QSlimStruct(cost, i, j, k, QSlimStruct::TWO_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z));
 
         vertexPairs.push(qs);
 
         //vectors 1 and 3
-        Q = curGeometry.positionQs[idx] + curGeometry.positionQs[idx3];
+        Q = positionQs[pos1.toString()] + positionQs[pos3.toString()];
+       
         Qbar =Matrix4x4f(Vector4f(Q(0,0), Q(0,1), Q(0,2), Q(0,3)),
                          Vector4f(Q(0,1), Q(1,1), Q(1,2), Q(1,3)),
                          Vector4f(Q(0,2), Q(1,2), Q(2,2), Q(2,3)),
-                         Vector4f(0,0,0,1),  Matrix4x4f::ROWS());
+                         Vector4f(0,0,0,1), Matrix4x4f::ROWS());
 
         det = invert(Qbarinv, Qbar);
         //std::cout << Qbar << " " << Qbarinv << " : inverted?\n";
@@ -306,20 +376,18 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
           vbar4f = Qbarinv * Vector4f(0,0,0,1);
           Vector3f vbar = Vector3f(vbar4f.x, vbar4f.y, vbar4f.z);
           if ( !boundingSphere.contains(vbar) ) {
-            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" <<  Q << "\n";
+            //std::cout << "det != 0 " << vbar4f << " from " << pos1 << " and " << pos2 << " and Q=" << Q << "\n";
             Vector3f vbar = (pos1+pos2)/2;
             vbar4f = Vector4f(vbar.x, vbar.y, vbar.z, 1);
           }
         }
-        cost = 1.0/vbar4f.dot(  Q * vbar4f );
+        cost = 1.0/vbar4f.dot( Q * vbar4f );
         qs = QSlimStruct(cost, i, j, k, QSlimStruct::ONE_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z));
 
         vertexPairs.push(qs);
       }
     }
   }
-
-  //std::cout << "totalVertices: " << totalVertices << "\n";
 
   //Remove the least cost pair from the list of vertex pairs. Replace it with a new vertex.
   //Modify all triangles that had either of the two vertices to point to the new vertex.
@@ -329,6 +397,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
   while (remainingVertices > numVerticesLeft && vertexPairs.size() > 0) {
     const QSlimStruct& top = vertexPairs.top();
+
 
     SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
     std::tr1::unordered_map<int, int>& vertexMapping = vertexMapping1[top.mGeomIdx];
@@ -376,11 +445,17 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
       pos1.y = top.mReplacementVector.y;
       pos1.z = top.mReplacementVector.z;
 
+      vertexMapping[idx2] = idx;
 
       std::map<unsigned short, int> posIndexes;
       int numVerticesRemoved = 0;
       for (int primIdx = top.mPrimitiveIndicesIdx; primIdx < top.mPrimitiveIndicesIdx + 3; primIdx++) {
 
+        uint32 numDiffVertices = numVerticesMap[top.mGeomIdx] -
+                             (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
+
+        if (totalVertices - numDiffVertices <= numVerticesLeft)
+          break;
 
         unsigned short posIdx = curGeometry.primitives[j].indices[primIdx];
         while (vertexMapping.find(posIdx) != vertexMapping.end() ) {
@@ -406,14 +481,11 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         remainingVertices -= curGeometry.numInstances;
         remainingVertices -= numVerticesRemoved;
       }
-
-      vertexMapping[idx2] = idx;
     }
 
     uint32 numDiffVertices = numVerticesMap[top.mGeomIdx] -
                              (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
-
-
+    
     numVerticesMap[top.mGeomIdx] = (curGeometry.positions.size() - vertexMapping.size()) *  curGeometry.numInstances;
 
     totalVertices -= numDiffVertices;
@@ -424,7 +496,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     vertexPairs.pop();
   }
 
-  //std::cout << "1. remainingVertices: " << remainingVertices << "\n";
+  std::cout << "1. remainingVertices: " << remainingVertices << "\n";
 
   remainingVertices = 0;
 
@@ -461,7 +533,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     remainingVertices += curGeometry.positions.size() * curGeometry.numInstances;
   }
 
-  //std::cout << "2. remainingVertices: " << remainingVertices << "\n";
+  std::cout << "2. remainingVertices: " << remainingVertices << "\n";
 
   remainingVertices = 0;
 
@@ -516,8 +588,6 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
       }
     }
     if (!hasTriangles) {
-      //std::cout << curGeometry.positionQs.size() << " : " << vertexMapping.size() << " and " << "!hasTriangles\n";
-
       curGeometry.positions.clear();
       curGeometry.texUVs.clear();
       curGeometry.normals.clear();
@@ -528,10 +598,12 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     curGeometry.positionQs.clear(); //no longer need these.
   }
 
-  //std::cout << "3. remainingVertices: " << remainingVertices << "\n";
+  std::cout << "3. remainingVertices: " << remainingVertices << "\n";
 
-  //std::cout << "Simplification ended\n";
+
+  fflush(stdout);
 }
 
-}
+} //namespace Mesh
+} //namespace Sirikata
 

@@ -532,6 +532,7 @@ void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid)
 }
 
 void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
+  mAggregateManager->aggregateObserved(objid, nobservers);
 }
 
 

@@ -1138,7 +1138,6 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
         ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
-        ${LIBCORE_SOURCE_DIR}/util/MeshSimplifier.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
@@ -1232,6 +1231,8 @@ SET(LIBMESH_SOURCES
   ${LIBMESH_SOURCE_DIR}/AnyModelsSystem.cpp
   ${LIBMESH_SOURCE_DIR}/ModelsSystemFactory.cpp
   ${LIBMESH_SOURCE_DIR}/Filter.cpp
+  ${LIBMESH_SOURCE_DIR}/MeshSimplifier.cpp
+
   )
 
 SET(LIBPROXYOBJECT_SOURCES
