@@ -83,6 +83,7 @@ struct JSContextStruct : public JSSuspendable
     SuspendableMap associatedSuspendables;
 };
 
+typedef std::vector<JSContextStruct*> ContextVector;
 
 }//end namespace js
 }//end namespace sirikata

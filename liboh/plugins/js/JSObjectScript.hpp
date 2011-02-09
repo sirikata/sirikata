@@ -87,7 +87,7 @@ public:
     virtual ~JSObjectScript();
 
     // SessionEventListener Interface
-    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
 
@@ -140,9 +140,7 @@ public:
     void create_entity(EntityCreateInfo& eci);
 
     /** create a new presence of this entity */
-    //void create_presence(const SpaceID&);
-    void create_presence(const SpaceID& new_space,std::string new_mesh);
-    void create_presence(const SpaceID& new_space);
+    v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
 
 
     v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
@@ -279,7 +277,8 @@ private:
     void printVisibleArray();
 
     // Adds/removes presences from the javascript's system.presences array.
-    v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
+    v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,int token);
+    v8::Handle<v8::Object> addPresence(JSPresenceStruct* presToAdd);
     void removePresence(const SpaceObjectReference& sporef);
 
     // Adds the Self field
@@ -299,9 +298,15 @@ private:
     JSObjectScriptManager* mManager;
 
 
+    void callbackUnconnected(const SpaceObjectReference& name, int token);
+    int presenceToken;
+    
+
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
     PresenceMap mPresences;
 
+    typedef std::vector<JSPresenceStruct*> PresenceVec;
+    PresenceVec mUnconnectedPresences;
 };
 
 } // namespace JS

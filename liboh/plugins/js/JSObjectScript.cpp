@@ -166,7 +166,8 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
  : mParent(ho),
-   mManager(jMan)
+   mManager(jMan),
+   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
 {
 
     OptionValue* init_script;
@@ -235,8 +236,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     mParent->getSpaceObjRefs(spaceobjrefs);
     if (spaceobjrefs.size() > 1)
         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
+
+    //default connections.
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
-        onConnected(mParent, *space_it);
+        onConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN);
 
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
@@ -523,7 +526,9 @@ JSInvokableObject::JSInvokableObjectInt* JSObjectScript::runSimulation(const Spa
 
 
 
-void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+
+void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int token)
+{
     //register for scripting messages from user
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
@@ -550,16 +555,47 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     // the Context::Scope or HandleScope.
     addSelfField(name);
 
-    
-    // Add to system.presences array
-    v8::Handle<v8::Object> new_pres = addPresence(name);
 
-    // Invoke user callback
-    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() ) {
-        int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { new_pres };
-        ProtectedJSCallback(mContext, NULL, mOnPresenceConnectedHandler, argc, argv);
+
+    //check for callbacks associated with presence connection
+    
+    //means that this is the first presence that has been added to the space
+    if (token == HostedObject::DEFAULT_PRESENCE_TOKEN)
+    {
+        // Add to system.presences array
+        v8::Handle<v8::Object> new_pres = addConnectedPresence(name,token);
+
+        // Invoke user callback
+        if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() )
+        {
+            int argc = 1;
+            v8::Handle<v8::Value> argv[1] = { new_pres };
+            ProtectedJSCallback(mContext, NULL, mOnPresenceConnectedHandler, argc, argv);
+        }
     }
+    else
+    {
+        //means that we've connected a presence and should finish by calling
+        //connection callback
+        callbackUnconnected(name,token);
+    }
+}
+
+
+void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, int token)
+{
+    
+    for (PresenceVec::iterator iter = mUnconnectedPresences.begin(); iter != mUnconnectedPresences.end(); ++iter)
+    {
+        if (token == (*iter)->getPresenceToken())
+        {
+            mPresences[name] = *iter;
+            (*iter)->connect(name);
+            mUnconnectedPresences.erase(iter);
+            return;
+        }
+    }
+    JSLOG(error,"Error, received a finished connection with token "<<token<<" that we do not have an unconnected presence struct for.");
 }
 
 
@@ -597,8 +633,10 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
     // Remove from system.presences array
     removePresence(name);
 
+    //FIXME: need to have separate disconnection handlers for each presence.
+    
     // FIXME this should get the presence but its already been deleted
-    if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
+    if ( !mOnPresenceDisconnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
         ProtectedJSCallback(mContext, NULL, mOnPresenceDisconnectedHandler);
 }
 
@@ -621,7 +659,8 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
         eci.mesh,
         eci.solid_angle,
         UUID::null(),
-        NULL);
+        NULL
+    );
 }
 
 
@@ -1471,7 +1510,15 @@ void JSObjectScript::initializePresences(Handle<Object>& system_obj)
     system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 }
 
-v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& sporef)
+v8::Handle<v8::Object> JSObjectScript::addConnectedPresence(const SpaceObjectReference& sporef,int token)
+{
+    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef,token);
+    // Add to our internal map
+    mPresences[sporef] = presToAdd;
+    return addPresence(presToAdd);
+}
+
+v8::Handle<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
 {
     HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
@@ -1483,17 +1530,12 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
 
     // Create the object for the new presence
     Local<Object> js_pres = mManager->mPresenceTemplate->NewInstance();
-    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef);
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 
-    
-    // Add to our internal map
-    mPresences[sporef] = presToAdd;
 
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
-
     return js_pres;
 }
 
@@ -1606,7 +1648,6 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 }
 
 
-
 v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_str)
 {
   v8::HandleScope handle_scope;
@@ -1619,8 +1660,6 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_s
   // The function name is not required. It is being put in because emerson is not compiling "( function() {} )"; correctly 
   const std::string new_code = sstream.str();
   counter++; 
-
-
   
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));  
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
@@ -1629,37 +1668,61 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_s
 }
 
 
-
-void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
+//takes in a string corresponding to the new presence's mesh and a function
+//callback to run when the presence is connected.
+v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback )
 {
-  // const HostedObject::SpaceSet& spaces = mParent->spaces();
-  // SpaceID spaceider = *(spaces.begin());
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+    
+ 
+    //presuming that we are connecting to the same space;
+    FIXME_GET_SPACE_OREF();
+    //"space" now contains the SpaceID we want to connect to.
 
-  FIXME_GET_SPACE_OREF();
-  const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
+    //arbitrarily saying that we'll just be on top of the root object.
+    Location startingLoc = mParent->getLocation(space,oref);
+    //Arbitrarily saying that we're just going to use a simple bounding sphere.
+    BoundingSphere3f bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
 
-  //mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
+    int presToke = presenceToken;
+    ++presenceToken;
+    mParent->connect(space,startingLoc,bs, newMesh,mParent->getUUID(),NULL,presToke);
 
-  //FIXME: may want to start in a different place.
-  Location startingLoc = mParent->getLocation(space,oref);
 
-  //mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
-
-  NOT_IMPLEMENTED(js);// Must fix create_presence to use new connect interface
-  assert(false);
-
-  //FIXME: will need to add this presence to the presences vector.
-  //but only want to do so when the function has succeeded.
+    //create a presence object associated with this presence and return it;
+    
+    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, callback,presToke);    
+    v8::Handle<v8::Object> js_pres = addPresence(presToAdd);
+    mUnconnectedPresences.push_back(presToAdd);
+    return js_pres;
 }
 
+   
 
-//FIXME: Hard coded default mesh below
-void JSObjectScript::create_presence(const SpaceID& new_space)
-{
-    NOT_IMPLEMENTED(js);
-    assert(false);
-    create_presence(new_space,"http://www.sirikata.com/content/assets/tetra.dae");
-}
+// void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
+// {
+//   // const HostedObject::SpaceSet& spaces = mParent->spaces();
+//   // SpaceID spaceider = *(spaces.begin());
+
+//   FIXME_GET_SPACE_OREF();
+//   const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
+
+//   //mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
+
+//   //FIXME: may want to start in a different place.
+//   Location startingLoc = mParent->getLocation(space,oref);
+
+//   //mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
+
+//   NOT_IMPLEMENTED(js);// Must fix create_presence to use new connect interface
+//   assert(false);
+
+//   //FIXME: will need to add this presence to the presences vector.
+//   //but only want to do so when the function has succeeded.
+// }
+
+
 
 
 void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef,const Quaternion& quat)

@@ -20,19 +20,28 @@ namespace JSSystem{
 
 v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding JSObjectScript from system object in ScriptCreatePresence of JSSystem.cpp.  ";
-    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
-    if (target_script == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+    if (args.Length() != 2)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence>")));
+
+    //check args.
+    //mesh arg
+    String newMesh = "";
+    String errorMessage = "Error decoding first argument of create_presence.  Should be a string corresponding to mesh uri.  ";
+    bool stringDecodeSuccessful = decodeString(args[0], newMesh, errorMessage);
+    if (! stringDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    //callback function arg
+    if (! args[1]->IsFunction())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that the second argument passed in be a function")));
 
     
-    v8::String::Utf8Value str(args[0]);
-    const char* cstr = ToCString(str);
-    const String s(cstr);
-    const SpaceID new_space(s);
-    target_script->create_presence(new_space);
+    String jsobjErrorMessage = "Error decoding JSObjectScript from system object in ScriptCreatePresence of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), jsobjErrorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(jsobjErrorMessage.c_str(),jsobjErrorMessage.length())));
 
-    return v8::Undefined();
+    return target_script->create_presence(newMesh,v8::Handle<v8::Function>::Cast(args[1]));
 }
 
 
@@ -70,7 +79,7 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     //getting who can sendTo
     SpaceObjectReference* canSendTo = NULL;
     if (args[1]->IsNull())
-        canSendTo = jsPresStruct->sporef;
+        canSendTo = jsPresStruct->getSporef();
     else
     {
         //should try to decode as visible.  if decoding fails, throw error

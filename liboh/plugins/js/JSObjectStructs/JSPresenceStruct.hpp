@@ -14,16 +14,25 @@ class JSObjectScript;
 
 struct JSPresenceStruct
 {
-    
-    JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef);
+
+    JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,int presenceToken); //isConnected is false using this:
+                                              //have no sporef
+    JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef,int presenceToken);
     ~JSPresenceStruct();
 
-    void registerOnProxAddedEventHandler(v8::Persistent<v8::Function>& cb);
-    void registerOnProxRemovedEventHandler(v8::Persistent<v8::Function>& cb);
 
+    void connect(const SpaceObjectReference& _sporef);
+    void disconnect();
+    
+    v8::Handle<v8::Value> registerOnProxRemovedEventHandler(v8::Handle<v8::Function>cb);
+    v8::Handle<v8::Value> registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb);
 
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
 
+
+    bool getIsConnected();
+    
+    v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
 
     v8::Handle<v8::Value> struct_getPosition();
     v8::Handle<v8::Value> struct_setVelocity(const Vector3f& newVel);
@@ -33,17 +42,45 @@ struct JSPresenceStruct
     
     void addAssociatedContext(JSContextStruct*);
 
+    v8::Persistent<v8::Function> mOnProxRemovedEventHandler;
+    v8::Persistent<v8::Function> mOnProxAddedEventHandler;
+    v8::Persistent<v8::Function> mOnConnectedCallback;
     
+    int getPresenceToken();
+
+    v8::Handle<v8::Value>  getOrientationFunction();
+    v8::Handle<v8::Value>  getVelocityFunction();
+    v8::Handle<v8::Value>  setPositionFunction(Vector3f newPos);
+    v8::Handle<v8::Value>  setVisualScaleFunction(float new_scale);
+    v8::Handle<v8::Value>  getVisualScaleFunction();
+    v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
+    v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
+    v8::Handle<v8::Value>  getOrientationVelFunction();
+    v8::Handle<v8::Value>  getVisualFunction();
+    v8::Handle<v8::Value>  setVisualFunction(String urilocation);
+    v8::Handle<v8::Value>  setOrientationFunction(Quaternion newOrientation);
+    v8::Handle<v8::Value>  runSimulation(String simname);
+
+    
+    SpaceObjectReference* getSporef()
+    {
+        return sporef;
+    }
+
+
+
+private:
     //data
     JSObjectScript* jsObjScript;
     SpaceObjectReference* sporef; //sporef associated with this presence.
-    v8::Persistent<v8::Function> mOnProxRemovedEventHandler;
-    v8::Persistent<v8::Function> mOnProxAddedEventHandler;
-
+    bool isConnected;
+    bool hasConnectedCallback;
+    int mPresenceToken;
     
-    typedef std::vector<JSContextStruct*> ContextVector;
+
     ContextVector associatedContexts;
     
+    void clearPreviousConnectedCB();
 };
 
 

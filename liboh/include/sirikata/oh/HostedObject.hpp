@@ -228,6 +228,8 @@ public:
     /** Called once per frame, at a certain framerate. */
     void tick();
 
+
+    const static int DEFAULT_PRESENCE_TOKEN = -1;
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
         message, however any other message must wait until you receive the RetObj
@@ -235,16 +237,20 @@ public:
         @param spaceID  The UUID of the space you connect to.
         @param startingLocation  The initial location of this object. Must be known at connection time?
         @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
-        @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
+        @param evidence  Usually use getUUID(); can be set differently if needed
+        for authentication.
+        @param token  When connection completes, notifies all session
+        listeners.  Provides token to these listeners so they can distinguish
+        which presence may have connected, etc.
     */
-
     void connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd);
+        PerPresenceData* ppd,
+        int token = DEFAULT_PRESENCE_TOKEN);
 
     void connect(
         const SpaceID&spaceID,
@@ -253,7 +259,8 @@ public:
         const String& mesh,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd);
+        PerPresenceData* ppd,
+        int token = DEFAULT_PRESENCE_TOKEN);
 
 
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
@@ -264,8 +271,9 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
