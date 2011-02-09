@@ -216,6 +216,7 @@ public:
         to a space, talking to other objects within this object host, and
         persistence messages.
     */
+    
     const UUID &getUUID() const {
         return mInternalObjectReference;
     }

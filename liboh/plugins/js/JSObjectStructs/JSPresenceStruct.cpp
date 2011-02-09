@@ -30,6 +30,8 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
 {
 }
 
+
+
 bool JSPresenceStruct::getIsConnected()
 {
     return isConnected;
