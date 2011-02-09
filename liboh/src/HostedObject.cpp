@@ -257,14 +257,15 @@ bool myisalphanum(char c) {
 }
 }
 
-void HostedObject::initializeScript(const String& script, const String& args)
+
+void HostedObject::initializeScript(const String& script, const String& args, const SpaceObjectReference sporef)
 {
     if (mObjectScript) {
-        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
+        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for " << sporef << "(internal id)");
         return;
     }
 
-    SILOG(oh,debug,"[HO] Creating a script object for " << getUUID().toString() << "(internal id)");
+    SILOG(oh,debug,"[HO] Creating a script object for " << sporef << "(internal id)");
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
@@ -282,12 +283,12 @@ void HostedObject::initializeScript(const String& script, const String& args)
         }
         else
         {
-            SILOG(oh,debug,"[HO] Failed to create script for " << getUUID().toString() << "(internal id) because incorrect script type");
+            SILOG(oh,debug,"[HO] Failed to create script for " << sporef << "(space object reference) because incorrect script type");
         }
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script);
     if (mgr) {
-        SILOG(oh,debug,"[HO] Creating script for " << getUUID().toString() << "(internal id) with args of "<<args);
+        SILOG(oh,debug,"[HO] Creating script for " << sporef << "(spcae object reference) with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         mObjectScript->scriptTypeIs(script);
         mObjectScript->scriptOptionsIs(args);
@@ -500,7 +501,7 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
     {
-        initializeScript(scriptType,"");
+        initializeScript(scriptType,"",SpaceObjectReference(dst.space(),dst.object()));
     }
 
     return true;
@@ -595,7 +596,7 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
     //s->registerReadCallback(0);
 }
 
-void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
     uint64 seqno = (update.has_seqno() ? update.seqno() : 0);
 
     TimedMotionVector3f loc;
@@ -611,11 +612,12 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (update.has_location()) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-        Time locTime = localTime(space,update_loc.t());
+        Time locTime = localTime(sporef.space(),update_loc.t());
         loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
         
         CONTEXT_OHTRACE(objectLoc,
-            getUUID(),
+            sporef,
+            //getUUID(),
             update.object(),
             loc
         );
@@ -625,7 +627,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (update.has_orientation()) {
         Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
-        orient = TimedMotionQuaternion(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
+        orient = TimedMotionQuaternion(localTime(sporef.space(), update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
         orientptr = &orient;
     }
 
@@ -742,7 +744,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             // Notify of any out of order loc updates
             OrphanLocUpdateManager::UpdateList orphan_loc_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);
             for(OrphanLocUpdateManager::UpdateList::iterator orphan_it = orphan_loc_updates.begin(); orphan_it != orphan_loc_updates.end(); orphan_it++)
-                processLocationUpdate(spaceobj.space(), proxy_obj, *orphan_it);
+                processLocationUpdate(spaceobj,proxy_obj, *orphan_it);
 
             //tells the object script that something that was close has come
             //into view

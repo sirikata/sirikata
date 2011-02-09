@@ -217,9 +217,9 @@ public:
         persistence messages.
     */
     
-    const UUID &getUUID() const {
-        return mInternalObjectReference;
-    }
+    // const UUID &getUUID() const {
+    //     return mInternalObjectReference;
+    // }
 
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
