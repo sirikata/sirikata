@@ -1044,15 +1044,7 @@ bool Entity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, Dense
     }
     else {
         // Otherwise, follow the rest of the normal process.
-        MeshdataPtr mesh_data = mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response);
-        if (!mesh_data)
-        {
-            SILOG(ogre,error,"Failed to parse mesh " << mURI.toString() << " --> " << request->getMetadata().getFingerprint().toString());
-            return true;
-        }
-
-
-        handleMeshParsed(mesh_data);
+        mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, _1));
     }
     return true;
 }
@@ -1150,6 +1142,11 @@ void Entity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
 }
 
 void Entity::handleMeshParsed(MeshdataPtr md) {
+    if (!md) {
+        SILOG(ogre,error,"Failed to parse mesh " << mURI.toString());
+        return;
+    }
+
     mRemainingDownloads += md->textures.size();
 
     // Special case for no dependent downloads

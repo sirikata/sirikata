@@ -55,6 +55,9 @@
 #include <boost/filesystem.hpp>
 #include <stdio.h>
 
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+
 using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
@@ -412,6 +415,10 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     mViewer = viewer;
     mPresenceID = presenceid;
 
+    mParsingIOService = Network::IOServiceFactory::makeIOService();
+    mParsingWork = new Network::IOWork(*mParsingIOService, "Ogre Mesh Parsing");
+    mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
+
     ProxyManagerPtr proxyManager = mViewer->presence(presenceid);
     mViewer->addListener((SessionEventListener*)this);
 
@@ -715,6 +722,10 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
+    mParsingThread->join();
+    delete mParsingThread;
+    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+
     {
         SceneEntitiesMap toDelete;
         toDelete.swap(mSceneEntities);
@@ -781,8 +792,14 @@ void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
     dlPlanner->removeObject(p);
 }
 
-Mesh::MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-    return mModelParser->load(orig_uri, fp, data);
+void OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+    mParsingIOService->post(
+        std::tr1::bind(&OgreSystem::parseMeshWork, this, orig_uri, fp, data, cb)
+    );
+}
+void OgreSystem::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+    Mesh::MeshdataPtr parsed = mModelParser->load(orig_uri, fp, data);
+    mContext->mainStrand->post(std::tr1::bind(cb, parsed));
 }
 
 struct RayTraceResult {
@@ -984,6 +1001,10 @@ void OgreSystem::poll(){
         mContext->shutdown();
         mQuitRequestHandled = true;
     }
+}
+void OgreSystem::stop() {
+    delete mParsingWork;
+    TimeSteppedQueryableSimulation::stop();
 }
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
