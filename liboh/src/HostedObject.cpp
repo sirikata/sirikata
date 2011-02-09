@@ -438,7 +438,8 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 }
 
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
-    SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
+    SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
+    //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
     if (sstStream != SSTStreamPtr() ) {
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
@@ -710,7 +711,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
-                getUUID(),
+                spaceobj,
+                //getUUID(),
                 addition.object(),
                 true,
                 loc
@@ -768,7 +770,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             proxy_obj->invalidate();
 
             CONTEXT_OHTRACE(prox,
-                getUUID(),
+                spaceobj,
+                //getUUID(),
                 removal.object(),
                 false,
                 TimedMotionVector3f()
@@ -1025,7 +1028,8 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     request.set_query_angle(new_angle.asFloat());
     std::string payload = serializePBJMessage(request);
 
-    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
+    //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != SSTStreamPtr()) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);
@@ -1074,7 +1078,8 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     std::string payload = serializePBJMessage(container);
 
 
-    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream != SSTStreamPtr()) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);

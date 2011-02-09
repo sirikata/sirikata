@@ -97,7 +97,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
 
     /** Connect the object to the space with the given starting parameters. */
     void connect(
-        const UUID& objid,
+        const SpaceObjectReference& sporef_objid,
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
@@ -261,7 +261,7 @@ private:
 
         // Add the object, completely disconnected, to the index
         void add(
-            const UUID& objid, ConnectingInfo ci,
+            const SpaceObjectReference& sporef_objid, ConnectingInfo ci,
             ConnectedCallback connect_cb, MigratedCallback migrate_cb,
             StreamCreatedCallback stream_created_cb, DisconnectedCallback disconnected_cb
         );
@@ -326,11 +326,11 @@ private:
         };
         typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;
-        typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
+        typedef std::tr1::unordered_map<SpaceObjectReference, ObjectInfo, UUID::Hasher> ObjectInfoMap;
         ObjectInfoMap mObjectInfo;
 
         // A reverse index allows us to lookup an objects internal ID
-        typedef std::tr1::unordered_map<ObjectReference, UUID, ObjectReference::Hasher> InternalIDMap;
+        typedef std::tr1::unordered_map<SpaceObjectReference, UUID, ObjectReference::Hasher> InternalIDMap;
         InternalIDMap mInternalIDs;
 
         typedef std::tr1::function<void()> DeferredCallback;

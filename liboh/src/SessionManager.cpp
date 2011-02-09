@@ -62,18 +62,18 @@ SessionManager::ObjectConnections::ObjectConnections(SessionManager* _parent)
 }
 
 void SessionManager::ObjectConnections::add(
-    const UUID& objid, ConnectingInfo ci, ConnectedCallback connect_cb,
+    const SpaceObjectReference& sporef_objid, ConnectingInfo ci, ConnectedCallback connect_cb,
     MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb,
     DisconnectedCallback disconnected_cb
 )
 {
     // Make sure we have this object's info stored
-    ObjectInfoMap::iterator it = mObjectInfo.find(objid);
+    ObjectInfoMap::iterator it = mObjectInfo.find(sporef_objid);
     if (it != mObjectInfo.end()) {
-        SILOG(oh,error,"Uh oh: this object connected twice "<<objid.toString());
+        SILOG(oh,error,"Uh oh: this object connected twice "<<sporef_objid);
     }
     assert (it == mObjectInfo.end());
-    it = mObjectInfo.insert( ObjectInfoMap::value_type( objid, ObjectInfo() ) ).first;
+    it = mObjectInfo.insert( ObjectInfoMap::value_type( sporef_objid, ObjectInfo() ) ).first;
     ObjectInfo& obj_info = it->second;
     obj_info.connectingInfo = ci;
     obj_info.connectedCB = connect_cb;
@@ -81,7 +81,7 @@ void SessionManager::ObjectConnections::add(
     obj_info.streamCreatedCB = stream_created_cb;
     obj_info.disconnectedCB = disconnected_cb;
     // Add to reverse index // FIXME we need a real ObjectReference to use here
-    mInternalIDs[ObjectReference(objid)] = objid;
+    mInternalIDs[sporef_objid] = sporef_objid.object();
 }
 
 SessionManager::ConnectingInfo& SessionManager::ObjectConnections::connectingTo(const UUID& objid, ServerID connecting_to) {
@@ -288,7 +288,7 @@ void SessionManager::stop() {
 }
 
 void SessionManager::connect(
-    const UUID& objid,
+    const SpaceObjectReference& sporef_objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
     bool regQuery, const SolidAngle& init_sa, const String& init_mesh,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb,
@@ -317,7 +317,7 @@ void SessionManager::connect(
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
     mObjectConnections.add(
-        objid, ci,
+        sporef_objid, ci,
         std::tr1::bind(&SessionManager::handleObjectFullyConnected, this,
 		       _1, _2, _3, _4, _5, _6, _7,
             connect_cb

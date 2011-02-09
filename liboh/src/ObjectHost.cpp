@@ -110,27 +110,28 @@ void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     smgr->start();
 }
 
-void ObjectHost::handleObjectConnected(const UUID& objid, ServerID server) {
+void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID server) {
     // ignored
 }
 
-void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID from, ServerID to) {
+void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID from, ServerID to) {
     // ignored
 }
 
-void ObjectHost::handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
+
+void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // Either we know the object and deliver, or somethings gone wacky
-    HostedObjectPtr obj = getHostedObject(internalID);
+    HostedObjectPtr obj = getHostedObject(sporef_internalID);
     if (obj) {
         obj->receiveMessage(space, msg);
     }
     else {
-        OH_LOG(warn, "Got message for " << internalID.toString() << " but no such object exists.");
+        OH_LOG(warn, "Got message for " << sporef_internalID << " but no such object exists.");
         delete msg;
     }
 }
 
-void ObjectHost::handleObjectDisconnected(const UUID& internalID, Disconnect::Code) {
+void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code) {
     // ignored
 }
 
@@ -150,14 +151,16 @@ SpaceID ObjectHost::getDefaultSpace()
 // Primary HostedObject API
 
 void ObjectHost::connect(
-    HostedObjectPtr obj, const SpaceID& space,
+    //HostedObjectPtr obj, const SpaceID& space,
+    SpaceObjectReference& sporef, const SpaceID& space,
     const TimedMotionVector3f& loc,
     const TimedMotionQuaternion& orient,
     const BoundingSphere3f& bnds,
     const String& mesh,
     const SolidAngle& init_sa,
     ConnectedCallback connected_cb,
-    MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
+    MigratedCallback migrated_cb,
+    StreamCreatedCallback stream_created_cb,
     DisconnectedCallback disconnected_cb
 )
 {
@@ -165,7 +168,7 @@ void ObjectHost::connect(
 
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
     mSessionManagers[space]->connect(
-        obj->getUUID(), loc, orient, bnds, with_query, init_sa, mesh,
+        sporef, loc, orient, bnds, with_query, init_sa, mesh,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, connected_cb),
         migrated_cb,
         stream_created_cb,
@@ -183,9 +186,9 @@ void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectRefe
     cb(space, obj, info);
 }
 
-void ObjectHost::disconnect(HostedObjectPtr obj, const SpaceID& space) {
+void ObjectHost::disconnect(SpaceObjectReference& sporef, const SpaceID& space) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-    mSessionManagers[space]->disconnect(obj->getUUID());
+    mSessionManagers[space]->disconnect(sporef);
 }
 
 Duration ObjectHost::serverTimeOffset(const SpaceID& space) const {
@@ -198,40 +201,39 @@ Duration ObjectHost::clientTimeOffset(const SpaceID& space) const {
     return mSessionManagers.find(space)->second->clientTimeOffset();
 }
 
-bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload) {
+bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
 
     std::string payload_str( (char*)payload.begin(), (char*)payload.end() );
-    return send(obj, space, src_port, dest, dest_port, payload_str);
+    return send(sporef_src, space, src_port, dest, dest_port, payload_str);
 }
 
-bool ObjectHost::send(HostedObjectPtr obj, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
+bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
-    return mSessionManagers[space]->send(obj->getUUID(), src_port, dest, dest_port, payload);
+    return mSessionManagers[space]->send(sporef_src, src_port, dest, dest_port, payload);
 }
 
-void ObjectHost::registerHostedObject(const HostedObjectPtr &obj) {
+void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef, HostedObjectPtr obj) {
     mHostedObjects.insert(HostedObjectMap::value_type(obj->getUUID(), obj));
 }
-void ObjectHost::unregisterHostedObject(const UUID &objID) {
-    HostedObjectMap::iterator iter = mHostedObjects.find(objID);
+void ObjectHost::unregisterHostedObject(SpaceObjectReference& sporef) {
+    HostedObjectMap::iterator iter = mHostedObjects.find(sporef);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
         mHostedObjects.erase(iter);
     }
 }
-HostedObjectPtr ObjectHost::getHostedObject(const UUID &id) const {
-    HostedObjectMap::const_iterator iter = mHostedObjects.find(id);
+HostedObjectPtr ObjectHost::getHostedObject(const SpaceObjectReference& sporef) const {
+    HostedObjectMap::const_iterator iter = mHostedObjects.find(sporef);
     if (iter != mHostedObjects.end()) {
-//        HostedObjectPtr obj(iter->second.lock());
-//        return obj;
         return iter->second;
     }
     return HostedObjectPtr();
 }
 
-ObjectHost::SSTStreamPtr ObjectHost::getSpaceStream(const SpaceID& space, const UUID& objectID) {
-    return mSessionManagers[space]->getSpaceStream(ObjectReference(objectID));
+ObjectHost::SSTStreamPtr ObjectHost::getSpaceStream(const SpaceID& space, const ObjectReference& oref)
+{
+    return mSessionManagers[space]->getSpaceStream(oref);
 }
 
 
