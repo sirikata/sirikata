@@ -109,7 +109,8 @@ Entity::Entity(OgreSystem *scene,
     mProxy(ppo),
     mOgreObject(NULL),
     mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(ppo->getObjectReference()) )),
-    mMovingIter(scene->mMovingEntities.end())
+    mMovingIter(scene->mMovingEntities.end()),
+    mHaveURIHash(false)
 {
     mSceneNode->setInheritScale(false);
     addToScene(NULL);
@@ -426,7 +427,9 @@ void Entity::setSelected(bool selected) {
 
 void Entity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<const DenseData> response)
 {
-    mScene->context()->mainStrand->post(std::tr1::bind(&Entity::tryInstantiateExistingMesh, this, request, response));
+    mURIHash = request->getMetadata().getFingerprint();
+    mHaveURIHash = true;
+    mScene->context()->mainStrand->post(std::tr1::bind(&Entity::tryInstantiateExistingMeshOrParse, this, request, response));
 }
 
 void Entity::downloadMeshFile(Transfer::URI const& uri)
@@ -460,8 +463,13 @@ void Entity::processMesh(Transfer::URI const& meshFile)
     if (mURI == meshFile && mOgreObject)
         return;
 
+    // If we have the hash and can instantiate, avoid doing any additional work
+    if (mURI == meshFile && tryInstantiateExistingMesh()) return;
+
+    // Otherwise, start the download process
     mURI = meshFile;
     mURIString = meshFile.toString();
+    mHaveURIHash = false;
 
     downloadMeshFile(meshFile);
 }
@@ -1035,17 +1043,23 @@ public:
     }
 };
 
-bool Entity::tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
-    SHA256 sha = request->getMetadata().getFingerprint();
-    String hash = sha.convertToHexString();
+bool Entity::tryInstantiateExistingMesh() {
+    if (!mHaveURIHash) return false;
+
+    String hash = mURIHash.convertToHexString();
     Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(hash);
     if (!mp.isNull()) {
         loadMesh(hash);
+        return true;
     }
-    else {
-        // Otherwise, follow the rest of the normal process.
-        mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, _1));
-    }
+    return false;
+}
+
+bool Entity::tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
+    if (tryInstantiateExistingMesh()) return true;
+
+    // Otherwise, follow the rest of the normal process.
+    mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, _1));
     return true;
 }
 
