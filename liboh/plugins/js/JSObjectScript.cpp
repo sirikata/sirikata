@@ -1681,8 +1681,9 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     //arbitrarily saying that we'll just be on top of the root object.
     Location startingLoc = mParent->getLocation(space,oref);
     //Arbitrarily saying that we're just going to use a simple bounding sphere.
-    BoundingSphere3f bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
-
+    BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
+    
+    
     int presToke = presenceToken;
     ++presenceToken;
     mParent->connect(space,startingLoc,bs, newMesh,UUID::null(),NULL,presToke);
