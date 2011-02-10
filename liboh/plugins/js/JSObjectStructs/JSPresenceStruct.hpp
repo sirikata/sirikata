@@ -61,6 +61,14 @@ struct JSPresenceStruct
     v8::Handle<v8::Value>  setOrientationFunction(Quaternion newOrientation);
     v8::Handle<v8::Value>  runSimulation(String simname);
 
+    v8::Handle<v8::Value>  toString()
+    {
+        v8::HandleScope handle_scope;
+        String sporefReturner = "Presence unconnected";
+        if (sporef != NULL)
+            sporefReturner = sporef->toString();
+        return v8::String::New(sporefReturner.c_str(), sporefReturner.length());
+    }
     
     SpaceObjectReference* getSporef()
     {

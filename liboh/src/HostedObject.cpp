@@ -394,7 +394,8 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 
 void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,int token)
 {
-    if (info.server == NullServerID) {
+    if (info.server == NullServerID)
+    {
         HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference2.toString() << ") to space " << space);
         return;
     }
@@ -434,6 +435,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
+    HO_LOG(warning,"Notifying of connected object" << mInternalObjectReference2.toString() << ") to space " << space);
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref, token);
 }
 

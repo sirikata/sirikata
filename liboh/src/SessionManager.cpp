@@ -768,8 +768,8 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
         //UUID obj = msg->dest_object();
 
-
-        if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success) {
+        if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Success)
+        {
             TimedMotionVector3f loc(
                 conn_resp.loc().t(),
                 MotionVector3f(conn_resp.loc().position(), conn_resp.loc().velocity())
@@ -849,6 +849,7 @@ SessionManager::SSTStreamPtr SessionManager::getSpaceStream(const ObjectReferenc
 
   return SSTStreamPtr();
 }
+
 
 void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference spaceobj) {
     using std::tr1::placeholders::_1;

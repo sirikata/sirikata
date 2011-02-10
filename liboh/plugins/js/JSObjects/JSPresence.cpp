@@ -359,11 +359,9 @@ Handle<v8::Value> toString(const v8::Arguments& args)
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-
     // Look up for the per space data
     //for now just print the space id
-    String s = mStruct->getSporef()->toString();
-    return v8::String::New(s.c_str(), s.length());
+    return mStruct->toString();
 }
 
 

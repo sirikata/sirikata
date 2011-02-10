@@ -72,7 +72,6 @@
 #define FIXME_GET_SPACE_OREF() \
     HostedObject::SpaceObjRefVec spaceobjrefs;              \
     mParent->getSpaceObjRefs(spaceobjrefs);                 \
-    assert(spaceobjrefs.size() == 1);                 \
     SpaceID space = (spaceobjrefs.begin())->space(); \
     ObjectReference oref = (spaceobjrefs.begin())->object();
 
