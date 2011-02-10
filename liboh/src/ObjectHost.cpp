@@ -84,7 +84,8 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
     }
 }
 
-ObjectHost::~ObjectHost() {
+ObjectHost::~ObjectHost()
+{
     {
         HostedObjectMap objs;
         mHostedObjects.swap(objs);
@@ -168,6 +169,7 @@ void ObjectHost::connect(
     bool with_query = init_sa != SolidAngle::Max;
 
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
+
     mSessionManagers[space]->connect(
         sporef, loc, orient, bnds, with_query, init_sa, mesh,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, connected_cb),

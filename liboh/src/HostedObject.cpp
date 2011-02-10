@@ -899,7 +899,7 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 {
     assert(source_ep.space() == dest_ep.space());
     SpaceObjectReference sporef(source_ep.space(), source_ep.object());
-    return mObjectHost->send(sporef,source_ep.space(), (Sirikata::uint16)source_ep.port(), dest_ep.object().getAsUUID(),(Sirikata::uint16) dest_ep.port(), payload);
+    return mObjectHost->send(sporef,source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(),dest_ep.port(), payload);
 }
 
 

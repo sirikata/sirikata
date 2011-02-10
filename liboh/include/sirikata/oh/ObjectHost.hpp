@@ -181,10 +181,7 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 
-    //void updateAddressable() const;
-
-
-		void persistEntityState(const String&);
+    void persistEntityState(const String&);
 
   private:
     // Session Management Implementation

@@ -648,7 +648,6 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
     FIXME_GET_SPACE_OREF();
 
     HostedObjectPtr obj = HostedObject::construct<HostedObject>(mParent->context(), mParent->getObjectHost(), UUID::random());
-    obj->init();
     if (eci.scriptType != "")
         obj->initializeScript(eci.scriptType, eci.scriptOpts);
 
@@ -1687,9 +1686,9 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
 
     int presToke = presenceToken;
     ++presenceToken;
-    mParent->connect(space,startingLoc,bs, newMesh,mParent->getUUID(),NULL,presToke);
+    mParent->connect(space,startingLoc,bs, newMesh,UUID::null(),NULL,presToke);
 
-
+    
     //create a presence object associated with this presence and return it;
     
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this, callback,presToke);    
