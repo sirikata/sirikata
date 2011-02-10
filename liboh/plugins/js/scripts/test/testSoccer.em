@@ -44,6 +44,20 @@ function setVelocity(player,angle,speed)
     player.setVelocity(newVeloc);
 }
 
+function setVelocityToCenter(ball,center,speed)
+{
+    var ballPos = ball.getPosition();
+    var unNormalizedVeloc = new util.Vec3(center.x - ballPos.x, center.y - ballPos.y, center.z - ballPos.z);
+    var normalizedVeloc = unNormalizedVeloc.normal();
+    system.print("\n\nunnormal: " + unNormalizedVeloc + "\n\n");
+    system.print("\nnormal: " + normalizedVeloc + "\n\n");
+    
+    normalizedVeloc.x = normalizedVeloc.x*speed;
+    normalizedVeloc.y = normalizedVeloc.y*speed;
+    normalizedVeloc.z = normalizedVeloc.z*speed;
+    ball.setVelocity(normalizedVeloc);
+}
+
 
 
 function createTeamObject(ball)
@@ -52,11 +66,12 @@ function createTeamObject(ball)
     team.count = 0;
     team.maxPlayers = 11;
     team.kickLock = false;
+    team.playerRadius = 3;
     
     team.playerMesh = "meerkat:///danielrh/Poisonbird.dae";
     team.ball = ball;
     team.center = ball.getPosition();
-    team.radius = 30;
+    team.radius = 15;
     team.playerSpeed = .5;
     team.ballSpeed = 1;
     team.allPlayers = new Array();
@@ -64,6 +79,7 @@ function createTeamObject(ball)
     team.addPlayer = function(newPlayer)
     {
         team.allPlayers.push(newPlayer);
+        newPlayer.whichPlayer = team.count;
         if (team.count == 0)
         {
             team.captain = newPlayer;
@@ -81,13 +97,19 @@ function createTeamObject(ball)
         var dist = playerToWander.distance(team.center);        
         if (dist > team.radius)
         {
-            baseAngle = getBaseAngle(playerToWander.getPosition(),team.center,dist);
-            maxAngle  = getMaxAngle(playerToWander.getPosition(),team.center,dist);
+            setVelocityToCenter(playerToWander,team.center,team.playerSpeed);
         }
-        
-        angle = baseAngle + (maxAngle - baseAngle)*util.rand();
-        setVelocity(playerToWander,angle,team.playerSpeed);
-        system.timeout(team.playerWanderPeriod,null,team.playerWander);
+        else
+        {
+            angle = baseAngle + (maxAngle - baseAngle)*util.rand();
+            setVelocity(playerToWander,angle,team.playerSpeed);
+        }            
+
+        system.timeout(team.playerWanderPeriod,null,
+                       function ()
+                       {
+                         team.playerWander(playerToWander);
+                       });
     };
 
     team.kickBall = function(playerToKick)
@@ -103,38 +125,39 @@ function createTeamObject(ball)
     {
         team.kickLock = true;
         playerToFetch.setPosition(team.ball.getPosition());
-        var dist = team.ball.distance(team.center);
-        var angle = getAngle(team.ball.getPosition(),team.center,dist);
-        setVelocity(team.ball,angle,team.ballSpeed);
+        setVelocityToCenter(team.ball,team.center,team.ballSpeed);
+        team.kickLock = false;
     };
 
     return team;
 }
 
-mTeam = createTeamObject(system.presences[0]); 
-
-for (var s=0; s < mTeam.maxPlayers; ++s)
+mTeam = createTeamObject(system.presences[0]);
+function waitForJoin(presJoined)
 {
-    var newPres = system.create_presence(mTeam.playerMesh,presAdded);
-
     var predicate = function()
     {
-        return newPres.isConnected;
+        return presJoined.isConnected;
     };
-
 
     var callbacker = function()
     {
-        mTeam.addPlayer(newPres);
+        mTeam.addPlayer(presJoined);
     };
-    
-    var whener = util.create_when(
+
+    util.create_when(
         predicate,
         callbacker,
         5,
-        newPres);
+        presJoined);
 }
 
+teamArray = new Array();
+for (var s=0; s < mTeam.maxPlayers; ++s)
+{
+    teamArray.push(system.create_presence(mTeam.playerMesh,presAdded));
+    waitForJoin(teamArray[s]);
+}
 
 
 var predTeamBegin = function()
@@ -155,15 +178,73 @@ util.create_when(
 
 
 
+
+function ballNearKick(player,team)
+{
+    //when ball is near a player, player locks it and tries to kick it.
+    var ballNearPred = function()
+    {
+        if ((team.ball.distance(player.getPosition())  < team.playerRadius) &&
+            (! team.kickLock) &&
+            (team.ball.distance(team.center) < team.radius))
+        {
+
+            return true;
+        }
+
+        return false;
+    };
+
+    var ballNearCB = function()
+    {
+        team.kickBall(player);
+    };
+
+    util.create_when(
+        ballNearPred,
+        ballNearCB,
+        .5,
+        player);
+}
+
 function playSoccer(team)
 {
-    system.print("\n\ngot into the playsoccer function\n\n");
-
+    //get players to wander around
     for (var s=0; s < team.allPlayers.length; ++s)
     {
-        //system.print("\n\nprinting\n\n");
+        var whichPlayer = team.allPlayers[s].whichPlayer;
+        system.print("\n\nBeginning wander for player" + whichPlayer+ "\n\n");
         team.playerWander(team.allPlayers[s]);            
     }
+
+    //when ball is near player, player kicks it.
+    for (var t=0; t < team.allPlayers.length; ++t)
+    {
+        ballNearKick(team.allPlayers[t],team);
+    }
+
+    //when ball goes out of play, captain kicks it back
+    var ballGonePred = function()
+    {
+        if (team.ball.distance(team.center) > team.radius)
+        {
+            return true;
+        }
+
+        return false;
+    };
+
+    var ballGoneCB = function()
+    {
+        team.fetchBall(team.captain);
+    };
+
+    util.create_when(
+        ballGonePred,
+        ballGoneCB,
+        5,
+        team.ball);
+    
 }
 
 
