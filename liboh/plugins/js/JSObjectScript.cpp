@@ -1698,32 +1698,6 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
 }
 
    
-
-// void JSObjectScript::create_presence(const SpaceID& new_space,std::string new_mesh)
-// {
-//   // const HostedObject::SpaceSet& spaces = mParent->spaces();
-//   // SpaceID spaceider = *(spaces.begin());
-
-//   FIXME_GET_SPACE_OREF();
-//   const BoundingSphere3f& bs = BoundingSphere3f(Vector3f(0, 0, 0), 1);
-
-//   //mParent->connectToSpace(new_space, mParent->getSharedPtr(), mParent->getLocation(spaceider),bs, mParent->getUUID());
-
-//   //FIXME: may want to start in a different place.
-//   Location startingLoc = mParent->getLocation(space,oref);
-
-//   //mParent->connect(new_space,startingLoc,bs, new_mesh,mParent->getUUID());
-
-//   NOT_IMPLEMENTED(js);// Must fix create_presence to use new connect interface
-//   assert(false);
-
-//   //FIXME: will need to add this presence to the presences vector.
-//   //but only want to do so when the function has succeeded.
-// }
-
-
-
-
 void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef,const Quaternion& quat)
 {
     mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
