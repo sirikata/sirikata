@@ -130,7 +130,6 @@ bool JSWhenStruct::evalPred()
     if (! returnedBool)
     {
         JSLOG(error,"Error in evalPred of JSWhenStruct.cpp.  Predicate did not return bool.  Suspending when statement");
-        suspend();
         return false;
     }
 

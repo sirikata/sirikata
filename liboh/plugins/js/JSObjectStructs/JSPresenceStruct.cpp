@@ -12,7 +12,8 @@ namespace JS {
 
 //this constructor is called when the presence associated
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback, int presenceToken)
- :  mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
+ :  JSWatchable(),
+    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
     jsObjScript(parent),
     sporef(NULL),
     isConnected(false),
@@ -22,14 +23,22 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Functi
 }
 
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, int presenceToken)
- : jsObjScript(parent),
+ : JSWatchable(),
+   jsObjScript(parent),
    sporef(new SpaceObjectReference(_sporef)),
    isConnected(true),
    hasConnectedCallback(false),
    mPresenceToken(presenceToken)
 {
+    setFlag();
 }
 
+
+v8::Handle<v8::Value> JSPresenceStruct::getIsConnectedV8()
+{
+    v8::HandleScope handle_scope;
+    return v8::Boolean::New(isConnected);
+}
 
 
 bool JSPresenceStruct::getIsConnected()
@@ -49,6 +58,7 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     if (getIsConnected())
         JSLOG(error, "Error when calling connect on presence.  The presence was already connected.");
 
+    setFlag();
     isConnected = true;
     sporef = new SpaceObjectReference(_sporef);
 
@@ -101,6 +111,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 
 v8::Handle<v8::Value> JSPresenceStruct::setPositionFunction(Vector3f newPos)
 {
+    setFlag();
     jsObjScript->setPositionFunction(sporef, newPos);
     return v8::Undefined();
 }
@@ -217,6 +228,8 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_getPosition()
     if (!getIsConnected())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling getPosition on presence.  The presence is not connected to any space, and therefore does not have any position.")));
 
+    setFlag();
+        
     return jsObjScript->getPositionFunction(sporef);
 }
 

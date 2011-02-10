@@ -5,16 +5,17 @@
 #include <v8.h>
 
 #include "JSContextStruct.hpp"
-
+#include "JSWatchable.hpp"
 namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 
-struct JSPresenceStruct
-{
 
+//note: only position and isConnected will actually set the flag of the watchable
+struct JSPresenceStruct :  public JSWatchable
+{
     JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,int presenceToken); //isConnected is false using this:
                                               //have no sporef
     JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef,int presenceToken);
@@ -31,6 +32,7 @@ struct JSPresenceStruct
 
 
     bool getIsConnected();
+    v8::Handle<v8::Value> getIsConnectedV8();
     
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
 

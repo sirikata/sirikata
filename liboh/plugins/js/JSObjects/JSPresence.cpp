@@ -6,6 +6,7 @@
 #include "JSInvokableObject.hpp"
 #include <sirikata/core/transfer/URI.hpp>
 #include "JSObjectsUtils.hpp"
+#include "../JSLogging.hpp"
 
 using namespace v8;
 
@@ -76,6 +77,23 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
 
     return mStruct->registerOnProxAddedEventHandler(cb);
+}
+
+v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info)
+{
+    String errorMessage = "Error in isConnectedGetter while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(info.Holder(),errorMessage);
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jspres->getIsConnectedV8();
+}
+
+void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSetTo,const AccessorInfo& info)
+{
+    String errorMessage = "Error.  Cannot write to isConnected variable.";
+    JSLOG(error, errorMessage);
+    //return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 }
 
 

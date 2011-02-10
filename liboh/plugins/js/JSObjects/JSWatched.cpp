@@ -14,18 +14,6 @@ namespace JSWatched{
 v8::Handle<v8::Value>WatchedGet(v8::Local<v8::String> name,const AccessorInfo& info)
 {
     //don't care about this;
-    // v8::Handle<v8::Object> actualObject  = info.Holder();
-    // if (!actualObject->Has(name))
-    // {
-    //     String nameString,dummyError,errorMessage;
-    //     decodeString(name,nameString,dummyError);
-    //     errorMessage = "Error in WatchedGet of JSWatched.cpp: object does not contain field " + nameString;
-    //     return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
-    // }
-
-    // return actualObject->Get(name);
-
-
     String errorMessage = "Error in WathcedSet of JSWatched.cpp: cannot decode jswatcedstruct.  ";
     JSWatchedStruct* jswatched = JSWatchedStruct::decodeWatchedStruct(info.Holder(),errorMessage);
     if (jswatched == NULL)
@@ -45,23 +33,6 @@ v8::Handle<v8::Value>WatchedSet(v8::Local<v8::String> name,v8::Local<v8::Value> 
 
     return jswatched->setInternal(name,value);
 }
-    
-//     if (!actualObject->Has(name))
-//     {
-//         String nameString,dummyError,errorMessage;
-//         decodeString(name,nameString,dummyError);
-//         errorMessage = "Error in WatchedGet of JSWatched.cpp: object does not contain field " + nameString;
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
-//     }
-
-
-//     actualObject->Set(name,value);
-//     lkjs;
-    
-//     jswatched->setFlag();
-//     return value;
-// }
-
 
 
 
