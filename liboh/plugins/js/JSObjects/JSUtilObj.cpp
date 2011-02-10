@@ -120,10 +120,6 @@ v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args)
     v8::Handle<v8::Value> toSqrt = args[0];
     
     double d_toSqrt = NumericExtract(toSqrt);
-    
-    
-    std::cout<<"\n\nThis is number to acos: "<<d_toSqrt<<"\n\n";
-    std::cout.flush();
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
     return v8::Number::New(acos(d_toSqrt));
@@ -138,9 +134,6 @@ v8::Handle<v8::Value> ScriptCosFunction(const v8::Arguments& args)
     
     double d_toSqrt = NumericExtract(toSqrt);
     
-    
-    std::cout<<"\n\nThis is number to cos: "<<d_toSqrt<<"\n\n";
-    std::cout.flush();
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
     return v8::Number::New(cos(d_toSqrt));
@@ -155,9 +148,6 @@ v8::Handle<v8::Value> ScriptSinFunction(const v8::Arguments& args)
     
     double d_toSqrt = NumericExtract(toSqrt);
     
-    
-    std::cout<<"\n\nThis is number to sin: "<<d_toSqrt<<"\n\n";
-    std::cout.flush();
 
     return v8::Number::New(sin(d_toSqrt));
 }
@@ -171,9 +161,6 @@ v8::Handle<v8::Value> ScriptAsinFunction(const v8::Arguments& args)
     
     double d_toSqrt = NumericExtract(toSqrt);
     
-    
-    std::cout<<"\n\nThis is number to asin: "<<d_toSqrt<<"\n\n";
-    std::cout.flush();
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
     return v8::Number::New(asin(d_toSqrt));
@@ -189,8 +176,6 @@ v8::Handle<v8::Value> ScriptPowFunction(const v8::Arguments& args)
     double exponent = NumericExtract(args[1]);
 
     double returner = pow(base,exponent);
-    std::cout<<"\n\nThis is the value of the math: "<<returner<<"\n\n";
-    std::cout.flush();
     
     return v8::Number::New( returner );
 }

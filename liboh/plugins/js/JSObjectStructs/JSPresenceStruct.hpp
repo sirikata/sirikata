@@ -40,6 +40,8 @@ struct JSPresenceStruct :  public JSWatchable
     v8::Handle<v8::Value> struct_setVelocity(const Vector3f& newVel);
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries);
 
+    v8::Handle<v8::Value> distance(Vector3d* distTo);
+    
     v8::Handle<v8::Value> struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast);
     
     void addAssociatedContext(JSContextStruct*);

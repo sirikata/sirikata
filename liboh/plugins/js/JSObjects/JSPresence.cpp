@@ -79,6 +79,33 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
     return mStruct->registerOnProxAddedEventHandler(cb);
 }
 
+v8::Handle<v8::Value>distance(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to distance method of presence")));
+
+    String errorMessage = "Error in distance method of JSPresence.cpp.  Cannot decode presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This(),errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    
+    if (! args[0]->IsObject())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in dist of JSPresence.cpp.  Argument should be an objet.")));
+
+    v8::Handle<v8::Object> argObj = args[0]->ToObject();
+    
+    bool isVec3 = Vec3Validate(argObj);
+    if (! isVec3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Presence needs to be a vec3")));
+
+    Vector3d vec3 = Vec3Extract(argObj);
+    
+    return jspres->distance(&vec3);
+    
+}
+
 v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info)
 {
     String errorMessage = "Error in isConnectedGetter while decoding presence.  ";

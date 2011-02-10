@@ -20,7 +20,12 @@ JSWatchable* decodeWatchable(v8::Handle<v8::Value> toDecode, String & errorMessa
     errorMessage += " Error in decodeWatchable of JSObjectsUtils.cpp.  ";
     JSWatchable* returner = (JSWatchable*)(JSVisibleStruct::decodeVisible(toDecode, errorMessage));
     if (returner == NULL)
-        returner = (JSWatchable*)(JSWhenStruct::decodeWhenStruct(toDecode, errorMessage));
+    {
+        returner = (JSWatchable*)(JSWatchedStruct::decodeWatchedStruct(toDecode, errorMessage));
+        if (returner == NULL)
+            returner = (JSWatchable*)(JSPresenceStruct::decodePresenceStruct(toDecode,errorMessage));
+    }
+    
 
     return returner;
 }

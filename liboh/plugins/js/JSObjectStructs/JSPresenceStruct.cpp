@@ -9,7 +9,6 @@ namespace Sirikata {
 namespace JS {
 
 
-
 //this constructor is called when the presence associated
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback, int presenceToken)
  :  JSWatchable(),
@@ -125,6 +124,17 @@ v8::Handle<v8::Value>JSPresenceStruct::getVelocityFunction()
 {
     return jsObjScript->getVelocityFunction(sporef);
 }
+
+v8::Handle<v8::Value> JSPresenceStruct::distance(Vector3d* distTo)
+{
+    if (!getIsConnected())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling distance on presence.  The presence is not connected to any space, and therefore does not have any position.")));
+
+    setFlag();
+    
+    return jsObjScript->getDistanceFunction(sporef,distTo);
+}
+
 
 
 v8::Handle<v8::Value> JSPresenceStruct::setConnectedCB(v8::Handle<v8::Function> newCB)

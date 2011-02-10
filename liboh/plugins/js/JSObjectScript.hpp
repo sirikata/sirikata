@@ -148,7 +148,8 @@ public:
 
     void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
     v8::Handle<v8::Value> getPositionFunction(const SpaceObjectReference* sporef);
-
+    v8::Handle<v8::Value> getDistanceFunction(const SpaceObjectReference* sporef, Vector3d* distTo);
+    
     void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
     v8::Handle<v8::Value> getVelocityFunction(const SpaceObjectReference* sporef);
 

@@ -17,14 +17,17 @@ function newPresCallback()
 
 var newPres = system.create_presence(myMesh,newPresCallback);
 
-function predicate()
+
+var predicate = function()
 {
     return newPres.isConnected;
-}
-function toDo()
+};
+
+
+var toDo = function ()
 {
     newPresMove(newPres);
-}
+};
 
 var whener = util.create_when(
     predicate,

@@ -142,7 +142,8 @@ void JSWhenStruct::runCallback()
     v8::HandleScope handle_scope;
     
     //the function passed in shouldn't take any arguments
-    mObjScript->executeInContext(mContext,mCB,0,NULL);
+    mObjScript->handleTimeoutContext(mCB,NULL);
+    //mObjScript->executeInContext(mContext,mCB,0,NULL);
 }
 
 

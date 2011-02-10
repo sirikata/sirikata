@@ -384,6 +384,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   //send broadcast message
   mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
+  mPresenceTemplate->Set(v8::String::New("distance"),v8::FunctionTemplate::New(JSPresence::distance));
+  
 }
 
 
