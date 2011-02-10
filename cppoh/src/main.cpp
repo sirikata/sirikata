@@ -31,6 +31,8 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 

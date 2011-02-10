@@ -248,7 +248,7 @@ void CSVObjectFactory::generate()
                 }
 
 
-                obj->init();
+                //obj->init();
                 if (scriptType != "")
                     obj->initializeScript(scriptType, scriptOpts);
 

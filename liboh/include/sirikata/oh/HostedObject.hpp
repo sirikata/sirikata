@@ -35,7 +35,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
@@ -120,7 +120,7 @@ protected:
 
 
     int mNextSubscriptionID;
-    UUID mInternalObjectReference;
+    UUID mInternalObjectReference2;
 
     ODP::DelegateService* mDelegateODPService;
 
@@ -182,10 +182,11 @@ public:
     /// Attempt to restore this item from database including script
     //void initializeRestoreFromDatabase(const SpaceID&spaceID);
 
-    /** Initializes this HostedObject, particularly to get it set up with the
+    /* Initializes this HostedObject, particularly to get it set up with the
      *  underlying ObjectHost.
      */
-    void init();
+    //void init();  Removed: will just connect to underlying object host during
+    //connect call
     void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
 
@@ -217,9 +218,9 @@ public:
         persistence messages.
     */
     
-    // const UUID &getUUID() const {
-    //     return mInternalObjectReference;
-    // }
+    const UUID &getUUID2() const {
+        return mInternalObjectReference2;
+    }
 
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
@@ -366,7 +367,7 @@ public:
     void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
-    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
     void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh);
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);

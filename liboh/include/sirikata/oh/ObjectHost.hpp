@@ -34,6 +34,7 @@
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
@@ -66,7 +67,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
-    typedef std::tr1::unordered_map<SpaceObjectReference, HostedObjectPtr, UUID::Hasher> HostedObjectMap;
+    typedef std::tr1::unordered_map<SpaceObjectReference, HostedObjectPtr, SpaceObjectReference::Hasher> HostedObjectMap;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -119,7 +120,7 @@ public:
 
     /** Connect the object to the space with the given starting parameters. */
     void connect(
-        SpaceObjectReference& sporef, const SpaceID& space,
+        const SpaceObjectReference& sporef, const SpaceID& space,
         const TimedMotionVector3f& loc,
         const TimedMotionQuaternion& orient,
         const BoundingSphere3f& bnds,
@@ -146,6 +147,7 @@ public:
     /** Primary ODP send function. */
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+ 
 
 
 
@@ -153,9 +155,9 @@ public:
         talk to objects/services which are not part of any space.
         Done automatically by HostedObject::initialize* functions.
     */
-    void registerHostedObject(const SpaceObjectReference& sporef, const HostedObjectPtr &obj);
+    void registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj);
     /// Unregister a private UUID. Done automatically by ~HostedObject.
-    void unregisterHostedObject(const SpaceObjectReference &objID);
+    void unregisterHostedObject(const SpaceObjectReference& sporef_uuid);
 
     /** Lookup HostedObject by private UUID. */
     HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
@@ -163,7 +165,7 @@ public:
     /** Lookup the SST stream for a particular object. */
     typedef Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
-    SSTStreamPtr getSpaceStream(const SpaceID& space, const UUID& internalID);
+    SSTStreamPtr getSpaceStream(const SpaceID& space, const ObjectReference& internalID);
 
     virtual void start();
     virtual void stop();

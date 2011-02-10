@@ -38,7 +38,7 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
-
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
@@ -76,7 +76,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mObjectScript(NULL),
    mPresenceData(new PresenceDataMap),
    mNextSubscriptionID(0),
-   mInternalObjectReference(objectName),
+   mInternalObjectReference2(objectName),
    mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
 {
     mContext->add(&mOrphanLocUpdates);
@@ -126,9 +126,11 @@ HostedObject::~HostedObject() {
     delete mPresenceData;
 }
 
-void HostedObject::init() {
-    mObjectHost->registerHostedObject(getSharedPtr());
-}
+// void HostedObject::init() {
+//     mObjectHost->registerHostedObject(
+//         lkjs;
+//         getSharedPtr());
+// }
 
 void HostedObject::destroy()
 {
@@ -137,8 +139,10 @@ void HostedObject::destroy()
         mObjectScript=NULL;
     }
 
+    for (PresenceDataMap::iterator iter = mPresenceData->begin(); iter != mPresenceData->end(); ++iter)
+        mObjectHost->unregisterHostedObject(iter->first);
+
     mPresenceData->clear();
-    mObjectHost->unregisterHostedObject(mInternalObjectReference);
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
@@ -184,8 +188,6 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
         smapIter->second.proxyManager->getAllObjectReferences(ss);
     }
 }
-
-
 
 
 
@@ -258,14 +260,14 @@ bool myisalphanum(char c) {
 }
 
 
-void HostedObject::initializeScript(const String& script, const String& args, const SpaceObjectReference sporef)
+void HostedObject::initializeScript(const String& script, const String& args)
 {
     if (mObjectScript) {
-        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for " << sporef << "(internal id)");
+        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for object");
         return;
     }
 
-    SILOG(oh,debug,"[HO] Creating a script object for " << sporef << "(internal id)");
+    SILOG(oh,debug,"[HO] Creating a script object for object");
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
@@ -283,12 +285,12 @@ void HostedObject::initializeScript(const String& script, const String& args, co
         }
         else
         {
-            SILOG(oh,debug,"[HO] Failed to create script for " << sporef << "(space object reference) because incorrect script type");
+            SILOG(oh,debug,"[HO] Failed to create script for object because incorrect script type");
         }
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script);
     if (mgr) {
-        SILOG(oh,debug,"[HO] Creating script for " << sporef << "(spcae object reference) with args of "<<args);
+        SILOG(oh,debug,"[HO] Creating script for object with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         mObjectScript->scriptTypeIs(script);
         mObjectScript->scriptOptionsIs(args);
@@ -323,11 +325,15 @@ void HostedObject::connect(
     if (spaceID == SpaceID::null())
         return;
 
+    SpaceObjectReference connectingSporef (spaceID,ObjectReference(UUID::random()));
+    mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
+
+
     // Note: we always use Time::null() here.  The server will fill in the
     // appropriate value.  When we get the callback, we can fix this up.
     Time approx_server_time = Time::null();
     mObjectHost->connect(
-        getSharedPtr(), spaceID,
+        connectingSporef, spaceID,
         TimedMotionVector3f(approx_server_time, MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
         TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
@@ -368,7 +374,6 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token)
 {
     // FIXME this never gets cleaned out on disconnect
@@ -390,7 +395,7 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,int token)
 {
     if (info.server == NullServerID) {
-        HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
+        HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference2.toString() << ") to space " << space);
         return;
     }
 
@@ -501,9 +506,8 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
         return false;
 
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
-    {
-        initializeScript(scriptType,"",SpaceObjectReference(dst.space(),dst.object()));
-    }
+        initializeScript(scriptType,"");
+
 
     return true;
 }
@@ -617,7 +621,7 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
         
         CONTEXT_OHTRACE(objectLoc,
-            sporef,
+            sporef.object().getAsUUID(),
             //getUUID(),
             update.object(),
             loc
@@ -642,7 +646,7 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         meshptr = &mesh;
     }
 
-    processLocationUpdate(space, proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr);
+    processLocationUpdate(sporef.space(), proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr);
 }
 
 void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh) {
@@ -688,7 +692,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
             continue;
         }
 
-        processLocationUpdate(space, proxy_obj, update);
+        processLocationUpdate(spaceobj, proxy_obj, update);
     }
 
     return true;
@@ -711,7 +715,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
-                spaceobj,
+                spaceobj.object().getAsUUID(),
                 //getUUID(),
                 addition.object(),
                 true,
@@ -770,7 +774,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             proxy_obj->invalidate();
 
             CONTEXT_OHTRACE(prox,
-                spaceobj,
+                spaceobj.object().getAsUUID(),
                 //getUUID(),
                 removal.object(),
                 false,
@@ -894,7 +898,8 @@ ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* par
 bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload)
 {
     assert(source_ep.space() == dest_ep.space());
-    return mObjectHost->send(getSharedPtr(), source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(), dest_ep.port(), payload);
+    SpaceObjectReference sporef(source_ep.space(), source_ep.object());
+    return mObjectHost->send(sporef,source_ep.space(), (Sirikata::uint16)source_ep.port(), dest_ep.object().getAsUUID(),(Sirikata::uint16) dest_ep.port(), payload);
 }
 
 

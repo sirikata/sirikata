@@ -31,6 +31,7 @@
  */
 
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <boost/thread.hpp>
@@ -44,7 +45,7 @@
 #include <sirikata/core/network/StreamFactory.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/proxyobject/ConnectionEventListener.hpp>
-
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/service/Context.hpp>
 
 #define OH_LOG(lvl,msg) SILOG(oh,lvl,"[OH] " << msg)
@@ -119,6 +120,7 @@ void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, 
 }
 
 
+
 void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // Either we know the object and deliver, or somethings gone wacky
     HostedObjectPtr obj = getHostedObject(sporef_internalID);
@@ -151,8 +153,7 @@ SpaceID ObjectHost::getDefaultSpace()
 // Primary HostedObject API
 
 void ObjectHost::connect(
-    //HostedObjectPtr obj, const SpaceID& space,
-    SpaceObjectReference& sporef, const SpaceID& space,
+    const SpaceObjectReference& sporef, const SpaceID& space,
     const TimedMotionVector3f& loc,
     const TimedMotionQuaternion& orient,
     const BoundingSphere3f& bnds,
@@ -213,16 +214,20 @@ bool ObjectHost::send(SpaceObjectReference& sporef_src, const SpaceID& space, co
     return mSessionManagers[space]->send(sporef_src, src_port, dest, dest_port, payload);
 }
 
-void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef, HostedObjectPtr obj) {
-    mHostedObjects.insert(HostedObjectMap::value_type(obj->getUUID(), obj));
+void ObjectHost::registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj)
+{
+    mHostedObjects.insert(HostedObjectMap::value_type(sporef_uuid, obj));
 }
-void ObjectHost::unregisterHostedObject(SpaceObjectReference& sporef) {
-    HostedObjectMap::iterator iter = mHostedObjects.find(sporef);
+void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid)
+{
+    HostedObjectMap::iterator iter = mHostedObjects.find(sporef_uuid);
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
         mHostedObjects.erase(iter);
     }
 }
+
+
 HostedObjectPtr ObjectHost::getHostedObject(const SpaceObjectReference& sporef) const {
     HostedObjectMap::const_iterator iter = mHostedObjects.find(sporef);
     if (iter != mHostedObjects.end()) {
