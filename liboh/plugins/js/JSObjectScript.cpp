@@ -707,7 +707,6 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
 }
 
 
-
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)
 {
@@ -733,16 +732,19 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
+
+
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
 
-    // assume the input string to be a valid js rather than emerson
+    assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
     #endif
 
-    
+
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
     
     // Compile
     //note, because using compile command, will run in the mContext context
@@ -756,7 +758,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     // Execute
     v8::Handle<v8::Value> result = script->Run();
-    if (result.IsEmpty()) {
+    if (try_catch.HasCaught()) {
         v8::String::Utf8Value error(try_catch.Exception());
         JSLOG(error, "Uncaught exception: " << *error);
         return try_catch.Exception();
@@ -771,6 +773,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     checkWatchables();
     return result;
 }
+
 
 
 //this function runs through 
@@ -807,7 +810,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
   context ctx.  It then calls the newly recompiled function from within ctx with
   args specified by argv and argc.
  */
-
 void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
 {
     v8::HandleScope handle_scope;
@@ -816,36 +818,32 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
     TryCatch try_catch;
 
 
-    v8::String::Utf8Value v8Source( cb->ToString());
-    const char* cMsg = ToCString(v8Source);
-
-    internalEval(ctx,String(ToCString(v8Source)));
-
-    v8::Handle<v8::Value> funcName = cb->GetName();
-    v8::String::Utf8Value v8funcNameString (funcName->ToString());
-    const char* funcNameCStr = ToCString(v8funcNameString);
-
-    if ( ! v8::Context::GetCurrent()->Global()->Has(funcName->ToString()))
+    // v8::String::Utf8Value v8Source( cb->ToString());
+    // const char* cMsg = ToCString(v8Source);
+    String errorMessage= "Cannot interpret callback function as string while executing in context.  ";
+    String v8Source;
+    bool stringDecodeSuccessful = decodeString(cb->ToString(),v8Source,errorMessage);
+    if (! stringDecodeSuccessful)
     {
-        JSLOG(error, "Uncaught exception: do not have the function name: "<< funcNameCStr <<" in current context.");
+        JSLOG(error, errorMessage);
+        return;        
+    }
+
+
+    v8Source = "(" + v8Source;
+    v8Source += ");";
+
+    
+    v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,v8Source);
+
+    
+    if (! compileFuncResult->IsFunction())
+    {
+        JSLOG(error, "Uncaught exception: function passed in did not compile to a function");
         return;
     }
 
-    v8::Handle<v8::Value> compiledFunctionValue = v8::Context::GetCurrent()->Global()->Get(funcName->ToString());
-    if (! compiledFunctionValue->IsObject())
-    {
-        JSLOG(error, "Uncaught exception: name is not associated with an object: "<< funcNameCStr <<" in current context.");
-        return;
-    }
-
-    v8::Handle<v8::Object>  compiledFunction = compiledFunctionValue->ToObject();
-    if (! compiledFunction->IsFunction())
-    {
-        JSLOG(error, "Uncaught exception: name is not associated with a function: "<< funcNameCStr <<" in current context.");
-        return;
-    }
-
-    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
+    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compileFuncResult);
 
     Handle<Value> result;
     bool targetGiven = false;
