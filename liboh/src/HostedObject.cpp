@@ -76,7 +76,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mObjectScript(NULL),
    mPresenceData(new PresenceDataMap),
    mNextSubscriptionID(0),
-   mInternalObjectReference2(objectName),
    mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
 {
     mContext->add(&mOrphanLocUpdates);
@@ -396,7 +395,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 {
     if (info.server == NullServerID)
     {
-        HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference2.toString() << ") to space " << space);
+        HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
 
@@ -435,7 +434,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
-    HO_LOG(warning,"Notifying of connected object" << mInternalObjectReference2.toString() << ") to space " << space);
+    HO_LOG(warning,"Notifying of connected object" << obj << " to space " << space);
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref, token);
 }
 

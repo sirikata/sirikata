@@ -120,7 +120,7 @@ protected:
 
 
     int mNextSubscriptionID;
-    UUID mInternalObjectReference2;
+
 
     ODP::DelegateService* mDelegateODPService;
 
@@ -218,9 +218,6 @@ public:
         persistence messages.
     */
     
-    const UUID &getUUID2() const {
-        return mInternalObjectReference2;
-    }
 
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);

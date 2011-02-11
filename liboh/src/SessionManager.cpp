@@ -215,14 +215,6 @@ ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObject
     return dest_server;
 }
 
-// UUID SessionManager::ObjectConnections::getInternalID(const ObjectReference& space_objid) const {
-//     InternalIDMap::const_iterator it = mInternalIDs.find(space_objid);
-//     if (it == mInternalIDs.end()) {
-//         // FIXME?
-//         return UUID::null();
-//     }
-//     return it->second;
-// }
 
 void SessionManager::ObjectConnections::invokeDeferredCallbacks() {
     for(DeferredCallbackList::iterator it = mDeferredCallbacks.begin(); it != mDeferredCallbacks.end(); it++)
