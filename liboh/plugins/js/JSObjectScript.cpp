@@ -756,32 +756,36 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     TryCatch try_catch;
 
     // Special casing emerson compilation
-    // #ifdef EMERSON_COMPILE
+    #ifdef EMERSON_COMPILE
 
-    // String em_script_str_new = em_script_str;
+    String em_script_str_new = em_script_str;
 
-    // if(em_script_str.empty())
-    //     return v8::Undefined();
+    if(em_script_str.empty())
+        return v8::Undefined();
 
-    // if(em_script_str.at(em_script_str.size() -1) != '\n')
-    // {
-    //     em_script_str_new.push_back('\n');
-    // }
+    if(em_script_str.at(em_script_str.size() -1) != '\n')
+    {
+        em_script_str_new.push_back('\n');
+    }
 
-    // emerson_init();
-    // String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-    // JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
-
-    // v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
-    // #else
-
-    // assume the input string to be a valid js rather than emerson
-    // v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
-    // #endif
+    emerson_init();
+    String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+    JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+    std::cout<<"\n\nDebugging:  Compiled JS script = \n" <<js_script_str<<"\n\n";
 
 
+
+    v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+    #else
+
+    assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
+    #endif
+
+
+    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
     
     // Compile
     //note, because using compile command, will run in the mContext context
@@ -866,13 +870,12 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
         return;        
     }
 
+
     v8Source = "(" + v8Source;
     v8Source += ");";
-    std::cout<<"\n\nThis is the v8source: "<<v8Source<<"\n\n";
+
     
     v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,v8Source);
-    //v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,String(ToCString(v8Source)));
-
 
     
     if (! compileFuncResult->IsFunction())
@@ -910,75 +913,6 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
     }
     
 }
-
-// void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
-// {
-//     v8::HandleScope handle_scope;
-//     v8::Context::Scope context_scope(ctx);
-
-//     TryCatch try_catch;
-
-
-//     v8::String::Utf8Value v8Source( cb->ToString());
-//     const char* cMsg = ToCString(v8Source);
-    
-//     v8::Handle<v8::Value> result =   internalEval(ctx,String(ToCString(v8Source)));
-
-//     lkjs;
-//     v8::Handle<v8::Value> funcName = cb->GetName();
-//     v8::String::Utf8Value v8funcNameString (funcName->ToString());
-//     const char* funcNameCStr = ToCString(v8funcNameString);
-
-//     if ( ! v8::Context::GetCurrent()->Global()->Has(funcName->ToString()))
-//     {
-//         JSLOG(error, "Uncaught exception: do not have the function name: "<< funcNameCStr <<" in current context.");
-//         return;
-//     }
-
-//     v8::Handle<v8::Value> compiledFunctionValue = v8::Context::GetCurrent()->Global()->Get(funcName->ToString());
-//     if (! compiledFunctionValue->IsObject())
-//     {
-//         JSLOG(error, "Uncaught exception: name is not associated with an object: "<< funcNameCStr <<" in current context.");
-//         return;
-//     }
-
-//     v8::Handle<v8::Object>  compiledFunction = compiledFunctionValue->ToObject();
-//     if (! compiledFunction->IsFunction())
-//     {
-//         JSLOG(error, "Uncaught exception: name is not associated with a function: "<< funcNameCStr <<" in current context.");
-//         return;
-//     }
-
-//     v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
-
-//     Handle<Value> result;
-//     bool targetGiven = false;
-//     if (target!=NULL)
-//     {
-//         if (((*target)->IsNull() || (*target)->IsUndefined()))
-//         {
-//             JSLOG(insane,"ProtectedJSCallback with target given.");
-//             result = funcInCtx->Call(*target, argc, argv);
-//             targetGiven = true;
-//         }
-//     }
-
-//     if (!targetGiven)
-//     {
-//         JSLOG(insane,"ProtectedJSCallback without target given.");
-//         result = funcInCtx->Call(ctx->Global(), argc, argv);
-//     }
-
-//     if (result.IsEmpty())
-//     {
-//         // FIXME what should we do with this exception?
-//         v8::String::Utf8Value error(try_catch.Exception());
-//         const char* cMsg = ToCString(error);
-//         JSLOG(error, "Uncaught exception: " << cMsg);
-//     }
-    
-// }
-
 
 
 
