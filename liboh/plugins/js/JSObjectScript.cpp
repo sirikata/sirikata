@@ -775,7 +775,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     // v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     // #else
 
-    // // assume the input string to be a valid js rather than emerson
+    // assume the input string to be a valid js rather than emerson
     // v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
     // #endif
