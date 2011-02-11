@@ -795,7 +795,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     // Execute
     v8::Handle<v8::Value> result = script->Run();
-    if (result.IsEmpty()) {
+    if (try_catch.HasCaught()) {
         v8::String::Utf8Value error(try_catch.Exception());
         JSLOG(error, "Uncaught exception: " << *error);
         return try_catch.Exception();
@@ -855,36 +855,33 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
     TryCatch try_catch;
 
 
-    v8::String::Utf8Value v8Source( cb->ToString());
-    const char* cMsg = ToCString(v8Source);
-
-    internalEval(ctx,String(ToCString(v8Source)));
-
-    v8::Handle<v8::Value> funcName = cb->GetName();
-    v8::String::Utf8Value v8funcNameString (funcName->ToString());
-    const char* funcNameCStr = ToCString(v8funcNameString);
-
-    if ( ! v8::Context::GetCurrent()->Global()->Has(funcName->ToString()))
+    // v8::String::Utf8Value v8Source( cb->ToString());
+    // const char* cMsg = ToCString(v8Source);
+    String errorMessage= "Cannot interpret callback function as string while executing in context.  ";
+    String v8Source;
+    bool stringDecodeSuccessful = decodeString(cb->ToString(),v8Source,errorMessage);
+    if (! stringDecodeSuccessful)
     {
-        JSLOG(error, "Uncaught exception: do not have the function name: "<< funcNameCStr <<" in current context.");
+        JSLOG(error, errorMessage);
+        return;        
+    }
+
+    v8Source = "(" + v8Source;
+    v8Source += ");";
+    std::cout<<"\n\nThis is the v8source: "<<v8Source<<"\n\n";
+    
+    v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,v8Source);
+    //v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,String(ToCString(v8Source)));
+
+
+    
+    if (! compileFuncResult->IsFunction())
+    {
+        JSLOG(error, "Uncaught exception: function passed in did not compile to a function");
         return;
     }
 
-    v8::Handle<v8::Value> compiledFunctionValue = v8::Context::GetCurrent()->Global()->Get(funcName->ToString());
-    if (! compiledFunctionValue->IsObject())
-    {
-        JSLOG(error, "Uncaught exception: name is not associated with an object: "<< funcNameCStr <<" in current context.");
-        return;
-    }
-
-    v8::Handle<v8::Object>  compiledFunction = compiledFunctionValue->ToObject();
-    if (! compiledFunction->IsFunction())
-    {
-        JSLOG(error, "Uncaught exception: name is not associated with a function: "<< funcNameCStr <<" in current context.");
-        return;
-    }
-
-    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
+    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compileFuncResult);
 
     Handle<Value> result;
     bool targetGiven = false;
@@ -913,6 +910,76 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
     }
     
 }
+
+// void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
+// {
+//     v8::HandleScope handle_scope;
+//     v8::Context::Scope context_scope(ctx);
+
+//     TryCatch try_catch;
+
+
+//     v8::String::Utf8Value v8Source( cb->ToString());
+//     const char* cMsg = ToCString(v8Source);
+    
+//     v8::Handle<v8::Value> result =   internalEval(ctx,String(ToCString(v8Source)));
+
+//     lkjs;
+//     v8::Handle<v8::Value> funcName = cb->GetName();
+//     v8::String::Utf8Value v8funcNameString (funcName->ToString());
+//     const char* funcNameCStr = ToCString(v8funcNameString);
+
+//     if ( ! v8::Context::GetCurrent()->Global()->Has(funcName->ToString()))
+//     {
+//         JSLOG(error, "Uncaught exception: do not have the function name: "<< funcNameCStr <<" in current context.");
+//         return;
+//     }
+
+//     v8::Handle<v8::Value> compiledFunctionValue = v8::Context::GetCurrent()->Global()->Get(funcName->ToString());
+//     if (! compiledFunctionValue->IsObject())
+//     {
+//         JSLOG(error, "Uncaught exception: name is not associated with an object: "<< funcNameCStr <<" in current context.");
+//         return;
+//     }
+
+//     v8::Handle<v8::Object>  compiledFunction = compiledFunctionValue->ToObject();
+//     if (! compiledFunction->IsFunction())
+//     {
+//         JSLOG(error, "Uncaught exception: name is not associated with a function: "<< funcNameCStr <<" in current context.");
+//         return;
+//     }
+
+//     v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
+
+//     Handle<Value> result;
+//     bool targetGiven = false;
+//     if (target!=NULL)
+//     {
+//         if (((*target)->IsNull() || (*target)->IsUndefined()))
+//         {
+//             JSLOG(insane,"ProtectedJSCallback with target given.");
+//             result = funcInCtx->Call(*target, argc, argv);
+//             targetGiven = true;
+//         }
+//     }
+
+//     if (!targetGiven)
+//     {
+//         JSLOG(insane,"ProtectedJSCallback without target given.");
+//         result = funcInCtx->Call(ctx->Global(), argc, argv);
+//     }
+
+//     if (result.IsEmpty())
+//     {
+//         // FIXME what should we do with this exception?
+//         v8::String::Utf8Value error(try_catch.Exception());
+//         const char* cMsg = ToCString(error);
+//         JSLOG(error, "Uncaught exception: " << cMsg);
+//     }
+    
+// }
+
+
 
 
 /*
