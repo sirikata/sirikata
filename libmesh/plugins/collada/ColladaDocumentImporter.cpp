@@ -989,19 +989,37 @@ bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
 }
 size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geomIndex, size_t primIndex) {
     using namespace COLLADAFW;
-    size_t retval=mEffects.size();
-    mEffects.push_back(MaterialEffectInfo());
+    size_t retval = -1;
     const Effect *effect=NULL;
     {
         const UniqueId & refmat= binding->getReferencedMaterial();
         IdMap::iterator matwhere=mMaterialMap.find(refmat);
+        bool found = false;
         if (matwhere!=mMaterialMap.end()) {
             ColladaEffectMap::iterator effectwhere = mColladaEffects.find(matwhere->second);
             if (effectwhere!=mColladaEffects.end()) {
                 effect=&effectwhere->second;
-            }else return retval;
-        }else return retval;
+                found = true;
+            }
+        }
+        if (!found) {
+            // Something's wrong, we can't find the effect from
+            // collada, return an empty one
+            retval=mEffects.size();
+            mEffects.push_back(MaterialEffectInfo());
+            return retval;
+        }
     }
+
+    // Here, we have the effect from collada, but we want to check if
+    // its a duplicate we've already translated.
+    IndicesMap::iterator converted_it = mConvertedEffects.find( effect->getUniqueId() );
+    if (converted_it != mConvertedEffects.end()) return converted_it->second;
+
+    // Otherwise, we need to create one.
+    retval=mEffects.size();
+    mEffects.push_back(MaterialEffectInfo());
+    // And translate it
     MaterialEffectInfo&mat = mEffects.back();
     CommonEffectPointerArray commonEffects = effect->getCommonEffects();
     bool allBlack=true;
@@ -1047,6 +1065,7 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         mat.textures.back().color.w=effect->getStandardColor().getAlpha();
     }
     COLLADA_LOG(insane, "ColladaDocumentImporter::finishEffect(" << effect << ") entered");
+    mConvertedEffects[effect->getUniqueId()] = retval;
     return retval;
 }
 
