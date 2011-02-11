@@ -94,7 +94,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
 
         for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
-            printf("      Primitive id: %d, indices: %d, type: %s\n", (int)p->materialId, (int)p->indices.size(), PrimitiveTypeToString(p->primitiveType));
+            printf("      Primitive: material: %d, indices: %d, type: %s\n", (int)p->materialId, (int)p->indices.size(), PrimitiveTypeToString(p->primitiveType));
         }
     }
 
@@ -154,6 +154,18 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
             }
         }
     }
+
+    // Compute the expected number of draw calls assuming no smart
+    // transformation is occuring. This should be:
+    // Number of instances * number of primitives in instance
+    // This really should trace from the root to make sure that all instances
+    // are actually drawn...
+    uint32 draw_calls = 0;
+    for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
+        draw_calls += md->geometry[ it->geometryIndex ].primitives.size();
+    }
+    printf("Estimated draw calls: %d\n", draw_calls);
+
 
     return input;
 }
