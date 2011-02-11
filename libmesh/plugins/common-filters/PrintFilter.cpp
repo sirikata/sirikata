@@ -51,6 +51,19 @@ struct NodeState {
     NodeIndex node;
     int32 curChild;
 };
+
+const char* PrimitiveTypeToString(SubMeshGeometry::Primitive::PrimitiveType type) {
+    switch (type) {
+      case SubMeshGeometry::Primitive::TRIANGLES: return "Triangles"; break;
+      case SubMeshGeometry::Primitive::TRISTRIPS: return "Triangle Strips"; break;
+      case SubMeshGeometry::Primitive::TRIFANS: return "Triangle Fans"; break;
+      case SubMeshGeometry::Primitive::LINESTRIPS: return "LineStrips"; break;
+      case SubMeshGeometry::Primitive::LINES: return "Lines"; break;
+      case SubMeshGeometry::Primitive::POINTS: return "Points"; break;
+      default: return "Unknown"; break;
+    }
+}
+
 }
 
 FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
@@ -81,7 +94,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
 
         for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
-            printf("      Primitive id: %d, indices: %d\n", (int)p->materialId, (int)p->indices.size());
+            printf("      Primitive id: %d, indices: %d, type: %s\n", (int)p->materialId, (int)p->indices.size(), PrimitiveTypeToString(p->primitiveType));
         }
     }
 
