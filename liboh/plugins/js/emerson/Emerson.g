@@ -146,9 +146,12 @@ functionExpression
 	;
 	
 formalParameterList
-	: '(' (LTERM* i1=Identifier (LTERM* ',' LTERM* i2=Identifier)*)? LTERM* ')' -> ^( FUNC_PARAMS $i1? $i2*)
+	//: '(' LTERM* i1=Identifier? (LTERM* ',' LTERM* i2=Identifier)* LTERM* ')' -> ^( FUNC_PARAMS $i1? $i2*)
+	//;
+        : '(' LTERM* (Identifier)? LTERM* ')' -> ^(FUNC_PARAMS Identifier?)
+	| '(' LTERM* i1=Identifier (',' LTERM* i2=Identifier)* LTERM* ')' -> ^(FUNC_PARAMS Identifier Identifier*)
 	;
-
+ 
 functionBody
  : '{' LTERM* '}' -> ^(EMPTY_FUNC_BODY)
 	| '{' LTERM* (sourceElements -> sourceElements) LTERM* '}'
@@ -386,9 +389,11 @@ callExpressionSuffix
 	;
 
 arguments
-	: '(' (LTERM* (assignmentExpression) (LTERM* ',' LTERM* assignmentExpression)*)? LTERM* ')' -> ^(ARGLIST assignmentExpression*) 
+        : '(' LTERM* (assignmentExpression)? LTERM* ')' -> ^(ARGLIST assignmentExpression?)
+	| '(' LTERM* e1=assignmentExpression (',' LTERM* e2=assignmentExpression)* LTERM* ')' -> ^(ARGLIST assignmentExpression assignmentExpression*)
 	;
-
+        
+	
 	
 indexSuffix
 	: '[' LTERM* expression LTERM* ']' -> ^(ARRAY_INDEX expression)

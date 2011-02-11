@@ -125,27 +125,25 @@ functionExpression
 	; 
 	
 formalParameterList
-	: ^( FUNC_PARAMS 
-	     (id1=Identifier
-									{
-						     APP((const char*)$id1.text->chars);
-											APP(" ");
+: ^(FUNC_PARAMS {APP(" "); })
+  | ^(FUNC_PARAMS 
+       Identifier
+       {APP((const char*)$Identifier.text->chars); }
+      )
 
-									}
-							)?		
-						(
-						 id2=Identifier
-							{
-									APP(", ");
-						   APP((const char*)$id2.text->chars);
-									APP(" ");
-							}
-						
-						)*
-						
-					)
-;
+  | ^(FUNC_PARAMS
+                (id1=Identifier {APP((const char*)$id1.text->chars); })
+                
+	       (
+                 {
+                   APP(", ");
+                 }
+                 id2=Identifier {APP((const char*)$id2.text->chars);}
+		)*
+      )
 
+       	;
+ 
 functionBody
 	: sourceElements
 	| EMPTY_FUNC_BODY 
@@ -838,28 +836,33 @@ callExpressionSuffix
 	;
 
 arguments
-	: ^(ARGLIST 
-	       {
-                 APP(" ( ");  
-               }
-               (
-                 assignmentExpression
-	          (
-			   {
-					  APP(", ");
-					}
-					  assignmentExpression
-					   	
-					)*
-				
-				)*
+  : ^(ARGLIST {APP("( )"); })
+  | ^(ARGLIST 
+
+	     { APP("( "); }
+       (assignmentExpression)
+			 { APP(" )"); }
       )
-				
-				{
-				  APP(" ) ");
-				}
-	;
-	
+
+  | ^(ARGLIST
+	       {
+                 APP("( ");
+		}
+                assignmentExpression
+      	
+	       (
+                 {
+                   APP(", ");
+                 }
+                 assignmentExpression
+		)*
+                {
+                  APP(" ) ");
+                }
+      )
+
+       	;
+ 
 
 indexSuffix
 	: ^(ARRAY_INDEX expression)

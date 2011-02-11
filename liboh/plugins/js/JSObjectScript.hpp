@@ -277,7 +277,7 @@ private:
     void initializeVisible(Handle<Object>&system_obj);
 
     void printVisibleArray();
-
+    void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addPresence(const SpaceObjectReference& sporef);
     void removePresence(const SpaceObjectReference& sporef);

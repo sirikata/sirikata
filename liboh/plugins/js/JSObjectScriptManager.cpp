@@ -285,6 +285,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
+    system_templ->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
     //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
     
     //math, vec, quaternion, etc.
@@ -325,6 +326,70 @@ void JSObjectScriptManager::createVisibleTemplate()
     mVisibleTemplate->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
 }
 
+
+void JSObjectScriptManager::createPresenceTemplate()
+{
+  v8::HandleScope handle_scope;
+
+  mPresenceTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
+  //mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
+  
+  v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
+
+  //These are not just accessors because we need to ensure that we can deal with
+  //their failure conditions.  (Have callbacks).
+
+   //v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
+
+  proto_t->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
+
+  //meshes
+  proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
+  proto_t->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  //positions
+  proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
+  proto_t->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
+
+  //velocities
+  proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
+  proto_t->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
+
+  //orientations
+  proto_t->Set(v8::String::New("setOrientation"),v8::FunctionTemplate::New(JSPresence::setOrientation));
+  proto_t->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSPresence::getOrientation));
+
+  //orientation velocities
+  proto_t->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
+  proto_t->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
+
+  //scale
+  proto_t->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
+  proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
+
+  //callback on prox addition and removal
+  proto_t->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  
+    
+  // Query angle
+  proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
+
+  //set up graphics
+  proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
+
+  //send broadcast message
+  proto_t->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
+
+
+  // For instance templates
+  v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
+  instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
+
+}
+
+
+/*
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
@@ -335,6 +400,8 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   //These are not just accessors because we need to ensure that we can deal with
   //their failure conditions.  (Have callbacks).
+
+   //v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
 
@@ -377,6 +444,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
 }
+
+*/
 
 
 //a handler is returned whenever you register a handler in system.

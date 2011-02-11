@@ -1,4 +1,4 @@
-
+system.import("std/library.em");
 /* Make Customer send out a touch event to the Book entity */
 
 /* question is how do you know the uuid of the Book entity */
@@ -25,7 +25,7 @@ function handleMarket(msg, sender)
     MARKET_CHANNEL = sender;    
     print("\n\nGot a new market\n\n");
 
-    handleMarketReply <- [new system.Pattern("vendor"), new system.Pattern("banner"), new system.Pattern("init_proto")] <- MARKET_CHANNEL;
+    handleMarketReply <- [new util.Pattern("vendor"), new util.Pattern("banner"), new util.Pattern("init_proto")] <- MARKET_CHANNEL;
     //send the subscription
 
     subsObj -> MARKET_CHANNEL;
@@ -43,7 +43,7 @@ function proxAddedCallback(new_addr_obj)
   test_msg.name = "get_protocol";
   
   //also register a callback
-  var p = new system.Pattern("protocol", "Market");
+  var p = new util.Pattern("protocol", "Market");
   
   print("\n\nRegistering  a pattern\n\n");
   handleMarket <- p <- new_addr_obj;
@@ -61,26 +61,11 @@ function handleBookList(msg, sender)
 
 function handleMarketReply(msg, sender)
 {
-  print("\n\n Got a reply from the market . The vendor is " + vendor + "\n\n");
-  var vendor = msg.vendor;
-  var banner = msg.banner;
-  var init_proto = msg.init_proto;
-
-  var req_obj = new Object();
-  req_obj.name = init_proto;
+  print("\n\n Got a reply from the market . The vendor is " + msg.vendor + "\n\n");
+  //var newContext = system.create_context(system.presences[0], msg.vendor, true, true, true);
   
-  req_obj.replyFunction = function(list_of_books, wrapped_reply)
-                          {
-                            wrapped_reply = new Object();
-                            wrapped_reply.reply = list_of_books;
-                            wrapped_reply.seq_no = 1;
-                          }
-
-  
-  //handleBookList <- [new system.Pattern("reply"), new system.Pattern("seq_no", 1)] <- vendor;
-  req_obj -> vendor;
-  print("Sent book list request to the vendor " + vendor);  
-
+  msg.init_proto(msg.init_arg_1, msg.vendor);
+  //newContext.execute(msg.init_proto, msg.init_arg_1, msg.init_arg_2); 
 }
 
 
@@ -100,5 +85,7 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
+
+
 
 
