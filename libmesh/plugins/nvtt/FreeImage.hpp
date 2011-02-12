@@ -1,7 +1,7 @@
 /*  Sirikata
- *  PluginInterface.cpp
+ *  FreeImage.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PluginInterface.hpp"
+#ifndef _SIRIKATA_MESH_NVTT_PLUGIN_FREEIMAGE_HPP_
+#define _SIRIKATA_MESH_NVTT_PLUGIN_FREEIMAGE_HPP_
 
-#include <sirikata/mesh/Filter.hpp>
-#include "CompressTexturesFilter.hpp"
-#include "TextureAtlasFilter.hpp"
+#include <FreeImage.h>
 
-static int nvtt_filters_plugin_refcount = 0;
+// This file provides some minimal utilities around FreeImage used by a couple
+// of different filters.
 
-SIRIKATA_PLUGIN_EXPORT_C void init ()
-{
-    using namespace Sirikata;
-    using namespace Sirikata::Mesh;
-    if ( nvtt_filters_plugin_refcount == 0 ) {
-        FilterFactory::getSingleton().registerConstructor("compress-textures", CompressTexturesFilter::create);
-        FilterFactory::getSingleton().registerConstructor("texture-atlas", TextureAtlasFilter::create);
+namespace Sirikata {
+
+extern bool freeimage_initialized;
+
+void InitFreeImage();
+
+static FIBITMAP* GenericLoader(const char* fname, int flag) {
+    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+    // check the file signature and deduce its format
+    // (the second argument is currently not used by FreeImage)
+    fif = FreeImage_GetFileType(fname, 0);
+    if(fif == FIF_UNKNOWN) {
+        // no signature ?
+        // try to guess the file format from the file extension
+        fif = FreeImage_GetFIFFromFilename(fname);
     }
-
-    ++nvtt_filters_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
-{
-    return ++nvtt_filters_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
-{
-    assert ( nvtt_filters_plugin_refcount > 0 );
-    return --nvtt_filters_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C void destroy ()
-{
-    using namespace Sirikata;
-    using namespace Sirikata::Mesh;
-
-    if ( nvtt_filters_plugin_refcount > 0 )
-    {
-        --nvtt_filters_plugin_refcount;
-
-        assert ( nvtt_filters_plugin_refcount == 0 );
-
-        if ( nvtt_filters_plugin_refcount == 0 ) {
-            FilterFactory::getSingleton().unregisterConstructor("compress-textures");
-            FilterFactory::getSingleton().unregisterConstructor("texture-atlas");
-        }
+    // check that the plugin has reading capabilities ...
+    if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
+        // ok, let's load the file
+        FIBITMAP *dib = FreeImage_Load(fif, fname, flag);
+        // unless a bad file format, we are done !
+        return dib;
     }
+    return NULL;
 }
 
-SIRIKATA_PLUGIN_EXPORT_C char const* name ()
-{
-    return "nvtt";
-}
+} // namespace Sirikata
 
-SIRIKATA_PLUGIN_EXPORT_C int refcount ()
-{
-    return nvtt_filters_plugin_refcount;
-}
+#endif //_SIRIKATA_MESH_NVTT_PLUGIN_FREEIMAGE_HPP_

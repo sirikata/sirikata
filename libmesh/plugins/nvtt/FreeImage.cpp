@@ -1,7 +1,7 @@
 /*  Sirikata
- *  PluginInterface.cpp
+ *  FreeImage.cpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PluginInterface.hpp"
+#include "FreeImage.hpp"
 
-#include <sirikata/mesh/Filter.hpp>
-#include "CompressTexturesFilter.hpp"
-#include "TextureAtlasFilter.hpp"
+namespace Sirikata {
 
-static int nvtt_filters_plugin_refcount = 0;
+bool freeimage_initialized = false;
 
-SIRIKATA_PLUGIN_EXPORT_C void init ()
-{
-    using namespace Sirikata;
-    using namespace Sirikata::Mesh;
-    if ( nvtt_filters_plugin_refcount == 0 ) {
-        FilterFactory::getSingleton().registerConstructor("compress-textures", CompressTexturesFilter::create);
-        FilterFactory::getSingleton().registerConstructor("texture-atlas", TextureAtlasFilter::create);
-    }
-
-    ++nvtt_filters_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
-{
-    return ++nvtt_filters_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
-{
-    assert ( nvtt_filters_plugin_refcount > 0 );
-    return --nvtt_filters_plugin_refcount;
-}
-
-SIRIKATA_PLUGIN_EXPORT_C void destroy ()
-{
-    using namespace Sirikata;
-    using namespace Sirikata::Mesh;
-
-    if ( nvtt_filters_plugin_refcount > 0 )
-    {
-        --nvtt_filters_plugin_refcount;
-
-        assert ( nvtt_filters_plugin_refcount == 0 );
-
-        if ( nvtt_filters_plugin_refcount == 0 ) {
-            FilterFactory::getSingleton().unregisterConstructor("compress-textures");
-            FilterFactory::getSingleton().unregisterConstructor("texture-atlas");
-        }
+void InitFreeImage() {
+    if (!freeimage_initialized) {
+        FreeImage_Initialise();
+        freeimage_initialized = true;
     }
 }
 
-SIRIKATA_PLUGIN_EXPORT_C char const* name ()
-{
-    return "nvtt";
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int refcount ()
-{
-    return nvtt_filters_plugin_refcount;
-}
+} // namespace Sirikata

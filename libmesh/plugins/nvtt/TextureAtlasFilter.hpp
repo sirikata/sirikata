@@ -1,7 +1,7 @@
 /*  Sirikata
- *  PluginInterface.cpp
+ *  TextureAtlasFilter.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "PluginInterface.hpp"
+#ifndef _SIRIKATA_MESH_NVTT_PLUGIN_TEXTURE_ATLAS_HPP_
+#define _SIRIKATA_MESH_NVTT_PLUGIN_TEXTURE_ATLAS_HPP_
 
 #include <sirikata/mesh/Filter.hpp>
-#include "CompressTexturesFilter.hpp"
-#include "TextureAtlasFilter.hpp"
 
-static int nvtt_filters_plugin_refcount = 0;
+namespace Sirikata {
+namespace Mesh {
 
-SIRIKATA_PLUGIN_EXPORT_C void init ()
-{
-    using namespace Sirikata;
-    using namespace Sirikata::Mesh;
-    if ( nvtt_filters_plugin_refcount == 0 ) {
-        FilterFactory::getSingleton().registerConstructor("compress-textures", CompressTexturesFilter::create);
-        FilterFactory::getSingleton().registerConstructor("texture-atlas", TextureAtlasFilter::create);
-    }
+class TextureAtlasFilter : public Filter {
+public:
+    static Filter* create(const String& args) { return new TextureAtlasFilter(args); }
 
-    ++nvtt_filters_plugin_refcount;
-}
+    TextureAtlasFilter(const String& args);
+    virtual ~TextureAtlasFilter() {}
 
-SIRIKATA_PLUGIN_EXPORT_C int increfcount ()
-{
-    return ++nvtt_filters_plugin_refcount;
-}
+    virtual FilterDataPtr apply(FilterDataPtr input);
+private:
+    MeshdataPtr apply(MeshdataPtr md);
+}; // class TextureAtlasFilter
 
-SIRIKATA_PLUGIN_EXPORT_C int decrefcount ()
-{
-    assert ( nvtt_filters_plugin_refcount > 0 );
-    return --nvtt_filters_plugin_refcount;
-}
+} // namespace Mesh
+} // namespace Sirikata
 
-SIRIKATA_PLUGIN_EXPORT_C void destroy ()
-{
-    using namespace Sirikata;
-    using namespace Sirikata::Mesh;
-
-    if ( nvtt_filters_plugin_refcount > 0 )
-    {
-        --nvtt_filters_plugin_refcount;
-
-        assert ( nvtt_filters_plugin_refcount == 0 );
-
-        if ( nvtt_filters_plugin_refcount == 0 ) {
-            FilterFactory::getSingleton().unregisterConstructor("compress-textures");
-            FilterFactory::getSingleton().unregisterConstructor("texture-atlas");
-        }
-    }
-}
-
-SIRIKATA_PLUGIN_EXPORT_C char const* name ()
-{
-    return "nvtt";
-}
-
-SIRIKATA_PLUGIN_EXPORT_C int refcount ()
-{
-    return nvtt_filters_plugin_refcount;
-}
+#endif //_SIRIKATA_MESH_NVTT_PLUGIN_TEXTURE_ATLAS_HPP_

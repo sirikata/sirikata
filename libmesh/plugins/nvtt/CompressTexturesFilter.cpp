@@ -31,7 +31,7 @@
  */
 
 #include "CompressTexturesFilter.hpp"
-#include <FreeImage.h>
+#include "FreeImage.hpp"
 #include <nvtt/nvtt.h>
 
 static bool freeimage_initialized = false;
@@ -42,33 +42,10 @@ namespace Mesh {
 CompressTexturesFilter::CompressTexturesFilter(const String& args) {
 }
 
-static FIBITMAP* GenericLoader(const char* fname, int flag) {
-    FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
-    // check the file signature and deduce its format
-    // (the second argument is currently not used by FreeImage)
-    fif = FreeImage_GetFileType(fname, 0);
-    if(fif == FIF_UNKNOWN) {
-        // no signature ?
-        // try to guess the file format from the file extension
-        fif = FreeImage_GetFIFFromFilename(fname);
-    }
-    // check that the plugin has reading capabilities ...
-    if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
-        // ok, let's load the file
-        FIBITMAP *dib = FreeImage_Load(fif, fname, flag);
-        // unless a bad file format, we are done !
-        return dib;
-    }
-    return NULL;
-}
-
 FilterDataPtr CompressTexturesFilter::apply(FilterDataPtr input) {
     using namespace nvtt;
 
-    if (!freeimage_initialized) {
-        FreeImage_Initialise();
-        freeimage_initialized = true;
-    }
+    InitFreeImage();
 
     for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
         MeshdataPtr mesh = *mesh_it;
@@ -92,12 +69,12 @@ FilterDataPtr CompressTexturesFilter::apply(FilterDataPtr input) {
             // Make sure we get the data in BGRA 8UB and properly packed
             FIBITMAP* input_image_32 = FreeImage_ConvertTo32Bits(input_image);
 
-            // Unfortunately, FreeImage chose just about the worst in memory
-            // layout, and doesn't provide any flexibility. Convert to packed
-            // BGRA which is all nvtt supports.
             int32 width = FreeImage_GetWidth(input_image_32);
             int32 height = FreeImage_GetHeight(input_image_32);
 
+            // Unfortunately, FreeImage chose just about the worst in memory
+            // layout, and doesn't provide any flexibility. Convert to packed
+            // BGRA which is all nvtt supports.
             uint8* data = new uint8[width*height*4];
             {
                 for(int32 y = 0; y < height; y++) {
