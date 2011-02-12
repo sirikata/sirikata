@@ -21,130 +21,109 @@ options
 
 @header
 {
-  #include <stdlib.h>
-		#include <string.h>
-		#include <antlr3.h>
-  #include "EmersonUtil.h" 
-	 #define APP(s) program_string->append(program_string, s);
+    #include <stdlib.h>
+    #include <string.h>
+    #include <antlr3.h>
+    #include "EmersonUtil.h" 
+	#define APP(s) program_string->append(program_string, s);
 
 	//	pANTLR3_STRING program_string;
 }
 
 @members
 {
-  
-		pANTLR3_STRING program_string;
+    pANTLR3_STRING program_string;
 }
 
 
-	program returns [pANTLR3_STRING  s]
+program returns [pANTLR3_STRING  s]
 	:^(PROG 
-	    {
-					  pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+            {
+                pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+                program_string = factory->newRaw(factory);
+            }
+            sourceElements
+     )
+        {
+            s = program_string;
+        }
+	;
 
-					  program_string = factory->newRaw(factory);
-					}
-					sourceElements
-					
-					)
-	{
-	  s = program_string;
-	}
-	                       
-	;
+sourceElements
+    :(sourceElement{APP("\n"); })+  // omitting the LT 
+    ;
 	
- sourceElements
-		:(sourceElement{APP("\n"); })+  // omitting the LT 
-	;
-	
-	sourceElement
-	: functionDeclaration
-	| statement{ APP(";"); }
-	;
+sourceElement
+    : functionDeclaration
+    | statement{ APP(";"); }
+    ;
 	
 // functions
 functionDeclaration
-	: ^( FUNC_DECL
-	         {
-										  
-						 APP("function ");
-					 }
-	         Identifier
-	         {
-										  
-												APP((const char*)$Identifier.text->chars);
-												APP("( ");
-										} 
-					formalParameterList 
-					     {
-										              
-												APP(" )");
-												APP("\n{\n");
-
-										}
-					functionBody
-					     {
+    : ^( FUNC_DECL
+            {
+                APP("function ");
+            }
+            Identifier
+	        {
+                APP((const char*)$Identifier.text->chars);
+                APP("( ");
+            } 
+            formalParameterList 
+            {
+                APP(" )");
+                APP("\n{\n");
+            }
+            functionBody
+            {
+                APP("\n}");
+            }
             
-										  APP("\n}");
-            
+        );
 
-										}
-					 					
-					)
-	
-	;
-	
 functionExpression
 	: ^( FUNC_EXPR 
-	     {
-        APP("function ");
-
-						}
-						(			
-						 Identifier
-						 {
-							  APP((const char*)$Identifier.text->chars);
-							}
-						)?  
-						{
-						
-									APP("( ");
-						}
-						formalParameterList 
-						  {
-          
-										APP("  )");
-										APP("\n{\n");
-
-								}
-						functionBody
-						  {
-								  APP("\n}");
-								}
-						)
-	; 
+            {
+                APP("function ");
+            }
+            (			
+                Identifier
+                {
+                    APP((const char*)$Identifier.text->chars);
+                }
+            )?  
+            {
+                APP("( ");
+            }
+            formalParameterList 
+            {
+                APP("  )");
+                APP("\n{\n");
+            }
+            functionBody
+            {
+                APP("\n}");
+            }
+        ); 
 	
 formalParameterList
 	: ^( FUNC_PARAMS 
-	     (id1=Identifier
-									{
-						     APP((const char*)$id1.text->chars);
-											APP(" ");
-
-									}
-							)?		
-						(
-						 id2=Identifier
-							{
-									APP(", ");
-						   APP((const char*)$id2.text->chars);
-									APP(" ");
-							}
-						
-						)*
-						
-					)
-;
+            (id1=Identifier
+                {
+                    APP((const char*)$id1.text->chars);
+                    APP(" ");
+                }
+            )?		
+            (
+                id2=Identifier
+                {
+                    APP(", ");
+                    APP((const char*)$id2.text->chars);
+                    APP(" ");
+                }
+                
+            )*
+        );
 
 functionBody
 	: sourceElements
@@ -153,64 +132,56 @@ functionBody
 
 // statements
 statement
-	: statementBlock
-	| variableStatement
-	//| emptyStatement
-	| expressionStatement
-	| ifStatement
-	| iterationStatement
-	| continueStatement
-	| breakStatement
-	| returnStatement
-	| withStatement
-	| labelledStatement
-	| switchStatement
-	| throwStatement
-	| tryStatement
-	| msgSendStatement
-	| msgRecvStatement
+    : statementBlock
+    | variableStatement
+    | expressionStatement
+    | ifStatement
+    | iterationStatement
+    | continueStatement
+    | breakStatement
+    | returnStatement
+    | withStatement
+    | labelledStatement
+    | switchStatement
+    | throwStatement
+    | tryStatement
+    | msgSendStatement
+    | msgRecvStatement
 	;
 	
 statementBlock
 	: {APP(" {\n "); } statementList {  
-	   APP(" }\n");
-	   }
+            APP(" }\n");
+        }
 	;
 	
 statementList
 	:  ^(
-	      SLIST 
-							(statement
-							  {
+            SLIST 
+            (statement
+                {
 			        APP("; \n");					  
-
-									}
-							)+
-							
-	
-	    )
-	;
+                }
+            )+
+	    );
 	
 variableStatement
 	:  ^( 
-	      VARLIST
-							  {
-									  APP("var ");
-									}
-	      variableDeclarationList
-					)
-	;
+            VARLIST
+            {
+                APP("var ");
+            }
+            variableDeclarationList
+        );
 	
 variableDeclarationList
 	: variableDeclaration 
-	  (
-      {
-						  APP(", ");
-						}	
-	   variableDeclaration
-			  
-			)*
-			
+        (
+            {
+                APP(", ");
+            }	
+            variableDeclaration
+        )*
 	;
 	
 variableDeclarationListNoIn
@@ -219,42 +190,41 @@ variableDeclarationListNoIn
 	
 variableDeclaration
 	: ^(
-	    VAR
-	    Identifier 
-					  {
-							  APP((const char*)$Identifier.text->chars);
-							}
-					
-					(
-					  {
-							  APP(" = ");
-							}
-					initialiser
-					)?
-					
-					)
+            VAR
+            Identifier 
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+            
+            (
+                {
+                    APP(" = ");
+                }
+                initialiser
+            )?
+        )
 	;
 	
 variableDeclarationNoIn
 	: 
-	^(
-	    VAR
+        ^(
+            VAR
 			{
-			  APP("var ");
+                APP("var ");
 			}
-	    Identifier 
-					  {
-							  APP((const char*)$Identifier.text->chars);
-							}
+            Identifier 
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+            
+            (
+                {
+                    APP(" = ");
+                }
+                initialiserNoIn
+            )?
 					
-					(
-					  {
-							  APP(" = ");
-							}
-					initialiserNoIn
-					)?
-					
-			)
+        )
 	;
 	
 initialiser
@@ -277,35 +247,27 @@ expressionStatement
 	
 ifStatement
 	: ^(IF 
-	    {
-
-							APP(" if ");
-							APP(" ( ");
-
-
-					}
-	   expression 
-				 {
-					  APP(" ) ");
-							
-					  //printf(" { \n");
-					}
-     
-				statement 
-				 {
-					  APP(" \n");
-					}
-     
-				(
-				 {
-					  APP(" else ");
-					}
-				 statement
-				 
-				)?
-				
-				)
-	   
+            {
+                
+                APP(" if ");
+                APP(" ( ");
+            }
+            expression 
+            {
+                APP(" ) ");
+            }
+            statement 
+            {
+                APP(" \n");
+            }
+            (
+                {
+                    APP(" else ");
+                }
+                statement
+                
+            )?
+        )
 	;
 	
 iterationStatement
@@ -317,89 +279,79 @@ iterationStatement
 	
 doWhileStatement
 	: ^( 
-	    DO
-					 {
-        APP(" do ");  						  
-						}    
-	    statement
-					{
-					  APP("while ( " );      
-					}
-
-					expression 
-
-					{
-					  APP(" ) ");  
-					}
-					
-					)
+            DO
+            {
+                APP(" do ");  						  
+            }    
+	        statement
+            {
+                APP("while ( " );      
+            }
+            expression 
+            {
+                APP(" ) ");  
+            }
+        )
 	;
 	
 whileStatement
 	: ^(
-	   WHILE
-				  {
-						  APP(" while ( ");
-						}
-	
-	   expression 
-
-			 {
-			   APP(" ) "); 
-			 }
-			
-			 statement
-			)
+            WHILE
+            {
+                APP(" while ( ");
+            }
+            expression 
+            {
+                APP(" ) "); 
+            }
+            statement
+        )
 	;
 	
 forStatement
 	: ^(
-	     FOR 
-	     {
-						  APP(" for ( ");
-						}
-	     (^(FORINIT forStatementInitialiserPart))?
-						{
-						  APP(" ; ");
-						}
-						(^(FORCOND expression))? 
-						{
-						  APP(" ; ");
-						}
-						(^(FORITER expression))?  
-						
-      {
-						  APP(" ) ");
-						}
-						statement
-					
-					)
+            FOR 
+            {
+                APP(" for ( ");
+            }
+            (^(FORINIT forStatementInitialiserPart))?
+            {
+                APP(" ; ");
+            }
+            (^(FORCOND expression))? 
+            {
+                APP(" ; ");
+            }
+            (^(FORITER expression))?  
+            {
+                APP(" ) ");
+            }
+            statement
+        )
 	;
 	
 forStatementInitialiserPart
-	: expressionNoIn
-	| ^(VARLIST variableDeclarationListNoIn)
-	;
+    : expressionNoIn
+    | ^(VARLIST variableDeclarationListNoIn)
+    ;
 	
 forInStatement
 	: ^(
-	     FORIN 
-	     {
-			   APP(" for ( ");
-			 }
+        FORIN 
+        {
+            APP(" for ( ");
+        }
 
-	     forInStatementInitialiserPart 
-		   {
-		     APP(" in ");
-		   }
-		   expression 
-       {
-			   APP(" ) ");
-			 }
-		 
-		   statement
-		 
-		 )
+        forInStatementInitialiserPart 
+        {
+            APP(" in ");
+        }
+        expression 
+        {
+            APP(" ) ");
+        }
+        statement
+    )
 	;
 	
 forInStatementInitialiserPart
@@ -408,123 +360,101 @@ forInStatementInitialiserPart
 	;
 
 continueStatement
-	: ^(
-	    CONTINUE 
-	    {
-					  APP("continue ");
-					} 
-	   
-				 (
-					 Identifier
-					 {
-						  APP((const char*)$Identifier.text->chars);
-						}
-					)?
-
-				
-				)
-			
-
+    : ^(
+        CONTINUE 
+        {
+            APP("continue ");
+        } 
+        (
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+        )?
+      )
 	;
 
 breakStatement
-	: ^(
-	    BREAK
-					{
-					  APP("break ");
-					}
-	     (
-						Identifier
-						{
-						  APP((const char*)$Identifier.text->chars);
-						}
-						)?
-						
-					)
+    : ^(
+        BREAK
+        {
+            APP("break ");
+        }
+        (
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+        )?
+        )
 	;
 
 returnStatement
-	: ^(
-	    RETURN 
-	     {
-						  APP("return ");
-						}
-				(		
-	   
-				  expression
-				
-				)?
-				
-				)
-
+    : ^(
+        RETURN 
+        {
+            APP("return ");
+        }
+        (		
+            expression
+        )?
+       )
 	;
 	
 withStatement
-	: ^(WITH expression statement)
-	;
+    : ^(WITH expression statement)
+    ;
 
 labelledStatement
-	: ^( LABEL 
-	    Identifier 
-
-					 {
-						  
-						  APP((const char*)$Identifier.text->chars);
-						  APP(" : \n");
-						}
-					statement
-					
-					)
+    : ^( LABEL 
+        Identifier 
+        {
+            APP((const char*)$Identifier.text->chars);
+            APP(" : \n");
+        }
+        statement
+        )
 	;
 	
 switchStatement
-	: ^(
-	    SWITCH 
-	     {
-						  APP(" switch ( ");
-								
-						}
-
+    : ^(
+        SWITCH 
+        {
+            APP(" switch ( ");
+        }
 	    expression 
-			   {
-
-								APP(" ) \n");
-								APP("{ \n");
-
-						}
-      
-						
-			  caseBlock
-
-					 {
-						  APP("} \n");
-						}
-			
-			)
+        {
+            APP(" ) \n");
+            APP("{ \n");
+        }
+        caseBlock
+        {
+            APP("} \n");
+        }
+       )
 	;
 	
 caseBlock
-	: (caseClause)* (defaultClause*)? (caseClause*)?
-	;
+    : (caseClause)* (defaultClause*)? (caseClause*)?
+    ;
 
 caseClause
-	: ^( CASE expression statementList?)
-	;
+    : ^( CASE expression statementList?)
+    ;
 	
 defaultClause
-	:^(DEFAULT statementList?)
-	;
+    :^(DEFAULT statementList?)
+    ;
 	
 throwStatement
-	: ^(THROW expression)
-	;
+    : ^(THROW expression)
+    ;
 
 tryStatement
-	: ^(TRY 
-	    
-	    statementBlock 
-					
-					finallyClause?) 
+    : ^(TRY 
+	      statementBlock 
+          finallyClause?
+        ) 
 	;
        
 

@@ -20,103 +20,106 @@ options
 
 tokens
 {
-  UNDEF; // imaginary opertator for some undefined operator. we don't knwo what happened
-  CALL;  // imaginary operator for function calls
-		ARRAY_INDEX; // imag operator for array indexing
-		DOT;   // imag op for property referencing
-		FUNC;  // imag op for the function
-  SLIST; // imag op for a list of statements
-		IF;    // imag op for if-else conditional clause
-		VARLIST; // list of variables declared. each declaration defined by the VAR
-		VAR;   // imag op for var decl
-		PROG; // imag operator for complete program
-		DO ; // imag operator for do-while statements
-		WHILE; // imag op for the while statement
-		FOR;  // imag op for the "for" statement
-			FORINIT; // for initializer part
-			FORCOND; // for conditional part
-			FORITER; // for iteration part
-  FORIN;   // for in statement operator
-		BREAK;  // break statement
-		CONTINUE; //continue statement
-		RETURN; // return statement
-		WITH;   // the with statement
-		NEW;    // the new operator
-  TRY;
-  THROW;
-		CATCH;
-		FINALLY;
-  DEFAULT;
-		SWITCH;
-		CASE;
-  LABEL;	
-		ASSIGN;
-  MULT_ASSIGN;
-		DIV_ASSIGN;
-		MOD_ASSIGN;
-  ADD_ASSIGN;
-		SUB_ASSIGN;
-		LEFT_SHIFT_ASSIGN;
-		RIGHT_SHIFT_ASSIGN;
-		TRIPLE_SHIFT_ASSIGN;
-		AND_ASSIGN;
-		EXP_ASSIGN;
-		OR_ASSIGN;
-  OR; 
-		AND;
-		BIT_OR;
-		EXP;
-		BIT_AND;
-		EQUALS;
-		NOT_EQUALS;
-		IDENT;
-		NOT_IDENT;
-		LESS_THAN;
-		GREATER_THAN;
-		LESS_THAN_EQUAL;
-		GREATER_THAN_EQUAL;
-		INSTANCE_OF;
-		IN;
-		LEFT_SHIFT;
-		RIGHT_SHIFT;
-		TRIPLE_SHIFT;
-		ADD;
-		SUB;
-		MULT;
-		DIV;
-		MOD;
-		ARRAY_LITERAL;
-		OBJ_LITERAL;
-		NAME_VALUE;
-  DELETE;
-		VOID;
-		TYPEOF;
-		PLUSPLUS;
-		MINUSMINUS;
-		UNARY_PLUS;
-		UNARY_MINUS;
-		COMPLEMENT;
-		NOT;
-		POSTEXPR;
-		FUNC_PARAMS;
-		FUNC_DECL;
-		FUNC_EXPR;
-  ARGLIST;
-		EXPR_LIST;
-		COND_EXPR;
-		COND_EXPR_NOIN;
-		TERNARYOP;
-		EMPTY_FUNC_BODY;
-		MESSAGE_SEND;
-		MESSAGE_RECV;
-                PAREN;
+    UNDEF; // imaginary opertator for some undefined operator. we don't knwo what happened
+    CALL;  // imaginary operator for function calls
+    ARRAY_INDEX; // imag operator for array indexing
+    DOT;   // imag op for property referencing
+    FUNC;  // imag op for the function
+    SLIST; // imag op for a list of statements
+    IF;    // imag op for if-else conditional clause
+    VARLIST; // list of variables declared. each declaration defined by the VAR
+    VAR;   // imag op for var decl
+    PROG; // imag operator for complete program
+    DO ; // imag operator for do-while statements
+    WHILE; // imag op for the while statement
+    FOR;  // imag op for the "for" statement
+    FORINIT; // for initializer part
+    FORCOND; // for conditional part
+    FORITER; // for iteration part
+    FORIN;   // for in statement operator
+    BREAK;  // break statement
+    CONTINUE; //continue statement
+    RETURN; // return statement
+    WITH;   // the with statement
+    NEW;    // the new operator
+    WHEN;  //bftm trying to include when syntax
+    WHEN_CHECKED_LIST;
+    WHEN_PRED;
+    TRY;
+    THROW;
+    CATCH;
+    FINALLY;
+    DEFAULT;
+    SWITCH;
+    CASE;
+    LABEL;	
+    ASSIGN;
+    MULT_ASSIGN;
+    DIV_ASSIGN;
+    MOD_ASSIGN;
+    ADD_ASSIGN;
+    SUB_ASSIGN;
+    LEFT_SHIFT_ASSIGN;
+    RIGHT_SHIFT_ASSIGN;
+    TRIPLE_SHIFT_ASSIGN;
+    AND_ASSIGN;
+    EXP_ASSIGN;
+    OR_ASSIGN;
+    OR; 
+    AND;
+    BIT_OR;
+    EXP;
+    BIT_AND;
+    EQUALS;
+    NOT_EQUALS;
+    IDENT;
+    NOT_IDENT;
+    LESS_THAN;
+    GREATER_THAN;
+    LESS_THAN_EQUAL;
+    GREATER_THAN_EQUAL;
+    INSTANCE_OF;
+    IN;
+    LEFT_SHIFT;
+    RIGHT_SHIFT;
+    TRIPLE_SHIFT;
+    ADD;
+    SUB;
+    MULT;
+    DIV;
+    MOD;
+    ARRAY_LITERAL;
+    OBJ_LITERAL;
+    NAME_VALUE;
+    DELETE;
+    VOID;
+    TYPEOF;
+    PLUSPLUS;
+    MINUSMINUS;
+    UNARY_PLUS;
+    UNARY_MINUS;
+    COMPLEMENT;
+    NOT;
+    POSTEXPR;
+    FUNC_PARAMS;
+    FUNC_DECL;
+    FUNC_EXPR;
+    ARGLIST;
+    EXPR_LIST;
+    COND_EXPR;
+    COND_EXPR_NOIN;
+    TERNARYOP;
+    EMPTY_FUNC_BODY;
+    MESSAGE_SEND;
+    MESSAGE_RECV;
+    PAREN;
 }
 
 @header
 {
   #include <stdlib.h>;
-		#include <stdio.h>;
-		#include "EmersonUtil.h";
+  #include <stdio.h>;
+  #include "EmersonUtil.h";
 }
 
 
@@ -218,9 +221,24 @@ emptyStatement
 expressionStatement
 	: expression (LTERM | ';') -> expression
 	;
-	
+
+whenStatement
+    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedList LTERM* s1=statement -> ^(WHEN whenPred whenCheckedList $s1)
+    ;
+
+//note: right now, this rule is very simple: it only does less than, doesn't do any checks to see if the values are watched,
+//and does not restrict the predicates from being zany.
+whenPred
+    : s1=expression LTERM* '<' LTERM* s2=expression -> ^(WHEN_PRED $s1 $s2)
+    ;
+
+whenCheckedList
+    : expression LTERM* (',' LTERM* expression)* -> ^(WHEN_CHECKED_LIST expression+)
+    ;
+
+
 ifStatement
-: 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
+    : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
 	;
 	
 iterationStatement
@@ -376,7 +394,7 @@ memberExpressionSuffix
 	;
 
 callExpression
- : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
+    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
 	;
 	
 callExpressionSuffix
