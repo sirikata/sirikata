@@ -144,6 +144,7 @@ statement
     | labelledStatement
     | switchStatement
     | throwStatement
+    | whenStatement
     | tryStatement
     | msgSendStatement
     | msgRecvStatement
@@ -422,7 +423,7 @@ switchStatement
         {
             APP(" switch ( ");
         }
-	    expression 
+        expression 
         {
             APP(" ) \n");
             APP("{ \n");
@@ -449,6 +450,50 @@ defaultClause
 throwStatement
     : ^(THROW expression)
     ;
+
+whenStatement
+    : ^(WHEN
+        {
+            APP(" util.create_when( ");
+        }
+        whenPred
+        {
+            //comma for end of predicate expression
+            //[ for beginning of array of watched statements
+            APP(",[");
+        }
+        whenCheckedList
+        {
+            //end the array of watched variables.  then end the actual
+            //util.create_when statement with parenthesis and semi-colon.
+            APP("]);");
+        }
+    )
+    ;
+
+whenPred
+    : ^(WHEN_PRED
+        {
+            APP(" unfinished_checkWhenPred()");
+        }
+    )
+    ;
+
+whenCheckedList
+    : ^(WHEN_CHECKED_LIST
+        {
+            
+        }
+        (expression
+        {
+            APP(" ,"
+        }
+        )+
+    )
+    ;    
+    lkjs;
+
+    
 
 tryStatement
     : ^(TRY 

@@ -172,6 +172,7 @@ statement
 	| labelledStatement
 	| switchStatement
 	| throwStatement
+    | whenStatement
 	| tryStatement
 	| msgSendStatement
 	| msgRecvStatement
@@ -233,9 +234,9 @@ whenPred
     ;
 
 whenCheckedList
-    : expression LTERM* (',' LTERM* expression)* -> ^(WHEN_CHECKED_LIST expression+)
+    : s1=expression LTERM* (',' LTERM* s2=whenCheckedList)* ->    ^(WHEN_CHECKED_LIST $s1 $s2*)
     ;
-
+//        : expression LTERM* (',' LTERM* expression)* -> ^(WHEN_CHECKED_LIST expression+)
 
 ifStatement
     : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
