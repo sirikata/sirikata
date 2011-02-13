@@ -138,18 +138,15 @@ sourceElement
 	
 // functions
 functionDeclaration
-	: 'function' LTERM* Identifier LTERM* formalParameterList LTERM* functionBody -> ^( FUNC_DECL Identifier formalParameterList functionBody)
+	: 'function' LTERM* Identifier LTERM*  formalParameterList? LTERM* functionBody -> ^( FUNC_DECL Identifier formalParameterList? functionBody)
 	;
 
 functionExpression
-	: 'function' LTERM* Identifier? LTERM* formalParameterList LTERM* functionBody -> ^( FUNC_EXPR Identifier?  formalParameterList functionBody)
+	: 'function' LTERM* Identifier? LTERM* '(' LTERM* formalParameterList? LTERM* ')' LTERM* functionBody -> ^( FUNC_EXPR Identifier?  formalParameterList? functionBody)
 	;
 	
 formalParameterList
-	//: '(' LTERM* i1=Identifier? (LTERM* ',' LTERM* i2=Identifier)* LTERM* ')' -> ^( FUNC_PARAMS $i1? $i2*)
-	//;
-        : '(' LTERM* (Identifier)? LTERM* ')' -> ^(FUNC_PARAMS Identifier?)
-	| '(' LTERM* i1=Identifier (',' LTERM* i2=Identifier)* LTERM* ')' -> ^(FUNC_PARAMS Identifier Identifier*)
+	: Identifier (',' LTERM* Identifier)* -> ^(FUNC_PARAMS Identifier+)
 	;
  
 functionBody

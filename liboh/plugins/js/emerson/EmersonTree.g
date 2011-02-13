@@ -65,73 +65,54 @@ options
 // functions
 functionDeclaration
 	: ^( FUNC_DECL
-	         {
-										  
-						 APP("function ");
-					 }
-	         Identifier
-	         {
-										  
-												APP((const char*)$Identifier.text->chars);
-												APP("( ");
-										} 
-					formalParameterList 
-					     {
-										              
-												APP(" )");
-												APP("\n{\n");
-
-										}
-					functionBody
-					     {
-            
-										  APP("\n}");
-            
-
-										}
-					 					
-					)
-	
+              {
+                APP("function ");
+              }
+              Identifier
+              {
+                APP((const char*)$Identifier.text->chars);
+                APP("( ");
+              } 
+              (formalParameterList)?
+              {
+                APP(" )");
+                APP("\n{\n");
+              }
+              functionBody
+              {
+                APP("\n}");
+              }
+            )
 	;
 	
 functionExpression
 	: ^( FUNC_EXPR 
 	     {
-        APP("function ");
-
-						}
-						(			
-						 Identifier
-						 {
-							  APP((const char*)$Identifier.text->chars);
-							}
-						)?  
-						{
-						
-									APP("( ");
-						}
-						formalParameterList 
-						  {
-          
-										APP("  )");
-										APP("\n{\n");
-
-								}
-						functionBody
-						  {
-								  APP("\n}");
-								}
-						)
-	; 
+               APP("function ");
+             }
+             (			
+               Identifier
+                 {
+                   APP((const char*)$Identifier.text->chars);
+                 }
+             )? 
+             {
+               APP("( ");
+             }
+             (formalParameterList)?
+             {
+               APP("  )");
+               APP("\n{\n");
+             }
+             functionBody
+             {
+               APP("\n}");
+             }
+           )
+       ;
 	
 formalParameterList
-: ^(FUNC_PARAMS {APP(" "); })
-  | ^(FUNC_PARAMS 
-       Identifier
-       {APP((const char*)$Identifier.text->chars); }
-      )
-
-  | ^(FUNC_PARAMS
+  : ^(FUNC_PARAMS
                 (id1=Identifier {APP((const char*)$id1.text->chars); })
                 
 	       (
@@ -141,8 +122,7 @@ formalParameterList
                  id2=Identifier {APP((const char*)$id2.text->chars);}
 		)*
       )
-
-       	;
+  ;
  
 functionBody
 	: sourceElements
