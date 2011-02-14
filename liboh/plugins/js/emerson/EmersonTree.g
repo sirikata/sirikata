@@ -456,21 +456,26 @@ whenStatement
         {
             APP(" util.create_when( ");
         }
-        whenPred
+        expression
         {
             //comma for end of predicate expression
             //[ for beginning of array of watched statements
             APP(",[");
         }
-        whenCheckedList
+        whenCheckedListFirst
         {
             //end the array of watched variables.  then end the actual
             //util.create_when statement with parenthesis and semi-colon.
             APP("]);");
         }
+        expression
+        {
+        }
     )
     ;
 
+
+    
 whenPred
     : ^(WHEN_PRED
         {
@@ -479,20 +484,36 @@ whenPred
     )
     ;
 
-whenCheckedList
-    : ^(WHEN_CHECKED_LIST
+whenCheckedListFirst
+    : ^(WHEN_CHECKED_LIST_FIRST
         {
-            
         }
-        (expression
+        expression
         {
-            APP(" ,"
+            //expression will automatically fill in correct values here
         }
-        )+
+        (whenCheckedListSubsequent
+        {
+        })?
     )
     ;    
-    lkjs;
 
+
+whenCheckedListSubsequent
+    : ^(WHEN_CHECKED_LIST_SUBSEQUENT
+        {
+            APP(",");
+        }
+        expression
+        {
+            //expression will automatically fill in correct values here
+        }
+        (whenCheckedListSubsequent
+        {
+        })*
+        )
+    ;
+        
     
 
 tryStatement

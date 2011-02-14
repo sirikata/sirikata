@@ -43,7 +43,8 @@ tokens
     WITH;   // the with statement
     NEW;    // the new operator
     WHEN;  //bftm trying to include when syntax
-    WHEN_CHECKED_LIST;
+    WHEN_CHECKED_LIST_FIRST;
+    WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
     TRY;
     THROW;
@@ -224,19 +225,24 @@ expressionStatement
 	;
 
 whenStatement
-    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedList LTERM* s1=statement -> ^(WHEN whenPred whenCheckedList $s1)
+    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
     ;
-
+//    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN whenPred whenCheckedListFirst $s1)
+    
 //note: right now, this rule is very simple: it only does less than, doesn't do any checks to see if the values are watched,
 //and does not restrict the predicates from being zany.
 whenPred
-    : s1=expression LTERM* '<' LTERM* s2=expression -> ^(WHEN_PRED $s1 $s2)
+    : s1=expression LTERM* '<wo38__' LTERM* s2=expression -> ^(WHEN_PRED $s1 $s2)
     ;
 
-whenCheckedList
-    : s1=expression LTERM* (',' LTERM* s2=whenCheckedList)* ->    ^(WHEN_CHECKED_LIST $s1 $s2*)
+whenCheckedListFirst
+    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)? ->    ^(WHEN_CHECKED_LIST_FIRST $s1 $s2?)
     ;
-//        : expression LTERM* (',' LTERM* expression)* -> ^(WHEN_CHECKED_LIST expression+)
+
+whenCheckedListSubsequent
+    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)* -> ^(WHEN_CHECKED_LIST_SUBSEQUENT $s1 $s2*)
+    ;
+    //        : expression LTERM* (',' LTERM* expression)* -> ^(WHEN_CHECKED_LIST expression+)
 
 ifStatement
     : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
