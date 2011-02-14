@@ -56,7 +56,12 @@ private:
     Vector4x mCol[4];
 public:
     typedef scalar real;
-    Matrix4x4(){}
+    Matrix4x4(){
+      setCol(0,Vector4x::nil());
+      setCol(1,Vector4x::nil());
+      setCol(2,Vector4x::nil());
+      setCol(3,Vector4x::nil());
+    }
     static const Matrix4x4& nil() {
         static Matrix4x4 nil(Vector4x::nil(),
                              Vector4x::nil(),
