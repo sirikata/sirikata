@@ -64,7 +64,6 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
     v8::Handle<v8::Object> senderObject = senderVal->ToObject();
 
     //now check internal field count
-    std::cout << "internal field count is = " << senderObject->InternalFieldCount() << "\n\n";
 
     if (senderObject->InternalFieldCount() != VISIBLE_FIELD_COUNT)
     {

@@ -58,7 +58,9 @@ public:
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
-    v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
+
+    //v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
+    v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate> mContextTemplate;
     v8::Persistent<v8::ObjectTemplate> mUtilTemplate;
     v8::Persistent<v8::ObjectTemplate> mInvokableObjectTemplate;

@@ -216,8 +216,12 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
 
-    // If we have a script to load, load it.
-    //Always import the library
+
+    //Always load the shim layer. 
+    // This is required. So do NOT remove. It is
+    // not the same as libraray
+    // TODO: hardcoded
+    import("std/shim.em");
 
 
 
@@ -707,7 +711,6 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
 }
 
 
-
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)
 {
@@ -733,16 +736,19 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
+
+
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
 
-    // assume the input string to be a valid js rather than emerson
+    assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
     #endif
 
-    
+
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
+
     
     // Compile
     //note, because using compile command, will run in the mContext context
@@ -756,9 +762,18 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     // Execute
     v8::Handle<v8::Value> result = script->Run();
-    if (result.IsEmpty()) {
+    if (try_catch.HasCaught()) {
         v8::String::Utf8Value error(try_catch.Exception());
         JSLOG(error, "Uncaught exception: " << *error);
+        v8::Local<v8::StackTrace> strace = v8::StackTrace::CurrentStackTrace(100);
+        int frame_count = strace->GetFrameCount();
+        std::stringstream sstream;
+        for(uint32 i = 0; i < frame_count; i++)
+        {
+          v8::Local<v8::StackFrame> frame = strace->GetFrame(i);
+          printStackFrame(sstream, frame);
+        }
+        JSLOG(error, "Following is the stack trace: \n" << sstream.str());
         return try_catch.Exception();
     }
 
@@ -771,6 +786,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     checkWatchables();
     return result;
 }
+
 
 
 //this function runs through 
@@ -793,6 +809,21 @@ void JSObjectScript::checkWhens(WhenMap& mapWhensToCheck)
 }
 
 
+void JSObjectScript::printStackFrame(std::stringstream& out, v8::Local<v8::StackFrame> frame)
+{
+  
+  int col = frame->GetColumn();
+  v8::Local<v8::String> func = frame->GetFunctionName();
+  int line = frame->GetLineNumber();
+  v8::Local<v8::String> script = frame->GetScriptName();
+
+  std::string func_str(ToCString( v8::String::Utf8Value(func)));
+  std::string script_str(ToCString( v8::String::Utf8Value(script)));
+  
+  out << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
+  std::cout << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
+}
+
 //defaults to internalEvaling with mContext, and does a ScopedEvalContext.
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
 {
@@ -807,7 +838,6 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
   context ctx.  It then calls the newly recompiled function from within ctx with
   args specified by argv and argc.
  */
-
 void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
 {
     v8::HandleScope handle_scope;
@@ -816,36 +846,32 @@ void JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ct
     TryCatch try_catch;
 
 
-    v8::String::Utf8Value v8Source( cb->ToString());
-    const char* cMsg = ToCString(v8Source);
-
-    internalEval(ctx,String(ToCString(v8Source)));
-
-    v8::Handle<v8::Value> funcName = cb->GetName();
-    v8::String::Utf8Value v8funcNameString (funcName->ToString());
-    const char* funcNameCStr = ToCString(v8funcNameString);
-
-    if ( ! v8::Context::GetCurrent()->Global()->Has(funcName->ToString()))
+    // v8::String::Utf8Value v8Source( cb->ToString());
+    // const char* cMsg = ToCString(v8Source);
+    String errorMessage= "Cannot interpret callback function as string while executing in context.  ";
+    String v8Source;
+    bool stringDecodeSuccessful = decodeString(cb->ToString(),v8Source,errorMessage);
+    if (! stringDecodeSuccessful)
     {
-        JSLOG(error, "Uncaught exception: do not have the function name: "<< funcNameCStr <<" in current context.");
+        JSLOG(error, errorMessage);
+        return;        
+    }
+
+
+    v8Source = "(" + v8Source;
+    v8Source += ");";
+
+    
+    v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,v8Source);
+
+    
+    if (! compileFuncResult->IsFunction())
+    {
+        JSLOG(error, "Uncaught exception: function passed in did not compile to a function");
         return;
     }
 
-    v8::Handle<v8::Value> compiledFunctionValue = v8::Context::GetCurrent()->Global()->Get(funcName->ToString());
-    if (! compiledFunctionValue->IsObject())
-    {
-        JSLOG(error, "Uncaught exception: name is not associated with an object: "<< funcNameCStr <<" in current context.");
-        return;
-    }
-
-    v8::Handle<v8::Object>  compiledFunction = compiledFunctionValue->ToObject();
-    if (! compiledFunction->IsFunction())
-    {
-        JSLOG(error, "Uncaught exception: name is not associated with a function: "<< funcNameCStr <<" in current context.");
-        return;
-    }
-
-    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunction);
+    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compileFuncResult);
 
     Handle<Value> result;
     bool targetGiven = false;
@@ -1206,13 +1232,11 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
 
     if (visFromArrayVal->IsObject())
     {
-        JSLOG(info, "returning the value from the array");
         return visFromArrayVal->ToObject();  //we found the object that we were
      }                                        //looking for in the visible
                                              //array.  returning it here.
 
     
-    JSLOG(info, "message sender is a new one");
     //didn't find the object that we were looking for in the visible array.
     v8::HandleScope handle_scope;
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mVisibleTemplate->NewInstance());
@@ -1477,7 +1501,9 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(const SpaceObjectReference& s
     uint32 new_pos = presences_array->Length();
 
     // Create the object for the new presence
-    Local<Object> js_pres = mManager->mPresenceTemplate->NewInstance();
+
+    Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
+
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef);
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
@@ -1615,7 +1641,7 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_s
   const std::string new_code = sstream.str();
   counter++; 
 
-
+  std::cout << "Trying to evaluate following script: " << new_code << "\n\n";
   
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));  
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);

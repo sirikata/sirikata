@@ -1,3 +1,5 @@
+ system.import("std/library.em");
+ 
  /*This is the Market Script  */
 
 /* vendors must send their banner to the market to attract customers */
@@ -13,9 +15,8 @@ var vendor = new Object();
 /* Handle an advertisement message */
 function advReactor(msg, sender)
 {
-  vendor[sender] = new Object();
-  vendor[sender].banner = msg.banner;    
-  
+  vendor[sender] = msg;
+   
   print("\n\n Got a vendor banner = " + vendor[sender].banner + " : " + msg.banner + "\n\n");
   for( s in customer)
   {
@@ -52,12 +53,9 @@ function subscriptionReactor(msg, sender)
     {
 		   
 		  print("\n\n Vendor match found for this new customer \n\n");
-      var reply_obj = new Object();
-      reply_obj.vendor = s;
-      reply_obj.banner = vendor[s].banner;
-      reply_obj.init_proto = vendor[s].init_proto;
-      // send this reply to this customer
+      var reply_obj = vendor[s];
       reply_obj -> sender;
+      print("\n\n Sent the vendor infor for " + s + "to the customer\n\n");
     }
   }
 
@@ -76,11 +74,11 @@ function handleProtocolMessage(msg, sender)
 
 
 /* React to the advertisements */
-advReactor <- [new system.Pattern("name", "advertisement"), new system.Pattern("banner"), new system.Pattern("init_proto")];
+advReactor <- [new util.Pattern("name", "advertisement"), new util.Pattern("banner"), new util.Pattern("init_proto")];
 
 /* React to the subscriptions */
-subscriptionReactor <- [new system.Pattern("name", "subscribe"), new system.Pattern("pattern")];
+subscriptionReactor <- [new util.Pattern("name", "subscribe"), new util.Pattern("pattern")];
 
-handleProtocolMessage <- new system.Pattern("name", "get_protocol");
+handleProtocolMessage <- new util.Pattern("name", "get_protocol");
 
 

@@ -1,3 +1,4 @@
+
 function test_function(x)
 {
             system.print("\n\n\n Hello "+ x + "\n\n\n\n");
@@ -5,18 +6,20 @@ function test_function(x)
 
 function reply_handler(reply, sender)
 {
-  system.print("Got a REPLY from " + sender.toString() ) ;
+  system.print("Got a REPLY from " + sender.toString() + "\n\n") ;
 }
 
 
 function proxAddedCallback(new_addr_obj)
 {
+  system.print("\n\nIn proxAddedCallback\n\n");
   if(system.Self.toString() == new_addr_obj.toString())
   {
     return;
   }
+  
 
- 
+
   var test_msg = new Object();
   test_msg.name = "test";
   /*
@@ -37,6 +40,10 @@ function proxAddedCallback(new_addr_obj)
 system.onPresenceConnected( function(pres) {
     system.print("\n\nconnected\n\n"); 
     system.presences[0].onProxAdded(proxAddedCallback);
+    system.print("system.presences[0] = " + system.presences[0]);
+    system.presences[0].getSimulation();
+    var vec = new util.Vec3(1,2,3);
+
     }
   );
 
