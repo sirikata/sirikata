@@ -18,6 +18,15 @@ namespace JSUtilObj{
 
 
 
+v8::Handle<v8::Value> ScriptCreateDistWhenPred(const v8::Arguments& args)
+{
+    lkjs;
+
+    
+    
+    lkjs;
+}
+
 
 v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args)
 {

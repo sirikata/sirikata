@@ -26,13 +26,14 @@ v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
 
 
 
-JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition)
+JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3d& currentVelocity)
  : JSWatchable(),
    jsObjScript(parent),
    whatIsVisible(new SpaceObjectReference(whatsVisible)),
    visibleToWhom(new SpaceObjectReference( toWhom)),
    stillVisible(new bool(visibleCurrently)),
-   mPosition(new Vector3d(currentPosition))
+   mPosition(new Vector3d(currentPosition)),
+   mVelocity(new Vector3d(currentVelocity))
 {
 }
 
@@ -44,6 +45,7 @@ JSVisibleStruct::~JSVisibleStruct()
     delete whatIsVisible;
     delete stillVisible;
     delete mPosition;
+    delete mVelocity;
 }
 
 
@@ -93,6 +95,18 @@ v8::Handle<v8::Value> JSVisibleStruct::returnProxyPosition()
     return jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
 }
 
+Vector3d JSVisibleStruct::returnProxyPositionCPP()
+{
+    setFlag();
+    jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
+    return *mPosition;
+}
+
+Vector3d JSVisibleStruct::returnProxyVelocityCPP()
+{
+    return *mVelocity;
+}
+
 
 v8::Handle<v8::Value> JSVisibleStruct::toString()
 {
@@ -124,6 +138,11 @@ v8::Handle<v8::Value> JSVisibleStruct::visibleSendMessage (std::string& msgToSen
     //actually send the message to the entity
     jsObjScript->sendMessageToEntity(whatIsVisible,visibleToWhom,msgToSend);
     return v8::Undefined();
+}
+
+bool JSVisibleStruct::getStillVisibleCPP()
+{
+    return *stillVisible;
 }
 
 

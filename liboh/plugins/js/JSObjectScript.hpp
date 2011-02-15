@@ -124,7 +124,8 @@ public:
     /** Print the given string to the current output. */
     void print(const String& str);
     v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
-
+    bool returnProxyPositionCPP(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position);
+    
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
     

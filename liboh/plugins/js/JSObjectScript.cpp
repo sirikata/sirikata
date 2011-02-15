@@ -606,7 +606,8 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
     
     v8::Local<v8::Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
 
-    JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()));
+    JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()),mParent->requestCurrentVelocity(myName.space(),myName.object()));
+
     
     selfVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(mySelf));
     selfVisObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
@@ -995,7 +996,8 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
 
     
-    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, mParent->requestCurrentPosition(proximateObject));
+    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, mParent->requestCurrentPosition(proximateObject),mParent->requestCurrentVelocity(proximateObject));
+
     newVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(toAdd));
     newVisObj->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
 
@@ -1254,7 +1256,7 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     v8::HandleScope handle_scope;
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mVisibleTemplate->NewInstance());
 
-    JSVisibleStruct* visStruct = new JSVisibleStruct(this, from, to, false, Vector3d());
+    JSVisibleStruct* visStruct = new JSVisibleStruct(this, from, to, false, Vector3d(),Vector3d());
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(visStruct));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
 
@@ -1749,14 +1751,19 @@ v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectRefer
     return CreateJSResult(mContext,vec3f);
 }
 
-
-v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position)
+bool JSObjectScript::returnProxyPositionCPP(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position)
 {
     bool updateSucceeded = updatePosition(sporef, spVisTo, position);
     if (! updateSucceeded)
         JSLOG(error, "No sporefs associated with position.  Returning undefined.");
-
     
+    return updateSucceeded;
+}
+
+
+v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position)
+{
+    returnProxyPositionCPP(sporef,spVisTo,position);
     return CreateJSResult(mContext,*position);
 }
 
