@@ -161,11 +161,14 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     // This really should trace from the root to make sure that all instances
     // are actually drawn...
     uint32 draw_calls = 0;
-    for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
-        draw_calls += md->geometry[ it->geometryIndex ].primitives.size();
+
+    Meshdata::GeometryInstanceIterator geoinst_it = md->getGeometryInstanceIterator();
+    uint32 geoinst_idx;
+    Matrix4x4f pos_xform;
+    while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
+        draw_calls += md->geometry[ md->instances[geoinst_idx].geometryIndex ].primitives.size();
     }
     printf("Estimated draw calls: %d\n", draw_calls);
-
 
     return input;
 }
