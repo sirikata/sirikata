@@ -54,7 +54,7 @@ typedef std::vector<std::string> TextureList;
 /** Represents a skinned animation. A skinned animation is directly associated
  *  with a SubMeshGeometry.
  */
-struct SkinController {
+struct SIRIKATA_MESH_EXPORT SkinController {
     // Joints for this controls Indexes into the Meshdata.joints array
     // (which indexes into Meshdata.nodes).
     std::vector<uint32> joints;
@@ -68,7 +68,7 @@ struct SkinController {
 };
 typedef std::vector<SkinController> SkinControllerList;
 
-struct SubMeshGeometry {
+struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
     std::string name;
     std::vector<Sirikata::Vector3f> positions;
 
@@ -118,7 +118,7 @@ struct SubMeshGeometry {
 typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
 
 
-struct GeometryInstance {
+struct SIRIKATA_MESH_EXPORT GeometryInstance {
     typedef std::map<SubMeshGeometry::Primitive::MaterialId,size_t> MaterialBindingMap;
     MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
     unsigned int geometryIndex; // Index in SubMeshGeometryList
@@ -128,13 +128,13 @@ struct GeometryInstance {
 };
 typedef std::vector<GeometryInstance> GeometryInstanceList;
 
-struct LightInstance {
+struct SIRIKATA_MESH_EXPORT LightInstance {
     int lightIndex; // Index in LightInfoList
     NodeIndex parentNode; // Index of node holding this instance
 };
 typedef std::vector<LightInstance> LightInstanceList;
 
-struct MaterialEffectInfo {
+struct SIRIKATA_MESH_EXPORT MaterialEffectInfo {
     struct Texture {
         std::string uri;
         Vector4f color;//color while the texture is pulled in, or if the texture is 404'd
@@ -203,16 +203,22 @@ struct MaterialEffectInfo {
         WrapMode wrapS,wrapT,wrapU;
         unsigned int maxMipLevel;
         float mipBias;
+
+        bool operator==(const Texture& rhs) const;
+        bool operator!=(const Texture& rhs) const;
     };
     typedef std::vector<Texture> TextureList;
     TextureList textures;
     float shininess;
     float reflectivity;
+
+    bool operator==(const MaterialEffectInfo& rhs) const;
+    bool operator!=(const MaterialEffectInfo& rhs) const;
 };
 typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
 
 
-struct InstanceSkinAnimation {
+struct  SIRIKATA_MESH_EXPORT InstanceSkinAnimation {
 };
 
 // A scene graph node. Contains a transformation, set of children nodes,

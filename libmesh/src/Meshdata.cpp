@@ -55,6 +55,41 @@ Node::Node(const Matrix4x4f& xform)
 {
 }
 
+bool MaterialEffectInfo::Texture::operator==(const MaterialEffectInfo::Texture& rhs) const {
+    return (
+        uri == rhs.uri &&
+        color == rhs.color &&
+        texCoord == rhs.texCoord &&
+        affecting == rhs.affecting &&
+        samplerType == rhs.samplerType &&
+        minFilter == rhs.minFilter &&
+        magFilter == rhs.magFilter &&
+        wrapS == rhs.wrapS &&
+        wrapT == rhs.wrapT &&
+        wrapU == rhs.wrapU &&
+        maxMipLevel == rhs.maxMipLevel &&
+        mipBias == rhs.mipBias);
+
+}
+bool MaterialEffectInfo::Texture::operator!=(const MaterialEffectInfo::Texture& rhs) const {
+    return !(*this == rhs);
+}
+
+bool MaterialEffectInfo::operator==(const MaterialEffectInfo& rhs) const {
+    bool basic =
+        shininess == rhs.shininess &&
+        reflectivity == rhs.reflectivity &&
+        textures.size() == rhs.textures.size();
+    if (!basic) return false;
+    for(int i = 0; i < textures.size(); i++) {
+        if (textures[i] != rhs.textures[i]) return false;
+    }
+    return true;
+}
+bool MaterialEffectInfo::operator!=(const MaterialEffectInfo& rhs) const {
+    return !(*this == rhs);
+}
+
 Matrix4x4f Meshdata::getTransform(NodeIndex index) const {
     // Just trace up the tree, multiplying in transforms
     Matrix4x4f xform(Matrix4x4f::identity());

@@ -37,6 +37,8 @@
 #include "SaveFilter.hpp"
 #include "PrintFilter.hpp"
 #include "ComputeBoundsFilter.hpp"
+#include "SquashPrimitivesFilter.hpp"
+#include "SquashMaterialsFilter.hpp"
 
 static int common_filters_plugin_refcount = 0;
 
@@ -49,6 +51,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
         FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
         FilterFactory::getSingleton().registerConstructor("print", PrintFilter::create);
         FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
+        FilterFactory::getSingleton().registerConstructor("squash-primitives", SquashPrimitivesFilter::create);
+        FilterFactory::getSingleton().registerConstructor("squash-materials", SquashMaterialsFilter::create);
     }
 
     ++common_filters_plugin_refcount;
@@ -81,6 +85,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
             FilterFactory::getSingleton().unregisterConstructor("save");
             FilterFactory::getSingleton().unregisterConstructor("print");
             FilterFactory::getSingleton().unregisterConstructor("compute-bounds");
+            FilterFactory::getSingleton().unregisterConstructor("squash-primitives");
+            FilterFactory::getSingleton().unregisterConstructor("squash-materials");
         }
     }
 }
