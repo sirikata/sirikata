@@ -474,7 +474,6 @@ whenStatement
     )
     ;
 
-
     
 whenPred
     : ^(WHEN_PRED
@@ -759,43 +758,6 @@ newExpression
 	| ^( NEW newExpression)
 	;
 	
-/*
-memberExpression
- : primaryExpression
-	| functionExpression
-	| ^(
-	     NEW 
-						  {
-								  APP("new ");
-								}
-						memberExpression 
-						
-						arguments
-					)
-
-	| ^(DOT 
-	      memberExpression
-							  {
-									  APP(".");
-									}
-							memberExpression
-				)
-	| ^(
-	    ARRAY_INDEX 
-					memberExpression 
-					    {
-           APP("[ ");
-									}
-					memberExpression
-					    {
-									  APP(" ]");
-									}
-					
-					)
-
-	;
-
-*/
 
 propertyReferenceSuffix1
 : Identifier { APP((const char*)$Identifier.text->chars);} 
@@ -862,7 +824,10 @@ indexSuffix
 	;	
 	
 propertyReferenceSuffix
-	: ^(DOT Identifier) 
+	: ^(DOT Identifier)
+        | ^(DOT
+                dollarExpression
+           )
 	;
 	
 assignmentOperator
@@ -1163,12 +1128,28 @@ primaryExpression
 	  { 
             APP((const char*)$Identifier.text->chars);
 	  }
+        | dollarExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
 	| ^(PAREN { APP("( "); } expression { APP(" )");}) 
 	;
-	
+
+dollarExpression
+        : ^(DOLLAR_EXPRESSION
+            {
+                APP(" util.dollar_expression(null,");
+            }
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+                APP(")");
+            }
+         )
+         ;
+        
+
+        
 // arrayLiteral definition.
 arrayLiteral
   : ^(ARRAY_LITERAL {APP("[ ]"); })

@@ -46,6 +46,7 @@ tokens
     WHEN_CHECKED_LIST_FIRST;
     WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
+    DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
     THROW;
     CATCH;
@@ -173,7 +174,7 @@ statement
 	| labelledStatement
 	| switchStatement
 	| throwStatement
-    | whenStatement
+        | whenStatement
 	| tryStatement
 	| msgSendStatement
 	| msgRecvStatement
@@ -228,7 +229,9 @@ whenStatement
     : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
     ;
 //    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN whenPred whenCheckedListFirst $s1)
-    
+
+
+
 //note: right now, this rule is very simple: it only does less than, doesn't do any checks to see if the values are watched,
 //and does not restrict the predicates from being zany.
 whenPred
@@ -242,11 +245,11 @@ whenCheckedListFirst
 whenCheckedListSubsequent
     : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)* -> ^(WHEN_CHECKED_LIST_SUBSEQUENT $s1 $s2*)
     ;
-    //        : expression LTERM* (',' LTERM* expression)* -> ^(WHEN_CHECKED_LIST expression+)
+
 
 ifStatement
     : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
-	;
+    ;
 	
 iterationStatement
 	: doWhileStatement
@@ -386,14 +389,13 @@ indexSuffix1
 propertyReferenceSuffix1
 	: '.' LTERM* Identifier -> Identifier
 	;
-	
+
 
 memberExpression
-
 	: (primaryExpression -> primaryExpression) ( LTERM* propertyReferenceSuffix1 -> ^( DOT  $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
-	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1)  | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
+	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
 	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
-		;
+        ;
 	
 memberExpressionSuffix
 	: indexSuffix -> indexSuffix 
@@ -421,8 +423,10 @@ indexSuffix
 	
 propertyReferenceSuffix
 	: '.' LTERM* Identifier -> ^(DOT Identifier)
+        | '.' LTERM* dollarExpression -> ^(DOT dollarExpression)
 	;
-	
+
+        
 assignmentOperator
 	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)| '<<=' -> ^(LEFT_SHIFT_ASSIGN)| '>>=' -> ^(RIGHT_SHIFT_ASSIGN)| '>>>=' -> ^(TRIPLE_SHIFT_ASSIGN)| '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
 	;
@@ -577,12 +581,17 @@ unaryExpression
 primaryExpression
 	: 'this'
 	| Identifier
+        | dollarExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
 	| '(' LTERM* expression LTERM* ')' -> ^( PAREN expression )
 	;
-	
+
+dollarExpression
+        : '$' LTERM* Identifier LTERM* '$' -> ^(DOLLAR_EXPRESSION Identifier)
+        ;
+        
 // arrayLiteral definition.
 arrayLiteral
   : '[' LTERM* (assignmentExpression)? LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression?)
@@ -699,10 +708,9 @@ fragment ExponentPart
 Identifier
 	: IdentifierStart IdentifierPart*
 	;
-	
+
 fragment IdentifierStart
 	: UnicodeLetter
-	| '$'
 	| '_'
         | '\\' UnicodeEscapeSequence
         ;
