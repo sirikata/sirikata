@@ -106,9 +106,30 @@ Meshdata::GeometryInstanceIterator Meshdata::getGeometryInstanceIterator() const
     return GeometryInstanceIterator(this);
 }
 
+uint32 Meshdata::getInstancedGeometryCount() const {
+    uint32 count = 0;
+    Meshdata::GeometryInstanceIterator geoinst_it = getGeometryInstanceIterator();
+    uint32 geoinst_idx;
+    Matrix4x4f pos_xform;
+    while( geoinst_it.next(&geoinst_idx, &pos_xform) )
+        count++;
+    return count;
+}
+
 Meshdata::LightInstanceIterator Meshdata::getLightInstanceIterator() const {
     return LightInstanceIterator(this);
 }
+
+uint32 Meshdata::getInstancedLightCount() const {
+    uint32 count = 0;
+    Meshdata::LightInstanceIterator lightinst_it = getLightInstanceIterator();
+    uint32 lightinst_idx;
+    Matrix4x4f pos_xform;
+    while( lightinst_it.next(&lightinst_idx, &pos_xform) )
+        count++;
+    return count;
+}
+
 
 
 

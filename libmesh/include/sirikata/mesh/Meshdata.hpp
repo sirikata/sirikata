@@ -315,6 +315,10 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
         std::stack<NodeState> mStack;
     };
     GeometryInstanceIterator getGeometryInstanceIterator() const;
+    /** Get count of instanced geometry. This can differ from instances.size()
+     * because many nodes may refer to the same InstanceGeometry.
+     */
+    uint32 getInstancedGeometryCount() const;
 
     // Allows you to generate a list of GeometryInstances with their transformations.
     class LightInstanceIterator {
@@ -331,7 +335,11 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
         std::stack<NodeState> mStack;
     };
     LightInstanceIterator getLightInstanceIterator() const;
-
+    /** Get count of instanced lights. This can differ from
+     * lightInstances.size() because many nodes may refer to the same
+     * InstanceLight.
+     */
+    uint32 getInstancedLightCount() const;
 };
 
 } // namespace Mesh

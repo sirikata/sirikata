@@ -110,7 +110,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
             printf("     Texture: %s\n", t_it->uri.c_str());
     }
 
-    printf("Geometry Instances:\n");
+    printf("Geometry Instances: (%d in list, %d instanced)\n", md->instances.size(), md->getInstancedGeometryCount());
     for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
         printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, (int)it->materialBindingMap.size());
         for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
@@ -118,7 +118,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
         }
     }
 
-    printf("Light Instances:\n");
+    printf("Light Instances: (%d in list, %d instanced)\n", md->lightInstances.size(), md->getInstancedLightCount());
     for(LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
         printf("   Index: %d Matrix: %s\n", it->lightIndex, md->getTransform(it->parentNode).toString().c_str());
     }
