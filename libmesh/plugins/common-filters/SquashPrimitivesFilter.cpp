@@ -120,6 +120,7 @@ FilterDataPtr SquashPrimitivesFilter::apply(FilterDataPtr input) {
         // singelMaterialID.
         for(uint32 geo_inst_idx = 0; geo_inst_idx < md->instances.size(); geo_inst_idx++) {
             GeometryInstance& geo_inst = md->instances[geo_inst_idx];
+            if (geo_inst.geometryIndex != geo_idx) continue;
             assert(!geo_inst.materialBindingMap.empty());
             // We should only need a single material ID for squashed primitives.
             uint32 single_mat_id = geo_inst.materialBindingMap.begin()->second;
