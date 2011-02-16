@@ -55,6 +55,83 @@ Node::Node(const Matrix4x4f& xform)
 {
 }
 
+void SubMeshGeometry::append(const SubMeshGeometry& rhs, const Matrix4x4f& xform) {
+    Matrix3x3f normal_xform = xform.extract3x3().inverseTranspose();
+
+    int32 index_offset = this->positions.size();
+    for(uint32 pi = 0; pi < rhs.positions.size(); pi++)
+        this->positions.push_back(xform * rhs.positions[pi]);
+    for(uint32 ni = 0; ni < rhs.normals.size(); ni++)
+        this->normals.push_back( normal_xform * rhs.normals[ni] );
+    // FIXME tangents?
+    this->colors.insert(this->colors.end(), rhs.colors.begin(), rhs.colors.end());
+
+    // FIXME: influenceStartIndex? jointindices? weights? inverseBindMatrices?
+
+    assert((this->texUVs.size() == 0 && index_offset == 0) ||
+        this->texUVs.size() == rhs.texUVs.size()); // same tex uvs or first
+                                                   // added
+    if (this->texUVs.size() == 0) {
+        // Copy
+        this->texUVs = rhs.texUVs;
+    }
+    else {
+        // Append
+        for(uint32 ti = 0; ti < rhs.texUVs.size(); ti++) {
+            assert( this->texUVs[ti].stride == rhs.texUVs[ti].stride );
+            this->texUVs[ti].uvs.insert(
+                this->texUVs[ti].uvs.end(),
+                rhs.texUVs[ti].uvs.begin(), rhs.texUVs[ti].uvs.end()
+            );
+        }
+    }
+
+    // Copy primitives
+    // FIXME this currently assumes all the materialIDs line up, and its not
+    // clear how to handle this any better
+    for(uint32 pi = 0; pi < rhs.primitives.size(); pi++) {
+        const Primitive& orig_prim = rhs.primitives[pi];
+        this->primitives.push_back( Primitive() );
+        Primitive& prim = this->primitives.back();
+        prim.primitiveType = orig_prim.primitiveType;
+        prim.materialId = orig_prim.materialId;
+
+        prim.indices.resize( orig_prim.indices.size() );
+        for(uint32 ii = 0; ii < orig_prim.indices.size(); ii++)
+            prim.indices[ii] = orig_prim.indices[ii] + index_offset;
+    }
+}
+
+void SubMeshGeometry::recomputeBounds() {
+    aabb = BoundingBox3f3f::null();
+    radius = 0.;
+    for(uint32 pi = 0; pi < primitives.size(); pi++) {
+        const Primitive& prim = primitives[pi];
+        for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
+            aabb = aabb.merge(positions[ii]);
+            double l = sqrt(positions[ii].lengthSquared());
+            radius = std::max(radius, l);
+        }
+    }
+}
+
+void GeometryInstance::recomputeBounds(MeshdataPtr parent, const Matrix4x4f& xform) {
+    SubMeshGeometry& geo = parent->geometry[ geometryIndex ];
+
+    aabb = BoundingBox3f3f::null();
+    radius = 0.;
+
+    for(uint32 pi = 0; pi < geo.primitives.size(); pi++) {
+        const SubMeshGeometry::Primitive& prim = geo.primitives[pi];
+        for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
+            Vector3f xpos = xform * geo.positions[ii];
+            aabb = aabb.merge(xpos);
+            double l = sqrt(xpos.lengthSquared());
+            radius = std::max(radius, l);
+        }
+    }
+}
+
 bool MaterialEffectInfo::Texture::operator==(const MaterialEffectInfo::Texture& rhs) const {
     return (
         uri == rhs.uri &&

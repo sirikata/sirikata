@@ -39,6 +39,7 @@
 #include "ComputeBoundsFilter.hpp"
 #include "SquashPrimitivesFilter.hpp"
 #include "SquashMaterialsFilter.hpp"
+#include "SquashInstancedGeometryFilter.hpp"
 
 static int common_filters_plugin_refcount = 0;
 
@@ -53,6 +54,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
         FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
         FilterFactory::getSingleton().registerConstructor("squash-primitives", SquashPrimitivesFilter::create);
         FilterFactory::getSingleton().registerConstructor("squash-materials", SquashMaterialsFilter::create);
+        FilterFactory::getSingleton().registerConstructor("squash-instanced-geometry", SquashInstancedGeometryFilter::create);
     }
 
     ++common_filters_plugin_refcount;
@@ -87,6 +89,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
             FilterFactory::getSingleton().unregisterConstructor("compute-bounds");
             FilterFactory::getSingleton().unregisterConstructor("squash-primitives");
             FilterFactory::getSingleton().unregisterConstructor("squash-materials");
+            FilterFactory::getSingleton().unregisterConstructor("squash-instanced-geometry");
         }
     }
 }

@@ -51,6 +51,9 @@ typedef std::vector<NodeIndex> NodeIndexList;
 typedef std::vector<LightInfo> LightInfoList;
 typedef std::vector<std::string> TextureList;
 
+struct SIRIKATA_MESH_EXPORT Meshdata;
+typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
+
 /** Represents a skinned animation. A skinned animation is directly associated
  *  with a SubMeshGeometry.
  */
@@ -101,10 +104,11 @@ struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
         typedef size_t MaterialId;
         MaterialId materialId;
     };
-    BoundingBox3f3f aabb;
-    double radius;
     std::vector<Primitive> primitives;
 
+    BoundingBox3f3f aabb;
+    double radius;
+    void recomputeBounds();
 
     SkinControllerList skinControllers;
 
@@ -114,6 +118,11 @@ struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
     std::tr1::unordered_map<uint32, std::vector< std::pair<uint32, uint32> > > neighborPrimitives; // maps positionIdx to list of primitiveIdxes
     /////////////////////////////////
 
+    /** Append the given SubMeshGeometry to the end of this one. Use the given
+     *  transformation to transform the geometry before adding it.  This is a
+     *  useful primitive when trying to merge/simplify geometry.
+     */
+    void append(const SubMeshGeometry& rhs, const Matrix4x4f& xform);
 };
 typedef std::vector<SubMeshGeometry> SubMeshGeometryList;
 
@@ -123,6 +132,8 @@ struct SIRIKATA_MESH_EXPORT GeometryInstance {
     MaterialBindingMap materialBindingMap;//maps materialIndex to offset in Meshdata's materials
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     NodeIndex parentNode; // Index of node holding this instance
+
+    void recomputeBounds(MeshdataPtr parent, const Matrix4x4f& xform);
     BoundingBox3f3f aabb;//transformed aabb
     double radius;//transformed radius
 };
@@ -242,9 +253,6 @@ struct SIRIKATA_MESH_EXPORT Node {
     NodeIndexList instanceChildren;
 };
 typedef std::vector<Node> NodeList;
-
-struct SIRIKATA_MESH_EXPORT Meshdata;
-typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
 
 struct SIRIKATA_MESH_EXPORT Meshdata {
     SubMeshGeometryList geometry;
