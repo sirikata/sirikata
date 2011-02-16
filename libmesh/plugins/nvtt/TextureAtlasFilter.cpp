@@ -335,7 +335,8 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
     for(MaterialEffectInfoList::iterator mat_it = md->materials.begin(); mat_it != md->materials.end(); mat_it++) {
         MaterialEffectInfo& mat_info = *mat_it;
         for(MaterialEffectInfo::TextureList::iterator tex_it = mat_info.textures.begin(); tex_it != mat_info.textures.end(); tex_it++) {
-            tex_it->uri = atlas_url;
+            if (!tex_it->uri.empty())
+                tex_it->uri = atlas_url;
         }
     }
 
