@@ -41,6 +41,7 @@
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "Camera.hpp"
 #include "Entity.hpp"
+#include "Lights.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
 #include "input/SDLInputManager.hpp"
@@ -409,7 +410,32 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
     }
 }
 
+void OgreSystem::constructSystemLight(const String& name, const Vector3f& direction) {
+    LightInfo li;
 
+    Color lcol(1.f, 1.f, 1.f);
+    li.setLightDiffuseColor(lcol);
+    li.setLightSpecularColor(lcol);
+    li.setLightFalloff(1.f, 0.f, 0.f);
+    li.setLightType(LightInfo::DIRECTIONAL);
+    li.setLightRange(10000.f);
+
+    Ogre::Light* light = constructOgreLight(getSceneManager(), String("____system_") + name, li);
+    light->setDirection(toOgre(direction));
+
+    getSceneManager()->getRootSceneNode()->attachObject(light);
+}
+
+void OgreSystem::loadSystemLights() {
+    if (useModelLights()) return;
+
+    constructSystemLight("forward", Vector3f(0.f, 0.f, 1.f));
+    constructSystemLight("back", Vector3f(0.f, 0.f, -1.f));
+    constructSystemLight("left", Vector3f(-1.f, 0.f, 0.f));
+    constructSystemLight("right", Vector3f(1.f, 0.f, 0.f));
+    constructSystemLight("up", Vector3f(0.f, 1.f, 0.f));
+    constructSystemLight("down", Vector3f(0.f, -1.f, 0.f));
+}
 
 bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     mViewer = viewer;
@@ -441,6 +467,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
     OptionValue*grabCursor;
+
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
@@ -464,6 +491,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
+                           mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
                            NULL);
     bool userAccepted=true;
 
@@ -603,6 +631,8 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
     allocMouseHandler(keybindingFile->as<String>());
     new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
+
+    loadSystemLights();
 
   // Test web view
 /*
@@ -765,7 +795,9 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     p->getProxyManager()->destroyObject(p);
 }
 
-
+bool OgreSystem::useModelLights() const {
+    return mModelLights->as<bool>();
+}
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
@@ -1073,11 +1105,11 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     // create a chatwindow
     // WebView mNager is already initialized by the ogre system
 
-    
+
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-    
+
 		WebView* ui_wv = wvManager->getWebView("chat_terminal");
-		
+
 		if(!ui_wv)
 		{
 
@@ -1108,7 +1140,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 			if(!ui_wv)
 			{
 			  ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_BOTTOMCENTER));
-        ui_wv->loadFile(script_name); 
+        ui_wv->loadFile(script_name);
 				SILOG(ogre,detailed,"Returning a new window.");
 			}
 
@@ -1116,7 +1148,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
       boost::any result(inn);
       return result;
 		}
-    
+
 
 	}
 

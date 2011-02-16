@@ -126,9 +126,16 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     Transfer::TransferPoolPtr mTransferPool;
 
+    OptionValue* mModelLights; // Use model or basic lights
+
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
+    // Loads system lights if they are being used.
+    void loadSystemLights();
+    // Helper for loadSystemLights.
+    void constructSystemLight(const String& name, const Vector3f& direction);
+
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Task::LocalTime, Duration);
@@ -179,6 +186,8 @@ public:
     Transfer::TransferPoolPtr transferPool();
 
     String getResourcesDir() const { return mResourcesDir; }
+
+    bool useModelLights() const;
 
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     void  attachCamera(const String&renderTargetName,Camera*);
