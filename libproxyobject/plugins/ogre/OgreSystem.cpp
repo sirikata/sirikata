@@ -1073,14 +1073,52 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     // create a chatwindow
     // WebView mNager is already initialized by the ogre system
 
+    
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-    WebView* ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
-    ui_wv->loadFile("chat/prompt.html");
-    SILOG(ogre,detailed,"Returning a chat window.");
+    
+		WebView* ui_wv = wvManager->getWebView("chat_terminal");
+		
+		if(!ui_wv)
+		{
+
+      ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+      ui_wv->loadFile("chat/prompt.html");
+      SILOG(ogre,detailed,"Returning a chat window.");
+	  }
     Invokable* inn = ui_wv;
     boost::any result(inn);
     return result;
   }
+	else if(name == "getWindow")
+	{
+	  // get the name of this window
+		string window_name;
+		string script_name;
+
+	  if( (!params[1].empty() && params[1].type() == typeid(string))
+		    &&
+				(!params[2].empty() && params[2].type() == typeid(string))
+		  )
+    {
+      window_name = boost::any_cast<std::string>(params[1]);
+      script_name = boost::any_cast<std::string>(params[2]);
+      WebViewManager* wvManager = WebViewManager::getSingletonPtr();
+		  WebView* ui_wv = wvManager->getWebView(window_name);
+
+			if(!ui_wv)
+			{
+			  ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+        ui_wv->loadFile(script_name); 
+				SILOG(ogre,detailed,"Returning a new window.");
+			}
+
+		  Invokable* inn = ui_wv;
+      boost::any result(inn);
+      return result;
+		}
+    
+
+	}
 
 
   return NULL;

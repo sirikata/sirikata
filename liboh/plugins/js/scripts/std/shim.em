@@ -12,21 +12,25 @@ system.shim = new Object();
 system.__presence_constructor__.prototype.runSimulation =
 function(name)
 {
+  system.print("\n\nIn side the runSimulation\n\n");
   var pres = this;
   if(!system.shim.graphics)
   {
+	  system.print("\n\n Got the new graphics object\n\n");
     system.shim.graphics = new Object();  
   }
-  else
+  if(!system.shim.graphics[pres])
   {
-    if(!system.shim.graphics[pres])
-    {
-      system.shim.graphics[pres] = new Object();
-      system.shim.graphics[pres][name] = pres._runSimulation(name);
-    }
-    
+    system.shim.graphics[pres] = new Object();
+    system.print("\n\nBefore _runSimulation\n\n");
+    system.shim.graphics[pres][name] = pres._runSimulation(name);
   }
-  return system.shim.graphics[pres][name];
+    
+	system.print("\n\n YEYEYEY 1\n\n");
+  var return_val = system.shim.graphics[pres][name];
+	system.print("\n\n YEYEYEY 2\n\n");
+
+	return return_val; 
 }
 
 system.__presence_constructor__.prototype.getSimulation = 

@@ -19,8 +19,8 @@ function createBannerObject()
   var f1 = function(init_arg_1, init_arg_2)
                           {  
                             
-                             print("\n\nExecuting the init_protocol\n\n");
-                             print("init_arg_1 = " + init_arg_1 + "init-arg_2 = " + init_arg_2);
+                             //system.print("\n\nExecuting the init_protocol\n\n");
+                             //system.print("init_arg_1 = " + init_arg_1 + "init-arg_2 = " + init_arg_2);
                               
                              init_arg_1 <- new util.Pattern("seq_no", "2") <- init_arg_2; 
                              var ack = new Object(); 
@@ -29,7 +29,7 @@ function createBannerObject()
                              print("Sending the ack to " + init_arg_2);
                              ack -> init_arg_2;
                              
-                             print("\n\ndone executing the init_protocol\n\n");
+                             //system.print("\n\ndone executing the init_protocol\n\n");
                           };
 
   bannerObj = new Object();
@@ -40,9 +40,10 @@ function createBannerObject()
   bannerObj.init_proto =  f1;  
   
   bannerObj.init_arg_1 = function(msg, sender){ 
-                          print("\n\nTrying opening the popup window\n\n");
+                          //system.print("\n\nTrying opening the popup window\n\n");
                           var simulator = system.presences[0].runSimulation("ogregraphics");
-                          //dialog_box = simulator.invoke("getChatWindow");
+                          //var dialog_box = simulator.invoke("getChatWindow");
+                          var dialog_box = simulator.invoke("getWindow", "chat_terminal", "chat/prompt.html");
                         }
 
   bannerObj.init_arg_2 = system.Self;
@@ -120,7 +121,6 @@ system.onPresenceConnected( function(pres) {
     if (system.presences.length == 1)
     {
       system.print("Printing ..." + system.Self.prototype);
-      //simulator = pres.runSimulation("ogregraphics");
 
       system.presences[0].onProxAdded(proxAddedCallback);
 

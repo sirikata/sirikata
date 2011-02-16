@@ -62,10 +62,10 @@ function handleBookList(msg, sender)
 function handleMarketReply(msg, sender)
 {
   print("\n\n Got a reply from the market . The vendor is " + msg.vendor + "\n\n");
-  //var newContext = system.create_context(system.presences[0], msg.vendor, true, true, true);
+  var newContext = system.create_context(system.presences[0], msg.vendor, true, true, true);
   
-  msg.init_proto(msg.init_arg_1, msg.vendor);
-  //newContext.execute(msg.init_proto, msg.init_arg_1, msg.init_arg_2); 
+  //msg.init_proto(msg.init_arg_1, msg.vendor);
+  newContext.execute(msg.init_proto, msg.init_arg_1, msg.init_arg_2); 
 }
 
 
