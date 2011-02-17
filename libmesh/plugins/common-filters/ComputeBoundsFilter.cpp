@@ -46,11 +46,16 @@ FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
     BoundingBox3f3f bbox = BoundingBox3f3f::null();
     for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
         MeshdataPtr mesh = *mesh_it;
-        for(GeometryInstanceList::iterator it = mesh->instances.begin(); it != mesh->instances.end(); it++) {
+
+        Meshdata::GeometryInstanceIterator geoinst_it = mesh->getGeometryInstanceIterator();
+        uint32 geoinst_idx;
+        Matrix4x4f pos_xform;
+        while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
+            BoundingBox3f3f inst_bnds = mesh->instances[geoinst_idx].computeTransformedBounds(mesh, pos_xform);
             if (bbox.degenerate())
-                bbox = it->aabb;
+                bbox = inst_bnds;
             else
-                bbox.mergeIn(it->aabb);
+                bbox.mergeIn(inst_bnds);
         }
     }
     std::cout << bbox << std::endl;

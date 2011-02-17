@@ -116,20 +116,33 @@ void SubMeshGeometry::recomputeBounds() {
 }
 
 void GeometryInstance::recomputeBounds(MeshdataPtr parent, const Matrix4x4f& xform) {
+    computeTransformedBounds(parent, xform, &aabb, &radius);
+}
+
+void GeometryInstance::computeTransformedBounds(MeshdataPtr parent, const Matrix4x4f& xform, BoundingBox3f3f* bounds_out, double* radius_out) const {
     SubMeshGeometry& geo = parent->geometry[ geometryIndex ];
 
-    aabb = BoundingBox3f3f::null();
-    radius = 0.;
+    if (bounds_out != NULL)
+        *bounds_out = BoundingBox3f3f::null();
+    if (radius_out != NULL)
+        *radius_out = 0.;
 
     for(uint32 pi = 0; pi < geo.primitives.size(); pi++) {
         const SubMeshGeometry::Primitive& prim = geo.primitives[pi];
         for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
             Vector3f xpos = xform * geo.positions[ii];
-            aabb = aabb.merge(xpos);
-            double l = sqrt(xpos.lengthSquared());
-            radius = std::max(radius, l);
+            if (bounds_out != NULL)
+                *bounds_out = (*bounds_out).merge(xpos);
+            if (radius_out != NULL)
+                *radius_out = std::max(*radius_out, sqrt(xpos.lengthSquared()));
         }
     }
+}
+
+BoundingBox3f3f GeometryInstance::computeTransformedBounds(MeshdataPtr parent, const Matrix4x4f& xform) const {
+    BoundingBox3f3f result;
+    computeTransformedBounds(parent, xform, &result, NULL);
+    return result;
 }
 
 bool MaterialEffectInfo::Texture::operator==(const MaterialEffectInfo::Texture& rhs) const {
