@@ -13,15 +13,14 @@ var buy_proto = "get_books";
 
 /* fill in the banner object to send to the market */
 var bannerObj = undefined;
+
+var my_books = ["Introduction to Computer Networks", "Introduction to Operating Systems", "Wireless Networks"];
 function createBannerObject()
 {
 
   var f1 = function(init_arg_1, init_arg_2)
                           {  
                             
-                             //system.print("\n\nExecuting the init_protocol\n\n");
-                             //system.print("init_arg_1 = " + init_arg_1 + "init-arg_2 = " + init_arg_2);
-                              
                              init_arg_1 <- new util.Pattern("seq_no", "2") <- init_arg_2; 
                              var ack = new Object(); 
                              ack.name = "ack";
@@ -29,7 +28,6 @@ function createBannerObject()
                              print("Sending the ack to " + init_arg_2);
                              ack -> init_arg_2;
                              
-                             //system.print("\n\ndone executing the init_protocol\n\n");
                           };
 
   bannerObj = new Object();
@@ -38,13 +36,42 @@ function createBannerObject()
   bannerObj.vendor = system.Self;
   bannerObj.seq_no = 1;
   bannerObj.init_proto =  f1;  
-  
-  bannerObj.init_arg_1 = function(msg, sender){ 
-                          //system.print("\n\nTrying opening the popup window\n\n");
-                          var simulator = system.presences[0].runSimulation("ogregraphics");
-                          //var dialog_box = simulator.invoke("getChatWindow");
-                          var dialog_box = simulator.invoke("getWindow", "chat_terminal", "chat/prompt.html");
-                        }
+  bannerObj.init_arg_1 = function(msg, sender)
+                         { 
+                           var simulator = system.presences[0].runSimulation("ogregraphics");
+
+                          
+                           var code = "<html><head><style type=\"text/css\">.command {border-width: 1px 1px 1px 1px;border-color: black;border-style: solid;padding: 0px;}</style><script>function onYes(){var arg_map = ['ExecScript', 'Command', 'Yes'];chrome.send('event', arg_map);}function onNo(){var arg_map = ['ExecScript', 'Command', 'No'];chrome.send('event', arg_map);}</script></head><body>Vendor XYZ wants to send you the list of books you may be interested in. Do you wish to look at it?<br><button type=\"button\" onclick=\"onYes()\">Yes</button><br><button type=\"button\" onclick=\"onNo()\">No</button></body></html>";
+
+                            
+                           var my_books = ["Introduction to Computer Networks", "Introduction to Operating Systems", "Wireless Networks"];
+                          
+                           var book_form_code = "<html><head><script>function onBuy(book){ document.write('<p>Hello</p>'); var arg_map = ['ExecScript', 'Command', book]; chrome.send('event', arg_map); }</script></head><body>Introduction to Computer Networks <button type=\"button\" onclick=\"onBuy(book1)\">Buy</button><br>Introduction to Operating Systems<button type=\"button\">Buy</button></body></html>";
+
+                          
+                           var dialog_box = simulator.invoke("getWindow", "chat_terminal", code);
+                             
+                           var event_handler = function(arg)
+                           {
+                             
+                             if(arg == "Yes")
+                             {
+                               
+                               var book_form = simulator.invoke("getWindow", "book_form", book_form_code);
+                               book_form.invoke("bind", "event", function(arg2){ system.print("Trying to buy the book " + arg2);} );
+                             }
+                            else if(arg == "No")
+                           {
+                             system.print("\n\n Got a No\n\n");
+                           }
+                          
+
+                         };
+                         
+                         dialog_box.invoke("bind", "event",  event_handler);
+                        
+                       };
+
 
   bannerObj.init_arg_2 = system.Self;
 
