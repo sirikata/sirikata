@@ -174,7 +174,7 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     printf("Geometry Instances: (%d in list, %d instanced)\n", (int)md->instances.size(), (int)md->getInstancedGeometryCount());
     for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
-        printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, (int)it->materialBindingMap.size());
+        printf("   Index: %d MapSize: %d\n", it->geometryIndex, (int)it->materialBindingMap.size());
         for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
             printf("      map from: %d to: %d\n", (int)m->first, (int)m->second);
         }

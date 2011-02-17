@@ -859,18 +859,13 @@ public:
             if (geoinst.geometryIndex >= md.geometry.size())
                 continue;
             const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
-            AxisAlignedBox ogresubmeshaabb(
-                Graphics::toOgre(geoinst.aabb.min()),
-                Graphics::toOgre(geoinst.aabb.max())
-            );
+            BoundingBox3f3f submeshaabb;
             double rad=0;
-            if (geoinst_idx != 0) {
-                ogresubmeshaabb.merge(mesh->getBounds());
-                rad=mesh->getBoundingSphereRadius();
-            }
-            if (geoinst.radius>rad) {
-                rad=geoinst.radius;
-            }
+            geoinst.computeTransformedBounds(md, pos_xform, &submeshaabb, &rad);
+            AxisAlignedBox ogresubmeshaabb(
+                Graphics::toOgre(submeshaabb.min()),
+                Graphics::toOgre(submeshaabb.max())
+            );
             mesh->_setBounds(ogresubmeshaabb);
             mesh->_setBoundingSphereRadius(rad);
             int vertcount = submesh.positions.size();

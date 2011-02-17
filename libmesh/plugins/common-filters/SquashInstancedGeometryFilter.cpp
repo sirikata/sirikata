@@ -159,7 +159,6 @@ FilterDataPtr SquashInstancedGeometryFilter::apply(FilterDataPtr input) {
             geo_inst.materialBindingMap = merged_material_maps[merged_it->first];
             geo_inst.geometryIndex = geo_idx;
             geo_inst.parentNode = root_node_idx;
-            geo_inst.recomputeBounds(new_md, rn.transform);
             new_md->instances.push_back(geo_inst);
         }
 

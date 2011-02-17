@@ -416,8 +416,6 @@ void ColladaDocumentImporter::finish ()
                         GeometryInstance new_geo_inst;
                         new_geo_inst.geometryIndex = geo_it->second;
                         new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
-                        new_geo_inst.radius=0;
-                        new_geo_inst.aabb=BoundingBox3f3f::null();
                         const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
                         for (size_t bind=0;bind< bindings.getCount();++bind) {
                             new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
@@ -425,7 +423,6 @@ void ColladaDocumentImporter::finish ()
                         }
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                            new_geo_inst.radius = computeRadiusAndBounds(geometry, curnode.transform, new_geo_inst.aabb);
 
                             mMesh->instances.push_back(new_geo_inst);
                         }
@@ -449,8 +446,6 @@ void ColladaDocumentImporter::finish ()
                             GeometryInstance new_geo_inst;
                             new_geo_inst.geometryIndex = geo_it->second;
                             new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
-                            new_geo_inst.radius=0;
-                            new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
                             for (size_t bind=0;bind< bindings.getCount();++bind) {
                                 COLLADAFW::MaterialId id = bindings[bind].getMaterialId();
@@ -460,11 +455,9 @@ void ColladaDocumentImporter::finish ()
                             }
                             if (geo_it->second<mMesh->geometry.size()) {
                                 const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                                new_geo_inst.radius = computeRadiusAndBounds(geometry, curnode.transform, new_geo_inst.aabb);
 
                                 mMesh->instances.push_back(new_geo_inst);
                             }
-                            new_geo_inst.radius=sqrt(new_geo_inst.radius);
                             mMesh->instances.push_back(new_geo_inst);
                         }
                     }

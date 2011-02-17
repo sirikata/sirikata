@@ -133,21 +133,14 @@ struct SIRIKATA_MESH_EXPORT GeometryInstance {
     unsigned int geometryIndex; // Index in SubMeshGeometryList
     NodeIndex parentNode; // Index of node holding this instance
 
-    void recomputeBounds(MeshdataPtr parent, const Matrix4x4f& xform);
-
     /** Compute the bounds of this instance with the given transform. This is
      * more precise, and much more expensive, than transforming the
      * SubMeshGeometry's bounds.
      */
     BoundingBox3f3f computeTransformedBounds(MeshdataPtr parent, const Matrix4x4f& xform) const;
+    BoundingBox3f3f computeTransformedBounds(const Meshdata& parent, const Matrix4x4f& xform) const;
     void computeTransformedBounds(MeshdataPtr parent, const Matrix4x4f& xform, BoundingBox3f3f* bounds_out, double* radius_out) const;
-
-    // FIXME an GeometryInstance can't have these properties unless they are
-    // identical to those in the SubMeshGeometry that is referenced since the
-    // GeometryInstance could actually refer to many instances since Nodes can
-    // also be instanced.
-    BoundingBox3f3f aabb;//transformed aabb
-    double radius;//transformed radius
+    void computeTransformedBounds(const Meshdata& parent, const Matrix4x4f& xform, BoundingBox3f3f* bounds_out, double* radius_out) const;
 };
 typedef std::vector<GeometryInstance> GeometryInstanceList;
 
