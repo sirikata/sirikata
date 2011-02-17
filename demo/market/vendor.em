@@ -30,7 +30,7 @@ function createBannerObject()
                              var ack = new Object(); 
                              ack.name = "ack";
                              ack.seq_no = "1";
-                             print("Sending the ack to " + init_arg_2);
+                             //print("Sending the ack to " + init_arg_2);
                              ack -> init_arg_2;
                              
                           };
@@ -44,16 +44,7 @@ function createBannerObject()
   var f2 = function(msg, sender, pres)
                          { 
                            
-                           //var simulator = system.presences[0].runSimulation("ogregraphics");
                            var simulator = pres.runSimulation("ogregraphics");
-                           /*
-                           var simulator = system.presences[0].getSimulation("ogregraphics");
-                          
-                           if(!simulator)
-                           {
-                             simulator = system.presences[0].runSimulation("ogregraphics");
-                           }
-                           */
                           
                            var code = "<html><head><style type=\"text/css\">.command {border-width: 1px 1px 1px 1px;border-color: black;border-style: solid;padding: 0px;}</style><script>function onYes(){var arg_map = ['ExecScript', 'Command', 'Yes'];chrome.send('event', arg_map);}function onNo(){var arg_map = ['ExecScript', 'Command', 'No'];chrome.send('event', arg_map);}</script></head><body>A Vendor wants to send you the list of books you may be interested in. Do you wish to look at it?<br><button type=\"button\" onclick=\"onYes()\">Yes</button><br><button type=\"button\" onclick=\"onNo()\">No</button></body></html>";
 
@@ -72,13 +63,9 @@ function createBannerObject()
                              {
                                
                                var book_form = simulator.invoke("getWindow", "book_form", book_form_code);
-                               book_form.invoke("bind", "event", function(arg2){ system.print("Trying to buy the book " + arg2);} );
+                               book_form.invoke("bind", "event", function(arg2){ /*system.print("Trying to buy the book " + arg2);*/ } );
                              }
-                            else if(arg == "No")
-                            {
-                              system.print("\n\n Got a No\n\n");
-                            }
-                          
+                                                      
 
                          };
                          
