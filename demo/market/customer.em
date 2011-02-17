@@ -33,44 +33,34 @@ function handleMarket(msg, sender)
   }
 }
 
-// arg here is an addressable object
+// argument here is a new visible object
 function proxAddedCallback(new_addr_obj)
 {
-  print("\n\n\n\n\n\n\n\n  Got a proxAdded Callback \n\n\n\n\n\n\n");
-  print("The new addressable is " + new_addr_obj);
   
   var test_msg = new Object();
   test_msg.name = "get_protocol";
   
-  //also register a callback
+  //also register a callback for market. the msg should have a "protocol" field with value "Market"
   var p = new util.Pattern("protocol", "Market");
   
-  print("\n\nRegistering  a pattern\n\n");
   handleMarket <- p <- new_addr_obj;
   print("\n\nRegistered a pattern\n\n");
   test_msg -> new_addr_obj;
-  print("\n\nOut of the prox added callback\n\n");
-}
-
-function handleBookList(msg, sender)
-{
-  print("\n\nGot a book List\n\n");    
 }
 
 // This is the callback for the reply from the market
-
 function handleMarketReply(msg, sender)
 {
   print("\n\n Got a reply from the market . The vendor is " + msg.vendor + "\n\n");
-  //var newContext = system.create_context(system.presences[0], msg.vendor, true, true, true);
+  //Do this inside a new context
+  var newContext = system.create_context(system.presences[0], msg.vendor, true, true, true);
   
-  msg.init_proto(msg.init_arg_1, msg.vendor);
-  //newContext.execute(msg.init_proto, msg.init_arg_1, msg.init_arg_2); 
+  msg.init_proto(msg.init_arg_1, msg.vendor, system.presences[0]);
+  newContext.execute(msg.init_proto, msg.init_arg_1, msg.init_arg_2); 
 }
 
 
 // Set up the camera
-
 system.onPresenceConnected( function(pres) {
                                 
     system.print("startupCamera connected " + pres);
