@@ -614,7 +614,6 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
       return;
     }
 
-
     static bool generated = false;
 
     if (!generated) {
@@ -678,8 +677,8 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     }
 
     bool returner = false;
-    for (std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > >::iterator it =  mObjectsByPriority.begin();
-         it != mObjectsByPriority.end(); it++)
+    for (std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > >::reverse_iterator it =  mObjectsByPriority.rbegin();
+         it != mObjectsByPriority.rend(); it++)
     {
       if (it->second.size() > 0) {
         std::tr1::shared_ptr<AggregateObject> aggObject = it->second.front();
