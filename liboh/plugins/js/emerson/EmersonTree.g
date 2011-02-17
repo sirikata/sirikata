@@ -25,9 +25,10 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "EmersonUtil.h" 
-	#define APP(s) program_string->append(program_string, s);
+    #define APP(s) program_string->append(program_string, s);
 
-	//	pANTLR3_STRING program_string;
+    //	pANTLR3_STRING program_string;
+    bool insideWhenPred = false;  
 }
 
 @members
@@ -455,15 +456,25 @@ whenStatement
     : ^(WHEN
         {
             APP(" util.create_when( ");
+            insideWhenPred = true;
+            lkjs;
+            APP(" util.create_when_pred( ['");
         }
-        expression
+        whenPred
         {
+            //FIXME: potential problem if last statement in array is
+            //dollar syntax.
+            //FIXME: still have to escape ' if in when predicate
+            //close when predicate
+            APP("'])\n");
+            
             //comma for end of predicate expression
             //[ for beginning of array of watched statements
             APP(",[");
         }
         whenCheckedListFirst
         {
+            insideWhenPred = false;
             //end the array of watched variables.  then end the actual
             //util.create_when statement with parenthesis and semi-colon.
             APP("]);");

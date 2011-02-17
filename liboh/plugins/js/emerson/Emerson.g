@@ -226,16 +226,15 @@ expressionStatement
 	;
 
 whenStatement
-    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
+//    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
+    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN whenPred whenCheckedListFirst $s1)
     ;
-//    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN whenPred whenCheckedListFirst $s1)
-
 
 
 //note: right now, this rule is very simple: it only does less than, doesn't do any checks to see if the values are watched,
 //and does not restrict the predicates from being zany.
 whenPred
-    : s1=expression LTERM* '<wo38__' LTERM* s2=expression -> ^(WHEN_PRED $s1 $s2)
+    : expression -> ^(WHEN_PRED expression)
     ;
 
 whenCheckedListFirst
@@ -423,7 +422,7 @@ indexSuffix
 	
 propertyReferenceSuffix
 	: '.' LTERM* Identifier -> ^(DOT Identifier)
-        | '.' LTERM* dollarExpression -> ^(DOT dollarExpression)
+//        | '.' LTERM* dollarExpression -> ^(DOT dollarExpression)
 	;
 
         
@@ -628,6 +627,8 @@ literal
 
 
 // lexer rules.
+
+lkjs;
 
 StringLiteral
 	: '"' DoubleStringCharacter* '"'
