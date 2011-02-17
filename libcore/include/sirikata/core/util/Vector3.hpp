@@ -36,6 +36,8 @@
 #include <cassert>
 #include <sstream>
 
+#include <boost/functional/hash.hpp>
+
 namespace Sirikata {
 template <typename scalar> class Vector3 {
 public:
@@ -182,7 +184,7 @@ public:
     }
     bool operator!=(const Vector3&other)const {
         return x!=other.x||y!=other.y||z!=other.z;
-    }
+    }    
     Vector3 normal()const {
         scalar len=length();
         if (len>1e-08)
@@ -203,6 +205,20 @@ public:
     Vector3 reflect(const Vector3& normal)const {
         return Vector3(*this-normal*((scalar)2.0*this->dot(normal)));
     }
+
+    size_t hash() const {
+      size_t seed = 0;
+      boost::hash_combine(seed, x);
+      boost::hash_combine(seed, y);
+      boost::hash_combine(seed, z);
+      return seed;
+    }
+
+    class Hasher{public:
+        size_t operator() (const Vector3 &v) const {
+            return v.hash();
+        }
+    };
 };
 
 template<typename scalar> inline Vector3<scalar> operator *(scalar lhs, const Vector3<scalar> &rhs) {

@@ -57,6 +57,10 @@ private:
 
     Vector3f mReplacementVector;
 
+    QSlimStruct() {
+      mCost = 1e-15;
+    }
+
     QSlimStruct(float cost, int i, int j, int k, VectorCombination c, Vector3f v) {
       mCost = cost;
       mGeomIdx = i;
@@ -67,7 +71,7 @@ private:
     }
 
     bool operator < (const QSlimStruct& qs) const {
-      return mCost < qs.mCost;
+      return mCost > qs.mCost;
     }
 
   } QSlimStruct;
