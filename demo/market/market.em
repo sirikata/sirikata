@@ -41,8 +41,9 @@ function subscriptionReactor(msg, sender)
   print("\n\n Customer is subscribing with the market\n\n");
   /* Note down the pattern of interest of this customer */
 	/* You identify the customer with the sender id */
-	customer[sender] = new Object();
-  customer[sender].pattern = msg.pattern; 
+	customer[sender.toString()] = new Object();
+        print("\n\n Herer\n\n");
+  customer[sender.toString()].pattern = msg.pattern; 
   
   //Check if there exist a vendor that satisfies this customer's pattern
 
