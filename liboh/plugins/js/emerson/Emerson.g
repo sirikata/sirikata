@@ -227,7 +227,7 @@ expressionStatement
 
 whenStatement
 //    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
-    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN whenPred whenCheckedListFirst $s1)
+    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* functionBody -> ^(WHEN whenPred functionBody)
     ;
 
 

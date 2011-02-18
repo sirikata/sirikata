@@ -467,23 +467,19 @@ whenStatement
         {
             //FIXME: potential problem if last statement in array is
             //dollar syntax.
-            //FIXME: still have to escape ' if in when predicate
-            //close when predicate
             APP("'])\n");
-            
-            //comma for end of predicate expression
-            //[ for beginning of array of watched statements
-            APP(",[");
-        }
-        whenCheckedListFirst
-        {
+
             insideWhenPred = false;
-            //end the array of watched variables.  then end the actual
-            //util.create_when statement with parenthesis and semi-colon.
-            APP("]);");
+            //open function for callback
+            APP("function(){ ");
+              
         }
-        expression
+        functionBody
         {
+            //close function for callback
+            APP(" }");
+            //close create_when
+            APP(");");
         }
     )
     ;
@@ -1150,13 +1146,19 @@ primaryExpression
 dollarExpression
         : ^(DOLLAR_EXPRESSION
             {
-                APP("\",");
-                APP(" util.dollar_expression(null,");
+                if (insideWhenPred)
+                    APP("',");
+                    
+                APP(" util.dollar_expression(");
             }
             Identifier
             {
                 APP((const char*)$Identifier.text->chars);
-                APP("),\"");
+                APP(")");
+
+                if (insideWhenPred)
+                   APP(",'");
+
             }
          )
          ;
