@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Filter.hpp
+ *  CompositeFilter.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,45 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_LIBMESH_FILTER_HPP_
-#define _SIRIKATA_LIBMESH_FILTER_HPP_
+#ifndef _SIRIKATA_LIBMESH_COMPOSITE_FILTER_HPP_
+#define _SIRIKATA_LIBMESH_COMPOSITE_FILTER_HPP_
 
-#include <sirikata/mesh/Meshdata.hpp>
-#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/mesh/Platform.hpp>
+#include <sirikata/mesh/Filter.hpp>
 
 namespace Sirikata {
 namespace Mesh {
 
-/** FilterData is the input and output of a Filter. In order to support filters
- *  with multiple inputs (e.g. simplification of multiple meshes), FilterData is
- *  a list of MeshdataPtrs.
+/** A CompositeFilter is essentially a pipeline of other filters. This makes it
+ *  easy to specify a whole set of operations together, e.g. perform a full
+ *  set of simplification procedures.
  */
-class SIRIKATA_MESH_EXPORT FilterData : public std::vector<MeshdataPtr> {
+class SIRIKATA_MESH_EXPORT CompositeFilter : public Filter {
 public:
-    bool single() const { return this->size() == 1; }
-    MeshdataPtr get() const { assert(single()); return at(0); }
-}; // class FilterData
-typedef std::tr1::shared_ptr<const FilterData> FilterDataPtr;
-typedef std::tr1::shared_ptr<FilterData> MutableFilterDataPtr;
+    CompositeFilter();
+    /** Constructor taking a sequence of arguments as
+     *  [filter1_name, filter1_args, filter2_name, filter2_args, ...].
+     *  Note that arguments cannot be omitted -- use an empty string if you do
+     *  not need to pass any.
+     */
+    CompositeFilter(const std::vector<String>& names_and_args);
+    virtual ~CompositeFilter() {}
 
-class SIRIKATA_MESH_EXPORT Filter {
-public:
-    virtual ~Filter() {}
+    void add(const String& name, const String& args = "");
 
-    virtual FilterDataPtr apply(FilterDataPtr input) = 0;
-}; // class Filter
-typedef std::tr1::shared_ptr<Filter> FilterPtr;
+    virtual FilterDataPtr apply(FilterDataPtr input);
 
-class SIRIKATA_MESH_EXPORT FilterFactory :
-        public AutoSingleton<FilterFactory>,
-        public Factory1<Filter*, const String&>
-{
-public:
-    static FilterFactory& getSingleton();
-    static void destroy();
-}; // class FilterFactory
+private:
+    std::vector<FilterPtr> mFilters;
+}; // class CompositeFilter
 
 } // namespace Mesh
 } // namespace Sirikata
 
-#endif //_SIRIKATA_LIBMESH_FILTER_HPP_
+#endif //_SIRIKATA_LIBMESH_COMPOSITE_FILTER_HPP_

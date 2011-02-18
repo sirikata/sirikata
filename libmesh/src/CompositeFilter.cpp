@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Filter.hpp
+ *  CompositeFilter.cpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,45 +30,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_LIBMESH_FILTER_HPP_
-#define _SIRIKATA_LIBMESH_FILTER_HPP_
-
-#include <sirikata/mesh/Meshdata.hpp>
-#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/mesh/CompositeFilter.hpp>
 
 namespace Sirikata {
 namespace Mesh {
 
-/** FilterData is the input and output of a Filter. In order to support filters
- *  with multiple inputs (e.g. simplification of multiple meshes), FilterData is
- *  a list of MeshdataPtrs.
- */
-class SIRIKATA_MESH_EXPORT FilterData : public std::vector<MeshdataPtr> {
-public:
-    bool single() const { return this->size() == 1; }
-    MeshdataPtr get() const { assert(single()); return at(0); }
-}; // class FilterData
-typedef std::tr1::shared_ptr<const FilterData> FilterDataPtr;
-typedef std::tr1::shared_ptr<FilterData> MutableFilterDataPtr;
+CompositeFilter::CompositeFilter() {
 
-class SIRIKATA_MESH_EXPORT Filter {
-public:
-    virtual ~Filter() {}
+}
 
-    virtual FilterDataPtr apply(FilterDataPtr input) = 0;
-}; // class Filter
-typedef std::tr1::shared_ptr<Filter> FilterPtr;
+CompositeFilter::CompositeFilter(const std::vector<String>& names_and_args) {
+    assert(names_and_args.size() % 2 == 0);
+    for(uint32 i = 0; i < names_and_args.size(); i+=2)
+        add(names_and_args[i], names_and_args[i+1]);
+}
 
-class SIRIKATA_MESH_EXPORT FilterFactory :
-        public AutoSingleton<FilterFactory>,
-        public Factory1<Filter*, const String&>
-{
-public:
-    static FilterFactory& getSingleton();
-    static void destroy();
-}; // class FilterFactory
+void CompositeFilter::add(const String& name, const String& args) {
+    if (!FilterFactory::getSingleton().hasConstructor(name))
+        throw "No filter named " + name;
+    FilterPtr next_filter(
+        FilterFactory::getSingleton().getConstructor(name)(args)
+    );
+    mFilters.push_back(next_filter);
+}
+
+FilterDataPtr CompositeFilter::apply(FilterDataPtr input) {
+    FilterDataPtr result = input;
+    for(uint32 i = 0; i < mFilters.size(); i++) {
+        result = mFilters[i]->apply(result);
+    }
+    return result;
+}
 
 } // namespace Mesh
 } // namespace Sirikata
-
-#endif //_SIRIKATA_LIBMESH_FILTER_HPP_

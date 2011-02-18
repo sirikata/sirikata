@@ -1231,6 +1231,7 @@ SET(LIBMESH_SOURCES
   ${LIBMESH_SOURCE_DIR}/AnyModelsSystem.cpp
   ${LIBMESH_SOURCE_DIR}/ModelsSystemFactory.cpp
   ${LIBMESH_SOURCE_DIR}/Filter.cpp
+  ${LIBMESH_SOURCE_DIR}/CompositeFilter.cpp
   ${LIBMESH_SOURCE_DIR}/MeshSimplifier.cpp
 
   )

@@ -35,6 +35,7 @@
 #include <sirikata/mesh/Filter.hpp>
 #include "CompressTexturesFilter.hpp"
 #include "TextureAtlasFilter.hpp"
+#include "CompositeFilters.hpp"
 
 static int nvtt_filters_plugin_refcount = 0;
 
@@ -45,6 +46,7 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
     if ( nvtt_filters_plugin_refcount == 0 ) {
         FilterFactory::getSingleton().registerConstructor("compress-textures", CompressTexturesFilter::create);
         FilterFactory::getSingleton().registerConstructor("texture-atlas", TextureAtlasFilter::create);
+        FilterFactory::getSingleton().registerConstructor("atlas-and-reduce", AtlasAndReduceDrawCalls);
     }
 
     ++nvtt_filters_plugin_refcount;
