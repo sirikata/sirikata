@@ -17,15 +17,20 @@ namespace JS{
 namespace JSUtilObj{
 
 
-
-v8::Handle<v8::Value> ScriptCreateDistWhenPred(const v8::Arguments& args)
+v8::Handle<v8::Value> CreateDollarExpression(const v8::Arguments& args)
 {
     lkjs;
+    if (args.Length() != 1)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in CreateDollarExpression of JSUtilObj.cpp.  Dollar expression requires an argument")));
 
+    
+    
+    evaluate the expression directly.  set the result to a new object within the context;
     
     
     lkjs;
 }
+
 
 
 v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args)

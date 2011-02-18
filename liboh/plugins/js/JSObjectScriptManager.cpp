@@ -120,7 +120,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
 
     mUtilTemplate->Set(v8::String::New("create_dist_when_pred"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateDistWhenPred));
-    
+    mUtilTemplate->Set(v8::String::New("dollar_epression"), v8::FunctionTemplate::New(JSUtilObj::CreateDollarExpression));
 
     addTypeTemplates(mUtilTemplate);
 }
