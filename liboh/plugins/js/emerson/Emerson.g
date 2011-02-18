@@ -231,8 +231,7 @@ whenStatement
     ;
 
 
-//note: right now, this rule is very simple: it only does less than, doesn't do any checks to see if the values are watched,
-//and does not restrict the predicates from being zany.
+//note: right now, this rule is very simple: it just takes in an expression.
 whenPred
     : expression -> ^(WHEN_PRED expression)
     ;
@@ -628,8 +627,7 @@ literal
 
 // lexer rules.
 
-lkjs;
-
+        
 StringLiteral
 	: '"' DoubleStringCharacter* '"'
 	| '\'' SingleStringCharacter* '\''

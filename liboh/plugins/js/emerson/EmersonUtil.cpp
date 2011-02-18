@@ -332,6 +332,28 @@ char* read_file(char* filename)
 }
 
 
+String replaceAllInstances(String initialString, String toReplace, String toReplaceWith)
+{
+    size_t posToSearchFrom = 0;
+    size_t finder   = initialString.find(toReplace, posToSearchFrom);
+
+    while (finder != String::npos)
+    {
+        initialString.replace(finder,toReplace.size(), toReplaceWith);
+        posToSearchFrom = finder +  toReplaceWith.size();
+        finder = initialString.find(toReplace, posToSearchFrom);
+    }
+    return initialString;
+}
+
+
+String emerson_escapeSingleQuotes(const char* stringSequence)
+{
+    return replaceAllInstances(String(stringSequence),"'","\\'");
+}
+
+
+
 
 
 int  emerson_isAKeyword(const char* word)

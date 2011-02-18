@@ -24,11 +24,15 @@ options
     #include <stdlib.h>
     #include <string.h>
     #include <antlr3.h>
-    #include "EmersonUtil.h" 
+    #include "EmersonUtil.h"
     #define APP(s) program_string->append(program_string, s);
-
+    
     //	pANTLR3_STRING program_string;
-    bool insideWhenPred = false;  
+
+    #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
+    #define __SIRIKATA_INSIDE_WHEN_PRED__
+    static bool insideWhenPred = false;
+    #endif
 }
 
 @members
@@ -457,7 +461,6 @@ whenStatement
         {
             APP(" util.create_when( ");
             insideWhenPred = true;
-            lkjs;
             APP(" util.create_when_pred( ['");
         }
         whenPred
@@ -488,9 +491,7 @@ whenStatement
     
 whenPred
     : ^(WHEN_PRED
-        {
-            APP(" unfinished_checkWhenPred()");
-        }
+        expression
     )
     ;
 
@@ -836,9 +837,9 @@ indexSuffix
 	
 propertyReferenceSuffix
 	: ^(DOT Identifier)
-        | ^(DOT
-                dollarExpression
-           )
+//        | ^(DOT
+//                dollarExpression
+//           )
 	;
 	
 assignmentOperator
@@ -1149,12 +1150,13 @@ primaryExpression
 dollarExpression
         : ^(DOLLAR_EXPRESSION
             {
+                APP("\",");
                 APP(" util.dollar_expression(null,");
             }
             Identifier
             {
                 APP((const char*)$Identifier.text->chars);
-                APP(")");
+                APP("),\"");
             }
          )
          ;
@@ -1230,7 +1232,18 @@ propertyNameAndValue
 
 propertyName
 	: Identifier {  APP((const char*)$Identifier.text->chars); }
-	| StringLiteral { APP((const char*)$StringLiteral.text->chars);  }
+	| StringLiteral
+          {
+              if (insideWhenPred)
+              {
+                  String escapedSequence = emerson_escapeSingleQuotes((const char*) $StringLiteral.text->chars);
+                  APP((const char*) escapedSequence.c_str());
+              }
+              else
+              {
+                  APP((const char*)$StringLiteral.text->chars);  
+              }
+          }
 	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
 
@@ -1239,7 +1252,19 @@ literal
 	: 'null' {   APP("null");}
 	| 'true' {   APP("true"); }
 	| 'false'{  APP("false");}
-	| StringLiteral {APP((const char*)$StringLiteral.text->chars);}
+	| StringLiteral
+          {
+              if (insideWhenPred)
+              {
+                  String escapedSequence = emerson_escapeSingleQuotes(((const char*) $StringLiteral.text->chars));
+                  APP((const char*)(escapedSequence.c_str()));
+              }
+              else
+              {
+                  APP((const char*)$StringLiteral.text->chars);  
+              }
+          }
+//	| StringLiteral {APP((const char*)$StringLiteral.text->chars);}
 	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
 	
