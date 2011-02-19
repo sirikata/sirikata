@@ -296,7 +296,7 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
 
     // A stack of NodeState is used to track the current traversal state for
     // instance iterators
-    struct NodeState {
+    struct SIRIKATA_MESH_EXPORT NodeState {
         enum Step {
             Nodes,
             InstanceNodes,
@@ -314,7 +314,7 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
   public:
 
     // Allows you to generate a list of GeometryInstances with their transformations.
-    class GeometryInstanceIterator {
+    class SIRIKATA_MESH_EXPORT GeometryInstanceIterator {
     public:
         GeometryInstanceIterator(const Meshdata* const mesh);
         // Get the next GeometryInstance and its transform. Returns true if
@@ -334,7 +334,7 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     uint32 getInstancedGeometryCount() const;
 
     // Allows you to generate a list of GeometryInstances with their transformations.
-    class LightInstanceIterator {
+    class SIRIKATA_MESH_EXPORT LightInstanceIterator {
     public:
         LightInstanceIterator(const Meshdata* const mesh);
         // Get the next LightInstance and its transform. Returns true if
