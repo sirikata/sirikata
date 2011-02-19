@@ -108,7 +108,7 @@ void SubMeshGeometry::recomputeBounds() {
     for(uint32 pi = 0; pi < primitives.size(); pi++) {
         const Primitive& prim = primitives[pi];
         for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
-            aabb = aabb.merge(positions[ii]);
+            aabb = (aabb == BoundingBox3f3f::null()) ? BoundingBox3f3f(positions[ii], positions[ii]) : aabb.merge(positions[ii]);
             double l = sqrt(positions[ii].lengthSquared());
             radius = std::max(radius, l);
         }
@@ -132,7 +132,7 @@ void GeometryInstance::computeTransformedBounds(const Meshdata& parent, const Ma
         for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
             Vector3f xpos = xform * geo.positions[ii];
             if (bounds_out != NULL)
-                *bounds_out = (*bounds_out).merge(xpos);
+                *bounds_out = (*bounds_out == BoundingBox3f3f::null()) ? BoundingBox3f3f(xpos, xpos) : bounds_out->merge(xpos);
             if (radius_out != NULL)
                 *radius_out = std::max(*radius_out, sqrt(xpos.lengthSquared()));
         }

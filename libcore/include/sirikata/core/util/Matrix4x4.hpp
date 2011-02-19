@@ -174,7 +174,7 @@ public:
     }
     template <typename T> Vector3<T> operator *(const Vector3<T>&other)const {
         Vector4<T> tmp = mCol[0]*other.x+mCol[1]*other.y+mCol[2]*other.z+mCol[3]*1.f;
-        return Vector3<T>(tmp.x, tmp.y, tmp.z);
+        return Vector3<T>(tmp.x/tmp.w, tmp.y/tmp.w, tmp.z/tmp.w);
     }
     Matrix4x4 operator *(scalar other)const {
         return Matrix4x4(getCol(0)*other,getCol(1)*other,getCol(2)*other,getCol(3)*other,COLUMNS());
