@@ -245,7 +245,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             st.index = mMesh->rootNodes[mRoot];
             st.step = NodeState::Nodes;
             st.currentChild = -1;
-            st.transform = mMesh->globalTransform;
+            st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
             mStack.push(st);
         }
 
@@ -279,8 +279,8 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             NodeState st;
             st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
             st.step = NodeState::Nodes;
-            st.currentChild = -1;
-            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            st.currentChild = -1;  
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform; 
             mStack.push(st);
             continue;
         }
@@ -300,6 +300,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             // Otherwise, just yield the information
             *geo_idx = node.currentChild;
             *xform = node.transform;
+            
             return true;
         }
 

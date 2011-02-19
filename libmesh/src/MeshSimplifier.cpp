@@ -256,12 +256,12 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
   uint32 totalVertices = 0;
   
   std::tr1::unordered_set<size_t> seenFaces;
+  
   //Calculate the Qs for each vertex
   while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
     const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
     SubMeshGeometry& curGeometry = agg_mesh->geometry[geomInstance.geometryIndex];
     int i = geomInstance.geometryIndex;
-    curGeometry.numInstances=0;
 
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
       if (curGeometry.primitives[j].primitiveType != SubMeshGeometry::Primitive::TRIANGLES) continue;
@@ -352,13 +352,17 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         positionQs[pos1] += mat;
         positionQs[pos2] += mat;
         positionQs[pos3] += mat;
+        
+        
       }
     }
   }
 
 
   totalVertices = positionQs.size();
-  std::cout << totalVertices << " : totalVertices;\n";
+  std::cout <<  agg_mesh->uri << " : agg_mesh->uri, " << totalVertices << " : totalVertices;\n";
+
+  if (totalVertices <= numVerticesLeft) return;
 
   //Iterate through all vertex pairs. Calculate the cost, v'(Q1+Q2)v, for each vertex pair.
   std::priority_queue<QSlimStruct> vertexPairs;
@@ -367,11 +371,11 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
   std::tr1::unordered_map<GeomPairContainer, QSlimStruct, GeomPairContainer::Hasher> intermediateVertexPairs;
 
   geoinst_it = agg_mesh->getGeometryInstanceIterator();    
-  int numInstances = 0;
-  while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) { numInstances++;
+  
+  while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
     const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
     SubMeshGeometry& curGeometry = agg_mesh->geometry[geomInstance.geometryIndex];
-    curGeometry.numInstances++;
+    
 
     uint32 i = geomInstance.geometryIndex;
 
