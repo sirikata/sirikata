@@ -52,7 +52,7 @@ FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
         Matrix4x4f pos_xform;
         while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
             BoundingBox3f3f inst_bnds = mesh->instances[geoinst_idx].computeTransformedBounds(mesh, pos_xform);
-            if (bbox.degenerate())
+            if (bbox == BoundingBox3f3f::null())
                 bbox = inst_bnds;
             else
                 bbox.mergeIn(inst_bnds);
