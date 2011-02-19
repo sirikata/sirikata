@@ -19,6 +19,7 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
    mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries)),
+   mUtil(NULL),
    mContext(v8::Context::New(NULL, contGlobTempl)),
    isSuspended(false)
 {
@@ -38,10 +39,10 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     fakeroot_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(FAKEROOT_TYPEID_STRING)));
 
 
+    mUtil = new JSUtilObjStruct(this,jsObjScript);
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
-    util_obj->SetInternalField(UTIL_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+    util_obj->SetInternalField(UTIL_TEMPLATE_UTIL_STRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
-    
 }
 
 

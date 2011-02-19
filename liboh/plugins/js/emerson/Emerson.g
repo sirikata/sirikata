@@ -421,7 +421,6 @@ indexSuffix
 	
 propertyReferenceSuffix
 	: '.' LTERM* Identifier -> ^(DOT Identifier)
-//        | '.' LTERM* dollarExpression -> ^(DOT dollarExpression)
 	;
 
         

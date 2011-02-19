@@ -80,7 +80,6 @@ class JSObjectScript : public ObjectScript,
 public:
 
     static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
-    static JSObjectScript* decodeUtilObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
 
     
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
@@ -97,8 +96,9 @@ public:
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
     v8::Handle<v8::Value> handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
-    v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
-
+    //v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
+    v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
+    
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with

@@ -73,6 +73,10 @@ struct JSContextStruct : public JSSuspendable
     //inside of the context.  
     JSFakerootStruct* mFakeroot;
 
+    //struct associated with the Emerson util object that is associated with this
+    //context.  
+    JSUtilObjStruct* mUtil;
+    
     //this is the context that any and all objects will be run in.
     v8::Persistent<v8::Context> mContext;
 

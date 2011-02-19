@@ -204,8 +204,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     system_obj->SetInternalField(TYPEID_FIELD,External::New(new String(SYSTEM_TYPEID_STRING)));
 
 
+    utilObjStruct = new JSUtilObjStruct(NULL,this);
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
-    util_obj->SetInternalField(UTIL_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+    util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(utilObjStruct));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 
     
@@ -281,41 +282,6 @@ v8::Handle<v8::Value> JSObjectScript::create_when(v8::Persistent<v8::Function>pr
     return whenObj;
 }
 
-
-
-JSObjectScript* JSObjectScript::decodeUtilObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
-{
-    v8::HandleScope handle_scope;  //for garbage collection.
-    
-    if (! toDecode->IsObject())
-    {
-        errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Should have received an object to decode.";
-        return NULL;
-    }
-
-    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
-
-    //now check internal field count
-    if (toDecodeObject->InternalFieldCount() != UTIL_TEMPLATE_FIELD_COUNT)
-    {
-        errorMessage += "Error in decode of util object in JSObjectScript.  Object given does not have adequate number of internal fields for decode.";
-        return NULL;
-    }
-
-    //now actually try to decode each.
-    //decode the jsObjectScript field
-    v8::Local<v8::External> wrapJSObjScript;
-    wrapJSObjScript = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(UTIL_TEMPLATE_JSOBJSCRIPT_FIELD));
-    void* ptr = wrapJSObjScript->Value();
-
-    JSObjectScript* returner;
-    returner = static_cast<JSObjectScript*>(ptr);
-    if (returner == NULL)
-        errorMessage += "Error in decode of util object in JSObjectScript.cpp.  Internal field of object given cannot be casted to a JSObjectScript.";
-
-    return returner;
-
-}
 
 
 JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
@@ -1048,13 +1014,16 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object
     return ProtectedJSCallback(jscontext->mContext, &target, cb);
 }
 
-v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
+
+//v8::Handle<v8::Value>
+//JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function>
+//cb,JSContextStruct* jscontext)
+v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext)
 {
     if (jscontext == NULL)
         return ProtectedJSCallback(mContext, NULL,cb);
-
     
-    return ProtectedJSCallback(jscontext->mContext,NULL, cb);
+    return ProtectedJSCallback(*jscontext,NULL, cb);
 }
 
 

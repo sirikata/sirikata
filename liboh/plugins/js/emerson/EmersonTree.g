@@ -461,13 +461,13 @@ whenStatement
         {
             APP(" util.create_when( ");
             insideWhenPred = true;
-            APP(" util.create_when_pred( ['");
+            APP(" [ util.create_quoted('");
         }
         whenPred
         {
             //FIXME: potential problem if last statement in array is
             //dollar syntax.
-            APP("'])\n");
+            APP("')]\n");
 
             insideWhenPred = false;
             //open function for callback
@@ -833,9 +833,6 @@ indexSuffix
 	
 propertyReferenceSuffix
 	: ^(DOT Identifier)
-//        | ^(DOT
-//                dollarExpression
-//           )
 	;
 	
 assignmentOperator
@@ -1147,17 +1144,15 @@ dollarExpression
         : ^(DOLLAR_EXPRESSION
             {
                 if (insideWhenPred)
-                    APP("',");
-                    
-                APP(" util.dollar_expression(");
+                    APP("'),");
+
             }
             Identifier
             {
                 APP((const char*)$Identifier.text->chars);
-                APP(")");
 
                 if (insideWhenPred)
-                   APP(",'");
+                   APP(",util.create_quoted('");
 
             }
          )
