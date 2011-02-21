@@ -16,6 +16,18 @@
 namespace Sirikata {
 namespace JS {
 
+    
+JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Local<v8::Function> callback,JSObjectScript* jsobj)
+ : mObjScript(jsobj),
+   mContext(n
+{
+    //enter
+    
+    lkjs;
+}
+
+
+
 JSWhenStruct::JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService* ioserve,std::map<JSWatchable*,int>predWatches,v8::Persistent<v8::Function> preder, v8::Persistent<v8::Function> callback,v8::Persistent<v8::Context> cont,float whenPeriod, JSContextStruct* jscontextstr)
  :   JSSuspendable(),
      predState(false),

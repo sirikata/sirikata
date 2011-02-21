@@ -59,7 +59,7 @@ String JSUtilStruct::whenCreateQuoted(v8::Handle<v8::Array>predArray)
 v8::Handle<v8::Value> JSUtilStruct::struct_createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback)
 {
     
-    JSWhenStruct* jswhen = new JSWhenStruct(predArray,callback);
+    JSWhenStruct* jswhen = new JSWhenStruct(predArray,callback,jsobj);
     
 
     

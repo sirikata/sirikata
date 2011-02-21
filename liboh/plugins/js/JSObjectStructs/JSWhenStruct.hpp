@@ -23,8 +23,12 @@ struct JSWhenStruct : public JSSuspendable
     const static float WHEN_MIN_PERIOD = .01;
     const static float WHEN_PERIOD_NOT_SET    =  -1;
 
-    JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService* ioserve,std::map<JSWatchable*,int>predWatches,v8::Persistent<v8::Function> preder, v8::Persistent<v8::Function> callback,v8::Persistent<v8::Context> cont,float whenPeriod, JSContextStruct* jscontextstr);
+//    JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService* ioserve,std::map<JSWatchable*,int>predWatches,v8::Persistent<v8::Function> preder, v8::Persistent<v8::Function> callback,v8::Persistent<v8::Context> cont,float whenPeriod, JSContextStruct* jscontextstr);
+
+
+    JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Local<v8::Function> callback,JSObjectScript* jsobj);
     ~JSWhenStruct();
+    
     
     static JSWhenStruct* decodeWhenStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
@@ -58,10 +62,7 @@ private:
                            //switches from false to true.
     double currentPeriod;
 
-    
-    
-    
-
+  
     JSObjectScript* mObjScript;
     Sirikata::Network::DeadlineTimer* mDeadlineTimer;
     std::map<JSWatchable*,int> mWatchables;
@@ -69,9 +70,8 @@ private:
     v8::Persistent<v8::Function> mCB;
     v8::Persistent<v8::Context> mContext;
     JSContextStruct* jscont;
-
-
 };
+
 
 typedef std::map<JSWhenStruct*,bool> WhenMap;
 typedef WhenMap::iterator WhenMapIter;
