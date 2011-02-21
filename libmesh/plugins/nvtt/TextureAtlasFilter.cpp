@@ -317,14 +317,17 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
 
                     for(int index_idx = 0; index_idx < prim.indices.size(); index_idx++) {
                         int index = prim.indices[index_idx];
+
                         float new_u, new_v;
                         assert(tex_set.stride >= 2);
                         final_tex_info.atlas_region.convert(
                             tex_set.uvs[index * tex_set.stride],
-                            tex_set.uvs[index * tex_set.stride + 1],
+                            (1.f-tex_set.uvs[index * tex_set.stride + 1]), // inverted
+                                                                           // v coords
                             &new_u, &new_v);
                         new_uvs[ index * tex_set.stride ] = new_u;
-                        new_uvs[ index * tex_set.stride + 1 ] = new_v;
+                        new_uvs[ index * tex_set.stride + 1 ] = 1.f - new_v; // inverted
+                                                                             // v coords
                     }
                 }
             }
