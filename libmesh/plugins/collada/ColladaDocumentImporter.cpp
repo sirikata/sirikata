@@ -876,18 +876,30 @@ bool ColladaDocumentImporter::makeTexture
                           MaterialEffectInfo::TextureList&output , bool forceBlack) {
     using namespace COLLADAFW;
     if (color.isColor()) {
-        if (color.getColor().getRed() ||
-            color.getColor().getGreen() ||
-            color.getColor().getBlue() ||
-            color.getColor().getAlpha()||forceBlack) {
-            output.push_back(MaterialEffectInfo::Texture());
-            MaterialEffectInfo::Texture &retval=output.back();
-            retval.color.x=color.getColor().getRed();
-            retval.color.y=color.getColor().getGreen();
-            retval.color.z=color.getColor().getBlue();
-            retval.color.w=color.getColor().getAlpha();
-            retval.affecting = type;
-        }else return false;
+        // We can safely ignore either anything black or anything white that
+        // affects opacity. We'll forceBlack at least one item if everything is
+        // black. However, we need to be careful about the alpha channel -- if
+        // it is anything but 1 then we would get incorrect results with the
+        // default black texture.
+        bool is_black = (color.getColor().getRed() == 0.0 &&
+            color.getColor().getGreen() == 0.0 &&
+            color.getColor().getBlue() == 0.0 &&
+            color.getColor().getAlpha() == 1.0);
+        bool is_white = (color.getColor().getRed() == 1.0 &&
+            color.getColor().getGreen() == 1.0 &&
+            color.getColor().getBlue() == 1.0 &&
+            color.getColor().getAlpha() == 1.0);
+        if ((type != MaterialEffectInfo::Texture::OPACITY && is_black && !forceBlack) ||
+            (type == MaterialEffectInfo::Texture::OPACITY && is_white))
+            return false;
+
+        output.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture &retval=output.back();
+        retval.color.x=color.getColor().getRed();
+        retval.color.y=color.getColor().getGreen();
+        retval.color.z=color.getColor().getBlue();
+        retval.color.w=color.getColor().getAlpha();
+        retval.affecting = type;
     }else if (color.isTexture()){
         output.push_back(MaterialEffectInfo::Texture());
         MaterialEffectInfo::Texture &retval=output.back();
