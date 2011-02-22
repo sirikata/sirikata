@@ -60,6 +60,14 @@ public:
         this->w=w;
     }
     Vector4(){}
+
+    Vector4(const Vector3<scalar>& xyz, scalar w) {
+        this->x = xyz.x;
+        this->y = xyz.y;
+        this->z = xyz.z;
+        this->w = w;
+    }
+
     template<class T>T convert(const T*ptr=NULL) const{
         return T(x,y,z,w);
     }
