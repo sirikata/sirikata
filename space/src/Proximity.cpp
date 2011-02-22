@@ -863,8 +863,8 @@ void Proximity::proxThreadMain() {
     Poller mServerHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mServerQueryHandler), max_rate);
     Poller mObjectHandlerPoller(mProxStrand, std::tr1::bind(&Proximity::tickQueryHandler, this, mObjectQueryHandler), max_rate);
 
-    Poller staticRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(60.f));
-    Poller dynamicRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(10.f));
+    Poller staticRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_STATIC), Duration::seconds(3600.f));
+    Poller dynamicRebuilder(mProxStrand, std::tr1::bind(&Proximity::rebuildHandler, this, OBJECT_CLASS_DYNAMIC), Duration::seconds(3600.f));
 
     mServerHandlerPoller.start();
     mObjectHandlerPoller.start();
