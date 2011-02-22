@@ -849,6 +849,8 @@ public:
         Meshdata::GeometryInstanceIterator geoinst_it = md.getGeometryInstanceIterator();
         uint32 geoinst_idx;
         Matrix4x4f pos_xform;
+        BoundingBox3f3f mesh_aabb = BoundingBox3f3f::null();
+        double mesh_rad = 0.0;
         while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
             assert(geoinst_idx < md.instances.size());
             const GeometryInstance& geoinst = md.instances[geoinst_idx];
@@ -862,12 +864,8 @@ public:
             BoundingBox3f3f submeshaabb;
             double rad=0;
             geoinst.computeTransformedBounds(md, pos_xform, &submeshaabb, &rad);
-            AxisAlignedBox ogresubmeshaabb(
-                Graphics::toOgre(submeshaabb.min()),
-                Graphics::toOgre(submeshaabb.max())
-            );
-            mesh->_setBounds(ogresubmeshaabb);
-            mesh->_setBoundingSphereRadius(rad);
+            mesh_aabb = (mesh_aabb == BoundingBox3f3f::null() ? submeshaabb : mesh_aabb.merge(submeshaabb));
+            mesh_rad = std::max(mesh_rad, rad);
             int vertcount = submesh.positions.size();
             int normcount = submesh.normals.size();
             for (size_t primitive_index = 0; primitive_index<submesh.primitives.size(); ++primitive_index) {
@@ -1026,6 +1024,14 @@ public:
                 }
             }
         }
+
+        AxisAlignedBox ogremeshaabb(
+            Graphics::toOgre(mesh_aabb.min()),
+            Graphics::toOgre(mesh_aabb.max())
+        );
+        mesh->_setBounds(ogremeshaabb);
+        mesh->_setBoundingSphereRadius(mesh_rad);
+
         if (useSharedBuffer) {
             assert(totalVerticesCopied==totalVertexCount);
 
