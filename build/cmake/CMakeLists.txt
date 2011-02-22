@@ -727,6 +727,7 @@ SET(CDN_NAMESERVER_SOURCE_DIR ${TOP_LEVEL}/cdn/src/nameserver)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
 SET(EMERSON_SOURCE_DIR ${TOP_LEVEL}/liboh/plugins/js/emerson)
+SET(EMERSON_WHEN_PRED_SRC_DIR ${TOP_LEVEL}/liboh/plugins/js/lexWhenPred)
 SET(STREAM_ECHO_SOURCE_DIR ${TOP_LEVEL}/tools/stream_echo)
 SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
@@ -1492,6 +1493,13 @@ SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/main.cpp
   )
 
+SET(EMERSON_WHEN_PRED_SRCS
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredLexer.cpp
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredParser.cpp
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredTree.cpp
+  ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp  #note: referencing this from the emerson directory instead of the whenpred directory: added a few pre-processors to make it re-usable
+  ${EMERSON_WHEN_PRED_SRC_DIR}/main.cpp
+  )
 
 SET(EMERSON_SOURCES
   ${EMERSON_SOURCE_DIR}/EmersonLexer.cpp
@@ -1942,6 +1950,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFakeroot.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
   ${EMERSON_SOURCES}
+  ${EMERSON_WHEN_PRED_SRCS}
   )
 IF(V8_FOUND)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
@@ -2079,6 +2088,14 @@ TARGET_LINK_LIBRARIES(cseg
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
+#ADD_DEFINITIONS(-DEMERSON_WHEN_PRED_COMPILE)
+ADD_EXECUTABLE(emersonWhenPred ${EMERSON_WHEN_PRED_SRCS})
+SET_TARGET_PROPERTIES(emersonWhenPred PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(emersonWhenPred
+        ${Boost_LIBRARIES}
+        ${ANTLR_LIBRARIES}
+        )
+      
 ADD_DEFINITIONS(-DEMERSON_COMPILE)
 ADD_EXECUTABLE(emerson ${EMERSON_SOURCES})
 SET_TARGET_PROPERTIES(emerson PROPERTIES ${COMPILE_DEFS_OPT})
