@@ -44,6 +44,7 @@
 
 #include "CompositeFilters.hpp"
 #include "TransformFilter.hpp"
+#include "CenterFilter.hpp"
 
 static int common_filters_plugin_refcount = 0;
 
@@ -65,6 +66,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
         FilterFactory::getSingleton().registerConstructor("translate", TransformFilter::createTranslate);
         FilterFactory::getSingleton().registerConstructor("rotate", TransformFilter::createRotate);
         FilterFactory::getSingleton().registerConstructor("scale", TransformFilter::createScale);
+
+        FilterFactory::getSingleton().registerConstructor("center", CenterFilter::create);
     }
 
     ++common_filters_plugin_refcount;
@@ -105,6 +108,8 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
             FilterFactory::getSingleton().unregisterConstructor("translate");
             FilterFactory::getSingleton().unregisterConstructor("rotate");
             FilterFactory::getSingleton().unregisterConstructor("scale");
+
+            FilterFactory::getSingleton().unregisterConstructor("center");
         }
     }
 }
