@@ -8,7 +8,7 @@
 #include "../JSObjects/JSObjectsUtils.hpp"
 #include "JSSuspendable.hpp"
 #include "../JSLogging.hpp"
-
+#include "JSUtilStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -39,11 +39,13 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     fakeroot_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(FAKEROOT_TYPEID_STRING)));
 
 
-    mUtil = new JSUtilObjStruct(this,jsObjScript);
+    JSUtilStruct* mUtil = new JSUtilStruct(this,jsObjScript);
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
-    util_obj->SetInternalField(UTIL_TEMPLATE_UTIL_STRUCT_FIELD,External::New(mUtil));
+    util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 }
+
+
 
 
 //looks in the current context for a fakeroot object.

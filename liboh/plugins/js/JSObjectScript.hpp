@@ -69,9 +69,6 @@ struct EntityCreateInfo
 };
 
 
-static const uint32 MAX_MESSAGE_CODE     = 1000;
-static const uint32 MAX_SEARCH_OPEN_CODE =   20;
-
 
 class JSObjectScript : public ObjectScript,
                        public SessionEventListener
@@ -108,13 +105,15 @@ public:
     
     void addWatchable(JSWatchable* toAdd);
     void removeWatchable(JSWatchable* toRemove);
-    v8::Handle<v8::Value> create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap);
+
     
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
     bool valid() const;
 
+    String createNewValueInContext(v8::Handle<v8::Value> val, v8::Handle<v8::Context> ctx);
+    
     /** Dummy callback for testing exposing new functionality to scripts. */
     void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
@@ -142,7 +141,8 @@ public:
 
     /** create a new presence of this entity */
     v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
-
+    v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
+    v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
     v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
     void  setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
@@ -198,7 +198,7 @@ public:
 
     JSObjectScriptManager* manager() const { return mManager; }
     
-
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
@@ -247,9 +247,17 @@ private:
     void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
-    void ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
 
+
+
+    v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
+    v8::Handle<v8::Value> executeJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Function> funcInCtx,int argc, v8::Handle<v8::Object>*target, v8::Handle<v8::Value> argv[]);
+    v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
+
+
+    
+
+    
     
     v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
@@ -288,10 +296,8 @@ private:
     v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
-    bool uniqueMessageCodeExists(uint32 code);
-    typedef std::map<uint32,bool> ScriptMessageCodes;
-    ScriptMessageCodes mMessageCodes;
-    
+
+
 
     ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
@@ -302,7 +308,7 @@ private:
 
     void callbackUnconnected(const SpaceObjectReference& name, int token);
     int presenceToken;
-    
+    uint64 hiddenObjectCount;    
 
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
     PresenceMap mPresences;

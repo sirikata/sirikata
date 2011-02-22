@@ -17,7 +17,7 @@ class JSObjectScript;
 struct JSVisibleStruct : public JSWatchable
 {
 
-    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3d& currentVelocity);
+    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3f& currentVelocity);
     ~JSVisibleStruct();
 
     //for decoding
@@ -26,7 +26,7 @@ struct JSVisibleStruct : public JSWatchable
     
     //methods mapped to javascript's visible object
     Vector3d returnProxyPositionCPP();
-    Vector3d returnProxyVelocityCPP();
+    Vector3f returnProxyVelocityCPP();
     bool getStillVisibleCPP();
     v8::Handle<v8::Value> returnProxyPosition();
     v8::Handle<v8::Value> toString();
@@ -43,7 +43,7 @@ struct JSVisibleStruct : public JSWatchable
     SpaceObjectReference* visibleToWhom;
     bool* stillVisible;
     Vector3d* mPosition;
-    Vector3d* mVelocity;
+    Vector3f* mVelocity;
 };
 
 

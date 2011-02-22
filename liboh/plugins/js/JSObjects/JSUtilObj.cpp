@@ -6,6 +6,7 @@
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
+#include "../JSObjectStructs/JSUtilStruct.hpp"
 #include <math.h>
 
 #include <sirikata/core/util/Random.hpp>
@@ -23,7 +24,7 @@ v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateQuotedObject of JSUtilObj.cpp.  Quoted object constructor requires a single argument (text, as a string, to be quoted).")));
 
     //try decoding first argument as a string.
-    String decodedString       = "";
+    String decodedString;
     String errorMessageStrDec  = "Error decoding first argument of ScriptCreateQuotedObject as a string.  ";
     bool stringArgDecodeSuccess = decodeString(args[0], decodedString, errorMessageStrDec);
     if (! stringArgDecodeSuccess)
@@ -32,13 +33,14 @@ v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
 
     //try decoding the util object.
     String errorMessage = "Error in ScriptCreateQuotedObject of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
-    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilObject(args.This(),errorMessage);
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
 
     if (jsutil == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
-    return jsutil->struct_createQuotedObject(errorMessageStrDec);
+    return jsutil->struct_createQuotedObject(decodedString);
 }
+
 
 
 v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args)
@@ -47,7 +49,7 @@ v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWatched of JSUtilObj.cpp.  Watched constructor takes no args.")));
     
     String errorMessage = "Error in ScriptCreateWatched of JSUtilObj.cpp.  Cannot decode the jsobjscript field of the util object.  ";
-    JSUtilStruct* jsutil = JSObjectScript::decodeUtilObject(args.This(),errorMessage);
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
 
     if (jsutil == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
@@ -78,13 +80,13 @@ v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args)
 
 
     //decode util object
-    String errorMessage  = "Error creating when in ScriptCreateWhen of JSUtilObj.cpp.  Cannot decode util object.  "
-    JSUtilStruct* jsutil = UtilObjStruct::decodeUtilObj(args.This(),errorMessage);
+    String errorMessage  = "Error creating when in ScriptCreateWhen of JSUtilObj.cpp.  Cannot decode util object.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
     if (jsutil == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
 
-    return jsutil->struct_createWhen(arrayPredObj,fucCBObj);
+    return jsutil->struct_createWhen(arrayPredObj,funcCBObj);
 }
 
 

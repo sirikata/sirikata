@@ -467,7 +467,7 @@ whenStatement
         {
             //FIXME: potential problem if last statement in array is
             //dollar syntax.
-            APP("')]\n");
+            APP("')],\n");
 
             insideWhenPred = false;
             //open function for callback
@@ -1233,7 +1233,7 @@ propertyName
           {
               if (insideWhenPred)
               {
-                  String escapedSequence = emerson_escapeSingleQuotes((const char*) $StringLiteral.text->chars);
+                  std::string escapedSequence = emerson_escapeSingleQuotes((const char*) $StringLiteral.text->chars);
                   APP((const char*) escapedSequence.c_str());
               }
               else
@@ -1253,7 +1253,7 @@ literal
           {
               if (insideWhenPred)
               {
-                  String escapedSequence = emerson_escapeSingleQuotes(((const char*) $StringLiteral.text->chars));
+                  std::string escapedSequence = emerson_escapeSingleQuotes(((const char*) $StringLiteral.text->chars));
                   APP((const char*)(escapedSequence.c_str()));
               }
               else

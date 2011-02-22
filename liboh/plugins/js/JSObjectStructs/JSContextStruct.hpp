@@ -17,6 +17,7 @@ namespace JS {
 class JSObjectScript;
 class JSPresenceStruct;
 class JSTimerStruct;
+class JSUtilObjStruct;
 
 struct JSContextStruct : public JSSuspendable
 {

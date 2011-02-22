@@ -586,7 +586,7 @@ primaryExpression
 	;
 
 dollarExpression
-        : '$' LTERM* Identifier LTERM* '$' -> ^(DOLLAR_EXPRESSION Identifier)
+        : '`' LTERM* Identifier LTERM* '`' -> ^(DOLLAR_EXPRESSION Identifier)
         ;
         
 // arrayLiteral definition.
@@ -709,6 +709,8 @@ Identifier
 
 fragment IdentifierStart
 	: UnicodeLetter
+        | '$'  //note. may have to reserve this a bit to prevent
+               //collisions with dollar expressions.
 	| '_'
         | '\\' UnicodeEscapeSequence
         ;

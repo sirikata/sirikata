@@ -332,12 +332,12 @@ char* read_file(char* filename)
 }
 
 
-String replaceAllInstances(String initialString, String toReplace, String toReplaceWith)
+std::string replaceAllInstances(std::string initialString, std::string toReplace, std::string toReplaceWith)
 {
     size_t posToSearchFrom = 0;
     size_t finder   = initialString.find(toReplace, posToSearchFrom);
 
-    while (finder != String::npos)
+    while (finder != std::string::npos)
     {
         initialString.replace(finder,toReplace.size(), toReplaceWith);
         posToSearchFrom = finder +  toReplaceWith.size();
@@ -347,9 +347,9 @@ String replaceAllInstances(String initialString, String toReplace, String toRepl
 }
 
 
-String emerson_escapeSingleQuotes(const char* stringSequence)
+std::string emerson_escapeSingleQuotes(const char* stringSequence)
 {
-    return replaceAllInstances(String(stringSequence),"'","\\'");
+    return replaceAllInstances(std::string(stringSequence),"'","\\'");
 }
 
 

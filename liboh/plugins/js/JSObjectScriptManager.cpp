@@ -118,11 +118,17 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
-
-    mUtilTemplate->Set(v8::String::New("create_dist_when_pred"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateDistWhenPred));
-    mUtilTemplate->Set(v8::String::New("dollar_epression"), v8::FunctionTemplate::New(JSUtilObj::CreateDollarExpression));
-
+    mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
+            
     addTypeTemplates(mUtilTemplate);
+}
+
+
+void JSObjectScriptManager::createQuotedTemplate()
+{
+    v8::HandleScope handle_scope;
+    mQuotedTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mQuotedTemplate->SetInternalFieldCount(QUOTED_TEMPLATE_FIELD_COUNT);
 }
 
 
@@ -136,10 +142,7 @@ void JSObjectScriptManager::createWhenTemplate()
 
     mWhenTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSWhen::WhenSuspend));
     mWhenTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSWhen::WhenResume));
-    mWhenTemplate->Set(v8::String::New("getPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetPeriod));
-    mWhenTemplate->Set(v8::String::New("setPeriod"),v8::FunctionTemplate::New(JSWhen::WhenSetPeriod));
     mWhenTemplate->Set(v8::String::New("getWhenLastPredState"),v8::FunctionTemplate::New(JSWhen::WhenGetLastPredState));
-    mWhenTemplate->Set(v8::String::New("getWhenMinPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetMinPeriod));
 }
 
 
@@ -154,6 +157,7 @@ void JSObjectScriptManager::createTemplates()
 
     createWatchedTemplate();
     createWhenTemplate();
+    createQuotedTemplate();
     
     createUtilTemplate();
 

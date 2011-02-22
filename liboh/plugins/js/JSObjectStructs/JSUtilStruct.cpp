@@ -1,6 +1,4 @@
 
-
-
 #include <v8.h>
 #include "JSUtilStruct.hpp"
 #include "JSContextStruct.hpp"
@@ -24,31 +22,16 @@ JSUtilStruct::~JSUtilStruct()
 }
 
 
-
-String JSUtilStruct::whenCreateQuoted(v8::Handle<v8::Array>predArray)
+v8::Handle<v8::Value> JSUtilStruct::struct_createWatched()
 {
-    lkjs;
-    String whenPredAsString  = "";
-    std::vec<String> dependentParts;
-    
-    for (int s=0; s < predArray->Length(); ++s)
-    {
-        JSQuoteStruct* fromPredArray = JSQuoteStruct::decodeQuote(predArray->Get(s));
-        if (JSQuoteStruct == NULL)
-        {
-            //create a new value in the context that is equal to this object
-            String newName = createNewValueInContext(predArray->Get(s));
-            
-            whenPredAsString += newName;
-        }
-        else
-        {
-            dependentParts.push_back(parseParts(fromPredArray->getQuote()));
-            whenPredAsString += fromPredArray->getQuote();
-        }
-    }
-    lkjs;
+    return associatedObjScr->createWatched();
 }
+
+v8::Handle<v8::Value> JSUtilStruct::struct_createQuotedObject(const String& toQuote)
+{
+    return associatedObjScr->createQuoted(toQuote);
+}
+
 
 //whenPred contains the followingTypes of objects:
 //quoted/re-evaluate text and dollar expressions.
@@ -58,15 +41,7 @@ String JSUtilStruct::whenCreateQuoted(v8::Handle<v8::Array>predArray)
 //second arg: callback as function
 v8::Handle<v8::Value> JSUtilStruct::struct_createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback)
 {
-    
-    JSWhenStruct* jswhen = new JSWhenStruct(predArray,callback,jsobj);
-    
-
-    
-
-    
-    check is dollar object;
-    lkjs;
+    return associatedObjScr->createWhen(predArray,callback,associatedContext);
 }
 
 
@@ -95,7 +70,7 @@ JSUtilStruct* JSUtilStruct::decodeUtilStruct(v8::Handle<v8::Value> toDecode ,Str
     //now actually try to decode each.
     //decode the jsVisibleStruct field
     v8::Local<v8::External> wrapJSUtilStructObj;
-    wrapJSUtilStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(UTIL_TEMAPLATE_FIELD));
+    wrapJSUtilStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD));
     void* ptr = wrapJSUtilStructObj->Value();
 
 

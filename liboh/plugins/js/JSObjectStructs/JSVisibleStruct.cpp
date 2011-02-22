@@ -26,14 +26,14 @@ v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
 
 
 
-JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3d& currentVelocity)
+JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3f& currentVelocity)
  : JSWatchable(),
    jsObjScript(parent),
    whatIsVisible(new SpaceObjectReference(whatsVisible)),
    visibleToWhom(new SpaceObjectReference( toWhom)),
    stillVisible(new bool(visibleCurrently)),
    mPosition(new Vector3d(currentPosition)),
-   mVelocity(new Vector3d(currentVelocity))
+   mVelocity(new Vector3f(currentVelocity))
 {
 }
 
@@ -102,7 +102,7 @@ Vector3d JSVisibleStruct::returnProxyPositionCPP()
     return *mPosition;
 }
 
-Vector3d JSVisibleStruct::returnProxyVelocityCPP()
+Vector3f JSVisibleStruct::returnProxyVelocityCPP()
 {
     return *mVelocity;
 }
