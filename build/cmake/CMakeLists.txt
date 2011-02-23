@@ -1497,8 +1497,8 @@ SET(EMERSON_WHEN_PRED_SRCS
   ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredLexer.cpp
   ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredParser.cpp
   ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredTree.cpp
-  ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp  #note: referencing this from the emerson directory instead of the whenpred directory: added a few pre-processors to make it re-usable
-  ${EMERSON_WHEN_PRED_SRC_DIR}/main.cpp
+  ${EMERSON_SOURCE_DIR}/Util.cpp  #note: referencing this from the emerson directory instead of the whenpred directory: added a few pre-processors to make it re-usable
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredUtil.cpp
   )
 
 SET(EMERSON_SOURCES
@@ -1506,6 +1506,7 @@ SET(EMERSON_SOURCES
   ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
   ${EMERSON_SOURCE_DIR}/EmersonTree.cpp
   ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp
+  ${EMERSON_SOURCE_DIR}/Util.cpp 
   ${EMERSON_SOURCE_DIR}/main.cpp
   )
 
@@ -2089,12 +2090,13 @@ TARGET_LINK_LIBRARIES(cseg
         )
 
 #ADD_DEFINITIONS(-DEMERSON_WHEN_PRED_COMPILE)
-ADD_EXECUTABLE(emersonWhenPred ${EMERSON_WHEN_PRED_SRCS})
+ADD_EXECUTABLE(emersonWhenPred ${EMERSON_WHEN_PRED_SRCS}  ${EMERSON_WHEN_PRED_SRC_DIR}/main.cpp)
 SET_TARGET_PROPERTIES(emersonWhenPred PROPERTIES ${COMPILE_DEFS_OPT})
 TARGET_LINK_LIBRARIES(emersonWhenPred
         ${Boost_LIBRARIES}
         ${ANTLR_LIBRARIES}
         )
+
       
 ADD_DEFINITIONS(-DEMERSON_COMPILE)
 ADD_EXECUTABLE(emerson ${EMERSON_SOURCES})

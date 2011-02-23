@@ -33,11 +33,11 @@
 // -I on the compile line (which vs2005 now handles, where vs2003 did not).
 //
 
-#include "EmersonUtil.h"
-#include "Util.h"
-#include "EmersonLexer.h"
-#include "EmersonParser.h"
-#include "EmersonTree.h"
+#include "../emerson/Util.h"
+#include "LexWhenPredUtil.h"
+#include "LexWhenPredLexer.h"
+#include "LexWhenPredParser.h"
+#include "LexWhenPredTree.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -45,7 +45,7 @@
 
 using namespace std;
 
-extern pANTLR3_UINT8* EmersonParserTokenNames;
+extern pANTLR3_UINT8* LexWhenPredParserTokenNames;
 
 // Main entry point for this example
 //
@@ -87,7 +87,7 @@ int main	(int argc, char *argv[])
     // The lexer is supplied with a pANTLR3_INPUT_STREAM from whence it consumes its
     // input and generates a token stream as output.
     //
-    pEmersonLexer			    lxr;
+    pLexWhenPredLexer			    lxr;
 
     // The token stream is produced by the ANTLR3 generated lexer. Again it is a structure based
     // API/Object, which you can customise and override methods of as you wish. a Token stream is
@@ -102,13 +102,13 @@ int main	(int argc, char *argv[])
     // but it can of course specify any kind of return type from the rule you invoke
     // when calling it.
     //
-    pEmersonParser			    psr;
+    pLexWhenPredParser			    psr;
 
     // The parser produces an AST, which is returned as a member of the return type of
     // the starting rule (any rule can start first of course). This is a generated type
     // based upon the rule we start with.
     //
-    EmersonParser_program_return	    emersonAST;
+    LexWhenPredParser_program_return	    lexWhenPredAST;
 
 
     // The tree nodes are managed by a tree adaptor, which doles
@@ -121,20 +121,20 @@ int main	(int argc, char *argv[])
     // Finally, when the parser runs, it will produce an AST that can be traversed by the 
     // the tree parser: c.f. LangDumpDecl.g3t
     //
-    pEmersonTree		    treePsr;
+    pLexWhenPredTree		    treePsr;
 
     // Create the input stream based upon the argument supplied to us on the command line
     // for this example, the input will always default to ./input if there is no explicit
     // argument.
     //
-	if (argc < 2 || argv[1] == NULL)
-	{
-		fName	="./input"; // Note in VS2005 debug, working directory must be configured
-	}
-	else
-	{
-		fName	= argv[1];
-	}
+    if (argc < 2 || argv[1] == NULL)
+    {
+        fName	="./input"; // Note in VS2005 debug, working directory must be configured
+    }
+    else
+    {
+        fName	= argv[1];
+    }
 
     // Create the input stream using the supplied file name
     // (Use antlr3AsciiFileStreamNew for UCS2/16bit input).
@@ -151,6 +151,6 @@ int main	(int argc, char *argv[])
     }
 				
 
-    char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr);
+    char* js_str = lexWhenPred_compile_diag((const char*)em_script_str_new.c_str(), stderr);
     return 0;
 }

@@ -58,6 +58,7 @@
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
+#include "emerson/Util.h"
 #include "JSSystemNames.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"

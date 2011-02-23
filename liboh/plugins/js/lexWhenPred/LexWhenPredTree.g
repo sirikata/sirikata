@@ -5,7 +5,7 @@
 
 // This is the Tree grammar for Emerson language
 
-tree grammar EmersonTree;
+tree grammar LexWhenPredTree;
 
 options
 {
@@ -15,7 +15,7 @@ options
 	rewrite=true;
 	ASTLabelType=pANTLR3_BASE_TREE;
 //	ASTLabelType=pANTRL3_COMMON_TREE;
-	tokenVocab=Emerson;
+	tokenVocab=LexWhenPred;
  language = C;
 }
 
@@ -24,9 +24,11 @@ options
     #include <stdlib.h>
     #include <string.h>
     #include <antlr3.h>
-    #include "Util.h"
-    #define APP(s) program_string->append(program_string, s);
-    
+    #include "../emerson/Util.h"; 
+
+    #define APPLEX(s) program_string_lex->append(program_string_lex, s);           
+
+
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
     static bool insideWhenPred = false;
@@ -35,7 +37,7 @@ options
 
 @members
 {
-    pANTLR3_STRING program_string;
+    pANTLR3_STRING program_string_lex;
 }
 
 
@@ -43,44 +45,43 @@ program returns [pANTLR3_STRING  s]
 	:^(PROG 
             {
                 pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
-                program_string = factory->newRaw(factory);
+                program_string_lex = factory->newRaw(factory);
             }
             sourceElements
-           )
-           {
-                s = program_string;
-           }
+     )
+        {
+            s = program_string_lex;
+        }
 	;
 
-        
 sourceElements
-    :(sourceElement{APP("\n"); })+  // omitting the LT 
+    :(sourceElement{APPLEX("\n"); })+  // omitting the LT 
     ;
 	
 sourceElement
     : functionDeclaration
-    | statement{ APP(";"); }
+    | statement{ APPLEX(";"); }
     ;
 	
 // functions
 functionDeclaration
     : ^( FUNC_DECL
             {
-                APP("function ");
+                APPLEX("function ");
             }
             Identifier
 	        {
-                APP((const char*)$Identifier.text->chars);
-                APP("( ");
+                APPLEX((const char*)$Identifier.text->chars);
+                APPLEX("( ");
             } 
             formalParameterList 
             {
-                APP(" )");
-                APP("\n{\n");
+                APPLEX(" )");
+                APPLEX("\n{\n");
             }
             functionBody
             {
-                APP("\n}");
+                APPLEX("\n}");
             }
             
         );
@@ -88,25 +89,25 @@ functionDeclaration
 functionExpression
 	: ^( FUNC_EXPR 
             {
-                APP("function ");
+                APPLEX("function ");
             }
             (			
                 Identifier
                 {
-                    APP((const char*)$Identifier.text->chars);
+                    APPLEX((const char*)$Identifier.text->chars);
                 }
             )?  
             {
-                APP("( ");
+                APPLEX("( ");
             }
             formalParameterList 
             {
-                APP("  )");
-                APP("\n{\n");
+                APPLEX("  )");
+                APPLEX("\n{\n");
             }
             functionBody
             {
-                APP("\n}");
+                APPLEX("\n}");
             }
         ); 
 	
@@ -114,16 +115,16 @@ formalParameterList
 	: ^( FUNC_PARAMS 
             (id1=Identifier
                 {
-                    APP((const char*)$id1.text->chars);
-                    APP(" ");
+                    APPLEX((const char*)$id1.text->chars);
+                    APPLEX(" ");
                 }
             )?		
             (
                 id2=Identifier
                 {
-                    APP(", ");
-                    APP((const char*)$id2.text->chars);
-                    APP(" ");
+                    APPLEX(", ");
+                    APPLEX((const char*)$id2.text->chars);
+                    APPLEX(" ");
                 }
                 
             )*
@@ -155,8 +156,8 @@ statement
 	;
 	
 statementBlock
-	: {APP(" {\n "); } statementList {  
-            APP(" }\n");
+	: {APPLEX(" {\n "); } statementList {  
+            APPLEX(" }\n");
         }
 	;
 	
@@ -165,7 +166,7 @@ statementList
             SLIST 
             (statement
                 {
-			        APP("; \n");					  
+			        APPLEX("; \n");					  
                 }
             )+
 	    );
@@ -174,7 +175,7 @@ variableStatement
 	:  ^( 
             VARLIST
             {
-                APP("var ");
+                APPLEX("var ");
             }
             variableDeclarationList
         );
@@ -183,7 +184,7 @@ variableDeclarationList
 	: variableDeclaration 
         (
             {
-                APP(", ");
+                APPLEX(", ");
             }	
             variableDeclaration
         )*
@@ -198,12 +199,12 @@ variableDeclaration
             VAR
             Identifier 
             {
-                APP((const char*)$Identifier.text->chars);
+                APPLEX((const char*)$Identifier.text->chars);
             }
             
             (
                 {
-                    APP(" = ");
+                    APPLEX(" = ");
                 }
                 initialiser
             )?
@@ -215,16 +216,16 @@ variableDeclarationNoIn
         ^(
             VAR
 			{
-                APP("var ");
+                APPLEX("var ");
 			}
             Identifier 
             {
-                APP((const char*)$Identifier.text->chars);
+                APPLEX((const char*)$Identifier.text->chars);
             }
             
             (
                 {
-                    APP(" = ");
+                    APPLEX(" = ");
                 }
                 initialiserNoIn
             )?
@@ -254,20 +255,20 @@ ifStatement
 	: ^(IF 
             {
                 
-                APP(" if ");
-                APP(" ( ");
+                APPLEX(" if ");
+                APPLEX(" ( ");
             }
             expression 
             {
-                APP(" ) ");
+                APPLEX(" ) ");
             }
             statement 
             {
-                APP(" \n");
+                APPLEX(" \n");
             }
             (
                 {
-                    APP(" else ");
+                    APPLEX(" else ");
                 }
                 statement
                 
@@ -286,15 +287,15 @@ doWhileStatement
 	: ^( 
             DO
             {
-                APP(" do ");  						  
+                APPLEX(" do ");  						  
             }    
 	        statement
             {
-                APP("while ( " );      
+                APPLEX("while ( " );      
             }
             expression 
             {
-                APP(" ) ");  
+                APPLEX(" ) ");  
             }
         )
 	;
@@ -303,11 +304,11 @@ whileStatement
 	: ^(
             WHILE
             {
-                APP(" while ( ");
+                APPLEX(" while ( ");
             }
             expression 
             {
-                APP(" ) "); 
+                APPLEX(" ) "); 
             }
             statement
         )
@@ -317,19 +318,19 @@ forStatement
 	: ^(
             FOR 
             {
-                APP(" for ( ");
+                APPLEX(" for ( ");
             }
             (^(FORINIT forStatementInitialiserPart))?
             {
-                APP(" ; ");
+                APPLEX(" ; ");
             }
             (^(FORCOND expression))? 
             {
-                APP(" ; ");
+                APPLEX(" ; ");
             }
             (^(FORITER expression))?  
             {
-                APP(" ) ");
+                APPLEX(" ) ");
             }
             statement
         )
@@ -344,16 +345,16 @@ forInStatement
 	: ^(
         FORIN 
         {
-            APP(" for ( ");
+            APPLEX(" for ( ");
         }
 
         forInStatementInitialiserPart 
         {
-            APP(" in ");
+            APPLEX(" in ");
         }
         expression 
         {
-            APP(" ) ");
+            APPLEX(" ) ");
         }
         statement
     )
@@ -368,12 +369,12 @@ continueStatement
     : ^(
         CONTINUE 
         {
-            APP("continue ");
+            APPLEX("continue ");
         } 
         (
             Identifier
             {
-                APP((const char*)$Identifier.text->chars);
+                APPLEX((const char*)$Identifier.text->chars);
             }
         )?
       )
@@ -383,12 +384,12 @@ breakStatement
     : ^(
         BREAK
         {
-            APP("break ");
+            APPLEX("break ");
         }
         (
             Identifier
             {
-                APP((const char*)$Identifier.text->chars);
+                APPLEX((const char*)$Identifier.text->chars);
             }
         )?
         )
@@ -398,7 +399,7 @@ returnStatement
     : ^(
         RETURN 
         {
-            APP("return ");
+            APPLEX("return ");
         }
         (		
             expression
@@ -414,8 +415,8 @@ labelledStatement
     : ^( LABEL 
         Identifier 
         {
-            APP((const char*)$Identifier.text->chars);
-            APP(" : \n");
+            APPLEX((const char*)$Identifier.text->chars);
+            APPLEX(" : \n");
         }
         statement
         )
@@ -425,16 +426,16 @@ switchStatement
     : ^(
         SWITCH 
         {
-            APP(" switch ( ");
+            APPLEX(" switch ( ");
         }
         expression 
         {
-            APP(" ) \n");
-            APP("{ \n");
+            APPLEX(" ) \n");
+            APPLEX("{ \n");
         }
         caseBlock
         {
-            APP("} \n");
+            APPLEX("} \n");
         }
        )
 	;
@@ -458,27 +459,27 @@ throwStatement
 whenStatement
     : ^(WHEN
         {
-            APP(" util.create_when( ");
+            APPLEX(" util.create_when( ");
             insideWhenPred = true;
-            APP(" [ util.create_quoted('");
+            APPLEX(" [ util.create_quoted('");
         }
         whenPred
         {
             //FIXME: potential problem if last statement in array is
             //dollar syntax.
-            APP("')],\n");
+            APPLEX("')],\n");
 
             insideWhenPred = false;
             //open function for callback
-            APP("function(){ ");
+            APPLEX("function(){ ");
               
         }
         functionBody
         {
             //close function for callback
-            APP(" }");
+            APPLEX(" }");
             //close create_when
-            APP(");");
+            APPLEX(");");
         }
     )
     ;
@@ -508,7 +509,7 @@ whenCheckedListFirst
 whenCheckedListSubsequent
     : ^(WHEN_CHECKED_LIST_SUBSEQUENT
         {
-            APP(",");
+            APPLEX(",");
         }
         expression
         {
@@ -532,108 +533,115 @@ tryStatement
 
 msgSendStatement
 scope{
-        pANTLR3_STRING prev_program_string;
+  pANTLR3_STRING prev_program_string;
 	unsigned int  prev_program_len;
 	char* firstExprString;
 	char* secondExprString;
-        pANTLR3_STRING init_program_string;
+  pANTLR3_STRING init_program_string;
 
 }
  : ^(
-     MESSAGE_SEND 
-     /* A little hack for the things to work */
-     {
-          /* Save the program string here */
-          $msgSendStatement::prev_program_string = program_string;
-          /* length of the program string */
-          $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
-          pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
-          $msgSendStatement::init_program_string = factory->newRaw(factory);
-          $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
-      }
-      leftHandSideExpression 
-      {
-          unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-          unsigned int  new_program_len = program_string->len;
-          $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-          memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
-          memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
-						 
-          $msgSendStatement::prev_program_len = new_program_len; 
-          //APP(".sendMessage( ");
-      }
-      leftHandSideExpression 
-      {
-          unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-          unsigned int new_program_len = program_string->len;
-          $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-          memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
-          memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
-
-          pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
-          init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
-          init_program_string->append(init_program_string, ".sendMessage( ");
-          init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
-
-          program_string->setS(program_string, init_program_string); 
-
-       }      				
-       (
-          {
-            APP(", ");
-          }
-          memberExpression
-          {
-          }	
-       )?
-       {
-          APP(" ) ");
+	     MESSAGE_SEND 
+       /* A little hack for the things to work */
+       
+			 {
+			 /* Save the program string here */
+			   $msgSendStatement::prev_program_string = program_string_lex;
+       /* length of the program string */
+			   $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
+         pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+				 $msgSendStatement::init_program_string = factory->newRaw(factory);
+				 $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string_lex);
        }
-       )
-       ;
+
+	     leftHandSideExpression 
+				  {
+					   unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+
+			       unsigned int  new_program_len = program_string_lex->len;
+             $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+						 memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
+						 memcpy($msgSendStatement::firstExprString, (char*)(program_string_lex->chars) + prev_program_len, (new_program_len - prev_program_len) );
+						 
+             $msgSendStatement::prev_program_len = new_program_len; 
+						  //APPLEX(".sendMessage( ");
+					}
+				leftHandSideExpression 
+				    {
+						  unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+						  unsigned int new_program_len = program_string_lex->len;
+              $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+							memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
+							memcpy($msgSendStatement::secondExprString, (char*)(program_string_lex->chars) + prev_program_len, (new_program_len - prev_program_len));
+
+              pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
+              init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
+              init_program_string->append(init_program_string, ".sendMessage( ");
+              init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
+
+							program_string_lex->setS(program_string_lex, init_program_string); 
+
+						}      				
+				(
+				
+				 {
+					  APPLEX(", ");
+					}
+				memberExpression
+			 		{
+					  
+					}	
+				)?
+						{
+						  APPLEX(" ) ");
+				    }
+
+				)
+
+				;
 
 msgRecvStatement
  : ^(
 	    MESSAGE_RECV
 	    {
-					  APP("system.registerHandler( ");
+					  APPLEX("system.registerHandler( ");
 			}
 
 					memberExpression
      {
-            APP(", null");
-					  APP(", ");
+            APPLEX(", null");
+					  APPLEX(", ");
 					} 
      leftHandSideExpression
 
 			)
     {
-				  APP(", null) ");  // No sender case
+				  APPLEX(", null) ");  // No sender case
 				}
    
  |^(
 	    MESSAGE_RECV
 	    {
-					  APP("system.registerHandler( ");
+					  APPLEX("system.registerHandler( ");
 			}
 
 					memberExpression
      {
-            APP(", null");
-					  APP(", ");
+            APPLEX(", null");
+					  APPLEX(", ");
 					} 
      leftHandSideExpression
 
 					
 					 {
-						  APP(", ");
+						  APPLEX(", ");
 						}
 
 						memberExpression
 					
 				)
     {
-				  APP(") "); // Case with sender
+				  APPLEX(") "); // Case with sender
 				}
 
 
@@ -643,12 +651,12 @@ msgRecvStatement
 catchClause
 	: ^(CATCH 
 	    {
-					  APP(" catch ( ");
+					  APPLEX(" catch ( ");
 					}
 	    Identifier 
 					{
-					  APP((const char*)$Identifier.text->chars);
-					  APP(" ) ");
+					  APPLEX((const char*)$Identifier.text->chars);
+					  APPLEX(" ) ");
 
 					}
 					
@@ -659,7 +667,7 @@ catchClause
 finallyClause
 	: ^( FINALLY 
 	   {
-				  APP(" finally ");
+				  APPLEX(" finally ");
 
 				}
 	   statementBlock 
@@ -703,9 +711,9 @@ scope
 
 					leftHandSideExpression 
 					  {
-							  APP(" ");
-							  APP($assignmentExpression::op);
-							  APP(" ");
+							  APPLEX(" ");
+							  APPLEX($assignmentExpression::op);
+							  APPLEX(" ");
 							}
 							
 							assignmentExpression
@@ -739,9 +747,9 @@ scope
      
 					leftHandSideExpression
      {
-					  APP(" ");
-					  APP($assignmentExpressionNoIn::op);
-					  APP(" ");
+					  APPLEX(" ");
+					  APPLEX($assignmentExpressionNoIn::op);
+					  APPLEX(" ");
 					}
 
 					assignmentExpressionNoIn
@@ -760,7 +768,7 @@ newExpression
 	
 
 propertyReferenceSuffix1
-: Identifier { APP((const char*)$Identifier.text->chars);} 
+: Identifier { APPLEX((const char*)$Identifier.text->chars);} 
 ;
 
 indexSuffix1
@@ -770,10 +778,10 @@ indexSuffix1
 memberExpression
 : primaryExpression
 |functionExpression
-| ^(DOT memberExpression { APP("."); } propertyReferenceSuffix1 )
-| ^(ARRAY_INDEX memberExpression { APP("[ "); } indexSuffix1 { APP(" ] "); })
-| ^(NEW { APP("new "); } memberExpression arguments)
-| ^(DOT { APP(".");} memberExpression) 
+| ^(DOT memberExpression { APPLEX("."); } propertyReferenceSuffix1 )
+| ^(ARRAY_INDEX memberExpression { APPLEX("[ "); } indexSuffix1 { APPLEX(" ] "); })
+| ^(NEW { APPLEX("new "); } memberExpression arguments)
+| ^(DOT { APPLEX(".");} memberExpression) 
 ;
 
 memberExpressionSuffix
@@ -783,8 +791,8 @@ memberExpressionSuffix
 
 callExpression
  : ^(CALL memberExpression arguments) 
- | ^(ARRAY_INDEX callExpression {APP("[ "); } indexSuffix1 { APP(" ]"); })
- | ^(DOT callExpression { APP(".");} propertyReferenceSuffix1)
+ | ^(ARRAY_INDEX callExpression {APPLEX("[ "); } indexSuffix1 { APPLEX(" ]"); })
+ | ^(DOT callExpression { APPLEX(".");} propertyReferenceSuffix1)
 ;
 	
 
@@ -798,13 +806,13 @@ callExpressionSuffix
 arguments
 	: ^(ARGLIST 
 	       {
-                 APP(" ( ");  
+                 APPLEX(" ( ");  
                }
                (
                  assignmentExpression
 	          (
 			   {
-					  APP(", ");
+					  APPLEX(", ");
 					}
 					  assignmentExpression
 					   	
@@ -814,7 +822,7 @@ arguments
       )
 				
 				{
-				  APP(" ) ");
+				  APPLEX(" ) ");
 				}
 	;
 	
@@ -836,21 +844,21 @@ conditionalExpression
 	|^(
 	    TERNARYOP
 					{
-					  APP( " ( ");
+					  APPLEX( " ( ");
 					}
 	    logicalORExpression
 					{
-					  APP(" )  ? ( ");
+					  APPLEX(" )  ? ( ");
 					}
 	    
 				 assignmentExpression 
 					{
-						  APP(" ) : ( ");
+						  APPLEX(" ) : ( ");
 					}
 						
 						assignmentExpression
 						{
-						  APP(" ) ");
+						  APPLEX(" ) ");
 						}
 
 						)
@@ -862,20 +870,20 @@ conditionalExpressionNoIn
 	|^(
 	   TERNARYOP
 				{
-				  APP(" ( ");
+				  APPLEX(" ( ");
 				}
 	   logicalORExpressionNoIn 
 				{
-				  APP(" ) ? ( ");
+				  APPLEX(" ) ? ( ");
 				}
     
 				 assignmentExpressionNoIn 
 			  {
-					  APP(" ) : ( ");
+					  APPLEX(" ) : ( ");
 					}		
 					assignmentExpressionNoIn
 					{
-					  APP(" ) ");
+					  APPLEX(" ) ");
 					}
 				)
 	;
@@ -883,70 +891,70 @@ conditionalExpressionNoIn
 
 logicalANDExpression
 	: bitwiseORExpression
-	|^(AND logicalANDExpression { APP(" && ");} bitwiseORExpression)
+	|^(AND logicalANDExpression { APPLEX(" && ");} bitwiseORExpression)
 	;
 
 
 logicalORExpression
 	: logicalANDExpression
-	|^(OR logicalORExpression { APP(" || "); } logicalANDExpression)
+	|^(OR logicalORExpression { APPLEX(" || "); } logicalANDExpression)
 	;
 	
 logicalORExpressionNoIn
 	: logicalANDExpressionNoIn
-	|^(OR logicalORExpressionNoIn{ APP(" || ");}logicalANDExpressionNoIn) 
+	|^(OR logicalORExpressionNoIn{ APPLEX(" || ");}logicalANDExpressionNoIn) 
 	;
 	
 
 logicalANDExpressionNoIn
 	: bitwiseORExpressionNoIn 
-	|^(AND logicalANDExpressionNoIn {APP(" && ");} bitwiseORExpressionNoIn) 
+	|^(AND logicalANDExpressionNoIn {APPLEX(" && ");} bitwiseORExpressionNoIn) 
 	;
 	
 bitwiseORExpression
 	: bitwiseXORExpression 
-	|^(BIT_OR bitwiseORExpression { APP(" | "); } bitwiseXORExpression)
+	|^(BIT_OR bitwiseORExpression { APPLEX(" | "); } bitwiseXORExpression)
 	;
 	
 bitwiseORExpressionNoIn
 	: bitwiseXORExpressionNoIn 
-	|^( BIT_OR bitwiseORExpressionNoIn {  APP(" | ");} bitwiseXORExpressionNoIn)
+	|^( BIT_OR bitwiseORExpressionNoIn {  APPLEX(" | ");} bitwiseXORExpressionNoIn)
 	;
 	
 bitwiseXORExpression
 : bitwiseANDExpression 
-| ^( EXP e=bitwiseXORExpression { APP(" ^ ");} bitwiseANDExpression)
+| ^( EXP e=bitwiseXORExpression { APPLEX(" ^ ");} bitwiseANDExpression)
 ;
 	
 bitwiseXORExpressionNoIn
 	: bitwiseANDExpressionNoIn
-	|^( EXP e=bitwiseXORExpressionNoIn { APP(" ^ ");}bitwiseANDExpressionNoIn) 
+	|^( EXP e=bitwiseXORExpressionNoIn { APPLEX(" ^ ");}bitwiseANDExpressionNoIn) 
 	;
 	
 bitwiseANDExpression
 	: equalityExpression
-	| ^(BIT_AND e=bitwiseANDExpression { APP(" & ");} equalityExpression) 
+	| ^(BIT_AND e=bitwiseANDExpression { APPLEX(" & ");} equalityExpression) 
 	;
 	
 bitwiseANDExpressionNoIn
 	: equalityExpressionNoIn 
-	| ^(BIT_AND e=bitwiseANDExpressionNoIn { APP(" & ");} equalityExpressionNoIn)
+	| ^(BIT_AND e=bitwiseANDExpressionNoIn { APPLEX(" & ");} equalityExpressionNoIn)
 	;
 	
 equalityExpression
 	: relationalExpression
-	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
-	| ^(NOT_EQUALS e=equalityExpression {APP(" != ");} relationalExpression)
-	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {APP(" !== ");} relationalExpression)
+	| ^(EQUALS e=equalityExpression { APPLEX(" == ");} relationalExpression)
+	| ^(NOT_EQUALS e=equalityExpression {APPLEX(" != ");} relationalExpression)
+	| ^(IDENT e=equalityExpression { APPLEX(" === ");} relationalExpression)
+	| ^(NOT_IDENT e=equalityExpression {APPLEX(" !== ");} relationalExpression)
 ;
 
 equalityExpressionNoIn
 : relationalExpressionNoIn
-| ^( EQUALS equalityExpressionNoIn { APP(" == ");} relationalExpressionNoIn)
-| ^( NOT_EQUALS equalityExpressionNoIn {  APP(" != ");} relationalExpressionNoIn)
-| ^( IDENT equalityExpressionNoIn { APP(" === "); } relationalExpressionNoIn)
-| ^( NOT_IDENT equalityExpressionNoIn { APP(" !== ");} relationalExpressionNoIn)
+| ^( EQUALS equalityExpressionNoIn { APPLEX(" == ");} relationalExpressionNoIn)
+| ^( NOT_EQUALS equalityExpressionNoIn {  APPLEX(" != ");} relationalExpressionNoIn)
+| ^( IDENT equalityExpressionNoIn { APPLEX(" === "); } relationalExpressionNoIn)
+| ^( NOT_IDENT equalityExpressionNoIn { APPLEX(" !== ");} relationalExpressionNoIn)
 
 ;
 	
@@ -972,9 +980,9 @@ scope
 	   relationalOps 
 				e=relationalExpression
 				{
-				  APP(" ");
-				  APP($relationalExpression::op );
-				  APP(" ");
+				  APPLEX(" ");
+				  APPLEX($relationalExpression::op );
+				  APPLEX(" ");
 				}
 				shiftExpression
 			) 
@@ -999,9 +1007,9 @@ scope
 	     relationalOpsNoIn
 						relationalExpressionNoIn
 						{
-						  APP(" ");
-						  APP($relationalExpressionNoIn::op);
-						  APP(" ");
+						  APPLEX(" ");
+						  APPLEX($relationalExpressionNoIn::op);
+						  APPLEX(" ");
 						}
 						shiftExpression
 				)
@@ -1023,9 +1031,9 @@ scope
 	| ^(shiftOps 
 	    e=shiftExpression 
 					 {
-						  APP(" ");
-						  APP($shiftExpression::op);
-						  APP(" ");
+						  APPLEX(" ");
+						  APPLEX($shiftExpression::op);
+						  APPLEX(" ");
 						}
 					additiveExpression
 					)
@@ -1039,7 +1047,7 @@ additiveExpression
 	     ADD 
 						e1=additiveExpression
 						{
-						  APP(" + ");
+						  APPLEX(" + ");
 						}
 						multiplicativeExpression
 					) 
@@ -1047,7 +1055,7 @@ additiveExpression
 	     SUB 
 						e1=additiveExpression 
 						 {
-							  APP(" - ");
+							  APPLEX(" - ");
 							}
 						multiplicativeExpression
 					) 
@@ -1070,13 +1078,13 @@ multiplicativeExpression
 	| ^( MULT 
 	    multiplicativeExpression 
 					{
-					  APP(" * ");
+					  APPLEX(" * ");
 					 
 					} 
 					unaryExpression
 					)
-	| ^(DIV multiplicativeExpression { APP(" / ");} unaryExpression)
-	| ^(MOD multiplicativeExpression { APP(" \% ");} unaryExpression)
+	| ^(DIV multiplicativeExpression { APPLEX(" / ");} unaryExpression)
+	| ^(MOD multiplicativeExpression { APPLEX(" \% ");} unaryExpression)
 	;
 
 unaryOps
@@ -1097,15 +1105,15 @@ unaryExpression
 	| ^(
 	
 	    (
-				   DELETE          {  APP("delete");}
-       | VOID          {   APP("void");}
-       | TYPEOF        {  APP("typeOf ");}
-       | PLUSPLUS      {  APP("++");}
-       | MINUSMINUS    {  APP("--");}
-       | UNARY_PLUS    {  APP("+");}
-       | UNARY_MINUS   {  APP("-");}
-       | COMPLEMENT    {  APP("~");}
-       | NOT           {  APP("!");}
+				   DELETE          {  APPLEX("delete");}
+       | VOID          {   APPLEX("void");}
+       | TYPEOF        {  APPLEX("typeOf ");}
+       | PLUSPLUS      {  APPLEX("++");}
+       | MINUSMINUS    {  APPLEX("--");}
+       | UNARY_PLUS    {  APPLEX("+");}
+       | UNARY_MINUS   {  APPLEX("-");}
+       | COMPLEMENT    {  APPLEX("~");}
+       | NOT           {  APPLEX("!");}
 	
 					)
 
@@ -1115,36 +1123,36 @@ unaryExpression
 	
 
 postfixExpression
-	: leftHandSideExpression ('++' { APP("++");})?
-	| leftHandSideExpression ('--'{ APP("--"); })?
+	: leftHandSideExpression ('++' { APPLEX("++");})?
+	| leftHandSideExpression ('--'{ APPLEX("--"); })?
 	;
 
 primaryExpression
-	: 'this' {APP("this");}
+	: 'this' {APPLEX("this");}
 	| Identifier 
 	  { 
-            APP((const char*)$Identifier.text->chars);
+            APPLEX((const char*)$Identifier.text->chars);
 	  }
         | dollarExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
-	| ^(PAREN { APP("( "); } expression { APP(" )");}) 
+	| ^(PAREN { APPLEX("( "); } expression { APPLEX(" )");}) 
 	;
 
 dollarExpression
         : ^(DOLLAR_EXPRESSION
             {
                 if (insideWhenPred)
-                    APP("'),");
+                    APPLEX("'),");
 
             }
             Identifier
             {
-                APP((const char*)$Identifier.text->chars);
+                APPLEX((const char*)$Identifier.text->chars);
 
                 if (insideWhenPred)
-                   APP(",util.create_quoted('");
+                   APPLEX(",util.create_quoted('");
 
             }
          )
@@ -1154,28 +1162,28 @@ dollarExpression
         
 // arrayLiteral definition.
 arrayLiteral
-  : ^(ARRAY_LITERAL {APP("[ ]"); })
+  : ^(ARRAY_LITERAL {APPLEX("[ ]"); })
   | ^(ARRAY_LITERAL 
 
-	     { APP("[ "); }
+	     { APPLEX("[ "); }
        (assignmentExpression)
-			 { APP(" ]"); }
+			 { APPLEX(" ]"); }
       )
 
   | ^(ARRAY_LITERAL
 	       {
-                 APP("[ ");
+                 APPLEX("[ ");
 		}
                 assignmentExpression
       	
 	       (
                  {
-                   APP(", ");
+                   APPLEX(", ");
                  }
                  assignmentExpression
 		)*
                 {
-                  APP(" ] ");
+                  APPLEX(" ] ");
                 }
       )
 
@@ -1183,28 +1191,28 @@ arrayLiteral
        
 // objectLiteral definition.
 objectLiteral
-  :^(OBJ_LITERAL {APP("{ }");} )
+  :^(OBJ_LITERAL {APPLEX("{ }");} )
   |^(OBJ_LITERAL 
-	    { APP("{ "); } 
+	    { APPLEX("{ "); } 
             
             (propertyNameAndValue)
 
-           {  APP(" }"); }
+           {  APPLEX(" }"); }
     )
 	|^(OBJ_LITERAL 
 	   
-				{ APP("{ ");}
+				{ APPLEX("{ ");}
 				propertyNameAndValue
 				( 
 				  { 
-					  APP(", "); 
+					  APPLEX(", "); 
 					} 
 				
 				  propertyNameAndValue
 				)*
 
       	{ 
-				  APP(" } "); 
+				  APPLEX(" } "); 
 				
 				}
 
@@ -1215,45 +1223,45 @@ objectLiteral
 propertyNameAndValue
 	: ^(NAME_VALUE 
 	   propertyName 
-			{	APP(" : ");}
+			{	APPLEX(" : ");}
 				assignmentExpression)
 	;
 
 propertyName
-	: Identifier {  APP((const char*)$Identifier.text->chars); }
+	: Identifier {  APPLEX((const char*)$Identifier.text->chars); }
 	| StringLiteral
           {
               if (insideWhenPred)
               {
                   std::string escapedSequence = emerson_escapeSingleQuotes((const char*) $StringLiteral.text->chars);
-                  APP((const char*) escapedSequence.c_str());
+                  APPLEX((const char*) escapedSequence.c_str());
               }
               else
               {
-                  APP((const char*)$StringLiteral.text->chars);  
+                  APPLEX((const char*)$StringLiteral.text->chars);  
               }
           }
-	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
+	| NumericLiteral {APPLEX((const char*)$NumericLiteral.text->chars);}
 	;
 
 // primitive literal definition.
 literal
-	: 'null' {   APP("null");}
-	| 'true' {   APP("true"); }
-	| 'false'{  APP("false");}
+	: 'null' {   APPLEX("null");}
+	| 'true' {   APPLEX("true"); }
+	| 'false'{  APPLEX("false");}
 	| StringLiteral
           {
               if (insideWhenPred)
               {
                   std::string escapedSequence = emerson_escapeSingleQuotes(((const char*) $StringLiteral.text->chars));
-                  APP((const char*)(escapedSequence.c_str()));
+                  APPLEX((const char*)(escapedSequence.c_str()));
               }
               else
               {
-                  APP((const char*)$StringLiteral.text->chars);  
+                  APPLEX((const char*)$StringLiteral.text->chars);  
               }
           }
-//	| StringLiteral {APP((const char*)$StringLiteral.text->chars);}
-	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
+//	| StringLiteral {APPLEX((const char*)$StringLiteral.text->chars);}
+	| NumericLiteral {APPLEX((const char*)$NumericLiteral.text->chars);}
 	;
 	

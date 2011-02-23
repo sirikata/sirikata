@@ -5,7 +5,7 @@
 
 // This is the parser grammar for Emerson language
 
-grammar Emerson;
+grammar LexWhenPred;
 
 options
 {
@@ -121,7 +121,7 @@ tokens
 {
   #include <stdlib.h>;
   #include <stdio.h>;
-  #include "Util.h";
+  #include "../emerson/Util.h";
 }
 
 
