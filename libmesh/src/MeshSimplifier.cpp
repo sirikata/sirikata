@@ -291,6 +291,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         sort(facevecs.begin(), facevecs.end());
         if (seenFaces.find(facevecs[0] + facevecs[1] + facevecs[2]) != seenFaces.end()) 
         {
+          
           continue;
         }
         seenFaces.insert(facevecs[0] + facevecs[1]+ facevecs[2]);
@@ -349,11 +350,11 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
                          Vector4f(A*C, B*C, C*C, C*D),
                          Vector4f(A*D, B*D, C*D, D*D), Matrix4x4f::ROWS() );
 
+       
+
         positionQs[pos1] += mat;
         positionQs[pos2] += mat;
         positionQs[pos3] += mat;
-        
-        
       }
     }
   }
@@ -376,7 +377,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     const GeometryInstance& geomInstance = agg_mesh->instances[geoinst_idx];
     SubMeshGeometry& curGeometry = agg_mesh->geometry[geomInstance.geometryIndex];
     
-
+    
     uint32 i = geomInstance.geometryIndex;
 
     for (uint32 j = 0; j < curGeometry.primitives.size(); j++) {
@@ -426,6 +427,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         if (seenFaces.find(facevecs[0] + facevecs[1] + facevecs[2])!=
             seenFaces.end()) 
         {
+          
           continue;
         }
         seenFaces.insert(facevecs[0] + facevecs[1]+ facevecs[2]);
@@ -445,7 +447,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         float cost = abs(vbar4f.dot(  Q * vbar4f )) ; //problem here: every instance would have a 
                                                       //different target vertex
                                                       //after decimation.
-        QSlimStruct qs( ((cost == 0) ? 1e-15 : cost), i, j, k, QSlimStruct::ONE_TWO, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
+        QSlimStruct qs( ((cost <= 1e-5) ? 1e15 : cost), i, j, k, QSlimStruct::ONE_TWO, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
         GeomPairContainer gpc(i,idx,idx2);
         
 
@@ -454,6 +456,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         }
         else {
           intermediateVertexPairs[gpc].mCost += qs.mCost;
+          
         }
         
 
@@ -462,7 +465,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         
         vbar4f = Vector4f(pos3.x, pos3.y,pos3.z,1);
         cost = abs(vbar4f.dot(  Q * vbar4f )) ;
-        qs = QSlimStruct( ((cost == 0) ? 1e-15:cost), i, j, k, QSlimStruct::TWO_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
+        qs = QSlimStruct( ((cost <= 1e-5) ? 1e15:cost), i, j, k, QSlimStruct::TWO_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
         gpc = GeomPairContainer(i,idx2,idx3);
 
 
@@ -479,9 +482,11 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         
         vbar4f = Vector4f(pos3.x, pos3.y,pos3.z,1);
         cost = abs(vbar4f.dot(  Q * vbar4f )) ;
-        qs = QSlimStruct( ((cost == 0) ? 1e-15:cost), i, j, k, QSlimStruct::ONE_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
+        qs = QSlimStruct( ((cost <= 1e-5) ? 1e15:cost), i, j, k, QSlimStruct::ONE_THREE, Vector3f(vbar4f.x, vbar4f.y, vbar4f.z) );
         gpc = GeomPairContainer(i,idx,idx3);
 
+        //std::cout << vbar4f << "\n";
+        //std::cout << "\t" << cost <<"\n";
         if (intermediateVertexPairs.find(gpc) == intermediateVertexPairs.end()) {            
           intermediateVertexPairs[gpc] = qs;
         }
@@ -508,6 +513,8 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
   while (remainingVertices > numVerticesLeft && vertexPairs.size() > 0) {
     const QSlimStruct& top = vertexPairs.top();
+
+    //    std::cout << top.mCost << " : top.mCost\n";
 
     SubMeshGeometry& curGeometry = agg_mesh->geometry[top.mGeomIdx];
     int i = top.mGeomIdx;
@@ -725,7 +732,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     std::cout << "Eliminated position " << it->first << "\n";
     }
   }*/
-  
+   
     
   remainingVertices = pq.size();
 
