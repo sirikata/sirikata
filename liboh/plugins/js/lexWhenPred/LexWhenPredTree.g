@@ -51,12 +51,12 @@ sourceElements
     ;
 	
 sourceElement
-    : statement{ }
+    : whenPredStatement{ }
     ;
 	
 
 // statements
-statement
+whenPredStatement
         : ^(
             WHEN_PRED_BLOCK
             {

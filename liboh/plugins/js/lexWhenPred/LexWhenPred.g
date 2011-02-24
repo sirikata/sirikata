@@ -41,12 +41,12 @@ sourceElements
 	;
 	
 sourceElement
-        : statement -> statement
+        : whenPredStatement -> whenPredStatement
 	;
 	
 
 // statements
-statement
+whenPredStatement
         : literal* s1=Identifier ( separator+  s2=Identifier)* separator* literal* separator*    -> ^(WHEN_PRED_BLOCK $s1 $s2*)
 	;
 
