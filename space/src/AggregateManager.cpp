@@ -66,6 +66,7 @@ void AggregateManager::addAggregate(const UUID& uuid) {
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   mAggregateObjects[uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(uuid, UUID::null()));
+
 }
 
 void AggregateManager::removeAggregate(const UUID& uuid) {
@@ -105,6 +106,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 
     mContext->mainStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
+
 }
 
 void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
@@ -124,6 +126,14 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     mContext->mainStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 }
+
+void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {  
+  boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
+  
+  if (mAggregateObjects.find(objid) != mAggregateObjects.end())
+    mAggregateObjects[objid]->mNumObservers = nobservers;
+}
+
 
 void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& delayFor) {
   if (mModelsSystem == NULL) return;
@@ -161,7 +171,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     return false;
   }
 
-  std::vector<UUID>& children = aggObject->mChildren;
+  std::vector<UUID>& children = aggObject->mLeaves;
 
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
@@ -218,9 +228,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
   }
 
-  if (!allMeshesAvailable) return false;
-
-  //Time agg_time_start = Timer::now();
+  if (!allMeshesAvailable) return false;  
 
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
@@ -228,8 +236,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   float32 bndsX = bnds.center().x;
   float32 bndsY = bnds.center().y;
   float32 bndsZ = bnds.center().z;
-
-
 
   std::tr1::unordered_map<std::string, uint32> meshToStartIdxMapping;
   std::tr1::unordered_map<std::string, uint32> meshToStartMaterialsIdxMapping;
@@ -319,7 +325,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     // SubMeshGeometry, Textures, LightInfos, MaterialEffectInfos, and Nodes can
     // all be shared, and can therefore reuse offsets.
     // If necessary, add the offset in.
-    if (  meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
+    if ( meshToStartIdxMapping.find(meshName) == meshToStartIdxMapping.end()) {
       meshToStartIdxMapping[ meshName ] = agg_mesh->geometry.size();
       meshToStartMaterialsIdxMapping[ meshName ] = agg_mesh->materials.size();
       meshToStartNodeIdxMapping[ meshName ] = agg_mesh->nodes.size();
@@ -424,6 +430,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // creating a new root node.
 
       agg_mesh->nodes.push_back( Node(trs * orig_geo_inst_xform) );
+      
       agg_mesh->rootNodes.push_back(geom_node_idx);
       // Overwrite the parent node to make this new one with the correct
       // transform the one we use.
@@ -443,7 +450,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       lightInstance.lightIndex += submeshLightOffset;
       agg_mesh->lightInstances.push_back(lightInstance);
     }
-
   }
 
   // We should have all the textures in our textureSet since we looped through
@@ -460,10 +466,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
-
-  //  std::cout << "Time spent aggregating: "  <<  (Timer::now() - agg_time_start) << "\n";
-  //Time simpl_time_start = Timer::now();
-
+  
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 40000);
   //std::cout << "Time spent simplifying: " << (Timer::now() - simpl_time_start) << "\n";
@@ -480,9 +483,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
-  system( cmdline.c_str()  );
-
-  //std::cout << "Time spent uploading: " << (Timer::now() - upload_time_start) << "\n";
+  system( cmdline.c_str()  );  
 
   //Update loc
 
@@ -586,18 +587,93 @@ std::vector<UUID>& AggregateManager::getChildren(const UUID& uuid) {
     return children;
 }
 
+void AggregateManager::getLeaves(const std::vector<UUID>& mIndividualObjects) {
+  for (uint32 i=0; i<mIndividualObjects.size(); i++) {
+    const  UUID& indl_uuid = mIndividualObjects[i];
+    UUID uuid = indl_uuid;
+
+    std::tr1::shared_ptr<AggregateObject> obj = mAggregateObjects[uuid];
+    float radius = mLoc->bounds(uuid).radius();
+
+    while (uuid != UUID::null()) {
+      float solid_angle = 6.28 * (1-sqrt(1- pow(radius/obj->mDistance,2)));
+
+      if (solid_angle > 0.000005) 
+        obj->mLeaves.push_back(indl_uuid);
+
+      uuid = obj->mParentUUID;
+
+      if (mAggregateObjects.find(uuid) != mAggregateObjects.end())
+        obj = mAggregateObjects[uuid];
+    }
+  }
+}
 
 void AggregateManager::generateMeshesFromQueue(Time postTime) {
     if (postTime < mAggregateGenerationStartTime) {
       return;
     }
 
+    static bool generated = false;
+
+    if (!generated) {
+      std::vector<UUID> mIndividualObjects;
+
+      for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher >::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++)
+        {
+          if (it->second->mTreeLevel == 0 && it->second->mChildren.size() > 0) {
+            mRootUUID = it->second->mUUID;
+          }
+
+          std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
+          float radius  = INT_MAX;
+          for (uint32 i=0; i < aggObject->mChildren.size(); i++) {
+            BoundingSphere3f bnds = mLoc->bounds(aggObject->mChildren[i]);
+            if (bnds.radius() < radius) {
+              radius = bnds.radius();
+            }
+          }
+
+          if (radius == INT_MAX) radius = 0;
+
+          aggObject->mDistance = 0.01 + radius/sqrt( 1 - pow( 1-0.011/6.28 , 2) );
+
+          //std::cout << aggObject->mTreeLevel << " : radius : " << radius << "\n";
+          std::cout << aggObject->mTreeLevel << " : distance : " << aggObject->mDistance << "\n";
+
+          if (aggObject->mChildren.size() == 0) {
+            mIndividualObjects.push_back(aggObject->mUUID);
+          }
+        }
+
+      getLeaves(mIndividualObjects);
+
+      for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher >::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++)
+        {
+          assert(it->second);
+          if ( it->second->mChildren.size() > 0) {
+            std::cout << it->second->mTreeLevel << " , "  << it->second->mLeaves.size() << "\n";
+          }
+
+          if (it->second->mTreeLevel == 0) {
+            for (uint32 i=0; i < it->second->mLeaves.size(); i++) {
+              std::cout << mLoc->mesh(it->second->mLeaves[i]) << " : mesh \n";
+            }
+          }
+        }
+
+      generated = true;
+    }
+    
     Time curTime = Timer::now();
 
     for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
     {
-      mObjectsByPriority[it->second->mTreeLevel].push_back(it->second);
+      if (it->second->mNumObservers > 0)
+        std::cout << it->second->mTreeLevel << " :  " << it->second->mNumObservers  << " observers\n";
+
+      mObjectsByPriority[it->second->mNumObservers].push_back(it->second);
     }
 
     bool returner = false;

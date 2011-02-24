@@ -84,6 +84,12 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     Camera* mCamera;
 
+    // FIXME because we don't have proper multithreaded support in cppoh, we
+    // need to allocate our own thread dedicated to parsing
+    Network::IOService* mParsingIOService;
+    Network::IOWork* mParsingWork;
+    Thread* mParsingThread;
+
     class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class OgreSystemMouseHandler;
     MouseHandler *mMouseHandler;
@@ -120,9 +126,16 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     Transfer::TransferPoolPtr mTransferPool;
 
+    OptionValue* mModelLights; // Use model or basic lights
+
     bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
+    // Loads system lights if they are being used.
+    void loadSystemLights();
+    // Helper for loadSystemLights.
+    void constructSystemLight(const String& name, const Vector3f& direction);
+
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
     void preFrame(Task::LocalTime, Duration);
@@ -174,6 +187,8 @@ public:
 
     String getResourcesDir() const { return mResourcesDir; }
 
+    bool useModelLights() const;
+
     ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
     void  attachCamera(const String&renderTargetName,Camera*);
     ///removes the camera from the list of attached cameras.
@@ -221,6 +236,7 @@ public:
         return getEntity(proxy->getObjectReference());
     }
 
+    typedef std::tr1::function<void(Mesh::MeshdataPtr)> ParseMeshCallback;
     /** Tries to parse a mesh. Can handle different types of meshes and tries to
      *  find the right parser using magic numbers.  If it is unable to find the
      *  right parser, returns NULL.  Otherwise, returns the parsed mesh as a
@@ -230,8 +246,12 @@ public:
      *  \param fp the fingerprint of the data, used for unique naming and passed
      *            through to the resulting mesh data
      *  \param data the contents of the
+     *  \param cb callback to invoke when parsing is complete
      */
-    Mesh::MeshdataPtr parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+private:
+    void parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+public:
 
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
@@ -257,6 +277,7 @@ public:
     virtual Duration desiredTickRate()const;
     ///returns if rendering should continue
     virtual void poll();
+    virtual void stop();
     Ogre::RenderTarget *getRenderTarget();
     static Ogre::Root *getRoot();
     Ogre::SceneManager* getSceneManager();

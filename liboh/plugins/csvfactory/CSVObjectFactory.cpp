@@ -150,7 +150,7 @@ void CSVObjectFactory::generate()
         }
         else {
             //note: script_file is not required, so not checking it with the assert
-            assert(objtype_idx != -1 && pos_idx != -1 && orient_idx != -1 && vel_idx != -1 && mesh_idx != -1 && quat_vel_idx != -1);
+            assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
             //assert(objtype_idx != -1 && pos_idx != -1 && mesh_idx != -1);
 
             if (line_parts[objtype_idx] == "mesh") {

@@ -222,8 +222,12 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
 
-    // If we have a script to load, load it.
-    //Always import the library
+
+    //Always load the shim layer. 
+    // This is required. So do NOT remove. It is
+    // not the same as libraray
+    // TODO: hardcoded
+    import("std/shim.em");
 
 
 
@@ -716,7 +720,6 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
 }
 
 
-
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)
 {
@@ -743,8 +746,11 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
+
+
     v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     #else
+
 
     //assume the input string to be a valid js rather than emerson
     v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
@@ -778,13 +784,20 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     TryCatch try_catch2;
     // Execute
     v8::Handle<v8::Value> result = script->Run();
+
     if (try_catch2.HasCaught()) {
         v8::String::Utf8Value error(try_catch2.Exception());
-        String uncaught( *error);
-        uncaught = "Uncaught excpetion " + uncaught;
-        JSLOG(error, uncaught);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(uncaught.c_str())));
-        //return try_catch.Exception();
+        JSLOG(error, "Uncaught exception: " << *error);
+        v8::Local<v8::StackTrace> strace = v8::StackTrace::CurrentStackTrace(100);
+        int frame_count = strace->GetFrameCount();
+        std::stringstream sstream;
+        for(uint32 i = 0; i < frame_count; i++)
+        {
+          v8::Local<v8::StackFrame> frame = strace->GetFrame(i);
+          printStackFrame(sstream, frame);
+        }
+        JSLOG(error, "Following is the stack trace: \n" << sstream.str());
+        return try_catch2.Exception();
     }
 
     
@@ -797,6 +810,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     checkWatchables();
     return result;
 }
+
 
 
 //this function runs through 
@@ -818,6 +832,21 @@ void JSObjectScript::checkWhens(WhenMap& mapWhensToCheck)
         iter->first->checkPredAndRun();
 }
 
+
+void JSObjectScript::printStackFrame(std::stringstream& out, v8::Local<v8::StackFrame> frame)
+{
+  
+  int col = frame->GetColumn();
+  v8::Local<v8::String> func = frame->GetFunctionName();
+  int line = frame->GetLineNumber();
+  v8::Local<v8::String> script = frame->GetScriptName();
+
+  std::string func_str(ToCString( v8::String::Utf8Value(func)));
+  std::string script_str(ToCString( v8::String::Utf8Value(script)));
+  
+  out << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
+  std::cout << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
+}
 
 //defaults to internalEvaling with mContext, and does a ScopedEvalContext.
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
@@ -841,7 +870,6 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-
 
     String errorMessage= "Cannot interpret callback function as string while executing in context.  ";
     String v8Source;
@@ -1289,13 +1317,11 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
 
     if (visFromArrayVal->IsObject())
     {
-        JSLOG(info, "returning the value from the array");
         return visFromArrayVal->ToObject();  //we found the object that we were
      }                                        //looking for in the visible
                                              //array.  returning it here.
 
     
-    JSLOG(info, "message sender is a new one");
     //didn't find the object that we were looking for in the visible array.
     v8::HandleScope handle_scope;
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mVisibleTemplate->NewInstance());
@@ -1571,7 +1597,8 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
     uint32 new_pos = presences_array->Length();
 
     // Create the object for the new presence
-    Local<Object> js_pres = mManager->mPresenceTemplate->NewInstance();
+
+    Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 

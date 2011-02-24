@@ -1004,11 +1004,22 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
     return true;
 }
 
+Vector3f HostedObject::requestCurrentVelocity(ProxyObjectPtr proxy_obj)
+{
+    return (Vector3f)proxy_obj->getVelocity();
+}
+
 
 Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    return (Vector3f)proxy_obj->getVelocity();
+    if (proxy_obj == nullPtr)
+    {
+        SILOG(cppoh,error,"[HO] Unknown space object reference looking for velocity for for  " << space<< "-"<<oref<<".");
+        return Vector3f::nil();
+    }
+
+    return requestCurrentVelocity(proxy_obj);
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {

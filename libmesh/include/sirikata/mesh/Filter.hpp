@@ -57,6 +57,7 @@ public:
 
     virtual FilterDataPtr apply(FilterDataPtr input) = 0;
 }; // class Filter
+typedef std::tr1::shared_ptr<Filter> FilterPtr;
 
 class SIRIKATA_MESH_EXPORT FilterFactory :
         public AutoSingleton<FilterFactory>,

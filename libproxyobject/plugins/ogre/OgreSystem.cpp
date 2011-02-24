@@ -41,6 +41,7 @@
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "Camera.hpp"
 #include "Entity.hpp"
+#include "Lights.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
 #include "input/SDLInputManager.hpp"
@@ -54,6 +55,9 @@
 
 #include <boost/filesystem.hpp>
 #include <stdio.h>
+
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
 
 using namespace std;
 
@@ -406,11 +410,40 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
     }
 }
 
+void OgreSystem::constructSystemLight(const String& name, const Vector3f& direction) {
+    LightInfo li;
 
+    Color lcol(1.f, 1.f, 1.f);
+    li.setLightDiffuseColor(lcol);
+    li.setLightSpecularColor(lcol);
+    li.setLightFalloff(1.f, 0.f, 0.f);
+    li.setLightType(LightInfo::DIRECTIONAL);
+    li.setLightRange(10000.f);
+
+    Ogre::Light* light = constructOgreLight(getSceneManager(), String("____system_") + name, li);
+    light->setDirection(toOgre(direction));
+
+    getSceneManager()->getRootSceneNode()->attachObject(light);
+}
+
+void OgreSystem::loadSystemLights() {
+    if (useModelLights()) return;
+
+    constructSystemLight("forward", Vector3f(0.f, 0.f, 1.f));
+    constructSystemLight("back", Vector3f(0.f, 0.f, -1.f));
+    constructSystemLight("left", Vector3f(-1.f, 0.f, 0.f));
+    constructSystemLight("right", Vector3f(1.f, 0.f, 0.f));
+    constructSystemLight("up", Vector3f(0.f, 1.f, 0.f));
+    constructSystemLight("down", Vector3f(0.f, -1.f, 0.f));
+}
 
 bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     mViewer = viewer;
     mPresenceID = presenceid;
+
+    mParsingIOService = Network::IOServiceFactory::makeIOService();
+    mParsingWork = new Network::IOWork(*mParsingIOService, "Ogre Mesh Parsing");
+    mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
 
     ProxyManagerPtr proxyManager = mViewer->presence(presenceid);
     mViewer->addListener((SessionEventListener*)this);
@@ -434,6 +467,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
     OptionValue*grabCursor;
+
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
@@ -457,6 +491,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
+                           mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
                            NULL);
     bool userAccepted=true;
 
@@ -597,6 +632,8 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     allocMouseHandler(keybindingFile->as<String>());
     new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
 
+    loadSystemLights();
+
   // Test web view
 /*
     WebView* view = WebViewManager::getSingleton().createWebView(UUID::random().rawHexData(), UUID::random().rawHexData(), 400, 300, OverlayPosition());
@@ -715,6 +752,10 @@ Ogre::RenderTarget*OgreSystem::getRenderTarget() {
     return mRenderTarget;
 }
 OgreSystem::~OgreSystem() {
+    mParsingThread->join();
+    delete mParsingThread;
+    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+
     {
         SceneEntitiesMap toDelete;
         toDelete.swap(mSceneEntities);
@@ -754,7 +795,9 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     p->getProxyManager()->destroyObject(p);
 }
 
-
+bool OgreSystem::useModelLights() const {
+    return mModelLights->as<bool>();
+}
 
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
@@ -781,8 +824,14 @@ void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
     dlPlanner->removeObject(p);
 }
 
-Mesh::MeshdataPtr OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-    return mModelParser->load(orig_uri, fp, data);
+void OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+    mParsingIOService->post(
+        std::tr1::bind(&OgreSystem::parseMeshWork, this, orig_uri, fp, data, cb)
+    );
+}
+void OgreSystem::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+    Mesh::MeshdataPtr parsed = mModelParser->load(orig_uri, fp, data);
+    mContext->mainStrand->post(std::tr1::bind(cb, parsed));
 }
 
 struct RayTraceResult {
@@ -985,6 +1034,10 @@ void OgreSystem::poll(){
         mQuitRequestHandled = true;
     }
 }
+void OgreSystem::stop() {
+    delete mParsingWork;
+    TimeSteppedQueryableSimulation::stop();
+}
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
     for (iter = mMovingEntities.begin(); iter != mMovingEntities.end();) {
@@ -1052,15 +1105,50 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     // create a chatwindow
     // WebView mNager is already initialized by the ogre system
 
+
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-    WebView* ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_BOTTOMCENTER));
-    ui_wv->loadFile("chat/prompt.html");
-    SILOG(ogre,detailed,"Returning a chat window.");
+
+		WebView* ui_wv = wvManager->getWebView("chat_terminal");
+
+		if(!ui_wv)
+		{
+
+      ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_TOPLEFT));
+      ui_wv->loadFile("chat/prompt.html");
+      SILOG(ogre,detailed,"Returning a chat window.");
+	  }
     Invokable* inn = ui_wv;
     boost::any result(inn);
     return result;
   }
+  else if(name == "getWindow")
+  {
+    // get the name of this window
+    string window_name;
+    string html_script;
 
+    if( (!params[1].empty() && params[1].type() == typeid(string))
+		&&
+	    (!params[2].empty() && params[2].type() == typeid(string))
+    )
+    {
+      window_name = boost::any_cast<std::string>(params[1]);
+      html_script = boost::any_cast<std::string>(params[2]);
+      WebViewManager* wvManager = WebViewManager::getSingletonPtr();
+      WebView* ui_wv = wvManager->getWebView(window_name);
+      if(!ui_wv)
+      {
+        ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_BOTTOMCENTER));
+        ui_wv->loadHTML(html_script);
+        SILOG(ogre,detailed,"Returning a new window.");
+      }
+
+      Invokable* inn = ui_wv;
+      boost::any result(inn);
+      return result;
+   }
+
+  }
 
   return NULL;
 }

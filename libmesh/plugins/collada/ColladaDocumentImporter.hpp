@@ -218,6 +218,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         IdMap mMaterialMap;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, COLLADAFW::Effect, UniqueIdHash> ColladaEffectMap;
         ColladaEffectMap mColladaEffects;
+        IndicesMap mConvertedEffects; // Index of effects already converted
+                                       // which we can reuse.
 
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, std::string, UniqueIdHash> URIMap;
         URIMap mTextureMap;

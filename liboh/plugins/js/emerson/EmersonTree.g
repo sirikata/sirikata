@@ -64,70 +64,66 @@ sourceElement
 	
 // functions
 functionDeclaration
-    : ^( FUNC_DECL
-            {
+	: ^( FUNC_DECL
+              {
                 APP("function ");
-            }
-            Identifier
-	        {
+              }
+              Identifier
+              {
                 APP((const char*)$Identifier.text->chars);
                 APP("( ");
-            } 
-            formalParameterList 
-            {
+              } 
+              (formalParameterList)?
+              {
                 APP(" )");
                 APP("\n{\n");
-            }
-            functionBody
-            {
+              }
+              functionBody
+              {
                 APP("\n}");
-            }
-            
-        );
-
+              }
+            )
+	;
+	
 functionExpression
 	: ^( FUNC_EXPR 
-            {
-                APP("function ");
-            }
-            (			
-                Identifier
-                {
-                    APP((const char*)$Identifier.text->chars);
-                }
-            )?  
-            {
-                APP("( ");
-            }
-            formalParameterList 
-            {
-                APP("  )");
-                APP("\n{\n");
-            }
-            functionBody
-            {
-                APP("\n}");
-            }
-        ); 
+	     {
+               APP("function ");
+             }
+             (			
+               Identifier
+                 {
+                   APP((const char*)$Identifier.text->chars);
+                 }
+             )? 
+             {
+               APP("( ");
+             }
+             (formalParameterList)?
+             {
+               APP("  )");
+               APP("\n{\n");
+             }
+             functionBody
+             {
+               APP("\n}");
+             }
+           )
+       ;
 	
 formalParameterList
-	: ^( FUNC_PARAMS 
-            (id1=Identifier
-                {
-                    APP((const char*)$id1.text->chars);
-                    APP(" ");
-                }
-            )?		
-            (
-                id2=Identifier
-                {
-                    APP(", ");
-                    APP((const char*)$id2.text->chars);
-                    APP(" ");
-                }
+  : ^(FUNC_PARAMS
+                (id1=Identifier {APP((const char*)$id1.text->chars); })
                 
-            )*
-        );
+	       (
+                 {
+                   APP(", ");
+                 }
+                 id2=Identifier {APP((const char*)$id2.text->chars);}
+		)*
+      )
+  ;
+ 
 
 functionBody
 	: sourceElements
@@ -796,28 +792,33 @@ callExpressionSuffix
 	;
 
 arguments
-	: ^(ARGLIST 
-	       {
-                 APP(" ( ");  
-               }
-               (
-                 assignmentExpression
-	          (
-			   {
-					  APP(", ");
-					}
-					  assignmentExpression
-					   	
-					)*
-				
-				)*
+  : ^(ARGLIST {APP("( )"); })
+  | ^(ARGLIST 
+
+	     { APP("( "); }
+       (assignmentExpression)
+			 { APP(" )"); }
       )
-				
-				{
-				  APP(" ) ");
-				}
-	;
-	
+
+  | ^(ARGLIST
+	       {
+                 APP("( ");
+		}
+                assignmentExpression
+      	
+	       (
+                 {
+                   APP(", ");
+                 }
+                 assignmentExpression
+		)*
+                {
+                  APP(" ) ");
+                }
+      )
+
+       	;
+ 
 
 indexSuffix
 	: ^(ARRAY_INDEX expression)

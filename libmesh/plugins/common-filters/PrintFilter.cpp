@@ -51,6 +51,70 @@ struct NodeState {
     NodeIndex node;
     int32 curChild;
 };
+
+const char* PrimitiveTypeToString(SubMeshGeometry::Primitive::PrimitiveType type) {
+    switch (type) {
+      case SubMeshGeometry::Primitive::TRIANGLES: return "Triangles"; break;
+      case SubMeshGeometry::Primitive::TRISTRIPS: return "Triangle Strips"; break;
+      case SubMeshGeometry::Primitive::TRIFANS: return "Triangle Fans"; break;
+      case SubMeshGeometry::Primitive::LINESTRIPS: return "LineStrips"; break;
+      case SubMeshGeometry::Primitive::LINES: return "Lines"; break;
+      case SubMeshGeometry::Primitive::POINTS: return "Points"; break;
+      default: return "Unknown"; break;
+    }
+}
+
+const char* AffectingToString(MaterialEffectInfo::Texture::Affecting type) {
+    switch (type) {
+      case MaterialEffectInfo::Texture::DIFFUSE: return "Diffuse"; break;
+      case MaterialEffectInfo::Texture::SPECULAR: return "Specular"; break;
+      case MaterialEffectInfo::Texture::EMISSION: return "Emission"; break;
+      case MaterialEffectInfo::Texture::AMBIENT: return "Ambient"; break;
+      case MaterialEffectInfo::Texture::REFLECTIVE: return "Reflective"; break;
+      case MaterialEffectInfo::Texture::OPACITY: return "Opacity"; break;
+      default: return "Unknown"; break;
+    }
+}
+
+const char* SamplerTypeToString(MaterialEffectInfo::Texture::SamplerType type) {
+    switch (type) {
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_UNSPECIFIED: return "Unspecified"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_1D: return "1D"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_2D: return "2D"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_3D: return "3D"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_CUBE: return "Cube"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_RECT: return "Rect"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_DEPTH: return "Depth"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_TYPE_STATE: return "State"; break;
+      default: return "Unknown"; break;
+    }
+}
+
+const char* SamplerFilterToString(MaterialEffectInfo::Texture::SamplerFilter type) {
+    switch (type) {
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_UNSPECIFIED: return "Unspecified"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_NONE: return "None"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_NEAREST: return "Nearest"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_NEAREST_MIPMAP_NEAREST: return "NearestMipmapNearest"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_NEAREST: return "LinearMipmapNearest"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_NEAREST_MIPMAP_LINEAR: return "NearestMipmapLinear"; break;
+      case MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR: return "LinearMipmapLinear"; break;
+      default: return "Unknown"; break;
+    }
+}
+
+const char* WrapModeToString(MaterialEffectInfo::Texture::WrapMode type) {
+    switch (type) {
+      case MaterialEffectInfo::Texture::WRAP_MODE_UNSPECIFIED: return "Unspecified"; break;
+      case MaterialEffectInfo::Texture::WRAP_MODE_NONE: return "None"; break;
+      case MaterialEffectInfo::Texture::WRAP_MODE_WRAP: return "Wrap"; break;
+      case MaterialEffectInfo::Texture::WRAP_MODE_MIRROR: return "Mirror"; break;
+      case MaterialEffectInfo::Texture::WRAP_MODE_CLAMP: return "Clamp"; break;
+      case MaterialEffectInfo::Texture::WRAP_MODE_BORDER: return "Border"; break;
+      default: return "Unknown"; break;
+    }
+}
+
 }
 
 FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
@@ -79,9 +143,8 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
         printf("   Name: %s, Positions: %d Normals: %d Primitives: %d\n", it->name.c_str(),
                 (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size());
 
-
         for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
-            printf("      Primitive id: %d, indices: %d\n", (int)p->materialId, (int)p->indices.size());
+            printf("      Primitive: material: %d, indices: %d, type: %s\n", (int)p->materialId, (int)p->indices.size(), PrimitiveTypeToString(p->primitiveType));
         }
     }
 
@@ -94,18 +157,30 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
     for(MaterialEffectInfoList::const_iterator it = md->materials.begin(); it != md->materials.end(); it++) {
         printf("   Textures: %d Shininess: %f Reflectivity: %f\n", (int)it->textures.size(), it->shininess, it->reflectivity);
         for(MaterialEffectInfo::TextureList::const_iterator t_it = it->textures.begin(); t_it != it->textures.end(); t_it++)
-            printf("     Texture: %s\n", t_it->uri.c_str());
+            printf("     Texture: %s, color = %s, affects %s, %s, min: %s, mag: %s, wrap = (%s, %s, %s), max_mip = %d, mip_bias = %f\n",
+                t_it->uri.c_str(),
+                t_it->color.toString().c_str(),
+                AffectingToString(t_it->affecting),
+                SamplerTypeToString(t_it->samplerType),
+                SamplerFilterToString(t_it->minFilter),
+                SamplerFilterToString(t_it->magFilter),
+                WrapModeToString(t_it->wrapS),
+                WrapModeToString(t_it->wrapT),
+                WrapModeToString(t_it->wrapU),
+                t_it->maxMipLevel,
+                t_it->mipBias
+            );
     }
 
-    printf("Geometry Instances:\n");
+    printf("Geometry Instances: (%d in list, %d instanced)\n", (int)md->instances.size(), (int)md->getInstancedGeometryCount());
     for(GeometryInstanceList::const_iterator it = md->instances.begin(); it != md->instances.end(); it++) {
-        printf("   Index: %d Radius: %f MapSize: %d\n", it->geometryIndex, it->radius, (int)it->materialBindingMap.size());
+        printf("   Index: %d MapSize: %d\n", it->geometryIndex, (int)it->materialBindingMap.size());
         for(GeometryInstance::MaterialBindingMap::const_iterator m = it->materialBindingMap.begin(); m != it->materialBindingMap.end(); m++) {
             printf("      map from: %d to: %d\n", (int)m->first, (int)m->second);
         }
     }
 
-    printf("Light Instances:\n");
+    printf("Light Instances: (%d in list, %d instanced)\n", (int)md->lightInstances.size(), (int)md->getInstancedLightCount());
     for(LightInstanceList::const_iterator it = md->lightInstances.begin(); it != md->lightInstances.end(); it++) {
         printf("   Index: %d Matrix: %s\n", it->lightIndex, md->getTransform(it->parentNode).toString().c_str());
     }
@@ -141,6 +216,21 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
             }
         }
     }
+
+    // Compute the expected number of draw calls assuming no smart
+    // transformation is occuring. This should be:
+    // Number of instances * number of primitives in instance
+    // This really should trace from the root to make sure that all instances
+    // are actually drawn...
+    uint32 draw_calls = 0;
+
+    Meshdata::GeometryInstanceIterator geoinst_it = md->getGeometryInstanceIterator();
+    uint32 geoinst_idx;
+    Matrix4x4f pos_xform;
+    while( geoinst_it.next(&geoinst_idx, &pos_xform) ) {
+        draw_calls += md->geometry[ md->instances[geoinst_idx].geometryIndex ].primitives.size();
+    }
+    printf("Estimated draw calls: %d\n", draw_calls);
 
     return input;
 }

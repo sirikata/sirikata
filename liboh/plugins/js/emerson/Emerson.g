@@ -143,17 +143,17 @@ sourceElement
 	
 // functions
 functionDeclaration
-	: 'function' LTERM* Identifier LTERM* formalParameterList LTERM* functionBody -> ^( FUNC_DECL Identifier formalParameterList functionBody)
+	: 'function' LTERM* Identifier LTERM*  formalParameterList? LTERM* functionBody -> ^( FUNC_DECL Identifier formalParameterList? functionBody)
 	;
 
 functionExpression
-	: 'function' LTERM* Identifier? LTERM* formalParameterList LTERM* functionBody -> ^( FUNC_EXPR Identifier?  formalParameterList functionBody)
+	: 'function' LTERM* Identifier? LTERM* '(' LTERM* formalParameterList? LTERM* ')' LTERM* functionBody -> ^( FUNC_EXPR Identifier?  formalParameterList? functionBody)
 	;
 	
 formalParameterList
-	: '(' (LTERM* i1=Identifier (LTERM* ',' LTERM* i2=Identifier)*)? LTERM* ')' -> ^( FUNC_PARAMS $i1? $i2*)
+	: Identifier (',' LTERM* Identifier)* -> ^(FUNC_PARAMS Identifier+)
 	;
-
+ 
 functionBody
  : '{' LTERM* '}' -> ^(EMPTY_FUNC_BODY)
 	| '{' LTERM* (sourceElements -> sourceElements) LTERM* '}'
@@ -411,9 +411,11 @@ callExpressionSuffix
 	;
 
 arguments
-	: '(' (LTERM* (assignmentExpression) (LTERM* ',' LTERM* assignmentExpression)*)? LTERM* ')' -> ^(ARGLIST assignmentExpression*) 
+        : '(' LTERM* (assignmentExpression)? LTERM* ')' -> ^(ARGLIST assignmentExpression?)
+	| '(' LTERM* e1=assignmentExpression (',' LTERM* e2=assignmentExpression)* LTERM* ')' -> ^(ARGLIST assignmentExpression assignmentExpression*)
 	;
-
+        
+	
 	
 indexSuffix
 	: '[' LTERM* expression LTERM* ']' -> ^(ARRAY_INDEX expression)

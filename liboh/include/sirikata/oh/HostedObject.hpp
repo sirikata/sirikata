@@ -330,7 +330,7 @@ public:
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
     virtual Vector3d requestCurrentPosition(ProxyObjectPtr proxy_obj);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
-
+    virtual Vector3f requestCurrentVelocity(ProxyObjectPtr proxy_obj);
 
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
 
