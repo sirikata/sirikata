@@ -69,13 +69,12 @@ statement
                 APPLEX("\n\n");
             }
             )
-            (
-                id2=Identifier
-                {
-                    APPLEX("\n\nThis is an identifier I found: ");
-                    APPLEX((const char*)$id2.text->chars);
-                    APPLEX("\n\n");
-                }
+            (id2=Identifier
+            {
+                APPLEX("\n\nThis is an identifier I found: ");
+                APPLEX((const char*)$id2.text->chars);
+                APPLEX("\n\n");
+            }
             )*
            )
 	;

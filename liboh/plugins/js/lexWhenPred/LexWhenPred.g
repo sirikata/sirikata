@@ -47,8 +47,9 @@ sourceElement
 
 // statements
 statement
-        : literal* s1=Identifier ( literal* s2=separator+ literal* s3=Identifier)* literal*    -> ^(WHEN_PRED_BLOCK $s1 $s3*)
+        : literal* s1=Identifier ( separator+  s2=Identifier)* separator* literal* separator*    -> ^(WHEN_PRED_BLOCK $s1 $s2*)
 	;
+
         
 // primitive literal definition.
 literal
