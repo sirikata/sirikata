@@ -30,7 +30,7 @@ function callback_change_mesh()
 
 
 
-var changeMeshPattern = new system.Pattern("changeMesh");
+var changeMeshPattern = new util.Pattern("changeMesh");
 
 var handler = system.registerHandler(callback_change_mesh,null,changeMeshPattern,null);
 

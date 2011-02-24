@@ -18,7 +18,7 @@ function printAllPartnerLocations()
 
 function getAveragePosition()
 {
-    var currentCenter = new system.Vec3(0,0,0);
+    var currentCenter = new util.Vec3(0,0,0);
     
     var numPartners = 1; //counting myself
     for (var s in allPartnerLocations)
@@ -121,7 +121,7 @@ function getLocationCallback(object,sender)
 }
 
 
-var getLocationPattern = new system.Pattern("command","getLocation");
+var getLocationPattern = new util.Pattern("command","getLocation");
 var getLocationHandler = system.registerHandler(getLocationCallback,null,getLocationPattern,null);
 
 
@@ -180,7 +180,7 @@ function copyLocationResponseObject(object)
 }
 
 
-var locationResponsePattern = new system.Pattern("command","locationResponse");
+var locationResponsePattern = new util.Pattern("command","locationResponse");
 var locationResponseHandler = system.registerHandler(locationResponseCallback,null,locationResponsePattern,null);
 
 

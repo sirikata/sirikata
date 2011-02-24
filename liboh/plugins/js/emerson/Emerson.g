@@ -20,103 +20,108 @@ options
 
 tokens
 {
-  UNDEF; // imaginary opertator for some undefined operator. we don't knwo what happened
-  CALL;  // imaginary operator for function calls
-		ARRAY_INDEX; // imag operator for array indexing
-		DOT;   // imag op for property referencing
-		FUNC;  // imag op for the function
-  SLIST; // imag op for a list of statements
-		IF;    // imag op for if-else conditional clause
-		VARLIST; // list of variables declared. each declaration defined by the VAR
-		VAR;   // imag op for var decl
-		PROG; // imag operator for complete program
-		DO ; // imag operator for do-while statements
-		WHILE; // imag op for the while statement
-		FOR;  // imag op for the "for" statement
-			FORINIT; // for initializer part
-			FORCOND; // for conditional part
-			FORITER; // for iteration part
-  FORIN;   // for in statement operator
-		BREAK;  // break statement
-		CONTINUE; //continue statement
-		RETURN; // return statement
-		WITH;   // the with statement
-		NEW;    // the new operator
-  TRY;
-  THROW;
-		CATCH;
-		FINALLY;
-  DEFAULT;
-		SWITCH;
-		CASE;
-  LABEL;	
-		ASSIGN;
-  MULT_ASSIGN;
-		DIV_ASSIGN;
-		MOD_ASSIGN;
-  ADD_ASSIGN;
-		SUB_ASSIGN;
-		LEFT_SHIFT_ASSIGN;
-		RIGHT_SHIFT_ASSIGN;
-		TRIPLE_SHIFT_ASSIGN;
-		AND_ASSIGN;
-		EXP_ASSIGN;
-		OR_ASSIGN;
-  OR; 
-		AND;
-		BIT_OR;
-		EXP;
-		BIT_AND;
-		EQUALS;
-		NOT_EQUALS;
-		IDENT;
-		NOT_IDENT;
-		LESS_THAN;
-		GREATER_THAN;
-		LESS_THAN_EQUAL;
-		GREATER_THAN_EQUAL;
-		INSTANCE_OF;
-		IN;
-		LEFT_SHIFT;
-		RIGHT_SHIFT;
-		TRIPLE_SHIFT;
-		ADD;
-		SUB;
-		MULT;
-		DIV;
-		MOD;
-		ARRAY_LITERAL;
-		OBJ_LITERAL;
-		NAME_VALUE;
-  DELETE;
-		VOID;
-		TYPEOF;
-		PLUSPLUS;
-		MINUSMINUS;
-		UNARY_PLUS;
-		UNARY_MINUS;
-		COMPLEMENT;
-		NOT;
-		POSTEXPR;
-		FUNC_PARAMS;
-		FUNC_DECL;
-		FUNC_EXPR;
-  ARGLIST;
-		EXPR_LIST;
-		COND_EXPR;
-		COND_EXPR_NOIN;
-		TERNARYOP;
-		EMPTY_FUNC_BODY;
-		MESSAGE_SEND;
-		MESSAGE_RECV;
-                PAREN;
+    UNDEF; // imaginary opertator for some undefined operator. we don't knwo what happened
+    CALL;  // imaginary operator for function calls
+    ARRAY_INDEX; // imag operator for array indexing
+    DOT;   // imag op for property referencing
+    FUNC;  // imag op for the function
+    SLIST; // imag op for a list of statements
+    IF;    // imag op for if-else conditional clause
+    VARLIST; // list of variables declared. each declaration defined by the VAR
+    VAR;   // imag op for var decl
+    PROG; // imag operator for complete program
+    DO ; // imag operator for do-while statements
+    WHILE; // imag op for the while statement
+    FOR;  // imag op for the "for" statement
+    FORINIT; // for initializer part
+    FORCOND; // for conditional part
+    FORITER; // for iteration part
+    FORIN;   // for in statement operator
+    BREAK;  // break statement
+    CONTINUE; //continue statement
+    RETURN; // return statement
+    WITH;   // the with statement
+    NEW;    // the new operator
+    WHEN;  //bftm trying to include when syntax
+    WHEN_CHECKED_LIST_FIRST;
+    WHEN_CHECKED_LIST_SUBSEQUENT;
+    WHEN_PRED;
+    DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
+    TRY;
+    THROW;
+    CATCH;
+    FINALLY;
+    DEFAULT;
+    SWITCH;
+    CASE;
+    LABEL;	
+    ASSIGN;
+    MULT_ASSIGN;
+    DIV_ASSIGN;
+    MOD_ASSIGN;
+    ADD_ASSIGN;
+    SUB_ASSIGN;
+    LEFT_SHIFT_ASSIGN;
+    RIGHT_SHIFT_ASSIGN;
+    TRIPLE_SHIFT_ASSIGN;
+    AND_ASSIGN;
+    EXP_ASSIGN;
+    OR_ASSIGN;
+    OR; 
+    AND;
+    BIT_OR;
+    EXP;
+    BIT_AND;
+    EQUALS;
+    NOT_EQUALS;
+    IDENT;
+    NOT_IDENT;
+    LESS_THAN;
+    GREATER_THAN;
+    LESS_THAN_EQUAL;
+    GREATER_THAN_EQUAL;
+    INSTANCE_OF;
+    IN;
+    LEFT_SHIFT;
+    RIGHT_SHIFT;
+    TRIPLE_SHIFT;
+    ADD;
+    SUB;
+    MULT;
+    DIV;
+    MOD;
+    ARRAY_LITERAL;
+    OBJ_LITERAL;
+    NAME_VALUE;
+    DELETE;
+    VOID;
+    TYPEOF;
+    PLUSPLUS;
+    MINUSMINUS;
+    UNARY_PLUS;
+    UNARY_MINUS;
+    COMPLEMENT;
+    NOT;
+    POSTEXPR;
+    FUNC_PARAMS;
+    FUNC_DECL;
+    FUNC_EXPR;
+    ARGLIST;
+    EXPR_LIST;
+    COND_EXPR;
+    COND_EXPR_NOIN;
+    TERNARYOP;
+    EMPTY_FUNC_BODY;
+    MESSAGE_SEND;
+    MESSAGE_RECV;
+    PAREN;
 }
 
 @header
 {
   #include <stdlib.h>;
-		#include <stdio.h>;
-		#include "EmersonUtil.h";
+  #include <stdio.h>;
+  #include "Util.h";
 }
 
 
@@ -169,6 +174,7 @@ statement
 	| labelledStatement
 	| switchStatement
 	| throwStatement
+        | whenStatement
 	| tryStatement
 	| msgSendStatement
 	| msgRecvStatement
@@ -218,10 +224,30 @@ emptyStatement
 expressionStatement
 	: expression (LTERM | ';') -> expression
 	;
-	
+
+whenStatement
+//    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
+    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* functionBody -> ^(WHEN whenPred functionBody)
+    ;
+
+
+//note: right now, this rule is very simple: it just takes in an expression.
+whenPred
+    : expression -> ^(WHEN_PRED expression)
+    ;
+
+whenCheckedListFirst
+    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)? ->    ^(WHEN_CHECKED_LIST_FIRST $s1 $s2?)
+    ;
+
+whenCheckedListSubsequent
+    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)* -> ^(WHEN_CHECKED_LIST_SUBSEQUENT $s1 $s2*)
+    ;
+
+
 ifStatement
-: 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
-	;
+    : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
+    ;
 	
 iterationStatement
 	: doWhileStatement
@@ -361,14 +387,13 @@ indexSuffix1
 propertyReferenceSuffix1
 	: '.' LTERM* Identifier -> Identifier
 	;
-	
+
 
 memberExpression
-
 	: (primaryExpression -> primaryExpression) ( LTERM* propertyReferenceSuffix1 -> ^( DOT  $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
-	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1)  | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
+	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
 	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
-		;
+        ;
 	
 memberExpressionSuffix
 	: indexSuffix -> indexSuffix 
@@ -376,7 +401,7 @@ memberExpressionSuffix
 	;
 
 callExpression
- : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
+    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
 	;
 	
 callExpressionSuffix
@@ -399,7 +424,8 @@ indexSuffix
 propertyReferenceSuffix
 	: '.' LTERM* Identifier -> ^(DOT Identifier)
 	;
-	
+
+        
 assignmentOperator
 	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)| '<<=' -> ^(LEFT_SHIFT_ASSIGN)| '>>=' -> ^(RIGHT_SHIFT_ASSIGN)| '>>>=' -> ^(TRIPLE_SHIFT_ASSIGN)| '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
 	;
@@ -554,12 +580,17 @@ unaryExpression
 primaryExpression
 	: 'this'
 	| Identifier
+        | dollarExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
 	| '(' LTERM* expression LTERM* ')' -> ^( PAREN expression )
 	;
-	
+
+dollarExpression
+        : '`' LTERM* Identifier LTERM* '`' -> ^(DOLLAR_EXPRESSION Identifier)
+        ;
+        
 // arrayLiteral definition.
 arrayLiteral
   : '[' LTERM* (assignmentExpression)? LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression?)
@@ -597,6 +628,7 @@ literal
 
 // lexer rules.
 
+        
 StringLiteral
 	: '"' DoubleStringCharacter* '"'
 	| '\'' SingleStringCharacter* '\''
@@ -676,10 +708,11 @@ fragment ExponentPart
 Identifier
 	: IdentifierStart IdentifierPart*
 	;
-	
+
 fragment IdentifierStart
 	: UnicodeLetter
-	| '$'
+        | '$'  //note. may have to reserve this a bit to prevent
+               //collisions with dollar expressions.
 	| '_'
         | '\\' UnicodeEscapeSequence
         ;

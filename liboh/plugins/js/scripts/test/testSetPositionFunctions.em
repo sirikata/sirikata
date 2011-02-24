@@ -19,7 +19,7 @@ system.print("\n\nThis is the centerPosition.x: \n");
 system.print(centerPosition.x);
 system.print("\n\n");
 
-displacementVector =            new system.Vec3(1.0,1.0,1.0);
+displacementVector =            new util.Vec3(1.0,1.0,1.0);
 
 
 function trembleCallbackFunction()
@@ -52,18 +52,18 @@ function trembleCallbackFunction()
 
 function addVecs(vecA,vecB)
 {
-    var returner = system.Vec3(vecA.x+vecB.x, vecA.y+vecB.y, vecA.z+vecB.z);
+    var returner = util.Vec3(vecA.x+vecB.x, vecA.y+vecB.y, vecA.z+vecB.z);
     return returner;
 }
 
 function subtractVecs(vecA,vecB)
 {
-    var returner = system.Vec3(vecA.x-vecB.x, vecA.y-vecB.y, vecA.z-vecB.z);
+    var returner = util.Vec3(vecA.x-vecB.x, vecA.y-vecB.y, vecA.z-vecB.z);
     return returner;
 }
 
 
-var matchTremblePattern = new system.Pattern("tremble");
+var matchTremblePattern = new util.Pattern("tremble");
 
 var trembleHandler      = system.registerHandler(trembleCallbackFunction,null,matchTremblePattern,null);
 

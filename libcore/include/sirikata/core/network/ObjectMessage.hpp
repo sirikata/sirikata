@@ -34,6 +34,7 @@
 #define _SIRIKATA_OBJECT_MESSAGE_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 
 #include "Message.hpp"
 #include "Protocol_ObjectMessage.pbj.hpp"
@@ -54,7 +55,10 @@ typedef uint16 ObjectMessagePort;
 #define MESSAGE_ID_SERVER_SHIFT 52
 #define MESSAGE_ID_SERVER_BITS 0xFFF0000000000000LL
 
+SIRIKATA_FUNCTION_EXPORT Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const SpaceObjectReference& sporef_src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+
 SIRIKATA_FUNCTION_EXPORT Sirikata::Protocol::Object::ObjectMessage* createObjectMessage(ServerID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload);
+
 
 // Wrapper class for Protocol::Object::Message which provides it some missing methods
 // that are useful, e.g. size().
@@ -74,7 +78,10 @@ public:
 }; // class ObjectMessage
 
 // FIXME get rid of this
+SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const SpaceObjectReference& sporef_src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
+
 SIRIKATA_FUNCTION_EXPORT void createObjectHostMessage(ObjectHostID source_server, const UUID& src, uint16 src_port, const UUID& dest, uint16 dest_port, const std::string& payload, ObjectMessage* result);
+
 
 } // namespace Sirikata
 

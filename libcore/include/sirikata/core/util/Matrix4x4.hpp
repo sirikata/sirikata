@@ -34,11 +34,13 @@
 
 #include "Vector3.hpp"
 #include "Vector4.hpp"
+#include "Quaternion.hpp"
 
 namespace Sirikata {
 
 template <typename scalar> class Matrix4x4 {
 public:
+    typedef Vector3<scalar> Vector3x;
     typedef Vector4<scalar> Vector4x;
 
     class COLUMNS{};
@@ -113,6 +115,24 @@ public:
             Vector4x::unitX() * s,
             Vector4x::unitY() * s,
             Vector4x::unitZ() * s,
+            Vector4x(0, 0, 0, 1),
+            COLUMNS()
+        );
+    }
+    static Matrix4x4 translate(const Vector3x& t) {
+        return Matrix4x4(
+            Vector4x(Vector3x::unitX(), 0),
+            Vector4x(Vector3x::unitY(), 0),
+            Vector4x(Vector3x::unitZ(), 0),
+            Vector4x(t.x, t.y, t.z, 1),
+            COLUMNS()
+        );
+    }
+    static Matrix4x4 rotate(const Quaternion& r) {
+        return Matrix4x4(
+            Vector4x(r.xAxis(), 0),
+            Vector4x(r.yAxis(), 0),
+            Vector4x(r.zAxis(), 0),
             Vector4x(0, 0, 0, 1),
             COLUMNS()
         );

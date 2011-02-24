@@ -60,7 +60,7 @@ void SimpleCameraObjectScript::attachScript(const String& script_name)
 {
 }
 
-void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name) {
+void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token) {
     mParent->runSimulation(name, "ogregraphics");
 }
 

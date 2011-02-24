@@ -93,8 +93,10 @@ void ObjectHost::connect(
     TimedMotionQuaternion init_orient(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity()));
     BoundingSphere3f init_bounds = obj->bounds();
 
+    SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
+
     mSessionManager.connect(
-        obj->uuid(), init_loc, init_orient, init_bounds, true, init_sa, "",
+        sporef, init_loc, init_orient, init_bounds, true, init_sa, "",
         connect_cb, migrate_cb, stream_created_cb, disconnected_cb
     );
 }
@@ -114,8 +116,10 @@ void ObjectHost::connect(
     TimedMotionQuaternion init_orient(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity()));
     BoundingSphere3f init_bounds = obj->bounds();
 
+    SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
+    
     mSessionManager.connect(
-        obj->uuid(), init_loc, init_orient, init_bounds, false, SolidAngle::Max, "",
+        sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, "",
         connect_cb, migrate_cb, stream_created_cb, disconnected_cb
     );
 }
@@ -123,13 +127,13 @@ void ObjectHost::connect(
 void ObjectHost::disconnect(Object* obj) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
     mObjects.erase(obj->uuid());
-    mSessionManager.disconnect(obj->uuid());
+    mSessionManager.disconnect(SpaceObjectReference(SpaceID::null(),ObjectReference(obj->uuid())));
 }
 
 bool ObjectHost::send(const Object* src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload) {
     Sirikata::SerializationCheck::Scoped sc(&mSerialization);
 
-    return mSessionManager.send(src->uuid(), src_port, dest, dest_port, payload);
+    return mSessionManager.send(SpaceObjectReference(SpaceID::null(),ObjectReference(src->uuid())), src_port, dest, dest_port, payload);
 }
 /*
 bool ObjectHost::send(const uint16 src_port, const UUID& src, const uint16 dest_port, const UUID& dest,const std::string& payload) {
@@ -152,7 +156,7 @@ void ObjectHost::fillPing(double distance, uint32 payload_size, Sirikata::Protoc
 bool ObjectHost::sendPing(const Time& t, const UUID& src, const UUID& dest, Sirikata::Protocol::Object::Ping* ping_msg) {
     ping_msg->set_ping(t);
     String ping_serialized = serializePBJMessage(*ping_msg);
-    bool send_success = mSessionManager.send(src, OBJECT_PORT_PING, dest, OBJECT_PORT_PING, ping_serialized);
+    bool send_success = mSessionManager.send(SpaceObjectReference(SpaceID::null(),ObjectReference(src)), OBJECT_PORT_PING, dest, OBJECT_PORT_PING, ping_serialized);
 
     if (send_success)
         CONTEXT_OHTRACE_NO_TIME(pingCreated,
@@ -177,15 +181,16 @@ bool ObjectHost::ping(const Time& t, const UUID& src, const UUID&dest, double di
     return sendPing(t, src, dest, &ping_msg);
 }
 
-void ObjectHost::handleObjectConnected(const UUID& objid, ServerID connectedTo) {
-    notify(&ObjectHostListener::objectHostConnectedObject, this, mObjects[objid], connectedTo);
+
+void ObjectHost::handleObjectConnected(const SpaceObjectReference& sporef_objid, ServerID connectedTo) {
+    notify(&ObjectHostListener::objectHostConnectedObject, this, mObjects[sporef_objid.object().getAsUUID()], connectedTo);
 }
 
-void ObjectHost::handleObjectMigrated(const UUID& objid, ServerID migratedFrom, ServerID migratedTo) {
-    notify(&ObjectHostListener::objectHostMigratedObject, this, objid, migratedFrom, migratedTo);
+void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, ServerID migratedFrom, ServerID migratedTo) {
+    notify(&ObjectHostListener::objectHostMigratedObject, this, sporef_objid.object().getAsUUID(), migratedFrom, migratedTo);
 }
 
-void ObjectHost::handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg) {
+void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internalID, Sirikata::Protocol::Object::ObjectMessage* msg) {
     // Possibly tag as ping non-destructively
     if (msg->source_port()==OBJECT_PORT_PING&&msg->dest_port()==OBJECT_PORT_PING) {
         Sirikata::Protocol::Object::Ping ping_msg;
@@ -219,8 +224,8 @@ void ObjectHost::handleObjectMessage(const UUID& internalID, Sirikata::Protocol:
     }
 }
 
-void ObjectHost::handleObjectDisconnected(const UUID& objid, Disconnect::Code) {
-    notify(&ObjectHostListener::objectHostDisconnectedObject, this, mObjects[objid]);
+void ObjectHost::handleObjectDisconnected(const SpaceObjectReference& sporef_objid, Disconnect::Code) {
+    notify(&ObjectHostListener::objectHostDisconnectedObject, this, mObjects[sporef_objid.object().getAsUUID()]);
 }
 
 bool ObjectHost::registerService(uint64 port, const ObjectMessageCallback&cb) {

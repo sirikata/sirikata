@@ -3,7 +3,7 @@ function testSetPosition()
 {
     var initialPosition = system.presences[0].getPosition();
     printVec3(initialPosition,"\n\n\nInitial position\n");
-    var displacement = system.Vec3(1,1,1);
+    var displacement = util.Vec3(1,1,1);
 
     system.presences[0].setPosition(addVec3(initialPosition,displacement));
     
@@ -49,7 +49,7 @@ function testSetHandler()
     };
 
     //requires message to have field m with value o.
-    var mPattern = new system.Pattern("m","o");
+    var mPattern = new util.Pattern("m","o");
     
     var handler = system.registerHandler(returnerCallBack,null,mPattern,null);
 }
@@ -74,7 +74,7 @@ function testForceHandler()
 
 function addVec3(a,b)
 {
-    var returner = system.Vec3(a.x+b.x,a.y+b.y,a.z+b.z);
+    var returner = util.Vec3(a.x+b.x,a.y+b.y,a.z+b.z);
     return returner;
 }
 

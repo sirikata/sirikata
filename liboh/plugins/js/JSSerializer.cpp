@@ -401,7 +401,7 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
         }
       }
 
-      JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d());
+      JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d(), Vector3f());
       deserializeTo->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD, External::New(visStruct));
 
       return true;

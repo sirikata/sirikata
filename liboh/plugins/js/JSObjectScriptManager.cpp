@@ -118,10 +118,17 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
-
-    
-
+    mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
+            
     addTypeTemplates(mUtilTemplate);
+}
+
+
+void JSObjectScriptManager::createQuotedTemplate()
+{
+    v8::HandleScope handle_scope;
+    mQuotedTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mQuotedTemplate->SetInternalFieldCount(QUOTED_TEMPLATE_FIELD_COUNT);
 }
 
 
@@ -135,10 +142,7 @@ void JSObjectScriptManager::createWhenTemplate()
 
     mWhenTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSWhen::WhenSuspend));
     mWhenTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSWhen::WhenResume));
-    mWhenTemplate->Set(v8::String::New("getPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetPeriod));
-    mWhenTemplate->Set(v8::String::New("setPeriod"),v8::FunctionTemplate::New(JSWhen::WhenSetPeriod));
     mWhenTemplate->Set(v8::String::New("getWhenLastPredState"),v8::FunctionTemplate::New(JSWhen::WhenGetLastPredState));
-    mWhenTemplate->Set(v8::String::New("getWhenMinPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetMinPeriod));
 }
 
 
@@ -153,6 +157,7 @@ void JSObjectScriptManager::createTemplates()
 
     createWatchedTemplate();
     createWhenTemplate();
+    createQuotedTemplate();
     
     createUtilTemplate();
 
@@ -181,6 +186,10 @@ void JSObjectScriptManager::createTimerTemplate()
 
     mTimerTemplate->Set(v8::String::New("resetTimer"),v8::FunctionTemplate::New(JSTimer::resetTimer));
     mTimerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSTimer::clear));
+    mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
+    mTimerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSTimer::resume));
+
+    
 }
 
 
@@ -230,6 +239,8 @@ void JSObjectScriptManager::createContextTemplate()
     // Functions / types
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
+    mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
+    mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
  
 }
 
@@ -432,7 +443,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   //callback on prox addition and removal
   mPresenceTemplate->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
   mPresenceTemplate->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
-  
+
+  //check if the presence is connected
+  mPresenceTemplate->SetAccessor(v8::String::New("isConnected"),JSPresence::isConnectedGetter,JSPresence::isConnectedSetter);
     
   // Query angle
   mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
@@ -443,6 +456,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   //send broadcast message
   mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
+  mPresenceTemplate->Set(v8::String::New("distance"),v8::FunctionTemplate::New(JSPresence::distance));
+  
 }
 
 */

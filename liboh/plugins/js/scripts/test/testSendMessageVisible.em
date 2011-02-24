@@ -8,7 +8,8 @@ function broadcastIt()
 {
     var toBroadcast = new Object();
     toBroadcast.msg = "msg";
-
+    toBroadcast.m = "random";
+    
     for (var s=0; s < arrayOfVisibles.length; ++s)
     {
         arrayOfVisibles[s].sendMessage(toBroadcast);

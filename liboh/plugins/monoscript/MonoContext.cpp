@@ -116,9 +116,8 @@ Mono::Domain& MonoContext::getDomain() const {
 }
 
 Sirikata::UUID MonoContext::getUUID() const {
-    std::tr1::shared_ptr<HostedObject> tmp=getVWObject();
-    if (tmp)
-        return tmp->getUUID();
+    //FIXME: returns null uuid
+    
     return UUID::null();
 }
 

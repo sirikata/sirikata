@@ -34,9 +34,10 @@
 //
 
 #include "EmersonUtil.h"
-#include    "EmersonLexer.h"
-#include    "EmersonParser.h"
-#include    "EmersonTree.h"
+#include "Util.h"
+#include "EmersonLexer.h"
+#include "EmersonParser.h"
+#include "EmersonTree.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -141,15 +142,15 @@ int main	(int argc, char *argv[])
 
     emerson_init();
 
-				char* em_script = read_file(fName);
-				string em_script_str = string(em_script);
+    char* em_script = read_file(fName);
+    string em_script_str = string(em_script);
     string em_script_str_new = em_script_str;
     if(em_script_str.at(em_script_str.size() -1) != '\n')
-				{
-				  em_script_str_new.push_back('\n'); 
-				}
+    {
+        em_script_str_new.push_back('\n'); 
+    }
 				
 
-				char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr);
+    char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr);
     return 0;
 }

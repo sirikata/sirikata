@@ -5,9 +5,10 @@
 #include "../JSObjects/JSFields.hpp"
 #include "JSWatchable.hpp"
 #include <v8.h>
-
+#include "JSSuspendable.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSObjectsUtils.hpp"
+#include "JSQuotedStruct.hpp"
 
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -16,64 +17,127 @@
 namespace Sirikata {
 namespace JS {
 
-JSWhenStruct::JSWhenStruct(JSObjectScript* jsscript,Sirikata::Network::IOService* ioserve,std::map<JSWatchable*,int>predWatches,v8::Persistent<v8::Function> preder, v8::Persistent<v8::Function> callback,v8::Persistent<v8::Context> cont,float whenPeriod)
- :   stateSuspended(false),
-     predState(false),
-     currentPeriod(whenPeriod),
-     mObjScript(jsscript),
-     mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
-     mWatchables(predWatches),
-     mPred(preder),
-     mCB(callback),
-     mContext(cont)
-{
-    setPredTimer();
-    addWatchablesToScript();
-    addWhenToWatchables();
-}
-
-void JSWhenStruct::addWhenToWatchables()
-{
-    for(WatchableIter iter = mWatchables.begin(); iter!= mWatchables.end(); ++iter)
-        iter->first->addWhen(this);
-}
-
-
-void JSWhenStruct::setPredTimer()
-{
-    if (stateSuspended)
-        return;
     
-    if (currentPeriod !=  WHEN_PERIOD_NOT_SET)
-    {
-        if (currentPeriod < WHEN_MIN_PERIOD)
-        {
-            JSLOG(error,"Error in setPredTimer of JSWhenStruct.cpp: trying to set when period below its min period.  Setting predicate checking period to the min checking period.");
-            currentPeriod = WHEN_MIN_PERIOD;
-        }
+JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback,JSObjectScript* jsobj, JSContextStruct* jscontextstr)
+ :  JSSuspendable(),
+    predState(false),
+    mObjScript(jsobj),
+    jscont(jscontextstr)
+{
+    //enter
+    v8::HandleScope handle_scope;
+    mContext = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 
-        mDeadlineTimer->expires_from_now(boost::posix_time::seconds(currentPeriod));
-        mDeadlineTimer->async_wait(std::tr1::bind(&JSWhenStruct::deadlineExpired,this));
+
+    //generate the predicate function and callback function.
+    whenCreatePredFunc(predArray);
+    whenCreateCBFunc(callback);
+
+
+
+    //linking everything so that will be able to chek
+    addWhenToContext();
+}
+
+
+/**
+   Simple.  Make callback more permanent (ie won't be disposed until you
+   explicitly tell it to be).
+ */
+void JSWhenStruct::whenCreateCBFunc(v8::Handle<v8::Function>callback)
+{
+    v8::HandleScope handle_scope;
+    mCB = v8::Persistent<v8::Function>::New ( callback );
+}
+
+//This function takes in the array that represents the when's predicate.
+//If there is a quoted object in the array, its quote explicitly gets appended
+//to the when predicate string.
+//If there is a non-quoted value in it, rename the value in the current context,
+//and append the re-named onto the when.
+void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
+{
+    String whenPredAsString;
+    std::vector<String> dependentParts;
+    
+    for (int s=0; s < (int)predArray->Length(); ++s)
+    {
+        String errorMessage;
+        JSQuotedStruct* fromPredArray = JSQuotedStruct::decodeQuotedStruct(predArray->Get(s),errorMessage);
+        if (fromPredArray == NULL)
+        {
+            //create a new value in the context that is equal to this object
+            String newName = mObjScript->createNewValueInContext(predArray->Get(s), mContext);
+            whenPredAsString += newName;
+        }
+        else
+        {
+            dependentParts.push_back(fromPredArray->getQuote());
+            //dependentParts.push_back(parseParts(fromPredArray->getQuote()));
+            whenPredAsString += fromPredArray->getQuote();
+        }
+    }
+    
+    //still need to do something to parse out dependent parts;
+    JSLOG(error, "\n\nStill need to parse out the relevant dependent objects in whenCreatePredFunc.\n\n");
+
+    
+    //compile function;
+    //note: additional parentheses and semi-colon around outside of the
+    //expression get around a minor idiosyncracy v8 has about compiling
+    //anonymous functions.
+    whenPredAsString = "(function()  {  return ( " + whenPredAsString + " ); });";
+
+    
+    v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,whenPredAsString);
+    if (! compileFuncResult->IsFunction())
+    {
+        JSLOG(error, "Error when creating when predicate.  Predicate did not resolve to a function.");
+        //Note: if the function is incorrectly declared.  The when struct stays
+        //permanently suspended.  Will never resume.
+        suspend();
+        return;
+    }
+
+    mContext->Enter();
+    v8::HandleScope handle_scope;
+    mPred = v8::Persistent<v8::Function>::New ( v8::Handle<v8::Function>::Cast(compileFuncResult));
+    mContext->Exit();
+}
+
+
+
+
+String JSWhenStruct::createNewValueIncontext(v8::Handle<v8::Value> toRenameInContext)
+{
+    JSLOG(insane, "got a dollared value to rename inside of when context.  Doing so now.");
+    return mObjScript->createNewValueInContext(toRenameInContext, mContext);
+}
+
+JSWhenStruct::~JSWhenStruct()
+{
+    if (! getIsCleared())
+    {
+        mContext.Dispose();
+        mPred.Dispose();
+        mCB.Dispose();
+
+        if (jscont != NULL)
+            jscont->struct_deregisterSuspendable(this);
     }
 }
 
 
-void JSWhenStruct::deadlineExpired()
+void JSWhenStruct::addWhenToContext()
 {
-    if (stateSuspended)
-    {
-        JSLOG(error,"Error in deadlineExpired of JSWhenStruct.  Should have been in a suspended state, but received a callback from timer constructor of JSWhenStruct.cpp: trying to set when statement below its min period.  Setting predicate checking period to the min checking period.");
-        return;
-    }
-
-    checkPredAndRun();
-    setPredTimer();
+    if (jscont != NULL)
+        jscont->struct_registerSuspendable(this);
 }
 
 
 bool JSWhenStruct::checkPredAndRun()
 {
-    if (stateSuspended)
+    if (getIsSuspended() || getIsCleared())
         return false;
 
     //updateVisibles();
@@ -92,21 +156,19 @@ bool JSWhenStruct::checkPredAndRun()
 
 //this function evaluates the predicate within the context
 bool JSWhenStruct::evalPred()
-{
+{    
     v8::HandleScope handle_scope;
     
     //the function passed in shouldn't take any arguments
-    //v8::Handle<v8::Value> predReturner = mObjScript->executeInContext(mContext,mPred,0,NULL);
     v8::Handle<v8::Value>predReturner = mObjScript->handleTimeoutContext(mPred,NULL);
     
-    String dummyErrorMessage = "";
+    String dummyErrorMessage;
     bool decodedVal;
     bool returnedBool = decodeBool(predReturner,decodedVal,dummyErrorMessage);
 
     if (! returnedBool)
     {
         JSLOG(error,"Error in evalPred of JSWhenStruct.cpp.  Predicate did not return bool.  Suspending when statement");
-        struct_whenSuspend();
         return false;
     }
 
@@ -119,9 +181,8 @@ void JSWhenStruct::runCallback()
     v8::HandleScope handle_scope;
     
     //the function passed in shouldn't take any arguments
-    mObjScript->executeInContext(mContext,mCB,0,NULL);
+    mObjScript->handleTimeoutContext(mCB,NULL);
 }
-
 
 
 v8::Handle<v8::Value>JSWhenStruct::struct_whenGetLastPredState()
@@ -131,67 +192,58 @@ v8::Handle<v8::Value>JSWhenStruct::struct_whenGetLastPredState()
 }
 
 
-v8::Handle<v8::Value>JSWhenStruct::struct_setPeriod(double newPeriod)
+
+
+v8::Handle<v8::Value>JSWhenStruct::suspend()
 {
-    currentPeriod = newPeriod;
-    //cancel current timer, and reset it
-    mDeadlineTimer->cancel();
-    setPredTimer();
-    return v8::Undefined();
+    return JSSuspendable::suspend();
 }
 
-v8::Handle<v8::Value>JSWhenStruct::struct_whenGetPeriod()
-{
-    v8::HandleScope handle_scope;
-    return v8::Number::New(currentPeriod);
-}
 
-v8::Handle<v8::Value>JSWhenStruct::struct_isSuspended()
-{
-    v8::HandleScope handle_scope;
-    return v8::Boolean::New(stateSuspended);
-}
 
-void JSWhenStruct::removeWatchablesFromScript()
+/**
+   Overriding clear to explicitly dispose of 
+ */
+v8::Handle<v8::Value>JSWhenStruct::clear()
 {
-    for (WatchableIter iter = mWatchables.begin(); iter != mWatchables.end(); ++iter)
-        mObjScript->removeWatchable(iter->first);
-}
 
-//call on resume and in constructor;
-void JSWhenStruct::addWatchablesToScript()
-{
-    for (WatchableIter iter = mWatchables.begin(); iter != mWatchables.end(); ++iter)
-        mObjScript->addWatchable(iter->first);
-}
+    if (! getIsCleared())
+    {
+        //should only dispose of these objects once.
+        if (! mPred->IsUndefined())  //may be undefined if passed in an
+                                     //incorrect function that wouldn't compile.
+            mPred.Dispose();
 
-v8::Handle<v8::Value>JSWhenStruct::struct_whenSuspend()
-{
-    if (! stateSuspended)
-        removeWatchablesFromScript(); //remove watchables from script (should
-                                      //add them again when when is resumed).
-        
-    stateSuspended = true;
-    mDeadlineTimer->cancel();
+        if (! mCB->IsUndefined())
+            mCB.Dispose();
+
+        //will always be defined if haven't been cleared.
+        mContext.Dispose();
+    }
     
-    return v8::Undefined();
+    return JSSuspendable::clear();
 }
 
 
-v8::Handle<v8::Value>JSWhenStruct::struct_whenResume()
+
+
+/**
+   Overriding the resume function.  We never want to be evaluating the predicate
+   if it is undefined.  Instead, we want to stay permanently suspended.
+ */
+v8::Handle<v8::Value>JSWhenStruct::resume()
 {
-    if (currentPeriod == WHEN_PERIOD_NOT_SET)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Please set the when period before continuing (via setPeriod)")));
+    if ((mPred->IsUndefined()) || (mCB->IsUndefined()))
+    {
+        JSLOG(error, "Cannot resume because incorrectly declared when predicate or callback.  Staying suspended forever.");
+        return suspend();
+    }
 
-    if (stateSuspended)
-        addWatchablesToScript();  //add watchables to script if we were
-                                  //previously in the state suspended state
+    if (getIsCleared())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot resume a when that has already been cleared.")));
         
-    stateSuspended = false;
-    setPredTimer();
 
-    
-    return v8::Undefined();
+    return JSSuspendable::resume();
 }
 
 

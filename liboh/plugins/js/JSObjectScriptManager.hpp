@@ -69,6 +69,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mContextGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mWatchedTemplate;
     v8::Persistent<v8::ObjectTemplate> mWhenTemplate;
+    v8::Persistent<v8::ObjectTemplate> mQuotedTemplate;
     
     void testPrint();
 
@@ -86,6 +87,7 @@ private:
     void createContextGlobalTemplate();
     void createWatchedTemplate();
     void createWhenTemplate();
+    void createQuotedTemplate();
     
     void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();

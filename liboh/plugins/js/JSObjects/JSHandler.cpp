@@ -2,7 +2,7 @@
 #include "../JSUtil.hpp"
 #include "../JSObjectScript.hpp"
 #include "JSHandler.hpp"
-#include "../JSEventHandler.hpp"
+#include "../JSObjectStructs/JSEventHandlerStruct.hpp"
 #include "JSFields.hpp"
 #include <v8.h>
 
@@ -15,14 +15,11 @@ v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
     //get the target object whose context owns it.
     //and the pattern and the callback associated with this
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
-    {
-        std::cout<<"\nHanlder has already been deleted\n";
-        return v8::Undefined();
-    }
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot print contents: handler has already been cleared.")));
 
     
     //print all handler stuff
@@ -34,14 +31,12 @@ v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
 v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
-    {
-        std::cout<<"\nHanlder has already been deleted\n";
-        return v8::Undefined();
-    }
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot suspend: handler has already been cleared.")));
+
 
     
     handler->suspend();
@@ -52,15 +47,11 @@ v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
 v8::Handle<v8::Value> __resume(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
-    {
-        std::cout<<"\nHanlder has already been deleted\n";
-        return v8::Undefined();
-    }
-
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot resume: handler has already been cleared.")));
     
     handler->resume();
     
@@ -70,32 +61,24 @@ v8::Handle<v8::Value> __resume(const v8::Arguments& args)
 v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
-    {
-        std::cout<<"\nHanlder has already been deleted\n";
-        return v8::Undefined();
-    }
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot suspend: handler has already been cleared.")));
     
-    bool isSusp = handler->isSuspended();
-
-    return v8::Boolean::New(isSusp);
+    return v8::Boolean::New(handler->getIsSuspended());
 }
 
 v8::Handle<v8::Value> __clear(const v8::Arguments& args)
 {
     JSObjectScript* caller;
-    JSEventHandler* handler;
+    JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
     if (handler == NULL)
-    {
-        std::cout<<"\nHanlder has already been deleted\n";
-        return v8::Undefined();
-    }
-
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot clear: handler has already been cleared.")));
+ 
     //handler has not been deleted, and we need to do so now inside of
     //JSObjectScript (so can also remove from event handler vector).
     caller->deleteHandler(handler);
@@ -123,7 +106,7 @@ void setNullHandler(const v8::Arguments& args)
 //utility function for working with handler objects.  pass in args for a
 //call, get back the jsobjectscript that called it, and the matching pattern and
 //callback function that are associated with the handler objects.
-void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandler*& hand)
+void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandlerStruct*& hand)
 {
    v8::Local<v8::Object> mHand = args.This();
 
@@ -153,7 +136,7 @@ void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHand
            v8::Handle<v8::Object>::Cast(mHand->GetPrototype())->GetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD)
        );
    void* ptr2 = wrapEventHand->Value();
-   hand = static_cast<JSEventHandler*>(ptr2);
+   hand = static_cast<JSEventHandlerStruct*>(ptr2);
 }
 
 

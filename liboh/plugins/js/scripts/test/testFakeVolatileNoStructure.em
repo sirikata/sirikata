@@ -77,7 +77,7 @@ SUBSCRIPTION_REQUEST = "please_subscribe";
 
 function setupReceiveSubscriptionRequest()
 {
-    var subPattern = new system.Pattern(SUBSCRIPTION_REQUEST);
+    var subPattern = new util.Pattern(SUBSCRIPTION_REQUEST);
     var subHandler = system.registerHandler(callback_sub_req, null, subPattern,null);
 }
 
