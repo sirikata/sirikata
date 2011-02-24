@@ -12,109 +12,15 @@ options
 	output=AST;
 	backtrack=true;
 	memoize=true;
- ASTLabelType = pANTLR3_BASE_TREE; 
-// ASTLabelType = pANTLR3_COMMON_TREE; 
+        ASTLabelType = pANTLR3_BASE_TREE; 
 	language = C;
 }
 
-
 tokens
 {
-    UNDEF; // imaginary opertator for some undefined operator. we don't knwo what happened
-    CALL;  // imaginary operator for function calls
-    ARRAY_INDEX; // imag operator for array indexing
-    DOT;   // imag op for property referencing
-    FUNC;  // imag op for the function
-    SLIST; // imag op for a list of statements
-    IF;    // imag op for if-else conditional clause
-    VARLIST; // list of variables declared. each declaration defined by the VAR
-    VAR;   // imag op for var decl
-    PROG; // imag operator for complete program
-    DO ; // imag operator for do-while statements
-    WHILE; // imag op for the while statement
-    FOR;  // imag op for the "for" statement
-    FORINIT; // for initializer part
-    FORCOND; // for conditional part
-    FORITER; // for iteration part
-    FORIN;   // for in statement operator
-    BREAK;  // break statement
-    CONTINUE; //continue statement
-    RETURN; // return statement
-    WITH;   // the with statement
-    NEW;    // the new operator
-    WHEN;  //bftm trying to include when syntax
-    WHEN_CHECKED_LIST_FIRST;
-    WHEN_CHECKED_LIST_SUBSEQUENT;
-    WHEN_PRED;
-    DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
-    TRY;
-    THROW;
-    CATCH;
-    FINALLY;
-    DEFAULT;
-    SWITCH;
-    CASE;
-    LABEL;	
-    ASSIGN;
-    MULT_ASSIGN;
-    DIV_ASSIGN;
-    MOD_ASSIGN;
-    ADD_ASSIGN;
-    SUB_ASSIGN;
-    LEFT_SHIFT_ASSIGN;
-    RIGHT_SHIFT_ASSIGN;
-    TRIPLE_SHIFT_ASSIGN;
-    AND_ASSIGN;
-    EXP_ASSIGN;
-    OR_ASSIGN;
-    OR; 
-    AND;
-    BIT_OR;
-    EXP;
-    BIT_AND;
-    EQUALS;
-    NOT_EQUALS;
-    IDENT;
-    NOT_IDENT;
-    LESS_THAN;
-    GREATER_THAN;
-    LESS_THAN_EQUAL;
-    GREATER_THAN_EQUAL;
-    INSTANCE_OF;
-    IN;
-    LEFT_SHIFT;
-    RIGHT_SHIFT;
-    TRIPLE_SHIFT;
-    ADD;
-    SUB;
-    MULT;
-    DIV;
-    MOD;
-    ARRAY_LITERAL;
-    OBJ_LITERAL;
-    NAME_VALUE;
-    DELETE;
-    VOID;
-    TYPEOF;
-    PLUSPLUS;
-    MINUSMINUS;
-    UNARY_PLUS;
-    UNARY_MINUS;
-    COMPLEMENT;
-    NOT;
-    POSTEXPR;
-    FUNC_PARAMS;
-    FUNC_DECL;
-    FUNC_EXPR;
-    ARGLIST;
-    EXPR_LIST;
-    COND_EXPR;
-    COND_EXPR_NOIN;
-    TERNARYOP;
-    EMPTY_FUNC_BODY;
-    MESSAGE_SEND;
-    MESSAGE_RECV;
-    PAREN;
+    LTERM;
+    PROG;
+    WHEN_PRED_BLOCK;
 }
 
 @header
@@ -125,11 +31,9 @@ tokens
 }
 
 
-	
 
 program
 	: a=LTERM* sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
-
 	;
 
 sourceElements
@@ -137,489 +41,46 @@ sourceElements
 	;
 	
 sourceElement
-	: functionDeclaration -> functionDeclaration
-	| statement -> statement
+        : statement -> statement
 	;
 	
-// functions
-functionDeclaration
-	: 'function' LTERM* Identifier LTERM* formalParameterList LTERM* functionBody -> ^( FUNC_DECL Identifier formalParameterList functionBody)
-	;
-
-functionExpression
-	: 'function' LTERM* Identifier? LTERM* formalParameterList LTERM* functionBody -> ^( FUNC_EXPR Identifier?  formalParameterList functionBody)
-	;
-	
-formalParameterList
-	: '(' (LTERM* i1=Identifier (LTERM* ',' LTERM* i2=Identifier)*)? LTERM* ')' -> ^( FUNC_PARAMS $i1? $i2*)
-	;
-
-functionBody
- : '{' LTERM* '}' -> ^(EMPTY_FUNC_BODY)
-	| '{' LTERM* (sourceElements -> sourceElements) LTERM* '}'
-	;
 
 // statements
 statement
-	: statementBlock
-	| variableStatement
-	| emptyStatement
-	| expressionStatement
-	| ifStatement
-	| iterationStatement
-	| continueStatement
-	| breakStatement
-	| returnStatement
-	| withStatement
-	| labelledStatement
-	| switchStatement
-	| throwStatement
-        | whenStatement
-	| tryStatement
-	| msgSendStatement
-	| msgRecvStatement
+        : literal* s1=Identifier ( literal* s2=separator+ literal* s3=Identifier)* literal*    -> ^(WHEN_PRED_BLOCK $s1 $s3*)
 	;
-	
-statementBlock
- : '{' LTERM* '}'
-	| '{' LTERM* (statementList->statementList) LTERM* '}' 
-	;
-	
-statementList
-	: statement (LTERM* statement)* -> ^(SLIST statement+)
-	;
-	
-variableStatement
-	: 'var' LTERM* variableDeclarationList (LTERM | ';') -> ^( VARLIST variableDeclarationList)
-	;
-	
-variableDeclarationList
-	: variableDeclaration (LTERM* ',' LTERM* variableDeclaration)* -> variableDeclaration+
-	;
-	
-variableDeclarationListNoIn
-	: variableDeclarationNoIn (LTERM* ',' LTERM* variableDeclarationNoIn)* -> variableDeclarationNoIn+
-	;
-	
-variableDeclaration
-	: Identifier LTERM* initialiser? -> ^(VAR Identifier initialiser?)
-	;
-	
-variableDeclarationNoIn
-	: Identifier LTERM* initialiserNoIn? ->  ^(VAR Identifier initialiserNoIn?)
-	;
-	
-initialiser
-	: '=' LTERM* assignmentExpression -> assignmentExpression 
-	;
-	
-initialiserNoIn
-	: '=' LTERM* assignmentExpressionNoIn -> assignmentExpressionNoIn
-	;
-	
-emptyStatement
-	: ';'
-	;
-	
-expressionStatement
-	: expression (LTERM | ';') -> expression
-	;
-
-whenStatement
-//    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
-    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* functionBody -> ^(WHEN whenPred functionBody)
-    ;
-
-
-//note: right now, this rule is very simple: it just takes in an expression.
-whenPred
-    : expression -> ^(WHEN_PRED expression)
-    ;
-
-whenCheckedListFirst
-    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)? ->    ^(WHEN_CHECKED_LIST_FIRST $s1 $s2?)
-    ;
-
-whenCheckedListSubsequent
-    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)* -> ^(WHEN_CHECKED_LIST_SUBSEQUENT $s1 $s2*)
-    ;
-
-
-ifStatement
-    : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
-    ;
-	
-iterationStatement
-	: doWhileStatement
-	| whileStatement
-	| forStatement
-	| forInStatement
-	;
-	
-doWhileStatement
-	: 'do' LTERM* statement LTERM* 'while' LTERM* '(' expression ')' (LTERM | ';') -> ^( DO  statement expression )
-	;
-	
-whileStatement
-	: 'while' LTERM* '(' LTERM* expression LTERM* ')' LTERM* statement -> ^(WHILE  expression statement)
-	;
-	
-forStatement
-	: 'for' LTERM* '(' (LTERM* init=forStatementInitialiserPart)? LTERM* ';' (LTERM* cond=expression)? LTERM* ';' (LTERM* iter=expression)? LTERM* ')' LTERM* statement ->  ^(FOR ^(FORINIT $init)?   ^(FORCOND $cond)?  ^(FORITER $iter)?  statement)
-	;
-	
-forStatementInitialiserPart
-	: expressionNoIn
-	| 'var' LTERM* variableDeclarationListNoIn -> ^(VARLIST variableDeclarationListNoIn)
-	;
-	
-forInStatement
-	: 'for' LTERM* '(' LTERM* forInStatementInitialiserPart LTERM* 'in' LTERM* expression LTERM* ')' LTERM* statement -> ^(FORIN forInStatementInitialiserPart expression statement)
-	;
-	
-forInStatementInitialiserPart
-	: leftHandSideExpression -> leftHandSideExpression
-	| 'var' LTERM* variableDeclarationNoIn -> ^(VAR variableDeclarationNoIn)
-	;
-
-continueStatement
-	: 'continue' Identifier? (LTERM | ';')  -> ^(CONTINUE Identifier?)
-	;
-
-breakStatement
-	: 'break' Identifier? (LTERM | ';') -> ^(BREAK Identifier?)
-	;
-
-returnStatement
-	: 'return' expression? (LTERM | ';') -> ^(RETURN expression?)
-	;
-	
-withStatement
-	: 'with' LTERM* '(' LTERM* expression LTERM* ')' LTERM* statement -> ^(WITH expression statement)
-	;
-
-labelledStatement
-	: Identifier LTERM* ':' LTERM* statement -> ^( LABEL Identifier statement)
-	;
-	
-switchStatement
-	: 'switch' LTERM* '(' LTERM* expression LTERM* ')' LTERM* caseBlock -> ^(SWITCH expression caseBlock)
-	;
-	
-caseBlock
-	: '{' (LTERM* case1=caseClause)* (LTERM* defaultClause (LTERM* case2=caseClause)*)? LTERM* '}' -> 	^($case1)* (^(defaultClause)*)? (^($case2)*)?
-	;
-
-caseClause
-	: 'case' LTERM* expression LTERM* ':' LTERM* statementList? -> ^( CASE expression statementList?)
-	;
-	
-defaultClause
-	: 'default' LTERM* ':' LTERM* statementList? -> ^(DEFAULT statementList?)
-	;
-	
-throwStatement
-	: 'throw' expression (LTERM | ';') -> ^(THROW expression)
-	;
-
-tryStatement
-	: ('try' LTERM* statementBlock LTERM* -> ^(TRY statementBlock))(finallyClause -> ^($tryStatement finallyClause)| catchClause (LTERM* finallyClause -> ^($tryStatement catchClause finallyClause))?) 
-	;
-       
-catchClause
-	: 'catch' LTERM* '(' LTERM* Identifier LTERM* ')' LTERM* statementBlock -> ^(CATCH Identifier statementBlock)
-	;
-	
-finallyClause
-	: 'finally' LTERM* statementBlock -> ^( FINALLY statementBlock )
-	;
-
-
-msgSendStatement
- : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
-;
-
-// There is an ambiguity here
-//msgRecvStatement
-// : (e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' )? -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression (LTERM | ';')-> ^($msgRecvStatement $e3) )? 
-
- msgRecvStatement
- : e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
- | e1=memberExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memberExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
-
-;
-// expressions
-expression
-	: assignmentExpression (LTERM* ',' LTERM* assignmentExpression)* ->  ^(EXPR_LIST assignmentExpression+)
-	;
-	
-expressionNoIn
-	: assignmentExpressionNoIn (LTERM* ',' LTERM* assignmentExpressionNoIn)* -> ^(EXPR_LIST assignmentExpressionNoIn+)
-
-	;
-	
-assignmentExpression
-	: conditionalExpression -> ^(COND_EXPR conditionalExpression)
-	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpression ->  ^(assignmentOperator  leftHandSideExpression assignmentExpression)
-	;
-	
-assignmentExpressionNoIn
-	: conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
-	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression assignmentExpressionNoIn ) 
-	;
-	
-leftHandSideExpression
-	: callExpression -> callExpression
-	| newExpression -> newExpression
-	;
-	
-newExpression
-	: memberExpression -> memberExpression
-	| 'new' LTERM* newExpression -> ^( NEW newExpression)
-	;
-	
-
-indexSuffix1
-	: '[' LTERM* expression LTERM* ']' -> expression
-	;	
-
-
-propertyReferenceSuffix1
-	: '.' LTERM* Identifier -> Identifier
-	;
-
-
-memberExpression
-	: (primaryExpression -> primaryExpression) ( LTERM* propertyReferenceSuffix1 -> ^( DOT  $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
-	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
-	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
-        ;
-	
-memberExpressionSuffix
-	: indexSuffix -> indexSuffix 
-	| propertyReferenceSuffix -> propertyReferenceSuffix 
-	;
-
-callExpression
-    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
-	;
-	
-callExpressionSuffix
-	: arguments -> arguments
-	| indexSuffix -> indexSuffix
-	| propertyReferenceSuffix -> propertyReferenceSuffix
-	;
-
-arguments
-	: '(' (LTERM* (assignmentExpression) (LTERM* ',' LTERM* assignmentExpression)*)? LTERM* ')' -> ^(ARGLIST assignmentExpression*) 
-	;
-
-	
-indexSuffix
-	: '[' LTERM* expression LTERM* ']' -> ^(ARRAY_INDEX expression)
-	;	
-	
-propertyReferenceSuffix
-	: '.' LTERM* Identifier -> ^(DOT Identifier)
-	;
-
         
-assignmentOperator
-	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)| '<<=' -> ^(LEFT_SHIFT_ASSIGN)| '>>=' -> ^(RIGHT_SHIFT_ASSIGN)| '>>>=' -> ^(TRIPLE_SHIFT_ASSIGN)| '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
-	;
-
-conditionalExpression
-	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=assignmentExpression LTERM* ':' LTERM* expr2=assignmentExpression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
-	;
-
-conditionalExpressionNoIn
-	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=assignmentExpressionNoIn LTERM* ':' LTERM* expr2=assignmentExpressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
-	;
-
-
-logicalORExpression
-	: (logicalANDExpression -> logicalANDExpression)(LTERM* '||' LTERM* logicalANDExpression -> ^(OR $logicalORExpression logicalANDExpression) )*
-	;
-	
-logicalANDExpression
-	: (bitwiseORExpression -> bitwiseORExpression)(LTERM* '&&' LTERM* bitwiseORExpression  -> ^(AND $logicalANDExpression bitwiseORExpression) )*
-	;
-	
-logicalORExpressionNoIn
-	: (logicalANDExpressionNoIn -> logicalANDExpressionNoIn)(LTERM* '||' LTERM* logicalANDExpressionNoIn -> ^(OR $logicalORExpressionNoIn logicalANDExpressionNoIn) )* 
-	;
-	
-
-logicalANDExpressionNoIn
-	: (bitwiseORExpressionNoIn -> bitwiseORExpressionNoIn) (LTERM* '&&' LTERM* bitwiseORExpressionNoIn -> ^(AND $logicalANDExpressionNoIn bitwiseORExpressionNoIn) )*
-	;
-	
-bitwiseORExpression
-	: (bitwiseXORExpression -> bitwiseXORExpression) (LTERM* '|' LTERM* bitwiseXORExpression -> ^(BIT_OR $bitwiseORExpression bitwiseXORExpression) )*
-	;
-	
-bitwiseORExpressionNoIn
-	: (bitwiseXORExpressionNoIn -> bitwiseXORExpressionNoIn) (LTERM* '|' LTERM* bitwiseXORExpressionNoIn -> ^( BIT_OR $bitwiseORExpressionNoIn bitwiseXORExpressionNoIn))*
-	;
-	
-bitwiseXORExpression
-: (bitwiseANDExpression -> bitwiseANDExpression) (LTERM* '^' LTERM* bitwiseANDExpression -> ^( EXP $bitwiseXORExpression bitwiseANDExpression))*
-	;
-	
-bitwiseXORExpressionNoIn
-	: (bitwiseANDExpressionNoIn -> bitwiseANDExpressionNoIn)(LTERM* '^' LTERM* bitwiseANDExpressionNoIn -> ^( EXP $bitwiseXORExpressionNoIn bitwiseANDExpressionNoIn) )*
-	;
-	
-bitwiseANDExpression
-	: (equalityExpression -> equalityExpression) (LTERM* '&' LTERM* equalityExpression -> ^(BIT_AND $bitwiseANDExpression equalityExpression) )* 
-	;
-	
-bitwiseANDExpressionNoIn
-	: (equalityExpressionNoIn -> equalityExpressionNoIn) (LTERM* '&' LTERM* equalityExpressionNoIn -> ^(BIT_AND $bitwiseANDExpressionNoIn equalityExpressionNoIn) )*
-	;
-	
-equalityExpression
-	: (relationalExpression -> relationalExpression)(LTERM* equalityOps LTERM* relationalExpression -> ^(equalityOps $equalityExpression relationalExpression) )*
-	;
-
-equalityOps
-:  '==' -> ^(EQUALS)
-| '!=' -> ^(NOT_EQUALS)
-| '===' -> ^(IDENT)
-| '!==' -> ^(NOT_IDENT)
-;
-
-equalityExpressionNoIn
-	: (relationalExpressionNoIn -> relationalExpressionNoIn)(LTERM* equalityOps LTERM* relationalExpressionNoIn -> ^(equalityOps $equalityExpressionNoIn relationalExpressionNoIn))*
-	;
-	
-
-relationalOps
-: '<'  -> ^(LESS_THAN)
-| '>'  -> ^(GREATER_THAN)
-| '<=' -> ^(LESS_THAN_EQUAL)
-| '>=' -> ^(GREATER_THAN_EQUAL)
-| 'instanceof' -> ^(INSTANCE_OF)
-| 'in'         -> ^(IN)
-;
-
-relationalExpression
-	: (shiftExpression -> shiftExpression )(LTERM* relationalOps LTERM* shiftExpression -> ^(relationalOps $relationalExpression shiftExpression))* 
-	;
-
-relationalOpsNoIn
-: '<'  -> ^(LESS_THAN)
-| '>'  -> ^(GREATER_THAN)
-| '<=' -> ^(LESS_THAN_EQUAL)
-| '>=' -> ^(GREATER_THAN_EQUAL)
-| 'instanceof' -> ^(INSTANCE_OF)
-;
-
-relationalExpressionNoIn
-	: (shiftExpression -> shiftExpression) (LTERM* relationalOpsNoIn LTERM* shiftExpression -> ^(relationalOpsNoIn $relationalExpressionNoIn shiftExpression ))*
-	;
-
-shiftOps
-:'<<' -> ^(LEFT_SHIFT)
-| '>>'-> ^(RIGHT_SHIFT)
-| '>>>' -> ^(TRIPLE_SHIFT)
-;
-
-shiftExpression
-	: (additiveExpression -> additiveExpression)(LTERM* shiftOps LTERM* additiveExpression -> ^(shiftOps $shiftExpression additiveExpression) )*
- ;	
-
-
-addOps
-: '+' -> ^(ADD)
-| '-' -> ^(SUB)
-;
-
-
-additiveExpression
-	: (multiplicativeExpression -> multiplicativeExpression)(LTERM* addOps LTERM* multiplicativeExpression -> ^(addOps $additiveExpression multiplicativeExpression) )* 
-	;
-
-multOps
-: '*' -> ^(MULT)
-| '/' -> ^(DIV)
-| '%' -> ^(MOD)
-;
-
-multiplicativeExpression
-	: (unaryExpression -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
-	;
-
-
-postfixExpression
- :(leftHandSideExpression -> leftHandSideExpression) (('--' -> $postfixExpression '--') | ('++' -> $postfixExpression '++'))?
-	;
-
-
-unaryOps
-:'delete' -> ^(DELETE)
-| 'void' -> ^(VOID)
-| 'typeof' -> ^(TYPEOF)
-| '++'  -> ^(PLUSPLUS)
-| '--'  -> ^(MINUSMINUS)
-| '+'   -> ^(UNARY_PLUS)
-| '-'   -> ^(UNARY_MINUS)
-| '~'   -> ^(COMPLEMENT)
-| '!'   -> ^(NOT)
-;
-
-
-unaryExpression
-	: postfixExpression -> ^(POSTEXPR postfixExpression)
-	| unaryOps e=unaryExpression -> ^(unaryOps $e)
-	;
-	
-
-primaryExpression
-	: 'this'
-	| Identifier
-        | dollarExpression
-	| literal
-	| arrayLiteral
-	| objectLiteral
-	| '(' LTERM* expression LTERM* ')' -> ^( PAREN expression )
-	;
-
-dollarExpression
-        : '`' LTERM* Identifier LTERM* '`' -> ^(DOLLAR_EXPRESSION Identifier)
-        ;
-        
-// arrayLiteral definition.
-arrayLiteral
-  : '[' LTERM* (assignmentExpression)? LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression?)
-	| '[' LTERM* e1=assignmentExpression (',' LTERM* e2=assignmentExpression)* LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression assignmentExpression*)
-	;
-       
-// objectLiteral definition.
-objectLiteral
-  : '{' LTERM* propertyNameAndValue? LTERM* '}' -> ^(OBJ_LITERAL propertyNameAndValue?)
-	| '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
-	;
-	
-propertyNameAndValue
-	: propertyName LTERM* ':' LTERM* assignmentExpression -> ^(NAME_VALUE propertyName assignmentExpression)
-	;
-
-propertyName
-	: Identifier
-	| StringLiteral
-	| NumericLiteral
-	;
-
 // primitive literal definition.
 literal
-	: 'null'
-	| 'true'
-	| 'false'
-	| StringLiteral
-	| NumericLiteral
-	;
-	
+        : StringLiteral
+        | NumericLiteral
+        ;
+
+separator
+        : LTERM
+        | '+'
+        | '-'
+        | '('
+        | ')'
+        | '['
+        | ']'
+        | '!'
+        | '='
+        | '*'
+        | '/'
+        | '>'
+        | '<'
+        | '%'
+        | '&'
+        | '|'
+        | '^'
+        | '{'
+        | '}'
+        | ';'
+        ;
+
+
+        
 
 // emerson specific syntax
 
@@ -707,6 +168,9 @@ Identifier
 	: IdentifierStart IdentifierPart*
 	;
 
+
+
+        
 fragment IdentifierStart
 	: UnicodeLetter
         | '$'  //note. may have to reserve this a bit to prevent
