@@ -49,7 +49,7 @@ sourceElement
 
 // statements
 whenPredStatement
-        : literal* s1=identifier ( separator+  s2=identifier)* separator* literal* separator*    -> ^(WHEN_PRED_BLOCK $s1 $s2*)
+        : literal* s1=identifier ( separator+  s2=whenPredStatement)* separator* literal* separator*    -> ^(WHEN_PRED_BLOCK $s1 $s2*)
 	;
 
 identifier

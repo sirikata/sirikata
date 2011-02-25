@@ -54,13 +54,22 @@ program returns [pANTLR3_STRING  s]
 	;
 
 sourceElements
-    :(sourceElement{APPLEX("),\n"); })+  // omitting the LT 
+    :(
+        sourceElement
+        {
+            //closes the last paren associated with util.create_when_watched_item
+            APPLEX(")\n");
+        }
+      )+  // omitting the LT 
     ;
 	
 sourceElement
-    : whenPredStatement{ }
+    :
+    (
+        whenPredStatement{ }
+    )
     ;
-	
+
 
 // statements
 whenPredStatement
@@ -75,11 +84,10 @@ whenPredStatement
             }
             (
                 {
-                    APPLEX("\nutil.create_when_watched_item(['");
+                    APPLEX("),");
                 }
-                id2=identifier
+                whenPredStatement
                 {
-                    APPLEX("]");
                 }
             )*
            )
