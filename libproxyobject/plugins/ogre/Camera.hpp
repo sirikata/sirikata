@@ -58,8 +58,10 @@ public:
     Entity* following() const;
 
     void attach (const String&renderTargetName,
-                         uint32 width,
-                         uint32 height);
+        uint32 width,
+        uint32 height,
+        Vector4f back_color);
+
     void detach();
 
     void tick();

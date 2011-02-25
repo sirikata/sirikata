@@ -467,6 +467,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
     OptionValue*grabCursor;
+    OptionValue* backColor;
 
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
@@ -492,10 +493,14 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
                            mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
+                           backColor = new OptionValue("back-color","<.71,.785,.91,1>",OptionValueType<Vector4f>(),"Background color to clear render viewport to."),
+
                            NULL);
     bool userAccepted=true;
 
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
+
+    mBackgroundColor = backColor->as<Vector4f>();
 
     // Initialize this first so we can get it to not spit out to stderr
     Ogre::LogManager * lm = OGRE_NEW Ogre::LogManager();
@@ -811,7 +816,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     {
         assert(mPrimaryCamera == NULL);
         mPrimaryCamera = new Camera(this, mesh);
-        mPrimaryCamera->attach("", 0, 0);
+        mPrimaryCamera->attach("", 0, 0, mBackgroundColor);
         attachCamera("", mPrimaryCamera);
         // for now, always hide the original entity. In the future, this should
         // be controlled based on the type of view we have (1st vs 3rd person).

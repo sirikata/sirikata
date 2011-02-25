@@ -83,6 +83,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     SpaceObjectReference mPresenceID;
 
     Camera* mCamera;
+    Vector4f mBackgroundColor;
 
     // FIXME because we don't have proper multithreaded support in cppoh, we
     // need to allocate our own thread dedicated to parsing

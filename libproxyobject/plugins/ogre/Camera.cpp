@@ -80,14 +80,14 @@ Entity* Camera::following() const {
     return mFollowing;
 }
 
-void Camera::attach (const String&renderTargetName,uint32 width,uint32 height)
+void Camera::attach (const String&renderTargetName,uint32 width,uint32 height,Vector4f back_color)
 {
     this->detach();
     mRenderTarget = mScene->createRenderTarget(renderTargetName,
                                                width,
                                                height);
     mViewport= mRenderTarget->addViewport(mOgreCamera);
-    mViewport->setBackgroundColour(Ogre::ColourValue(0,.125,.25,1));
+    mViewport->setBackgroundColour(Ogre::ColourValue(back_color.x, back_color.y, back_color.z, back_color.w));
     mOgreCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
     mScene->attachCamera(renderTargetName,this);
 }
