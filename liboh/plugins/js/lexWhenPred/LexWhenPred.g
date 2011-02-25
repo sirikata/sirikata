@@ -21,6 +21,8 @@ tokens
     LTERM;
     PROG;
     WHEN_PRED_BLOCK;
+    DOTTED_IDENTIFIER;
+    IDENTIFIER;
 }
 
 @header
@@ -47,8 +49,18 @@ sourceElement
 
 // statements
 whenPredStatement
-        : literal* s1=Identifier ( separator+  s2=Identifier)* separator* literal* separator*    -> ^(WHEN_PRED_BLOCK $s1 $s2*)
+        : literal* s1=identifier ( separator+  s2=identifier)* separator* literal* separator*    -> ^(WHEN_PRED_BLOCK $s1 $s2*)
 	;
+
+identifier
+        : s1=Identifier ( s2=dottedIdentifier)* -> ^(IDENTIFIER $s1 $s2*)
+        ;
+
+dottedIdentifier
+        : '.' s1=Identifier (s2=dottedIdentifier)* ->  ^(DOTTED_IDENTIFIER $s1 $s2*)
+        ;
+
+        //        : s1=Identifier ( '.' s2=Identifier)* -> ^(DOTTED_IDENTIFIER $s1 $s2*)
 
         
 // primitive literal definition.

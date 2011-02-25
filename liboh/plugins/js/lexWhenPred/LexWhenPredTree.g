@@ -38,16 +38,23 @@ program returns [pANTLR3_STRING  s]
             {
                 pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
                 program_string_lex = factory->newRaw(factory);
+                APPLEX("\n");
+                //open when_watched_list
+                APPLEX("util.create_when_watched_list([");
             }
             sourceElements
-     )
+            {
+                //close when_watched_list
+                APPLEX("]);");
+            }
+          )
         {
             s = program_string_lex;
         }
 	;
 
 sourceElements
-    :(sourceElement{APPLEX("\n"); })+  // omitting the LT 
+    :(sourceElement{APPLEX("),\n"); })+  // omitting the LT 
     ;
 	
 sourceElement
@@ -60,25 +67,70 @@ whenPredStatement
         : ^(
             WHEN_PRED_BLOCK
             {
-                APPLEX("\n\nParsing when pred block: \n");
+                APPLEX("\nutil.create_when_watched_item(['");
             }
-            (id1=Identifier
+            id1=identifier
             {
-                APPLEX("\n\nThis is an identifier I found: ");
-                APPLEX((const char*)$id1.text->chars);
-                APPLEX("\n\n");
+                APPLEX("]");
             }
-            )
-            (id2=Identifier
-            {
-                APPLEX("\n\nThis is an identifier I found: ");
-                APPLEX((const char*)$id2.text->chars);
-                APPLEX("\n\n");
-            }
+            (
+                {
+                    APPLEX("\nutil.create_when_watched_item(['");
+                }
+                id2=identifier
+                {
+                    APPLEX("]");
+                }
             )*
            )
 	;
 
+identifier
+        : ^(
+            IDENTIFIER
+            {
+            }
+            Identifier
+            {
+                APPLEX((const char*)$Identifier.text->chars);
+                APPLEX("'");
+            }
+            (
+                {
+                    APPLEX(",'");
+                }
+                dottedIdentifier
+                {
+                }
+            )*
+           )
+        ;
+
+            
+dottedIdentifier
+        : ^( 
+            DOTTED_IDENTIFIER
+            {
+            }
+            id1=Identifier
+            {
+                APPLEX((const char*)$id1.text->chars);
+                APPLEX("'");   
+            }
+            (
+                {
+                    APPLEX(",'");
+                }
+                dottedIdentifier
+                {
+                }
+            )*
+          )
+        ;
+            
+
+
+        
 
 // primitive literal definition.
 literal
