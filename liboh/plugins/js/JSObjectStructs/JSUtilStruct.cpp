@@ -21,6 +21,10 @@ JSUtilStruct::~JSUtilStruct()
 {
 }
 
+v8::Handle<v8::Value> JSUtilStruct::struct_createWhenWatchedItem(v8::Handle<v8::Array>itemArray)
+{
+    return associatedObjScr->createWhenWatchedItem(itemArray);
+}
 
 v8::Handle<v8::Value> JSUtilStruct::struct_createWatched()
 {

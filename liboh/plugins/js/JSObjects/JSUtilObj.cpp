@@ -17,6 +17,26 @@ namespace Sirikata{
 namespace JS{
 namespace JSUtilObj{
 
+v8::Handle<v8::Value> ScriptCreateWhenWatchedItem(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
+
+    if (! args[0]->IsArray())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
+
+    v8::Handle<v8::Array> itemArray = v8::Handle<v8::Array>::Cast(args[0]->ToObject());
+
+
+    String errorMessage = "Error in ScriptCreateWhenWatchedItem of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
+
+    if (jsutil == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsutil->struct_createWhenWatchedItem(itemArray);
+}
+
 
 v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
 {

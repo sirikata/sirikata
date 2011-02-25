@@ -127,7 +127,8 @@ public:
     
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
-    
+
+    v8::Handle<v8::Value> createWhenWatchedItem(v8::Handle<v8::Array> itemArray);
 
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);

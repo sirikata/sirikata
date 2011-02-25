@@ -70,6 +70,7 @@
 #include "JSObjectStructs/JSWatchedStruct.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include "JSObjectStructs/JSQuotedStruct.hpp"
+#include "JSObjectStructs/JSWhenWatchedItem.hpp"
 #include <boost/lexical_cast.hpp>
 
 
@@ -272,22 +273,23 @@ v8::Handle<v8::Value> JSObjectScript::createWatched()
 }
 
 
+v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(v8::Handle<v8::Array> itemArray)
+{
+    v8::HandleScope handle_scope;
+
+    if (itemArray->Length() == 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
 
 
-// v8::Handle<v8::Value> JSObjectScript::create_when(v8::Persistent<v8::Function>pred,v8::Persistent<v8::Function>cb,float minPeriod,WatchableMap& watchMap)
-// {
-//     v8::HandleScope handle_scope;
+    JSWhenWatchedItemStruct* jswhenwatched = new JSWhenWathcedItemStruct(itemArray);
+    v8::Local<v8::Object> whenWatchedItemObj_local = mManager->mWhenWatchedTemplate->NewInstance();
+    v8::Persistent<v8::Object> whenWatchedItemObj  = v8::Persistent<v8::Object>::New(whenWatchedItemObj_local);
 
-//     Network::IOService* ioserve = mParent->getIOService();
-//     v8::Persistent<v8::Context> contexter = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-//     JSWhenStruct* jswhen = new JSWhenStruct(this,ioserve,watchMap,pred,cb,contexter,minPeriod, JSContextStruct::getJSContextStruct());
+    whenWatchedItemObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_ITEM_TYPEID_STRING)));
+    whenWatchedItemObj->SetInternalField(WHEN_WATCHED_ITEM_TEMPLATE_FIELD,v8::External::New(jswhenwatched));
 
-    
-//     v8::Handle<v8::Object> whenObj = mManager->mWhenTemplate->NewInstance();
-//     whenObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_TYPEID_STRING)));
-//     whenObj->SetInternalField(WHEN_TEMPLATE_FIELD,v8::External::New(jswhen));
-//     return whenObj;
-// }
+    return whenWatchedItemObj;
+}
 
 
 
