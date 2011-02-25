@@ -106,6 +106,8 @@ public:
     void addWatchable(JSWatchable* toAdd);
     void removeWatchable(JSWatchable* toRemove);
 
+    String tokenizeWhenPred(const String& whenPredAsString);
+    
     
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -129,7 +131,8 @@ public:
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
 
     v8::Handle<v8::Value> createWhenWatchedItem(v8::Handle<v8::Array> itemArray);
-
+    v8::Handle<v8::Value> createWhenWatchedItem(JSWhenWatchedItemStruct* wwis);
+    
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
 

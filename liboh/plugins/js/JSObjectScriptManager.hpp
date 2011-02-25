@@ -61,20 +61,22 @@ public:
 
     //v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
-    v8::Persistent<v8::ObjectTemplate> mContextTemplate;
-    v8::Persistent<v8::ObjectTemplate> mUtilTemplate;
-    v8::Persistent<v8::ObjectTemplate> mInvokableObjectTemplate;
-    v8::Persistent<v8::ObjectTemplate> mFakerootTemplate;
-    v8::Persistent<v8::ObjectTemplate> mTimerTemplate;
-    v8::Persistent<v8::ObjectTemplate> mContextGlobalTemplate;
-    v8::Persistent<v8::ObjectTemplate> mWatchedTemplate;
-    v8::Persistent<v8::ObjectTemplate> mWhenTemplate;
-    v8::Persistent<v8::ObjectTemplate> mQuotedTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mContextTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mUtilTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mInvokableObjectTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mFakerootTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mTimerTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWatchedTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWhenTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mQuotedTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWhenWatchedItemTemplate;
     
     void testPrint();
 
 private:
 
+    void createWhenWatchedItemTemplate();
     void createVisibleTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();

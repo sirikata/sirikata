@@ -58,6 +58,7 @@
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
+#include "lexWhenPred/LexWhenPredUtil.h"
 #include "emerson/Util.h"
 #include "JSSystemNames.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
@@ -70,7 +71,7 @@
 #include "JSObjectStructs/JSWatchedStruct.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include "JSObjectStructs/JSQuotedStruct.hpp"
-#include "JSObjectStructs/JSWhenWatchedItem.hpp"
+#include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
 #include <boost/lexical_cast.hpp>
 
 
@@ -282,15 +283,22 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(v8::Handle<v8::Array
 
 
     JSWhenWatchedItemStruct* jswhenwatched = new JSWhenWathcedItemStruct(itemArray);
-    v8::Local<v8::Object> whenWatchedItemObj_local = mManager->mWhenWatchedTemplate->NewInstance();
+    return createWhenWatchedItem(jswhenwatched);
+
+}
+
+v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(JSWhenWatchedItemStruct* wwis)
+{
+    v8::HandleScope handle_scope;
+    
+    v8::Local<v8::Object> whenWatchedItemObj_local = mManager->mWhenWatchedItemTemplate->NewInstance();
     v8::Persistent<v8::Object> whenWatchedItemObj  = v8::Persistent<v8::Object>::New(whenWatchedItemObj_local);
 
     whenWatchedItemObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_ITEM_TYPEID_STRING)));
-    whenWatchedItemObj->SetInternalField(WHEN_WATCHED_ITEM_TEMPLATE_FIELD,v8::External::New(jswhenwatched));
+    whenWatchedItemObj->SetInternalField(WHEN_WATCHED_ITEM_TEMPLATE_FIELD,v8::External::New(wwis));
 
     return whenWatchedItemObj;
 }
-
 
 
 JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
@@ -721,6 +729,14 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
     mMessagingPort->send(dest,toSend);
 }
 
+//take in whenPredAsString that should look something like: " x<3 && y > 2"
+//and then translates to [ util.create_when_watched_item(['x']), util.create_when_watched_item(['y'])  ] 
+String JSObjectScript::tokenizeWhenPred(const String& whenPredAsString)
+{
+    lexWhenPred_init();
+    return string(lexWhenPred_compile(whenPredAsString.c_str()));
+}
+lkjs;
 
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)

@@ -12,6 +12,8 @@
 
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include "JSWhenWatchedItemStruct.hpp"
+
 
 
 namespace Sirikata {
@@ -33,8 +35,7 @@ JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Functi
     whenCreatePredFunc(predArray);
     whenCreateCBFunc(callback);
 
-
-
+    
     //linking everything so that will be able to chek
     addWhenToContext();
 }
@@ -48,6 +49,45 @@ void JSWhenStruct::whenCreateCBFunc(v8::Handle<v8::Function>callback)
 {
     v8::HandleScope handle_scope;
     mCB = v8::Persistent<v8::Function>::New ( callback );
+}
+
+
+void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
+{
+    //whenPredAsString:  x < 3 + z || x.y.a > 2
+    //tokenizedPred: [ util.create_when_watched_item(['x']),
+    //util.create_when_watched(['x']),
+    //util.create_when_watched_item(['x','y','a])]
+    //
+    //
+    String tokenizedPred = mObjScript->tokenizeWhenPred(whenPredAsString);
+
+    //evaluate the tokenizedPred, which returns an array object
+    String fncTokePred = "(function()  {  return ( " + tokenizedPred + " ); });";
+    v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,fncTokePred);
+
+    if (! compileFuncResult->IsArray())
+    {
+        JSLOG(error, "compiled token result for watched items is not an array.  no watched items will be recorded for when pred.");
+        return;
+    }
+
+    v8::Handle<v8::Array> arrayFncRes = v8::Handle<v8::Array>::Cast(compileFuncResult);
+
+    for (int s=0; s < (int) arrayFncRes->Length(); ++s)
+    {
+        String errorMessage = "Error in buildWatchedItems of jswhenstruct.  Object in array cannot be decoded as a JSWhenWatchedItemStruct.  ";
+        
+        JSWhenWatchedItemStruct* wwis = JSWhenWatchedItemStruct::decodeWhenWatchedItemStruct(arrayFncRes->Get(s), errorMessage);
+
+        if (wwis == NULL)
+        {
+            JSLOG(error, errorMessage<<" When will not have any watched variables.");
+            return;
+        }
+
+        mWWVec.push_back(wwis);
+    }
 }
 
 //This function takes in the array that represents the when's predicate.
@@ -81,6 +121,8 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
     //still need to do something to parse out dependent parts;
     JSLOG(error, "\n\nStill need to parse out the relevant dependent objects in whenCreatePredFunc.\n\n");
 
+
+    buildWatchedItems(whenPredAsString);
     
     //compile function;
     //note: additional parentheses and semi-colon around outside of the
@@ -88,7 +130,7 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
     //anonymous functions.
     whenPredAsString = "(function()  {  return ( " + whenPredAsString + " ); });";
 
-    
+        
     v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,whenPredAsString);
     if (! compileFuncResult->IsFunction())
     {

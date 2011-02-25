@@ -9,6 +9,8 @@
 #include <sirikata/core/network/IOService.hpp>
 #include <map>
 #include "JSSuspendable.hpp"
+#include "JSWhenWatchedItemStruct.hpp"
+
 
 
 namespace Sirikata {
@@ -54,12 +56,14 @@ private:
                            //predicate is true.  Only fire callback if predicate
                            //switches from false to true.
 
-  
+
     JSObjectScript* mObjScript;
     v8::Persistent<v8::Function> mPred;
     v8::Persistent<v8::Function> mCB;
     v8::Persistent<v8::Context>  mContext;
     JSContextStruct* jscont;
+    JSWhenWatchedVec mWWVec;
+
 };
 
 

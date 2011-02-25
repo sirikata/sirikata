@@ -37,6 +37,30 @@ v8::Handle<v8::Value> ScriptCreateWhenWatchedItem(const v8::Arguments& args)
     return jsutil->struct_createWhenWatchedItem(itemArray);
 }
 
+v8::Handle<v8::Value> ScriptCreateWhenWatchedList(const v8::Arguments& args)
+{
+    //check do not have too many arguments
+    if (args.Length() !=1)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedList: requires one argument (an array of createWhenWatchedItems).")));
+
+
+    //check that first arg is an array.
+    if (! args[0]->IsArray())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem of JSUtilObj.cpp.  First argument passed to create_when_watched_list should be an array each containing a single watched_item.")));
+
+    //try to decode object
+    String errorMessage = "Error in ScriptCreateWhenWatchedItem of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
+
+    if (jsutil == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+
+    v8::Handle<v8::Array> arrayOfItems = v8::Handle<v8::Array>::Cast(args[0]);
+
+    return jsutil->struct_createWhenWatchedList(arrayOfItems);
+}
+
 
 v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
 {

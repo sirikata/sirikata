@@ -132,6 +132,15 @@ void JSObjectScriptManager::createQuotedTemplate()
     mQuotedTemplate->SetInternalFieldCount(QUOTED_TEMPLATE_FIELD_COUNT);
 }
 
+void JSObjectScriptManager::createWhenWatchedItemTemplate()
+{
+    v8::HandleScope handle_scope;
+    mWhenWatchedItemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mWatchedTemplate->SetInternalFieldCount(WHEN_WATCHED_ITEM_TEMPLATE_FIELD_COUNT);
+}
+
+
+
 
 void JSObjectScriptManager::createWhenTemplate()
 {
@@ -162,6 +171,7 @@ void JSObjectScriptManager::createTemplates()
     
     createUtilTemplate();
 
+    createWhenWatchedItemTemplate();
     
     createFakerootTemplate();
     createContextTemplate();
