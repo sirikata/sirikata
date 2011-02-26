@@ -416,8 +416,6 @@ void ColladaDocumentImporter::finish ()
                         GeometryInstance new_geo_inst;
                         new_geo_inst.geometryIndex = geo_it->second;
                         new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
-                        new_geo_inst.radius=0;
-                        new_geo_inst.aabb=BoundingBox3f3f::null();
                         const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
                         for (size_t bind=0;bind< bindings.getCount();++bind) {
                             new_geo_inst.materialBindingMap[bindings[bind].getMaterialId()]=finishEffect(&bindings[bind],geo_it->second,0);//FIXME: hope to heck that the meaning of texcoords
@@ -425,7 +423,6 @@ void ColladaDocumentImporter::finish ()
                         }
                         if (geo_it->second<mMesh->geometry.size()) {
                             const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                            new_geo_inst.radius = computeRadiusAndBounds(geometry, curnode.transform, new_geo_inst.aabb);
 
                             mMesh->instances.push_back(new_geo_inst);
                         }
@@ -449,8 +446,6 @@ void ColladaDocumentImporter::finish ()
                             GeometryInstance new_geo_inst;
                             new_geo_inst.geometryIndex = geo_it->second;
                             new_geo_inst.parentNode = mNodeIndices[curnode.node->getUniqueId()];
-                            new_geo_inst.radius=0;
-                            new_geo_inst.aabb=BoundingBox3f3f::null();
                             const COLLADAFW::MaterialBindingArray& bindings = geo_inst->getMaterialBindings();
                             for (size_t bind=0;bind< bindings.getCount();++bind) {
                                 COLLADAFW::MaterialId id = bindings[bind].getMaterialId();
@@ -460,11 +455,9 @@ void ColladaDocumentImporter::finish ()
                             }
                             if (geo_it->second<mMesh->geometry.size()) {
                                 const SubMeshGeometry & geometry = mMesh->geometry[geo_it->second];
-                                new_geo_inst.radius = computeRadiusAndBounds(geometry, curnode.transform, new_geo_inst.aabb);
 
                                 mMesh->instances.push_back(new_geo_inst);
                             }
-                            new_geo_inst.radius=sqrt(new_geo_inst.radius);
                             mMesh->instances.push_back(new_geo_inst);
                         }
                     }
@@ -883,18 +876,30 @@ bool ColladaDocumentImporter::makeTexture
                           MaterialEffectInfo::TextureList&output , bool forceBlack) {
     using namespace COLLADAFW;
     if (color.isColor()) {
-        if (color.getColor().getRed() ||
-            color.getColor().getGreen() ||
-            color.getColor().getBlue() ||
-            color.getColor().getAlpha()||forceBlack) {
-            output.push_back(MaterialEffectInfo::Texture());
-            MaterialEffectInfo::Texture &retval=output.back();
-            retval.color.x=color.getColor().getRed();
-            retval.color.y=color.getColor().getGreen();
-            retval.color.z=color.getColor().getBlue();
-            retval.color.w=color.getColor().getAlpha();
-            retval.affecting = type;
-        }else return false;
+        // We can safely ignore either anything black or anything white that
+        // affects opacity. We'll forceBlack at least one item if everything is
+        // black. However, we need to be careful about the alpha channel -- if
+        // it is anything but 1 then we would get incorrect results with the
+        // default black texture.
+        bool is_black = (color.getColor().getRed() == 0.0 &&
+            color.getColor().getGreen() == 0.0 &&
+            color.getColor().getBlue() == 0.0 &&
+            color.getColor().getAlpha() == 1.0);
+        bool is_white = (color.getColor().getRed() == 1.0 &&
+            color.getColor().getGreen() == 1.0 &&
+            color.getColor().getBlue() == 1.0 &&
+            color.getColor().getAlpha() == 1.0);
+        if ((type != MaterialEffectInfo::Texture::OPACITY && is_black && !forceBlack) ||
+            (type == MaterialEffectInfo::Texture::OPACITY && is_white))
+            return false;
+
+        output.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture &retval=output.back();
+        retval.color.x=color.getColor().getRed();
+        retval.color.y=color.getColor().getGreen();
+        retval.color.z=color.getColor().getBlue();
+        retval.color.w=color.getColor().getAlpha();
+        retval.affecting = type;
     }else if (color.isTexture()){
         output.push_back(MaterialEffectInfo::Texture());
         MaterialEffectInfo::Texture &retval=output.back();
@@ -989,19 +994,37 @@ bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
 }
 size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geomIndex, size_t primIndex) {
     using namespace COLLADAFW;
-    size_t retval=mEffects.size();
-    mEffects.push_back(MaterialEffectInfo());
+    size_t retval = -1;
     const Effect *effect=NULL;
     {
         const UniqueId & refmat= binding->getReferencedMaterial();
         IdMap::iterator matwhere=mMaterialMap.find(refmat);
+        bool found = false;
         if (matwhere!=mMaterialMap.end()) {
             ColladaEffectMap::iterator effectwhere = mColladaEffects.find(matwhere->second);
             if (effectwhere!=mColladaEffects.end()) {
                 effect=&effectwhere->second;
-            }else return retval;
-        }else return retval;
+                found = true;
+            }
+        }
+        if (!found) {
+            // Something's wrong, we can't find the effect from
+            // collada, return an empty one
+            retval=mEffects.size();
+            mEffects.push_back(MaterialEffectInfo());
+            return retval;
+        }
     }
+
+    // Here, we have the effect from collada, but we want to check if
+    // its a duplicate we've already translated.
+    IndicesMap::iterator converted_it = mConvertedEffects.find( effect->getUniqueId() );
+    if (converted_it != mConvertedEffects.end()) return converted_it->second;
+
+    // Otherwise, we need to create one.
+    retval=mEffects.size();
+    mEffects.push_back(MaterialEffectInfo());
+    // And translate it
     MaterialEffectInfo&mat = mEffects.back();
     CommonEffectPointerArray commonEffects = effect->getCommonEffects();
     bool allBlack=true;
@@ -1047,6 +1070,7 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
         mat.textures.back().color.w=effect->getStandardColor().getAlpha();
     }
     COLLADA_LOG(insane, "ColladaDocumentImporter::finishEffect(" << effect << ") entered");
+    mConvertedEffects[effect->getUniqueId()] = retval;
     return retval;
 }
 

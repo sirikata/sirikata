@@ -6,6 +6,7 @@
 #include "JSInvokableObject.hpp"
 #include <sirikata/core/transfer/URI.hpp>
 #include "JSObjectsUtils.hpp"
+#include "../JSLogging.hpp"
 
 using namespace v8;
 
@@ -33,9 +34,7 @@ Handle<v8::Value> setMesh(const v8::Arguments& args)
     if (! uriArgValid)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Oops.  You didn't really specify an appropriate uri for your mesh.")) );
 
-    mStruct->jsObjScript->setVisualFunction(mStruct->sporef, uriLocation);
-
-    return v8::Undefined();
+    return mStruct->setVisualFunction(uriLocation);
 }
 
 v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
@@ -50,35 +49,23 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            
-    v8::String::Utf8Value str(args[0]);
-    const char* cstr = ToCString(str);
-    String simname(cstr);
-    v8::HandleScope scope;
+    String strDecodeErrorMessage = "Error decoding string as first argument of runSimulation to jspresence.  ";
+    String simname = ""; //string to decode to.
+    bool decodeStrSuccessful = decodeString(args[0],simname,strDecodeErrorMessage);
+    if (! decodeStrSuccessful)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
 
-    JSInvokableObject::JSInvokableObjectInt* invokableObj = mStruct->jsObjScript->runSimulation(*(mStruct->sporef),simname);
-
-    Local<Object> tmpObj = mStruct->jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
-    Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
-
-
-    tmpObjP->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mStruct->jsObjScript));
-    tmpObjP->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
-    tmpObjP->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
-
-    return tmpObjP;
+    return mStruct->runSimulation(simname);
 }
 
 
 v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
 {
-
     String errorMessage = "Error in ScriptOnProxAddedEvent while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
             
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
 
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded.")) );
@@ -88,10 +75,52 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded().  Must contain callback function.")) );
 
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    mStruct->registerOnProxAddedEventHandler(cb_persist);
-    return v8::Undefined();
+    return mStruct->registerOnProxAddedEventHandler(cb);
+}
+
+v8::Handle<v8::Value>distance(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to distance method of presence")));
+
+    String errorMessage = "Error in distance method of JSPresence.cpp.  Cannot decode presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This(),errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    
+    if (! args[0]->IsObject())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in dist of JSPresence.cpp.  Argument should be an objet.")));
+
+    v8::Handle<v8::Object> argObj = args[0]->ToObject();
+    
+    bool isVec3 = Vec3Validate(argObj);
+    if (! isVec3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Presence needs to be a vec3")));
+
+    Vector3d vec3 = Vec3Extract(argObj);
+    
+    return jspres->distance(&vec3);
+    
+}
+
+v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info)
+{
+    String errorMessage = "Error in isConnectedGetter while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(info.Holder(),errorMessage);
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jspres->getIsConnectedV8();
+}
+
+void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSetTo,const AccessorInfo& info)
+{
+    String errorMessage = "Error.  Cannot write to isConnected variable.";
+    JSLOG(error, errorMessage);
+    //return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 }
 
 
@@ -113,10 +142,8 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved().  Must contain callback function.")) );
 
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    mStruct->registerOnProxRemovedEventHandler(cb_persist);
-    return v8::Undefined();
+    return mStruct->registerOnProxRemovedEventHandler(cb);
 }
 
 
@@ -133,8 +160,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-
-            return mStruct->jsObjScript->getVisualFunction(mStruct->sporef);
+            return mStruct->getVisualFunction();
         }
 
 
@@ -159,9 +185,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             Vector3f newPos (Vec3Extract(posArg));
 
-            mStruct->jsObjScript->setPositionFunction(mStruct->sporef, newPos);
-            return v8::Undefined();
-
+            return mStruct->setPositionFunction(newPos);
         }
 
 
@@ -205,7 +229,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
-        Handle<v8::Value>      getVelocity(const v8::Arguments& args)
+        Handle<v8::Value> getVelocity(const v8::Arguments& args)
         {
 
             String errorMessage = "Error in getVelocity while decoding presence.  ";
@@ -215,7 +239,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-            return mStruct->jsObjScript->getVelocityFunction(mStruct->sporef);
+            return mStruct->getVelocityFunction();
         }
 
 
@@ -228,7 +252,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            return mStruct->jsObjScript->getOrientationFunction(mStruct->sporef);
+            return mStruct->getOrientationFunction();
         }
 
         v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args)
@@ -252,10 +276,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             Quaternion newOrientation (QuaternionExtract(orientationArg));
 
-            mStruct->jsObjScript->setOrientationFunction(mStruct->sporef,newOrientation);
-            return v8::Undefined();
-        }
+            return mStruct->setOrientationFunction(newOrientation);
 
+        }
 
 
         Handle<v8::Value>      getOrientationVel(const v8::Arguments& args)
@@ -266,8 +289,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            return mStruct->jsObjScript->getOrientationVelFunction(mStruct->sporef);
+            return mStruct->getOrientationVelFunction();
         }
+
 
         v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args)
         {
@@ -289,10 +313,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
 
             Quaternion newOrientationVel (QuaternionExtract(orientationVelArg));
-
-            mStruct->jsObjScript->setOrientationVelFunction(mStruct->sporef,newOrientationVel);
-            return v8::Undefined();
+            return mStruct->setOrientationVelFunction(newOrientationVel);
         }
+
 
         v8::Handle<v8::Value> setQueryAngle(const v8::Arguments& args)
         {
@@ -312,23 +335,21 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             SolidAngle new_qa(NumericExtract(qa_arg));
 
-            mStruct->jsObjScript->setQueryAngleFunction(mStruct->sporef, new_qa);
-            return v8::Undefined();
-
+            return mStruct->setQueryAngleFunction(new_qa);
         }
 
 
-        Handle<v8::Value> getScale(const v8::Arguments& args)
-        {
-            String errorMessage = "Error in getScale while decoding presence.  ";
-            JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+Handle<v8::Value> getScale(const v8::Arguments& args)
+{
+    String errorMessage = "Error in getScale while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
             
-            if (mStruct == NULL)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-            return mStruct->jsObjScript->getVisualScaleFunction(mStruct->sporef);
-        }
+    return mStruct->getVisualScaleFunction();
+}
 
 
 v8::Handle<v8::Value> setScale(const v8::Arguments& args)
@@ -349,8 +370,7 @@ v8::Handle<v8::Value> setScale(const v8::Arguments& args)
 
     float new_scale = NumericExtract(scale_arg);
     
-    mStruct->jsObjScript->setVisualScaleFunction(mStruct->sporef, new_scale);
-    return v8::Undefined();
+    return mStruct->setVisualScaleFunction(new_scale);
 }
 
 
@@ -384,11 +404,9 @@ Handle<v8::Value> toString(const v8::Arguments& args)
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-
     // Look up for the per space data
     //for now just print the space id
-    String s = mStruct->sporef->toString();
-    return v8::String::New(s.c_str(), s.length());
+    return mStruct->toString();
 }
 
 

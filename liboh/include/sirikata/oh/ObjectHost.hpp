@@ -34,6 +34,7 @@
 #define _SIRIKATA_OBJECT_HOST_HPP_
 
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/network/Address.hpp>
@@ -66,7 +67,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
 
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
-    typedef std::tr1::unordered_map<UUID, HostedObjectPtr, UUID::Hasher> HostedObjectMap;
+    typedef std::tr1::unordered_map<SpaceObjectReference, HostedObjectPtr, SpaceObjectReference::Hasher> HostedObjectMap;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -119,7 +120,7 @@ public:
 
     /** Connect the object to the space with the given starting parameters. */
     void connect(
-        HostedObjectPtr obj, const SpaceID& space,
+        const SpaceObjectReference& sporef, const SpaceID& space,
         const TimedMotionVector3f& loc,
         const TimedMotionQuaternion& orient,
         const BoundingSphere3f& bnds,
@@ -130,9 +131,10 @@ public:
         DisconnectedCallback disconnected_cb
     );
 
-    /** Disconnect the object from the space. */
-    void disconnect(HostedObjectPtr obj, const SpaceID& space);
 
+    /** Disconnect the object from the space. */
+    void disconnect(SpaceObjectReference& sporef, const SpaceID& space);
+    
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
      */
@@ -143,8 +145,9 @@ public:
     Duration clientTimeOffset(const SpaceID& space) const;
 
     /** Primary ODP send function. */
-    bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
-    bool send(HostedObjectPtr src, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
+    bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
+ 
 
 
 
@@ -152,17 +155,17 @@ public:
         talk to objects/services which are not part of any space.
         Done automatically by HostedObject::initialize* functions.
     */
-    void registerHostedObject(const HostedObjectPtr &obj);
+    void registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj);
     /// Unregister a private UUID. Done automatically by ~HostedObject.
-    void unregisterHostedObject(const UUID &objID);
+    void unregisterHostedObject(const SpaceObjectReference& sporef_uuid);
 
     /** Lookup HostedObject by private UUID. */
-    HostedObjectPtr getHostedObject(const UUID &id) const;
+    HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;
 
     /** Lookup the SST stream for a particular object. */
     typedef Stream<SpaceObjectReference> SSTStream;
     typedef SSTStream::Ptr SSTStreamPtr;
-    SSTStreamPtr getSpaceStream(const SpaceID& space, const UUID& internalID);
+    SSTStreamPtr getSpaceStream(const SpaceID& space, const ObjectReference& internalID);
 
     virtual void start();
     virtual void stop();
@@ -178,17 +181,14 @@ public:
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
 
-    //void updateAddressable() const;
-
-
-		void persistEntityState(const String&);
+    void persistEntityState(const String&);
 
   private:
     // Session Management Implementation
-    void handleObjectConnected(const UUID& internalID, ServerID server);
-    void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
-    void handleObjectMessage(const UUID& internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
-    void handleObjectDisconnected(const UUID& internalID, Disconnect::Code);
+    void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);
+    void handleObjectMigrated(const SpaceObjectReference& sporef_internalID, ServerID from, ServerID to);
+    void handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg);
+    void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
 
     // Wrapper to convert callback to use ConnectionInfo
     void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb);

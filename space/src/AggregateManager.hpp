@@ -47,7 +47,7 @@
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/ModelsSystem.hpp>
 
-#include <sirikata/core/util/MeshSimplifier.hpp>
+#include <sirikata/mesh/MeshSimplifier.hpp>
 
 
 namespace Sirikata {
@@ -60,7 +60,7 @@ private:
 
   ModelsSystem* mModelsSystem;
 
-  MeshSimplifier mMeshSimplifier;
+  Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
 
 
   typedef struct AggregateObject{
@@ -87,8 +87,15 @@ private:
 
     uint32 mNumObservers;
 
+    std::vector<UUID> mLeaves;
+    double mDistance;  //MINIMUM distance at which this object could be part of a cut
+
   } AggregateObject;
 
+  void getLeaves(const std::vector<UUID>& mIndividualObjects);
+
+  UUID mRootUUID;
+  
 
   boost::mutex mAggregateObjectsMutex;
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher > mAggregateObjects;
@@ -116,6 +123,7 @@ private:
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
 
+
 public:
 
   AggregateManager(SpaceContext* ctx, LocationService* loc) ;
@@ -130,7 +138,9 @@ public:
 
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
+  void aggregateObserved(const UUID& objid, uint32 nobservers);
 
+  
 
 
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );

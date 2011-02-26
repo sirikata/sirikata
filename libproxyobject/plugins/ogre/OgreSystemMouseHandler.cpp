@@ -163,6 +163,7 @@ class OgreSystem::OgreSystemMouseHandler : public MouseHandler {
     Task::DeltaTime mCameraPathTime;
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;
+    Task::LocalTime mLastRenderStatsTime;
 
     InputBinding::InputResponseMap mInputResponses;
 
@@ -1202,7 +1203,7 @@ private:
     }
 
 
-    
+
 
     void rotateAction(Vector3f about, float amount)
     {
@@ -1674,6 +1675,23 @@ private:
         }
     }
 
+    void renderStatsUpdateTick(const Task::LocalTime& t) {
+        if(mUIWidgetView) {
+            Task::DeltaTime dt = t - mLastRenderStatsTime;
+            if(dt.toSeconds() > 1) {
+                mLastRenderStatsTime = t;
+                Ogre::RenderTarget::FrameStats stats = mParent->getRenderTarget()->getStatistics();
+                mUIWidgetView->evaluateJS(
+                    "update_render_stats(" +
+                    boost::lexical_cast<String>(stats.batchCount) +
+                    ", " +
+                    boost::lexical_cast<String>(stats.triangleCount) +
+                    ")"
+                );
+            }
+        }
+    }
+
     void screenshotTick(const Task::LocalTime& t) {
         if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.0))) {
             timedScreenshotAction(t);
@@ -1749,6 +1767,7 @@ public:
        mCurrentGroup(SpaceObjectReference::null()),
        mLastCameraTime(Task::LocalTime::now()),
        mLastFpsTime(Task::LocalTime::now()),
+       mLastRenderStatsTime(Task::LocalTime::now()),
        mUploadWebView(NULL),
        mUIWidgetView(NULL),
        mQueryAngleWidgetView(NULL),
@@ -1998,6 +2017,7 @@ public:
     void tick(const Task::LocalTime& t) {
         cameraPathTick(t);
         fpsUpdateTick(t);
+        renderStatsUpdateTick(t);
         screenshotTick(t);
 
         if(!mUIWidgetView) {

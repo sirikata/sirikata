@@ -40,7 +40,7 @@
 #include <sirikata/core/util/MotionVector.hpp>
 #include <sirikata/core/util/MotionQuaternion.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
-
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/sync/TimeSyncClient.hpp>
 
@@ -74,15 +74,15 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
 
     // Notifies the ObjectHost class of a new object connection: void(object, connectedTo)
-    typedef std::tr1::function<void(const UUID&,ServerID)> ObjectConnectedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&,ServerID)> ObjectConnectedCallback;
     // Notifies the ObjectHost class of a migrated object:
     // void(object, migratedFrom, migratedTo)
-    typedef std::tr1::function<void(const UUID&,ServerID,ServerID)> ObjectMigratedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&,ServerID,ServerID)> ObjectMigratedCallback;
     // Returns a message to the object host for handling.
-    typedef std::tr1::function<void(const UUID&, Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&, Sirikata::Protocol::Object::ObjectMessage*)> ObjectMessageHandlerCallback;
     // Notifies the ObjectHost of object connection that was closed, including a
     // reason.
-    typedef std::tr1::function<void(const UUID&, Disconnect::Code)> ObjectDisconnectedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> ObjectDisconnectedCallback;
 
     // SST stream related typedefs
     typedef Stream<SpaceObjectReference> SSTStream;
@@ -97,7 +97,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
 
     /** Connect the object to the space with the given starting parameters. */
     void connect(
-        const UUID& objid,
+        const SpaceObjectReference& sporef_objid,
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
@@ -106,7 +106,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
     /** Disconnect the object from the space. */
-    void disconnect(const UUID& id);
+    void disconnect(const SpaceObjectReference& id);
 
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
@@ -123,7 +123,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     // only be used to deal with session management.
     // If dest_server is NullServerID, then getConnectedServer is used to determine where to send the packet.
     // This is used to possibly exchange data between the main and IO strands, so it acquires locks.
-    bool send(const UUID& objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
+    bool send(const SpaceObjectReference& sporef_objid, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server = NullServerID);
 
     SSTStreamPtr getSpaceStream(const ObjectReference& objectID);
 
@@ -166,10 +166,10 @@ private:
     // additional setup work (sst stream) and then invokes the real callback
     void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb);
 
-    void retryOpenConnection(const UUID&uuid,ServerID sid);
+    void retryOpenConnection(const SpaceObjectReference& sporef_uuid,ServerID sid);
 
     // Utility method which keeps trying to resend a message
-    void sendRetryingMessage(const UUID& src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
+    void sendRetryingMessage(const SpaceObjectReference& sporef_src, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload, ServerID dest_server, Network::IOStrand* strand, const Duration& rate);
 
     /** SpaceNodeConnection initiation. */
 
@@ -191,16 +191,16 @@ private:
     /** Object session initiation. */
 
     // Final callback in session initiation -- we have all the info and now just have to return it to the object
-    void openConnectionStartSession(const UUID& uuid, SpaceNodeConnection* conn);
+    void openConnectionStartSession(const SpaceObjectReference& sporef_uuid, SpaceNodeConnection* conn);
 
 
     /** Object session migration. */
 
     // Start the migration process for the object to the given server.
-    void migrate(const UUID& obj_id, ServerID sid);
+    void migrate(const SpaceObjectReference& sporef_obj_id, ServerID sid);
 
     // Callback that indicates we have a connection to the new server and can now start the migration to it.
-    void openConnectionStartMigration(const UUID& uuid, ServerID sid, SpaceNodeConnection* conn);
+    void openConnectionStartMigration(const SpaceObjectReference& sporef_uuid, ServerID sid, SpaceNodeConnection* conn);
 
 
     /** Time Sync related utilities **/
@@ -261,29 +261,29 @@ private:
 
         // Add the object, completely disconnected, to the index
         void add(
-            const UUID& objid, ConnectingInfo ci,
+            const SpaceObjectReference& sporef_objid, ConnectingInfo ci,
             ConnectedCallback connect_cb, MigratedCallback migrate_cb,
             StreamCreatedCallback stream_created_cb, DisconnectedCallback disconnected_cb
         );
 
         // Mark the object as connecting to the given server
-        ConnectingInfo& connectingTo(const UUID& obj, ServerID connecting_to);
+        ConnectingInfo& connectingTo(const SpaceObjectReference& obj, ServerID connecting_to);
 
         // Start a migration to a new server, return the MigratedCallback for the object
-        void startMigration(const UUID& objid, ServerID migrating_to);
+        void startMigration(const SpaceObjectReference& objid, ServerID migrating_to);
 
         WARN_UNUSED
-        ConnectedCallback& getConnectCallback(const UUID& objid);
+        ConnectedCallback& getConnectCallback(const SpaceObjectReference& sporef_objid);
 
         // Marks as connected and returns the server connected to. do_cb
         // specifies whether the callback should be invoked or deferred
-      ServerID handleConnectSuccess(const UUID& obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, bool do_cb);
+      ServerID handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, bool do_cb);
 
-        void handleConnectError(const UUID& objid);
+        void handleConnectError(const SpaceObjectReference& sporef_objid);
 
-        void handleConnectStream(const UUID& objid, bool do_cb);
+        void handleConnectStream(const SpaceObjectReference& sporef_objid, bool do_cb);
 
-        void remove(const UUID& obj);
+        void remove(const SpaceObjectReference& obj);
 
         // Handle a disconnection triggered by the loss of the underlying
         // network connection, i.e. because the TCPSST connection was lost
@@ -293,9 +293,9 @@ private:
         // Lookup the server the object is connected to.  With allow_connecting, allows using
         // the server currently being connected to, not just one where a session has been
         // established
-        ServerID getConnectedServer(const UUID& obj_id, bool allow_connecting = false);
+        ServerID getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting = false);
 
-        UUID getInternalID(const ObjectReference& space_objid) const;
+        //UUID getInternalID(const ObjectReference& space_objid) const;
 
         // We have to defer some callbacks sometimes for time
         // synchronization. This invokes them, allowing the connection process
@@ -324,14 +324,14 @@ private:
   	    StreamCreatedCallback streamCreatedCB;
   	    DisconnectedCallback disconnectedCB;
         };
-        typedef std::tr1::unordered_map<ServerID, std::vector<UUID> > ObjectServerMap;
+        typedef std::tr1::unordered_map<ServerID, std::vector<SpaceObjectReference> > ObjectServerMap;
         ObjectServerMap mObjectServerMap;
-        typedef std::tr1::unordered_map<UUID, ObjectInfo, UUID::Hasher> ObjectInfoMap;
+        typedef std::tr1::unordered_map<SpaceObjectReference, ObjectInfo, SpaceObjectReference::Hasher> ObjectInfoMap;
         ObjectInfoMap mObjectInfo;
 
         // A reverse index allows us to lookup an objects internal ID
-        typedef std::tr1::unordered_map<ObjectReference, UUID, ObjectReference::Hasher> InternalIDMap;
-        InternalIDMap mInternalIDs;
+        //typedef std::tr1::unordered_map<SpaceObjectReference, UUID, ObjectReference::Hasher> InternalIDMap;
+        //InternalIDMap mInternalIDs;
 
         typedef std::tr1::function<void()> DeferredCallback;
         typedef std::vector<DeferredCallback> DeferredCallbackList;

@@ -118,10 +118,17 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
-
-    
-
+    mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
+            
     addTypeTemplates(mUtilTemplate);
+}
+
+
+void JSObjectScriptManager::createQuotedTemplate()
+{
+    v8::HandleScope handle_scope;
+    mQuotedTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mQuotedTemplate->SetInternalFieldCount(QUOTED_TEMPLATE_FIELD_COUNT);
 }
 
 
@@ -135,10 +142,7 @@ void JSObjectScriptManager::createWhenTemplate()
 
     mWhenTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSWhen::WhenSuspend));
     mWhenTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSWhen::WhenResume));
-    mWhenTemplate->Set(v8::String::New("getPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetPeriod));
-    mWhenTemplate->Set(v8::String::New("setPeriod"),v8::FunctionTemplate::New(JSWhen::WhenSetPeriod));
     mWhenTemplate->Set(v8::String::New("getWhenLastPredState"),v8::FunctionTemplate::New(JSWhen::WhenGetLastPredState));
-    mWhenTemplate->Set(v8::String::New("getWhenMinPeriod"),v8::FunctionTemplate::New(JSWhen::WhenGetMinPeriod));
 }
 
 
@@ -153,6 +157,7 @@ void JSObjectScriptManager::createTemplates()
 
     createWatchedTemplate();
     createWhenTemplate();
+    createQuotedTemplate();
     
     createUtilTemplate();
 
@@ -181,6 +186,10 @@ void JSObjectScriptManager::createTimerTemplate()
 
     mTimerTemplate->Set(v8::String::New("resetTimer"),v8::FunctionTemplate::New(JSTimer::resetTimer));
     mTimerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSTimer::clear));
+    mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
+    mTimerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSTimer::resume));
+
+    
 }
 
 
@@ -230,6 +239,8 @@ void JSObjectScriptManager::createContextTemplate()
     // Functions / types
     //suspend,kill,resume,execute
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
+    mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
+    mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
  
 }
 
@@ -285,6 +296,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
+    system_templ->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
     //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
     
     //math, vec, quaternion, etc.
@@ -325,6 +337,70 @@ void JSObjectScriptManager::createVisibleTemplate()
     mVisibleTemplate->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
 }
 
+
+void JSObjectScriptManager::createPresenceTemplate()
+{
+  v8::HandleScope handle_scope;
+
+  mPresenceTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
+  //mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
+  
+  v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
+
+  //These are not just accessors because we need to ensure that we can deal with
+  //their failure conditions.  (Have callbacks).
+
+   //v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
+
+  proto_t->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
+
+  //meshes
+  proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
+  proto_t->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  //positions
+  proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
+  proto_t->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
+
+  //velocities
+  proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
+  proto_t->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
+
+  //orientations
+  proto_t->Set(v8::String::New("setOrientation"),v8::FunctionTemplate::New(JSPresence::setOrientation));
+  proto_t->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSPresence::getOrientation));
+
+  //orientation velocities
+  proto_t->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
+  proto_t->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
+
+  //scale
+  proto_t->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
+  proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
+
+  //callback on prox addition and removal
+  proto_t->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  
+    
+  // Query angle
+  proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
+
+  //set up graphics
+  proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
+
+  //send broadcast message
+  proto_t->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
+
+
+  // For instance templates
+  v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
+  instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
+
+}
+
+
+/*
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
@@ -335,6 +411,8 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   //These are not just accessors because we need to ensure that we can deal with
   //their failure conditions.  (Have callbacks).
+
+   //v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
 
   mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
 
@@ -365,7 +443,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   //callback on prox addition and removal
   mPresenceTemplate->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
   mPresenceTemplate->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
-  
+
+  //check if the presence is connected
+  mPresenceTemplate->SetAccessor(v8::String::New("isConnected"),JSPresence::isConnectedGetter,JSPresence::isConnectedSetter);
     
   // Query angle
   mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
@@ -376,7 +456,11 @@ void JSObjectScriptManager::createPresenceTemplate()
   //send broadcast message
   mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
+  mPresenceTemplate->Set(v8::String::New("distance"),v8::FunctionTemplate::New(JSPresence::distance));
+  
 }
+
+*/
 
 
 //a handler is returned whenever you register a handler in system.

@@ -37,6 +37,14 @@
 #include "SaveFilter.hpp"
 #include "PrintFilter.hpp"
 #include "ComputeBoundsFilter.hpp"
+#include "SquashPrimitivesFilter.hpp"
+#include "SquashMaterialsFilter.hpp"
+#include "SquashInstancedGeometryFilter.hpp"
+#include "SingleMaterialGeometryFilter.hpp"
+
+#include "CompositeFilters.hpp"
+#include "TransformFilter.hpp"
+#include "CenterFilter.hpp"
 
 static int common_filters_plugin_refcount = 0;
 
@@ -49,6 +57,17 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
         FilterFactory::getSingleton().registerConstructor("save", SaveFilter::create);
         FilterFactory::getSingleton().registerConstructor("print", PrintFilter::create);
         FilterFactory::getSingleton().registerConstructor("compute-bounds", ComputeBoundsFilter::create);
+        FilterFactory::getSingleton().registerConstructor("squash-primitives", SquashPrimitivesFilter::create);
+        FilterFactory::getSingleton().registerConstructor("squash-materials", SquashMaterialsFilter::create);
+        FilterFactory::getSingleton().registerConstructor("squash-instanced-geometry", SquashInstancedGeometryFilter::create);
+        FilterFactory::getSingleton().registerConstructor("single-material-geometry", SingleMaterialGeometryFilter::create);
+        FilterFactory::getSingleton().registerConstructor("reduce-draw-calls", ReduceDrawCalls);
+
+        FilterFactory::getSingleton().registerConstructor("translate", TransformFilter::createTranslate);
+        FilterFactory::getSingleton().registerConstructor("rotate", TransformFilter::createRotate);
+        FilterFactory::getSingleton().registerConstructor("scale", TransformFilter::createScale);
+
+        FilterFactory::getSingleton().registerConstructor("center", CenterFilter::create);
     }
 
     ++common_filters_plugin_refcount;
@@ -81,6 +100,16 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
             FilterFactory::getSingleton().unregisterConstructor("save");
             FilterFactory::getSingleton().unregisterConstructor("print");
             FilterFactory::getSingleton().unregisterConstructor("compute-bounds");
+            FilterFactory::getSingleton().unregisterConstructor("squash-primitives");
+            FilterFactory::getSingleton().unregisterConstructor("squash-materials");
+            FilterFactory::getSingleton().unregisterConstructor("squash-instanced-geometry");
+            FilterFactory::getSingleton().unregisterConstructor("single-material-geometry");
+
+            FilterFactory::getSingleton().unregisterConstructor("translate");
+            FilterFactory::getSingleton().unregisterConstructor("rotate");
+            FilterFactory::getSingleton().unregisterConstructor("scale");
+
+            FilterFactory::getSingleton().unregisterConstructor("center");
         }
     }
 }

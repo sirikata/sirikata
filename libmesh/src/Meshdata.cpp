@@ -55,6 +55,135 @@ Node::Node(const Matrix4x4f& xform)
 {
 }
 
+void SubMeshGeometry::append(const SubMeshGeometry& rhs, const Matrix4x4f& xform) {
+    Matrix3x3f normal_xform = xform.extract3x3().inverseTranspose();
+
+    int32 index_offset = this->positions.size();
+    for(uint32 pi = 0; pi < rhs.positions.size(); pi++)
+        this->positions.push_back(xform * rhs.positions[pi]);
+    for(uint32 ni = 0; ni < rhs.normals.size(); ni++)
+        this->normals.push_back( normal_xform * rhs.normals[ni] );
+    // FIXME tangents?
+    this->colors.insert(this->colors.end(), rhs.colors.begin(), rhs.colors.end());
+
+    // FIXME: influenceStartIndex? jointindices? weights? inverseBindMatrices?
+
+    assert((this->texUVs.size() == 0 && index_offset == 0) ||
+        this->texUVs.size() == rhs.texUVs.size()); // same tex uvs or first
+                                                   // added
+    if (this->texUVs.size() == 0) {
+        // Copy
+        this->texUVs = rhs.texUVs;
+    }
+    else {
+        // Append
+        for(uint32 ti = 0; ti < rhs.texUVs.size(); ti++) {
+            assert( this->texUVs[ti].stride == rhs.texUVs[ti].stride );
+            this->texUVs[ti].uvs.insert(
+                this->texUVs[ti].uvs.end(),
+                rhs.texUVs[ti].uvs.begin(), rhs.texUVs[ti].uvs.end()
+            );
+        }
+    }
+
+    // Copy primitives
+    // FIXME this currently assumes all the materialIDs line up, and its not
+    // clear how to handle this any better
+    for(uint32 pi = 0; pi < rhs.primitives.size(); pi++) {
+        const Primitive& orig_prim = rhs.primitives[pi];
+        this->primitives.push_back( Primitive() );
+        Primitive& prim = this->primitives.back();
+        prim.primitiveType = orig_prim.primitiveType;
+        prim.materialId = orig_prim.materialId;
+
+        prim.indices.resize( orig_prim.indices.size() );
+        for(uint32 ii = 0; ii < orig_prim.indices.size(); ii++)
+            prim.indices[ii] = orig_prim.indices[ii] + index_offset;
+    }
+}
+
+void SubMeshGeometry::recomputeBounds() {
+    aabb = BoundingBox3f3f::null();
+    radius = 0.;
+    for(uint32 pi = 0; pi < primitives.size(); pi++) {
+        const Primitive& prim = primitives[pi];
+        for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
+            aabb = (aabb == BoundingBox3f3f::null()) ? BoundingBox3f3f(positions[prim.indices[ii]], positions[prim.indices[ii]]) : aabb.merge(positions[prim.indices[ii]]);
+            double l = sqrt(positions[prim.indices[ii]].lengthSquared());
+            radius = std::max(radius, l);
+        }
+    }
+}
+
+void GeometryInstance::computeTransformedBounds(MeshdataPtr parent, const Matrix4x4f& xform, BoundingBox3f3f* bounds_out, double* radius_out) const {
+    computeTransformedBounds(*parent, xform, bounds_out, radius_out);
+}
+
+void GeometryInstance::computeTransformedBounds(const Meshdata& parent, const Matrix4x4f& xform, BoundingBox3f3f* bounds_out, double* radius_out) const {
+    const SubMeshGeometry& geo = parent.geometry[ geometryIndex ];
+
+    if (bounds_out != NULL)
+        *bounds_out = BoundingBox3f3f::null();
+    if (radius_out != NULL)
+        *radius_out = 0.;
+
+    for(uint32 pi = 0; pi < geo.primitives.size(); pi++) {
+        const SubMeshGeometry::Primitive& prim = geo.primitives[pi];
+        for(uint32 ii = 0; ii < prim.indices.size(); ii++) {
+            Vector3f xpos = xform * geo.positions[ prim.indices[ii] ];
+            if (bounds_out != NULL)
+                *bounds_out = (*bounds_out == BoundingBox3f3f::null()) ? BoundingBox3f3f(xpos, xpos) : bounds_out->merge(xpos);
+            if (radius_out != NULL)
+                *radius_out = std::max(*radius_out, sqrt(xpos.lengthSquared()));
+        }
+    }
+}
+
+BoundingBox3f3f GeometryInstance::computeTransformedBounds(const Meshdata& parent, const Matrix4x4f& xform) const {
+    BoundingBox3f3f result;
+    computeTransformedBounds(parent, xform, &result, NULL);
+    return result;
+}
+
+BoundingBox3f3f GeometryInstance::computeTransformedBounds(MeshdataPtr parent, const Matrix4x4f& xform) const {
+    return computeTransformedBounds(*parent, xform);
+}
+
+bool MaterialEffectInfo::Texture::operator==(const MaterialEffectInfo::Texture& rhs) const {
+    return (
+        uri == rhs.uri &&
+        color == rhs.color &&
+        texCoord == rhs.texCoord &&
+        affecting == rhs.affecting &&
+        samplerType == rhs.samplerType &&
+        minFilter == rhs.minFilter &&
+        magFilter == rhs.magFilter &&
+        wrapS == rhs.wrapS &&
+        wrapT == rhs.wrapT &&
+        wrapU == rhs.wrapU &&
+        maxMipLevel == rhs.maxMipLevel &&
+        mipBias == rhs.mipBias);
+
+}
+bool MaterialEffectInfo::Texture::operator!=(const MaterialEffectInfo::Texture& rhs) const {
+    return !(*this == rhs);
+}
+
+bool MaterialEffectInfo::operator==(const MaterialEffectInfo& rhs) const {
+    bool basic =
+        shininess == rhs.shininess &&
+        reflectivity == rhs.reflectivity &&
+        textures.size() == rhs.textures.size();
+    if (!basic) return false;
+    for(int i = 0; i < textures.size(); i++) {
+        if (textures[i] != rhs.textures[i]) return false;
+    }
+    return true;
+}
+bool MaterialEffectInfo::operator!=(const MaterialEffectInfo& rhs) const {
+    return !(*this == rhs);
+}
+
 Matrix4x4f Meshdata::getTransform(NodeIndex index) const {
     // Just trace up the tree, multiplying in transforms
     Matrix4x4f xform(Matrix4x4f::identity());
@@ -71,9 +200,30 @@ Meshdata::GeometryInstanceIterator Meshdata::getGeometryInstanceIterator() const
     return GeometryInstanceIterator(this);
 }
 
+uint32 Meshdata::getInstancedGeometryCount() const {
+    uint32 count = 0;
+    Meshdata::GeometryInstanceIterator geoinst_it = getGeometryInstanceIterator();
+    uint32 geoinst_idx;
+    Matrix4x4f pos_xform;
+    while( geoinst_it.next(&geoinst_idx, &pos_xform) )
+        count++;
+    return count;
+}
+
 Meshdata::LightInstanceIterator Meshdata::getLightInstanceIterator() const {
     return LightInstanceIterator(this);
 }
+
+uint32 Meshdata::getInstancedLightCount() const {
+    uint32 count = 0;
+    Meshdata::LightInstanceIterator lightinst_it = getLightInstanceIterator();
+    uint32 lightinst_idx;
+    Matrix4x4f pos_xform;
+    while( lightinst_it.next(&lightinst_idx, &pos_xform) )
+        count++;
+    return count;
+}
+
 
 
 
@@ -95,7 +245,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             st.index = mMesh->rootNodes[mRoot];
             st.step = NodeState::Nodes;
             st.currentChild = -1;
-            st.transform = mMesh->globalTransform;
+            st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
             mStack.push(st);
         }
 
@@ -129,8 +279,8 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             NodeState st;
             st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
             st.step = NodeState::Nodes;
-            st.currentChild = -1;
-            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            st.currentChild = -1;  
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform; 
             mStack.push(st);
             continue;
         }
@@ -150,6 +300,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             // Otherwise, just yield the information
             *geo_idx = node.currentChild;
             *xform = node.transform;
+            
             return true;
         }
 

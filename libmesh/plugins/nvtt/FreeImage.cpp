@@ -1,7 +1,7 @@
 /*  Sirikata
- *  MeshSimplifier.hpp
+ *  FreeImage.cpp
  *
- *  Copyright (c) 2010, Tahir Azim.
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,53 +30,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/UUID.hpp>
-
-#include <sirikata/core/transfer/TransferData.hpp>
-#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/core/transfer/TransferMediator.hpp>
-
-#include <sirikata/mesh/Meshdata.hpp>
+#include "FreeImage.hpp"
 
 namespace Sirikata {
 
-class SIRIKATA_EXPORT MeshSimplifier {
-private:
+bool freeimage_initialized = false;
 
-  double invert(Matrix4x4f& inv, Matrix4x4f& orig);
-
-  typedef struct QSlimStruct {
-    float mCost;
-    int mGeomIdx, mPrimitiveIdx, mPrimitiveIndicesIdx;
-    enum VectorCombination {ONE_TWO, TWO_THREE, ONE_THREE} ;
-
-    VectorCombination mCombination;
-
-    Vector3f mReplacementVector;
-
-    QSlimStruct(float cost, int i, int j, int k, VectorCombination c, Vector3f v) {
-      mCost = cost;
-      mGeomIdx = i;
-      mPrimitiveIdx = j;
-      mPrimitiveIndicesIdx = k;
-      mCombination = c;
-      mReplacementVector = v;
+void InitFreeImage() {
+    if (!freeimage_initialized) {
+        FreeImage_Initialise();
+        freeimage_initialized = true;
     }
-
-    bool operator < (const QSlimStruct& qs) const {
-      return mCost < qs.mCost;
-    }
-
-  } QSlimStruct;
-
-
-public:
-
-  void simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft);
-
-
-};
-
 }
+
+} // namespace Sirikata

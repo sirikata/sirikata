@@ -10,6 +10,8 @@ namespace JSTimer{
 
 v8::Handle<v8::Value> resetTimer(const v8::Arguments& args);
 v8::Handle<v8::Value> clear(const v8::Arguments& args);
+v8::Handle<v8::Value> suspend(const v8::Arguments& args);
+v8::Handle<v8::Value> resume(const v8::Arguments& args);
 
 } //jstimer
 } //js

@@ -1,23 +1,54 @@
-#include "JSEventHandler.hpp"
+#include "JSEventHandlerStruct.hpp"
 #include <v8.h>
-#include "JSPattern.hpp"
+#include "../JSPattern.hpp"
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/odp/Defs.hpp>
 
-#include "JSObjects/JSFields.hpp"
-#include "JSObjectStructs/JSVisibleStruct.hpp"
-
+#include "../JSObjects/JSFields.hpp"
+#include "JSVisibleStruct.hpp"
+#include "../JSLogging.hpp"
+#include "JSContextStruct.hpp"
+#include "JSSuspendable.hpp"
 
 namespace Sirikata {
 namespace JS {
 
-//sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
-bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender) const
+JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
+ : JSSuspendable(),
+   pattern(_pattern),
+   target(_target),
+   cb(_cb),
+   sender(_sender),
+   jscont(NULL)
 {
-    if (suspended)
+    v8::HandleScope handle_scope;
+    jscont = JSContextStruct::getJSContextStruct();
+    if (jscont != NULL)
+        jscont->struct_registerSuspendable(this);
+
+}
+
+
+JSEventHandlerStruct::~JSEventHandlerStruct()
+{
+    if (! getIsCleared())
+    {
+        if (jscont != NULL)
+            jscont->struct_deregisterSuspendable(this);
+
+        target.Dispose();
+        cb.Dispose();
+        sender.Dispose();
+    }
+}
+
+//sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
+bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender)
+{
+    if (getIsSuspended() || getIsCleared())
         return false; //cannot match a suspended handler
 
     //decode the sender of the message
@@ -49,7 +80,6 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
         //check if the senders match
         if ( (*spref1)  != (*spref2))  //the senders do not match.  do not fire
             return false;
-
     }
 
     
@@ -65,31 +95,51 @@ bool JSEventHandler::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> 
 
 
 
-
-
-//changes state of handler to suspended
-void JSEventHandler::suspend()
+v8::Handle<v8::Value> JSEventHandlerStruct::suspend()
 {
-    suspended = true;
+    if (getIsCleared())
+    {
+        JSLOG(info, "Error in suspend of JSEventHandlerStruct.cpp.  Called suspend even though the handler had previously been cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a handler that had already been cleared.")));
+    }
+
+    return JSSuspendable::suspend();
 }
 
-void JSEventHandler::resume()
+v8::Handle<v8::Value> JSEventHandlerStruct::resume()
 {
-    suspended = false;
+    if (getIsCleared())
+    {
+        JSLOG(info, "Error in resume of JSEventHandlerStruct.cpp.  Called resume even though the handler had previously been cleared.");
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called resume on a handler that had already been cleared.")));
+    }
+    
+    return JSSuspendable::resume();
+}
+v8::Handle<v8::Value> JSEventHandlerStruct::clear()
+{
+    target.Dispose();
+    cb.Dispose();
+    sender.Dispose();
+    return JSSuspendable::clear();
 }
 
-bool JSEventHandler::isSuspended()
-{
-    return suspended;
-}
 
 
-void JSEventHandler::printHandler()
+
+void JSEventHandlerStruct::printHandler()
 {
+    if (getIsCleared())
+    {
+        std::cout<<"**Cleared.  No information.";
+        return;
+    }
+
+    
     //print patterns
     for (PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
     {
-        if (suspended)
+        if (getIsSuspended())
             std::cout<<"**Suspended  ";
         else
             std::cout<<"**Active     ";

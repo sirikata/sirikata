@@ -112,10 +112,10 @@ public:
 private:
     struct ConnectingInfo;
 
-    void handleObjectConnected(const UUID& internalID, ServerID server);
-    void handleObjectMigrated(const UUID& internalID, ServerID from, ServerID to);
-    void handleObjectMessage(const UUID& internalID, Sirikata::Protocol::Object::ObjectMessage* msg);
-    void handleObjectDisconnected(const UUID& internalID, Disconnect::Code);
+    void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);
+    void handleObjectMigrated(const SpaceObjectReference& sporef_internalID, ServerID from, ServerID to);
+    void handleObjectMessage(const SpaceObjectReference& sporef_internalID, Sirikata::Protocol::Object::ObjectMessage* msg);
+    void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
 
     OptionSet* mStreamOptions;
 

@@ -24,6 +24,12 @@ function update_fps(num) {
 	$("#fps-num").html(formatted);
 }
 
+var renderStatsDisplayEnabled = true;
+function update_render_stats(batches, tris) {
+	var formatted = batches + " batches, " + tris + " triangles";
+	$("#render-stats").html(formatted);
+}
+
 function alert_permanent(title, text) {
 	var $dialog = $('<div></div>')
 	.html(text)
@@ -74,6 +80,14 @@ $(document).ready(function() {
 				fpsDisplayEnabled = true;
 				$('#fps-display').show();
 			}
+		}
+
+		if(action_clicked == 'action_toggle_render_stats') {
+                    renderStatsDisplayEnabled = !renderStatsDisplayEnabled;
+                    if (renderStatsDisplayEnabled)
+                        $('#render-stats-display').show();
+                    else
+                        $('#render-stats-display').hide();
 		}
 		
 		if(action_clicked == 'action_cdn_upload') {

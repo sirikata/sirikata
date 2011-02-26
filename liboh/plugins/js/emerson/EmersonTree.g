@@ -21,130 +21,109 @@ options
 
 @header
 {
-  #include <stdlib.h>
-		#include <string.h>
-		#include <antlr3.h>
-  #include "EmersonUtil.h" 
-	 #define APP(s) program_string->append(program_string, s);
-
-	//	pANTLR3_STRING program_string;
+    #include <stdlib.h>
+    #include <string.h>
+    #include <antlr3.h>
+    #include "Util.h"
+    #define APP(s) program_string->append(program_string, s);
+    
+    #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
+    #define __SIRIKATA_INSIDE_WHEN_PRED__
+    static bool insideWhenPred = false;
+    #endif
 }
 
 @members
 {
-  
-		pANTLR3_STRING program_string;
+    pANTLR3_STRING program_string;
 }
 
 
-	program returns [pANTLR3_STRING  s]
+program returns [pANTLR3_STRING  s]
 	:^(PROG 
-	    {
-					  pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+            {
+                pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+                program_string = factory->newRaw(factory);
+            }
+            sourceElements
+           )
+           {
+                s = program_string;
+           }
+	;
 
-					  program_string = factory->newRaw(factory);
-					}
-					sourceElements
-					
-					)
-	{
-	  s = program_string;
-	}
-	                       
-	;
+        
+sourceElements
+    :(sourceElement{APP("\n"); })+  // omitting the LT 
+    ;
 	
- sourceElements
-		:(sourceElement{APP("\n"); })+  // omitting the LT 
-	;
-	
-	sourceElement
-	: functionDeclaration
-	| statement{ APP(";"); }
-	;
+sourceElement
+    : functionDeclaration
+    | statement{ APP(";"); }
+    ;
 	
 // functions
 functionDeclaration
 	: ^( FUNC_DECL
-	         {
-										  
-						 APP("function ");
-					 }
-	         Identifier
-	         {
-										  
-												APP((const char*)$Identifier.text->chars);
-												APP("( ");
-										} 
-					formalParameterList 
-					     {
-										              
-												APP(" )");
-												APP("\n{\n");
-
-										}
-					functionBody
-					     {
-            
-										  APP("\n}");
-            
-
-										}
-					 					
-					)
-	
+              {
+                APP("function ");
+              }
+              Identifier
+              {
+                APP((const char*)$Identifier.text->chars);
+                APP("( ");
+              } 
+              (formalParameterList)?
+              {
+                APP(" )");
+                APP("\n{\n");
+              }
+              functionBody
+              {
+                APP("\n}");
+              }
+            )
 	;
 	
 functionExpression
 	: ^( FUNC_EXPR 
 	     {
-        APP("function ");
-
-						}
-						(			
-						 Identifier
-						 {
-							  APP((const char*)$Identifier.text->chars);
-							}
-						)?  
-						{
-						
-									APP("( ");
-						}
-						formalParameterList 
-						  {
-          
-										APP("  )");
-										APP("\n{\n");
-
-								}
-						functionBody
-						  {
-								  APP("\n}");
-								}
-						)
-	; 
+               APP("function ");
+             }
+             (			
+               Identifier
+                 {
+                   APP((const char*)$Identifier.text->chars);
+                 }
+             )? 
+             {
+               APP("( ");
+             }
+             (formalParameterList)?
+             {
+               APP("  )");
+               APP("\n{\n");
+             }
+             functionBody
+             {
+               APP("\n}");
+             }
+           )
+       ;
 	
 formalParameterList
-	: ^( FUNC_PARAMS 
-	     (id1=Identifier
-									{
-						     APP((const char*)$id1.text->chars);
-											APP(" ");
-
-									}
-							)?		
-						(
-						 id2=Identifier
-							{
-									APP(", ");
-						   APP((const char*)$id2.text->chars);
-									APP(" ");
-							}
-						
-						)*
-						
-					)
-;
+  : ^(FUNC_PARAMS
+                (id1=Identifier {APP((const char*)$id1.text->chars); })
+                
+	       (
+                 {
+                   APP(", ");
+                 }
+                 id2=Identifier {APP((const char*)$id2.text->chars);}
+		)*
+      )
+  ;
+ 
 
 functionBody
 	: sourceElements
@@ -153,64 +132,57 @@ functionBody
 
 // statements
 statement
-	: statementBlock
-	| variableStatement
-	//| emptyStatement
-	| expressionStatement
-	| ifStatement
-	| iterationStatement
-	| continueStatement
-	| breakStatement
-	| returnStatement
-	| withStatement
-	| labelledStatement
-	| switchStatement
-	| throwStatement
-	| tryStatement
-	| msgSendStatement
-	| msgRecvStatement
+    : statementBlock
+    | variableStatement
+    | expressionStatement
+    | ifStatement
+    | iterationStatement
+    | continueStatement
+    | breakStatement
+    | returnStatement
+    | withStatement
+    | labelledStatement
+    | switchStatement
+    | throwStatement
+    | whenStatement
+    | tryStatement
+    | msgSendStatement
+    | msgRecvStatement
 	;
 	
 statementBlock
 	: {APP(" {\n "); } statementList {  
-	   APP(" }\n");
-	   }
+            APP(" }\n");
+        }
 	;
 	
 statementList
 	:  ^(
-	      SLIST 
-							(statement
-							  {
+            SLIST 
+            (statement
+                {
 			        APP("; \n");					  
-
-									}
-							)+
-							
-	
-	    )
-	;
+                }
+            )+
+	    );
 	
 variableStatement
 	:  ^( 
-	      VARLIST
-							  {
-									  APP("var ");
-									}
-	      variableDeclarationList
-					)
-	;
+            VARLIST
+            {
+                APP("var ");
+            }
+            variableDeclarationList
+        );
 	
 variableDeclarationList
 	: variableDeclaration 
-	  (
-      {
-						  APP(", ");
-						}	
-	   variableDeclaration
-			  
-			)*
-			
+        (
+            {
+                APP(", ");
+            }	
+            variableDeclaration
+        )*
 	;
 	
 variableDeclarationListNoIn
@@ -219,42 +191,41 @@ variableDeclarationListNoIn
 	
 variableDeclaration
 	: ^(
-	    VAR
-	    Identifier 
-					  {
-							  APP((const char*)$Identifier.text->chars);
-							}
-					
-					(
-					  {
-							  APP(" = ");
-							}
-					initialiser
-					)?
-					
-					)
+            VAR
+            Identifier 
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+            
+            (
+                {
+                    APP(" = ");
+                }
+                initialiser
+            )?
+        )
 	;
 	
 variableDeclarationNoIn
 	: 
-	^(
-	    VAR
+        ^(
+            VAR
 			{
-			  APP("var ");
+                APP("var ");
 			}
-	    Identifier 
-					  {
-							  APP((const char*)$Identifier.text->chars);
-							}
+            Identifier 
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+            
+            (
+                {
+                    APP(" = ");
+                }
+                initialiserNoIn
+            )?
 					
-					(
-					  {
-							  APP(" = ");
-							}
-					initialiserNoIn
-					)?
-					
-			)
+        )
 	;
 	
 initialiser
@@ -277,35 +248,27 @@ expressionStatement
 	
 ifStatement
 	: ^(IF 
-	    {
-
-							APP(" if ");
-							APP(" ( ");
-
-
-					}
-	   expression 
-				 {
-					  APP(" ) ");
-							
-					  //printf(" { \n");
-					}
-     
-				statement 
-				 {
-					  APP(" \n");
-					}
-     
-				(
-				 {
-					  APP(" else ");
-					}
-				 statement
-				 
-				)?
-				
-				)
-	   
+            {
+                
+                APP(" if ");
+                APP(" ( ");
+            }
+            expression 
+            {
+                APP(" ) ");
+            }
+            statement 
+            {
+                APP(" \n");
+            }
+            (
+                {
+                    APP(" else ");
+                }
+                statement
+                
+            )?
+        )
 	;
 	
 iterationStatement
@@ -317,89 +280,79 @@ iterationStatement
 	
 doWhileStatement
 	: ^( 
-	    DO
-					 {
-        APP(" do ");  						  
-						}    
-	    statement
-					{
-					  APP("while ( " );      
-					}
-
-					expression 
-
-					{
-					  APP(" ) ");  
-					}
-					
-					)
+            DO
+            {
+                APP(" do ");  						  
+            }    
+	        statement
+            {
+                APP("while ( " );      
+            }
+            expression 
+            {
+                APP(" ) ");  
+            }
+        )
 	;
 	
 whileStatement
 	: ^(
-	   WHILE
-				  {
-						  APP(" while ( ");
-						}
-	
-	   expression 
-
-			 {
-			   APP(" ) "); 
-			 }
-			
-			 statement
-			)
+            WHILE
+            {
+                APP(" while ( ");
+            }
+            expression 
+            {
+                APP(" ) "); 
+            }
+            statement
+        )
 	;
 	
 forStatement
 	: ^(
-	     FOR 
-	     {
-						  APP(" for ( ");
-						}
-	     (^(FORINIT forStatementInitialiserPart))?
-						{
-						  APP(" ; ");
-						}
-						(^(FORCOND expression))? 
-						{
-						  APP(" ; ");
-						}
-						(^(FORITER expression))?  
-						
-      {
-						  APP(" ) ");
-						}
-						statement
-					
-					)
+            FOR 
+            {
+                APP(" for ( ");
+            }
+            (^(FORINIT forStatementInitialiserPart))?
+            {
+                APP(" ; ");
+            }
+            (^(FORCOND expression))? 
+            {
+                APP(" ; ");
+            }
+            (^(FORITER expression))?  
+            {
+                APP(" ) ");
+            }
+            statement
+        )
 	;
 	
 forStatementInitialiserPart
-	: expressionNoIn
-	| ^(VARLIST variableDeclarationListNoIn)
-	;
+    : expressionNoIn
+    | ^(VARLIST variableDeclarationListNoIn)
+    ;
 	
 forInStatement
 	: ^(
-	     FORIN 
-	     {
-			   APP(" for ( ");
-			 }
+        FORIN 
+        {
+            APP(" for ( ");
+        }
 
-	     forInStatementInitialiserPart 
-		   {
-		     APP(" in ");
-		   }
-		   expression 
-       {
-			   APP(" ) ");
-			 }
-		 
-		   statement
-		 
-		 )
+        forInStatementInitialiserPart 
+        {
+            APP(" in ");
+        }
+        expression 
+        {
+            APP(" ) ");
+        }
+        statement
+    )
 	;
 	
 forInStatementInitialiserPart
@@ -408,194 +361,232 @@ forInStatementInitialiserPart
 	;
 
 continueStatement
-	: ^(
-	    CONTINUE 
-	    {
-					  APP("continue ");
-					} 
-	   
-				 (
-					 Identifier
-					 {
-						  APP((const char*)$Identifier.text->chars);
-						}
-					)?
-
-				
-				)
-			
-
+    : ^(
+        CONTINUE 
+        {
+            APP("continue ");
+        } 
+        (
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+        )?
+      )
 	;
 
 breakStatement
-	: ^(
-	    BREAK
-					{
-					  APP("break ");
-					}
-	     (
-						Identifier
-						{
-						  APP((const char*)$Identifier.text->chars);
-						}
-						)?
-						
-					)
+    : ^(
+        BREAK
+        {
+            APP("break ");
+        }
+        (
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+            }
+        )?
+        )
 	;
 
 returnStatement
-	: ^(
-	    RETURN 
-	     {
-						  APP("return ");
-						}
-				(		
-	   
-				  expression
-				
-				)?
-				
-				)
-
+    : ^(
+        RETURN 
+        {
+            APP("return ");
+        }
+        (		
+            expression
+        )?
+       )
 	;
 	
 withStatement
-	: ^(WITH expression statement)
-	;
+    : ^(WITH expression statement)
+    ;
 
 labelledStatement
-	: ^( LABEL 
-	    Identifier 
-
-					 {
-						  
-						  APP((const char*)$Identifier.text->chars);
-						  APP(" : \n");
-						}
-					statement
-					
-					)
+    : ^( LABEL 
+        Identifier 
+        {
+            APP((const char*)$Identifier.text->chars);
+            APP(" : \n");
+        }
+        statement
+        )
 	;
 	
 switchStatement
-	: ^(
-	    SWITCH 
-	     {
-						  APP(" switch ( ");
-								
-						}
-
-	    expression 
-			   {
-
-								APP(" ) \n");
-								APP("{ \n");
-
-						}
-      
-						
-			  caseBlock
-
-					 {
-						  APP("} \n");
-						}
-			
-			)
+    : ^(
+        SWITCH 
+        {
+            APP(" switch ( ");
+        }
+        expression 
+        {
+            APP(" ) \n");
+            APP("{ \n");
+        }
+        caseBlock
+        {
+            APP("} \n");
+        }
+       )
 	;
 	
 caseBlock
-	: (caseClause)* (defaultClause*)? (caseClause*)?
-	;
+    : (caseClause)* (defaultClause*)? (caseClause*)?
+    ;
 
 caseClause
-	: ^( CASE expression statementList?)
-	;
+    : ^( CASE expression statementList?)
+    ;
 	
 defaultClause
-	:^(DEFAULT statementList?)
-	;
+    :^(DEFAULT statementList?)
+    ;
 	
 throwStatement
-	: ^(THROW expression)
-	;
+    : ^(THROW expression)
+    ;
+
+whenStatement
+    : ^(WHEN
+        {
+            APP(" util.create_when( ");
+            insideWhenPred = true;
+            APP(" [ util.create_quoted('");
+        }
+        whenPred
+        {
+            //FIXME: potential problem if last statement in array is
+            //dollar syntax.
+            APP("')],\n");
+
+            insideWhenPred = false;
+            //open function for callback
+            APP("function(){ ");
+              
+        }
+        functionBody
+        {
+            //close function for callback
+            APP(" }");
+            //close create_when
+            APP(");");
+        }
+    )
+    ;
+
+    
+whenPred
+    : ^(WHEN_PRED
+        expression
+    )
+    ;
+
+whenCheckedListFirst
+    : ^(WHEN_CHECKED_LIST_FIRST
+        {
+        }
+        expression
+        {
+            //expression will automatically fill in correct values here
+        }
+        (whenCheckedListSubsequent
+        {
+        })?
+    )
+    ;    
+
+
+whenCheckedListSubsequent
+    : ^(WHEN_CHECKED_LIST_SUBSEQUENT
+        {
+            APP(",");
+        }
+        expression
+        {
+            //expression will automatically fill in correct values here
+        }
+        (whenCheckedListSubsequent
+        {
+        })*
+        )
+    ;
+        
+    
 
 tryStatement
-	: ^(TRY 
-	    
-	    statementBlock 
-					
-					finallyClause?) 
+    : ^(TRY 
+	      statementBlock 
+          finallyClause?
+        ) 
 	;
        
 
 msgSendStatement
 scope{
-  pANTLR3_STRING prev_program_string;
+        pANTLR3_STRING prev_program_string;
 	unsigned int  prev_program_len;
 	char* firstExprString;
 	char* secondExprString;
-  pANTLR3_STRING init_program_string;
+        pANTLR3_STRING init_program_string;
 
 }
  : ^(
-	     MESSAGE_SEND 
-       /* A little hack for the things to work */
-       
-			 {
-			 /* Save the program string here */
-			   $msgSendStatement::prev_program_string = program_string;
-       /* length of the program string */
-			   $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
-         pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
-				 $msgSendStatement::init_program_string = factory->newRaw(factory);
-				 $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
-       }
-
-	     leftHandSideExpression 
-				  {
-					   unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-
-			       unsigned int  new_program_len = program_string->len;
-             $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-						 memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
-						 memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
+     MESSAGE_SEND 
+     /* A little hack for the things to work */
+     {
+          /* Save the program string here */
+          $msgSendStatement::prev_program_string = program_string;
+          /* length of the program string */
+          $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
+          pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+          $msgSendStatement::init_program_string = factory->newRaw(factory);
+          $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
+      }
+      leftHandSideExpression 
+      {
+          unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+          unsigned int  new_program_len = program_string->len;
+          $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+          memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
+          memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
 						 
-             $msgSendStatement::prev_program_len = new_program_len; 
-						  //APP(".sendMessage( ");
-					}
-				leftHandSideExpression 
-				    {
-						  unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-						  unsigned int new_program_len = program_string->len;
-              $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-							memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
-							memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
+          $msgSendStatement::prev_program_len = new_program_len; 
+          //APP(".sendMessage( ");
+      }
+      leftHandSideExpression 
+      {
+          unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+          unsigned int new_program_len = program_string->len;
+          $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+          memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
+          memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
 
-              pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
-              init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
-              init_program_string->append(init_program_string, ".sendMessage( ");
-              init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
+          pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
+          init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
+          init_program_string->append(init_program_string, ".sendMessage( ");
+          init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
 
-							program_string->setS(program_string, init_program_string); 
+          program_string->setS(program_string, init_program_string); 
 
-						}      				
-				(
-				
-				 {
-					  APP(", ");
-					}
-				memberExpression
-			 		{
-					  
-					}	
-				)?
-						{
-						  APP(" ) ");
-				    }
-
-				)
-
-				;
+       }      				
+       (
+          {
+            APP(", ");
+          }
+          memberExpression
+          {
+          }	
+       )?
+       {
+          APP(" ) ");
+       }
+       )
+       ;
 
 msgRecvStatement
  : ^(
@@ -763,43 +754,6 @@ newExpression
 	| ^( NEW newExpression)
 	;
 	
-/*
-memberExpression
- : primaryExpression
-	| functionExpression
-	| ^(
-	     NEW 
-						  {
-								  APP("new ");
-								}
-						memberExpression 
-						
-						arguments
-					)
-
-	| ^(DOT 
-	      memberExpression
-							  {
-									  APP(".");
-									}
-							memberExpression
-				)
-	| ^(
-	    ARRAY_INDEX 
-					memberExpression 
-					    {
-           APP("[ ");
-									}
-					memberExpression
-					    {
-									  APP(" ]");
-									}
-					
-					)
-
-	;
-
-*/
 
 propertyReferenceSuffix1
 : Identifier { APP((const char*)$Identifier.text->chars);} 
@@ -838,35 +792,40 @@ callExpressionSuffix
 	;
 
 arguments
-	: ^(ARGLIST 
-	       {
-                 APP(" ( ");  
-               }
-               (
-                 assignmentExpression
-	          (
-			   {
-					  APP(", ");
-					}
-					  assignmentExpression
-					   	
-					)*
-				
-				)*
+  : ^(ARGLIST {APP("( )"); })
+  | ^(ARGLIST 
+
+	     { APP("( "); }
+       (assignmentExpression)
+			 { APP(" )"); }
       )
-				
-				{
-				  APP(" ) ");
-				}
-	;
-	
+
+  | ^(ARGLIST
+	       {
+                 APP("( ");
+		}
+                assignmentExpression
+      	
+	       (
+                 {
+                   APP(", ");
+                 }
+                 assignmentExpression
+		)*
+                {
+                  APP(" ) ");
+                }
+      )
+
+       	;
+ 
 
 indexSuffix
 	: ^(ARRAY_INDEX expression)
 	;	
 	
 propertyReferenceSuffix
-	: ^(DOT Identifier) 
+	: ^(DOT Identifier)
 	;
 	
 assignmentOperator
@@ -1167,12 +1126,33 @@ primaryExpression
 	  { 
             APP((const char*)$Identifier.text->chars);
 	  }
+        | dollarExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
 	| ^(PAREN { APP("( "); } expression { APP(" )");}) 
 	;
-	
+
+dollarExpression
+        : ^(DOLLAR_EXPRESSION
+            {
+                if (insideWhenPred)
+                    APP("'),");
+
+            }
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+
+                if (insideWhenPred)
+                   APP(",util.create_quoted('");
+
+            }
+         )
+         ;
+        
+
+        
 // arrayLiteral definition.
 arrayLiteral
   : ^(ARRAY_LITERAL {APP("[ ]"); })
@@ -1242,7 +1222,18 @@ propertyNameAndValue
 
 propertyName
 	: Identifier {  APP((const char*)$Identifier.text->chars); }
-	| StringLiteral { APP((const char*)$StringLiteral.text->chars);  }
+	| StringLiteral
+          {
+              if (insideWhenPred)
+              {
+                  std::string escapedSequence = emerson_escapeSingleQuotes((const char*) $StringLiteral.text->chars);
+                  APP((const char*) escapedSequence.c_str());
+              }
+              else
+              {
+                  APP((const char*)$StringLiteral.text->chars);  
+              }
+          }
 	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
 
@@ -1251,7 +1242,19 @@ literal
 	: 'null' {   APP("null");}
 	| 'true' {   APP("true"); }
 	| 'false'{  APP("false");}
-	| StringLiteral {APP((const char*)$StringLiteral.text->chars);}
+	| StringLiteral
+          {
+              if (insideWhenPred)
+              {
+                  std::string escapedSequence = emerson_escapeSingleQuotes(((const char*) $StringLiteral.text->chars));
+                  APP((const char*)(escapedSequence.c_str()));
+              }
+              else
+              {
+                  APP((const char*)$StringLiteral.text->chars);  
+              }
+          }
+//	| StringLiteral {APP((const char*)$StringLiteral.text->chars);}
 	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
 	

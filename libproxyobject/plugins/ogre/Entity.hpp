@@ -74,6 +74,9 @@ protected:
     Transfer::URI mURI;
     String mURIString;
 
+    bool mHaveURIHash;
+    SHA256 mURIHash; // Hash of mURI content. Stored so we can possibly avoid a download.
+
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
 
@@ -178,10 +181,16 @@ public:
 
     void handleMeshParsed(Mesh::MeshdataPtr md);
 
+    // If a mesh had already been downloaded (by us or someone else), we have
+    // the hash, *and* the object still exists, we should be able to just add it
+    // to the scene.
+    bool tryInstantiateExistingMesh();
+
     void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
+
     // After a mesh is downloaded, try instantiating it from an existing mesh,
     // i.e. in case this URI/underlying hash has already been loaded.
-    bool tryInstantiateExistingMesh(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
+    bool tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

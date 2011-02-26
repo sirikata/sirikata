@@ -727,6 +727,7 @@ SET(CDN_NAMESERVER_SOURCE_DIR ${TOP_LEVEL}/cdn/src/nameserver)
 SET(ANALYSIS_SOURCE_DIR ${TOP_LEVEL}/analysis/src)
 SET(BENCH_SOURCE_DIR ${TOP_LEVEL}/bench/src)
 SET(EMERSON_SOURCE_DIR ${TOP_LEVEL}/liboh/plugins/js/emerson)
+SET(EMERSON_WHEN_PRED_SRC_DIR ${TOP_LEVEL}/liboh/plugins/js/lexWhenPred)
 SET(STREAM_ECHO_SOURCE_DIR ${TOP_LEVEL}/tools/stream_echo)
 SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
@@ -1138,7 +1139,6 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/Platform.cpp
 	${LIBCORE_SOURCE_DIR}/util/UUID.cpp
         ${LIBCORE_SOURCE_DIR}/util/ThreadId.cpp
-        ${LIBCORE_SOURCE_DIR}/util/MeshSimplifier.cpp
 	${LIBCORE_SOURCE_DIR}/util/BoundingInfo.cpp
         ${LIBCORE_SOURCE_DIR}/util/Hash.cpp
         ${LIBCORE_SOURCE_DIR}/util/Timer.cpp
@@ -1232,6 +1232,9 @@ SET(LIBMESH_SOURCES
   ${LIBMESH_SOURCE_DIR}/AnyModelsSystem.cpp
   ${LIBMESH_SOURCE_DIR}/ModelsSystemFactory.cpp
   ${LIBMESH_SOURCE_DIR}/Filter.cpp
+  ${LIBMESH_SOURCE_DIR}/CompositeFilter.cpp
+  ${LIBMESH_SOURCE_DIR}/MeshSimplifier.cpp
+
   )
 
 SET(LIBPROXYOBJECT_SOURCES
@@ -1497,12 +1500,20 @@ SET(PINTO_SOURCES
   ${PINTO_SOURCE_DIR}/main.cpp
   )
 
+SET(EMERSON_WHEN_PRED_SRCS
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredLexer.cpp
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredParser.cpp
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredTree.cpp
+  ${EMERSON_SOURCE_DIR}/Util.cpp  #note: referencing this from the emerson directory instead of the whenpred directory: added a few pre-processors to make it re-usable
+  ${EMERSON_WHEN_PRED_SRC_DIR}/LexWhenPredUtil.cpp
+  )
 
 SET(EMERSON_SOURCES
   ${EMERSON_SOURCE_DIR}/EmersonLexer.cpp
   ${EMERSON_SOURCE_DIR}/EmersonParser.cpp
   ${EMERSON_SOURCE_DIR}/EmersonTree.cpp
   ${EMERSON_SOURCE_DIR}/EmersonUtil.cpp
+  ${EMERSON_SOURCE_DIR}/Util.cpp 
   ${EMERSON_SOURCE_DIR}/main.cpp
   )
 
@@ -1938,13 +1949,16 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSFakerootStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSUtilStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchedStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSQuotedStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSuspendable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSEventHandler.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSEventHandlerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVisible.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
@@ -1952,6 +1966,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFakeroot.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
   ${EMERSON_SOURCES}
+  ${EMERSON_WHEN_PRED_SRCS}
   )
 IF(V8_FOUND)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
@@ -2002,6 +2017,12 @@ SET(LIBMESH_PLUGIN_COMMONFILTERS_SOURCES
  ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/SaveFilter.cpp
  ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/PrintFilter.cpp
  ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/ComputeBoundsFilter.cpp
+ ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/SquashPrimitivesFilter.cpp
+ ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/SquashMaterialsFilter.cpp
+ ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/SquashInstancedGeometryFilter.cpp
+ ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/SingleMaterialGeometryFilter.cpp
+ ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/TransformFilter.cpp
+ ${LIBMESH_PLUGIN_COMMONFILTERS_DIR}/CenterFilter.cpp
  )
 ADD_PLUGIN_TARGET(common-filters
   SOURCES ${LIBMESH_PLUGIN_COMMONFILTERS_SOURCES}
@@ -2014,7 +2035,9 @@ IF(NVTT_FOUND AND FREEIMAGE_FOUND)
   SET(LIBMESH_PLUGIN_NVTT_DIR ${LIBMESH_PLUGIN_DIR}/nvtt)
   SET(LIBMESH_PLUGIN_NVTT_SOURCES
     ${LIBMESH_PLUGIN_NVTT_DIR}/PluginInterface.cpp
+    ${LIBMESH_PLUGIN_NVTT_DIR}/FreeImage.cpp
     ${LIBMESH_PLUGIN_NVTT_DIR}/CompressTexturesFilter.cpp
+    ${LIBMESH_PLUGIN_NVTT_DIR}/TextureAtlasFilter.cpp
     )
   ADD_PLUGIN_TARGET(nvtt
     SOURCES ${LIBMESH_PLUGIN_NVTT_SOURCES}
@@ -2089,6 +2112,15 @@ TARGET_LINK_LIBRARIES(cseg
         ${PROTOCOLBUFFERS_LIBRARIES}
         )
 
+#ADD_DEFINITIONS(-DEMERSON_WHEN_PRED_COMPILE)
+ADD_EXECUTABLE(emersonWhenPred ${EMERSON_WHEN_PRED_SRCS}  ${EMERSON_WHEN_PRED_SRC_DIR}/main.cpp)
+SET_TARGET_PROPERTIES(emersonWhenPred PROPERTIES ${COMPILE_DEFS_OPT})
+TARGET_LINK_LIBRARIES(emersonWhenPred
+        ${Boost_LIBRARIES}
+        ${ANTLR_LIBRARIES}
+        )
+
+      
 ADD_DEFINITIONS(-DEMERSON_COMPILE)
 ADD_EXECUTABLE(emerson ${EMERSON_SOURCES})
 SET_TARGET_PROPERTIES(emerson PROPERTIES ${COMPILE_DEFS_OPT})

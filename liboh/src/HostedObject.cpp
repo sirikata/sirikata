@@ -38,7 +38,7 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/oh/ObjectHostContext.hpp>
 #include <sirikata/oh/ObjectHost.hpp>
-
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
@@ -76,7 +76,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mObjectScript(NULL),
    mPresenceData(new PresenceDataMap),
    mNextSubscriptionID(0),
-   mInternalObjectReference(objectName),
    mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
 {
     mContext->add(&mOrphanLocUpdates);
@@ -126,9 +125,11 @@ HostedObject::~HostedObject() {
     delete mPresenceData;
 }
 
-void HostedObject::init() {
-    mObjectHost->registerHostedObject(getSharedPtr());
-}
+// void HostedObject::init() {
+//     mObjectHost->registerHostedObject(
+//         lkjs;
+//         getSharedPtr());
+// }
 
 void HostedObject::destroy()
 {
@@ -137,8 +138,10 @@ void HostedObject::destroy()
         mObjectScript=NULL;
     }
 
+    for (PresenceDataMap::iterator iter = mPresenceData->begin(); iter != mPresenceData->end(); ++iter)
+        mObjectHost->unregisterHostedObject(iter->first);
+
     mPresenceData->clear();
-    mObjectHost->unregisterHostedObject(mInternalObjectReference);
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
@@ -184,8 +187,6 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
         smapIter->second.proxyManager->getAllObjectReferences(ss);
     }
 }
-
-
 
 
 
@@ -257,14 +258,15 @@ bool myisalphanum(char c) {
 }
 }
 
+
 void HostedObject::initializeScript(const String& script, const String& args)
 {
     if (mObjectScript) {
-        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for " << getUUID().toString() << "(internal id)");
+        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for object");
         return;
     }
 
-    SILOG(oh,debug,"[HO] Creating a script object for " << getUUID().toString() << "(internal id)");
+    SILOG(oh,debug,"[HO] Creating a script object for object");
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
@@ -282,12 +284,12 @@ void HostedObject::initializeScript(const String& script, const String& args)
         }
         else
         {
-            SILOG(oh,debug,"[HO] Failed to create script for " << getUUID().toString() << "(internal id) because incorrect script type");
+            SILOG(oh,debug,"[HO] Failed to create script for object because incorrect script type");
         }
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script);
     if (mgr) {
-        SILOG(oh,debug,"[HO] Creating script for " << getUUID().toString() << "(internal id) with args of "<<args);
+        SILOG(oh,debug,"[HO] Creating script for object with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         mObjectScript->scriptTypeIs(script);
         mObjectScript->scriptOptionsIs(args);
@@ -300,10 +302,13 @@ void HostedObject::connect(
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd)
+        PerPresenceData* ppd,
+        int token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd);
+    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd, token);
 }
+
+
 
 
 void HostedObject::connect(
@@ -313,22 +318,27 @@ void HostedObject::connect(
         const String& mesh,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd)
+        PerPresenceData* ppd,
+        int token)
 {
     if (spaceID == SpaceID::null())
         return;
+
+    SpaceObjectReference connectingSporef (spaceID,ObjectReference(UUID::random()));
+    mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
+
 
     // Note: we always use Time::null() here.  The server will fill in the
     // appropriate value.  When we get the callback, we can fix this up.
     Time approx_server_time = Time::null();
     mObjectHost->connect(
-        getSharedPtr(), spaceID,
+        connectingSporef, spaceID,
         TimedMotionVector3f(approx_server_time, MotionVector3f( Vector3f(startingLocation.getPosition()), startingLocation.getVelocity()) ),
         TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),
         meshBounds,
         mesh,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd, token),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
@@ -363,8 +373,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -377,15 +386,16 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd, token)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,int token)
 {
-    if (info.server == NullServerID) {
-        HO_LOG(warning,"Failed to connect object (internal:" << mInternalObjectReference.toString() << ") to space " << space);
+    if (info.server == NullServerID)
+    {
+        HO_LOG(warning,"Failed to connect object:" << obj << " to space " << space);
         return;
     }
 
@@ -424,7 +434,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
-    notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref);
+    HO_LOG(warning,"Notifying of connected object" << obj << " to space " << space);
+    notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref, token);
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -433,7 +444,8 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 }
 
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
-    SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
+    SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
+    //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
     if (sstStream != SSTStreamPtr() ) {
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
@@ -495,9 +507,8 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
         return false;
 
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
-    {
         initializeScript(scriptType,"");
-    }
+
 
     return true;
 }
@@ -591,7 +602,7 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
     //s->registerReadCallback(0);
 }
 
-void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
     uint64 seqno = (update.has_seqno() ? update.seqno() : 0);
 
     TimedMotionVector3f loc;
@@ -607,11 +618,12 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (update.has_location()) {
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
-        Time locTime = localTime(space,update_loc.t());
+        Time locTime = localTime(sporef.space(),update_loc.t());
         loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
         
         CONTEXT_OHTRACE(objectLoc,
-            getUUID(),
+            sporef.object().getAsUUID(),
+            //getUUID(),
             update.object(),
             loc
         );
@@ -621,7 +633,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (update.has_orientation()) {
         Sirikata::Protocol::TimedMotionQuaternion update_orient = update.orientation();
-        orient = TimedMotionQuaternion(localTime(space, update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
+        orient = TimedMotionQuaternion(localTime(sporef.space(), update_orient.t()), MotionQuaternion(update_orient.position(), update_orient.velocity()));
         orientptr = &orient;
     }
 
@@ -635,7 +647,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
         meshptr = &mesh;
     }
 
-    processLocationUpdate(space, proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr);
+    processLocationUpdate(sporef.space(), proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr);
 }
 
 void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh) {
@@ -681,7 +693,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
             continue;
         }
 
-        processLocationUpdate(space, proxy_obj, update);
+        processLocationUpdate(spaceobj, proxy_obj, update);
     }
 
     return true;
@@ -704,7 +716,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
-                getUUID(),
+                spaceobj.object().getAsUUID(),
+                //getUUID(),
                 addition.object(),
                 true,
                 loc
@@ -738,7 +751,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             // Notify of any out of order loc updates
             OrphanLocUpdateManager::UpdateList orphan_loc_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);
             for(OrphanLocUpdateManager::UpdateList::iterator orphan_it = orphan_loc_updates.begin(); orphan_it != orphan_loc_updates.end(); orphan_it++)
-                processLocationUpdate(spaceobj.space(), proxy_obj, *orphan_it);
+                processLocationUpdate(spaceobj,proxy_obj, *orphan_it);
 
             //tells the object script that something that was close has come
             //into view
@@ -762,7 +775,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             proxy_obj->invalidate();
 
             CONTEXT_OHTRACE(prox,
-                getUUID(),
+                spaceobj.object().getAsUUID(),
+                //getUUID(),
                 removal.object(),
                 false,
                 TimedMotionVector3f()
@@ -885,7 +899,8 @@ ODP::DelegatePort* HostedObject::createDelegateODPPort(ODP::DelegateService* par
 bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload)
 {
     assert(source_ep.space() == dest_ep.space());
-    return mObjectHost->send(getSharedPtr(), source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(), dest_ep.port(), payload);
+    SpaceObjectReference sporef(source_ep.space(), source_ep.object());
+    return mObjectHost->send(sporef,source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(),dest_ep.port(), payload);
 }
 
 
@@ -989,11 +1004,22 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
     return true;
 }
 
+Vector3f HostedObject::requestCurrentVelocity(ProxyObjectPtr proxy_obj)
+{
+    return (Vector3f)proxy_obj->getVelocity();
+}
+
 
 Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    return (Vector3f)proxy_obj->getVelocity();
+    if (proxy_obj == nullPtr)
+    {
+        SILOG(cppoh,error,"[HO] Unknown space object reference looking for velocity for for  " << space<< "-"<<oref<<".");
+        return Vector3f::nil();
+    }
+
+    return requestCurrentVelocity(proxy_obj);
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
@@ -1019,7 +1045,8 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     request.set_query_angle(new_angle.asFloat());
     std::string payload = serializePBJMessage(request);
 
-    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
+    //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != SSTStreamPtr()) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);
@@ -1068,7 +1095,8 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     std::string payload = serializePBJMessage(container);
 
 
-    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream != SSTStreamPtr()) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);

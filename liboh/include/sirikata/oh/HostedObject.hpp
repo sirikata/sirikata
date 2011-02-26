@@ -35,7 +35,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
-
+#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/odp/DelegateService.hpp>
 #include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
@@ -120,7 +120,7 @@ protected:
 
 
     int mNextSubscriptionID;
-    UUID mInternalObjectReference;
+
 
     ODP::DelegateService* mDelegateODPService;
 
@@ -182,10 +182,11 @@ public:
     /// Attempt to restore this item from database including script
     //void initializeRestoreFromDatabase(const SpaceID&spaceID);
 
-    /** Initializes this HostedObject, particularly to get it set up with the
+    /* Initializes this HostedObject, particularly to get it set up with the
      *  underlying ObjectHost.
      */
-    void init();
+    //void init();  Removed: will just connect to underlying object host during
+    //connect call
     void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
 
@@ -216,9 +217,7 @@ public:
         to a space, talking to other objects within this object host, and
         persistence messages.
     */
-    const UUID &getUUID() const {
-        return mInternalObjectReference;
-    }
+    
 
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);
@@ -228,6 +227,8 @@ public:
     /** Called once per frame, at a certain framerate. */
     void tick();
 
+
+    const static int DEFAULT_PRESENCE_TOKEN = -1;
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
         message, however any other message must wait until you receive the RetObj
@@ -235,16 +236,20 @@ public:
         @param spaceID  The UUID of the space you connect to.
         @param startingLocation  The initial location of this object. Must be known at connection time?
         @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
-        @param evidence  Usually use getUUID(); can be set differently if needed for authentication.
+        @param evidence  Usually use getUUID(); can be set differently if needed
+        for authentication.
+        @param token  When connection completes, notifies all session
+        listeners.  Provides token to these listeners so they can distinguish
+        which presence may have connected, etc.
     */
-
     void connect(
         const SpaceID&spaceID,
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd);
+        PerPresenceData* ppd,
+        int token = DEFAULT_PRESENCE_TOKEN);
 
     void connect(
         const SpaceID&spaceID,
@@ -253,7 +258,8 @@ public:
         const String& mesh,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd);
+        PerPresenceData* ppd,
+        int token = DEFAULT_PRESENCE_TOKEN);
 
 
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
@@ -264,8 +270,9 @@ public:
     // underlying boost impementation doesnt), we need to handle wrapping
     // connection callbacks manually.
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
@@ -323,7 +330,7 @@ public:
     virtual Vector3d requestCurrentPosition (const SpaceID& space,const ObjectReference& oref);
     virtual Vector3d requestCurrentPosition(ProxyObjectPtr proxy_obj);
     virtual Vector3f requestCurrentVelocity(const SpaceID& space, const ObjectReference& oref);
-
+    virtual Vector3f requestCurrentVelocity(ProxyObjectPtr proxy_obj);
 
     virtual void requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient);
 
@@ -357,7 +364,7 @@ public:
     void handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdata, uint8* buffer, int length);
 
     // Handlers for core space-managed updates
-    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
+    void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
     void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh);
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);

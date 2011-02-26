@@ -57,7 +57,7 @@ system.onPresenceConnected( function(pres) {
       simulator = pres.runSimulation("ogregraphics");
       chat = simulator.invoke("getChatWindow");
       chat.invoke("bind", "eventname", onChatMsgReceived);
-      p = new system.Pattern("chat");
+      p = new util.Pattern("chat");
       onChatFromNeighbor <- p ;
     }
     else

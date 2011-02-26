@@ -66,7 +66,7 @@ want_interactive=0
 want_oprofile=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    space | simoh | genpack | cseg | pinto | analysis | bench)
+    space | simoh | cppoh | genpack | cseg | pinto | analysis | bench)
       APPNAME="${1}${BUILD_POST}"
       shift;;
     -h | --help | -help )

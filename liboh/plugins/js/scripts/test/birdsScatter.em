@@ -12,7 +12,7 @@ var runOrientationCallback = true;
 var runDartingAboutCallback = true;
 var scaleRandomness = 3.0;
 
-var realCenter= new system.Vec3(0,0,-12);
+var realCenter= new util.Vec3(0,0,-12);
 var maxRadiusFromCenter = 3;
 var dartingAboutCallbackPeriod = 1; //how long to go before calling darting about callback
 var minVelocitySquared = 1.0;
@@ -21,7 +21,7 @@ var constBirdVelocity = .7;
 //this function returns an object that has converted the relevant position fields from strings to a vec3
 function parseLocationFromObject(object)
 {
-    var returner = new system.Vec3(parseFloat(object.positionX),parseFloat(object.positionY),parseFloat(object.positionZ));
+    var returner = new util.Vec3(parseFloat(object.positionX),parseFloat(object.positionY),parseFloat(object.positionZ));
     return returner;
 }
 
@@ -54,7 +54,7 @@ function evasiveManeuvers(camLocation,curPosition)
 {
     evading = evading + 1;
     //var velocityDirection = new system.Vec3(curPosition.x-camLocation.x,curPosition.y-camLocation.y, curPosition.z-camLocation.z);
-    var velocityDirection = new system.Vec3(curPosition.x-camLocation.x,0, curPosition.z-camLocation.z);
+    var velocityDirection = new util.Vec3(curPosition.x-camLocation.x,0, curPosition.z-camLocation.z);
     var newVel = scalarMultVec(howFastToEvadeConst, (normalizeVector(velocityDirection)));
     system.presences[0].setVelocity(newVel);
     system.timeout(howLongToFlee,null,regularOperationCallback);
@@ -70,7 +70,7 @@ function normalizeVector(vec)
 
 function scalarMultVec(scalar, vec)
 {
-    return new system.Vec3(scalar*vec.x, scalar*vec.y, scalar*vec.z);
+    return new util.Vec3(scalar*vec.x, scalar*vec.y, scalar*vec.z);
 }
 
 
@@ -79,7 +79,7 @@ function regularOperationCallback()
     evading = evading -1;
     if (evading == 0)
     {
-        system.presences[0].setVelocity(new system.Vec3(0,0,0));
+        system.presences[0].setVelocity(new util.Vec3(0,0,0));
         callDartingAbout();        
     }
     
@@ -87,7 +87,7 @@ function regularOperationCallback()
 
 
 //listenging for camera location
-var cameraLocationPattern = new system.Pattern("command","locationCamera");
+var cameraLocationPattern = new util.Pattern("command","locationCamera");
 var cameraLocationHandler = system.registerHandler(cameraLocationCallback,null,cameraLocationPattern,null);
 
 
@@ -272,7 +272,7 @@ function quaternionToCardinal(q,ind) {
     system.print(r[0]);
     system.print(r[1]);
     system.print(r[2]);
-    return new system.Vec3(r[0][ind],r[1][ind],r[2][ind]);//similar fixme from above applies  is it [ind][0] or [0][ind]
+    return new util.Vec3(r[0][ind],r[1][ind],r[2][ind]);//similar fixme from above applies  is it [ind][0] or [0][ind]
 }
 function quaternionToForward(q) {
     return quaternionToCardinal(q,1);
@@ -359,7 +359,7 @@ dartingAboutCallback();
 
 function zeroVelocity()
 {
-    system.presences[0].setVelocity(new system.Vec3(0,0,0));
+    system.presences[0].setVelocity(new util.Vec3(0,0,0));
 }
 
 function resetPosition()
@@ -382,7 +382,7 @@ function callDartingAbout()
     if (distToCenter > maxRadiusFromCenter)
     {
         system.print("\ndist to center too great\n");
-        var newVelDirection = new system.Vec3(realCenter.x - curPosition.x , realCenter.y - curPosition.y, realCenter.z - curPosition.z);
+        var newVelDirection = new util.Vec3(realCenter.x - curPosition.x , realCenter.y - curPosition.y, realCenter.z - curPosition.z);
 
         var normalizedVector = normalizeVector(newVelDirection);
         var newVel = scalarMultVec(constBirdVelocity, normalizedVector);
@@ -404,7 +404,7 @@ function callDartingAbout()
         if (prevVelocitySquared < minVelocitySquared)
         {
             //var newVelocity = new system.Vec3(previousVelocity.x,previousVelocity.y,previousVelocity.z );
-            var newVelocity = new system.Vec3(previousVelocity.x,0,previousVelocity.z );
+            var newVelocity = new util.Vec3(previousVelocity.x,0,previousVelocity.z );
             
             var randX = system.rand();
             var randY = system.rand();

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #
-# prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_dir output_dir
+# prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_dir output_dir [collada_name]
 #
 # Prepares a collada file for upload to the CDN. Tries to validate
 # that all referenced resources (currently just images) are available,
@@ -11,6 +11,9 @@
 #
 # Note that this assumes a somewhat standard layout for collada
 # directories, with models/ and images/ directories.
+#
+# If you provide collada_name, it allows you to select the correct
+# collada file when multiple are present.
 
 import sys
 import os
@@ -23,16 +26,21 @@ import tempfile
 import shutil
 
 if sys.argv < 4:
-    print "Usage: prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_zip_or_dir [output_dir]"
+    print "Usage: prepare_collada.py username@cdn.com:/path/to/cdn/prep/dir collada_zip_or_dir [output_dir] [collada_name]"
     sys.exit(-1)
 
+print sys.argv
 remote_path, collada_dir = sys.argv[1:3]
-if len(sys.argv) > 4:
-    output_dir = sys.argv[4]
+if len(sys.argv) >= 4:
+    output_dir = sys.argv[3]
     cleanup_output = False
 else:
     output_dir = tempfile.mkdtemp()
     cleanup_output = True
+
+collada_name = None
+if len(sys.argv) >= 5:
+    collada_name = sys.argv[4]
 
 # Get just username+server and remote directory individually
 username_at_server, remote_dir = remote_path.split(':')
@@ -96,13 +104,19 @@ else:
     collada = ColladaZip(collada_dir)
 
 daes = collada.find_daes()
+print collada_name
+if collada_name:
+    daes = [x for x in daes if x.endswith(collada_name)]
+
 if len(daes) == 0:
-    print "Couldn't find any .dae files."
+    print "Couldn't find .dae file."
     exit(-1)
-if len(daes) > 1:
-    print "Too man daes"
+elif len(daes) > 1:
+    print "Too many daes"
     exit(-1)
+
 (dae,) = daes
+
 # Get the actual directory for the collada file
 dae_dir = os.path.dirname(dae)
 
