@@ -72,6 +72,7 @@
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include "JSObjectStructs/JSQuotedStruct.hpp"
 #include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
+#include "JSObjectStructs/JSWhenWatchedListStruct.hpp"
 #include <boost/lexical_cast.hpp>
 
 
@@ -282,9 +283,8 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(v8::Handle<v8::Array
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
 
 
-    JSWhenWatchedItemStruct* jswhenwatched = new JSWhenWathcedItemStruct(itemArray);
-    return createWhenWatchedItem(jswhenwatched);
-
+    JSWhenWatchedItemStruct * wwis = new JSWhenWatchedItemStruct(itemArray,this);
+    return createWhenWatchedItem(wwis);
 }
 
 v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(JSWhenWatchedItemStruct* wwis)
@@ -733,10 +733,26 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
 //and then translates to [ util.create_when_watched_item(['x']), util.create_when_watched_item(['y'])  ] 
 String JSObjectScript::tokenizeWhenPred(const String& whenPredAsString)
 {
-    lexWhenPred_init();
+    //even though using lexWhenPred grammar, still must make call to emerson init
+    emerson_init();
     return string(lexWhenPred_compile(whenPredAsString.c_str()));
 }
-lkjs;
+
+
+v8::Handle<v8::Value> JSObjectScript::createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec)
+{
+    JSWhenWatchedListStruct* jswwl = new JSWhenWatchedListStruct(wwisVec,this);
+
+    v8::HandleScope handle_scope;
+    
+    v8::Handle<v8::Object> whenWatchedList = mManager->mWhenWatchedListTemplate->NewInstance();
+    whenWatchedList->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_LIST_TYPEID_STRING)));
+    whenWatchedList->SetInternalField(WHEN_WATCHED_LIST_TEMPLATE_FIELD,v8::External::New(jswwl));
+
+    return whenWatchedList;
+}
+
+
 
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)

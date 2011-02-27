@@ -58,7 +58,7 @@ sourceElements
         sourceElement
         {
             //closes the last paren associated with util.create_when_watched_item
-            APPLEX(")\n");
+            APPLEX(")");
         }
       )+  // omitting the LT 
     ;
@@ -76,7 +76,7 @@ whenPredStatement
         : ^(
             WHEN_PRED_BLOCK
             {
-                APPLEX("\nutil.create_when_watched_item(['");
+                APPLEX("util.create_when_watched_item(['");
             }
             id1=identifier
             {

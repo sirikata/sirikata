@@ -136,9 +136,16 @@ void JSObjectScriptManager::createWhenWatchedItemTemplate()
 {
     v8::HandleScope handle_scope;
     mWhenWatchedItemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mWatchedTemplate->SetInternalFieldCount(WHEN_WATCHED_ITEM_TEMPLATE_FIELD_COUNT);
+    mWhenWatchedItemTemplate->SetInternalFieldCount(WHEN_WATCHED_ITEM_TEMPLATE_FIELD_COUNT);
 }
 
+
+void JSObjectScriptManager::createWhenWatchedListTemplate()
+{
+    v8::HandleScope handle_scope;
+    mWhenWatchedListTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mWhenWatchedListTemplate->SetInternalFieldCount(WHEN_WATCHED_LIST_TEMPLATE_FIELD_COUNT);
+}
 
 
 

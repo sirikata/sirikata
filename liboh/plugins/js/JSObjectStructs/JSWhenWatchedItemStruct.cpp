@@ -7,6 +7,7 @@
 #include "JSWhenWatchedItemStruct.hpp"
 #include "JSWatchable.hpp"
 #include "../JSLogging.hpp"
+#include "../JSObjects/JSObjectsUtils.hpp"
 
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
@@ -15,31 +16,7 @@ namespace Sirikata {
 namespace JS {
 
 
-JSWhenWatchedItemStruct::JSWhenWatchedItemStruct(JSObjectScript* jsobj)
- : mJSObj(jsobj)
-{
-}
-
-
-
-//function returns true if the item in nameChanged should cause the predicate to
-//re-fire
-//let's say that this item corresponds to system.x.y.z, then the mItemsToWatch
-//vector contains [system, system.x, system.x.y, and system.x.y.z]
-// if have an assignment to system.x, will receive "system.x" in name changed,
-// and return true.
-bool JSWhenWatchedItemStruct::changeTrigger(String nameChanged)
-{
-    for (std::vector<String>::iterator iter = mItemsToWatch.begin(); iter != mItemsToWatch.end(); ++iter)
-    {
-        if (*iter == nameChanged)
-            return true;
-    }
-    return false;
-}
-
-
-JSWhenWatchedItemStruct::JSWhenWatchedItemStruct(v8::Persistent<v8::Array> itemArray,JSObjectScript* jsobj)
+JSWhenWatchedItemStruct::JSWhenWatchedItemStruct(v8::Handle<v8::Array> itemArray,JSObjectScript* jsobj)
  : mJSObj(jsobj)
 {
     for (int s = 0; s < (int) itemArray->Length(); ++s)
@@ -63,15 +40,28 @@ JSWhenWatchedItemStruct::JSWhenWatchedItemStruct(v8::Persistent<v8::Array> itemA
     }
 }
 
-void JSWhenWatchedItemStruct::mergeItems(JSWhenWatchedItemStruct* jswhenwatcheditem)
+void JSWhenWatchedItemStruct::debugPrint()
 {
+    JSLOG(debug, "****inside of individual when watched item******");
     for (std::vector<String>::iterator iter = mItemsToWatch.begin(); iter != mItemsToWatch.end(); ++iter)
-        jswhenwatcheditem->addItem(*iter);
+        JSLOG(debug,*iter);
 }
 
-void addItem(const String& itemToAdd)
+
+//function returns true if the item in nameChanged should cause the predicate to
+//re-fire
+//let's say that this item corresponds to system.x.y.z, then the mItemsToWatch
+//vector contains [system, system.x, system.x.y, and system.x.y.z]
+// if have an assignment to system.x, will receive "system.x" in name changed,
+// and return true.
+bool JSWhenWatchedItemStruct::checkTrigger(String nameChanged)
 {
-    mItemsToWatch.push_back(itemToAdd);
+    for (std::vector<String>::iterator iter = mItemsToWatch.begin(); iter != mItemsToWatch.end(); ++iter)
+    {
+        if (*iter == nameChanged)
+            return true;
+    }
+    return false;
 }
 
 
@@ -114,8 +104,6 @@ JSWhenWatchedItemStruct* JSWhenWatchedItemStruct::decodeWhenWatchedItemStruct(v8
 
     return returner;
 }
-
-
 
 
 } //end namespace js

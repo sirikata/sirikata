@@ -59,7 +59,6 @@ public:
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
 
-    //v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate>   mContextTemplate;
     v8::Persistent<v8::ObjectTemplate>   mUtilTemplate;
@@ -71,12 +70,14 @@ public:
     v8::Persistent<v8::ObjectTemplate>   mWhenTemplate;
     v8::Persistent<v8::ObjectTemplate>   mQuotedTemplate;
     v8::Persistent<v8::ObjectTemplate>   mWhenWatchedItemTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWhenWatchedListTemplate;
     
     void testPrint();
 
 private:
 
     void createWhenWatchedItemTemplate();
+    void createWhenWatchedListTemplate();
     void createVisibleTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();

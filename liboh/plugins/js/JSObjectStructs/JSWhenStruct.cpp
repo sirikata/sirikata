@@ -54,6 +54,8 @@ void JSWhenStruct::whenCreateCBFunc(v8::Handle<v8::Function>callback)
 
 void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
 {
+    JSLOG(debug, "building a list of watched items for predicate of when statement.  here is predicate: "<<whenPredAsString);
+    
     //whenPredAsString:  x < 3 + z || x.y.a > 2
     //tokenizedPred: [ util.create_when_watched_item(['x']),
     //util.create_when_watched(['x']),
@@ -63,31 +65,24 @@ void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
     String tokenizedPred = mObjScript->tokenizeWhenPred(whenPredAsString);
 
     //evaluate the tokenizedPred, which returns an array object
-    String fncTokePred = "(function()  {  return ( " + tokenizedPred + " ); });";
+    //String fncTokePred = "(function()  {  return " + tokenizedPred + " });";
+    String fncTokePred = tokenizedPred;
+    JSLOG(debug,"when predicate function associated with tokenized predicate: "<<fncTokePred);
+        
     v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,fncTokePred);
 
-    if (! compileFuncResult->IsArray())
+    
+    String errorMessage = "Error building watched items in jswhenstruct.  Trying to decode a list of items to watch associated with the when predicate.  ";
+    mWWLS = JSWhenWatchedListStruct::decodeWhenWatchedListStruct(compileFuncResult,errorMessage);
+    if (mWWLS == NULL)
     {
-        JSLOG(error, "compiled token result for watched items is not an array.  no watched items will be recorded for when pred.");
+        errorMessage += ("\n\n predicate decoding:  " + fncTokePred );
+        JSLOG(error, errorMessage);
         return;
     }
 
-    v8::Handle<v8::Array> arrayFncRes = v8::Handle<v8::Array>::Cast(compileFuncResult);
-
-    for (int s=0; s < (int) arrayFncRes->Length(); ++s)
-    {
-        String errorMessage = "Error in buildWatchedItems of jswhenstruct.  Object in array cannot be decoded as a JSWhenWatchedItemStruct.  ";
-        
-        JSWhenWatchedItemStruct* wwis = JSWhenWatchedItemStruct::decodeWhenWatchedItemStruct(arrayFncRes->Get(s), errorMessage);
-
-        if (wwis == NULL)
-        {
-            JSLOG(error, errorMessage<<" When will not have any watched variables.");
-            return;
-        }
-
-        mWWVec.push_back(wwis);
-    }
+    //for debugging.
+    mWWLS->debugPrintWatchedList();
 }
 
 //This function takes in the array that represents the when's predicate.
@@ -119,9 +114,6 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
     }
     
     //still need to do something to parse out dependent parts;
-    JSLOG(error, "\n\nStill need to parse out the relevant dependent objects in whenCreatePredFunc.\n\n");
-
-
     buildWatchedItems(whenPredAsString);
     
     //compile function;
@@ -130,7 +122,8 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
     //anonymous functions.
     whenPredAsString = "(function()  {  return ( " + whenPredAsString + " ); });";
 
-        
+    mContext->Enter();
+    
     v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,whenPredAsString);
     if (! compileFuncResult->IsFunction())
     {
@@ -141,7 +134,7 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
         return;
     }
 
-    mContext->Enter();
+
     v8::HandleScope handle_scope;
     mPred = v8::Persistent<v8::Function>::New ( v8::Handle<v8::Function>::Cast(compileFuncResult));
     mContext->Exit();

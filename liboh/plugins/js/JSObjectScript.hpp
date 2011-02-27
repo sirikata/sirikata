@@ -52,7 +52,7 @@
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSObjectStructs/JSWatchable.hpp"
-
+#include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -132,6 +132,8 @@ public:
 
     v8::Handle<v8::Value> createWhenWatchedItem(v8::Handle<v8::Array> itemArray);
     v8::Handle<v8::Value> createWhenWatchedItem(JSWhenWatchedItemStruct* wwis);
+    v8::Handle<v8::Value> createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec);
+
     
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);

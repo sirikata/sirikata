@@ -1936,6 +1936,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedItemStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedListStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSFakerootStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSUtilStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp

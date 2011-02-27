@@ -10,7 +10,7 @@
 #include <map>
 #include "JSSuspendable.hpp"
 #include "JSWhenWatchedItemStruct.hpp"
-
+#include "JSWhenWatchedListStruct.hpp"
 
 
 namespace Sirikata {
@@ -38,7 +38,7 @@ struct JSWhenStruct : public JSSuspendable
     
     bool checkPredAndRun();
 
-
+    void buildWatchedItems(const String& whenPredAsString);
     v8::Handle<v8::Value>struct_whenGetLastPredState();
 
 
@@ -62,7 +62,8 @@ private:
     v8::Persistent<v8::Function> mCB;
     v8::Persistent<v8::Context>  mContext;
     JSContextStruct* jscont;
-    JSWhenWatchedVec mWWVec;
+    JSWhenWatchedListStruct* mWWLS;
+
 
 };
 
