@@ -21,8 +21,6 @@ key-ctrl-n=createWebview
 key-alt-n=openObjectUI
 key-alt-s=openScriptingUI
 key-alt-c=openChatUI
-key-ctrl-o=import
-key-ctrl-s=saveScene
 
 key-ctrl-u=startUploadObject
 key-ctrl-a=handleQueryAngleWidget

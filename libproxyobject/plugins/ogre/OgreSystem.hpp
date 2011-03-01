@@ -64,6 +64,7 @@ namespace Sirikata {
 class ProxyObject;
 namespace Input {
 class SDLInputManager;
+class OgreSystemMouseHandler;
 }
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
@@ -91,7 +92,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Network::IOWork* mParsingWork;
     Thread* mParsingThread;
 
-    class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class OgreSystemMouseHandler;
     MouseHandler *mMouseHandler;
     void allocMouseHandler(const String& keybinding_file);
@@ -303,13 +303,15 @@ public:
     // Create a window using HTML
     boost::any createWindowHTML(vector<boost::any>& params);
 
+    // Set an input handler function which will be invoked for input
+    // events, e.g. mouse and keyboard
+    boost::any setInputHandler(vector<boost::any>& params);
 
     ~OgreSystem();
 
 private:
     ResourceDownloadPlanner *dlPlanner;
     void instantiateAllObjects(ProxyManagerPtr pop);
-
 };
 
 

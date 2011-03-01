@@ -35,6 +35,7 @@
 
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
+#include "OgreSystemMouseHandler.hpp"
 #include "OgrePlugin.hpp"
 #include "task/Event.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
@@ -1093,6 +1094,32 @@ void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectR
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
+
+void OgreSystem::allocMouseHandler(const String& keybindings_file) {
+    mMouseHandler = new OgreSystemMouseHandler(this, keybindings_file);
+}
+void OgreSystem::destroyMouseHandler() {
+    if (mMouseHandler) {
+        delete mMouseHandler;
+    }
+}
+
+void OgreSystem::selectObject(Entity *obj, bool replace) {
+    if (replace) {
+        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParentProxy()->getObjectReference());
+    }
+    if (mMouseHandler->getParentGroup() == obj->getProxy().getParentProxy()->getObjectReference()) {
+        mMouseHandler->addToSelection(obj->getProxyPtr());
+        obj->setSelected(true);
+    }
+}
+
+void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
+    if (mMouseHandler != NULL)
+        mMouseHandler->tick(t);
+}
+
+
 namespace {
 
 bool anyIsString(const boost::any& a) {
@@ -1103,7 +1130,16 @@ String anyAsString(const boost::any& a) {
     return boost::any_cast<String>(a);
 }
 
+
+bool anyIsInvokable(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(Invokable*));
 }
+
+Invokable* anyAsInvokable(const boost::any& a) {
+    return boost::any_cast<Invokable*>(a);
+}
+
+} // namespace
 
 boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
@@ -1118,6 +1154,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return createWindow(params);
     else if(name == "createWindowHTML")
         return createWindowHTML(params);
+    else if(name == "setInputHandler")
+        return setInputHandler(params);
 
     return NULL;
 }
@@ -1158,6 +1196,14 @@ boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
     String html_script = anyAsString(params[2]);
 
     return createWindow(window_name, true, html_script);
+}
+
+boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
+    if (params.size() < 2) return NULL;
+    if (!anyIsInvokable(params[1])) return NULL;
+
+    Invokable* handler = anyAsInvokable(params[1]);
+
 }
 
 }
