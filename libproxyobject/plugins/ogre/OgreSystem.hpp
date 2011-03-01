@@ -293,7 +293,17 @@ public:
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token) {};
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
+    // Methods for handling Invokable actions
     virtual boost::any invoke(vector<boost::any>& params);
+
+    // Helper which creates a WebView window, either
+    boost::any createWindow(const String& name, bool is_html, String content);
+    // Create a window using a URL
+    boost::any createWindow(vector<boost::any>& params);
+    // Create a window using HTML
+    boost::any createWindowHTML(vector<boost::any>& params);
+
+
     ~OgreSystem();
 
 private:

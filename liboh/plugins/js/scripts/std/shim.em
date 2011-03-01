@@ -26,9 +26,7 @@ function(name)
     system.shim.graphics[pres][name] = pres._runSimulation(name);
   }
     
-	system.print("\n\n YEYEYEY 1\n\n");
   var return_val = system.shim.graphics[pres][name];
-	system.print("\n\n YEYEYEY 2\n\n");
 
 	return return_val; 
 }
@@ -40,6 +38,3 @@ function(name)
   if(!system.shim.graphics || !system.shim.graphics[this]) return undefined;
   return system.shim.graphics[this][name];        
 }
-
-
-

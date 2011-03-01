@@ -50,7 +50,7 @@ function handleNewChatNeighbor(msg, sender)
   }
 
   chat_group.push(sender);
-  var p = new system.Pattern("chat"); 
+  var p = new util.Pattern("chat"); 
   onChatFromNeighbor <- p <- sender;
   
 }
@@ -68,7 +68,7 @@ function proxAddedCallback(new_addr_obj)
   test_msg.name = "get_protocol";
   
   //also register a callback
-  var p = new system.Pattern("protocol", "chat");
+  var p = new util.Pattern("protocol", "chat");
   handleNewChatNeighbor <- p <- new_addr_obj;
   test_msg -> new_addr_obj;
 }
@@ -89,9 +89,9 @@ system.onPresenceConnected( function(pres) {
     if (system.presences.length == 1)
     {
       simulator = pres.runSimulation("ogregraphics");
-      chat = simulator.invoke("getChatWindow");
+      chat = simulator.invoke("createWindow", "chat_terminal", "chat/prompt.html");
       chat.invoke("bind", "eventname", onChatMsgReceived);
-      var p  = new system.Pattern("name", "get_protocol");
+      var p  = new util.Pattern("name", "get_protocol");
       onTestMessage <- p ;
       system.presences[0].onProxAdded(proxAddedCallback);
 

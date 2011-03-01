@@ -1093,69 +1093,71 @@ void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectR
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
+namespace {
+
+bool anyIsString(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(String));
+}
+
+String anyAsString(const boost::any& a) {
+    return boost::any_cast<String>(a);
+}
+
+}
+
 boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
-  string name="";
-  /*Check the first param */
+    // Decode the command. First argument is the "function name"
+    if (params.empty() || !anyIsString(params[0]))
+        return NULL;
 
-  if(!params[0].empty() && params[0].type() == typeid(string) )
-  {
-    name = boost::any_cast<std::string>(params[0]);
-  }
+    string name = anyAsString(params[0]);
+    SILOG(ogre,detailed,"Invoking the function " << name);
 
-  SILOG(ogre,detailed,"Invoking the function " << name);
+    if(name == "createWindow")
+        return createWindow(params);
+    else if(name == "createWindowHTML")
+        return createWindowHTML(params);
 
-  if(name == "getChatWindow")
-  {
-    // create a chatwindow
-    // WebView mNager is already initialized by the ogre system
+    return NULL;
+}
 
-
+boost::any OgreSystem::createWindow(const String& window_name, bool is_html, String content) {
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-
-		WebView* ui_wv = wvManager->getWebView("chat_terminal");
-
-		if(!ui_wv)
-		{
-
-      ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_TOPLEFT));
-      ui_wv->loadFile("chat/prompt.html");
-      SILOG(ogre,detailed,"Returning a chat window.");
-	  }
+    WebView* ui_wv = wvManager->getWebView(window_name);
+    if(!ui_wv)
+    {
+        ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_TOPLEFT));
+        if (is_html)
+            ui_wv->loadHTML(content);
+        else
+            ui_wv->loadFile(content);
+    }
     Invokable* inn = ui_wv;
     boost::any result(inn);
     return result;
-  }
-  else if(name == "getWindow")
-  {
-    // get the name of this window
-    string window_name;
-    string html_script;
+}
 
-    if( (!params[1].empty() && params[1].type() == typeid(string))
-		&&
-	    (!params[2].empty() && params[2].type() == typeid(string))
-    )
-    {
-      window_name = boost::any_cast<std::string>(params[1]);
-      html_script = boost::any_cast<std::string>(params[2]);
-      WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-      WebView* ui_wv = wvManager->getWebView(window_name);
-      if(!ui_wv)
-      {
-        ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_BOTTOMCENTER));
-        ui_wv->loadHTML(html_script);
-        SILOG(ogre,detailed,"Returning a new window.");
-      }
+boost::any OgreSystem::createWindow(vector<boost::any>& params) {
+    // Create a window using the specified url
+    if (params.size() < 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
 
-      Invokable* inn = ui_wv;
-      boost::any result(inn);
-      return result;
-   }
+    String window_name = anyAsString(params[1]);
+    String html_url = anyAsString(params[2]);
 
-  }
+    return createWindow(window_name, false, html_url);
+}
 
-  return NULL;
+boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
+    // Create a window using the specified HTML content
+    if (params.size() < 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+
+    String window_name = anyAsString(params[1]);
+    String html_script = anyAsString(params[2]);
+
+    return createWindow(window_name, true, html_script);
 }
 
 }
