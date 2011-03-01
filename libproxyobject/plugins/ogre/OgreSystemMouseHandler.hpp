@@ -42,6 +42,7 @@
 #include "task/Event.hpp"
 #include "task/EventManager.hpp"
 #include <sirikata/core/transfer/DiskManager.hpp>
+#include "input/InputEvents.hpp"
 
 namespace Sirikata {
 
@@ -51,12 +52,21 @@ class InputDevice;
 
 namespace Graphics {
 
-class OgreSystemMouseHandler : public MouseHandler {
+class OgreSystemMouseHandler {
 public:
     OgreSystemMouseHandler(OgreSystem *parent, const String& bindings_file);
     ~OgreSystemMouseHandler();
 
+    void alert(const String& title, const String& text);
+    void setParentGroupAndClear(const SpaceObjectReference &id);
+    const SpaceObjectReference& getParentGroup() const;
+    void addToSelection(const ProxyObjectPtr &obj);
+    void tick(const Task::LocalTime& t);
+
+    void setDelegate(Invokable* del);
 private:
+    bool delegateEvent(Input::InputEventPtr inputev);
+
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
     void clearSelection();
@@ -120,15 +130,10 @@ private:
 
     Task::EventResponse deviceListener(Task::EventPtr evbase);
 
-    void alert(const String& title, const String& text);
-    void setParentGroupAndClear(const SpaceObjectReference &id);
-    const SpaceObjectReference& getParentGroup() const;
-    void addToSelection(const ProxyObjectPtr &obj);
     void onUIDirectoryListingFinished(String initial_path,
         std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing);
 
     void onUIAction(WebView* webview, const JSArguments& args);
-    void tick(const Task::LocalTime& t);
 
     int mWhichRayObject;
 
@@ -136,6 +141,8 @@ private:
     std::vector<Task::SubscriptionId> mEvents;
     typedef std::multimap<Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
+
+    Invokable* mDelegate;
 
     uint32 mScreenshotID;
     bool mPeriodicScreenshot;

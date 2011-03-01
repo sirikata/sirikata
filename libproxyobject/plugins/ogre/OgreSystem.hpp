@@ -47,7 +47,6 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
-#include "MouseHandler.hpp"
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -64,7 +63,6 @@ namespace Sirikata {
 class ProxyObject;
 namespace Input {
 class SDLInputManager;
-class OgreSystemMouseHandler;
 }
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
@@ -74,6 +72,7 @@ class Camera;
 class CubeMap;
 struct IntersectResult;
 class CDNArchivePlugin;
+class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener
@@ -93,7 +92,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Thread* mParsingThread;
 
     friend class OgreSystemMouseHandler;
-    MouseHandler *mMouseHandler;
+    OgreSystemMouseHandler *mMouseHandler;
     void allocMouseHandler(const String& keybinding_file);
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;

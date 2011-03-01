@@ -227,6 +227,5 @@ void PointerDevice::firePointerMotion(
     }
 }
 
-
 }
 }

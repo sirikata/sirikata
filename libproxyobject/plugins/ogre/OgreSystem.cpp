@@ -1157,7 +1157,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     else if(name == "setInputHandler")
         return setInputHandler(params);
 
-    return NULL;
+    return boost::any();
 }
 
 boost::any OgreSystem::createWindow(const String& window_name, bool is_html, String content) {
@@ -1203,7 +1203,8 @@ boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
     if (!anyIsInvokable(params[1])) return NULL;
 
     Invokable* handler = anyAsInvokable(params[1]);
-
+    mMouseHandler->setDelegate(handler);
+    return boost::any();
 }
 
 }

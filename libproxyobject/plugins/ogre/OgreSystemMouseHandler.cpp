@@ -824,7 +824,7 @@ EventResponse OgreSystemMouseHandler::keyHandler(EventPtr ev) {
         return EventResponse::cancel();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -849,7 +849,7 @@ EventResponse OgreSystemMouseHandler::axisHandler(EventPtr ev) {
     }
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     return EventResponse::cancel();
 }
@@ -866,7 +866,7 @@ EventResponse OgreSystemMouseHandler::textInputHandler(EventPtr ev) {
         return EventResponse::cancel();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -883,7 +883,7 @@ EventResponse OgreSystemMouseHandler::mouseHoverHandler(EventPtr ev) {
         return EventResponse::cancel();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     if (mParent->mPrimaryCamera) {
         Camera *camera = mParent->mPrimaryCamera;
@@ -916,7 +916,7 @@ EventResponse OgreSystemMouseHandler::mousePressedHandler(EventPtr ev) {
         mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
     }
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -945,7 +945,7 @@ EventResponse OgreSystemMouseHandler::mouseClickHandler(EventPtr ev) {
     mMouseDownObject.reset();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -981,7 +981,7 @@ EventResponse OgreSystemMouseHandler::mouseDragHandler(EventPtr evbase) {
     }
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     ActiveDrag * &drag = mActiveDrag[ev->mButton];
     if (ev->mType == Input::DRAG_START) {
@@ -1017,7 +1017,7 @@ EventResponse OgreSystemMouseHandler::webviewHandler(EventPtr ev) {
     // For everything else we let the browser go first, but in this case it should have
     // had its chance, so we just let it go
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev);
+    mInputBinding.handle(inputev) || delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -1135,7 +1135,8 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent, const String&
    mNewQueryAngle(0.f),
    mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&OgreSystemMouseHandler::handleSetQueryAngleTimeout, this)) ),
    mWhichRayObject(0),
-   mScriptingRequestPort(NULL)
+   mScriptingRequestPort(NULL),
+   mDelegate(NULL)
 {
     mLastHitCount=0;
     mLastHitX=0;
@@ -1284,6 +1285,147 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
             delete iter->second;
     }
 }
+
+void OgreSystemMouseHandler::setDelegate(Invokable* del) {
+    mDelegate = del;
+}
+
+bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
+    if (mDelegate == NULL) return false;
+
+    // Convert to a list of parameters for Invokable
+    std::vector<boost::any> args;
+
+    {
+        ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
+        if (button_pressed_ev) {
+            args.push_back(String("button"));
+            args.push_back(String("pressed"));
+            args.push_back(keyButtonString(button_pressed_ev->mButton));
+            // FIXME modifiers array
+            args.push_back(keyModifiersString(button_pressed_ev->mModifier));
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        ButtonReleasedEventPtr button_released_ev (std::tr1::dynamic_pointer_cast<ButtonReleased>(inputev));
+        if (button_released_ev) {
+            args.push_back(String("button"));
+            args.push_back(String("up"));
+            args.push_back(keyButtonString(button_released_ev->mButton));
+            // FIXME modifiers array
+            args.push_back(keyModifiersString(button_released_ev->mModifier));
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        ButtonDownEventPtr button_down_ev (std::tr1::dynamic_pointer_cast<ButtonDown>(inputev));
+        if (button_down_ev) {
+            args.push_back(String("button"));
+            args.push_back(String("down"));
+            args.push_back(keyButtonString(button_down_ev->mButton));
+            // FIXME modifiers array
+            args.push_back(keyModifiersString(button_down_ev->mModifier));
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        AxisEventPtr axis_ev (std::tr1::dynamic_pointer_cast<AxisEvent>(inputev));
+        if (axis_ev) {
+            args.push_back(String("axis"));
+            args.push_back(axisString(axis_ev->mAxis));
+            // FIXME value
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        TextInputEventPtr text_input_ev (std::tr1::dynamic_pointer_cast<TextInputEvent>(inputev));
+        if (text_input_ev) {
+            args.push_back(String("text"));
+            args.push_back(text_input_ev->mText);
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        MouseHoverEventPtr mouse_hover_ev (std::tr1::dynamic_pointer_cast<MouseHoverEvent>(inputev));
+        if (mouse_hover_ev) {
+            args.push_back(String("mouse"));
+            args.push_back(String("hover"));
+            // fixme x & y
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        MouseClickEventPtr mouse_click_ev (std::tr1::dynamic_pointer_cast<MouseClickEvent>(inputev));
+        if (mouse_click_ev) {
+            args.push_back(String("mouse"));
+            args.push_back(String("click"));
+            // fixme x & y
+            args.push_back(mouseButtonString(mouse_click_ev->mButton));
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        MouseDragEventPtr mouse_drag_ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(inputev));
+        if (mouse_drag_ev) {
+            args.push_back(String("mouse"));
+            args.push_back(String("drag"));
+            // fixme x & y
+            args.push_back(mouseButtonString(mouse_drag_ev->mButton));
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        DragAndDropEventPtr dd_ev (std::tr1::dynamic_pointer_cast<DragAndDropEvent>(inputev));
+        if (dd_ev) {
+            args.push_back(String("dragdrop"));
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    {
+        WebViewEventPtr wv_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(inputev));
+        if (wv_ev) {
+            args.push_back(String("webview"));
+            args.push_back(wv_ev->webview);
+            args.push_back(wv_ev->name);
+            for(uint32 ii = 0; ii < wv_ev->args.size(); ii++)
+                args.push_back(wv_ev->args[ii]);
+
+            mDelegate->invoke(args);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 void OgreSystemMouseHandler::alert(const String& title, const String& text) {
     if (!mUIWidgetView) return;

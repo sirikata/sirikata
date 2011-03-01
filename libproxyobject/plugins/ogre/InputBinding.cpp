@@ -75,14 +75,16 @@ void InputBinding::addFromFile(const String& filename, InputResponseMap response
     }
 }
 
-void InputBinding::handle(Input::InputEventPtr& evt) {
+bool InputBinding::handle(Input::InputEventPtr& evt) {
     Input::EventDescriptor descriptor = evt->getDescriptor();
 
     Binding::iterator it = mResponses.find(descriptor);
-    if (it != mResponses.end()) {
-        InputResponse* response = it->second;
-        response->invoke(evt);
-    }
+    if (it == mResponses.end())
+        return false;
+
+    InputResponse* response = it->second;
+    response->invoke(evt);
+    return true;
 }
 
 } // namespace Graphics

@@ -58,7 +58,7 @@ public:
      */
     void addFromFile(const String& filename, InputResponseMap responses);
 
-    void handle(Input::InputEventPtr& evt);
+    bool handle(Input::InputEventPtr& evt);
 private:
     Binding mResponses;
 }; // class InputBinding
