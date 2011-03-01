@@ -13,6 +13,32 @@ namespace JSInvokableObject
 {
 
 
+namespace {
+
+/** Converts a V8 object into a boost:any, leaving the boost::any empty if the
+ *  object cannot be translated.
+ */
+boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
+    /* Pushing only string params for now */
+    if(val->IsString())
+    {
+      v8::String::AsciiValue str(val);
+      string s = string(*str);
+      return boost::any(s);
+    }
+    else if(val->IsFunction())
+    {
+      v8::Handle<v8::Function> function = v8::Handle<v8::Function>::Cast(val);
+      v8::Persistent<v8::Function> function_persist = v8::Persistent<v8::Function>::New(function);
+
+      JSFunctionInvokable* invokable = new JSFunctionInvokable(function_persist, parent);
+      Invokable* in = invokable;
+      return boost::any(in);
+    }
+    return boost::any();
+}
+
+} // namespace
 
 v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 {
@@ -38,24 +64,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 
   //assert(args.Length() == 1);
   for(int i =0; i < args.Length(); i++)
-  {
-    /* Pushing only string params for now */
-    if(args[i]->IsString())
-    {
-      v8::String::AsciiValue str(args[i]);
-      string s = string(*str);
-      params.push_back(boost::any(s));
-    }
-    else if(args[i]->IsFunction())
-    {
-      v8::Handle<v8::Function> function = v8::Handle<v8::Function>::Cast(args[i]);
-      v8::Persistent<v8::Function> function_persist = v8::Persistent<v8::Function>::New(function);
-
-      JSFunctionInvokable* invokable = new JSFunctionInvokable(function_persist, caller);
-      Invokable* in = invokable;
-      params.push_back( boost::any(in));
-    }
-  }
+      params.push_back(V8ToAny(caller, args[i]));
 
   /* This is just a trampoline pattern */
 
