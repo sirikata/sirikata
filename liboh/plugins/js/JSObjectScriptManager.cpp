@@ -120,6 +120,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
     mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
     mUtilTemplate->Set(v8::String::New("create_when_watched_item"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedItem));
+    mUtilTemplate->Set(v8::String::New("create_when_watched_list"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedList));
             
     addTypeTemplates(mUtilTemplate);
 }
@@ -179,6 +180,7 @@ void JSObjectScriptManager::createTemplates()
     createUtilTemplate();
 
     createWhenWatchedItemTemplate();
+    createWhenWatchedListTemplate();
     
     createFakerootTemplate();
     createContextTemplate();

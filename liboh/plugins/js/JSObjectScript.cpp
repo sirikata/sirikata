@@ -744,6 +744,7 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedList(std::vector<JSWhenWa
     JSWhenWatchedListStruct* jswwl = new JSWhenWatchedListStruct(wwisVec,this);
 
     v8::HandleScope handle_scope;
+
     
     v8::Handle<v8::Object> whenWatchedList = mManager->mWhenWatchedListTemplate->NewInstance();
     whenWatchedList->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_LIST_TYPEID_STRING)));
