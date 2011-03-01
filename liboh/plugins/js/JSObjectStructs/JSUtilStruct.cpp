@@ -4,7 +4,8 @@
 #include "JSContextStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "../JSObjectScript.hpp"
-
+#include "JSPresenceStruct.hpp"
+#include "JSUtilStruct.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -20,6 +21,37 @@ JSUtilStruct::JSUtilStruct ( JSContextStruct* jscont, JSObjectScript* jsObj)
 JSUtilStruct::~JSUtilStruct()
 {
 }
+
+
+//first three arguments correspond to
+// want to say dist(a,b) < x
+//x corresponds to ltRHS
+//the first three arguments correspond to the value of a
+//a is either a presence struct, a visible struct, or a vec3.
+//if a is a presence, then presStruct_LHS_1 will not be null, and visStruct_LHS_1 will
+// be null.  if a is a visibleStruct, then presStruct_LHS_1 will be null and
+// visStruct_LHS_1 will not.  if a is a vector, then presStruct_LHS_1 and
+// visStruct_LHS_1 will be null.
+//Arguments 4-6 correspond to b in the same way args 1-3 correspond to a.
+//ltRHS corresponds to x.
+v8::Handle<v8::Value> JSUtilStruct::struct_createWhenTimeoutLT(
+        JSPresenceStruct* presStruct_LHS_1,JSVisibleStruct* visStruct_LHS_1,Vector3d& vec3_LHS_1,
+        JSPresenceStruct* presStruct_LHS_2,JSVisibleStruct* visStruct_LHS_2,Vector3d& vec3_LHS_2,
+        double ltRHS
+)
+{
+    // lkjs;
+    // JSWhenTimeoutStruct* jswts = JSWhenTimeoutStruct(presStruct_LHS_1,visStruct_LHS_1, vec3_LHS_1,
+    //     presStruct_LHS_2,visStruct_LHS_2, vec3_LHS_2,
+    //     ltRHS);
+
+    // lkjs;
+
+    assert(false);
+    return v8::Undefined();
+}
+
+
 
 
 //should just return an object that is a whenwatcheditem.  The internal field of
@@ -50,11 +82,6 @@ v8::Handle<v8::Value> JSUtilStruct::struct_createWhenWatchedList(v8::Handle<v8::
 v8::Handle<v8::Value> JSUtilStruct::struct_createWhenWatchedItem(v8::Handle<v8::Array>itemArray)
 {
     return associatedObjScr->createWhenWatchedItem(itemArray);
-}
-
-v8::Handle<v8::Value> JSUtilStruct::struct_createWatched()
-{
-    return associatedObjScr->createWatched();
 }
 
 v8::Handle<v8::Value> JSUtilStruct::struct_createQuotedObject(const String& toQuote)

@@ -63,6 +63,21 @@ Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Function>& vec3_constructor
     return result;
 }
 
+bool Vec3ValValidate(v8::Handle<v8::Value> src)
+{
+    if (!src->IsObject())
+        return false;
+
+    v8::Handle<v8::Object> toValidate= src->ToObject();
+    return Vec3Validate(toValidate);
+}
+
+//Note: user takes responsibility that src is actually a vec object.
+Vector3d Vec3ValExtract(v8::Handle<v8::Value> src)
+{
+    v8::Handle<v8::Object>toExtract = src->ToObject();
+    return Vec3Extract(toExtract);
+}
 
 bool Vec3Validate(Handle<Object>& src) {
     return (

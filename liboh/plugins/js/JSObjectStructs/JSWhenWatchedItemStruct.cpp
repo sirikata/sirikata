@@ -5,7 +5,6 @@
 #include "../JSObjects/JSFields.hpp"
 #include <v8.h>
 #include "JSWhenWatchedItemStruct.hpp"
-#include "JSWatchable.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSObjectsUtils.hpp"
 

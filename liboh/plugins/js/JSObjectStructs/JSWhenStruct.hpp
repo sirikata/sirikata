@@ -17,7 +17,7 @@ namespace Sirikata {
 namespace JS {
 
 class JSObjectScript;
-class JSWatchable;
+
 
 struct JSWhenStruct : public JSSuspendable
 {
@@ -49,7 +49,8 @@ private:
     void whenCreateCBFunc(v8::Handle<v8::Function>callback);
     bool evalPred();
     void runCallback();
-    void addWhenToContext();    
+    void addWhenToContext();
+    void addWhenToScript();    
     
     bool predState;        //predState is true if the predicate was true in the
                            //previous iteration.  Do not fire a callback if the

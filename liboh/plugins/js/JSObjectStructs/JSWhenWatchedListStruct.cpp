@@ -6,7 +6,6 @@
 #include <v8.h>
 #include "JSWhenWatchedItemStruct.hpp"
 #include "JSWhenWatchedListStruct.hpp"
-#include "JSWatchable.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSObjectsUtils.hpp"
 

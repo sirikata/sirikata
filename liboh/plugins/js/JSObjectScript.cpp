@@ -66,9 +66,7 @@
 #include "JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSObjectStructs/JSTimerStruct.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"
-#include "JSObjectStructs/JSWatchable.hpp"
 #include "JSObjectStructs/JSWhenStruct.hpp"
-#include "JSObjectStructs/JSWatchedStruct.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include "JSObjectStructs/JSQuotedStruct.hpp"
 #include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
@@ -257,22 +255,78 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
 }
 
-
-v8::Handle<v8::Value> JSObjectScript::createWatched()
+//checks to see if the associated space object reference exists in the script.
+//if it does, then make the position listener a subscriber to is pos updates.
+bool JSObjectScript::registerPosListenerOwnPres(SpaceObjectReference* ownPres, PositionListener* pl)
 {
-    v8::HandleScope handle_scope;
-
-    v8::Handle<v8::Object>     watchedObj    = mManager->mWatchedTemplate->NewInstance();
-    v8::Persistent<v8::Object> newWatchedObj = v8::Persistent<v8::Object>::New(watchedObj);
-
-    JSWatchedStruct* jswatched = new JSWatchedStruct(newWatchedObj,this);
-
-    
-    newWatchedObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WATCHED_TYPEID_STRING)));
-    newWatchedObj->SetInternalField(WATCHED_TEMPLATE_FIELD,v8::External::New(jswatched));
-
-    return newWatchedObj;
+    return registerPosListener(NULL,ownPres,pl);
 }
+
+
+bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl)
+{
+    ProxyObjectPtr p;
+    bool succeeded = false;
+    if (sporef ==NULL)
+    {
+        //trying to set to one of my own presence's postion listeners
+        JSLOG(insane,"attempting to register position listener for one of my own presences with sporef "<<*ownPres);
+        succeeded = mParent->getProxy(ownPres,p);
+    }
+    else
+    {
+        //trying to get a non-local proxy object
+        JSLOG(insane,"attempting to register position listener for a visible object with sporef "<<*sporef);
+        succeeded = mParent->getProxyObjectFrom(ownPres,sporef,p);
+    }
+
+    //if actually had associated proxy object
+    if (succeeded)
+        p->PositionProvider::addListener(pl);
+    else
+        JSLOG(error,"error registering to be a position listener. could not find associated object in hosted object.");
+
+    return succeeded;
+
+}
+
+
+//deregisters position listening on one of my own presences (ownPres).
+bool JSObjectScript::deRegisterPosListenerOwnPres(SpaceObjectReference* ownPres,PositionListener* pl)
+{
+    return deRegisterPosListener(NULL,ownPres,pl);
+}
+
+//deregisters position listening for an arbitrary proxy object visible to
+//ownPres and with spaceobject reference sporef.
+bool JSObjectScript::deRegisterPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl)
+{
+    ProxyObjectPtr p;
+    bool succeeded = false;
+    
+    if (sporef == NULL)
+    {
+        //de-regestering pl from position listening to one of my own presences.
+        JSLOG(insane,"attempting to de-register position listener for one of my presences with sporef "<<*ownPres);
+        succeeded = mParent->getProxy(ownPres,p);
+    }
+    else
+    {
+        //de-registering pl from position listening to an arbitrary proxy object
+        JSLOG(insane,"attempting to de-register position listener for visible object with sporef "<<*sporef);
+        succeeded =  mParent->getProxyObjectFrom(ownPres,sporef,p);
+    }
+    
+    if (succeeded)
+        p->PositionProvider::removeListener(pl);
+    else
+        JSLOG(error,"error de-registering to be a position listener.  could not find associated object in hosted object.");
+
+    return succeeded;
+    
+}
+
+
 
 
 v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(v8::Handle<v8::Array> itemArray)
@@ -754,6 +808,10 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedList(std::vector<JSWhenWa
 }
 
 
+Time JSObjectScript::getHostedTime()
+{
+    return mParent->currentLocalTime();
+}
 
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)
@@ -842,28 +900,21 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     }
 
 
-    checkWatchables();
+    checkWhens();
     return result;
 }
 
 
 
-//this function runs through 
-void JSObjectScript::checkWatchables()
-{
-    WhenMap whensToCheck;
-    for (WatchableIter iter = mWatchables.begin(); iter!= mWatchables.end(); ++iter)
-        iter->first->checkAndClearFlag(whensToCheck);
-    
-    checkWhens(whensToCheck);
-}
 
 //there's sort of an open question as to whether one when condition should be
 //able to trigger another.  As structured, the answer is yes.  May do something
 //to prevent this.
-void JSObjectScript::checkWhens(WhenMap& mapWhensToCheck)
+//this function runs through all the when statements associated with script, it
+//checks their predicates and runs them if the predicates evaluate to true.
+void JSObjectScript::checkWhens()
 {
-    for (WhenMapIter iter = mapWhensToCheck.begin(); iter!= mapWhensToCheck.end(); ++iter)
+    for (WhenMapIter iter = mWhens.begin(); iter!= mWhens.end(); ++iter)
         iter->first->checkPredAndRun();
 }
 
@@ -1294,47 +1345,6 @@ v8::Handle<v8::Value> JSObjectScript::getVisibleFromArray(const SpaceObjectRefer
 }
 
 
-//keeping a reference count of watched objects
-//at end of every executed bit of code, iterate through watchable list
-//when do this iteration, creates a list of associated when structs that
-//
-void JSObjectScript::addWatchable(JSWatchable* toAdd)
-{
-    WatchableIter iter = mWatchables.find(toAdd);
-    if (iter == mWatchables.end())
-    {
-        //didn't already exist, create it.
-        mWatchables[toAdd] = 1;
-        JSLOG(info,"Was not already watching this object.  Creating an entry for it in watched list");
-    }
-    else
-    {
-        //did already exist, increment reference count to watchable
-        mWatchables[toAdd] = mWatchables[toAdd] + 1;
-        JSLOG(info,"Was already watching this object.  Incrementing its reference count in JSObjectScript.cpp");
-    }
-    
-}
-void JSObjectScript::removeWatchable(JSWatchable* toRemove)
-{
-    WatchableIter iter = mWatchables.find(toRemove);
-
-    if (iter == mWatchables.end())
-    {
-        JSLOG(error,"Do not have a record of this watchable object associated with JSObjectScript.  Highly unusual, and likely an error.");
-        return;
-    }
-
-    mWatchables[toRemove] = mWatchables[toRemove] -1;
-    if (mWatchables[toRemove] == 0)
-    {
-        mWatchables.erase(iter);
-        JSLOG(insane,"No additional references to watchable object.  Removing it from watchable list.");
-    }
-
-    
-}
-
 
 
 /*
@@ -1637,10 +1647,30 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 
-
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
     return js_pres;
+}
+
+
+
+void JSObjectScript::addWhen(JSWhenStruct* whenToAdd)
+{
+    JSLOG(insane, "registering when to object script");
+    mWhens[whenToAdd] = true;
+}
+
+void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
+{
+    WhenMapIter iter = mWhens.find(whenToRemove);
+    if (iter == mWhens.end())
+    {
+        JSLOG(error,"could not remove when from object script because when was not already registered here");
+        return;
+    }
+
+    JSLOG(insane, "removing previously registered when from object script");
+    mWhens.erase(iter);
 }
 
 

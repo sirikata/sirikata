@@ -3,9 +3,7 @@
 #include "JSObjectsUtils.hpp"
 #include <cassert>
 #include <sirikata/core/util/Platform.hpp>
-#include "../JSObjectStructs/JSWatchable.hpp"
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
-#include "../JSObjectStructs/JSWatchedStruct.hpp"
 #include "../JSObjectStructs/JSWhenStruct.hpp"
 
 
@@ -13,21 +11,6 @@ namespace Sirikata{
 namespace JS{
 
 
-JSWatchable* decodeWatchable(v8::Handle<v8::Value> toDecode, String & errorMessage)
-{
-    v8::HandleScope handle_scope;  //for garbage collection.
-
-    errorMessage += " Error in decodeWatchable of JSObjectsUtils.cpp.  ";
-    JSWatchable* returner = dynamic_cast<JSWatchable*>(JSVisibleStruct::decodeVisible(toDecode, errorMessage));
-    if (returner == NULL)
-    {
-        returner = dynamic_cast<JSWatchable*>(JSWatchedStruct::decodeWatchedStruct(toDecode, errorMessage));
-        if (returner == NULL)
-            returner = dynamic_cast<JSWatchable*>(JSPresenceStruct::decodePresenceStruct(toDecode,errorMessage));
-    }
-
-    return returner;
-}
 
 
 

@@ -51,8 +51,8 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
-#include "JSObjectStructs/JSWatchable.hpp"
 #include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
+#include "JSObjectStructs/JSWhenStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -86,7 +86,7 @@ public:
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
-
+    Time getHostedTime();
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
@@ -101,12 +101,10 @@ public:
     //this function returns a context with
     v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
 
-    v8::Handle<v8::Value>createWatched();
-    
-    void addWatchable(JSWatchable* toAdd);
-    void removeWatchable(JSWatchable* toRemove);
 
     String tokenizeWhenPred(const String& whenPredAsString);
+    void addWhen(JSWhenStruct* whenToAdd);
+    void removeWhen(JSWhenStruct* whenToRemove);
     
     
     /** Returns true if this script is valid, i.e. if it was successfully loaded
@@ -176,6 +174,12 @@ public:
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
+    bool registerPosListenerOwnPres(SpaceObjectReference* ownPres, PositionListener* pl);
+    bool deRegisterPosListenerOwnPres(SpaceObjectReference* ownPres,PositionListener* pl);
+    bool registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl);
+    bool deRegisterPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl);
+    
+
     /** Register an event pattern matcher and handler. */
     JSEventHandlerStruct* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand);
@@ -233,16 +237,14 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
-    void checkWatchables();
-    void checkWhens(WhenMap& mapWhensToCheck);
+
+    void checkWhens();
+
+
     
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-
-    WatchableMap mWatchables;
-    
-    
 
     // Handlers for presence connection events
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
@@ -261,9 +263,6 @@ private:
     v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
 
 
-    
-
-    
     
     v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
@@ -311,6 +310,7 @@ private:
 
     JSObjectScriptManager* mManager;
 
+    WhenMap mWhens;
 
     void callbackUnconnected(const SpaceObjectReference& name, int token);
     int presenceToken;

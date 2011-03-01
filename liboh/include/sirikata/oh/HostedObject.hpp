@@ -203,6 +203,7 @@ public:
     /// Gets the proxy object representing this HostedObject inside space.
     ///const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
+    bool getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p);
     const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
 
 public:

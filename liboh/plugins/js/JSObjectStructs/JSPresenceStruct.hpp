@@ -5,7 +5,6 @@
 #include <v8.h>
 
 #include "JSContextStruct.hpp"
-#include "JSWatchable.hpp"
 namespace Sirikata {
 namespace JS {
 
@@ -14,7 +13,7 @@ class JSObjectScript;
 
 
 //note: only position and isConnected will actually set the flag of the watchable
-struct JSPresenceStruct :  public JSWatchable
+struct JSPresenceStruct : public PositionListener
 {
     JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,int presenceToken); //isConnected is false using this:
                                               //have no sporef
@@ -37,11 +36,10 @@ struct JSPresenceStruct :  public JSWatchable
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
 
     v8::Handle<v8::Value> struct_getPosition();
+    v8::Handle<v8::Value> struct_getVelocity();
     v8::Handle<v8::Value> struct_setVelocity(const Vector3f& newVel);
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries);
-
     v8::Handle<v8::Value> distance(Vector3d* distTo);
-    
     v8::Handle<v8::Value> struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast);
     
     void addAssociatedContext(JSContextStruct*);
@@ -53,7 +51,7 @@ struct JSPresenceStruct :  public JSWatchable
     int getPresenceToken();
 
     v8::Handle<v8::Value>  getOrientationFunction();
-    v8::Handle<v8::Value>  getVelocityFunction();
+
     v8::Handle<v8::Value>  setPositionFunction(Vector3f newPos);
     v8::Handle<v8::Value>  setVisualScaleFunction(float new_scale);
     v8::Handle<v8::Value>  getVisualScaleFunction();
@@ -80,6 +78,7 @@ struct JSPresenceStruct :  public JSWatchable
     }
 
 
+    virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
 
 private:
     //data
@@ -88,11 +87,16 @@ private:
     bool isConnected;
     bool hasConnectedCallback;
     int mPresenceToken;
-    
+
+    TimedMotionVector3f mLocation;
+    TimedMotionQuaternion mOrientation;
+
 
     ContextVector associatedContexts;
     
     void clearPreviousConnectedCB();
+    void registerAsPosListener();
+    void deregisterAsPosListener();
 };
 
 

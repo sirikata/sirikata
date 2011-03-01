@@ -3,7 +3,6 @@
 #include "../JSObjectScript.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include <v8.h>
-#include "JSWatchable.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -12,7 +11,7 @@ namespace JS {
 v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    setFlag();
+
     
     if (distTo == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in call to dist of jsvisible object in jsvisiblestruct.cpp.  Must provide a vector to dist function.")) );
@@ -27,8 +26,7 @@ v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
 
 
 JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3f& currentVelocity)
- : JSWatchable(),
-   jsObjScript(parent),
+ : jsObjScript(parent),
    whatIsVisible(new SpaceObjectReference(whatsVisible)),
    visibleToWhom(new SpaceObjectReference( toWhom)),
    stillVisible(new bool(visibleCurrently)),
@@ -91,13 +89,11 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
 
 v8::Handle<v8::Value> JSVisibleStruct::returnProxyPosition()
 {
-    setFlag();
     return jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
 }
 
 Vector3d JSVisibleStruct::returnProxyPositionCPP()
 {
-    setFlag();
     jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
     return *mPosition;
 }

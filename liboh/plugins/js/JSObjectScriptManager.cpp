@@ -43,7 +43,6 @@
 #include "JSObjects/JSUtilObj.hpp"
 #include "JSObjects/JSHandler.hpp"
 #include "JSObjects/JSTimer.hpp"
-#include "JSObjects/JSWatched.hpp"
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
 
@@ -87,17 +86,6 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 
 
 
-//here's how watched objects work;
-//they have an internal field with an accessor.
-void JSObjectScriptManager::createWatchedTemplate()
-{
-    v8::HandleScope handle_scope;
-    mWatchedTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-
-    // An internal field holds the JSObjectScript*
-    mWatchedTemplate->SetInternalFieldCount(WATCHED_TEMPLATE_FIELD_COUNT);
-    mWatchedTemplate->SetNamedPropertyHandler(JSWatched::WatchedGet, JSWatched::WatchedSet);
-}
 
 
 void JSObjectScriptManager::createUtilTemplate()
@@ -108,7 +96,7 @@ void JSObjectScriptManager::createUtilTemplate()
     // An internal field holds the JSObjectScript*
     mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
-    mUtilTemplate->Set(v8::String::New("create_watched"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWatched));
+
     mUtilTemplate->Set(v8::String::New("create_when"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhen));
     mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSUtilObj::ScriptSqrtFunction));
     mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSUtilObj::ScriptAcosFunction));
@@ -121,7 +109,9 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
     mUtilTemplate->Set(v8::String::New("create_when_watched_item"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedItem));
     mUtilTemplate->Set(v8::String::New("create_when_watched_list"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedList));
-            
+
+    mUtilTemplate->Set(v8::String::New("create_when_timeout_lt"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenTimeoutLT));
+    
     addTypeTemplates(mUtilTemplate);
 }
 
@@ -173,7 +163,7 @@ void JSObjectScriptManager::createTemplates()
     mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
     mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
-    createWatchedTemplate();
+
     createWhenTemplate();
     createQuotedTemplate();
     
@@ -279,7 +269,6 @@ void JSObjectScriptManager::createContextGlobalTemplate()
 void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> tempToAddTo)
 {
     tempToAddTo->Set(v8::String::New("When"),mWhenTemplate);
-    tempToAddTo->Set(v8::String::New("Watched"), mWatchedTemplate);
     tempToAddTo->Set(v8::String::New("Pattern"), mPatternTemplate);
     tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);

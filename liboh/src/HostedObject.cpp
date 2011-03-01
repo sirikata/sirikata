@@ -249,6 +249,16 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
     return proxy_obj;
 }
 
+bool HostedObject::getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p)
+{
+    p = getProxy(sporef->space(), sporef->object());
+    if (p.get() == NULL);
+        return false;
+    
+    return true;
+}
+
+
 namespace {
 bool myisalphanum(char c) {
     if (c>='a'&&c<='z') return true;

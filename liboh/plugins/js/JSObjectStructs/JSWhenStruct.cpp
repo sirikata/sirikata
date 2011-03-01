@@ -3,7 +3,6 @@
 #include "../JSObjectScript.hpp"
 #include "JSTimerStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
-#include "JSWatchable.hpp"
 #include <v8.h>
 #include "JSSuspendable.hpp"
 #include "../JSLogging.hpp"
@@ -38,7 +37,10 @@ JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Functi
     
     //linking everything so that will be able to chek
     addWhenToContext();
+    addWhenToScript();
 }
+
+
 
 
 /**
@@ -54,7 +56,7 @@ void JSWhenStruct::whenCreateCBFunc(v8::Handle<v8::Function>callback)
 
 void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
 {
-    JSLOG(debug, "building a list of watched items for predicate of when statement.  here is predicate: "<<whenPredAsString);
+    JSLOG(insane, "building a list of watched items for predicate of when statement.  here is predicate: "<<whenPredAsString);
     
     //whenPredAsString:  x < 3 + z || x.y.a > 2
     //tokenizedPred: [ util.create_when_watched_item(['x']),
@@ -64,7 +66,7 @@ void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
 
     //evaluate the tokenizedPred, which returns an array object
     String fncTokePred = tokenizedPred;
-    JSLOG(debug,"when predicate function associated with tokenized predicate: "<<fncTokePred);
+    JSLOG(insane,"when predicate function associated with tokenized predicate: "<<fncTokePred);
         
     v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,fncTokePred);
 
@@ -79,7 +81,7 @@ void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
     }
 
     //for debugging.
-    mWWLS->debugPrintWatchedList();
+    //mWWLS->debugPrintWatchedList();
 }
 
 //This function takes in the array that represents the when's predicate.
@@ -156,6 +158,8 @@ JSWhenStruct::~JSWhenStruct()
 
         if (jscont != NULL)
             jscont->struct_deregisterSuspendable(this);
+
+        mObjScript->removeWhen(this);
     }
 }
 
@@ -164,6 +168,11 @@ void JSWhenStruct::addWhenToContext()
 {
     if (jscont != NULL)
         jscont->struct_registerSuspendable(this);
+}
+
+void JSWhenStruct::addWhenToScript()
+{
+    mObjScript->addWhen(this);
 }
 
 
@@ -224,8 +233,6 @@ v8::Handle<v8::Value>JSWhenStruct::struct_whenGetLastPredState()
 }
 
 
-
-
 v8::Handle<v8::Value>JSWhenStruct::suspend()
 {
     return JSSuspendable::suspend();
@@ -251,6 +258,11 @@ v8::Handle<v8::Value>JSWhenStruct::clear()
 
         //will always be defined if haven't been cleared.
         mContext.Dispose();
+
+        if (jscont != NULL)
+            jscont->struct_deregisterSuspendable(this);
+
+        mObjScript->removeWhen(this);
     }
     
     return JSSuspendable::clear();
