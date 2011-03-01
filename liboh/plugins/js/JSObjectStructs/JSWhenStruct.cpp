@@ -60,12 +60,9 @@ void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
     //tokenizedPred: [ util.create_when_watched_item(['x']),
     //util.create_when_watched(['x']),
     //util.create_when_watched_item(['x','y','a])]
-    //
-    //
     String tokenizedPred = mObjScript->tokenizeWhenPred(whenPredAsString);
 
     //evaluate the tokenizedPred, which returns an array object
-    //String fncTokePred = "(function()  {  return " + tokenizedPred + " });";
     String fncTokePred = tokenizedPred;
     JSLOG(debug,"when predicate function associated with tokenized predicate: "<<fncTokePred);
         
