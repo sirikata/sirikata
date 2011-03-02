@@ -58,7 +58,10 @@ function() {
     };
 
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
+        system.print(evt.button + "\n");
         if (evt.button == 'escape') this._simulator.quit();
+        if (evt.button == 'i') this._simulator.screenshot();
+        if (evt.button == 'm') this._simulator.toggleSuspend();
     };
 
 })();

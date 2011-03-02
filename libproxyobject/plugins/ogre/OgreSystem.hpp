@@ -145,7 +145,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     void screenshot(const String& filename);
 
+    void toggleSuspend();
     void suspend();
+    void resume();
 
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();

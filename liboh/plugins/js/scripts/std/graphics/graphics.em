@@ -53,9 +53,29 @@ function() {
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
+    /** Request that the renderer suspend rendering. It continues to exist, but doesn't use any CPU on rendering. */
+    ns.Graphics.prototype.suspend = function() {
+        this.invoke('suspend');
+    };
+
+    /** Request that the renderer resume rendering. If rendering wasn't suspended, has no effect. */
+    ns.Graphics.prototype.resume = function() {
+        this.invoke('resume');
+    };
+
+    /** Request that the renderer toggle suspended rendering. See suspend and resume for details. */
+    ns.Graphics.prototype.toggleSuspend = function() {
+        this.invoke('toggleSuspend');
+    };
+
     /** Request that the OH shut itself down, i.e. that the entire application exit. */
     ns.Graphics.prototype.quit = function() {
         this.invoke('quit');
+    };
+
+    /** Request a screenshot be taken and stored on disk. */
+    ns.Graphics.prototype.screenshot = function() {
+        this.invoke('screenshot');
     };
 
 })();

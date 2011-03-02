@@ -64,6 +64,9 @@ public:
     void tick(const Task::LocalTime& t);
 
     void setDelegate(Invokable* del);
+
+    void screenshotAction();
+
 private:
     bool delegateEvent(Input::InputEventPtr inputev);
 
@@ -71,7 +74,6 @@ private:
     Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
     void clearSelection();
     void suspendAction();
-    void screenshotAction();
     void togglePeriodicScreenshotAction();
 
     void timedScreenshotAction(const Task::LocalTime& t);

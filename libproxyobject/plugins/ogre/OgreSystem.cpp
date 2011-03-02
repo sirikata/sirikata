@@ -282,9 +282,18 @@ Transfer::TransferPoolPtr OgreSystem::transferPool() {
     return mTransferPool;
 }
 
-void OgreSystem::suspend() {
+void OgreSystem::toggleSuspend() {
   mSuspended = !mSuspended;
 }
+
+void OgreSystem::suspend() {
+  mSuspended = true;
+}
+
+void OgreSystem::resume() {
+  mSuspended = false;
+}
+
 void OgreSystem::destroyRenderTarget(Ogre::ResourcePtr&name) {
     Ogre::TextureManager::getSingleton().remove(name);
 }
@@ -1156,10 +1165,16 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return createWindowHTML(params);
     else if(name == "setInputHandler")
         return setInputHandler(params);
-    else if(name == "quit") {
+    else if(name == "quit")
         quit();
-        return boost::any();
-    }
+    else if (name == "suspend")
+        suspend();
+    else if (name == "toggleSuspend")
+        toggleSuspend();
+    else if (name == "resume")
+        resume();
+    else if (name == "screenshot")
+        mMouseHandler->screenshotAction();
 
     return boost::any();
 }
