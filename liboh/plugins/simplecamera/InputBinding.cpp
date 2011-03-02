@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  InputBinding.cpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
@@ -35,9 +35,7 @@
 #include <boost/program_options.hpp>
 
 namespace Sirikata {
-namespace Graphics {
-
-using namespace Input;
+namespace SimpleCamera {
 
 InputBinding::InputBinding() {
 }
@@ -75,17 +73,20 @@ void InputBinding::addFromFile(const String& filename, InputResponseMap response
     }
 }
 
-bool InputBinding::handle(Input::InputEventPtr& evt) {
-    Input::EventDescriptor descriptor = evt->getDescriptor();
-
-    Binding::iterator it = mResponses.find(descriptor);
-    if (it == mResponses.end())
-        return false;
-
-    InputResponse* response = it->second;
-    response->invoke(evt);
-    return true;
+bool InputBinding::handle(InputBindingEvent& evt) {
+    // This approach sucks, but lets us keep this code simple instead of
+    // requiring two classes ('descriptors' vs. actual events). Since this is
+    // only supposed to be used for simple interfaces anyway, if this becomes a
+    // problem then somebody is using this incorrectly.
+    for(Binding::iterator it = mResponses.begin(); it != mResponses.end(); it++) {
+        if (it->first.matches(evt)) {
+            InputResponse* response = it->second;
+            response->invoke(evt);
+            return true;
+        }
+    }
+    return false;
 }
 
-} // namespace Graphics
+} // namespace SimpleCamera
 } // namespace Sirikata

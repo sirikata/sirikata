@@ -469,7 +469,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     OptionValue*configFile;
     OptionValue*ogreLogFile;
     OptionValue*purgeConfig;
-    OptionValue* keybindingFile;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*windowTitle;
@@ -484,7 +483,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
                            purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
-                           keybindingFile=new OptionValue("keybinding","keybinding.default",OptionValueType<String>(),"File to load key bindings from"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
@@ -644,7 +642,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
-    allocMouseHandler(keybindingFile->as<String>());
+    allocMouseHandler();
     new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
 
     loadSystemLights();
@@ -1104,8 +1102,8 @@ void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectR
 }
 
 
-void OgreSystem::allocMouseHandler(const String& keybindings_file) {
-    mMouseHandler = new OgreSystemMouseHandler(this, keybindings_file);
+void OgreSystem::allocMouseHandler() {
+    mMouseHandler = new OgreSystemMouseHandler(this);
 }
 void OgreSystem::destroyMouseHandler() {
     if (mMouseHandler) {
@@ -1174,7 +1172,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     else if (name == "resume")
         resume();
     else if (name == "screenshot")
-        mMouseHandler->screenshotAction();
+        screenshot("screenshot.png");
 
     return boost::any();
 }

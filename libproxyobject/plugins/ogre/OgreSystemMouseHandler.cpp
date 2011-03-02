@@ -165,35 +165,6 @@ void OgreSystemMouseHandler::clearSelection() {
     mSelectedObjects.clear();
 }
 
-static String fillZeroPrefix(const String& prefill, int32 nwide) {
-    String retval = prefill;
-    while((int)retval.size() < nwide)
-        retval = String("0") + retval;
-    return retval;
-}
-
-void OgreSystemMouseHandler::suspendAction() {
-    mParent->suspend();
-}
-
-void OgreSystemMouseHandler::screenshotAction() {
-    String fname = String("screenshot-") + boost::lexical_cast<String>(mScreenshotID) + String(".png");
-    mParent->screenshot(fname);
-    mScreenshotID++;
-}
-
-void OgreSystemMouseHandler::togglePeriodicScreenshotAction() {
-    mPeriodicScreenshot = !mPeriodicScreenshot;
-}
-
-void OgreSystemMouseHandler::timedScreenshotAction(const Task::LocalTime& t) {
-    String fname = String("screenshot-") + fillZeroPrefix(boost::lexical_cast<String>((t - mScreenshotStartTime).toMilliseconds()), 8) + String(".png");
-    mParent->screenshot(fname);
-}
-
-void OgreSystemMouseHandler::quitAction() {
-    mParent->quit();
-}
 
 bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, float *lastY) {
     float delx = x-*lastX;
@@ -824,7 +795,7 @@ EventResponse OgreSystemMouseHandler::keyHandler(EventPtr ev) {
         return EventResponse::cancel();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -849,7 +820,7 @@ EventResponse OgreSystemMouseHandler::axisHandler(EventPtr ev) {
     }
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     return EventResponse::cancel();
 }
@@ -866,7 +837,7 @@ EventResponse OgreSystemMouseHandler::textInputHandler(EventPtr ev) {
         return EventResponse::cancel();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -883,7 +854,7 @@ EventResponse OgreSystemMouseHandler::mouseHoverHandler(EventPtr ev) {
         return EventResponse::cancel();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     if (mParent->mPrimaryCamera) {
         Camera *camera = mParent->mPrimaryCamera;
@@ -916,7 +887,7 @@ EventResponse OgreSystemMouseHandler::mousePressedHandler(EventPtr ev) {
         mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
     }
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -945,7 +916,7 @@ EventResponse OgreSystemMouseHandler::mouseClickHandler(EventPtr ev) {
     mMouseDownObject.reset();
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -981,7 +952,7 @@ EventResponse OgreSystemMouseHandler::mouseDragHandler(EventPtr evbase) {
     }
 
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     ActiveDrag * &drag = mActiveDrag[ev->mButton];
     if (ev->mType == Input::DRAG_START) {
@@ -1017,7 +988,7 @@ EventResponse OgreSystemMouseHandler::webviewHandler(EventPtr ev) {
     // For everything else we let the browser go first, but in this case it should have
     // had its chance, so we just let it go
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
-    mInputBinding.handle(inputev) || delegateEvent(inputev);
+    delegateEvent(inputev);
 
     return EventResponse::nop();
 }
@@ -1054,23 +1025,7 @@ void OgreSystemMouseHandler::renderStatsUpdateTick(const Task::LocalTime& t) {
     }
 }
 
-void OgreSystemMouseHandler::screenshotTick(const Task::LocalTime& t) {
-    if (mPeriodicScreenshot && (t-mLastScreenshotTime > Task::DeltaTime::seconds(1.0))) {
-        timedScreenshotAction(t);
-        mLastScreenshotTime = t;
-    }
-}
 
-/// WebView Actions
-void OgreSystemMouseHandler::webViewNavigateAction(WebViewManager::NavigationAction action) {
-    WebViewManager::getSingleton().navigate(action);
-}
-
-void OgreSystemMouseHandler::webViewNavigateStringAction(WebViewManager::NavigationAction action, const String& arg) {
-    WebViewManager::getSingleton().navigate(action, arg);
-}
-
-///////////////// DEVICE FUNCTIONS ////////////////
 
 EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
     std::tr1::shared_ptr<InputDeviceEvent> ev (std::tr1::dynamic_pointer_cast<InputDeviceEvent>(evbase));
@@ -1119,12 +1074,8 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
     return EventResponse::nop();
 }
 
-OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent, const String& bindings_file)
+OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mParent(parent),
-   mScreenshotID(0),
-   mPeriodicScreenshot(false),
-   mScreenshotStartTime(Task::LocalTime::now()),
-   mLastScreenshotTime(Task::LocalTime::now()),
    mCurrentGroup(SpaceObjectReference::null()),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
@@ -1174,28 +1125,7 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent, const String&
             WebViewEvent::getEventId(),
             std::tr1::bind(&OgreSystemMouseHandler::webviewHandler, this, _1)));
 
-    mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::screenshotAction, this));
-    mInputResponses["togglePeriodicScreenshot"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::togglePeriodicScreenshotAction, this));
-    mInputResponses["suspend"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::suspendAction, this));
-
-    mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
-    mInputResponses["moveBackward"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(0, 0, 1), _1), 1, 0);
-    mInputResponses["moveLeft"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(-1, 0, 0), _1), 1, 0);
-    mInputResponses["moveRight"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(1, 0, 0), _1), 1, 0);
-    mInputResponses["moveDown"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(0, -1, 0), _1), 1, 0);
-    mInputResponses["moveUp"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(0, 1, 0), _1), 1, 0);
-
-    mInputResponses["rotateXPos"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::rotateAction, this, Vector3f(1, 0, 0), _1), 1, 0);
-    mInputResponses["rotateXNeg"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::rotateAction, this, Vector3f(-1, 0, 0), _1), 1, 0);
-    mInputResponses["rotateYPos"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::rotateAction, this, Vector3f(0, 1, 0), _1), 1, 0);
-    mInputResponses["rotateYNeg"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::rotateAction, this, Vector3f(0, -1, 0), _1), 1, 0);
-    mInputResponses["rotateZPos"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::rotateAction, this, Vector3f(0, 0, 1), _1), 1, 0);
-    mInputResponses["rotateZNeg"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::rotateAction, this, Vector3f(0, 0, -1), _1), 1, 0);
-
-    mInputResponses["stableRotatePos"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::stableRotateAction, this, 1.f, _1), 1, 0);
-    mInputResponses["stableRotateNeg"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::stableRotateAction, this, -1.f, _1), 1, 0);
-
-
+/*
     mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptingUIAction, this));
 
     mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createUIAction, this, "object/object.html"));
@@ -1220,39 +1150,9 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent, const String&
     mInputResponses["setDragModeRotateCamera"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "rotateCamera"));
     mInputResponses["setDragModePanCamera"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "panCamera"));
 
-    mInputResponses["webNewTab"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateAction, this, WebViewManager::NavigateNewTab));
-    mInputResponses["webBack"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateAction, this, WebViewManager::NavigateBack));
-    mInputResponses["webForward"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateAction, this, WebViewManager::NavigateForward));
-    mInputResponses["webRefresh"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateAction, this, WebViewManager::NavigateRefresh));
-    mInputResponses["webHome"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateAction, this, WebViewManager::NavigateHome));
-    mInputResponses["webGo"] = new StringInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateGo, _1));
-    mInputResponses["webDelete"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateAction, this, WebViewManager::NavigateDelete));
-
-    mInputResponses["webCommand"] = new StringInputResponse(std::tr1::bind(&OgreSystemMouseHandler::webViewNavigateStringAction, this, WebViewManager::NavigateCommand, _1));
-
-
     mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::startUploadObject, this));
     mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::handleQueryAngleWidget, this));
-
-    boost::filesystem::path resources_dir = mParent->getResourcesDir();
-    String keybinding_file = (resources_dir / bindings_file).string();
-    mInputBinding.addFromFile(keybinding_file, mInputResponses);
-
-    // WebView Chrome
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navnewtab"), mInputResponses["webNewTab"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navback"), mInputResponses["webBack"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navforward"), mInputResponses["webForward"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navrefresh"), mInputResponses["webRefresh"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navhome"), mInputResponses["webHome"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navgo"), mInputResponses["webGo"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navdel"), mInputResponses["webDelete"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navmoveforward"), mInputResponses["moveForward"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnleft"), mInputResponses["rotateYPos"]);
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navturnright"), mInputResponses["rotateYNeg"]);
-
-    mInputBinding.add(InputBindingEvent::Web("__chrome", "navcommand"), mInputResponses["webCommand"]);
-
-    //mInputBinding.add(InputBindingEvent::Web("__scripting", "Close"), mInputResponses["closeWebView"]);
+*/
 
     // Allocate a random port for scripting requests
     mScriptingRequestPort = mParent->getViewer()->bindODPPort(mParent->getViewerPresence());
@@ -1275,9 +1175,6 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
          iter != mEvents.end();
          ++iter) {
         mParent->mInputManager->unsubscribe(*iter);
-    }
-    for (InputBinding::InputResponseMap::iterator iter=mInputResponses.begin(),iterend=mInputResponses.end();iter!=iterend;++iter) {
-        delete iter->second;
     }
     for (std::map<int, ActiveDrag*>::iterator iter=mActiveDrag.begin(),iterend=mActiveDrag.end();iter!=iterend;++iter) {
         if(iter->second!=NULL)
@@ -1303,8 +1200,8 @@ void fillModifiers(Invokable::Dict& event_data, Input::Modifier m) {
 
 }
 
-bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
-    if (mDelegate == NULL) return false;
+void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
+    if (mDelegate == NULL) return;
 
     Invokable::Dict event_data;
     {
@@ -1403,12 +1300,11 @@ bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         }
     }
 
-    if (event_data.empty()) return false;
+    if (event_data.empty()) return;
 
     std::vector<boost::any> args;
     args.push_back(event_data);
     mDelegate->invoke(args);
-    return true;
 }
 
 
@@ -1464,7 +1360,7 @@ void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& arg
     printf("UI Action triggered. action = '%s'.\n", action_triggered.c_str());
 
     if(action_triggered == "action_exit") {
-        quitAction();
+        mParent->quit();
     } else if(action_triggered == "action_directory_list_request") {
         if(args.size() != 2) {
             printf("expected 2 arguments, returning.\n");
@@ -1481,7 +1377,6 @@ void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& arg
 void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
     fpsUpdateTick(t);
     renderStatsUpdateTick(t);
-    screenshotTick(t);
 
     if(!mUIWidgetView) {
         mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget","ui_widget",

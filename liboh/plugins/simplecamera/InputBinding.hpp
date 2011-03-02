@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  InputBinding.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
@@ -34,16 +34,14 @@
 #define _SIRIKATA_INPUT_BINDING_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include "input/InputEventDescriptor.hpp"
-#include "input/InputEvents.hpp"
 #include "InputBindingEvent.hpp"
 #include "InputResponse.hpp"
 
 namespace Sirikata {
-namespace Graphics {
+namespace SimpleCamera {
 
 class InputBinding {
-    typedef std::map<Input::EventDescriptor, InputResponse*> Binding;
+    typedef std::map<InputBindingEvent, InputResponse*> Binding;
 public:
     typedef std::map<String, InputResponse*> InputResponseMap;
 
@@ -58,12 +56,12 @@ public:
      */
     void addFromFile(const String& filename, InputResponseMap responses);
 
-    bool handle(Input::InputEventPtr& evt);
+    bool handle(InputBindingEvent& evt);
 private:
     Binding mResponses;
 }; // class InputBinding
 
-} // namespace Graphics
+} // namespace SimpleCamera
 } // namespace Sirikata
 
 #endif //_SIRIKATA_INPUT_BINDING_HPP_

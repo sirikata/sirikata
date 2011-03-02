@@ -93,7 +93,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     friend class OgreSystemMouseHandler;
     OgreSystemMouseHandler *mMouseHandler;
-    void allocMouseHandler(const String& keybinding_file);
+    void allocMouseHandler();
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 

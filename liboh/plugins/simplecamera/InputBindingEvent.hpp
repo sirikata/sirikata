@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  InputBindingEvent.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
@@ -34,76 +34,81 @@
 #define _SIRIKATA_INPUT_BINDING_EVENT_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include "input/InputEvents.hpp"
-#include "input/InputEventDescriptor.hpp"
+#include <sirikata/proxyobject/Invokable.hpp>
 
 namespace Sirikata {
-namespace Graphics {
+namespace SimpleCamera {
 
 class InputBindingEvent {
 public:
-    static InputBindingEvent Key(Input::KeyButton button, Input::Modifier mod = Input::MOD_NONE);
-    static InputBindingEvent MouseClick(Input::MouseButton button);
-    static InputBindingEvent MouseDrag(Input::MouseButton button);
-    static InputBindingEvent Axis(Input::AxisIndex axis);
+    enum Modifier {
+        NONE = 0,
+        SHIFT = 1,
+        CTRL = 2,
+        ALT = 4,
+        SUPER = 8
+    };
+
+    static InputBindingEvent Key(String button, Modifier mod);
+    static InputBindingEvent MouseClick(int32 button);
+    static InputBindingEvent MouseDrag(int32 button);
+    static InputBindingEvent Axis(uint32 index);
     static InputBindingEvent Web(const String& wvname, const String& name);
 
     InputBindingEvent();
     InputBindingEvent(const InputBindingEvent& rhs);
+    InputBindingEvent(const boost::any& evt);
     ~InputBindingEvent();
 
     bool valid() const;
 
     bool isKey() const;
-    Input::KeyButton keyButton() const;
-    Input::Modifier keyModifiers() const;
+    String keyButton() const;
+    Modifier keyModifiers() const;
+    bool keyPressed() const;
+    bool keyReleased() const;
 
     bool isMouseClick() const;
-    Input::MouseButton mouseClickButton() const;
+    int32 mouseClickButton() const;
 
     bool isMouseDrag() const;
-    Input::MouseButton mouseDragButton() const;
+    int32 mouseDragButton() const;
+
+    float mouseX() const;
+    float mouseY() const;
 
     bool isAxis() const;
-    Input::AxisIndex axisIndex() const;
+    uint32 axisIndex() const;
+    float axisValue() const;
 
     bool isWeb() const;
-    const String& webViewName() const;
-    const String& webName() const;
+    String webViewName() const;
+    String webName() const;
 
     InputBindingEvent& operator=(const InputBindingEvent& rhs);
 
     String toString() const;
     static InputBindingEvent fromString(const String& asString);
 
-private:
-    Input::EventTypeTag mTag;
+    // Checks if the events "match", which is looser than being equal, allowing
+    // a binding to pair an actual event with an event template for a handler.
+    bool matches(const InputBindingEvent& rhs) const;
 
-    union {
-        struct {
-            Input::KeyButton button;
-            Input::Modifier mod;
-        } key;
-        struct {
-            Input::MouseButton button;
-        } mouseClick;
-        struct {
-            Input::MouseButton button;
-        } mouseDrag;
-        struct {
-            Input::AxisIndex index;
-        } axis;
-        struct {
-            String* wvname;
-            String* name;
-        } web;
-    } mDescriptor;
+    bool operator<(const InputBindingEvent& rhs) const;
+private:
+    static String keyModifiersAsString(Modifier m);
+    static Modifier keyModifiersFromString(const String& s);
+
+    // Get a type tag to help with comparisons
+    int32 typeTag() const;
+
+    Invokable::Dict mEvent;
 };
 
-std::istream& operator>>(std::istream& is, Sirikata::Graphics::InputBindingEvent& ibe);
-std::ostream& operator<<(std::ostream& os, const Sirikata::Graphics::InputBindingEvent& ibe);
+std::istream& operator>>(std::istream& is, Sirikata::SimpleCamera::InputBindingEvent& ibe);
+std::ostream& operator<<(std::ostream& os, const Sirikata::SimpleCamera::InputBindingEvent& ibe);
 
-} // namespace Graphics
+} // namespace SimpleCamera
 } // namespace Sirikata
 
 #endif //_SIRIKATA_INPUT_BINDING_EVENT_HPP_

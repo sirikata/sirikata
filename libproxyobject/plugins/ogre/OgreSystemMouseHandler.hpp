@@ -36,8 +36,6 @@
 #include "WebView.hpp"
 #include "WebViewManager.hpp"
 #include "DragActions.hpp"
-#include "InputResponse.hpp"
-#include "InputBinding.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "task/Event.hpp"
 #include "task/EventManager.hpp"
@@ -54,7 +52,7 @@ namespace Graphics {
 
 class OgreSystemMouseHandler {
 public:
-    OgreSystemMouseHandler(OgreSystem *parent, const String& bindings_file);
+    OgreSystemMouseHandler(OgreSystem *parent);
     ~OgreSystemMouseHandler();
 
     void alert(const String& title, const String& text);
@@ -65,19 +63,13 @@ public:
 
     void setDelegate(Invokable* del);
 
-    void screenshotAction();
-
 private:
-    bool delegateEvent(Input::InputEventPtr inputev);
+    void delegateEvent(Input::InputEventPtr inputev);
 
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
     void clearSelection();
-    void suspendAction();
-    void togglePeriodicScreenshotAction();
 
-    void timedScreenshotAction(const Task::LocalTime& t);
-    void quitAction();
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY);
     void selectObjectAction(Vector2f p, int direction);
 
@@ -126,7 +118,6 @@ private:
 
     void renderStatsUpdateTick(const Task::LocalTime& t);
 
-    void screenshotTick(const Task::LocalTime& t);
     void webViewNavigateAction(WebViewManager::NavigationAction action);
     void webViewNavigateStringAction(WebViewManager::NavigationAction action, const String& arg);
 
@@ -145,11 +136,6 @@ private:
     DeviceSubMap mDeviceSubscriptions;
 
     Invokable* mDelegate;
-
-    uint32 mScreenshotID;
-    bool mPeriodicScreenshot;
-    Task::LocalTime mScreenshotStartTime;
-    Task::LocalTime mLastScreenshotTime;
 
     SpaceObjectReference mCurrentGroup;
     typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
@@ -191,10 +177,6 @@ private:
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;
     Task::LocalTime mLastRenderStatsTime;
-
-    InputBinding::InputResponseMap mInputResponses;
-
-    InputBinding mInputBinding;
 
     WebView* mUploadWebView;
     WebView* mUIWidgetView;

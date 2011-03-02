@@ -1,7 +1,7 @@
-key-m=suspend
+key-escape=quit
+key-m=toggleSuspend
 
 key-i=screenshot
-key-ctrl-i=togglePeriodicScreenshot
 
 key-w=moveForward
 key-s=moveBackward

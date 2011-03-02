@@ -1329,14 +1329,10 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
   ${GFX}/DragActions.cpp
-  ${GFX}/InputBinding.cpp
-  ${GFX}/InputBindingEvent.cpp
-  ${GFX}/InputResponse.cpp
   ${GFX}/task/EventManager.cpp
   ${GFX}/task/Event.cpp
   ${GFX}/task/UniqueId.cpp
   ${INPUT}/SDLInputManager.cpp
-  ${INPUT}/InputEventDescriptor.cpp
   ${INPUT}/InputEvents.cpp
   ${INPUT}/InputDevice.cpp
   ${INPUT}/SDLInputDevice.cpp
@@ -1995,6 +1991,9 @@ SET(LIBOH_PLUGIN_SIMPLECAMERA_SOURCES
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/PluginInterface.cpp
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/SimpleCameraObjectScript.cpp
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/SimpleCameraObjectScriptManager.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputBinding.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputBindingEvent.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputResponse.cpp
     )
 ADD_PLUGIN_TARGET(simplecamera
                     SOURCES ${LIBOH_PLUGIN_SIMPLECAMERA_SOURCES}

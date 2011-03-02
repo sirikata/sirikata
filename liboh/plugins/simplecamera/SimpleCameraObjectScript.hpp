@@ -37,11 +37,17 @@
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
 #include <sirikata/proxyobject/SessionEventListener.hpp>
+#include <sirikata/proxyobject/Invokable.hpp>
+#include "InputBinding.hpp"
 
 namespace Sirikata {
 namespace SimpleCamera {
 
-class SimpleCameraObjectScript : public ObjectScript, SessionEventListener {
+class SimpleCameraObjectScript :
+        public ObjectScript,
+        SessionEventListener,
+        Invokable // For input callbacks
+{
 public:
     SimpleCameraObjectScript(HostedObjectPtr ho, const String& args);
     virtual ~SimpleCameraObjectScript();
@@ -53,8 +59,24 @@ public:
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
+    // Invokable Interface -- Handles input events
+    virtual boost::any invoke(std::vector<boost::any>& params);
+
 private:
+    void suspendAction();
+    void resumeAction();
+    void toggleSuspendAction();
+    void quitAction();
+
+    void screenshotAction();
+
+
     HostedObjectPtr mParent;
+
+    Invokable* mGraphics;
+
+    InputBinding::InputResponseMap mInputResponses;
+    InputBinding mInputBinding;
 };
 
 } // namespace SimpleCamera
