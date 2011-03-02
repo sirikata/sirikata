@@ -1,5 +1,4 @@
 key-m=suspend
-key-escape=quit
 
 key-i=screenshot
 key-ctrl-i=togglePeriodicScreenshot

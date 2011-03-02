@@ -1,5 +1,5 @@
 /*  Sirikata
- *  graphics.em
+ *  default.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,35 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-if (typeof(std) === "undefined") std = {};
-if (typeof(std.graphics) === "undefined") std.graphics = {};
+system.import('graphics.em');
 
 (
 function() {
 
     var ns = std.graphics;
 
-    /** The Graphics class wraps the underlying graphics simulation,
-     *  allowing you to get access to input, control display options,
-     *  and perform operations like picking in response to mouse
-     *  clicks.
+    /** The DefaultGraphics class just contains some sane defaults for
+     *  interaction, allowing you to get a decent, baseline client
+     *  that only requires built-in functionality. You still define
+     *  the presence and which underlying graphics system to use, but
+     *  this class takes care of defining all other UI and interaction.
      */
-    ns.Graphics = function(pres, name) {
-        this._simulator = pres.runSimulation(name);
-        this.inputHandler = new std.graphics.InputHandler(this);
+    ns.DefaultGraphics = function(pres, name) {
+        this._simulator = new std.graphics.Graphics(pres, name);
+        this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
+        this._simulator.inputHandler.onButtonPressed = std.core.bind(this.onButtonPressed, this);
     };
 
-    ns.Graphics.prototype.invoke = function() {
+    ns.DefaultGraphics.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
-    /** Request that the OH shut itself down, i.e. that the entire application exit. */
-    ns.Graphics.prototype.quit = function() {
-        this.invoke('quit');
+    ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
+    };
+
+    ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
+        if (evt.button == 'escape') this._simulator.quit();
     };
 
 })();
-
-// Import additional utilities that anybody using this class will need.
-system.import('input.em');

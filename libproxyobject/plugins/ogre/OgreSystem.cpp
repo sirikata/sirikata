@@ -1156,6 +1156,10 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return createWindowHTML(params);
     else if(name == "setInputHandler")
         return setInputHandler(params);
+    else if(name == "quit") {
+        quit();
+        return boost::any();
+    }
 
     return boost::any();
 }

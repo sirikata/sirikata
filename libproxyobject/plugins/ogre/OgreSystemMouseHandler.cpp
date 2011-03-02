@@ -1177,7 +1177,6 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent, const String&
     mInputResponses["screenshot"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::screenshotAction, this));
     mInputResponses["togglePeriodicScreenshot"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::togglePeriodicScreenshotAction, this));
     mInputResponses["suspend"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::suspendAction, this));
-    mInputResponses["quit"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::quitAction, this));
 
     mInputResponses["moveForward"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(0, 0, -1), _1), 1, 0);
     mInputResponses["moveBackward"] = new FloatToggleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::moveAction, this, Vector3f(0, 0, 1), _1), 1, 0);
@@ -1312,7 +1311,8 @@ bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
         if (button_pressed_ev) {
             event_data["msg"] = String("button-pressed");
-            event_data["button"] = button_pressed_ev->mButton;
+            event_data["button"] = keyButtonString(button_pressed_ev->mButton);
+            event_data["keycode"] = button_pressed_ev->mButton;
             fillModifiers(event_data, button_pressed_ev->mModifier);
         }
     }
@@ -1321,7 +1321,8 @@ bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         ButtonReleasedEventPtr button_released_ev (std::tr1::dynamic_pointer_cast<ButtonReleased>(inputev));
         if (button_released_ev) {
             event_data["msg"] = String("button-up");
-            event_data["button"] = button_released_ev->mButton;
+            event_data["button"] = keyButtonString(button_released_ev->mButton);
+            event_data["keycode"] = button_released_ev->mButton;
             fillModifiers(event_data, button_released_ev->mModifier);
         }
     }
@@ -1330,7 +1331,8 @@ bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         ButtonDownEventPtr button_down_ev (std::tr1::dynamic_pointer_cast<ButtonDown>(inputev));
         if (button_down_ev) {
             event_data["msg"] = String("button-down");
-            event_data["button"] = button_down_ev->mButton;
+            event_data["button"] = keyButtonString(button_down_ev->mButton);
+            event_data["keycode"] = button_down_ev->mButton;
             fillModifiers(event_data, button_down_ev->mModifier);
         }
     }

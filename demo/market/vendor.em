@@ -1,4 +1,5 @@
 system.import("std/library.em");
+system.import('std/graphics/default.em');
 
 /* This is a Book Vendor */
 
@@ -44,7 +45,7 @@ function createBannerObject()
   var f2 = function(msg, sender, pres)
                          { 
                            
-                           var simulator = pres.runSimulation("ogregraphics");
+                           var simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
                           
                            var code = "<html><head><style type=\"text/css\">.command {border-width: 1px 1px 1px 1px;border-color: black;border-style: solid;padding: 0px;}</style><script>function onYes(){var arg_map = ['ExecScript', 'Command', 'Yes'];chrome.send('event', arg_map);}function onNo(){var arg_map = ['ExecScript', 'Command', 'No'];chrome.send('event', arg_map);}</script></head><body>A Vendor wants to send you the list of books you may be interested in. Do you wish to look at it?<br><button type=\"button\" onclick=\"onYes()\">Yes</button><br><button type=\"button\" onclick=\"onNo()\">No</button></body></html>";
 

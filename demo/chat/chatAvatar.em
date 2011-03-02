@@ -1,6 +1,8 @@
 system.import("std/library.em");
 system.import('std/escape.em');
 
+system.import('std/graphics/default.em');
+
 simulator = undefined;
 chat = undefined;
 chat_group = new Array();
@@ -88,7 +90,7 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-      simulator = pres.runSimulation("ogregraphics");
+        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
       chat = simulator.invoke("createWindow", "chat_terminal", "chat/prompt.html");
       chat.invoke("bind", "eventname", onChatMsgReceived);
       var p  = new util.Pattern("name", "get_protocol");
