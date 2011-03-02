@@ -1933,6 +1933,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSWhen.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleStructMonitor.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedItemStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedListStruct.cpp
@@ -1942,6 +1943,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSQuotedStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPositionListener.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSuspendable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSEventHandlerStruct.cpp

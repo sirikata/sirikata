@@ -79,6 +79,7 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
     return mStruct->registerOnProxAddedEventHandler(cb);
 }
 
+
 v8::Handle<v8::Value>distance(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -102,7 +103,7 @@ v8::Handle<v8::Value>distance(const v8::Arguments& args)
 
     Vector3d vec3 = Vec3Extract(argObj);
     
-    return jspres->distance(&vec3);
+    return jspres->struct_getDistance(vec3);
     
 }
 
@@ -184,8 +185,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
 
             Vector3f newPos (Vec3Extract(posArg));
-
-            return mStruct->setPositionFunction(newPos);
+            return mStruct->struct_setPosition(newPos);
         }
 
 
@@ -252,7 +252,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            return mStruct->getOrientationFunction();
+            return mStruct->struct_getOrientation();
         }
 
         v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args)
@@ -281,7 +281,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
-        Handle<v8::Value>      getOrientationVel(const v8::Arguments& args)
+        Handle<v8::Value> getOrientationVel(const v8::Arguments& args)
         {
             String errorMessage = "Error in getOrientationVel while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
@@ -289,7 +289,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            return mStruct->getOrientationVelFunction();
+            return mStruct->struct_getOrientationVel();
         }
 
 
@@ -408,28 +408,6 @@ Handle<v8::Value> toString(const v8::Arguments& args)
     //for now just print the space id
     return mStruct->toString();
 }
-
-
-
-v8::Handle<v8::Value> broadcastVisible(const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in broadcastVisible of JSPresence.cpp.  You need to specify exactly one argument to broadcastVisible (an object that is the message you were going to send).")) );
-
-
-    if (! args[0]->IsObject())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in broadcastVisible of JSPresence.cpp.  You need to pass in an object to broadcast to everyone else.")) );
-
-        
-    String errorMessage = "Error in broadcastVisible while decoding presence.  ";
-    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
-    if (mStruct == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-    return mStruct->struct_broadcastVisible(args[0]->ToObject());
-}
-
 
 
 

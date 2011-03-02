@@ -90,7 +90,7 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
         if (jsPresStruct == NULL)
             return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
-        canSendTo = jsvis->whatIsVisible;
+        canSendTo = jsvis->getToListenTo();
     }
     
     

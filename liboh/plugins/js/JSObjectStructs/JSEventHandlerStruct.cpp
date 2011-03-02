@@ -60,7 +60,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
         return false;
     }
     
-    SpaceObjectReference* spref1 =  jsvis->whatIsVisible;
+    SpaceObjectReference* spref1 =  jsvis->getToListenTo();
 
 
     //decode the expected sender
@@ -75,7 +75,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
             return false;
         }
 
-        SpaceObjectReference* spref2 = jsvisExpectedSender->whatIsVisible;
+        SpaceObjectReference* spref2 = jsvisExpectedSender->getToListenTo();
 
         //check if the senders match
         if ( (*spref1)  != (*spref2))  //the senders do not match.  do not fire

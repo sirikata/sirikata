@@ -398,8 +398,6 @@ void JSObjectScriptManager::createPresenceTemplate()
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
-  //send broadcast message
-  proto_t->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
 
   // For instance templates
@@ -407,69 +405,6 @@ void JSObjectScriptManager::createPresenceTemplate()
   instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
 
 }
-
-
-/*
-void JSObjectScriptManager::createPresenceTemplate()
-{
-  v8::HandleScope handle_scope;
-
-  mPresenceTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-  mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
-
-
-  //These are not just accessors because we need to ensure that we can deal with
-  //their failure conditions.  (Have callbacks).
-
-   //v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
-
-  mPresenceTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
-
-  //meshes
-  mPresenceTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
-  mPresenceTemplate->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
-
-  //positions
-  mPresenceTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
-  mPresenceTemplate->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
-
-  //velocities
-  mPresenceTemplate->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
-  mPresenceTemplate->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
-
-  //orientations
-  mPresenceTemplate->Set(v8::String::New("setOrientation"),v8::FunctionTemplate::New(JSPresence::setOrientation));
-  mPresenceTemplate->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSPresence::getOrientation));
-
-  //orientation velocities
-  mPresenceTemplate->Set(v8::String::New("setOrientationVel"),v8::FunctionTemplate::New(JSPresence::setOrientationVel));
-  mPresenceTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSPresence::getOrientationVel));
-
-  //scale
-  mPresenceTemplate->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
-  mPresenceTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
-
-  //callback on prox addition and removal
-  mPresenceTemplate->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
-  mPresenceTemplate->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
-
-  //check if the presence is connected
-  mPresenceTemplate->SetAccessor(v8::String::New("isConnected"),JSPresence::isConnectedGetter,JSPresence::isConnectedSetter);
-    
-  // Query angle
-  mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
-
-  //set up graphics
-  mPresenceTemplate->Set(v8::String::New("runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
-
-  //send broadcast message
-  mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
-
-  mPresenceTemplate->Set(v8::String::New("distance"),v8::FunctionTemplate::New(JSPresence::distance));
-  
-}
-
-*/
 
 
 //a handler is returned whenever you register a handler in system.

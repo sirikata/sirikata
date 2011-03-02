@@ -5,7 +5,7 @@
 #include "../JSSerializer.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
-
+#include "JSPositionListener.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -13,65 +13,22 @@ namespace JS {
 
 //this constructor is called when the presence associated
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback, int presenceToken)
- :  mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
-    jsObjScript(parent),
-    sporef(NULL),
-    isConnected(false),
-    hasConnectedCallback(true),
-    mPresenceToken(presenceToken)
+ : JSPositionListener(parent),
+   mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
+   isConnected(false),
+   hasConnectedCallback(true),
+   mPresenceToken(presenceToken)
 {
 }
 
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, int presenceToken)
- :  jsObjScript(parent),
-    sporef(new SpaceObjectReference(_sporef)),
-    isConnected(true),
-    hasConnectedCallback(false),
-    mPresenceToken(presenceToken)
+ : JSPositionListener(parent),
+   isConnected(true),
+   hasConnectedCallback(false),
+   mPresenceToken(presenceToken)
 {
-    registerAsPosListener();
-}
-
-void JSPresenceStruct::registerAsPosListener()
-{
-    jsObjScript->registerPosListenerOwnPres(sporef,this);
-}
-
-void JSPresenceStruct::deregisterAsPosListener()
-{
-    jsObjScript->deRegisterPosListenerOwnPres(sporef,this);
-}
-
-
-//from being a position listener;
-void JSPresenceStruct::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds)
-{
-    mLocation    = newLocation;
-    mOrientation = newOrient;
-}
-
-
-v8::Handle<v8::Value> JSPresenceStruct::struct_getPosition()
-{
-    if (!v8::Context::InContext())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling getPosition on presence.  Not currently within a context.")));
-
-    if (!getIsConnected())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling getPosition on presence.  The presence is not connected to any space, and therefore does not have any position.")));
-
-    //Vector3f cppPos = Vector3f(mLocation.position(jsObjScript->getHostedTime()));
-    v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
-    return CreateJSResult(curContext,mLocation.position(jsObjScript->getHostedTime()));
-}
-
-
-v8::Handle<v8::Value>JSPresenceStruct::struct_getVelocity()
-{
-    if (!v8::Context::InContext())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling getVelocity on presence.  Not currently within a context.")));
-
-    v8::Handle<v8::Context> curContext;
-    return CreateJSResult(curContext,mLocation.velocity());
+    JSPositionListener::setListenTo(&_sporef,&_sporef);
+    JSPositionListener::registerAsPosListener();
 }
 
 
@@ -100,13 +57,12 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     if (getIsConnected())
     {
         JSLOG(error, "Error when calling connect on presence.  The presence was already connected.");
-        deRegisterPosListener();
+        deregisterAsPosListener();
     }
 
     isConnected = true;
-    sporef = new SpaceObjectReference(_sporef);
-
-    registerPosListener();
+    JSPositionListener::setListenTo(&_sporef,NULL);
+    JSPositionListener::registerAsPosListener();
     
     if (hasConnectedCallback)
         jsObjScript->handleTimeoutContext(mOnConnectedCallback,NULL);
@@ -122,58 +78,39 @@ void JSPresenceStruct::clearPreviousConnectedCB()
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOrientation)
 {
-    jsObjScript->setOrientationFunction(sporef,newOrientation);
+    jsObjScript->setOrientationFunction(sporefToListenTo,newOrientation);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion newOrientationVel)
 {
-    jsObjScript->setOrientationVelFunction(sporef,newOrientationVel);
+    jsObjScript->setOrientationVelFunction(sporefToListenTo,newOrientationVel);
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::getOrientationVelFunction()
-{
-    return jsObjScript->getOrientationVelFunction(sporef);
-}
 
 v8::Handle<v8::Value> JSPresenceStruct::getVisualScaleFunction()
 {
-    return jsObjScript->getVisualScaleFunction(sporef);
+    return jsObjScript->getVisualScaleFunction(sporefToListenTo);
 }
 
     
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
-    jsObjScript->setQueryAngleFunction(sporef, new_qa);
+    jsObjScript->setQueryAngleFunction(sporefToListenTo, new_qa);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {
-    jsObjScript->setVisualScaleFunction(sporef, new_scale);
+    jsObjScript->setVisualScaleFunction(sporefToListenTo, new_scale);
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::setPositionFunction(Vector3f newPos)
+v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 {
-    jsObjScript->setPositionFunction(sporef, newPos);
+    jsObjScript->setPositionFunction(sporefToListenTo, newPos);
     return v8::Undefined();
-}
-
-v8::Handle<v8::Value> JSPresenceStruct::getOrientationFunction()
-{
-    return jsObjScript->getOrientationFunction(sporef);
-}
-
-
-
-v8::Handle<v8::Value> JSPresenceStruct::distance(Vector3d* distTo)
-{
-    if (!getIsConnected())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling distance on presence.  The presence is not connected to any space, and therefore does not have any position.")));
-
-    return jsObjScript->getDistanceFunction(sporef,distTo);
 }
 
 
@@ -190,40 +127,29 @@ v8::Handle<v8::Value> JSPresenceStruct::setConnectedCB(v8::Handle<v8::Function> 
 JSPresenceStruct::~JSPresenceStruct()
 {
     clearPreviousConnectedCB();
-    deRegisterAsPosListener();
-
     
     for (ContextVector::iterator iter = associatedContexts.begin(); iter != associatedContexts.end(); ++iter)
         (*iter)->presenceDied();
 
-    if (sporef != NULL)
-        delete sporef;
 }
 
 void JSPresenceStruct::disconnect()
 {    
     if (! getIsConnected())
         JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
-    
-    if (sporef != NULL)
-    {
-        deRegisterAsPosListener();
-        delete sporef;
-    }
-    
-    sporef = NULL;
+
     isConnected = false;
 }
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {
-    jsObjScript->setVisualFunction(sporef, urilocation);
+    jsObjScript->setVisualFunction(sporefToListenTo, urilocation);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value>JSPresenceStruct::getVisualFunction()
 {
-    return jsObjScript->getVisualFunction(sporef);    
+    return jsObjScript->getVisualFunction(sporefToListenTo);    
 }
 
 
@@ -235,7 +161,7 @@ v8::Handle<v8::Value>JSPresenceStruct::getVisualFunction()
 v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
-    JSInvokableObject::JSInvokableObjectInt* invokableObj = jsObjScript->runSimulation(*sporef,simname);
+    JSInvokableObject::JSInvokableObjectInt* invokableObj = jsObjScript->runSimulation(*sporefToListenTo,simname);
 
     v8::Local<v8::Object> tmpObj = jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(jsObjScript));
@@ -278,31 +204,16 @@ v8::Handle<v8::Value> JSPresenceStruct::registerOnProxAddedEventHandler(v8::Hand
     return v8::Boolean::New(true);
 }
 
-
-
-
 v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {
     if (!getIsConnected())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling setVelocity on presence.  The presence is not connected to any space, and therefore has no velocity to set.")));
 
     
-    jsObjScript->setVelocityFunction(sporef,newVel);
+    jsObjScript->setVelocityFunction(sporefToListenTo,newVel);
     return v8::Undefined();
 }
 
-
-v8::Handle<v8::Value> JSPresenceStruct::struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast)
-{
-    v8::HandleScope handle_scope;
-    if (!getIsConnected())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling broadcastVisible on presence.  The presence is not connected to any space, and therefore has no one to broadcast to.")));
-
-    
-    v8::Local<v8::Object> obj = v8::Local<v8::Object>::New(toBroadcast);
-    jsObjScript->broadcastVisible(sporef,JSSerializer::serializeObject(obj));
-    return v8::Undefined();
-}
 
 JSPresenceStruct* JSPresenceStruct::decodePresenceStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)
 {

@@ -45,7 +45,7 @@ namespace Sirikata
     v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args);
     v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args);
 
-    v8::Handle<v8::Value> broadcastVisible(const v8::Arguments& args);
+
 
     bool getURI(const v8::Arguments& args,std::string& returner);
     v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);

@@ -163,7 +163,8 @@ Time HostedObject::currentLocalTime() {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
-    PresenceDataMap::const_iterator it = mPresenceData->find(SpaceObjectReference(space,oref));
+    SpaceObjectReference toFind(space,oref);
+    PresenceDataMap::const_iterator it = mPresenceData->find(toFind);
     if (it == mPresenceData->end())
     {
         ProxyManagerPtr returner;
@@ -243,7 +244,10 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
 {
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     if (proxy_manager == nullManPtr)
+    {
+        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy manager associated with "<<space<<"-"<<oref);
         return nullPtr;
+    }
 
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj;
@@ -252,8 +256,12 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
 bool HostedObject::getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p)
 {
     p = getProxy(sporef->space(), sporef->object());
-    if (p.get() == NULL);
+
+    if (p.get() == NULL)
+    {
+        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy presence associated with "<<*sporef);
         return false;
+    }
     
     return true;
 }

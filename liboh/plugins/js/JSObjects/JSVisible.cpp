@@ -21,19 +21,15 @@ namespace JSVisible {
 
 v8::Handle<v8::Value> dist(const v8::Arguments& args)
 {
-    if ((args.Length() != 0) && (args.Length() != 1))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly zero or one argument to dist method of Visible")));
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to dist method of Visible")));
 
     String errorMessage = "Error in dist method of JSVisible.cpp.  Cannot decode visible.  ";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
 
     if (jsvis == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-
         
-    if (args.Length() == 0)
-        return jsvis->dist(NULL);
-
     if (! args[0]->IsObject())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in dist of JSVisible.cpp.  Argument should be an objet.")));
 
@@ -45,7 +41,7 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
 
     Vector3d vec3 = Vec3Extract(argObj);
     
-    return jsvis->dist(&vec3);
+    return jsvis->struct_getDistance(vec3);
 }
 
 
@@ -60,7 +56,7 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
     if (jsvis == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
-    return jsvis->returnProxyPosition();
+    return jsvis->struct_getPosition();
 }
 
 

@@ -72,6 +72,7 @@
 #include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
 #include "JSObjectStructs/JSWhenWatchedListStruct.hpp"
 #include <boost/lexical_cast.hpp>
+#include "JSVisibleStructMonitor.hpp"
 
 
 #define FIXME_GET_SPACE_OREF() \
@@ -219,7 +220,6 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     
     //hangs math, presences, and addressable off of system_obj
     initializePresences(system_obj);
-    initializeVisible(system_obj);
 
     mHandlingEvent = false;
 
@@ -256,14 +256,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 }
 
 //checks to see if the associated space object reference exists in the script.
-//if it does, then make the position listener a subscriber to is pos updates.
-bool JSObjectScript::registerPosListenerOwnPres(SpaceObjectReference* ownPres, PositionListener* pl)
-{
-    return registerPosListener(NULL,ownPres,pl);
-}
-
-
-bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl)
+//if it does, then make the position listener a subscriber to its pos updates.
+bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient)
 {
     ProxyObjectPtr p;
     bool succeeded = false;
@@ -280,9 +274,15 @@ bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObje
         succeeded = mParent->getProxyObjectFrom(ownPres,sporef,p);
     }
 
-    //if actually had associated proxy object
+    //if actually had associated proxy object, then update loc and orientation.
     if (succeeded)
+    {
         p->PositionProvider::addListener(pl);
+        if (loc != NULL)
+            *loc = p->getTimedMotionVector();
+        if (orient != NULL)
+            *orient = p->getTimedMotionQuaternion();
+    }
     else
         JSLOG(error,"error registering to be a position listener. could not find associated object in hosted object.");
 
@@ -290,12 +290,6 @@ bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObje
 
 }
 
-
-//deregisters position listening on one of my own presences (ownPres).
-bool JSObjectScript::deRegisterPosListenerOwnPres(SpaceObjectReference* ownPres,PositionListener* pl)
-{
-    return deRegisterPosListener(NULL,ownPres,pl);
-}
 
 //deregisters position listening for an arbitrary proxy object visible to
 //ownPres and with spaceobject reference sporef.
@@ -389,122 +383,44 @@ JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecod
 }
 
 
-//removes the object from the visible array if it exists (returns the object
-//itself so it can be passed into any user callbacks).  Otherwise asserts false.
-v8::Handle<v8::Value> JSObjectScript::removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
-{
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-    Local<Object>removedProxObj;
-
-    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
-    int removedIndex = -1;
-    JSVisibleStruct* jsvis= NULL;
-    for (int s=0; s < (int)vis_array->Length(); ++s)
-    {
-        removedProxObj= v8::Local<v8::Object>::Cast(vis_array->Get(s));
-
-        std::string errorMessage = "Error in removeVisible.  Unable to decode object.";
-        jsvis= JSVisibleStruct::decodeVisible(vis_array->Get(s),errorMessage);
-
-        if (jsvis == NULL)
-        {
-            JSLOG(error, errorMessage);
-            return v8::Undefined();
-        }
-        
-         
-        if ( ((*jsvis->whatIsVisible)== proximateObject->getObjectReference()) &&
-            (*jsvis->visibleToWhom == querier))
-        {
-            removedIndex = s;
-            break;
-        }
-    }
-
-    //actually remove from array.
-    if (removedIndex == -1)
-    {
-        JSLOG(error, "Couldn't find the visible entity in the visible array.  Looking for object: "<<proximateObject->getObjectReference());
-        //printVisibleArray();
-        return v8::Undefined();
-    }
-    else
-    {
-        v8::Local<v8::Array> newVis = v8::Array::New();
-
-        //create a new visible array without the previous member.
-        for (uint32 i = 0; i < (uint32)removedIndex; ++i)
-            newVis->Set(i,vis_array->Get(i));
-
-        for(uint32 i = removedIndex; i < vis_array->Length()-1; i++)
-            newVis->Set(i,vis_array->Get(i+1));
-
-        getSystemObject()->Set(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME), newVis);
-    }
-
-    *jsvis->stillVisible = false;
-    //removedProxObj->Set(v8::String::New(JSSystemNames::VISIBLE_OBJECT_STILL_VISIBLE_FIELD),v8::Boolean::New(false));
-    return removedProxObj;
-}
-
-void JSObjectScript::printVisibleArray()
-{
-    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
-    Local<Object>removedProxObj;
-
-    std::cout<<"\nPrinting array.  This is array length: "<<vis_array->Length()<<"\n\n";
-    std::cout.flush();
-    for (int s=0; s < (int)vis_array->Length(); ++s)
-    {
-        std::string errorMessage = "Inside of JSObjectScript::printVisibleArray.  ";
-        JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s), errorMessage);
-        if (jsvis != NULL)
-            jsvis->printData();
-        else
-            JSLOG(error, errorMessage);
-
-    }
-}
-
-
+//this is the callback that fires when proximateObject no longer receives
+//updates from loc (ie the object in the world associated with proximate object
+//is outside of querier's standing query registered to pinto).
 void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
 
-    // Invoke user callback
-    PresenceMap::iterator iter = mPresences.find(querier);
+    //notifies the underlying struct associated with this object (if any exist)
+    //that the proxy object is no longer visible.
+    JSVisibleStructMonitor::checkNotifyNowNotVis(proximateObject->getObjectReference(),querier);
+
+    PresenceMapIter iter = mPresences.find(querier);
     if (iter == mPresences.end())
     {
-        JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximateGone.  Taking no action.");
+        JSLOG(error,"Error.  Received a notification that a proximate object left query set for querier "<<querier<<".  However, querier has no associated presence in array.  Aborting now");
         return;
     }
 
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-
-    
-    v8::Handle<v8::Value>removedProxVal = removeVisible(proximateObject,querier);
-    if (removedProxVal->IsUndefined())
-        return;
-
-    if (! removedProxVal->IsObject())
-        return;
-
-
-    v8::Local<v8::Object>removedProxObj;
-    removedProxObj = removedProxVal->ToObject();
-
-    
-    
+    //now see if must issue callback for this object's going out of scope
     if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
     {
-        //check if have the the removed prox obj has
+        JSVisibleStruct* jsvis =  checkVisStructExists(proximateObject->getObjectReference(),querier);
+        if (jsvis == NULL)
+        {
+            JSLOG(error, "Error in notifyProximateGone of JSObjectScript.  Before receiving a notification that an object is no longer visible, should have received a notification that it was originally visible.  Error on object: "<<proximateObject->getObjectReference()<<" for querier: "<<querier<<".  Aborting call now.");
+            return;
+        }
+        
+        //jswrap the object
+        //should be in context from createVisibleObject call
+        v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext);
 
+        v8::HandleScope handle_scope;
+        v8::Context::Scope context_scope(mContext);
+
+        
         int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { removedProxObj };
+        v8::Handle<v8::Value> argv[1] = { outOfRangeObject };
         //FIXME: Potential memory leak: when will removedProxObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
@@ -513,35 +429,62 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 }
 
 
+//creates a js object associated with the jsvisiblestruct
+//will enter and exit the context passed in to make the object before returning
+v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
+{
+    v8::HandleScope handle_scope;
+    ctxToCreateIn->Enter();
+
+    
+    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->NewInstance();
+    returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
+    returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
+
+
+    ctxToCreateIn->Exit();
+
+    return returner;
+}
+
+
+//attempts to make a new jsvisible struct...may be returned an existing one.
+//then wraps it as v8 object.
+v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
+{
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, isVisible);
+    return createVisibleObject(jsvis,ctx);
+}
+
+
+
+
+//Gets called by notifier when PINTO states that proximateObject originally
+//satisfies the solid angle query registered by querier
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
+    
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
 
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, true);
+    
     // Invoke user callback
-    PresenceMap::iterator iter = mPresences.find(querier);
+    PresenceMapIter iter = mPresences.find(querier);
     if (iter == mPresences.end())
     {
         JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
         return;
     }
+
     
+    //check callbacks
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
+        
+        v8::Local<v8::Object> newVisibleObj = createVisibleObject(jsvis, mContext);
+
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
-
-
-        v8::Handle<v8::Value> newVisibleVal = addVisible(proximateObject,querier);
-
-        if (newVisibleVal->IsUndefined())
-            return;
-
-
-        if (! newVisibleVal->IsObject())
-            return;
-
-
-        v8::Local<v8::Object> newVisibleObj = newVisibleVal->ToObject();
 
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { newVisibleObj };
@@ -640,15 +583,8 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
-    
-    v8::Local<v8::Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
-
-    JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()),mParent->requestCurrentVelocity(myName.space(),myName.object()));
-
-    
-    selfVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(mySelf));
-    selfVisObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
-
+    JSLOG(info,"Adding self field with sporef "<<myName<<" to world");
+    v8::Local<v8::Object> selfVisObj = createVisibleObject(myName, myName, true,mContext);
     
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
@@ -746,32 +682,6 @@ bool JSObjectScript::valid() const
     return (mParent);
 }
 
-
-
-//This function broadcasts message msgToBCast to all objects that satisfy your solid
-//angle query.  
-void JSObjectScript::broadcastVisible(SpaceObjectReference* visibleTo,const std::string& msgToBCast)
-{
-    v8::HandleScope handle_scope;
-    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
-    v8::Local<v8::Object>iterObj;
-
-
-    for (int s=0; s < (int)vis_array->Length(); ++s)
-    {
-        std::string errorMessage = "Inside of JSObjectScript::broadcastVisible.  ";
-        JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s), errorMessage);
-
-        if (jsvis == NULL)
-        {
-            JSLOG(error, errorMessage);
-            return;
-        }
-
-        if (*jsvis->visibleToWhom == *visibleTo)
-            sendMessageToEntity(jsvis->whatIsVisible,visibleTo,msgToBCast);
-    }
-}
 
 
 
@@ -1112,58 +1022,6 @@ v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context
 
 
 
-
-v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier)
-{
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-    // Do check if the visible already exists..
-    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
-    std::string errorMessage = "In addVisible of JSObjectScript.  ";
-    JSVisibleStruct* jsvis   = NULL;
-    
-    for (int s=0; s < (int) vis_array->Length(); ++s)
-    {
-
-        jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s),errorMessage);
-        if (jsvis == NULL)
-        {
-            JSLOG(error,errorMessage);
-            return v8::Undefined();
-        }
-
-        if ((*jsvis->whatIsVisible == proximateObject->getObjectReference()) && (*jsvis->visibleToWhom == querier))
-        {
-            JSLOG(info, "Already had the associated object in visible array.  Returning empty.");
-            return v8::Undefined();
-        }
-    }
-
-    JSLOG(info, "Did not already have the associated object in visible array.  Creating new one.");
-    //means that we don't already have this object in visible array.
-    uint32 new_pos = vis_array->Length();
-
-
-    //create the visible object associated with the new proxy object
-    Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
-
-
-    SpaceObjectReference sporefObj = proximateObject->getObjectReference();
-    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, mParent->requestCurrentPosition(sporefObj.space(),sporefObj.object()),mParent->requestCurrentVelocity(sporefObj.space(),sporefObj.object()));
-        
-
-    newVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(toAdd));
-    newVisObj->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
-
-    
-    vis_array->Set(v8::Number::New(new_pos),newVisObj);
-    return newVisObj;
-}
-
-
-
-
 void JSObjectScript::print(const String& str) {
     assert(!mEvalContextStack.empty());
     std::ostream* os = mEvalContextStack.top().currentOutputStream;
@@ -1285,7 +1143,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
 
 
-//position
 
 
 // need to ensure that the sender object is an visible of type spaceobject reference rather than just having an object reference;
@@ -1321,31 +1178,6 @@ void JSObjectScript::printAllHandlerLocations()
 
 
 
-v8::Handle<v8::Value> JSObjectScript::getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom)
-{
-    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
-    std::string errorMessage = "In addVisible of JSObjectScript.  Serious error.  ";
-    JSVisibleStruct* jsvis   = NULL;
-    
-    for (int s=0; s < (int) vis_array->Length(); ++s)
-    {
-        jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s),errorMessage);
-        if (jsvis == NULL)
-        {
-            JSLOG(error,errorMessage);
-            continue;
-        }
-
-        if ((*jsvis->whatIsVisible == visobj) &&
-            (*jsvis->visibleToWhom == vistowhom))
-            return vis_array->Get(s);
-    }
-
-    return v8::Undefined();
-}
-
-
-
 
 /*
  * From the odp::endpoint & src and destination, checks if the corresponding
@@ -1358,26 +1190,10 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     SpaceObjectReference from(src.space(), src.object());
     SpaceObjectReference to  (dst.space(), dst.object());
 
-    v8::Handle<v8::Value> visFromArrayVal = getVisibleFromArray(from, to);
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,false);
+    v8::Local<v8::Object> returner =createVisibleObject(jsvis, mContext);
 
-    if (visFromArrayVal->IsObject())
-    {
-        return visFromArrayVal->ToObject();  //we found the object that we were
-     }                                        //looking for in the visible
-                                             //array.  returning it here.
-
-    
-    //didn't find the object that we were looking for in the visible array.
-    v8::HandleScope handle_scope;
-    v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mVisibleTemplate->NewInstance());
-
-    JSVisibleStruct* visStruct = new JSVisibleStruct(this, from, to, false, Vector3d(),Vector3f());
-    returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(visStruct));
-    returner->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
-
-    
     return returner;
-
 }
 
 
@@ -1394,7 +1210,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
 
-//bftm:clean all this up later
+   //bftm:clean all this up later
 
     if (! parsed)
     {
@@ -1603,15 +1419,6 @@ Handle<Object> JSObjectScript::getSystemObject()
 }
 
 
-void JSObjectScript::initializeVisible(Handle<Object>&system_obj)
-{
-    v8::Context::Scope context_scope(mContext);
-    // Create the space for the visibles, they get filled in by
-    // onConnected/onCreateProxy calls
-    v8::Local<v8::Array> arrayObj = v8::Array::New();
-    system_obj->Set(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME), arrayObj);
-}
-
 
 //called to build the presences array as well as to build the presence keyword
 void JSObjectScript::initializePresences(Handle<Object>& system_obj)
@@ -1804,38 +1611,12 @@ void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* spore
     mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
 }
 
-v8::Handle<v8::Value> JSObjectScript::getOrientationVelFunction(const SpaceObjectReference* sporef)
-{
-    Quaternion returner = mParent->requestCurrentOrientationVel(sporef->space(),sporef->object());
-    return CreateJSResult(mContext, returner);
-}
 
 
 
 void JSObjectScript::setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec)
 {
     mParent->requestPositionUpdate(sporef->space(),sporef->object(),posVec);
-}
-
-v8::Handle<v8::Value> JSObjectScript::getPositionFunction(const SpaceObjectReference* sporef)
-{
-    return getContextPosition(mContext,sporef);
-}
-
-v8::Handle<v8::Value>JSObjectScript::getDistanceFunction(const SpaceObjectReference* sporef, Vector3d* distTo)
-{
-    v8::HandleScope handle_scope;
-    Vector3d vec3 = mParent->requestCurrentPosition(sporef->space(),sporef->object());
-    float dist = (vec3 - *distTo).length();
-    return v8::Number::New(dist);
-
-}
-
-
-v8::Handle<v8::Value> JSObjectScript::getContextPosition(v8::Handle<v8::Context> cont,const SpaceObjectReference* sporef)
-{
-    Vector3d vec3 = mParent->requestCurrentPosition(sporef->space(),sporef->object());
-    return CreateJSResult(cont,vec3);
 }
 
 
@@ -1846,60 +1627,6 @@ void JSObjectScript::setVelocityFunction(const SpaceObjectReference* sporef, con
     mParent->requestVelocityUpdate(sporef->space(),sporef->object(),velVec);
 }
 
-v8::Handle<v8::Value> JSObjectScript::getVelocityFunction(const SpaceObjectReference* sporef)
-{
-    Vector3f vec3f = mParent->requestCurrentVelocity(sporef->space(),sporef->object());
-    return CreateJSResult(mContext,vec3f);
-}
-
-bool JSObjectScript::returnProxyPositionCPP(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position)
-{
-    bool updateSucceeded = updatePosition(sporef, spVisTo, position);
-    if (! updateSucceeded)
-        JSLOG(error, "No sporefs associated with position.  Returning undefined.");
-    
-    return updateSucceeded;
-}
-
-
-v8::Handle<v8::Value>JSObjectScript::returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position)
-{
-    returnProxyPositionCPP(sporef,spVisTo,position);
-    return CreateJSResult(mContext,*position);
-}
-
-
-bool JSObjectScript::updatePosition(SpaceObjectReference* sporef, SpaceObjectReference* spVisTo,Vector3d* position)
-{
-    ProxyObjectPtr p;
-    bool succeeded =  mParent->getProxyObjectFrom(spVisTo,sporef,p);
-
-    if (succeeded)
-        *position = mParent->requestCurrentPosition(p);
-
-    return succeeded;
-}
-
-v8::Handle<v8::Value> JSObjectScript::printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo)
-{
-    ProxyObjectPtr p;
-    bool succeeded =  mParent->getProxyObjectFrom(spVisTo,sporef,p);
-
-    if (succeeded)
-    {
-        Vector3d vec3d = p->getPosition();
-        std::cout << "Printing position :" << vec3d << "\n";
-        return v8::Undefined();
-    }
-
-    std::cout<<"\n\n  Error: no association for given sporefs\n\n";
-    assert(false);
-    return v8::Undefined();
-
-}
-
-
-
 
 
 //orientation
@@ -1908,11 +1635,6 @@ void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef,
     mParent->requestOrientationDirectionUpdate(sporef->space(),sporef->object(),quat);
 }
 
-v8::Handle<v8::Value> JSObjectScript::getOrientationFunction(const SpaceObjectReference* sporef)
-{
-    Quaternion curOrientation = mParent->requestCurrentOrientation(sporef->space(),sporef->object());
-    return CreateJSResult(mContext,curOrientation);
-}
 
 
 //scale

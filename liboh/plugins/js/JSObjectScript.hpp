@@ -53,6 +53,8 @@
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
 #include "JSObjectStructs/JSWhenStruct.hpp"
+#include "JSVisibleStructMonitor.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -71,7 +73,8 @@ struct EntityCreateInfo
 
 
 class JSObjectScript : public ObjectScript,
-                       public SessionEventListener
+                       public SessionEventListener,
+                       public JSVisibleStructMonitor
 {
 
 public:
@@ -93,7 +96,6 @@ public:
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
     v8::Handle<v8::Value> handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
-    //v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
     v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
     
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
@@ -118,12 +120,9 @@ public:
     void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
 
-    void broadcastVisible(SpaceObjectReference* visibleTo,const std::string& msgToBCast);
 
     /** Print the given string to the current output. */
     void print(const String& str);
-    v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
-    bool returnProxyPositionCPP(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position);
     
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
@@ -143,40 +142,39 @@ public:
     /** create a new entity at the run time */
     void create_entity(EntityCreateInfo& eci);
 
+
+    
+    //handling basic datatypes for JSPresences
+    v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
+    v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
+    void setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
+    void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
+    void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
+    void setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
+    void setVisualScaleFunction(const SpaceObjectReference* sporef, float newScale);
+    void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
+    void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
+
+
+    /****Methods that return V8 wrappers for c++ objects **/
+    //attempts to make a new jsvisiblestruct if don't already have one in
+    //jsvismonitor matching visibleObj+visibleTo.  Wraps the c++ jsvisiblestruct
+    //in v8 object.
+    v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
+
     /** create a new presence of this entity */
     v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
     v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
-    v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
-    void  setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
-
-    void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
-    v8::Handle<v8::Value> getPositionFunction(const SpaceObjectReference* sporef);
-    v8::Handle<v8::Value> getDistanceFunction(const SpaceObjectReference* sporef, Vector3d* distTo);
     
-    void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
-    v8::Handle<v8::Value> getVelocityFunction(const SpaceObjectReference* sporef);
-
-    void  setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
-    v8::Handle<v8::Value> getOrientationFunction(const SpaceObjectReference* sporef);
-
-    v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
-    void setVisualScaleFunction(const SpaceObjectReference* sporef, float newScale);
-
-    v8::Handle<v8::Value> getOrientationVelFunction(const SpaceObjectReference* sporef);
-    void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
-
-    void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
-    uint32 registerUniqueMessageCode();
-    bool unregisterUniqueMessageCode(uint32 toUnregister);
     
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
-    bool registerPosListenerOwnPres(SpaceObjectReference* ownPres, PositionListener* pl);
-    bool deRegisterPosListenerOwnPres(SpaceObjectReference* ownPres,PositionListener* pl);
-    bool registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl);
+
+    //registering position listeners to receive updates from loc
+    bool registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient);
     bool deRegisterPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl);
     
 
@@ -193,19 +191,14 @@ public:
         mOnPresenceDisconnectedHandler = cb;
     }
 
-    v8::Handle<v8::Value> returnProxyPosition(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* );
-    bool updatePosition(SpaceObjectReference* whatIsVisible, SpaceObjectReference* visibleToWhom,Vector3d* position);
-    v8::Handle<v8::Value> printPositionFunction(const SpaceObjectReference* sporef,const SpaceObjectReference*   spVisTo);
+
+    //visible struct management: for auto-notifying visible structs for when
+    //they become visible and when they stop being visible (ie enter and leave
+    //query to pinto).
+    void deRegisterVisibleStruct(JSVisibleStruct* jsvis);
 
 
-    // Presence version of the access handlers
-    v8::Handle<v8::Value> getPosition(SpaceID&);
-    v8::Handle<v8::Value> getContextPosition(v8::Handle<v8::Context> cont,const SpaceObjectReference* sporef);
-    void setPosition(SpaceID&, v8::Local<v8::Value>& newval);
-
-    v8::Handle<v8::Value> getVelocity(SpaceID&);
-    void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
-
+    
     JSObjectScriptManager* manager() const { return mManager; }
     
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
@@ -238,6 +231,10 @@ private:
     std::stack<EvalContext> mEvalContextStack;
 
 
+    //wraps internal c++ jsvisiblestruct in a v8 object
+    v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
+    
+    
     void checkWhens();
 
 
@@ -263,8 +260,7 @@ private:
     v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
 
 
-    
-    v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
+
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 
     void addSelfField(const SpaceObjectReference& myName);
@@ -287,19 +283,14 @@ private:
     void printAllHandlerLocations();
     void initializePresences(Handle<Object>& system_obj);
     void populateSystemObject(Handle<Object>& system_obj );
-    void initializeVisible(Handle<Object>&system_obj);
 
-    void printVisibleArray();
+
+
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,int token);
     v8::Handle<v8::Object> addPresence(JSPresenceStruct* presToAdd);
     void removePresence(const SpaceObjectReference& sporef);
-
-    // Adds the Self field
-
-    v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
-    v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
 
 
 
@@ -317,6 +308,7 @@ private:
     uint64 hiddenObjectCount;    
 
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
+    typedef PresenceMap::iterator PresenceMapIter;
     PresenceMap mPresences;
 
     typedef std::vector<JSPresenceStruct*> PresenceVec;

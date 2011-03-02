@@ -8,10 +8,10 @@ system.print("\n\n Testing visible calls.\n\n");
 
 var haveCallback = false;
 var objToMvTowards;
-var inverseSpeed = 1;
+var inverseSpeed = 3;
 var CALLBACK_PERIOD = .5;
 var CALLBACK_MAX_DISTANCE = 40;
-
+var PRINT_DEBUGGING = false;
 
 
 function proxCallback(calledBack)
@@ -38,8 +38,19 @@ function proxCallback(calledBack)
     }
 }
 
+function proxRemovedCallback(outOfRange)
+{
+    if (haveCallback)
+    {
+        if (outOfRange.checkEqual(objToMvTowards))
+        {
+            haveCallback = false;
+        }
+    }
+}
 
 system.presences[0].onProxAdded(proxCallback);
+system.presences[0].onProxRemoved(proxRemovedCallback);
 
 function distanceFromMeToIt(it)
 {
@@ -94,7 +105,11 @@ function moveTowards(toMoveTowards)
 
     var posToMoveTowardsString = posToMoveTowards.toString();
     var newVelocityString = mNewVelocity.toString();
-    system.print("\nMoving towards object at position: " +  posToMoveTowardsString + "     with velocity: " +  newVelocityString +  "\n");
+    if (PRINT_DEBUGGING)
+    {
+        system.print("\nMoving towards object at position: " +  posToMoveTowardsString + "     with velocity: " +  newVelocityString +  "\n");            
+    }
+
     system.presences[0].setVelocity(mNewVelocity);
 }
 
@@ -124,6 +139,16 @@ function timerCallback()
 
     //reset timer
     system.timeout(CALLBACK_PERIOD,null,timerCallback);
+}
+
+
+//called so that I can get outside its radius again
+function moveFarAway()
+{
+    var myPosition = system.presences[0].getPosition();
+    myPosition.x += CALLBACK_MAX_DISTANCE*8;
+    system.presences[0].setPosition(myPosition);
+    system.presences[0].setVelocity(new util.Vec3(0,0,0));
 }
 
 

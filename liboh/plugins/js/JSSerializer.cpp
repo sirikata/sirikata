@@ -7,7 +7,7 @@
 #include "JSObjects/JSVisible.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSObjectScript.hpp"
-
+#include "JSLogging.hpp"
 
 /*
   FIXME: If I do not include the JS_Sirikata.pbj.hpp, then just including the
@@ -57,8 +57,7 @@ void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::J
 
 void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::JS::Protocol::IJSMessage& jsmessage)
 {
- 
-  std::string err_msg;
+   std::string err_msg;
   JSVisibleStruct* vstruct = JSVisibleStruct::decodeVisible(jsVisible, err_msg);
   if(err_msg.size() > 0)
   {
@@ -66,9 +65,9 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
     return ; 
   }
 
-  JSObjectScript* jsObjectScript = vstruct->jsObjScript;
-  SpaceObjectReference* sporef = vstruct->whatIsVisible;
-  SpaceObjectReference* sporefVisTo = vstruct->visibleToWhom;
+  JSObjectScript* jsObjectScript     =           vstruct->jsObjScript;
+  SpaceObjectReference* sporef       =      vstruct->sporefToListenTo;
+  SpaceObjectReference* sporefVisTo  =    vstruct->sporefToListenFrom;
   
   
   // we don't want to serialize jsobjectscript for now
@@ -317,6 +316,7 @@ bool JSSerializer::deserializeVisible(JSObjectScript* jsObjScript, Sirikata::JS:
 
     }
 
+    lkjs;
     JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d());
     deserializeTo->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD, External::New(visStruct));
     
@@ -379,9 +379,6 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
 
       SpaceObjectReference visibleObj;
       SpaceObjectReference visibleTo; 
-      deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
-
-      deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new std::string(VISIBLE_TYPEID_STRING)));
       
       std::cout << "\n\nset internal field for type id \n\n";
       for(int i = 0; i < jsmessage.fields_size(); i++)
@@ -394,16 +391,25 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
           visibleObj = SpaceObjectReference(jsvalue.s_value());
           std::cout << "\n\ngot visobj\n\n";
         }
-        else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
-        {
-          visibleTo = SpaceObjectReference(jsvalue.s_value());
-          std::cout << "\n\n got vistoobj\n\n";
-        }
       }
 
-      JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d(), Vector3f());
-      deserializeTo->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD, External::New(visStruct));
+      //visibleTo is always set to null spaceObjectReference
+      visibleTo = SpaceObjectReference::null();
+      
 
+      //error if not in context, won't be able to create a new v8 object.
+      //should just abort here before seg faulting.
+      if (! v8::Context::InContext())
+      {
+          JSLOG(error, "Error deserializing visible object.  Am not inside a v8 context.  Aborting.");
+          return false;
+      }
+      v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
+      deserializeTo = jsObjScript->createVisibleObject(visibleObj,visibleTo,false, ctx);  //create
+                                                                                          //the
+                                                                                          //vis
+                                                                                          //obj
+                                                                                          //through objScript
       return true;
     }
 
