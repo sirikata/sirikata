@@ -31,6 +31,7 @@
  */
 
 system.import('graphics.em');
+system.import('std/movement/movement.em');
 
 (
 function() {
@@ -44,9 +45,11 @@ function() {
      *  this class takes care of defining all other UI and interaction.
      */
     ns.DefaultGraphics = function(pres, name) {
+        this._pres = pres;
         this._simulator = new std.graphics.Graphics(pres, name);
         this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
         this._simulator.inputHandler.onButtonPressed = std.core.bind(this.onButtonPressed, this);
+        this._simulator.inputHandler.onButtonReleased = std.core.bind(this.onButtonReleased, this);
     };
 
     ns.DefaultGraphics.prototype.invoke = function() {
@@ -58,10 +61,29 @@ function() {
     };
 
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
-        system.print(evt.button + "\n");
         if (evt.button == 'escape') this._simulator.quit();
         if (evt.button == 'i') this._simulator.screenshot();
         if (evt.button == 'm') this._simulator.toggleSuspend();
+
+        if (evt.button == 'up' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
+        if (evt.button == 'down' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
+
+        if (evt.button == 'up' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(1, 0, 0), 1);
+        if (evt.button == 'down' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(-1, 0, 0), 1);
+        if (evt.button == 'left') std.movement.rotate(this._pres, new util.Vec3(0, 1, 0), 1);
+        if (evt.button == 'right') std.movement.rotate(this._pres, new util.Vec3(0, -1, 0), 1);
+
+        if (evt.button == 'w') std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
+        if (evt.button == 's') std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
+        if (evt.button == 'a') std.movement.move(this._pres, new util.Vec3(-1, 0, 0), 1);
+        if (evt.button == 'd') std.movement.move(this._pres, new util.Vec3(1, 0, 0), 1);
+        if (evt.button == 'q') std.movement.move(this._pres, new util.Vec3(0, 1, 0), 1);
+        if (evt.button == 'z') std.movement.move(this._pres, new util.Vec3(0, -1, 0), 1);
+    };
+
+    ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
+        std.movement.stopMove(this._pres);
+        std.movement.stopRotate(this._pres);
     };
 
 })();

@@ -52,8 +52,8 @@ Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector
     Handle<Object> result = vec3_constructor->NewInstance();
     Vec3Fill(result, src);
     return result;
-    
-    
+
+
 }
 Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Function>& vec3_constructor, const Vector3d& src)
 {
@@ -149,6 +149,18 @@ DefineVec3BinaryOperator(Vec3Dot, dot, &Vector3d::dot);
 DefineVec3UnaryOperator(Vec3Length, length, &Vector3d::length);
 DefineVec3UnaryOperator(Vec3LengthSquared, lengthSquared, &Vector3d::lengthSquared);
 
+Handle<Value> Vec3Scale(const Arguments& args) {
+    Handle<Object> self = args.This();
+
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Vec3.scale should take one parameter.")) );
+    Handle<Object> rhs_obj = Handle<Object>::Cast(args[0]);
+    Vec3CheckAndExtract(lhs, self);
+    NumericCheckAndExtract(rhs, rhs_obj);
+    Handle<Value> result = CreateJSResult(self, lhs * rhs);
+    return result;
+}
+
 static Vector3d(Vector3d::*neg_op)() const = &Vector3d::operator-;
 DefineVec3UnaryOperator(Vec3Neg, neg, neg_op);
 
@@ -176,6 +188,7 @@ Handle<FunctionTemplate> CreateVec3Template() {
     vec3_prototype_templ->Set(JS_STRING(max), v8::FunctionTemplate::New(Vec3Max));
     vec3_prototype_templ->Set(JS_STRING(min), v8::FunctionTemplate::New(Vec3Min));
     vec3_prototype_templ->Set(JS_STRING(componentMul), v8::FunctionTemplate::New(Vec3ComponentMultiply));
+    vec3_prototype_templ->Set(JS_STRING(scale), v8::FunctionTemplate::New(Vec3Scale));
 
     vec3_prototype_templ->Set(JS_STRING(dot), v8::FunctionTemplate::New(Vec3Dot));
     vec3_prototype_templ->Set(JS_STRING(length), v8::FunctionTemplate::New(Vec3Length));

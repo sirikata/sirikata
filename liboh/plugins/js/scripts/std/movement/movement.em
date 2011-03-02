@@ -1,5 +1,5 @@
 /*  Sirikata
- *  input.em
+ *  movement.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -31,48 +31,31 @@
  */
 
 if (typeof(std) === "undefined") std = {};
-if (typeof(std.graphics) === "undefined") std.graphics = {};
-
-system.import('std/core/bind.js');
+if (typeof(std.movement) === "undefined") std.movement = {};
 
 (
 function() {
 
-    var ns = std.graphics;
+    var ns = std.movement;
 
-    /** InputHandler makes setting up callbacks for input events, or a
-     *  subset of them, easier. It looks a lot like browser events do.
-     *  Allocate one with a simulation and it will register itself as
-     *  a listener. Then, add your own listeners which will be
-     *  delegated to, e.g. set
-     *
-     *   handler.onButtonPressed = function() { .... }
-     */
-    ns.InputHandler = function(sim) {
-        sim.invoke("setInputHandler", std.core.bind(this._handle, this) );
+    ns.move = function(pres, dir, amount) {
+        var orient = pres.getOrientation();
+        var vel = orient.mul(dir);
+        vel = vel.scale(amount);
+        pres.setVelocity(vel);
     };
 
-    ns.InputHandler.prototype._handle = function(evt) {
-        if (evt.msg == 'button-pressed' && 'onButtonPressed' in this)
-            this.onButtonPressed(evt);
-        if (evt.msg == 'button-up' && 'onButtonReleased' in this)
-            this.onButtonReleased(evt);
-        if (evt.msg == 'button-down' && 'onButtonDown' in this)
-            this.onButtonDown(evt);
-        if (evt.msg == 'axis' && 'onAxis' in this)
-            this.onAxis(evt);
-        if (evt.msg == 'text' && 'onText' in this)
-            this.onText(evt);
-        if (evt.msg == 'mouse-hover' && 'onMouseHover' in this)
-            this.onMouseHover(evt);
-        if (evt.msg == 'mouse-click' && 'onMouseClick' in this)
-            this.onMouseClick(evt);
-        if (evt.msg == 'mouse-drag' && 'onMouseDrag' in this)
-            this.onMouseDrag(evt);
-        if (evt.msg == 'dragdrop' && 'onDragAndDrop' in this)
-            this.onDragAndDrop(evt);
-        if (evt.msg == 'webview' && 'onWebView' in this)
-            this.onWebView(evt);
+    ns.stopMove = function(pres) {
+        ns.move(pres, new util.Vec3(0,0,0), 0);
     };
+
+    ns.rotate = function(pres, about, amount) {
+        pres.setOrientationVel(new util.Quaternion(about, amount));
+    };
+
+    ns.stopRotate = function(pres) {
+        ns.rotate(pres, new util.Vec3(1,0,0), 0);
+    };
+
 
 })();
