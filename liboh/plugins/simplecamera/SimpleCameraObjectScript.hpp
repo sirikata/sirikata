@@ -63,15 +63,23 @@ public:
     virtual boost::any invoke(std::vector<boost::any>& params);
 
 private:
+    Context* context() const;
+
     void suspendAction();
     void resumeAction();
     void toggleSuspendAction();
     void quitAction();
 
+    void moveAction(Vector3f dir, float amount);
+    void rotateAction(Vector3f about, float amount);
+    void stableRotateAction(float dir, float amount);
+
     void screenshotAction();
 
 
     HostedObjectPtr mParent;
+    SpaceObjectReference mID; // SimpleCamera only handles one presence
+    ProxyObjectPtr mSelfProxy;
 
     Invokable* mGraphics;
 

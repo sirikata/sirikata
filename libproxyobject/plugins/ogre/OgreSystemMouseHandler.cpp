@@ -44,7 +44,6 @@
 #include "task/Event.hpp"
 #include "task/EventManager.hpp"
 #include <sirikata/core/task/Time.hpp>
-#include <SDL_keysym.h>
 #include <set>
 
 #include <sirikata/core/util/KnownServices.hpp>
@@ -59,22 +58,6 @@ namespace Graphics {
 using namespace Input;
 using namespace Task;
 using namespace std;
-
-#define DEG2RAD 0.0174532925
-#ifdef _WIN32
-#undef SDL_SCANCODE_UP
-#define SDL_SCANCODE_UP 0x60
-#undef SDL_SCANCODE_RIGHT
-#define SDL_SCANCODE_RIGHT 0x5e
-#undef SDL_SCANCODE_DOWN
-#define SDL_SCANCODE_DOWN 0x5a
-#undef SDL_SCANCODE_LEFT
-#define SDL_SCANCODE_LEFT 0x5c
-#undef SDL_SCANCODE_PAGEUP
-#define SDL_SCANCODE_PAGEUP 0x61
-#undef SDL_SCANCODE_PAGEDOWN
-#define SDL_SCANCODE_PAGEDOWN 0x5b
-#endif
 
 // FIXME this needs to be documented. this used to rely on whether entities were
 // cameras or not (using position instead of names). it is not clear at all how
@@ -625,147 +608,6 @@ ProxyObjectPtr OgreSystemMouseHandler::getTopLevelParent(ProxyObjectPtr camProxy
     return camProxy;
 }
 
-void OgreSystemMouseHandler::moveAction(Vector3f dir, float amount)
-{
-    float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-
-    if (!mParent||!mParent->mPrimaryCamera)
-    {
-        return;
-    }
-
-    ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
-    if (!cam)
-    {
-        return;
-    }
-
-    SpaceID space = cam->getObjectReference().space();
-    ObjectReference oref = cam->getObjectReference().object();
-
-    // Make sure the thing we're trying to move really is the thing
-    // connected to the world.
-    // FIXME We should have a real "owner" VWObject, even if it is possible
-    // for it to change over time.
-    VWObjectPtr cam_vwobj = cam->getOwner();
-    //FIXME: these checks do not make sense any more for multi-presenced objects.
-    //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-    //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
-
-    // Get the updated position
-    Time now = mParent->simTime();
-    Location loc = cam->extrapolateLocation(now);
-    const Quaternion &orient = loc.getOrientation();
-
-    // Request updates from spcae
-    TimedMotionVector3f newloc(now, MotionVector3f(Vector3f(loc.getPosition()), (orient * dir) * amount * WORLD_SCALE * .5) );
-    //SILOG(ogre,fatal,"Req loc: " << loc.getPosition() <<
-    //loc.getVelocity());
-    SILOG(ogre,fatal,"Req loc: " << newloc.position() << newloc.velocity());
-    cam_vwobj->requestLocationUpdate(space, oref,newloc);
-    // And update our local Proxy's information, assuming the move will be successful
-    cam->setLocation(newloc, 0, true);
-}
-
-
-
-
-void OgreSystemMouseHandler::rotateAction(Vector3f about, float amount)
-{
-    float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-    if (!mParent||!mParent->mPrimaryCamera) return;
-    ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
-    if (!cam) return;
-
-    SpaceID space = cam->getObjectReference().space();
-    ObjectReference oref = cam->getObjectReference().object();
-
-    // Make sure the thing we're trying to move really is the thing
-    // connected to the world.
-    // FIXME We should have a real "owner" VWObject, even if it is possible
-    // for it to change over time.
-    VWObjectPtr cam_vwobj = cam->getOwner();
-    //FIXME: these checks do not make sense any more for multi-presenced objects.
-    //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-    //if (cam_vwobj->getObjectReference().object() != cam->getObjectReference()) return;
-
-    // Get the updated position
-    Time now = mParent->simTime();
-    Location loc = cam->extrapolateLocation(now);
-    const Quaternion &orient = loc.getOrientation();
-
-    // Request updates from spcae
-    //previous
-    // TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
-    // cam_vwobj->requestOrientationUpdate(space, oref,neworient);
-    // And update our local Proxy's information, assuming the move will be
-    // successful
-
-    TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(about, amount)));
-    cam_vwobj->requestOrientationUpdate(space, oref,neworient);
-    // And update our local Proxy's information, assuming the move will be successful
-    cam->setOrientation(neworient, 0, true);
-
-}
-
-static bool quat2Euler(Quaternion q, double& pitch, double& roll, double& yaw) {
-    /// note that in the 'gymbal lock' situation, we will get nan's for pitch.
-    /// for now, in that case we should revert to quaternion
-    double q1,q2,q3,q0;
-    q2=q.x;
-    q3=q.y;
-    q1=q.z;
-    q0=q.w;
-    roll = std::atan2((2*((q0*q1)+(q2*q3))), (1-(2*(std::pow(q1,2.0)+std::pow(q2,2.0)))));
-    pitch = std::asin((2*((q0*q2)-(q3*q1))));
-    yaw = std::atan2((2*((q0*q3)+(q1*q2))), (1-(2*(std::pow(q2,2.0)+std::pow(q3,2.0)))));
-    pitch /= DEG2RAD;
-    roll /= DEG2RAD;
-    yaw /= DEG2RAD;
-    if (std::abs(pitch) > 89.0) {
-        return false;
-    }
-    return true;
-}
-
-
-void OgreSystemMouseHandler::stableRotateAction(float dir, float amount)
-{
-    float WORLD_SCALE = mParent->mInputManager->mWorldScale->as<float>();
-    if (!mParent||!mParent->mPrimaryCamera) return;
-    ProxyObjectPtr cam = mParent->mPrimaryCamera->following()->getProxyPtr();
-    if (!cam) return;
-
-    SpaceID space = cam->getObjectReference().space();
-    ObjectReference oref = cam->getObjectReference().object();
-
-    // Make sure the thing we're trying to move really is the thing
-    // connected to the world.
-    // FIXME We should have a real "owner" VWObject, even if it is possible
-    // for it to change over time.
-    VWObjectPtr cam_vwobj = cam->getOwner();
-    //FIXME: these checks do not make sense any more for multi-presenced objects.
-    //if (cam_vwobj->id(space) != cam->getObjectReference()) return;
-    //if (cam_vwobj->getObjectReference() != cam->getObjectReference()) return;
-
-    // Get the updated position
-    Time now = mParent->simTime();
-    Location loc = cam->extrapolateLocation(now);
-    const Quaternion &orient = loc.getOrientation();
-
-    double p, r, y;
-    quat2Euler(orient, p, r, y);
-    Vector3f raxis;
-    raxis.x = 0;
-    raxis.y = std::cos(p*DEG2RAD);
-    raxis.z = -std::sin(p*DEG2RAD);
-
-    // Request updates from spcae
-    TimedMotionQuaternion neworient(now, MotionQuaternion(loc.getOrientation(), Quaternion(raxis, dir*amount)));
-    cam_vwobj->requestOrientationUpdate(space, oref,neworient);
-    // And update our local Proxy's information, assuming the move will be successful
-    cam->setOrientation(neworient, 0, true);
-}
 
 void OgreSystemMouseHandler::setDragModeAction(const String& modename) {
     if (modename == "")

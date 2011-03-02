@@ -97,9 +97,6 @@ private:
     void handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void initScriptOnSelectedObjects();
     ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy);
-    void moveAction(Vector3f dir, float amount);
-    void rotateAction(Vector3f about, float amount);
-    void stableRotateAction(float dir, float amount);
     void setDragModeAction(const String& modename);
 
 
