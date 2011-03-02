@@ -78,6 +78,17 @@ bool compareEntity (const Entity* one, const Entity* two)
     return one<two;
 }
 
+Vector3f pixelToDirection(Camera *cam, Quaternion orient, float xPixel, float yPixel) {
+    float xRadian, yRadian;
+    //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
+    xRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * cam->getOgreCamera()->getAspectRatio() * xPixel;
+    yRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * yPixel;
+
+    return Vector3f(-orient.zAxis()*cos(cam->getOgreCamera()->getFOVy().valueRadians()*.5) +
+                    orient.xAxis() * xRadian +
+                    orient.yAxis() * yRadian);
+}
+
 void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
     Location location(cam->following()->getProxy().globalLocation(time));
     Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
@@ -123,8 +134,7 @@ Entity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixe
     }
     if (mouseOverEntity) {
         while (
-            mouseOverEntity->getProxy().getParentProxy() &&
-            !(mouseOverEntity->getProxy().getParentProxy()->getObjectReference() == mCurrentGroup)) {
+            mouseOverEntity->getProxy().getParentProxy()) {
             mouseOverEntity = mParent->getEntity(mouseOverEntity->getProxy().getParentProxy()->getObjectReference());
             if (mouseOverEntity == NULL) {
                 return NULL; // FIXME: should try again.
@@ -134,20 +144,6 @@ Entity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixe
     }
     return NULL;
 }
-
-void OgreSystemMouseHandler::clearSelection() {
-    for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
-         selectIter != mSelectedObjects.end(); ++selectIter) {
-        ProxyObjectPtr obj(selectIter->lock());
-        Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-        if (ent) {
-            ent->setSelected(false);
-        }
-        // Fire deselected event.
-    }
-    mSelectedObjects.clear();
-}
-
 
 bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, float *lastY) {
     float delx = x-*lastX;
@@ -164,6 +160,8 @@ bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, 
     return true;
 }
 
+/** Keeping this around so we can refactor it as a generic picking
+ * interface.
 void OgreSystemMouseHandler::selectObjectAction(Vector2f p, int direction) {
     if (!mParent||!mParent->mPrimaryCamera) return;
     Camera *camera = mParent->mPrimaryCamera;
@@ -242,154 +240,7 @@ void OgreSystemMouseHandler::selectObjectAction(Vector2f p, int direction) {
     }
     return;
 }
-
-///////////////// KEYBOARD HANDLERS /////////////////
-
-void OgreSystemMouseHandler::groupObjectsAction() {
-    if (mSelectedObjects.size()<2) {
-        return;
-    }
-    if (!mParent->mPrimaryCamera) {
-        return;
-    }
-    SpaceObjectReference parentId = mCurrentGroup;
-
-    ProxyManager *proxyMgr = mParent->mPrimaryCamera->following()->getProxy().getProxyManager();
-    Time now = mParent->simTime();
-    for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-         iter != mSelectedObjects.end(); ++iter) {
-        ProxyObjectPtr obj(iter->lock());
-        Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-        if (!ent) continue;
-        if (ent->getProxy().getProxyManager() != proxyMgr) {
-            SILOG(input,error,"Attempting to group objects owned by different proxy manager!");
-            return;
-        }
-        if (!(ent->getProxy().getParentProxy()->getObjectReference() == parentId)) {
-            SILOG(input,error,"Multiple select "<< ent->id() <<
-                " has parent  "<<ent->getProxy().getParentProxy()->getObjectReference() << " instead of " << mCurrentGroup);
-            return;
-        }
-    }
-    Vector3d totalPosition (averageSelectedPosition(now, mSelectedObjects.begin(), mSelectedObjects.end()));
-    Location totalLocation (totalPosition,Quaternion::identity(),Vector3f(0,0,0),Vector3f(0,0,0),0);
-    Entity *parentEntity = mParent->getEntity(parentId);
-    if (parentEntity) {
-        totalLocation = parentEntity->getProxy().globalLocation(now);
-        totalLocation.setPosition(totalPosition);
-    }
-
-    SpaceObjectReference newParentId = SpaceObjectReference(mCurrentGroup.space(), ObjectReference(UUID::random()));
-    //proxyMgr->createObject(ProxyObjectPtr(new ProxyMeshObject(proxyMgr, newParentId, mParent->getPrimaryCamera()->getProxy().odp())),mParent->getPrimaryCamera()->getProxy().getQueryTracker());
-    Entity *newParentEntity = mParent->getEntity(newParentId);
-    //newParentEntity->getProxy().resetLocation(now, totalLocation);
-
-    if (parentEntity) {
-        //newParentEntity->getProxy().setParent(parentEntity->getProxyPtr(), now);
-    }
-    for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-         iter != mSelectedObjects.end(); ++iter) {
-        ProxyObjectPtr obj(iter->lock());
-        Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-        if (!ent) continue;
-        //ent->getProxy().setParent(newParentEntity->getProxyPtr(), now);
-        ent->setSelected(false);
-    }
-    mSelectedObjects.clear();
-    mSelectedObjects.insert(newParentEntity->getProxyPtr());
-    newParentEntity->setSelected(true);
-}
-
-bool OgreSystemMouseHandler::doUngroupObjects(Time now) {
-    int numUngrouped = 0;
-    SelectedObjectSet newSelectedObjects;
-    for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-         iter != mSelectedObjects.end(); ++iter) {
-        ProxyObjectPtr obj(iter->lock());
-        Entity *parentEnt = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-        if (!parentEnt) {
-            continue;
-        }
-        ProxyManager *proxyMgr = parentEnt->getProxy().getProxyManager();
-        ProxyObjectPtr parentParent (parentEnt->getProxy().getParentProxy());
-        mCurrentGroup = parentEnt->getProxy().getParentProxy()->getObjectReference(); // parentParent may be NULL.
-        bool hasSubObjects = false;
-        for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
-            hasSubObjects = true;
-            Entity *ent = *subIter;
-            //ent->getProxy().setParent(parentParent, now);
-            newSelectedObjects.insert(ent->getProxyPtr());
-            ent->setSelected(true);
-        }
-        if (hasSubObjects) {
-            parentEnt->setSelected(false);
-            proxyMgr->destroyObject(parentEnt->getProxyPtr());
-            parentEnt = NULL; // dies.
-            numUngrouped++;
-        }
-        else {
-            newSelectedObjects.insert(parentEnt->getProxyPtr());
-        }
-    }
-    mSelectedObjects.swap(newSelectedObjects);
-    return (numUngrouped>0);
-}
-
-void OgreSystemMouseHandler::ungroupObjectsAction() {
-    Time now = mParent->simTime();
-    doUngroupObjects(now);
-}
-
-void OgreSystemMouseHandler::enterObjectAction() {
-    Time now = mParent->simTime();
-    if (mSelectedObjects.size() != 1) {
-        return;
-    }
-    Entity *parentEnt = NULL;
-    for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-         iter != mSelectedObjects.end(); ++iter) {
-        ProxyObjectPtr obj(iter->lock());
-        parentEnt = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-    }
-    if (parentEnt) {
-        SelectedObjectSet newSelectedObjects;
-        bool hasSubObjects = false;
-        for (SubObjectIterator subIter (parentEnt); !subIter.end(); ++subIter) {
-            hasSubObjects = true;
-            Entity *ent = *subIter;
-            newSelectedObjects.insert(ent->getProxyPtr());
-            ent->setSelected(true);
-        }
-        if (hasSubObjects) {
-            mSelectedObjects.swap(newSelectedObjects);
-            mCurrentGroup = parentEnt->id();
-        }
-    }
-}
-
-void OgreSystemMouseHandler::leaveObjectAction() {
-    Time now = mParent->simTime();
-    for (SelectedObjectSet::iterator iter = mSelectedObjects.begin();
-         iter != mSelectedObjects.end(); ++iter) {
-        ProxyObjectPtr obj(iter->lock());
-        Entity *selent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-        if (selent) {
-            selent->setSelected(false);
-        }
-    }
-    mSelectedObjects.clear();
-    Entity *ent = mParent->getEntity(mCurrentGroup);
-    if (ent) {
-        mCurrentGroup = ent->getProxy().getParentProxy()->getObjectReference();
-        Entity *parentEnt = mParent->getEntity(mCurrentGroup);
-        if (parentEnt) {
-            mSelectedObjects.insert(parentEnt->getProxyPtr());
-        }
-    }
-    else {
-        mCurrentGroup = SpaceObjectReference::null();
-    }
-}
+*/
 
 /** Create a UI element using a web view. */
 void OgreSystemMouseHandler::createUIAction(const String& ui_page) {
@@ -402,6 +253,7 @@ void OgreSystemMouseHandler::createUIAction(const String& ui_page) {
     Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
     HostedObject.
 */
+/** Needs to be moved to real UI handling code.
 void OgreSystemMouseHandler::createScriptingUIAction() {
     static bool onceInitialized = false;
 
@@ -444,95 +296,7 @@ void OgreSystemMouseHandler::createScriptingUIAction() {
         }
     }
 }
-
-
-void OgreSystemMouseHandler::onUploadObjectEvent(WebView* webview, const JSArguments& args) {
-    printf("upload object event fired arg length = %d\n", (int)args.size());
-    if (args.size() != 3) {
-        printf("expected 3 arguments, returning.\n");
-        return;
-    }
-
-    String file_path(args[0].data());
-    String title(args[1].data());
-    String description(args[2].data());
-
-    printf("Upload request. path = '%s' , title = '%s' , desc = '%s' .\n", file_path.c_str(), title.c_str(), description.c_str());
-    WebViewManager::getSingleton().destroyWebView(mUploadWebView);
-    mUploadWebView = NULL;
-}
-
-void OgreSystemMouseHandler::startUploadObject() {
-    if(mUploadWebView) {
-        printf("startUploadObject called. Focusing existing.\n");
-        mUploadWebView->focus();
-    } else {
-        printf("startUploadObject called. Opening upload UI.\n");
-        mUploadWebView = WebViewManager::getSingleton().createWebView("upload_tool", "upload_tool",404, 227,
-            OverlayPosition(RP_CENTER), false, 70, TIER_FRONT);
-        mUploadWebView->bind("event", std::tr1::bind(&OgreSystemMouseHandler::onUploadObjectEvent, this, _1, _2));
-        mUploadWebView->loadFile("chrome/upload.html");
-    }
-}
-
-void OgreSystemMouseHandler::handleQueryAngleWidget() {
-    if(mQueryAngleWidgetView) {
-        WebViewManager::getSingleton().destroyWebView(mQueryAngleWidgetView);
-        mQueryAngleWidgetView = NULL;
-    } else {
-        mQueryAngleWidgetView = WebViewManager::getSingleton().createWebView("query_angle_widget", "query_angle_widget",300, 100,
-            OverlayPosition(RP_BOTTOMRIGHT), false, 70, TIER_FRONT);
-        mQueryAngleWidgetView->bind("set_query_angle", std::tr1::bind(&OgreSystemMouseHandler::handleSetQueryAngle, this, _1, _2));
-        mQueryAngleWidgetView->loadFile("debug/query_angle.html");
-    }
-}
-
-void OgreSystemMouseHandler::handleSetQueryAngle(WebView* webview, const JSArguments& args) {
-    assert(args.size() == 1);
-    mNewQueryAngle = boost::lexical_cast<float>(args[0].data());
-    mQueryAngleTimer->cancel();
-    mQueryAngleTimer->wait(Duration::seconds(1.f));
-}
-
-void OgreSystemMouseHandler::handleSetQueryAngleTimeout() {
-    mParent->mViewer->requestQueryUpdate(mParent->mPresenceID.space(), mParent->mPresenceID.object(), SolidAngle(mNewQueryAngle));
-}
-
-void OgreSystemMouseHandler::executeScript(WebView* wv, const JSArguments& args)
-{
-    ScriptingUIObjectMap::iterator objit = mScriptingUIObjects.find(wv);
-    if (objit == mScriptingUIObjects.end())
-        return;
-    ProxyObjectPtr target_obj(objit->second.lock());
-
-    if (!target_obj) return;
-
-
-    JSIter command_it;
-    for (command_it = args.begin(); command_it != args.end(); ++command_it)
-    {
-        std::string strcmp (command_it->begin());
-
-
-
-        if (strcmp == "Command")
-        {
-            Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
-            Sirikata::JS::Protocol::IScriptingRequest scripting_req = scripting_msg.add_requests();
-            scripting_req.set_id(0);
-            //scripting_req.set_body(String(command_it->second));
-            JSIter nexter = command_it + 1;
-            String msgBody = String(nexter->begin());
-            scripting_req.set_body(msgBody);
-            std::string serialized_scripting_request;
-            scripting_msg.SerializeToString(&serialized_scripting_request);
-            mScriptingRequestPort->send(
-                ODP::Endpoint(target_obj->getObjectReference(), Services::SCRIPTING),
-                MemoryReference(serialized_scripting_request)
-            );
-        }
-    }
-}
+*/
 
 static String convertAndEscapeJavascriptString(const String& in) {
     String result = "'";
@@ -575,6 +339,7 @@ void OgreSystemMouseHandler::handleScriptReply(const ODP::Endpoint& src, const O
    LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
    object receives the message and attaches a JSObjectScript to the HostedObject.
 */
+/*
 void OgreSystemMouseHandler::initScriptOnSelectedObjects() {
     for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
          selectIter != mSelectedObjects.end(); ++selectIter) {
@@ -598,28 +363,46 @@ void OgreSystemMouseHandler::initScriptOnSelectedObjects() {
         );
     }
 }
+*/
 
-ProxyObjectPtr OgreSystemMouseHandler::getTopLevelParent(ProxyObjectPtr camProxy)
-{
-    ProxyObjectPtr parentProxy;
-    while ((parentProxy=camProxy->getParentProxy())) {
-        camProxy=parentProxy;
-    }
-    return camProxy;
+inline Vector3f direction(Quaternion cameraAngle) {
+    return -cameraAngle.zAxis();
 }
 
+void zoomInOut(float value, const Vector2f& axes, Camera *camera, OgreSystem *parent) {
+    SILOG(input,debug,"zoom "<<value);
 
-void OgreSystemMouseHandler::setDragModeAction(const String& modename) {
-    if (modename == "")
-        mDragAction[1] = 0;
+    Time now = parent->simTime();
 
-    mDragAction[1] = DragActionRegistry::get(modename);
+    Location cameraLoc = camera->following()->getProxy().extrapolateLocation(now);
+    Location cameraGlobalLoc = camera->following()->getProxy().globalLocation(now);
+    Vector3d toMove;
+    int subent;
+
+    toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
+
+    double distance;
+    Vector3f normal;
+    float WORLD_SCALE = parent->getInputManager()->mWorldScale->as<float>();
+    int hitCount=0;
+    if (!parent->getInputManager()->isModifierDown(Input::MOD_CTRL) &&
+        !parent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
+        toMove *= WORLD_SCALE;
+    } else if (parent->rayTrace(cameraGlobalLoc.getPosition(), direction(cameraGlobalLoc.getOrientation()), hitCount, distance, normal, subent) &&
+               (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(Input::MOD_SHIFT))) {
+        toMove *= distance*.75;
+    } else {
+        toMove *= WORLD_SCALE;
+    }
+    toMove *= value; // up == zoom in
+    cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
+    //camera->following()->getProxy().resetLocation(now, cameraLoc);
 }
 
 void OgreSystemMouseHandler::zoomAction(float value, Vector2f axes)
 {
     if (!mParent||!mParent->mPrimaryCamera) return;
-    zoomInOut(value, axes, mParent->mPrimaryCamera, mSelectedObjects, mParent);
+    zoomInOut(value, axes, mParent->mPrimaryCamera, mParent);
 }
 
 ///// Top Level Input Event Handlers //////
@@ -796,29 +579,6 @@ EventResponse OgreSystemMouseHandler::mouseDragHandler(EventPtr evbase) {
     InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(evbase));
     delegateEvent(inputev);
 
-    ActiveDrag * &drag = mActiveDrag[ev->mButton];
-    if (ev->mType == Input::DRAG_START) {
-        if (drag) {
-            delete drag;
-        }
-        DragStartInfo info = {
-            /*.sys = */ mParent,
-            /*.camera = */ mParent->mPrimaryCamera, // for now...
-            /*.objects = */ mSelectedObjects,
-            /*.ev = */ ev
-        };
-        if (mDragAction[ev->mButton]) {
-            drag = mDragAction[ev->mButton](info);
-        }
-    }
-    if (drag) {
-        drag->mouseMoved(ev);
-
-        if (ev->mType == Input::DRAG_END) {
-            delete drag;
-            drag = 0;
-        }
-    }
     return EventResponse::nop();
 }
 
@@ -918,15 +678,11 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
 
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mParent(parent),
-   mCurrentGroup(SpaceObjectReference::null()),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
    mLastRenderStatsTime(Task::LocalTime::now()),
-   mUploadWebView(NULL),
    mUIWidgetView(NULL),
-   mQueryAngleWidgetView(NULL),
    mNewQueryAngle(0.f),
-   mQueryAngleTimer( Network::IOTimer::create(parent->mContext->ioService, std::tr1::bind(&OgreSystemMouseHandler::handleSetQueryAngleTimeout, this)) ),
    mWhichRayObject(0),
    mScriptingRequestPort(NULL),
    mDelegate(NULL)
@@ -937,11 +693,6 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
 
     mEvents.push_back(mParent->mInputManager->registerDeviceListener(
             std::tr1::bind(&OgreSystemMouseHandler::deviceListener, this, _1)));
-
-    mDragAction[1] = 0;
-    mDragAction[2] = DragActionRegistry::get("zoomCamera");
-    mDragAction[3] = DragActionRegistry::get("panCamera");
-    mDragAction[4] = DragActionRegistry::get("rotateCamera");
 
     mEvents.push_back(mParent->mInputManager->subscribeId(
             MouseHoverEvent::getEventId(),
@@ -967,35 +718,6 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
             WebViewEvent::getEventId(),
             std::tr1::bind(&OgreSystemMouseHandler::webviewHandler, this, _1)));
 
-/*
-    mInputResponses["openScriptingUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createScriptingUIAction, this));
-
-    mInputResponses["openObjectUI"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::createUIAction, this, "object/object.html"));
-
-
-    //mInputResponses["executeScript"] = new WebViewStringMapInputResponse(std::tr1::bind(&OgreSystemMouseHandler::executeScript, this, _1, _2));
-
-    mInputResponses["enterObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::enterObjectAction, this));
-    mInputResponses["leaveObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::leaveObjectAction, this));
-    mInputResponses["groupObjects"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::groupObjectsAction, this));
-    mInputResponses["ungroupObjects"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::ungroupObjectsAction, this));
-
-    mInputResponses["selectObject"] = new Vector2fInputResponse(std::tr1::bind(&OgreSystemMouseHandler::selectObjectAction, this, _1, 1));
-    mInputResponses["selectObjectReverse"] = new Vector2fInputResponse(std::tr1::bind(&OgreSystemMouseHandler::selectObjectAction, this, _1, -1));
-
-    mInputResponses["zoom"] = new AxisInputResponse(std::tr1::bind(&OgreSystemMouseHandler::zoomAction, this, _1, _2));
-
-    mInputResponses["setDragModeNone"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, ""));
-    mInputResponses["setDragModeMoveObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "moveObject"));
-    mInputResponses["setDragModeRotateObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "rotateObject"));
-    mInputResponses["setDragModeScaleObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "scaleObject"));
-    mInputResponses["setDragModeRotateCamera"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "rotateCamera"));
-    mInputResponses["setDragModePanCamera"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::setDragModeAction, this, "panCamera"));
-
-    mInputResponses["startUploadObject"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::startUploadObject, this));
-    mInputResponses["handleQueryAngleWidget"] = new SimpleInputResponse(std::tr1::bind(&OgreSystemMouseHandler::handleQueryAngleWidget, this));
-*/
-
     // Allocate a random port for scripting requests
     mScriptingRequestPort = mParent->getViewer()->bindODPPort(mParent->getViewerPresence());
     mScriptingRequestPort->receive( std::tr1::bind(&OgreSystemMouseHandler::handleScriptReply, this, _1, _2, _3) );
@@ -1004,10 +726,6 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
 OgreSystemMouseHandler::~OgreSystemMouseHandler() {
     delete mScriptingRequestPort;
 
-    if(mUploadWebView) {
-        WebViewManager::getSingleton().destroyWebView(mUploadWebView);
-        mUploadWebView = NULL;
-    }
     if(mUIWidgetView) {
         WebViewManager::getSingleton().destroyWebView(mUIWidgetView);
         mUIWidgetView = NULL;
@@ -1017,10 +735,6 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
          iter != mEvents.end();
          ++iter) {
         mParent->mInputManager->unsubscribe(*iter);
-    }
-    for (std::map<int, ActiveDrag*>::iterator iter=mActiveDrag.begin(),iterend=mActiveDrag.end();iter!=iterend;++iter) {
-        if(iter->second!=NULL)
-            delete iter->second;
     }
 }
 
@@ -1154,17 +868,6 @@ void OgreSystemMouseHandler::alert(const String& title, const String& text) {
     if (!mUIWidgetView) return;
 
     mUIWidgetView->evaluateJS("alert_permanent('" + title + "', '" + text + "');");
-}
-
-void OgreSystemMouseHandler::setParentGroupAndClear(const SpaceObjectReference &id) {
-    clearSelection();
-    mCurrentGroup = id;
-}
-const SpaceObjectReference &OgreSystemMouseHandler::getParentGroup() const {
-    return mCurrentGroup;
-}
-void OgreSystemMouseHandler::addToSelection(const ProxyObjectPtr &obj) {
-    mSelectedObjects.insert(obj);
 }
 
 void OgreSystemMouseHandler::onUIDirectoryListingFinished(String initial_path,

@@ -35,7 +35,6 @@
 #include "task/UniqueId.hpp"
 #include "WebView.hpp"
 #include "WebViewManager.hpp"
-#include "DragActions.hpp"
 #include "OgreMeshRaytrace.hpp"
 #include "task/Event.hpp"
 #include "task/EventManager.hpp"
@@ -56,9 +55,6 @@ public:
     ~OgreSystemMouseHandler();
 
     void alert(const String& title, const String& text);
-    void setParentGroupAndClear(const SpaceObjectReference &id);
-    const SpaceObjectReference& getParentGroup() const;
-    void addToSelection(const ProxyObjectPtr &obj);
     void tick(const Task::LocalTime& t);
 
     void setDelegate(Invokable* del);
@@ -68,38 +64,12 @@ private:
 
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
-    void clearSelection();
 
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY);
-    void selectObjectAction(Vector2f p, int direction);
-
-    void groupObjectsAction();
-    bool doUngroupObjects(Time now);
-
-    void ungroupObjectsAction();
-    void enterObjectAction();
-    void leaveObjectAction();
 
     void createUIAction(const String& ui_page);
-    void createScriptingUIAction();
-    void onUploadObjectEvent(WebView* webview, const JSArguments& args);
-    void startUploadObject();
-
-    void handleQueryAngleWidget();
-
-    void handleSetQueryAngle(WebView* webview, const JSArguments& args);
-
-    void handleSetQueryAngleTimeout();
-
-    void executeScript(WebView* wv, const JSArguments& args);
-
 
     void handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    void initScriptOnSelectedObjects();
-    ProxyObjectPtr getTopLevelParent(ProxyObjectPtr camProxy);
-    void setDragModeAction(const String& modename);
-
-
 
     void zoomAction(float value, Vector2f axes);
     Task::EventResponse keyHandler(Task::EventPtr ev);
@@ -134,10 +104,6 @@ private:
 
     Invokable* mDelegate;
 
-    SpaceObjectReference mCurrentGroup;
-    typedef std::set<ProxyObjectWPtr> SelectedObjectSet;
-    SelectedObjectSet mSelectedObjects;
-
     struct UIInfo {
         UIInfo()
          : scripting(NULL),chat(NULL)
@@ -164,21 +130,15 @@ private:
     int mLastHitCount;
     float mLastHitX;
     float mLastHitY;
-    // map from mouse button to drag for that mouse button.
-    /* as far as multiple cursors are concerned,
-       each cursor should have its own MouseHandler instance */
-    std::map<int, DragAction> mDragAction;
-    std::map<int, ActiveDrag*> mActiveDrag;
+
     std::set<int> mWebViewActiveButtons;
 
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;
     Task::LocalTime mLastRenderStatsTime;
 
-    WebView* mUploadWebView;
     WebView* mUIWidgetView;
 
-    WebView* mQueryAngleWidgetView;
     // To avoid too many messages, update only after a timeout
     float mNewQueryAngle;
     Network::IOTimerPtr mQueryAngleTimer;

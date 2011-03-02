@@ -1328,7 +1328,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/OgreMeshRaytrace.cpp
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
-  ${GFX}/DragActions.cpp
   ${GFX}/task/EventManager.cpp
   ${GFX}/task/Event.cpp
   ${GFX}/task/UniqueId.cpp

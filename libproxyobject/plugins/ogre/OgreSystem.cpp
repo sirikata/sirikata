@@ -1111,16 +1111,6 @@ void OgreSystem::destroyMouseHandler() {
     }
 }
 
-void OgreSystem::selectObject(Entity *obj, bool replace) {
-    if (replace) {
-        mMouseHandler->setParentGroupAndClear(obj->getProxy().getParentProxy()->getObjectReference());
-    }
-    if (mMouseHandler->getParentGroup() == obj->getProxy().getParentProxy()->getObjectReference()) {
-        mMouseHandler->addToSelection(obj->getProxyPtr());
-        obj->setSelected(true);
-    }
-}
-
 void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
     if (mMouseHandler != NULL)
         mMouseHandler->tick(t);

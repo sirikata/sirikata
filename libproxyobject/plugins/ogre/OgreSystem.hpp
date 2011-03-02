@@ -207,7 +207,7 @@ public:
     const OptionSet*getOptions()const{
         return mOptions;
     }
-    void selectObject(Entity *obj, bool reset=true); // Defined in OgreSystemMouseHandler.cpp
+
     const Vector3d& getOffset()const {return mFloatingPointOffset;}
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
