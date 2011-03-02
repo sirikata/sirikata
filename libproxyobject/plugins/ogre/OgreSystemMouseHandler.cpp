@@ -1290,140 +1290,123 @@ void OgreSystemMouseHandler::setDelegate(Invokable* del) {
     mDelegate = del;
 }
 
+namespace {
+
+// Fills in modifier fields
+void fillModifiers(Invokable::Dict& event_data, Input::Modifier m) {
+    Invokable::Dict mods;
+    mods["shift"] = (bool)(m & MOD_SHIFT);
+    mods["ctrl"] = (bool)(m & MOD_CTRL);
+    mods["alt"] = (bool)(m & MOD_ALT);
+    mods["super"] = (bool)(m & MOD_GUI);
+    event_data["modifier"] = mods;
+}
+
+}
+
 bool OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     if (mDelegate == NULL) return false;
 
-    // Convert to a list of parameters for Invokable
-    std::vector<boost::any> args;
-
+    Invokable::Dict event_data;
     {
         ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
         if (button_pressed_ev) {
-            args.push_back(String("button"));
-            args.push_back(String("pressed"));
-            args.push_back(keyButtonString(button_pressed_ev->mButton));
-            // FIXME modifiers array
-            args.push_back(keyModifiersString(button_pressed_ev->mModifier));
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("button-pressed");
+            event_data["button"] = button_pressed_ev->mButton;
+            fillModifiers(event_data, button_pressed_ev->mModifier);
         }
     }
 
     {
         ButtonReleasedEventPtr button_released_ev (std::tr1::dynamic_pointer_cast<ButtonReleased>(inputev));
         if (button_released_ev) {
-            args.push_back(String("button"));
-            args.push_back(String("up"));
-            args.push_back(keyButtonString(button_released_ev->mButton));
-            // FIXME modifiers array
-            args.push_back(keyModifiersString(button_released_ev->mModifier));
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("button-up");
+            event_data["button"] = button_released_ev->mButton;
+            fillModifiers(event_data, button_released_ev->mModifier);
         }
     }
 
     {
         ButtonDownEventPtr button_down_ev (std::tr1::dynamic_pointer_cast<ButtonDown>(inputev));
         if (button_down_ev) {
-            args.push_back(String("button"));
-            args.push_back(String("down"));
-            args.push_back(keyButtonString(button_down_ev->mButton));
-            // FIXME modifiers array
-            args.push_back(keyModifiersString(button_down_ev->mModifier));
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("button-down");
+            event_data["button"] = button_down_ev->mButton;
+            fillModifiers(event_data, button_down_ev->mModifier);
         }
     }
 
     {
         AxisEventPtr axis_ev (std::tr1::dynamic_pointer_cast<AxisEvent>(inputev));
         if (axis_ev) {
-            args.push_back(String("axis"));
-            args.push_back(axisString(axis_ev->mAxis));
-            // FIXME value
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("axis");
+            event_data["index"] = axis_ev->mAxis;
+            event_data["value"] = axis_ev->mValue.value;
         }
     }
 
     {
         TextInputEventPtr text_input_ev (std::tr1::dynamic_pointer_cast<TextInputEvent>(inputev));
         if (text_input_ev) {
-            args.push_back(String("text"));
-            args.push_back(text_input_ev->mText);
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("text");
+            event_data["value"] = text_input_ev->mText;
         }
     }
 
     {
         MouseHoverEventPtr mouse_hover_ev (std::tr1::dynamic_pointer_cast<MouseHoverEvent>(inputev));
         if (mouse_hover_ev) {
-            args.push_back(String("mouse"));
-            args.push_back(String("hover"));
-            // fixme x & y
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("mouse-hover");
+            event_data["x"] = mouse_hover_ev->mX;
+            event_data["y"] = mouse_hover_ev->mY;
         }
     }
 
     {
         MouseClickEventPtr mouse_click_ev (std::tr1::dynamic_pointer_cast<MouseClickEvent>(inputev));
         if (mouse_click_ev) {
-            args.push_back(String("mouse"));
-            args.push_back(String("click"));
-            // fixme x & y
-            args.push_back(mouseButtonString(mouse_click_ev->mButton));
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("mouse-click");
+            event_data["button"] = mouse_click_ev->mButton;
+            event_data["x"] = mouse_click_ev->mX;
+            event_data["y"] = mouse_click_ev->mY;
         }
     }
 
     {
         MouseDragEventPtr mouse_drag_ev (std::tr1::dynamic_pointer_cast<MouseDragEvent>(inputev));
         if (mouse_drag_ev) {
-            args.push_back(String("mouse"));
-            args.push_back(String("drag"));
-            // fixme x & y
-            args.push_back(mouseButtonString(mouse_drag_ev->mButton));
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("mouse-drag");
+            event_data["button"] = mouse_drag_ev->mButton;
+            event_data["x"] = mouse_drag_ev->mX;
+            event_data["y"] = mouse_drag_ev->mY;
         }
     }
 
     {
         DragAndDropEventPtr dd_ev (std::tr1::dynamic_pointer_cast<DragAndDropEvent>(inputev));
         if (dd_ev) {
-            args.push_back(String("dragdrop"));
-
-            mDelegate->invoke(args);
-            return true;
+            event_data["msg"] = String("dragdrop");
         }
     }
 
     {
         WebViewEventPtr wv_ev (std::tr1::dynamic_pointer_cast<WebViewEvent>(inputev));
         if (wv_ev) {
-            args.push_back(String("webview"));
-            args.push_back(wv_ev->webview);
-            args.push_back(wv_ev->name);
+            event_data["msg"] = (String("webview"));
+            event_data["webview"] = (wv_ev->webview);
+            event_data["name"] = (wv_ev->name);
+            Invokable::Array wv_args;
             for(uint32 ii = 0; ii < wv_ev->args.size(); ii++)
-                args.push_back(wv_ev->args[ii]);
-
-            mDelegate->invoke(args);
-            return true;
+                wv_args.push_back(wv_ev->args[ii]);
+            event_data["args"] = wv_args;
         }
     }
 
-    return false;
+    if (event_data.empty()) return false;
+
+    std::vector<boost::any> args;
+    args.push_back(event_data);
+    mDelegate->invoke(args);
+    return true;
 }
 
 
