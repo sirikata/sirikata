@@ -1098,7 +1098,7 @@ unaryExpression
 	| ^(
 	
 	    (
-				   DELETE          {  APP("delete");}
+				   DELETE          {  APP("delete ");}
        | VOID          {   APP("void");}
        | TYPEOF        {  APP("typeof ");}
        | PLUSPLUS      {  APP("++");}
