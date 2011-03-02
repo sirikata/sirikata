@@ -1100,7 +1100,7 @@ unaryExpression
 	    (
 				   DELETE          {  APP("delete");}
        | VOID          {   APP("void");}
-       | TYPEOF        {  APP("typeOf ");}
+       | TYPEOF        {  APP("typeof ");}
        | PLUSPLUS      {  APP("++");}
        | MINUSMINUS    {  APP("--");}
        | UNARY_PLUS    {  APP("+");}
