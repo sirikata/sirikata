@@ -593,6 +593,12 @@ ENDIF()
 #ENDIF(NOT GLUT_FOUND)
 SET(GSL_ROOT ${PLATFORM_LIBS}/installed-gsl)
 FIND_PACKAGE(GSL)
+IF(GSL_FOUND)
+  SET(GSL_CXX_FLAGS "-DHAVE_GSL ${GSL_CXX_FLAGS}")
+ELSE()
+  MESSAGE(STATUS "GSL was not found: Will single sample in center of region to approximate integral.")
+  SET(GSL_CXX_FLAGS "")
+ENDIF()
 
 IF(WIN32)
 #dependency: berkelium
@@ -1759,6 +1765,7 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
 
 ADD_PLUGIN_TARGET(weight-exp
                     SOURCES ${LIBCORE_PLUGIN_WEIGHTEXP_SOURCES}
+                    TARGET_CXXFLAGS ${GSL_CXX_FLAGS}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
@@ -1766,6 +1773,7 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-exp)
 
 ADD_PLUGIN_TARGET(weight-sqr
                     SOURCES ${LIBCORE_PLUGIN_WEIGHTSQR_SOURCES}
+                    TARGET_CXXFLAGS ${GSL_CXX_FLAGS}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
