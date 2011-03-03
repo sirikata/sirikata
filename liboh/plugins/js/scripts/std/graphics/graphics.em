@@ -80,6 +80,11 @@ function() {
         this.invoke('screenshot');
     };
 
+    /** Request a screenshot be taken and stored on disk. */
+    ns.Graphics.prototype.pick = function(x, y) {
+        return this.invoke('pick', x, y);
+    };
+
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createGUI = function(name, url) {
         return new ns.GUI(simulator.invoke("createWindowFile", name, url));

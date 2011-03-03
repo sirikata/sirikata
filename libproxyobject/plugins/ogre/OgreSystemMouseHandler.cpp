@@ -160,87 +160,23 @@ bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, 
     return true;
 }
 
-/** Keeping this around so we can refactor it as a generic picking
- * interface.
-void OgreSystemMouseHandler::selectObjectAction(Vector2f p, int direction) {
-    if (!mParent||!mParent->mPrimaryCamera) return;
+SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction) {
+    if (!mParent||!mParent->mPrimaryCamera) SpaceObjectReference::null();
+
     Camera *camera = mParent->mPrimaryCamera;
     Time time = mParent->simTime();
 
-    if (!camera) {
-        return;
+    int numObjectsUnderCursor=0;
+    Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
+    if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount)
+        mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0);
+    if (mouseOver) {
+        mouseOver->setSelected(true);
+        return mouseOver->getProxyPtr()->getObjectReference();
     }
-    if (mParent->mInputManager->isModifierDown(Input::MOD_SHIFT)) {
-        // add object.
-        int numObjectsUnderCursor=0;
-        Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, false, &numObjectsUnderCursor, mWhichRayObject);
-        if (!mouseOver) {
-            return;
-        }
-        if (mouseOver->id() == mLastShiftSelected && numObjectsUnderCursor==mLastHitCount ) {
-            SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
-            if (selectIter != mSelectedObjects.end()) {
-                ProxyObjectPtr obj(selectIter->lock());
-                Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-                if (ent) {
-                    ent->setSelected(false);
-                }
-                mSelectedObjects.erase(selectIter);
-            }
-            mWhichRayObject+=direction;
-            mLastShiftSelected = SpaceObjectReference::null();
-        }else {
-            mWhichRayObject=0;
-        }
-        mouseOver = hoverEntity(camera, time, p.x, p.y, false, &mLastHitCount, mWhichRayObject);
-        if (!mouseOver) {
-            return;
-        }
 
-        SelectedObjectSet::iterator selectIter = mSelectedObjects.find(mouseOver->getProxyPtr());
-        if (selectIter == mSelectedObjects.end()) {
-            SILOG(input,info,"Added selection " << mouseOver->id());
-            mSelectedObjects.insert(mouseOver->getProxyPtr());
-            mouseOver->setSelected(true);
-            mLastShiftSelected = mouseOver->id();
-            // Fire selected event.
-        }
-        else {
-            ProxyObjectPtr obj(selectIter->lock());
-            Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
-            if (ent) {
-                SILOG(input,info,"Deselected " << ent->id());
-                ent->setSelected(false);
-            }
-            mSelectedObjects.erase(selectIter);
-            // Fire deselected event.
-        }
-    }
-    else if (mParent->mInputManager->isModifierDown(Input::MOD_CTRL)) {
-        SILOG(input,info,"Cleared selection");
-        clearSelection();
-        mLastShiftSelected = SpaceObjectReference::null();
-    }
-    else {
-        // reset selection.
-        clearSelection();
-        //mWhichRayObject+=direction;
-        int numObjectsUnderCursor=0;
-        Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
-        if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount){
-            mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0);
-        }
-        if (mouseOver) {
-            mSelectedObjects.insert(mouseOver->getProxyPtr());
-            mouseOver->setSelected(true);
-            SILOG(input,info,"Replaced selection with " << mouseOver->id() << " : " << mouseOver->getOgrePosition() );
-            // Fire selected event.
-        }
-        mLastShiftSelected = SpaceObjectReference::null();
-    }
-    return;
+    return SpaceObjectReference::null();
 }
-*/
 
 /** Create a UI element using a web view. */
 void OgreSystemMouseHandler::createUIAction(const String& ui_page) {

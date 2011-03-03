@@ -82,7 +82,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
 
-    Camera* mCamera;
     Vector4f mBackgroundColor;
 
     // FIXME because we don't have proper multithreaded support in cppoh, we
@@ -151,6 +150,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();
+
+    boost::any pick(vector<boost::any>& params);
 
     bool mQuitRequested;
     bool mQuitRequestHandled;

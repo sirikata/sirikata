@@ -58,6 +58,7 @@ function() {
     };
 
     ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
+        system.print("pick: " + this._simulator.pick(evt.x, evt.y) + "\n");
     };
 
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {

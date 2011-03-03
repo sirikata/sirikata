@@ -1192,7 +1192,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
     //just _1, _2 for now
     Invokable* invokable = boost::any_cast<Invokable*>(params[2]);
-    bind("event", std::tr1::bind(&WebView::translateParamsAndInvoke, this, invokable, _1, _2));
+    bind(event, std::tr1::bind(&WebView::translateParamsAndInvoke, this, invokable, _1, _2));
     Invokable* inv_result = this;
     return boost::any(inv_result);
 

@@ -2,6 +2,7 @@
 #include "../JSObjectScript.hpp"
 #include "JSFields.hpp"
 #include "JSFunctionInvokable.hpp"
+#include "JSInvokableUtil.hpp"
 
 #include <cassert>
 #include <vector>
@@ -11,34 +12,6 @@ namespace JS
 {
 namespace JSInvokableObject
 {
-
-
-namespace {
-
-/** Converts a V8 object into a boost:any, leaving the boost::any empty if the
- *  object cannot be translated.
- */
-boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
-    /* Pushing only string params for now */
-    if(val->IsString())
-    {
-      v8::String::AsciiValue str(val);
-      string s = string(*str);
-      return boost::any(s);
-    }
-    else if(val->IsFunction())
-    {
-      v8::Handle<v8::Function> function = v8::Handle<v8::Function>::Cast(val);
-      v8::Persistent<v8::Function> function_persist = v8::Persistent<v8::Function>::New(function);
-
-      JSFunctionInvokable* invokable = new JSFunctionInvokable(function_persist, parent);
-      Invokable* in = invokable;
-      return boost::any(in);
-    }
-    return boost::any();
-}
-
-} // namespace
 
 v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 {
@@ -64,7 +37,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 
   //assert(args.Length() == 1);
   for(int i =0; i < args.Length(); i++)
-      params.push_back(V8ToAny(caller, args[i]));
+      params.push_back(InvokableUtil::V8ToAny(caller, args[i]));
 
   /* This is just a trampoline pattern */
 
@@ -73,16 +46,8 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
   {
     return v8::Undefined();
   }
-  Invokable* newInvokableObj = boost::any_cast<Invokable*>(b);
-  //Invokable* newInvokableObj = (boost::unsafe_any_cast<Invokable>(&b) );  //boost::any_cast<*>( invokableObj->invoke(params) );
-
-  Local<Object> tmpObj = caller->manager()->mInvokableObjectTemplate->NewInstance();
-  Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
-  tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(caller));
-  tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD,External::New(  new JSInvokableObjectInt(newInvokableObj) ));
-  tmpObjP->SetInternalField(TYPEID_FIELD,External::New(  new String (JSINVOKABLE_TYPEID_STRING)));
-
-  return tmpObj;
+  Handle<Value> retval = InvokableUtil::AnyToV8(caller, b);
+  return retval;
 }
 
 boost::any JSInvokableObjectInt::invoke(std::vector<boost::any> &params)

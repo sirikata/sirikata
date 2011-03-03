@@ -1119,6 +1119,31 @@ void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
 
 namespace {
 
+bool anyIsFloat(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(float32));
+}
+
+float32 anyAsFloat(const boost::any& a) {
+    return boost::any_cast<float32>(a);
+}
+
+bool anyIsDouble(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(float64));
+}
+
+float64 anyAsDouble(const boost::any& a) {
+    return boost::any_cast<float64>(a);
+}
+
+bool anyIsNumeric(const boost::any& a) {
+    return anyIsFloat(a) || anyIsDouble(a);
+}
+
+float64 anyAsNumeric(const boost::any& a) {
+    if (anyIsFloat(a)) return anyAsFloat(a);
+    else return anyAsDouble(a);
+}
+
 bool anyIsString(const boost::any& a) {
     return (!a.empty() && a.type() == typeid(String));
 }
@@ -1165,6 +1190,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         resume();
     else if (name == "screenshot")
         screenshot("screenshot.png");
+    else if (name == "pick")
+        return pick(params);
 
     return boost::any();
 }
@@ -1227,6 +1254,19 @@ boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
     Invokable* handler = anyAsInvokable(params[1]);
     mMouseHandler->setDelegate(handler);
     return boost::any();
+}
+
+
+boost::any OgreSystem::pick(vector<boost::any>& params) {
+    if (params.size() < 3) return boost::any();
+    if (!anyIsNumeric(params[1])) return boost::any();
+    if (!anyIsNumeric(params[2])) return boost::any();
+
+    float x = anyAsNumeric(params[1]);
+    float y = anyAsNumeric(params[2]);
+    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1);
+
+    return result.toString();
 }
 
 }

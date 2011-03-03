@@ -59,6 +59,8 @@ public:
 
     void setDelegate(Invokable* del);
 
+    // FIXME no reason for this to be in this class.
+    SpaceObjectReference pick(Vector2f p, int direction);
 private:
     void delegateEvent(Input::InputEventPtr inputev);
 
@@ -123,7 +125,6 @@ private:
     typedef std::map<SpaceObjectReference, WebView*> ScriptingUIWebViewMap;
     ScriptingUIWebViewMap mScriptingUIWebViews;
 
-    SpaceObjectReference mLastShiftSelected;
     IntersectResult mMouseDownTri;
     ProxyObjectWPtr mMouseDownObject;
     int mMouseDownSubEntity; // not dereferenced.
