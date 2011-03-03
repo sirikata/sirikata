@@ -74,16 +74,25 @@ function() {
         if (evt.button == 'right') std.movement.rotate(this._pres, new util.Vec3(0, -1, 0), 1);
 
         if (evt.button == 'w') std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
-        if (evt.button == 's') std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
+        if (evt.button == 's' && !evt.modifier.alt) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
         if (evt.button == 'a') std.movement.move(this._pres, new util.Vec3(-1, 0, 0), 1);
         if (evt.button == 'd') std.movement.move(this._pres, new util.Vec3(1, 0, 0), 1);
         if (evt.button == 'q') std.movement.move(this._pres, new util.Vec3(0, 1, 0), 1);
         if (evt.button == 'z') std.movement.move(this._pres, new util.Vec3(0, -1, 0), 1);
+
+        if (evt.button == 's' && evt.modifier.alt) {
+            scripting_gui = this._simulator.createGUI("scripting", "scripting/prompt.html");
+            scripting_gui.bind("event", std.core.bind(this._handleScriptingEvent, this));
+        }
     };
 
     ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
         std.movement.stopMove(this._pres);
         std.movement.stopRotate(this._pres);
+    };
+
+    ns.DefaultGraphics.prototype._handleScriptingEvent = function(evt) {
+        system.print('scripting evt: ' + evt[0] + '\n');
     };
 
 })();

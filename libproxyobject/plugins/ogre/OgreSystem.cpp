@@ -1149,6 +1149,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 
     if(name == "createWindow")
         return createWindow(params);
+    else if(name == "createWindowFile")
+        return createWindowFile(params);
     else if(name == "createWindowHTML")
         return createWindowHTML(params);
     else if(name == "setInputHandler")
@@ -1167,7 +1169,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     return boost::any();
 }
 
-boost::any OgreSystem::createWindow(const String& window_name, bool is_html, String content) {
+boost::any OgreSystem::createWindow(const String& window_name, bool is_html, bool is_file, String content) {
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
     WebView* ui_wv = wvManager->getWebView(window_name);
     if(!ui_wv)
@@ -1175,8 +1177,10 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, Str
         ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_TOPLEFT));
         if (is_html)
             ui_wv->loadHTML(content);
-        else
+        else if (is_file)
             ui_wv->loadFile(content);
+        else
+            ui_wv->loadURL(content);
     }
     Invokable* inn = ui_wv;
     boost::any result(inn);
@@ -1191,7 +1195,18 @@ boost::any OgreSystem::createWindow(vector<boost::any>& params) {
     String window_name = anyAsString(params[1]);
     String html_url = anyAsString(params[2]);
 
-    return createWindow(window_name, false, html_url);
+    return createWindow(window_name, false, false, html_url);
+}
+
+boost::any OgreSystem::createWindowFile(vector<boost::any>& params) {
+    // Create a window using the specified url
+    if (params.size() < 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+
+    String window_name = anyAsString(params[1]);
+    String html_url = anyAsString(params[2]);
+
+    return createWindow(window_name, false, true, html_url);
 }
 
 boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
@@ -1202,7 +1217,7 @@ boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
     String window_name = anyAsString(params[1]);
     String html_script = anyAsString(params[2]);
 
-    return createWindow(window_name, true, html_script);
+    return createWindow(window_name, true, false, html_script);
 }
 
 boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {

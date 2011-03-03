@@ -33,6 +33,8 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
+system.import('gui.em');
+
 (
 function() {
 
@@ -76,6 +78,16 @@ function() {
     /** Request a screenshot be taken and stored on disk. */
     ns.Graphics.prototype.screenshot = function() {
         this.invoke('screenshot');
+    };
+
+    /** Request that the given URL be presented as a widget. */
+    ns.Graphics.prototype.createGUI = function(name, url) {
+        return new ns.GUI(simulator.invoke("createWindowFile", name, url));
+    };
+
+    /** Request that the given URL be presented as a widget. */
+    ns.Graphics.prototype.createBrowser = function(name, url) {
+        return new ns.GUI(simulator.invoke("createWindow", name, url));
     };
 
 })();

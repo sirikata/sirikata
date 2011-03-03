@@ -249,55 +249,6 @@ void OgreSystemMouseHandler::createUIAction(const String& ui_page) {
 
 }
 
-/** Create a UI element for interactively scripting an object.
-    Sends a message on KnownServices port LISTEN_FOR_SCRIPT_BEGIN to the
-    HostedObject.
-*/
-/** Needs to be moved to real UI handling code.
-void OgreSystemMouseHandler::createScriptingUIAction() {
-    static bool onceInitialized = false;
-
-    // Ask all the objects to initialize scripting
-    initScriptOnSelectedObjects();
-
-    // Then bring up windows for each of them
-    for(SelectedObjectSet::iterator sel_it = mSelectedObjects.begin(); sel_it != mSelectedObjects.end(); sel_it++) {
-        ProxyObjectPtr obj(sel_it->lock());
-        if (!obj) continue;
-
-        SpaceObjectReference objid = obj->getObjectReference();
-
-        ObjectUIMap::iterator ui_it = mObjectUIs.find(objid);
-        if (ui_it == mObjectUIs.end()) {
-            mObjectUIs.insert( ObjectUIMap::value_type(objid, UIInfo()) );
-            ui_it = mObjectUIs.find(objid);
-        }
-        UIInfo& ui_info = ui_it->second;
-
-        if (ui_info.scripting != NULL) {
-            // Already there, just make sure its showing
-            ui_info.scripting->show();
-        }
-        else {
-            OverlayPosition op = onceInitialized ? RP_BOTTOMCENTER : RP_TOPLEFT;
-            onceInitialized = true;
-
-            WebView* new_scripting_ui =
-                WebViewManager::getSingleton().createWebView(
-                    String("__scripting") + objid.toString(), "__scripting", 300, 300,
-                    OverlayPosition(RP_BOTTOMCENTER)
-                );
-            new_scripting_ui->loadFile("scripting/prompt.html");
-
-            ui_info.scripting = new_scripting_ui;
-            mScriptingUIObjects[new_scripting_ui] = obj;
-            mScriptingUIWebViews[obj->getObjectReference()] = new_scripting_ui;
-            new_scripting_ui->bind("event", std::tr1::bind(&OgreSystemMouseHandler::executeScript, this, _1, _2));
-        }
-    }
-}
-*/
-
 static String convertAndEscapeJavascriptString(const String& in) {
     String result = "'";
 
@@ -333,37 +284,6 @@ void OgreSystemMouseHandler::handleScriptReply(const ODP::Endpoint& src, const O
         wv->evaluateJS("addMessage( " + convertAndEscapeJavascriptString(scripting_msg.replies(ii).body()) + " )");
     }
 }
-
-/**
-   This function sends out a message on KnownServices port
-   LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
-   object receives the message and attaches a JSObjectScript to the HostedObject.
-*/
-/*
-void OgreSystemMouseHandler::initScriptOnSelectedObjects() {
-    for (SelectedObjectSet::const_iterator selectIter = mSelectedObjects.begin();
-         selectIter != mSelectedObjects.end(); ++selectIter) {
-        ProxyObjectPtr obj(selectIter->lock());
-
-        Sirikata::JS::Protocol::ScriptingInit init_script;
-
-        // Filter out the script type from rest of args
-        //String script_type = "js"; // FIXME how to decide this?
-        init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
-        init_script.set_messager(KnownMessages::INIT_SCRIPT);
-        String serializedInitScript;
-        init_script.SerializeToString(&serializedInitScript);
-        //std::string serialized;
-        //init_script.SerializeToString(&serialized);
-
-        obj->sendMessage(
-            Services::LISTEN_FOR_SCRIPT_BEGIN,
-            MemoryReference(serializedInitScript.data(), serializedInitScript.length())
-            //  MemoryReference(serialized.data(), serialized.length())
-        );
-    }
-}
-*/
 
 inline Vector3f direction(Quaternion cameraAngle) {
     return -cameraAngle.zAxis();

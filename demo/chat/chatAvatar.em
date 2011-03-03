@@ -91,7 +91,7 @@ system.onPresenceConnected( function(pres) {
     if (system.presences.length == 1)
     {
         simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
-      chat = simulator.invoke("createWindow", "chat_terminal", "chat/prompt.html");
+      chat = simulator.invoke("createWindowFile", "chat_terminal", "chat/prompt.html");
       chat.invoke("bind", "eventname", onChatMsgReceived);
       var p  = new util.Pattern("name", "get_protocol");
       onTestMessage <- p ;
