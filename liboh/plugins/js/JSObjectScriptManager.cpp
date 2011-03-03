@@ -76,6 +76,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
         import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        mDefaultScript = new OptionValue("default-script", "std/default.em", OptionValueType<String>(), "Default script to execute when an initial script is not specified."),
         NULL
     );
 
@@ -85,6 +86,9 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     createTemplates(); //these templates involve vec, quat, pattern, etc.
 }
 
+String JSObjectScriptManager::defaultScript() const {
+    return mDefaultScript->as<String>();
+}
 
 
 //here's how watched objects work;
@@ -119,7 +123,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
     mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
-            
+
     addTypeTemplates(mUtilTemplate);
 }
 
@@ -158,20 +162,20 @@ void JSObjectScriptManager::createTemplates()
     createWatchedTemplate();
     createWhenTemplate();
     createQuotedTemplate();
-    
+
     createUtilTemplate();
 
-    
+
     createFakerootTemplate();
     createContextTemplate();
     createContextGlobalTemplate();
     createHandlerTemplate();
-    createVisibleTemplate();    
+    createVisibleTemplate();
 
     createTimerTemplate();
-    
+
     createJSInvokableObjectTemplate();
-    createPresenceTemplate();    
+    createPresenceTemplate();
     createSystemTemplate();
 
     //createTriggerableTemplate();
@@ -189,7 +193,7 @@ void JSObjectScriptManager::createTimerTemplate()
     mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
     mTimerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSTimer::resume));
 
-    
+
 }
 
 
@@ -199,14 +203,14 @@ void JSObjectScriptManager::createFakerootTemplate()
     mFakerootTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
     mFakerootTemplate->SetInternalFieldCount(FAKEROOT_TEMPLATE_FIELD_COUNT);
-    
-    
+
+
     mFakerootTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSFakeroot::root_sendHome));
     mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::root_registerHandler));
     mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::root_timeout));
     mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::root_print));
 
-        
+
     //check what permissions fake root is loaded with
     mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
     mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
@@ -214,7 +218,7 @@ void JSObjectScriptManager::createFakerootTemplate()
 
     mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
     mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
-    
+
     //add basic templates: vec3, quat, math
 
 }
@@ -241,7 +245,7 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
     mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
     mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
- 
+
 }
 
 void JSObjectScriptManager::createContextGlobalTemplate()
@@ -285,6 +289,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::ScriptImport));
+    system_templ->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::ScriptEval));
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
@@ -298,7 +303,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
     system_templ->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
     //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
-    
+
     //math, vec, quaternion, etc.
     //add the system template to the global template
     mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
@@ -314,7 +319,7 @@ void JSObjectScriptManager::createJSInvokableObjectTemplate()
 
   mInvokableObjectTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
   mInvokableObjectTemplate->SetInternalFieldCount(JSSIMOBJECT_TEMPLATE_FIELD_COUNT);
-  mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke)); 
+  mInvokableObjectTemplate->Set(v8::String::New("invoke"), v8::FunctionTemplate::New(JSInvokableObject::invoke));
 }
 
 
@@ -326,7 +331,7 @@ void JSObjectScriptManager::createVisibleTemplate()
     // An internal field holds the external address of the visible object
     mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 
-    
+
     //these function calls are defined in JSObjects/JSVisible.hpp
     mVisibleTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
     mVisibleTemplate->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
@@ -344,7 +349,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   mPresenceTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
   //mPresenceTemplate->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
-  
+
   v8::Local<v8::Template> proto_t = mPresenceTemplate->PrototypeTemplate();
 
   //These are not just accessors because we need to ensure that we can deal with
@@ -381,8 +386,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   //callback on prox addition and removal
   proto_t->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
   proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
-  
-    
+
+
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 
@@ -446,7 +451,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   //check if the presence is connected
   mPresenceTemplate->SetAccessor(v8::String::New("isConnected"),JSPresence::isConnectedGetter,JSPresence::isConnectedSetter);
-    
+
   // Query angle
   mPresenceTemplate->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 
@@ -457,7 +462,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   mPresenceTemplate->Set(v8::String::New("broadcastVisible"), v8::FunctionTemplate::New(JSPresence::broadcastVisible));
 
   mPresenceTemplate->Set(v8::String::New("distance"),v8::FunctionTemplate::New(JSPresence::distance));
-  
+
 }
 
 */

@@ -314,6 +314,9 @@ public:
     boost::any pick(vector<boost::any>& params);
     boost::any bbox(vector<boost::any>& params);
 
+    boost::any initScript(vector<boost::any>& params);
+
+
     ~OgreSystem();
 
 private:

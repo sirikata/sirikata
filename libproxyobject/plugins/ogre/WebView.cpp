@@ -1228,7 +1228,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
 {
   std::vector<boost::any> params;
   // Do the translation here
-  for(unsigned int i = 2 ; i < args.size(); i++)
+  for(unsigned int i = 0; i < args.size(); i++)
   {
     const char* s = args[i].begin();
 

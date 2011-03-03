@@ -32,6 +32,7 @@
 
 system.import('graphics.em');
 system.import('std/movement/movement.em');
+system.import('std/script/scripter.em');
 
 (
 function() {
@@ -52,6 +53,7 @@ function() {
         this._simulator.inputHandler.onButtonReleased = std.core.bind(this.onButtonReleased, this);
 
         this._selected = null;
+        this._scripter = new std.script.Scripter(this);
     };
 
     ns.DefaultGraphics.prototype.invoke = function() {
@@ -92,19 +94,13 @@ function() {
         if (evt.button == 'q') std.movement.move(this._pres, new util.Vec3(0, 1, 0), 1);
         if (evt.button == 'z') std.movement.move(this._pres, new util.Vec3(0, -1, 0), 1);
 
-        if (evt.button == 's' && evt.modifier.alt) {
-            scripting_gui = this._simulator.createGUI("scripting", "scripting/prompt.html");
-            scripting_gui.bind("event", std.core.bind(this._handleScriptingEvent, this));
-        }
+        if (evt.button == 's' && evt.modifier.alt)
+            this._scripter.script(this._selected);
     };
 
     ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
         std.movement.stopMove(this._pres);
         std.movement.stopRotate(this._pres);
-    };
-
-    ns.DefaultGraphics.prototype._handleScriptingEvent = function(evt) {
-        system.print('scripting evt: ' + evt[0] + '\n');
     };
 
 })();

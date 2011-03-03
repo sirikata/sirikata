@@ -16,6 +16,8 @@ namespace Sirikata
     namespace JSPresence
     {
 
+    bool isPresence(v8::Handle<v8::Value> v8Val);
+
     v8::Handle<v8::Value>  setMesh(const v8::Arguments& args);
     v8::Handle<v8::Value>  getMesh(const v8::Arguments& args);
 
@@ -54,7 +56,7 @@ namespace Sirikata
     void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSetTo,const AccessorInfo& info);
 
     v8::Handle<v8::Value>distance(const v8::Arguments& args);
-    
+
     }
   }
 }

@@ -45,19 +45,3 @@ message JSMessage
 {
 	repeated JSField fields = 1;
 }
-
-
-message ScriptingRequest {
-    optional uint32 id = 1;
-    optional string body = 2;
-}
-
-message ScriptingReply {
-    optional uint32 id = 1;
-    optional string body = 2;
-}
-
-message ScriptingMessage {
-    repeated ScriptingRequest requests = 1;
-    repeated ScriptingReply replies = 2;
-}

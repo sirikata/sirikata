@@ -42,6 +42,8 @@ if (typeof(std.core) === "undefined") std.core = {};
  *  @return {function(...[*])}  A new function that wraps func.apply()
  */
 std.core.bind = function(func, object) {
+    if (typeof(func) === "undefined")
+        throw new TypeError("Tried to bind undefined function.");
     if (arguments.length==2) {
         delete arguments;
         return function() {

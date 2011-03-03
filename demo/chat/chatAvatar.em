@@ -6,8 +6,6 @@ system.import('std/graphics/default.em');
 simulator = undefined;
 chat = undefined;
 chat_group = new Array();
-
-
 function sendAll(msg)
 {
   for(var i = 0; i < chat_group.length; i++)
@@ -40,7 +38,7 @@ function onChatFromNeighbor(msg, sender)
 
 function handleNewChatNeighbor(msg, sender)
 {
-  print("Got a new entity into the chat group");
+  print("Got a new entity into the chat group\n");
   // add this new member of the chat group
   //check for duplicats
   for(var i = 0; i < chat_group.length; i++)

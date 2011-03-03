@@ -35,7 +35,7 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
     if (! args[1]->IsFunction())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that the second argument passed in be a function")));
 
-    
+
     String jsobjErrorMessage = "Error decoding JSObjectScript from system object in ScriptCreatePresence of JSSystem.cpp.  ";
     JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), jsobjErrorMessage);
     if (target_script == NULL)
@@ -63,11 +63,11 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <visible object that can always send messages to, or null if want to send messages to self><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
 
 
-    bool sendEveryone,recvEveryone,proxQueries;    
+    bool sendEveryone,recvEveryone,proxQueries;
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
-    
+
     //jspresstruct decode
     errorMessageWhichArg= " 1.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
@@ -75,7 +75,7 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     if (jsPresStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
-    
+
     //getting who can sendTo
     SpaceObjectReference* canSendTo = NULL;
     if (args[1]->IsNull())
@@ -92,8 +92,8 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 
         canSendTo = jsvis->whatIsVisible;
     }
-    
-    
+
+
     //send everyone decode
     errorMessageWhichArg= " 3.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
@@ -113,7 +113,7 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     if (! decodeBool(args[4],proxQueries, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
-    
+
     return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries);
 }
 
@@ -134,7 +134,7 @@ v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
 
-    
+
     // get the location from the args
 
     //get position
@@ -209,7 +209,7 @@ v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args)
    if (target_script == NULL)
        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-   
+
    // invoke the reboot in the script
    target_script->reboot();
 
@@ -225,7 +225,7 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
 
 v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextStruct* jscont)
 {
-    
+
     if (args.Length() != 3)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second is target val, and third argumnet is callback")) );
 
@@ -249,12 +249,12 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
     v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
     v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
 
-    
+
     // Function
     if (!cb_val->IsFunction())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Third argument incorrect: callback isn't a function.")) );
-    
-    
+
+
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
@@ -265,12 +265,12 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
         JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
         if (target_script == NULL)
             return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-        
-        return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
+
+        return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);
     }
 
-    //means that this is the 
-    return jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);        
+    //means that this is the
+    return jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);
 }
 
 
@@ -288,11 +288,28 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
     if (target_script == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    
+
 
     target_script->import(native_filename);
 
     return v8::Undefined();
+}
+
+
+v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Eval only takes one parameter: the program text to evaluate.")) );
+
+    v8::Handle<v8::Value> contents = args[0];
+
+    StringCheckAndExtract(native_contents, contents);
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptEval of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    return target_script->eval(native_contents);
 }
 
 
@@ -395,7 +412,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
     }
 
-    
+
     v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
     v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
 
@@ -413,9 +430,9 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     if (target_script == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    
+
     JSEventHandlerStruct* evHand = target_script->registerHandler(native_patterns, target_persist, cb_persist, sender_persist);
-    
+
     return target_script->makeEventHandlerObject(evHand);
 }
 
@@ -441,7 +458,7 @@ v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args)
     if (target_script == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    
+
     target_script->registerOnPresenceConnectedHandler(cb_persist);
 
     return v8::Undefined();

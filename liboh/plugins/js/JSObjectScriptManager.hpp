@@ -53,6 +53,7 @@ public:
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
     OptionSet* getOptions() const { return mOptions; }
+    String defaultScript() const;
 
     v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
@@ -70,7 +71,7 @@ public:
     v8::Persistent<v8::ObjectTemplate> mWatchedTemplate;
     v8::Persistent<v8::ObjectTemplate> mWhenTemplate;
     v8::Persistent<v8::ObjectTemplate> mQuotedTemplate;
-    
+
     void testPrint();
 
 private:
@@ -88,12 +89,12 @@ private:
     void createWatchedTemplate();
     void createWhenTemplate();
     void createQuotedTemplate();
-    
+
     void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();
 
-    
-    
+
+
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
@@ -101,6 +102,7 @@ private:
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
     OptionSet* mOptions;
+    OptionValue* mDefaultScript;
 };
 
 } // namespace JS

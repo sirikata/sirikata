@@ -1,5 +1,5 @@
 /*  Sirikata
- *  graphics.em
+ *  default.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,30 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-if (typeof(std) === "undefined") std = {};
-if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-(
-function() {
-
-    var ns = std.graphics;
-
-    /** The GUI class wraps the underlying GUI Invokable
-     *  objects. These present 2D user interface widgets to the user,
-     *  which are coded as HTML + Javascript pages.
-     */
-    ns.GUI = function(me) {
-        this._gui = me;
-    };
-
-    /** Bind a listener for events from this GUI. */
-    ns.GUI.prototype.bind = function(type, cb) {
-        this._gui.invoke("bind", type, cb);
-    };
-
-    /** Evaluate the Javascript string inside the GUI context. */
-    ns.GUI.prototype.eval = function(js) {
-        this._gui.invoke("eval", js);
-    };
-
-})();
+// A sane, simple, default. Only includes functionality from libraries.
+system.import('std/script/scriptable.em');
+scriptable = new std.script.Scriptable();

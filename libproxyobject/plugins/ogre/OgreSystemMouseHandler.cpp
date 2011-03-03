@@ -46,10 +46,6 @@
 #include <sirikata/core/task/Time.hpp>
 #include <set>
 
-#include <sirikata/core/util/KnownServices.hpp>
-#include <sirikata/core/util/KnownMessages.hpp>
-#include <sirikata/core/util/KnownScriptTypes.hpp>
-#include "Protocol_JSMessage.pbj.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 
@@ -182,7 +178,7 @@ void OgreSystemMouseHandler::createUIAction(const String& ui_page) {
     ui_wv->loadFile(ui_page);
 
 }
-
+/*
 static String convertAndEscapeJavascriptString(const String& in) {
     String result = "'";
 
@@ -218,7 +214,7 @@ void OgreSystemMouseHandler::handleScriptReply(const ODP::Endpoint& src, const O
         wv->evaluateJS("addMessage( " + convertAndEscapeJavascriptString(scripting_msg.replies(ii).body()) + " )");
     }
 }
-
+*/
 inline Vector3f direction(Quaternion cameraAngle) {
     return -cameraAngle.zAxis();
 }
@@ -538,7 +534,6 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
    mUIWidgetView(NULL),
    mNewQueryAngle(0.f),
    mWhichRayObject(0),
-   mScriptingRequestPort(NULL),
    mDelegate(NULL)
 {
     mLastHitCount=0;
@@ -571,14 +566,9 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
     mEvents.push_back(mParent->mInputManager->subscribeId(
             WebViewEvent::getEventId(),
             std::tr1::bind(&OgreSystemMouseHandler::webviewHandler, this, _1)));
-
-    // Allocate a random port for scripting requests
-    mScriptingRequestPort = mParent->getViewer()->bindODPPort(mParent->getViewerPresence());
-    mScriptingRequestPort->receive( std::tr1::bind(&OgreSystemMouseHandler::handleScriptReply, this, _1, _2, _3) );
 }
 
 OgreSystemMouseHandler::~OgreSystemMouseHandler() {
-    delete mScriptingRequestPort;
 
     if(mUIWidgetView) {
         WebViewManager::getSingleton().destroyWebView(mUIWidgetView);

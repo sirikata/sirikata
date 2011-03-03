@@ -2,10 +2,7 @@
  *  literals in strings which will eventually be passed to eval.
  */
 
-// See bugs #182, #183, and #185 for why this code looks so weird.
-//if (typeof(Escape) === "undefined") {
-    Escape = { x : 7 };
-//}
+if (typeof(Escape) === "undefined") Escape = {};
 
 /** Escape a string.
  *  \param {string} orig the original string

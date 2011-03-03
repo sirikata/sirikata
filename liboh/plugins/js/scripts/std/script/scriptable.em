@@ -1,5 +1,5 @@
 /*  Sirikata
- *  graphics.em
+ *  scriptable.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,30 +30,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+system.import('std/core/bind.js');
+
 if (typeof(std) === "undefined") std = {};
-if (typeof(std.graphics) === "undefined") std.graphics = {};
+if (typeof(std.script) === "undefined") std.script = {};
 
 (
 function() {
 
-    var ns = std.graphics;
+    var ns = std.script;
 
-    /** The GUI class wraps the underlying GUI Invokable
-     *  objects. These present 2D user interface widgets to the user,
-     *  which are coded as HTML + Javascript pages.
+    /** A Scriptable is an object which listens for messages from
+     *  other objects, executes their contents, and replies with the
+     *  results.
      */
-    ns.GUI = function(me) {
-        this._gui = me;
+    ns.Scriptable = function() {
+        var scriptRequestPattern = new util.Pattern("request", "script");
+        var scriptRequestHandler = std.core.bind(this._handleScriptRequest, this);
+        scriptRequestHandler <- scriptRequestPattern;
     };
 
-    /** Bind a listener for events from this GUI. */
-    ns.GUI.prototype.bind = function(type, cb) {
-        this._gui.invoke("bind", type, cb);
-    };
-
-    /** Evaluate the Javascript string inside the GUI context. */
-    ns.GUI.prototype.eval = function(js) {
-        this._gui.invoke("eval", js);
+    ns.Scriptable.prototype._handleScriptRequest = function(msg, sender) {
+        var cmd = msg.script;
+        var result = system.eval(cmd);
+        var retmsg = {
+            reply : 'script',
+            value : result
+        };
+        retmsg -> sender;
     };
 
 })();

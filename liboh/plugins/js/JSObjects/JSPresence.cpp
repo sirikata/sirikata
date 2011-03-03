@@ -14,6 +14,38 @@ namespace Sirikata{
 namespace JS{
 namespace JSPresence{
 
+bool isPresence(v8::Handle<v8::Value> v8Val)
+{
+  if( v8Val->IsNull() || v8Val->IsUndefined() || !v8Val->IsObject())
+  {
+    return false;
+  }
+
+  // This is an object
+
+  v8::Handle<v8::Object>v8Obj = v8::Handle<v8::Object>::Cast(v8Val);
+  v8::Local<v8::Value> typeidVal = v8Obj->GetInternalField(TYPEID_FIELD);
+  if(typeidVal->IsNull() || typeidVal->IsUndefined())
+  {
+      return false;
+  }
+
+  v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);
+  void* ptr = wrapped->Value();
+  std::string* typeId = static_cast<std::string*>(ptr);
+  if(typeId == NULL) return false;
+
+  std::string typeIdString = *typeId;
+
+  if(typeIdString == PRESENCE_TYPEID_STRING)
+  {
+    return true;
+  }
+
+  return false;
+
+}
+
 //changine this function to actually do something
 //args should contain a string that can be converted to a uri
 //FIXME: Should maybe also have a callback function inside
@@ -24,7 +56,7 @@ Handle<v8::Value> setMesh(const v8::Arguments& args)
 
     String errorMessage = "Error in setMesh while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -45,7 +77,7 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
 
     String errorMessage = "Error in runSimulation while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -63,7 +95,7 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
 {
     String errorMessage = "Error in ScriptOnProxAddedEvent while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -90,20 +122,20 @@ v8::Handle<v8::Value>distance(const v8::Arguments& args)
     if (jspres == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    
+
     if (! args[0]->IsObject())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in dist of JSPresence.cpp.  Argument should be an objet.")));
 
     v8::Handle<v8::Object> argObj = args[0]->ToObject();
-    
+
     bool isVec3 = Vec3Validate(argObj);
     if (! isVec3)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Presence needs to be a vec3")));
 
     Vector3d vec3 = Vec3Extract(argObj);
-    
+
     return jspres->distance(&vec3);
-    
+
 }
 
 v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info)
@@ -129,11 +161,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
     String errorMessage = "Error in ScriptOnProxRemovedEvent while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    
+
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved.")) );
 
@@ -156,7 +188,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in getMesh while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -171,11 +203,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in getMesh while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            
+
             //get first args
             Handle<Object> posArg = ObjectCast(args[0]);
 
@@ -194,11 +226,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in getPosition while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            
+
             return mStruct->struct_getPosition();
         }
 
@@ -211,7 +243,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in setVelocity while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -234,7 +266,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in getVelocity while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -248,7 +280,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         {
             String errorMessage = "Error in getOrientation while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -262,7 +294,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in setOrientation while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -285,7 +317,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         {
             String errorMessage = "Error in getOrientationVel while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -301,11 +333,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in setOrientationVel while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            
+
             //get first args
             Handle<Object> orientationVelArg = ObjectCast(args[0]);
 
@@ -324,7 +356,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
             String errorMessage = "Error in setQueryAngle while decoding presence.  ";
             JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -343,7 +375,7 @@ Handle<v8::Value> getScale(const v8::Arguments& args)
 {
     String errorMessage = "Error in getScale while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -359,7 +391,7 @@ v8::Handle<v8::Value> setScale(const v8::Arguments& args)
 
     String errorMessage = "Error in setScale while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -369,7 +401,7 @@ v8::Handle<v8::Value> setScale(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Wrong argument: require a number for query angle.")) );
 
     float new_scale = NumericExtract(scale_arg);
-    
+
     return mStruct->setVisualScaleFunction(new_scale);
 }
 
@@ -381,16 +413,16 @@ bool getURI(const v8::Arguments& args,std::string& returner)
 {
     //assumes that the URI object is in the first 0th arg field
     Handle<Object> newVis = Handle<Object>::Cast(args[0]);
-    
+
     //means that the argument passed was not a string identifying where
     //we could get the uri
     if (!newVis->IsString())
         return false;
-    
+
     v8::String::Utf8Value newvis_str(newVis);
     if (! *newvis_str)
         return false;
-    
+
     returner= std::string(*newvis_str);
     return true;
 }
@@ -400,7 +432,7 @@ Handle<v8::Value> toString(const v8::Arguments& args)
 {
     String errorMessage = "Error in toString of JSPresence while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
@@ -420,10 +452,10 @@ v8::Handle<v8::Value> broadcastVisible(const v8::Arguments& args)
     if (! args[0]->IsObject())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in broadcastVisible of JSPresence.cpp.  You need to pass in an object to broadcast to everyone else.")) );
 
-        
+
     String errorMessage = "Error in broadcastVisible while decoding presence.  ";
     JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-            
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 

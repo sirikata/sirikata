@@ -120,6 +120,9 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
         v8::String::Utf8Value error(try_catch.Exception());
         const char* cMsg = ToCString(error);
         JSLOG(error, "Uncaught exception: " << cMsg);
+        v8::String::Utf8Value stack(try_catch.StackTrace());
+        const char* cStack = ToCString(stack);
+        JSLOG(error, "Stack trace: " << cStack);
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
     }
     return result;
@@ -229,11 +232,12 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // TODO: hardcoded
     import("std/shim.em");
 
-
-
     String script_name = init_script->as<String>();
-    if (!script_name.empty())
-    {
+    if (script_name.empty()) {
+        JSLOG(info,"Importing default script.");
+        import(mManager->defaultScript());
+    }
+    else {
         JSLOG(info,"Have an initial script to import from " + script_name );
         import(script_name);
     }
@@ -510,10 +514,6 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 
     Handle<Object> system_obj = getSystemObject();
 
-    mScriptingPort = mParent->bindODPPort(space_id, obj_refer, Services::SCRIPTING);
-    if (mScriptingPort)
-        mScriptingPort->receive( std::tr1::bind(&JSObjectScript::handleScriptingMessageNewProto, this, _1, _2, _3));
-
     //register port for messaging
     mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
     if (mMessagingPort)
@@ -665,9 +665,6 @@ void JSObjectScript::debugPrintString(std::string cStrMsgBody) const
 
 JSObjectScript::~JSObjectScript()
 {
-    if (mScriptingPort)
-        delete mScriptingPort;
-
     for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
         delete *handler_it;
 
@@ -801,7 +798,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     }
 
 
-    if (! result->IsUndefined()) {
+    if (!result.IsEmpty() && !result->IsUndefined()) {
         v8::String::AsciiValue ascii(result);
         JSLOG(detailed, "Script result: " << *ascii);
     }
@@ -1164,6 +1161,11 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Fu
 
 
 
+v8::Handle<v8::Value> JSObjectScript::eval(const String& contents) {
+    EvalContext& ctx = mEvalContextStack.top();
+    EvalContext new_ctx(ctx);
+    return protectedEval(contents, new_ctx);
+}
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     v8::HandleScope handle_scope;
@@ -1229,7 +1231,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     new_ctx.currentScriptDir = full_filename.parent_path().string();
     return protectedEval(contents, new_ctx);
 }
-
 
 
 //position
@@ -1498,51 +1499,6 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
     removeHandler(toDelete);
     delete toDelete;
     toDelete = NULL;
-}
-
-
-
-//this function is bound to the odp port for scripting messages.  It receives
-//the commands that users type into the command terminal on the visual and
-//parses them.
-void JSObjectScript::handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
-{
-    Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
-    bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
-    if (!parsed) {
-        JSLOG(fatal, "Parsing failed.");
-        return;
-    }
-
-    Sirikata::JS::Protocol::ScriptingMessage scripting_reply;
-
-    // Handle all requests
-    for(int32 ii = 0; ii < scripting_msg.requests_size(); ii++)
-    {
-        Sirikata::JS::Protocol::ScriptingRequest req = scripting_msg.requests(ii);
-        String script_str = req.body();
-
-        // Replace output stream in context with string stream to collect
-        // resulting output.
-        std::stringstream output;
-        assert(!mEvalContextStack.empty());
-        EvalContext new_ctx(mEvalContextStack.top());
-        new_ctx.currentOutputStream = &output;
-        // No new context info currently, just copy the previous one
-        protectedEval(script_str, new_ctx);
-
-        if (output.str().size() > 0) {
-            Sirikata::JS::Protocol::IScriptingReply reply = scripting_reply.add_replies();
-            reply.set_id(req.id());
-            reply.set_body(output.str());
-        }
-    }
-
-    if (scripting_reply.replies_size() > 0) {
-        std::string serialized_scripting_reply;
-        scripting_reply.SerializeToString(&serialized_scripting_reply);
-        mScriptingPort->send(src, MemoryReference(serialized_scripting_reply));
-    }
 }
 
 
