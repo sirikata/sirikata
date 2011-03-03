@@ -909,7 +909,7 @@ void WebView::blitScrollImage(
     size_t height = shared_rect.height();
 
     Ogre::TexturePtr shadow = Ogre::TextureManager::getSingleton().createManual(
-        "_ _internal","_ _internal",
+        "_ _ webview scroll buffer _ _",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
         Ogre::TEX_TYPE_2D,
         Bitwise::firstPO2From(width), Bitwise::firstPO2From(height), 1, 1,
         PF_BYTE_BGRA
