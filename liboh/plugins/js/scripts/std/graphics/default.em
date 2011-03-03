@@ -50,6 +50,8 @@ function() {
         this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
         this._simulator.inputHandler.onButtonPressed = std.core.bind(this.onButtonPressed, this);
         this._simulator.inputHandler.onButtonReleased = std.core.bind(this.onButtonReleased, this);
+
+        this._selected = null;
     };
 
     ns.DefaultGraphics.prototype.invoke = function() {
@@ -58,7 +60,16 @@ function() {
     };
 
     ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
-        system.print("pick: " + this._simulator.pick(evt.x, evt.y) + "\n");
+        if (this._selected) {
+            this._simulator.bbox(this._selected, false);
+            this._selected = null;
+        }
+
+        var clicked = this._simulator.pick(evt.x, evt.y);
+        if (clicked) {
+            this._selected = clicked;
+            this._simulator.bbox(this._selected, true);
+        }
     };
 
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {

@@ -1125,6 +1125,9 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
         ${LIBCORE_SOURCE_DIR}/service/TimeProfiler.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
+	${LIBCORE_SOURCE_DIR}/util/SpaceID.cpp
+	${LIBCORE_SOURCE_DIR}/util/ObjectReference.cpp
+	${LIBCORE_SOURCE_DIR}/util/SpaceObjectReference.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
 	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp

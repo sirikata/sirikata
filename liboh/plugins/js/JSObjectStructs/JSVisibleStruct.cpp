@@ -13,7 +13,7 @@ v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     setFlag();
-    
+
     if (distTo == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in call to dist of jsvisible object in jsvisiblestruct.cpp.  Must provide a vector to dist function.")) );
 
@@ -56,7 +56,7 @@ JSVisibleStruct::~JSVisibleStruct()
 JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal, std::string& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    
+
     if (! senderVal->IsObject())
     {
         errorMessage += "Error in decode of visible object.  Should have received an object to decode.";
@@ -114,7 +114,7 @@ v8::Handle<v8::Value> JSVisibleStruct::toString()
 
     std::string s = whatIsVisible->toString();
     v8::Local<v8::String> ret = v8::String::New(s.c_str(), s.length());
-    v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret); 
+    v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret);
     return pret;
 }
 
@@ -128,7 +128,7 @@ v8::Handle<v8::Value> JSVisibleStruct::printData()
         jsObjScript->updatePosition(whatIsVisible,visibleToWhom,mPosition);
 
     std::cout<<*mPosition<<"\n\n";
-    
+
     return v8::Undefined();
 }
 

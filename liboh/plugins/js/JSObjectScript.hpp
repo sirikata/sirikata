@@ -78,7 +78,7 @@ public:
 
     static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
 
-    
+
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 
@@ -95,25 +95,25 @@ public:
     v8::Handle<v8::Value> handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
     //v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
     v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
-    
+
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
     v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
 
     v8::Handle<v8::Value>createWatched();
-    
+
     void addWatchable(JSWatchable* toAdd);
     void removeWatchable(JSWatchable* toRemove);
 
-    
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
     bool valid() const;
 
     String createNewValueInContext(v8::Handle<v8::Value> val, v8::Handle<v8::Context> ctx);
-    
+
     /** Dummy callback for testing exposing new functionality to scripts. */
     void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
@@ -124,10 +124,10 @@ public:
     void print(const String& str);
     v8::Handle<v8::Value>returnProxyPosition(ProxyObjectPtr p);
     bool returnProxyPositionCPP(SpaceObjectReference*   sporef,SpaceObjectReference*   spVisTo, Vector3d* position);
-    
+
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
-    
+
 
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
@@ -150,7 +150,7 @@ public:
     void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
     v8::Handle<v8::Value> getPositionFunction(const SpaceObjectReference* sporef);
     v8::Handle<v8::Value> getDistanceFunction(const SpaceObjectReference* sporef, Vector3d* distTo);
-    
+
     void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
     v8::Handle<v8::Value> getVelocityFunction(const SpaceObjectReference* sporef);
 
@@ -166,7 +166,7 @@ public:
     void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
     uint32 registerUniqueMessageCode();
     bool unregisterUniqueMessageCode(uint32 toUnregister);
-    
+
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
@@ -197,9 +197,11 @@ public:
     void setVelocity(SpaceID&, v8::Local<v8::Value>& newval);
 
     JSObjectScriptManager* manager() const { return mManager; }
-    
+
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
+
+    v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
@@ -229,14 +231,14 @@ private:
 
     void checkWatchables();
     void checkWhens(WhenMap& mapWhensToCheck);
-    
+
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
 
     WatchableMap mWatchables;
-    
-    
+
+
 
     // Handlers for presence connection events
     v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
@@ -255,16 +257,16 @@ private:
     v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
 
 
-    
 
-    
-    
+
+
+
     v8::Handle<v8::Value> getVisibleFromArray(const SpaceObjectReference& visobj, const SpaceObjectReference& vistowhom);
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 
     void addSelfField(const SpaceObjectReference& myName);
-    
-    
+
+
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
@@ -294,7 +296,7 @@ private:
     // Adds the Self field
 
     v8::Handle<v8::Value> removeVisible(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
-    v8::Handle<v8::Value> addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier);
+    v8::Handle<v8::Value> addVisible(const SpaceObjectReference& proximateObject,const SpaceObjectReference& querier);
 
 
 
@@ -308,7 +310,7 @@ private:
 
     void callbackUnconnected(const SpaceObjectReference& name, int token);
     int presenceToken;
-    uint64 hiddenObjectCount;    
+    uint64 hiddenObjectCount;
 
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
     PresenceMap mPresences;

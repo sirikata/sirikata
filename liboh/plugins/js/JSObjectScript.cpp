@@ -112,7 +112,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
         JSLOG(insane,"ProtectedJSCallback without target given.");
         result = cb->Call(ctx->Global(), argc, argv);
     }
-    
+
 
     if (result.IsEmpty())
     {
@@ -123,7 +123,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
     }
     return result;
-    
+
 }
 
 
@@ -214,8 +214,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(utilObjStruct));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 
-    
-    
+
+
     //hangs math, presences, and addressable off of system_obj
     initializePresences(system_obj);
     initializeVisible(system_obj);
@@ -223,7 +223,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     mHandlingEvent = false;
 
 
-    //Always load the shim layer. 
+    //Always load the shim layer.
     // This is required. So do NOT remove. It is
     // not the same as libraray
     // TODO: hardcoded
@@ -264,7 +264,7 @@ v8::Handle<v8::Value> JSObjectScript::createWatched()
 
     JSWatchedStruct* jswatched = new JSWatchedStruct(newWatchedObj,this);
 
-    
+
     newWatchedObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WATCHED_TYPEID_STRING)));
     newWatchedObj->SetInternalField(WATCHED_TEMPLATE_FIELD,v8::External::New(jswatched));
 
@@ -282,7 +282,7 @@ v8::Handle<v8::Value> JSObjectScript::createWatched()
 //     v8::Persistent<v8::Context> contexter = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 //     JSWhenStruct* jswhen = new JSWhenStruct(this,ioserve,watchMap,pred,cb,contexter,minPeriod, JSContextStruct::getJSContextStruct());
 
-    
+
 //     v8::Handle<v8::Object> whenObj = mManager->mWhenTemplate->NewInstance();
 //     whenObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_TYPEID_STRING)));
 //     whenObj->SetInternalField(WHEN_TEMPLATE_FIELD,v8::External::New(jswhen));
@@ -294,7 +294,7 @@ v8::Handle<v8::Value> JSObjectScript::createWatched()
 JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    
+
     if (! toDecode->IsObject())
     {
         errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Should have received an object to decode.";
@@ -349,8 +349,8 @@ v8::Handle<v8::Value> JSObjectScript::removeVisible(ProxyObjectPtr proximateObje
             JSLOG(error, errorMessage);
             return v8::Undefined();
         }
-        
-         
+
+
         if ( ((*jsvis->whatIsVisible)== proximateObject->getObjectReference()) &&
             (*jsvis->visibleToWhom == querier))
         {
@@ -421,7 +421,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
     v8::Context::Scope context_scope(mContext);
 
 
-    
+
     v8::Handle<v8::Value>removedProxVal = removeVisible(proximateObject,querier);
     if (removedProxVal->IsUndefined())
         return;
@@ -433,8 +433,8 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
     v8::Local<v8::Object>removedProxObj;
     removedProxObj = removedProxVal->ToObject();
 
-    
-    
+
+
     if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
     {
         //check if have the the removed prox obj has
@@ -460,14 +460,14 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
         return;
     }
-    
+
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
 
 
-        v8::Handle<v8::Value> newVisibleVal = addVisible(proximateObject,querier);
+        v8::Handle<v8::Value> newVisibleVal = addVisible(proximateObject->getObjectReference(),querier);
 
         if (newVisibleVal->IsUndefined())
             return;
@@ -530,7 +530,7 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 
 
     //check for callbacks associated with presence connection
-    
+
     //means that this is the first presence that has been added to the space
     if (token == HostedObject::DEFAULT_PRESENCE_TOKEN)
     {
@@ -556,7 +556,7 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 
 void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, int token)
 {
-    
+
     for (PresenceVec::iterator iter = mUnconnectedPresences.begin(); iter != mUnconnectedPresences.end(); ++iter)
     {
         if (token == (*iter)->getPresenceToken())
@@ -576,16 +576,16 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
-    
+
     v8::Local<v8::Object> selfVisObj = mManager->mVisibleTemplate->NewInstance();
 
     JSVisibleStruct* mySelf = new JSVisibleStruct (this, myName, myName, true,mParent->requestCurrentPosition(myName.space(), myName.object()),mParent->requestCurrentVelocity(myName.space(),myName.object()));
 
-    
+
     selfVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(mySelf));
     selfVisObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
-    
+
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
 }
@@ -602,12 +602,12 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
     if (sysObj->Has(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME)))
         sysObj->Delete(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
 
-    
+
     // Remove from system.presences array
     removePresence(name);
 
     //FIXME: need to have separate disconnection handlers for each presence.
-    
+
     // FIXME this should get the presence but its already been deleted
     if ( !mOnPresenceDisconnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
         ProtectedJSCallback(mContext, NULL, mOnPresenceDisconnectedHandler);
@@ -685,7 +685,7 @@ bool JSObjectScript::valid() const
 
 
 //This function broadcasts message msgToBCast to all objects that satisfy your solid
-//angle query.  
+//angle query.
 void JSObjectScript::broadcastVisible(SpaceObjectReference* visibleTo,const std::string& msgToBCast)
 {
     v8::HandleScope handle_scope;
@@ -742,7 +742,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     }
 
     emerson_init();
-    
+
     String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
     JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
@@ -760,7 +760,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
-    
+
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source);
@@ -800,7 +800,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         return try_catch2.Exception();
     }
 
-    
+
     if (! result->IsUndefined()) {
         v8::String::AsciiValue ascii(result);
         JSLOG(detailed, "Script result: " << *ascii);
@@ -813,13 +813,13 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
 
 
-//this function runs through 
+//this function runs through
 void JSObjectScript::checkWatchables()
 {
     WhenMap whensToCheck;
     for (WatchableIter iter = mWatchables.begin(); iter!= mWatchables.end(); ++iter)
         iter->first->checkAndClearFlag(whensToCheck);
-    
+
     checkWhens(whensToCheck);
 }
 
@@ -835,7 +835,7 @@ void JSObjectScript::checkWhens(WhenMap& mapWhensToCheck)
 
 void JSObjectScript::printStackFrame(std::stringstream& out, v8::Local<v8::StackFrame> frame)
 {
-  
+
   int col = frame->GetColumn();
   v8::Local<v8::String> func = frame->GetFunctionName();
   int line = frame->GetLineNumber();
@@ -843,7 +843,7 @@ void JSObjectScript::printStackFrame(std::stringstream& out, v8::Local<v8::Stack
 
   std::string func_str(ToCString( v8::String::Utf8Value(func)));
   std::string script_str(ToCString( v8::String::Utf8Value(script)));
-  
+
   out << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
   std::cout << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
 }
@@ -884,7 +884,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     v8Source += ");";
 
     v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,v8Source);
-    
+
     if (! compileFuncResult->IsFunction())
     {
         String errorMessage = "Uncaught exception: function passed in did not compile to a function";
@@ -917,7 +917,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
  */
 v8::Handle<v8::Value> JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
 {
-    
+
     v8::Handle<v8::Value> compiledFunc = compileFunctionInContext(ctx,cb);
     if (! compiledFunc->IsFunction())
     {
@@ -933,7 +933,7 @@ v8::Handle<v8::Value> JSObjectScript::ProtectedJSFunctionInContext(v8::Persisten
 
 /*
   This function takes the result of compileFunctionInContext, and executes it
-  within context ctx.  
+  within context ctx.
  */
 v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Function> funcInCtx,int argc, v8::Handle<v8::Object>*target, v8::Handle<v8::Value> argv[])
 {
@@ -942,7 +942,7 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
 
     TryCatch try_catch;
 
-    
+
     v8::Handle<v8::Value> result;
     bool targetGiven = false;
     if (target!=NULL)
@@ -998,7 +998,7 @@ v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context
         v8::Context::GetCurrent()->Exit();
     }
 
-    
+
     //entering new context associated with
     JSLOG(insane, "entering new context associated with JSContextStruct.");
     contExecIn->Enter();
@@ -1007,11 +1007,11 @@ v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context
     JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");
     ProtectedJSFunctionInContext(contExecIn, NULL,funcToCall, argc, argv);
 
-    
+
     JSLOG(insane, "Exiting new context associated with JSContextStruct.");
     contExecIn->Exit();
 
-    
+
     //restore previous contexts
     std::vector<v8::Handle<v8::Context> >::reverse_iterator revIt;
     for (revIt= contextVec.rbegin(); revIt != contextVec.rend(); ++revIt)
@@ -1027,7 +1027,7 @@ v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context
 
 
 
-v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,const SpaceObjectReference& querier)
+v8::Handle<v8::Value> JSObjectScript::addVisible(const SpaceObjectReference& proximateObject,const SpaceObjectReference& querier)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
@@ -1036,7 +1036,7 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
     std::string errorMessage = "In addVisible of JSObjectScript.  ";
     JSVisibleStruct* jsvis   = NULL;
-    
+
     for (int s=0; s < (int) vis_array->Length(); ++s)
     {
 
@@ -1047,7 +1047,7 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
             return v8::Undefined();
         }
 
-        if ((*jsvis->whatIsVisible == proximateObject->getObjectReference()) && (*jsvis->visibleToWhom == querier))
+        if ((*jsvis->whatIsVisible == proximateObject) && (*jsvis->visibleToWhom == querier))
         {
             JSLOG(info, "Already had the associated object in visible array.  Returning empty.");
             return v8::Undefined();
@@ -1063,18 +1063,51 @@ v8::Handle<v8::Value> JSObjectScript::addVisible(ProxyObjectPtr proximateObject,
     Local<Object> newVisObj = mManager->mVisibleTemplate->NewInstance();
 
 
-    SpaceObjectReference sporefObj = proximateObject->getObjectReference();
-    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject->getObjectReference(),querier,true, mParent->requestCurrentPosition(sporefObj.space(),sporefObj.object()),mParent->requestCurrentVelocity(sporefObj.space(),sporefObj.object()));
-        
+    SpaceObjectReference sporefObj = proximateObject;
+    JSVisibleStruct* toAdd= new JSVisibleStruct(this, proximateObject,querier,true, mParent->requestCurrentPosition(sporefObj.space(),sporefObj.object()),mParent->requestCurrentVelocity(sporefObj.space(),sporefObj.object()));
+
 
     newVisObj->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(toAdd));
     newVisObj->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
 
-    
-    vis_array->Set(v8::Number::New(new_pos),newVisObj);
+
+    vis_array->Set(new_pos,newVisObj);
     return newVisObj;
 }
 
+
+v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& proximateObj) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    // Do check if the visible already exists..
+    v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
+    std::string errorMessage = "In findVisible of JSObjectScript.";
+    JSVisibleStruct* jsvis = NULL;
+
+    int len = vis_array->Length();
+    for (int s=0; s < (int) vis_array->Length(); ++s)
+    {
+        jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s),errorMessage);
+        if (jsvis == NULL)
+        {
+            JSLOG(error,errorMessage);
+            return v8::Undefined();
+        }
+
+        if ((*jsvis->whatIsVisible == proximateObj))
+            return vis_array->Get(s);
+    }
+
+    // FIXME apparently visibles aren't always added because the array is length
+    // zero despite there clearly being objects in the scene. In this case, just
+    // generate one since we're currently expecting that we only use this to
+    // translate known IDs into Visible objects.
+    v8::Handle<v8::Object> sysObj = getSystemObject();
+    v8::Local<v8::Value> self_obj = sysObj->Get(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
+    JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
+    return addVisible(proximateObj, *self_vis->visibleToWhom);
+}
 
 
 
@@ -1100,7 +1133,7 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
-    
+
     return returner;
 }
 
@@ -1113,7 +1146,7 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object
     if (jscontext == NULL)
         return ProtectedJSCallback(mContext, &target, cb);
 
-    
+
     return ProtectedJSCallback(jscontext->mContext, &target, cb);
 }
 
@@ -1125,7 +1158,7 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Fu
 {
     if (jscontext == NULL)
         return ProtectedJSCallback(mContext, NULL,cb);
-    
+
     return ProtectedJSCallback(*jscontext,NULL, cb);
 }
 
@@ -1206,7 +1239,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 JSEventHandlerStruct* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
 {
     JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(pattern, target, cb,sender);
-    
+
     if ( mHandlingEvent)
     {
         //means that we're in the process of handling an event, and therefore
@@ -1240,7 +1273,7 @@ v8::Handle<v8::Value> JSObjectScript::getVisibleFromArray(const SpaceObjectRefer
     v8::Local<v8::Array> vis_array = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::VISIBLE_ARRAY_NAME)));
     std::string errorMessage = "In addVisible of JSObjectScript.  Serious error.  ";
     JSVisibleStruct* jsvis   = NULL;
-    
+
     for (int s=0; s < (int) vis_array->Length(); ++s)
     {
         jsvis = JSVisibleStruct::decodeVisible(vis_array->Get(s),errorMessage);
@@ -1278,7 +1311,7 @@ void JSObjectScript::addWatchable(JSWatchable* toAdd)
         mWatchables[toAdd] = mWatchables[toAdd] + 1;
         JSLOG(info,"Was already watching this object.  Incrementing its reference count in JSObjectScript.cpp");
     }
-    
+
 }
 void JSObjectScript::removeWatchable(JSWatchable* toRemove)
 {
@@ -1297,7 +1330,7 @@ void JSObjectScript::removeWatchable(JSWatchable* toRemove)
         JSLOG(insane,"No additional references to watchable object.  Removing it from watchable list.");
     }
 
-    
+
 }
 
 
@@ -1321,7 +1354,7 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
      }                                        //looking for in the visible
                                              //array.  returning it here.
 
-    
+
     //didn't find the object that we were looking for in the visible array.
     v8::HandleScope handle_scope;
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mVisibleTemplate->NewInstance());
@@ -1330,7 +1363,7 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,External::New(visStruct));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(VISIBLE_TYPEID_STRING)));
 
-    
+
     return returner;
 
 }
@@ -1526,7 +1559,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
-    
+
     return returner;
 }
 
@@ -1626,11 +1659,11 @@ v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssoci
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
     JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, mManager->mContextGlobalTemplate);
-    
+
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
 
-    
+
     return returner;
 }
 
@@ -1685,19 +1718,19 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_str)
 {
   v8::HandleScope handle_scope;
-  
-  static int32_t counter;  
+
+  static int32_t counter;
   std::stringstream sstream;
   sstream <<  " __emerson_deserialized_function_" << counter << "__ = " << em_script_str << ";";
 
   //const std::string new_code = std::string("(function () { return ") + em_script_str + "}());";
-  // The function name is not required. It is being put in because emerson is not compiling "( function() {} )"; correctly 
+  // The function name is not required. It is being put in because emerson is not compiling "( function() {} )"; correctly
   const std::string new_code = sstream.str();
-  counter++; 
-  
-  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));  
+  counter++;
+
+  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
-  v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f); 
+  v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
   return pf;
 }
 
@@ -1708,8 +1741,8 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
-    
- 
+
+
     //presuming that we are connecting to the same space;
     FIXME_GET_SPACE_OREF();
     //"space" now contains the SpaceID we want to connect to.
@@ -1718,22 +1751,22 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     Location startingLoc = mParent->getLocation(space,oref);
     //Arbitrarily saying that we're just going to use a simple bounding sphere.
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
-    
-    
+
+
     int presToke = presenceToken;
     ++presenceToken;
     mParent->connect(space,startingLoc,bs, newMesh,UUID::null(),NULL,presToke);
 
-    
+
     //create a presence object associated with this presence and return it;
-    
-    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, callback,presToke);    
+
+    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, callback,presToke);
     v8::Handle<v8::Object> js_pres = addPresence(presToAdd);
     mUnconnectedPresences.push_back(presToAdd);
     return js_pres;
 }
 
-   
+
 void JSObjectScript::setOrientationVelFunction(const SpaceObjectReference* sporef,const Quaternion& quat)
 {
     mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
@@ -1792,7 +1825,7 @@ bool JSObjectScript::returnProxyPositionCPP(SpaceObjectReference*   sporef,Space
     bool updateSucceeded = updatePosition(sporef, spVisTo, position);
     if (! updateSucceeded)
         JSLOG(error, "No sporefs associated with position.  Returning undefined.");
-    
+
     return updateSucceeded;
 }
 
@@ -1907,7 +1940,7 @@ String JSObjectScript::createNewValueInContext(v8::Handle<v8::Value> val, v8::Ha
     String newName = "$_"+ boost::lexical_cast<String>(hiddenObjectCount);
 
     v8::HandleScope handle_scope;
-    
+
     v8::Local<v8::Object> ctx_global_obj = ctx->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
@@ -1931,7 +1964,7 @@ v8::Handle<v8::Value> JSObjectScript::createWhen(v8::Handle<v8::Array>predArray,
     v8::Handle<v8::Object> returner =mManager->mWhenTemplate->NewInstance();
     returner->SetInternalField(WHEN_TEMPLATE_FIELD, External::New(internalwhen));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(WHEN_TYPEID_STRING)));
-    
+
     return returner;
 }
 

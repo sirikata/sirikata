@@ -30,7 +30,7 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
     if (jsvis == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-        
+
     if (args.Length() == 0)
         return jsvis->dist(NULL);
 
@@ -38,13 +38,13 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in dist of JSVisible.cpp.  Argument should be an objet.")));
 
     v8::Handle<v8::Object> argObj = args[0]->ToObject();
-    
+
     bool isVec3 = Vec3Validate(argObj);
     if (! isVec3)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Visible needs to be a vec3")));
 
     Vector3d vec3 = Vec3Extract(argObj);
-    
+
     return jsvis->dist(&vec3);
 }
 
@@ -117,7 +117,7 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
     return jsvis->visibleSendMessage(serialized_message);
 }
 
-bool isVisibleObject(v8::Local<v8::Value> v8Val)
+bool isVisibleObject(v8::Handle<v8::Value> v8Val)
 {
   if( v8Val->IsNull() || v8Val->IsUndefined() || !v8Val->IsObject())
   {
@@ -132,12 +132,12 @@ bool isVisibleObject(v8::Local<v8::Value> v8Val)
   {
       return false;
   }
-    
+
   v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);
   void* ptr = wrapped->Value();
   std::string* typeId = static_cast<std::string*>(ptr);
   if(typeId == NULL) return false;
-    
+
   std::string typeIdString = *typeId;
 
   if(typeIdString == VISIBLE_TYPEID_STRING)
@@ -168,7 +168,7 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to checkEqual.  Requires 1 argument: another JSVisibleStruct.")) );
 
-    
+
     std::string errorMessage = "In checkEqual function of visible.  Decoding caller.  ";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
     if (jsvis == NULL)
@@ -180,7 +180,7 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
     if (jsvis2 == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
-    
+
     return jsvis->checkEqual(jsvis2);
 }
 
@@ -188,5 +188,3 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
 }//end jsvisible namespace
 }//end js namespace
 }//end sirikata
-
-

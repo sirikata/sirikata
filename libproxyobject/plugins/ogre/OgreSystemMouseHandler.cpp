@@ -170,10 +170,8 @@ SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction) {
     Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
     if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount)
         mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0);
-    if (mouseOver) {
-        mouseOver->setSelected(true);
+    if (mouseOver)
         return mouseOver->getProxyPtr()->getObjectReference();
-    }
 
     return SpaceObjectReference::null();
 }

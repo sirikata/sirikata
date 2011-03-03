@@ -23,7 +23,7 @@ struct JSVisibleStruct : public JSWatchable
     //for decoding
     static JSVisibleStruct* decodeVisible(v8::Handle<v8::Value> senderVal,std::string& errorMessage);
 
-    
+
     //methods mapped to javascript's visible object
     Vector3d returnProxyPositionCPP();
     Vector3f returnProxyVelocityCPP();
@@ -35,7 +35,7 @@ struct JSVisibleStruct : public JSWatchable
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
     v8::Handle<v8::Value> dist(Vector3d* distTo);
-    
+
 
     //data
     JSObjectScript* jsObjScript;

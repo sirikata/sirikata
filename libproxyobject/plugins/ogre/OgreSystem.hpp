@@ -100,9 +100,11 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
+
     typedef std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> SceneEntitiesMap;
     SceneEntitiesMap mSceneEntities;
     std::list<Entity*> mMovingEntities;
+
     friend class Entity; //Entity will insert/delete itself from these arrays.
     friend class Camera; //CameraEntity will insert/delete itself from the scene cameras array.
     OptionValue*mWindowWidth;
@@ -150,8 +152,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();
-
-    boost::any pick(vector<boost::any>& params);
 
     bool mQuitRequested;
     bool mQuitRequestHandled;
@@ -310,6 +310,9 @@ public:
     // Set an input handler function which will be invoked for input
     // events, e.g. mouse and keyboard
     boost::any setInputHandler(vector<boost::any>& params);
+
+    boost::any pick(vector<boost::any>& params);
+    boost::any bbox(vector<boost::any>& params);
 
     ~OgreSystem();
 

@@ -42,13 +42,13 @@ namespace Sirikata {
  *  guaranteed to work in spaces other than the one they originated
  *  in.
  */
-class ObjectReference : public TotallyOrdered<ObjectReference>{
+class SIRIKATA_EXPORT ObjectReference : public TotallyOrdered<ObjectReference>{
   public:
     enum {static_size=UUID::static_size};
-    ObjectReference(){}
-    explicit ObjectReference(const UUID& id):mID(id){}
-    explicit ObjectReference(const String& str):mID(str,UUID::HumanReadable()){}
-    explicit ObjectReference(const UUID::Data &data):mID(data){}
+    ObjectReference();
+    explicit ObjectReference(const UUID& id);
+    explicit ObjectReference(const String& str);
+    explicit ObjectReference(const UUID::Data &data);
 
     UUID::Data toRawBytes() const
     { return mID.getArray(); }

@@ -36,6 +36,8 @@
 #include "JSFunctionInvokable.hpp"
 #include "JSInvokableObject.hpp"
 #include <sirikata/proxyobject/Invokable.hpp>
+#include "JSVisible.hpp"
+#include "../JSObjectStructs/JSVisibleStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -66,6 +68,17 @@ inline boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
     }
     else if (val->IsNumber()) {
         return boost::any((float64)val->NumberValue());
+    }
+    else if (val->IsObject()) {
+        // Handle special types
+        if ( JSVisible::isVisibleObject(val) ) {
+            std::string errmsg;
+            JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(val,errmsg);
+            return boost::any((*jsvis->whatIsVisible));
+        }
+
+        // Otherwise do normal translation
+        return boost::any(); // FIXME
     }
     return boost::any();
 }
@@ -152,6 +165,11 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
         tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(parent));
         tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD,External::New( new JSInvokableObject::JSInvokableObjectInt(newInvokableObj) ));
         tmpObjP->SetInternalField(TYPEID_FIELD,External::New(  new String (JSINVOKABLE_TYPEID_STRING)));
+    }
+    else if (val.type() == typeid(SpaceObjectReference)) {
+        SpaceObjectReference obj = boost::any_cast<SpaceObjectReference>(val);
+        if (obj == SpaceObjectReference::null()) return v8::Handle<v8::Value>();
+        return parent->findVisible(obj);
     }
 
     return v8::Handle<v8::Value>();

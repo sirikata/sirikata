@@ -85,6 +85,11 @@ function() {
         return this.invoke('pick', x, y);
     };
 
+    /** Request the bounding box for the object be enabled or disabled. */
+    ns.Graphics.prototype.bbox = function(obj, on) {
+        return this.invoke('bbox', obj, on);
+    };
+
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createGUI = function(name, url) {
         return new ns.GUI(simulator.invoke("createWindowFile", name, url));

@@ -1119,6 +1119,14 @@ void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
 
 namespace {
 
+bool anyIsBoolean(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(bool));
+}
+
+bool anyAsBoolean(const boost::any& a) {
+    return boost::any_cast<bool>(a);
+}
+
 bool anyIsFloat(const boost::any& a) {
     return (!a.empty() && a.type() == typeid(float32));
 }
@@ -1161,6 +1169,14 @@ Invokable* anyAsInvokable(const boost::any& a) {
     return boost::any_cast<Invokable*>(a);
 }
 
+bool anyIsObject(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(SpaceObjectReference));
+}
+
+SpaceObjectReference anyAsObject(const boost::any& a) {
+    return boost::any_cast<SpaceObjectReference>(a);
+}
+
 } // namespace
 
 boost::any OgreSystem::invoke(vector<boost::any>& params)
@@ -1192,6 +1208,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         screenshot("screenshot.png");
     else if (name == "pick")
         return pick(params);
+    else if (name == "bbox")
+        return bbox(params);
 
     return boost::any();
 }
@@ -1265,8 +1283,23 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
     float x = anyAsNumeric(params[1]);
     float y = anyAsNumeric(params[2]);
     SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1);
+    return boost::any(result);
+}
 
-    return result.toString();
+
+boost::any OgreSystem::bbox(vector<boost::any>& params) {
+    if (params.size() < 3) return boost::any();
+    if (!anyIsObject(params[1])) return boost::any();
+    if (!anyIsBoolean(params[2])) return boost::any();
+
+    SpaceObjectReference objid = anyAsObject(params[1]);
+    bool setting = anyAsBoolean(params[2]);
+
+    if (mSceneEntities.find(objid) == mSceneEntities.end()) return boost::any();
+    Entity* ent = mSceneEntities.find(objid)->second;
+    ent->setSelected(setting);
+
+    return boost::any();
 }
 
 }
