@@ -19,14 +19,16 @@ function ChatMsgObject(msg)
   this.chat = msg;
 }
 
-function onChatMsgReceived(msg)
+function onChatMsgReceived(cmd, msg)
 {
-  system.print("\n\n"); 
-  system.print("Got message: ");
-  system.print(msg);
-  system.print("\n\n"); 
-  system.print("Sending out to others....\n\n");
-  sendAll(new ChatMsgObject(msg));
+    if (cmd == 'Chat' && msg) {
+        system.print("\n\n");
+        system.print("Got message: ");
+        system.print(msg);
+        system.print("\n\n");
+        system.print("Sending out to others....\n\n");
+        sendAll(new ChatMsgObject(msg));
+    }
 }
 
 function onChatFromNeighbor(msg, sender)
