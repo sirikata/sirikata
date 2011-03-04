@@ -223,18 +223,18 @@ const String& BulletPhysicsService::mesh(const UUID& uuid) {
     return locinfo.mesh;
 }
 
-void BulletPhysicsService::getMesh(const string meshURI, const UUID uuid) {
+void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
 	
 	meshLoaded = false;
 	getMetadata(meshURI, uuid);
 	//TEMPORARY: Please fix me! Busy waiting is bad.
 	while(!meshLoaded) {};
 	
-	string t = retrievedMesh->uri;
+    std::string t = retrievedMesh->uri;
 	printf("Mesh was retrieved!: %s\n", &t[0]);
 }
 
-void BulletPhysicsService::getMetadata(const string meshURI, const UUID uuid) {
+void BulletPhysicsService::getMetadata(const std::string meshURI, const UUID uuid) {
 	Transfer::TransferRequestPtr req(
                                        new Transfer::MetadataRequest( Transfer::URI(meshURI), 1.0, std::tr1::bind(
                                        &BulletPhysicsService::metadataFinished, this, uuid, meshURI,

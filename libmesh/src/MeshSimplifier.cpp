@@ -316,7 +316,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
         if ( mesh.add_face(face_vhandles) == OpenMesh::PolyConnectivity::InvalidFaceHandle) {
           invalidFaceMap.insert(facevecs[0] + facevecs[1]+ facevecs[2]);
         }
-        /**  OpenMesh **/
+        **  OpenMesh **/
   
                 
         GeomContainer gc1(i, idx);

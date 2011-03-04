@@ -1074,7 +1074,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
         for (MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
-            std::string matname = hash+"_mat_"+boost::lexical_cast<string>(index);
+            std::string matname = hash+"_mat_"+boost::lexical_cast<std::string>(index);
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;

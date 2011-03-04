@@ -83,9 +83,9 @@ public:
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length);
     
-    void getMesh(const string, const UUID);
+    void getMesh(const std::string, const UUID);
     
-	void getMetadata(const string, const UUID);
+	void getMetadata(const std::string, const UUID);
 
 	void metadataFinished(const UUID, std::string, std::tr1::shared_ptr<Transfer::MetadataRequest>, std::tr1::shared_ptr<Transfer::RemoteFileMetadata>);
 
