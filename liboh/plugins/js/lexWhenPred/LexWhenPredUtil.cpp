@@ -16,7 +16,7 @@ extern pANTLR3_UINT8  LexWhenPredParserTokenNames[];
 
 pANTLR3_STRING lexWhenPred_printAST(pANTLR3_BASE_TREE tree)
 {
-    emerson_printAST(tree,LexWhenPredParserTokenNames);
+    return emerson_printAST(tree,LexWhenPredParserTokenNames);
 }
 
 

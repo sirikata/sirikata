@@ -28,9 +28,10 @@
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+*/
 
 #include "OgreSystemMouseHandler.hpp"
+
 #include "OgreSystem.hpp"
 #include "Camera.hpp"
 #include "Lights.hpp"
@@ -38,9 +39,11 @@
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include "input/InputEvents.hpp"
+
 #include "input/SDLInputDevice.hpp"
 #include "input/SDLInputManager.hpp"
 #include "input/InputManager.hpp"
+
 #include "task/Event.hpp"
 #include "task/EventManager.hpp"
 #include <sirikata/core/task/Time.hpp>

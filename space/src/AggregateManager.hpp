@@ -119,7 +119,8 @@ private:
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
 
   void generateMeshesFromQueue(Time postTime);
-
+ 
+  void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
 

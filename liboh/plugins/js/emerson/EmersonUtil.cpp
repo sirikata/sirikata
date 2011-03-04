@@ -16,7 +16,7 @@ extern pANTLR3_UINT8  EmersonParserTokenNames[];
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 {
-    emerson_printAST(tree,EmersonParserTokenNames);
+    return emerson_printAST(tree,EmersonParserTokenNames);
 }
 
 

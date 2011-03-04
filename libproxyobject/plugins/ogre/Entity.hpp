@@ -86,7 +86,7 @@ protected:
     void fixTextures();
 
     // Wrapper for createMesh which allows us to use a WorkQueue
-    bool createMeshWork(Mesh::MeshdataPtr md);
+    void createMeshWork(Mesh::MeshdataPtr md);
 
     void createMesh(Mesh::MeshdataPtr md);
 
@@ -191,7 +191,7 @@ public:
 
     // After a mesh is downloaded, try instantiating it from an existing mesh,
     // i.e. in case this URI/underlying hash has already been loaded.
-    bool tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
+    void tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

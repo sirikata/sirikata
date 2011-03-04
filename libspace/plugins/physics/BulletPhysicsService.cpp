@@ -36,6 +36,10 @@
 #include "Protocol_Loc.pbj.hpp"
 
 namespace Sirikata {
+#ifdef _WIN32
+	//FIXME: is this the right thing? DRH
+typedef float float_t;
+#endif
 
 class SirikataMotionState : public btMotionState {
 public:
@@ -279,7 +283,6 @@ void BulletPhysicsService::chunkFinished(const UUID uuid, std::string meshName,
      mTransferPool->addRequest(req);
 	}
 }
-
 void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -329,13 +332,13 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 			for(unsigned int i = 0; i < numOfPrimitives; i++) {
 				//create bullet triangle array from our data structure
 				std::vector<int> gIndices;
-				std::vector<btVector3> gVertices;
+				btVector3 *gVertices= new btVector3[subGeom->positions.size()];
 				for(unsigned int j=0; j < subGeom->primitives[i].indices.size(); j++) {
 					gIndices.push_back((int)(subGeom->primitives[i].indices[j]));
 				}
 				for(unsigned int j=0; j < subGeom->positions.size(); j++) {
 					btVector3 tmpVec = btVector3(subGeom->positions[j].x, subGeom->positions[j].y, subGeom->positions[j].z); 
-					gVertices.push_back(tmpVec);
+					gVertices[j]=tmpVec;
 				}
 				//TODO: check memleak, check divisible by 3
 				printf("btTriangleIndexVertexArray:\n");
@@ -343,10 +346,11 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 				printf("argument 3: %d\n", (int) 3*sizeof(unsigned short));
 				printf("argument 4: %d\n", subGeom->positions.size());
 				printf("argument 6: %d\n", (int) sizeof(Vector3f));
-				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x(), (int) sizeof(btVector3));
+				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), subGeom->positions.size(), (btScalar *) &gVertices[0].x(), (int) sizeof(btVector3));
 				
 				btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
 				objShape  = new btBvhTriangleMeshShape(indexVertexArrays,true,aabbMin,aabbMax);
+				delete [] gVertices;
 			}
 		}
 	}

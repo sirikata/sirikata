@@ -146,9 +146,14 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& d
   lock.unlock();
   aggObject->mLastGenerateTime = Timer::now();
 
-  mContext->mainStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsync, this, uuid, aggObject->mLastGenerateTime, true)  );
+  mContext->mainStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
 }
-
+void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
+	bool retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
+	if (!retval) {
+		SILOG(aggregate,error,"generateAggregateMeshAsync returned false, but no error handling happening");
+	}
+}
 
 bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings) {
   Time curTime = Timer::now();

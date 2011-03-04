@@ -44,7 +44,7 @@ namespace Mesh {
 
 // Typedefs for NodeIndices, which refer to scene graph nodes in the model
 typedef int32 NodeIndex;
-extern NodeIndex NullNodeIndex;
+extern SIRIKATA_MESH_EXPORT NodeIndex NullNodeIndex;
 typedef std::vector<NodeIndex> NodeIndexList;
 
 
