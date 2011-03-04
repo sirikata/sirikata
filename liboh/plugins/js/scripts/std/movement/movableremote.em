@@ -1,5 +1,5 @@
 /*  Sirikata
- *  movement.em
+ *  movableremote.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -33,45 +33,58 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.movement) === "undefined") std.movement = {};
 
+system.import('std/core/bind.js');
+
 (
 function() {
 
     var ns = std.movement;
 
-    ns.position = function(pres, pos) {
-        pres.setPosition(pos);
+    /** A MovableRemote wraps a remote object (visible) and allows you
+     *  to control its movement with simple commands, assuming it is
+     *  both capable and allows you to.
+     */
+    ns.MovableRemote = function(remote) {
+        this._remote = remote;
     };
 
-    ns.move = function(pres, dir, amount) {
-        var orient = pres.getOrientation();
-        var vel = orient.mul(dir);
-        if (amount)
-            vel = vel.scale(amount);
-        pres.setVelocity(vel);
+    ns.MovableRemote.prototype.setPosition = function(pos) {
+        {
+            request : 'movable',
+            action : 'setPosition',
+            position : pos
+        } -> this._remote;
     };
 
-    ns.stopMove = function(pres) {
-        ns.move(pres, new util.Vec3(0,0,0), 0);
+    ns.MovableRemote.prototype.move = function(dir) {
+        {
+            request : 'movable',
+            action : 'setVelocity',
+            velocity : dir
+        } -> this._remote;
     };
 
-    ns.orientation = function(pres, pos) {
-        pres.setPosition(pos);
+    ns.MovableRemote.prototype.setOrientation = function(orient) {
+        {
+            request : 'movable',
+            action : 'setOrientation',
+            orient : orient
+        } -> this._remote;
     };
 
-    ns.rotate = function(pres) {
-        if (arguments.length == 2) { // quaternion
-            pres.setOrientationVel(orient);
-        }
-        else if (arguments.length == 3) { // axis-angle
-            var about = arguments[1];
-            var amount = arguments[2];
-            pres.setOrientationVel(new util.Quaternion(about, amount));
-        }
+    ns.MovableRemote.prototype.setRotationalVelocity = function(orientvel) {
+        {
+            request : 'movable',
+            action : 'setRotationalVelocity',
+            orientvel : orientvel
+        } -> this._remote;
     };
 
-    ns.stopRotate = function(pres) {
-        ns.rotate(pres, new util.Vec3(1,0,0), 0);
+    ns.MovableRemote.prototype.stop = function() {
+        {
+            request : 'movable',
+            action : 'stop'
+        } -> this._remote;
     };
-
 
 })();

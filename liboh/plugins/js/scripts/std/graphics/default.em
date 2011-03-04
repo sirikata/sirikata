@@ -32,6 +32,7 @@
 
 system.import('graphics.em');
 system.import('std/movement/movement.em');
+system.import('std/movement/movableremote.em');
 system.import('std/script/scripter.em');
 
 (
