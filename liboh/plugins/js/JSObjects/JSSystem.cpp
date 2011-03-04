@@ -309,7 +309,8 @@ v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args)
     if (target_script == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    return target_script->eval(native_contents);
+    ScriptOrigin origin = args.Callee()->GetScriptOrigin();
+    return target_script->eval(native_contents, &origin);
 }
 
 

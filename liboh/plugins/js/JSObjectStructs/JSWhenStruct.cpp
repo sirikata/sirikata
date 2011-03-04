@@ -17,7 +17,7 @@
 namespace Sirikata {
 namespace JS {
 
-    
+
 JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback,JSObjectScript* jsobj, JSContextStruct* jscontextstr)
  :  JSSuspendable(),
     predState(false),
@@ -59,7 +59,7 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
 {
     String whenPredAsString;
     std::vector<String> dependentParts;
-    
+
     for (int s=0; s < (int)predArray->Length(); ++s)
     {
         String errorMessage;
@@ -77,19 +77,19 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
             whenPredAsString += fromPredArray->getQuote();
         }
     }
-    
+
     //still need to do something to parse out dependent parts;
     JSLOG(error, "\n\nStill need to parse out the relevant dependent objects in whenCreatePredFunc.\n\n");
 
-    
+
     //compile function;
     //note: additional parentheses and semi-colon around outside of the
     //expression get around a minor idiosyncracy v8 has about compiling
     //anonymous functions.
     whenPredAsString = "(function()  {  return ( " + whenPredAsString + " ); });";
 
-    
-    v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,whenPredAsString);
+    v8::ScriptOrigin origin(v8::String::New("(whenpredicate)"));
+    v8::Handle<v8::Value> compileFuncResult = mObjScript->internalEval(mContext, whenPredAsString, &origin);
     if (! compileFuncResult->IsFunction())
     {
         JSLOG(error, "Error when creating when predicate.  Predicate did not resolve to a function.");
@@ -156,12 +156,12 @@ bool JSWhenStruct::checkPredAndRun()
 
 //this function evaluates the predicate within the context
 bool JSWhenStruct::evalPred()
-{    
+{
     v8::HandleScope handle_scope;
-    
+
     //the function passed in shouldn't take any arguments
     v8::Handle<v8::Value>predReturner = mObjScript->handleTimeoutContext(mPred,NULL);
-    
+
     String dummyErrorMessage;
     bool decodedVal;
     bool returnedBool = decodeBool(predReturner,decodedVal,dummyErrorMessage);
@@ -179,7 +179,7 @@ bool JSWhenStruct::evalPred()
 void JSWhenStruct::runCallback()
 {
     v8::HandleScope handle_scope;
-    
+
     //the function passed in shouldn't take any arguments
     mObjScript->handleTimeoutContext(mCB,NULL);
 }
@@ -202,7 +202,7 @@ v8::Handle<v8::Value>JSWhenStruct::suspend()
 
 
 /**
-   Overriding clear to explicitly dispose of 
+   Overriding clear to explicitly dispose of
  */
 v8::Handle<v8::Value>JSWhenStruct::clear()
 {
@@ -220,7 +220,7 @@ v8::Handle<v8::Value>JSWhenStruct::clear()
         //will always be defined if haven't been cleared.
         mContext.Dispose();
     }
-    
+
     return JSSuspendable::clear();
 }
 
@@ -241,7 +241,7 @@ v8::Handle<v8::Value>JSWhenStruct::resume()
 
     if (getIsCleared())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot resume a when that has already been cleared.")));
-        
+
 
     return JSSuspendable::resume();
 }

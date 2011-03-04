@@ -87,6 +87,38 @@ namespace JS {
 
 namespace {
 
+void printException(v8::TryCatch& try_catch) {
+    stringstream os;
+
+    v8::HandleScope handle_scope;
+    v8::String::Utf8Value exception(try_catch.Exception());
+    const char* exception_string = ToCString(exception);
+    v8::Handle<v8::Message> message = try_catch.Message();
+
+    // Print (filename):(line number): (message).
+    v8::String::Utf8Value filename(message->GetScriptResourceName());
+    const char* filename_string = ToCString(filename);
+    int linenum = message->GetLineNumber();
+    os << filename_string << ':' << linenum << ": " << exception_string << "\n";
+    // Print line of source code.
+    v8::String::Utf8Value sourceline(message->GetSourceLine());
+    const char* sourceline_string = ToCString(sourceline);
+    os << sourceline_string << "\n";
+    // Print wavy underline (GetUnderline is deprecated).
+    int start = message->GetStartColumn();
+    for (int i = 0; i < start; i++)
+        os << " ";
+    int end = message->GetEndColumn();
+    for (int i = start; i < end; i++)
+        os << "^";
+    os << "\n";
+    v8::String::Utf8Value stack_trace(try_catch.StackTrace());
+    if (stack_trace.length() > 0) {
+      const char* stack_trace_string = ToCString(stack_trace);
+      os << stack_trace_string << "\n";
+    }
+    JSLOG(error, "Uncaught exception:\n" << os.str());
+}
 
 
 v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
@@ -117,12 +149,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
     if (result.IsEmpty())
     {
         // FIXME what should we do with this exception?
-        v8::String::Utf8Value error(try_catch.Exception());
-        const char* cMsg = ToCString(error);
-        JSLOG(error, "Uncaught exception: " << cMsg);
-        v8::String::Utf8Value stack(try_catch.StackTrace());
-        const char* cStack = ToCString(stack);
-        JSLOG(error, "Stack trace: " << cStack);
+        printException(try_catch);
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
     }
     return result;
@@ -718,7 +745,7 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
 
 
 //Will compile and run code in the context ctx whose source is em_script_str.
-v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str)
+v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
@@ -760,7 +787,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     // Compile
     //note, because using compile command, will run in the mContext context
-    v8::Handle<v8::Script> script = v8::Script::Compile(source);
+    v8::Handle<v8::Script> script = v8::Script::Compile(source, em_script_name);
     if (try_catch.HasCaught()) {
         v8::String::Utf8Value error(try_catch.Exception());
         String uncaught( *error);
@@ -783,17 +810,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     v8::Handle<v8::Value> result = script->Run();
 
     if (try_catch2.HasCaught()) {
-        v8::String::Utf8Value error(try_catch2.Exception());
-        JSLOG(error, "Uncaught exception: " << *error);
-        v8::Local<v8::StackTrace> strace = v8::StackTrace::CurrentStackTrace(100);
-        int frame_count = strace->GetFrameCount();
-        std::stringstream sstream;
-        for(uint32 i = 0; i < frame_count; i++)
-        {
-          v8::Local<v8::StackFrame> frame = strace->GetFrame(i);
-          printStackFrame(sstream, frame);
-        }
-        JSLOG(error, "Following is the stack trace: \n" << sstream.str());
+        printException(try_catch2);
         return try_catch2.Exception();
     }
 
@@ -829,27 +846,11 @@ void JSObjectScript::checkWhens(WhenMap& mapWhensToCheck)
         iter->first->checkPredAndRun();
 }
 
-
-void JSObjectScript::printStackFrame(std::stringstream& out, v8::Local<v8::StackFrame> frame)
-{
-
-  int col = frame->GetColumn();
-  v8::Local<v8::String> func = frame->GetFunctionName();
-  int line = frame->GetLineNumber();
-  v8::Local<v8::String> script = frame->GetScriptName();
-
-  std::string func_str(ToCString( v8::String::Utf8Value(func)));
-  std::string script_str(ToCString( v8::String::Utf8Value(script)));
-
-  out << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
-  std::cout << script_str << " : " << " : " << func_str << " : " << line << " : " << col << "\n"  ;
-}
-
 //defaults to internalEvaling with mContext, and does a ScopedEvalContext.
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, const EvalContext& new_ctx)
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx)
 {
     ScopedEvalContext sec(this, new_ctx);
-    return internalEval(mContext,em_script_str);
+    return internalEval(mContext, em_script_str, em_script_name);
 }
 
 
@@ -880,7 +881,8 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     v8Source = "(" + v8Source;
     v8Source += ");";
 
-    v8::Handle<v8::Value> compileFuncResult =   internalEval(ctx,v8Source);
+    ScriptOrigin cb_origin = cb->GetScriptOrigin();
+    v8::Handle<v8::Value> compileFuncResult = internalEval(ctx, v8Source, &cb_origin);
 
     if (! compileFuncResult->IsFunction())
     {
@@ -1161,10 +1163,10 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Fu
 
 
 
-v8::Handle<v8::Value> JSObjectScript::eval(const String& contents) {
+v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOrigin* origin) {
     EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx);
-    return protectedEval(contents, new_ctx);
+    return protectedEval(contents, origin, new_ctx);
 }
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
@@ -1229,7 +1231,8 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
 
     EvalContext new_ctx(ctx);
     new_ctx.currentScriptDir = full_filename.parent_path().string();
-    return protectedEval(contents, new_ctx);
+    ScriptOrigin origin(v8::String::New(filename.c_str()));
+    return protectedEval(contents, &origin, new_ctx);
 }
 
 
@@ -1684,7 +1687,8 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_s
   const std::string new_code = sstream.str();
   counter++;
 
-  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code));
+  v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
+  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code, &origin));
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
   return pf;

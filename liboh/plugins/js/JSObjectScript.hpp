@@ -129,7 +129,7 @@ public:
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
 
     /** Eval a string, executing its contents in the root object's scope. */
-    v8::Handle<v8::Value> eval(const String& contents);
+    v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name);
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
 
@@ -199,7 +199,7 @@ public:
 
     JSObjectScriptManager* manager() const { return mManager; }
 
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
 
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
@@ -248,7 +248,7 @@ private:
 
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
+    v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
 
 
 
@@ -287,7 +287,7 @@ private:
     void initializeVisible(Handle<Object>&system_obj);
 
     void printVisibleArray();
-    void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
+
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,int token);
     v8::Handle<v8::Object> addPresence(JSPresenceStruct* presToAdd);
