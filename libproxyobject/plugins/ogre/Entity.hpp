@@ -39,7 +39,8 @@
 #include <OgreSceneManager.h>
 #include "OgreConversions.hpp"
 #include <sirikata/core/network/IOTimer.hpp>
-
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
 namespace Sirikata {
 namespace Graphics {
 class OgreSystem;

@@ -42,7 +42,10 @@
 namespace Sirikata {
 /// URI.hpp: Fingerprint and URI class
 namespace Transfer {
-
+class ChunkRequest;
+class TransferPool;
+typedef std::tr1::shared_ptr<TransferPool> TransferPoolPtr;
+typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 /// simple file ID class--should make no assumptions about which hash.
 typedef SHA256 Fingerprint;
 

@@ -296,25 +296,25 @@ public:
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
     // Methods for handling Invokable actions
-    virtual boost::any invoke(vector<boost::any>& params);
+    virtual boost::any invoke(std::vector<boost::any>& params);
 
     // Helper which creates a WebView window, either
     boost::any createWindow(const String& name, bool is_html, bool is_file, String content);
     // Create a window using a URL
-    boost::any createWindow(vector<boost::any>& params);
+    boost::any createWindow(std::vector<boost::any>& params);
     // Create a window using a file
-    boost::any createWindowFile(vector<boost::any>& params);
+    boost::any createWindowFile(std::vector<boost::any>& params);
     // Create a window using HTML
-    boost::any createWindowHTML(vector<boost::any>& params);
+    boost::any createWindowHTML(std::vector<boost::any>& params);
 
     // Set an input handler function which will be invoked for input
     // events, e.g. mouse and keyboard
-    boost::any setInputHandler(vector<boost::any>& params);
+    boost::any setInputHandler(std::vector<boost::any>& params);
 
-    boost::any pick(vector<boost::any>& params);
-    boost::any bbox(vector<boost::any>& params);
+    boost::any pick(std::vector<boost::any>& params);
+    boost::any bbox(std::vector<boost::any>& params);
 
-    boost::any initScript(vector<boost::any>& params);
+    boost::any initScript(std::vector<boost::any>& params);
 
 
     ~OgreSystem();

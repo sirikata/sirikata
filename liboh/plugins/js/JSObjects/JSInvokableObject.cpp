@@ -4,6 +4,7 @@
 #include "JSFunctionInvokable.hpp"
 #include "JSInvokableUtil.hpp"
 
+#include <sirikata/core/network/Asio.hpp>
 #include <cassert>
 #include <vector>
 namespace Sirikata

@@ -30,6 +30,7 @@ namespace JS
    v8::Context::Scope  context_scope(script_->context());
 
    v8::Handle<v8::Value> argv[argc];
+
    if (base_offset) argv[0] = v8::Handle<v8::Value>();
 
    for(int i = 0; i < params.size(); i++)

@@ -53,7 +53,7 @@ inline boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
     if(val->IsString())
     {
       v8::String::AsciiValue str(val);
-      string s = string(*str);
+      std::string s = std::string(*str);
       return boost::any(s);
     }
     else if(val->IsFunction())
@@ -97,7 +97,7 @@ inline boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
 inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& val) {
     if(val.type() == typeid(std::string) )
     {
-        string s = boost::any_cast<std::string>(val);
+        std::string s = boost::any_cast<std::string>(val);
         return v8::String::New(s.c_str(), s.length());
     }
     else if (val.type() == typeid(float)) {
