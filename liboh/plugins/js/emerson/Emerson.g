@@ -369,7 +369,7 @@ assignmentExpressionNoIn
 	;
 	
 leftHandSideExpression
-	: callExpression{printf("\nLEFT HAND SIDE\n");}-> callExpression
+	: callExpression -> callExpression
 	| newExpression -> newExpression
 	;
 	
@@ -554,8 +554,7 @@ multiplicativeExpression
 
 
 postfixExpression
- //:(leftHandSideExpression -> leftHandSideExpression ) {printf("GREAT!!!");} (('--' -> $postfixExpression '--') | ('++' -> $postfixExpression '++'))?
- :leftHandSideExpression { printf("\n\n GREAT \n\n"); }-> leftHandSideExpression
+ :leftHandSideExpression  -> leftHandSideExpression
  | leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
  | leftHandSideExpression '++' -> ^(PLUSPLUS leftHandSideExpression)
   
