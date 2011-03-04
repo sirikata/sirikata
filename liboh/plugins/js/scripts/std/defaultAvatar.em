@@ -32,8 +32,10 @@
 
 
 // A sane, simple, default. Only includes functionality from libraries.
+system.import('std/script/scriptable.em');
 system.import('std/graphics/default.em');
 
+scriptable = new std.script.Scriptable();
 system.onPresenceConnected(
     function(pres) {
         simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');

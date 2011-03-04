@@ -96,7 +96,7 @@ function() {
         if (evt.button == 'right') std.movement.rotate(this._pres, new util.Vec3(0, -1, 0), this.defaultRotationVelocityScaling);
 
         if (evt.button == 'w') std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
-        if (evt.button == 's' && !evt.modifier.alt) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
+        if (evt.button == 's' && !evt.modifier.alt && !evt.modifier.ctrl) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
         if (evt.button == 'a') std.movement.move(this._pres, new util.Vec3(-1, 0, 0), 1);
         if (evt.button == 'd') std.movement.move(this._pres, new util.Vec3(1, 0, 0), 1);
         if (evt.button == 'q') std.movement.move(this._pres, new util.Vec3(0, 1, 0), 1);
@@ -104,6 +104,9 @@ function() {
 
         if (evt.button == 's' && evt.modifier.alt)
             this._scripter.script(this._selected);
+
+        if (evt.button == 's' && evt.modifier.ctrl)
+            this._scripter.script(system.Self);
     };
 
     ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
