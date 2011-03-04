@@ -10,7 +10,7 @@ namespace Sirikata {
 namespace JS {
 namespace JSHandler{
 
-v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
+v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
 {
     //get the target object whose context owns it.
     //and the pattern and the callback associated with this
@@ -28,7 +28,7 @@ v8::Handle<v8::Value> __printContents(const v8::Arguments& args)
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
+v8::Handle<v8::Value> _suspend(const v8::Arguments& args)
 {
     JSObjectScript* caller;
     JSEventHandlerStruct* handler;
@@ -44,7 +44,7 @@ v8::Handle<v8::Value> __suspend(const v8::Arguments& args)
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> __resume(const v8::Arguments& args)
+v8::Handle<v8::Value> _resume(const v8::Arguments& args)
 {
     JSObjectScript* caller;
     JSEventHandlerStruct* handler;
@@ -58,7 +58,7 @@ v8::Handle<v8::Value> __resume(const v8::Arguments& args)
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args)
+v8::Handle<v8::Value> _isSuspended(const v8::Arguments& args)
 {
     JSObjectScript* caller;
     JSEventHandlerStruct* handler;
@@ -70,7 +70,7 @@ v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args)
     return v8::Boolean::New(handler->getIsSuspended());
 }
 
-v8::Handle<v8::Value> __clear(const v8::Arguments& args)
+v8::Handle<v8::Value> _clear(const v8::Arguments& args)
 {
     JSObjectScript* caller;
     JSEventHandlerStruct* handler;

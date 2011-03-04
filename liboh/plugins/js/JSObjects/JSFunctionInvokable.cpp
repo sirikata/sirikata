@@ -29,7 +29,7 @@ namespace JS
    v8::HandleScope handle_scope;
    v8::Context::Scope  context_scope(script_->context());
 
-   v8::Handle<v8::Value> argv[argc];
+   std::vector<v8::Handle<v8::Value> >argv(argc);
 
    if (base_offset) argv[0] = v8::Handle<v8::Value>();
 
@@ -40,7 +40,7 @@ namespace JS
 
    // We are currently executing in the global context of the entity
    // FIXME: need to take care fo the "this" pointer
-   v8::Handle<v8::Value> result = function_->Call(script_->context()->Global(), argc, argv);
+   v8::Handle<v8::Value> result = function_->Call(script_->context()->Global(), argc, &argv[0]);
 
    if(result.IsEmpty())
    {

@@ -17,6 +17,10 @@
 namespace Sirikata {
 namespace JS {
 
+	JSWhenStruct* JSWhenStruct::decodeWhenStruct(v8::Handle<v8::Value> toDecode,String& errorMessage){
+		NOT_IMPLEMENTED();
+		return NULL;
+	}
 
 JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback,JSObjectScript* jsobj, JSContextStruct* jscontextstr)
  :  JSSuspendable(),

@@ -3,6 +3,12 @@
 #include <iostream>
 #include <fstream>
 #include<cassert>
+#ifdef _WIN32
+#pragma warning(disable:4786)
+#endif
+#include <string>
+#include <iostream>
+
 using namespace v8;
 using namespace std;
 
@@ -22,7 +28,7 @@ char* read_js_file_as_string(char* js_file_name)
   	{
 	    while (! myfile.eof() )
 			{
-				getline (myfile,line);
+				std::getline (myfile,line);
 				strcat(output, line.c_str());
 				strcat(output, "\n");
 			}
