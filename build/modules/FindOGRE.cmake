@@ -52,7 +52,7 @@ IF(WIN32)  # Windows
   SET(OGRE_FOUND FALSE)
 
   IF(OGRE_ROOT AND EXISTS "${OGRE_ROOT}")
-    SET(OGRE_LIBRARY_DIRS ${OGRE_ROOT}/lib)
+    SET(OGRE_LIBRARY_DIRS ${OGRE_ROOT}/lib/Release ${OGRE_ROOT}/lib/Debug ${OGRE_ROOT}/lib)
     SET(OGRE_LIBRARIES
         debug OgreMain_d.lib
         optimized OgreMain.lib)
