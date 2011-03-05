@@ -5,6 +5,7 @@
 #include "../JSSerializer.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
+#include "../JSObjects/JSQuaternion.hpp"
 
 
 namespace Sirikata {
