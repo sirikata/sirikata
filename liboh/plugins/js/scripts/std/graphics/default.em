@@ -74,18 +74,25 @@ function() {
         }
     };
 
+
+    //by default how to scale translational velocity from keypresses.  (movement
+    //is agonizingly slow if just set this to 1.  I really recommend 5.)
+    ns.DefaultGraphics.prototype.defaultVelocityScaling = 5;
+    //by default how to scale rotational velocity from keypresses
+    ns.DefaultGraphics.prototype.defaultRotationVelocityScaling = 1;
+    
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
         if (evt.button == 'escape') this._simulator.quit();
         if (evt.button == 'i') this._simulator.screenshot();
         if (evt.button == 'm') this._simulator.toggleSuspend();
 
-        if (evt.button == 'up' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
-        if (evt.button == 'down' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
+        if (evt.button == 'up' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, -1), this.defaultVelocityScaling);
+        if (evt.button == 'down' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, 1), this.defaultVelocityScaling);
 
-        if (evt.button == 'up' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(1, 0, 0), 1);
-        if (evt.button == 'down' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(-1, 0, 0), 1);
-        if (evt.button == 'left') std.movement.rotate(this._pres, new util.Vec3(0, 1, 0), 1);
-        if (evt.button == 'right') std.movement.rotate(this._pres, new util.Vec3(0, -1, 0), 1);
+        if (evt.button == 'up' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(1, 0, 0), this.defaultVelocityScaling);
+        if (evt.button == 'down' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(-1, 0, 0), this.defaultVelocityScaling);
+        if (evt.button == 'left') std.movement.rotate(this._pres, new util.Vec3(0, 1, 0), this.defaultRotationVelocityScaling);
+        if (evt.button == 'right') std.movement.rotate(this._pres, new util.Vec3(0, -1, 0), this.defaultRotationVelocityScaling);
 
         if (evt.button == 'w') std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
         if (evt.button == 's' && !evt.modifier.alt) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);

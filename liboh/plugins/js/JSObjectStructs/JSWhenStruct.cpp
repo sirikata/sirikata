@@ -18,10 +18,6 @@
 namespace Sirikata {
 namespace JS {
 
-	JSWhenStruct* JSWhenStruct::decodeWhenStruct(v8::Handle<v8::Value> toDecode,String& errorMessage){
-		NOT_IMPLEMENTED();
-		return NULL;
-	}
 
 JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback,JSObjectScript* jsobj, JSContextStruct* jscontextstr)
  :  JSSuspendable(),
@@ -45,6 +41,38 @@ JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Functi
 }
 
 
+JSWhenStruct* JSWhenStruct::decodeWhenStruct(v8::Handle<v8::Value> toDecode,String& errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+
+    if (! toDecode->IsObject())
+    {
+        errorMessage += "Error in decode of when object.  Should have received an object to decode.";
+        return NULL;
+    }
+
+    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+
+    //now check internal field count
+    if (toDecodeObject->InternalFieldCount() != WHEN_TEMPLATE_FIELD_COUNT)
+    {
+        errorMessage += "Error in decode of when bject.  Object given does not have adequate number of internal fields for decode.";
+        return NULL;
+    }
+
+    //now actually try to decode each.
+    //decode the jsWhenStruct field
+    v8::Local<v8::External> wrapJSWhenObj;
+    wrapJSWhenObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(WHEN_TEMPLATE_FIELD));
+    void* ptr = wrapJSWhenObj->Value();
+
+    JSWhenStruct* returner;
+    returner = static_cast<JSWhenStruct*>(ptr);
+    if (returner == NULL)
+        errorMessage += "Error in decode of when object.  Internal field of object given cannot be casted to a JSWhentruct.";
+
+    return returner;
+}
 
 
 /**
@@ -140,7 +168,6 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
         suspend();
         return;
     }
-
 
     v8::HandleScope handle_scope;
     mPred = v8::Persistent<v8::Function>::New ( v8::Handle<v8::Function>::Cast(compileFuncResult));
