@@ -165,7 +165,8 @@ public:
     //attempts to make a new jsvisiblestruct if don't already have one in
     //jsvismonitor matching visibleObj+visibleTo.  Wraps the c++ jsvisiblestruct
     //in v8 object.
-    v8::Handle<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
+    v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
+    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
     
     /** create a new presence of this entity */
@@ -238,8 +239,8 @@ private:
     std::stack<EvalContext> mEvalContextStack;
 
     //wraps internal c++ jsvisiblestruct in a v8 object
-    v8::Handle<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
-    
+    v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
+    v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     
     void checkWhens();
 
