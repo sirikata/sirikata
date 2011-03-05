@@ -1,3 +1,5 @@
+system.import('std/graphics/default.em');
+
 /* Make Customer send out a touch event to the Book entity */
 
 /* question is how do you know the uuid of the Book entity */
@@ -61,7 +63,7 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-      simulator = pres.runSimulation("ogregraphics");
+        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
       system.presences[0].onProxAdded(proxAddedCallback);
     }
 });
@@ -69,5 +71,3 @@ system.onPresenceConnected( function(pres) {
 system.onPresenceDisconnected( function() {
     system.print("startupCamera disconnected");
 });
-
-

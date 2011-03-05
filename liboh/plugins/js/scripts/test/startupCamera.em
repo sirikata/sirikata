@@ -1,4 +1,5 @@
 system.import("std/library.em");
+system.import('std/graphics/default.em');
 
 system.print("\n\n\nSTARTING A CAMERA OBJECT\n\n\n");
 
@@ -54,8 +55,8 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-      simulator = pres.runSimulation("ogregraphics");
-      chat = simulator.invoke("getChatWindow");
+        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+      chat = simulator.invoke("createWindowFile", "chat_terminal", "chat/prompt.html");
       chat.invoke("bind", "eventname", onChatMsgReceived);
       p = new util.Pattern("chat");
       onChatFromNeighbor <- p ;

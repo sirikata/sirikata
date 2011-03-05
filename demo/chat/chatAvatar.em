@@ -1,11 +1,11 @@
 system.import("std/library.em");
 system.import('std/escape.em');
 
+system.import('std/graphics/default.em');
+
 simulator = undefined;
 chat = undefined;
 chat_group = new Array();
-
-
 function sendAll(msg)
 {
   for(var i = 0; i < chat_group.length; i++)
@@ -19,14 +19,16 @@ function ChatMsgObject(msg)
   this.chat = msg;
 }
 
-function onChatMsgReceived(msg)
+function onChatMsgReceived(cmd, msg)
 {
-  system.print("\n\n"); 
-  system.print("Got message: ");
-  system.print(msg);
-  system.print("\n\n"); 
-  system.print("Sending out to others....\n\n");
-  sendAll(new ChatMsgObject(msg));
+    if (cmd == 'Chat' && msg) {
+        system.print("\n\n");
+        system.print("Got message: ");
+        system.print(msg);
+        system.print("\n\n");
+        system.print("Sending out to others....\n\n");
+        sendAll(new ChatMsgObject(msg));
+    }
 }
 
 function onChatFromNeighbor(msg, sender)
@@ -38,7 +40,7 @@ function onChatFromNeighbor(msg, sender)
 
 function handleNewChatNeighbor(msg, sender)
 {
-  print("Got a new entity into the chat group");
+  print("Got a new entity into the chat group\n");
   // add this new member of the chat group
   //check for duplicats
   for(var i = 0; i < chat_group.length; i++)
@@ -50,7 +52,7 @@ function handleNewChatNeighbor(msg, sender)
   }
 
   chat_group.push(sender);
-  var p = new system.Pattern("chat"); 
+  var p = new util.Pattern("chat"); 
   onChatFromNeighbor <- p <- sender;
   
 }
@@ -68,7 +70,7 @@ function proxAddedCallback(new_addr_obj)
   test_msg.name = "get_protocol";
   
   //also register a callback
-  var p = new system.Pattern("protocol", "chat");
+  var p = new util.Pattern("protocol", "chat");
   handleNewChatNeighbor <- p <- new_addr_obj;
   test_msg -> new_addr_obj;
 }
@@ -88,10 +90,10 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-      simulator = pres.runSimulation("ogregraphics");
-      chat = simulator.invoke("getChatWindow");
-      chat.invoke("bind", "eventname", onChatMsgReceived);
-      var p  = new system.Pattern("name", "get_protocol");
+        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+      chat = simulator.invoke("createWindowFile", "chat_terminal", "chat/prompt.html");
+      chat.invoke("bind", "event", onChatMsgReceived);
+      var p  = new util.Pattern("name", "get_protocol");
       onTestMessage <- p ;
       system.presences[0].onProxAdded(proxAddedCallback);
 

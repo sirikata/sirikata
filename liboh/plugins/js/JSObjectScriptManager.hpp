@@ -42,7 +42,7 @@
 namespace Sirikata {
 namespace JS {
 
-class SIRIKATA_OH_EXPORT JSObjectScriptManager : public ObjectScriptManager {
+class JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
 
@@ -53,6 +53,7 @@ public:
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
     OptionSet* getOptions() const { return mOptions; }
+    String defaultScript() const;
 
     v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
@@ -70,7 +71,7 @@ public:
     v8::Persistent<v8::ObjectTemplate>   mQuotedTemplate;
     v8::Persistent<v8::ObjectTemplate>   mWhenWatchedItemTemplate;
     v8::Persistent<v8::ObjectTemplate>   mWhenWatchedListTemplate;
-    
+
     void testPrint();
 
 private:
@@ -89,12 +90,12 @@ private:
     void createContextGlobalTemplate();
     void createWhenTemplate();
     void createQuotedTemplate();
-    
+
     void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();
 
-    
-    
+
+
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
@@ -102,6 +103,7 @@ private:
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
     OptionSet* mOptions;
+    OptionValue* mDefaultScript;
 };
 
 } // namespace JS

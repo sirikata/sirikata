@@ -16,7 +16,7 @@ extern pANTLR3_UINT8  LexWhenPredParserTokenNames[];
 
 pANTLR3_STRING lexWhenPred_printAST(pANTLR3_BASE_TREE tree)
 {
-    emerson_printAST(tree,LexWhenPredParserTokenNames);
+    return emerson_printAST(tree,LexWhenPredParserTokenNames);
 }
 
 
@@ -105,7 +105,7 @@ char* lexWhenPred_compile(const char* em_script_str)
     return js_str;
 }
 
-char* lexWhenPred_compile_diag(const char* em_script_str, FILE* dbg)
+char* lexWhenPred_compile_diag(const char* em_script_str, FILE* dbg, int& errorNum)
 {
     fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
@@ -159,7 +159,7 @@ char* lexWhenPred_compile_diag(const char* em_script_str, FILE* dbg)
     {
         fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
         fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
-
+        errorNum = ANTLR3_ERR_NOMEM;
     }
     else
     {

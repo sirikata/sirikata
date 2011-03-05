@@ -38,7 +38,6 @@
 #include "URI.hpp"
 #include "CachePolicy.hpp"
 
-using namespace std;
 
 namespace Sirikata {
 /** CacheLayer.hpp -- CacheLayer superclass */

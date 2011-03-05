@@ -34,12 +34,10 @@
 #define _SIRIKATA_INPUT_RESPONSES_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include "input/InputEvents.hpp"
-#include "input/InputEventDescriptor.hpp"
 #include "InputBindingEvent.hpp"
 
 namespace Sirikata {
-namespace Graphics {
+namespace SimpleCamera {
 
 /** Base class for input responses. Implementations will generally handle
  *  two things: wrap a generic callback, e.g. one requiring a float
@@ -49,39 +47,18 @@ class InputResponse {
 public:
     virtual ~InputResponse();
 
-    /** Methods that invoke the response based on specific event types.
-     *  They convert the event to the parameters needed by the reponse
-     *  and then invoke it. The default implementations simply ignore
-     *  the event.
-     */
-    virtual void invoke(Input::ButtonEventPtr& evt);
-    virtual void invoke(Input::ButtonPressedEventPtr& evt);
-    virtual void invoke(Input::ButtonReleasedEventPtr& evt);
-    virtual void invoke(Input::ButtonDownEventPtr& evt);
-    virtual void invoke(Input::AxisEventPtr& evt);
-    virtual void invoke(Input::TextInputEventPtr& evt);
-    virtual void invoke(Input::MouseHoverEventPtr& evt);
-    virtual void invoke(Input::MouseClickEventPtr& evt);
-    virtual void invoke(Input::MouseDragEventPtr& evt);
-    virtual void invoke(Input::WindowEventPtr& evt);
-    virtual void invoke(Input::DragAndDropEventPtr& evt);
-    virtual void invoke(Input::WebViewEventPtr& evt);
+    /** Invokes the input response for any type of InputEvent. */
+    virtual void invoke(InputBindingEvent& evt);
 
-    /** Invokes the input response for any type of InputEvent.  This should
-     *  generally be avoided if you know the type of event, but if you don't
-     *  know the type this might be handy.
-     */
-    void invoke(Input::InputEventPtr& evt);
-
-    typedef std::vector<Input::EventDescriptor> InputEventDescriptorList;
+    typedef std::vector<InputBindingEvent> InputEventDescriptorList;
     /** Get a list of InputEventDescriptors which specify the events that this
      *  response will handle, given a higher level description of the input
      *  to bind to this response.
      */
     virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const = 0;
+
 protected:
-    /** Default action for events that aren't understood. */
-    virtual void defaultAction();
+    virtual void defaultAction() {}
 };
 
 class SimpleInputResponse : public InputResponse {
@@ -104,9 +81,7 @@ public:
 
     FloatToggleInputResponse(ResponseCallback cb, float onval, float offval);
 
-    virtual void invoke(Input::ButtonPressedEventPtr& evt);
-    virtual void invoke(Input::ButtonReleasedEventPtr& evt);
-    virtual void invoke(Input::WebViewEventPtr& evt);
+    virtual void invoke(InputBindingEvent& evt);
 
     virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:
@@ -121,8 +96,7 @@ public:
 
     Vector2fInputResponse(ResponseCallback cb);
 
-    virtual void invoke(Input::MouseClickEventPtr& evt);
-    virtual void invoke(Input::MouseDragEventPtr& evt);
+    virtual void invoke(InputBindingEvent& evt);
 
     virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:
@@ -131,63 +105,18 @@ private:
 
 class AxisInputResponse : public InputResponse {
 public:
-    typedef std::tr1::function<void(float,Vector2f)> ResponseCallback;
+    typedef std::tr1::function<void(float)> ResponseCallback;
 
     AxisInputResponse(ResponseCallback cb);
 
-    virtual void invoke(Input::AxisEventPtr& evt);
+    virtual void invoke(InputBindingEvent& evt);
 
     virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
 private:
     ResponseCallback mCallback;
 };
 
-class StringInputResponse : public InputResponse {
-public:
-    typedef std::tr1::function<void(String)> ResponseCallback;
-
-    StringInputResponse(ResponseCallback cb);
-
-    virtual void invoke(Input::WebViewEventPtr&);
-
-    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
-private:
-    ResponseCallback mCallback;
-};
-
-
-// Input response that takes a string -> string map.
-class StringMapInputResponse : public InputResponse {
-public:
-    typedef std::tr1::unordered_map<String, String> StringMap;
-    typedef std::tr1::function<void(StringMap)> ResponseCallback;
-
-    StringMapInputResponse(ResponseCallback cb);
-
-    virtual void invoke(Input::WebViewEventPtr&);
-
-    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
-private:
-    ResponseCallback mCallback;
-};
-
-
-// Input response that takes a webview and string -> string map.
-class WebViewStringMapInputResponse : public InputResponse {
-public:
-    typedef std::tr1::unordered_map<String, String> StringMap;
-    typedef std::tr1::function<void(WebView*, StringMap)> ResponseCallback;
-
-    WebViewStringMapInputResponse(ResponseCallback cb);
-
-    virtual void invoke(Input::WebViewEventPtr&);
-
-    virtual InputEventDescriptorList getInputEvents(const InputBindingEvent& descriptor) const;
-private:
-    ResponseCallback mCallback;
-};
-
-} // namespace Graphics
+} // namespace SimpleCamera
 } // namespace Sirikata
 
 #endif //_SIRIKATA_INPUT_RESPONSES_HPP_

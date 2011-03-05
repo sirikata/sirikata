@@ -8,7 +8,7 @@
 #include "../JSUtil.hpp"
 #include <math.h>
 #include "../JSObjectStructs/JSTimerStruct.hpp"
-
+#include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/util/Random.hpp>
 
 

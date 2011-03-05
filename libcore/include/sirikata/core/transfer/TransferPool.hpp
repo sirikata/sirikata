@@ -43,7 +43,6 @@
 #include <time.h>
 #include <stdlib.h>
 
-using namespace std;
 
 namespace Sirikata {
 namespace Transfer {

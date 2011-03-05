@@ -34,7 +34,6 @@
 #define SIRIKATA_INPUT_InputEvents_HPP__
 
 #include "InputDevice.hpp"
-#include "InputEventDescriptor.hpp"
 
 namespace Sirikata {
 
@@ -64,8 +63,6 @@ public:
         os << &(*dev);
         return IdPair::Secondary(os.str());
     }
-
-    virtual EventDescriptor getDescriptor() const = 0;
 
     virtual ~InputEvent() {}
 
@@ -98,10 +95,6 @@ public:
           mEvent(event),
          mButton(key),
          mModifier(mod) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::Key(mButton, mEvent, mModifier);
     }
 
     bool pressed() {
@@ -184,10 +177,6 @@ public:
         mAxis = axis;
         mValue = value;
     }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::Axis(mAxis);
-    }
 };
 typedef std::tr1::shared_ptr<AxisEvent> AxisEventPtr;
 
@@ -215,10 +204,6 @@ public:
     TextInputEvent(const InputDevicePtr &dev, char *text)
         : InputEvent(dev, IdPair(getEventId(), getSecondaryId(dev))),
                                  mText(text) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::Text();
     }
 };
 typedef std::tr1::shared_ptr<TextInputEvent> TextInputEventPtr;
@@ -257,10 +242,6 @@ public:
     MouseHoverEvent(const PointerDevicePtr &dev,
                float x, float y, int cursorType)
         : MouseEvent(IdPair(getEventId(), getSecondaryId(dev)), dev, x, y, cursorType) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MouseHover();
     }
 };
 typedef std::tr1::shared_ptr<MouseHoverEvent> MouseHoverEventPtr;
@@ -337,10 +318,6 @@ public:
         : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
                          cursorType, button, 0, 0, 0) {
     }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MouseClick(mButton);
-    }
 };
 typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
 
@@ -359,10 +336,6 @@ public:
                     int cursorType, int button)
         : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
                          cursorType, button, 0, 0, 0) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MousePressed(mButton);
     }
 };
 typedef std::tr1::shared_ptr<MousePressedEvent> MousePressedEventPtr;
@@ -388,10 +361,6 @@ public:
                          xend, yend, lastx, lasty, cursorType, button,
                          pressure, pressureMin, pressureMax) {
         mType = type;
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MouseDrag(mButton, mType);
     }
 };
 typedef std::tr1::shared_ptr<MouseDragEvent> MouseDragEventPtr;
@@ -456,7 +425,6 @@ public:
         return mData2;
     }
 
-    virtual EventDescriptor getDescriptor() const;
 };
 typedef std::tr1::shared_ptr<WindowEvent> WindowEventPtr;
 
@@ -474,10 +442,6 @@ public:
     std::vector<std::string> mFilenames;
     DragAndDropEvent(const std::vector<std::string>&files, int x=0, int y=0)
         : Task::Event(getId()), mXCoord(x), mYCoord(y), mFilenames(files) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::DragAndDrop();
     }
 };
 typedef std::tr1::shared_ptr<DragAndDropEvent> DragAndDropEventPtr;
@@ -502,8 +466,6 @@ public:
     WebViewEvent(const String &wvName, const String& name, const std::vector<String>& args);
     WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& args);
     virtual ~WebViewEvent();
-
-    virtual EventDescriptor getDescriptor() const;
 };
 typedef std::tr1::shared_ptr<WebViewEvent> WebViewEventPtr;
 

@@ -85,7 +85,7 @@ template <class MemoryBuffer> bool tnext_eol(const MemoryBuffer &input,
         char next=*iter;
         if (cur=='\r'||cur=='\n') {
             return true;
-        }else if (!isblank(cur)) {
+        }else if (cur!=' '&&cur!='\t') {
             if (cur=='/'&&where_lexeme_start+1<size&&next=='/')
                 return true;
             return false;

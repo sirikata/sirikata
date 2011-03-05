@@ -1,7 +1,7 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
- *  InputBinding.hpp
+/*  Sirikata
+ *  SpaceObjectReference.hpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,40 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_INPUT_BINDING_HPP_
-#define _SIRIKATA_INPUT_BINDING_HPP_
-
-#include <sirikata/core/util/Platform.hpp>
-#include "input/InputEventDescriptor.hpp"
-#include "input/InputEvents.hpp"
-#include "InputBindingEvent.hpp"
-#include "InputResponse.hpp"
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 
 namespace Sirikata {
-namespace Graphics {
 
-class InputBinding {
-    typedef std::map<Input::EventDescriptor, InputResponse*> Binding;
-public:
-    typedef std::map<String, InputResponse*> InputResponseMap;
+SpaceObjectReference::SpaceObjectReference() {
+}
 
-    InputBinding();
-    ~InputBinding();
 
-    void add(const InputBindingEvent& evt, InputResponse* response);
-    /** Add bindings by loading them from an options file.
-     *  \param filename name of file to load from.
-     *  \param responses map from strings, which are specified in the
-     *         configuration file, to InputResponses.
-     */
-    void addFromFile(const String& filename, InputResponseMap responses);
+SpaceObjectReference::SpaceObjectReference(const SpaceID&sid,const ObjectReference&oref)
+  : mSpace(sid),
+    mObject(oref)
+{
+}
 
-    void handle(Input::InputEventPtr& evt);
-private:
-    Binding mResponses;
-}; // class InputBinding
-
-} // namespace Graphics
 } // namespace Sirikata
-
-#endif //_SIRIKATA_INPUT_BINDING_HPP_

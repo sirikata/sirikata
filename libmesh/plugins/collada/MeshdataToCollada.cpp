@@ -112,8 +112,8 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
           }
 
         if (texture.uri == "") {
-          char colorEncodingStr[256];
-          snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
+          char colorEncodingStr[512];
+          sprintf(colorEncodingStr, "%f %f %f %f %d", texture.color.x, texture.color.y,
                    texture.color.z, texture.color.w, texture.affecting);
           String colorEncoding = colorEncodingStr;
 
@@ -129,7 +129,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
         materialRedirectionMap[i] = i;
         char effectNameStr[256];
-        snprintf(effectNameStr, 256, "material%d", i);
+        sprintf(effectNameStr, "material%d", i);
         std::string effectName = effectNameStr;
         std::string materialName = effectName + "ID";
         openMaterial(materialName, COLLADABU::Utils::checkNCName(materialName) );
@@ -185,7 +185,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
                 if (it->first == texture.uri) {
                   const int IMAGE_ID_LEN = 1024;
                   char imageID[IMAGE_ID_LEN];
-                  snprintf(imageID, IMAGE_ID_LEN, "image_id_%d", k);
+                  sprintf(imageID, "image_id_%d", k);
                   colladaSampler.setImageId( std::string(imageID) );
                   break;
                 }
@@ -202,8 +202,8 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
               colorOrTexture = COLLADASW::ColorOrTexture(colladaTexture);
             }
             else {
-              char colorEncodingStr[256];
-              snprintf(colorEncodingStr, 256, "%f %f %f %f %d", texture.color.x, texture.color.y,
+              char colorEncodingStr[512];
+              sprintf(colorEncodingStr, "%f %f %f %f %d", texture.color.x, texture.color.y,
                        texture.color.z, texture.color.w, texture.affecting);
               colorEncoding = colorEncodingStr;
 
@@ -239,7 +239,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
           if (!effectProfileEmpty) {
             char effectNameStr[256];
-            snprintf(effectNameStr, 256, "material%d", i);
+            sprintf(effectNameStr, "material%d", i);
             std::string effectName = effectNameStr;
 
             openEffect(effectName+"-effect");
@@ -414,7 +414,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
           char materialName[256];
           GeometryInstance::MaterialBindingMap::const_iterator mbm_it = geoInst->materialBindingMap.find(meshdata.geometry[i].primitives[j].materialId);
-          snprintf(materialName, 256, "material%d", materialRedirectionMap[mbm_it->second]);
+          sprintf(materialName, "material%d", materialRedirectionMap[mbm_it->second]);
           triangles.setMaterial(std::string(materialName));
 
           int offset = 0;
@@ -918,7 +918,7 @@ public:
         String jointSourceId = controllerId + JOINTS_SOURCE_ID_SUFFIX;
         String weightSourceId = controllerId + WEIGHTS_SOURCE_ID_SUFFIX;
 
-        uint offset = 0;
+        uint32 offset = 0;
         COLLADASW::VertexWeightsElement vertexWeightsElement(mSW);
         COLLADASW::InputList &inputList = vertexWeightsElement.getInputList();
         inputList.push_back ( COLLADASW::Input ( COLLADASW::JOINT, COLLADASW::URI (EMPTY_STRING, jointSourceId ), offset++ ) );
@@ -990,7 +990,7 @@ public:
       for (std::map<String,int>::iterator it = textureList.begin(); it != textureList.end(); it++ ) {
         const int IMAGE_ID_LEN = 1024;
         char imageID[IMAGE_ID_LEN];
-        snprintf(imageID, IMAGE_ID_LEN, "image_id_%d", i);
+        sprintf(imageID, "image_id_%d", i);
         addImage( COLLADASW::Image( it->first, std::string(imageID)  )  );
         i++;
       }

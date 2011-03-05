@@ -401,7 +401,7 @@ memberExpressionSuffix
 	;
 
 callExpression
-    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
+    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> ^(CALL $callExpression arguments) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
 	;
 	
 callExpressionSuffix
@@ -554,8 +554,11 @@ multiplicativeExpression
 
 
 postfixExpression
- :(leftHandSideExpression -> leftHandSideExpression) (('--' -> $postfixExpression '--') | ('++' -> $postfixExpression '++'))?
-	;
+ :leftHandSideExpression  -> leftHandSideExpression
+ | leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
+ | leftHandSideExpression '++' -> ^(PLUSPLUS leftHandSideExpression)
+  
+;
 
 
 unaryOps
@@ -572,7 +575,7 @@ unaryOps
 
 
 unaryExpression
-	: postfixExpression -> ^(POSTEXPR postfixExpression)
+	: postfixExpression -> postfixExpression
 	| unaryOps e=unaryExpression -> ^(unaryOps $e)
 	;
 	

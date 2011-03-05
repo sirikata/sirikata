@@ -81,7 +81,7 @@ public:
 
     static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
 
-    
+
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 
@@ -97,25 +97,25 @@ public:
 
     v8::Handle<v8::Value> handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
     v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
-    
+
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
     v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
-
 
     String tokenizeWhenPred(const String& whenPredAsString);
     void addWhen(JSWhenStruct* whenToAdd);
     void removeWhen(JSWhenStruct* whenToRemove);
     
     
+
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
      */
     bool valid() const;
 
     String createNewValueInContext(v8::Handle<v8::Value> val, v8::Handle<v8::Context> ctx);
-    
+
     /** Dummy callback for testing exposing new functionality to scripts. */
     void debugPrintString(std::string cStrMsgBody) const;
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
@@ -124,14 +124,19 @@ public:
     /** Print the given string to the current output. */
     void print(const String& str);
     
-    /** Set a timeout with a callback. */
-    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
 
     v8::Handle<v8::Value> createWhenWatchedItem(v8::Handle<v8::Array> itemArray);
     v8::Handle<v8::Value> createWhenWatchedItem(JSWhenWatchedItemStruct* wwis);
     v8::Handle<v8::Value> createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec);
 
     
+
+    /** Set a timeout with a callback. */
+    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
+
+    /** Eval a string, executing its contents in the root object's scope. */
+    v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name);
+
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
 
@@ -161,14 +166,14 @@ public:
     //jsvismonitor matching visibleObj+visibleTo.  Wraps the c++ jsvisiblestruct
     //in v8 object.
     v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
-
+    v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
+    
     /** create a new presence of this entity */
     v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
     v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
-    
-    
+
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
 
@@ -200,9 +205,11 @@ public:
 
     
     JSObjectScriptManager* manager() const { return mManager; }
-    
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx,const String& em_script_str);
+
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
+
+
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
@@ -230,17 +237,16 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
-
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     
     
     void checkWhens();
 
-
     
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
+
 
 
     // Handlers for presence connection events
@@ -249,9 +255,8 @@ private:
 
 
 
-    void handleScriptingMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    v8::Handle<v8::Value> protectedEval(const String& script_str, const EvalContext& new_ctx);
+    v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
 
 
 
@@ -260,12 +265,11 @@ private:
     v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
 
 
-
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 
     void addSelfField(const SpaceObjectReference& myName);
-    
-    
+
+
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;
@@ -285,17 +289,14 @@ private:
     void populateSystemObject(Handle<Object>& system_obj );
 
 
-
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
+
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,int token);
     v8::Handle<v8::Object> addPresence(JSPresenceStruct* presToAdd);
     void removePresence(const SpaceObjectReference& sporef);
 
 
-
-
-    ODP::Port* mScriptingPort;
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
 
@@ -305,7 +306,7 @@ private:
 
     void callbackUnconnected(const SpaceObjectReference& name, int token);
     int presenceToken;
-    uint64 hiddenObjectCount;    
+    uint64 hiddenObjectCount;
 
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;
     typedef PresenceMap::iterator PresenceMapIter;

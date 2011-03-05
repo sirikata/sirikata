@@ -507,6 +507,8 @@ FIND_PACKAGE(OIS)
 IF(NOT OGRE_ROOT)
   IF(EXISTS ${PLATFORM_LIBS}/installed-ogre)
     SET(OGRE_ROOT ${PLATFORM_LIBS}/installed-ogre)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.7.2)
+    SET(OGRE_ROOT ${PLATFORM_LIBS}/ogre-1.7.2)
   ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.6.1)
     SET(OGRE_ROOT ${PLATFORM_LIBS}/ogre-1.6.1)
   ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.6.x)
@@ -538,11 +540,7 @@ IF(NOT SQLite3_ROOT)
   IF(WIN32)
     SET(SQLite3_ROOT ${PLATFORM_LIBS}/sqlite-3_6_16)
   ELSE()
-    IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-      SET(SQLite3_ROOT ${PLATFORM_LIBS})
-    ELSE()
-      SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
-    ENDIF()
+    SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
   ENDIF()
 ENDIF()
 IF(NOT SQLite3_FOUND)
@@ -597,6 +595,15 @@ ENDIF()
 #ENDIF(NOT GLUT_FOUND)
 SET(GSL_ROOT ${PLATFORM_LIBS}/installed-gsl)
 FIND_PACKAGE(GSL)
+IF(GSL_FOUND)
+  SET(GSL_CXX_FLAGS "-DHAVE_GSL ${GSL_CXX_FLAGS}")
+ELSE()
+  MESSAGE(STATUS "GSL was not found: Will single sample in center of region to approximate integral.")
+  SET(GSL_CXX_FLAGS "")
+  SET(GSL_INCLUDE_DIR ${TOP_LEVEL}/externals/berkelium)
+  SET(GSL_LINK_DIRECTORIES)
+  SET(GSL_LIBRARIES)
+ENDIF()
 
 IF(WIN32)
 #dependency: berkelium
@@ -1129,6 +1136,9 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
         ${LIBCORE_SOURCE_DIR}/service/TimeProfiler.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
+	${LIBCORE_SOURCE_DIR}/util/SpaceID.cpp
+	${LIBCORE_SOURCE_DIR}/util/ObjectReference.cpp
+	${LIBCORE_SOURCE_DIR}/util/SpaceObjectReference.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
 	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp
@@ -1332,22 +1342,16 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/OgreMeshRaytrace.cpp
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
-  ${GFX}/DragActions.cpp
-  ${GFX}/InputBinding.cpp
-  ${GFX}/InputBindingEvent.cpp
-  ${GFX}/InputResponse.cpp
   ${GFX}/task/EventManager.cpp
   ${GFX}/task/Event.cpp
   ${GFX}/task/UniqueId.cpp
   ${INPUT}/SDLInputManager.cpp
-  ${INPUT}/InputEventDescriptor.cpp
   ${INPUT}/InputEvents.cpp
   ${INPUT}/InputDevice.cpp
   ${INPUT}/SDLInputDevice.cpp
   ${GFX}/Entity.cpp
   ${GFX}/Camera.cpp
   ${GFX}/OgrePlugin.cpp
-  ${GFX}/CameraPath.cpp
 ${GFX}/resourceManager/CDNArchive.cpp
 ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
@@ -1409,6 +1413,11 @@ SET(LIBSPACE_PLUGIN_STANDARD_SOURCES
   ${LIBSPACE_PLUGIN_STANDARD_DIR}/AlwaysLocationUpdatePolicy.cpp
 )
 
+SET(LIBSPACE_PLUGIN_BULLETPHYSICS_DIR ${LIBSPACE_PLUGIN_DIR}/physics)
+SET(LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletPhysicsService.cpp
+)
 
 SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/AggregateManager.cpp
@@ -1758,6 +1767,7 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
 
 ADD_PLUGIN_TARGET(weight-exp
                     SOURCES ${LIBCORE_PLUGIN_WEIGHTEXP_SOURCES}
+                    TARGET_CXXFLAGS ${GSL_CXX_FLAGS}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
@@ -1765,6 +1775,7 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-exp)
 
 ADD_PLUGIN_TARGET(weight-sqr
                     SOURCES ${LIBCORE_PLUGIN_WEIGHTSQR_SOURCES}
+                    TARGET_CXXFLAGS ${GSL_CXX_FLAGS}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
@@ -1875,9 +1886,17 @@ ADD_PLUGIN_TARGET(bulletphysics
                     SOURCES ${LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_SOURCES}
                     TARGET_CXXFLAGS ${bullet_CFLAGS}
                     TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB})
+                    TARGET_LIBRARIES ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB} 
+                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB}) 
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} bulletphysics)
+
+ADD_PLUGIN_TARGET(space-bulletphysics
+                    SOURCES ${LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES}
+		    TARGET_CXXFLAGS ${bullet_CFLAGS}
+                    TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${bullet_LIBRARIES} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-bulletphysics)
 ENDIF()
 
 
@@ -1988,6 +2007,9 @@ SET(LIBOH_PLUGIN_SIMPLECAMERA_SOURCES
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/PluginInterface.cpp
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/SimpleCameraObjectScript.cpp
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/SimpleCameraObjectScriptManager.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputBinding.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputBindingEvent.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputResponse.cpp
     )
 ADD_PLUGIN_TARGET(simplecamera
                     SOURCES ${LIBOH_PLUGIN_SIMPLECAMERA_SOURCES}

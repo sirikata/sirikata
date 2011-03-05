@@ -1,0 +1,89 @@
+/*  Sirikata
+ *  scripter.em
+ *
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+system.import('std/core/bind.js');
+system.import('std/escape.em');
+
+if (typeof(std) === "undefined") std = {};
+if (typeof(std.script) === "undefined") std.script = {};
+
+(
+function() {
+
+    var ns = std.script;
+
+    /** A Scripter is an object which will display a scripting window
+     *  for operating on other objects.
+     */
+    ns.Scripter = function(parent) {
+        this._parent = parent;
+        this._scriptingWindows = {};
+        // Listen for replies
+        var scriptReplyPattern = new util.Pattern("reply", "script");
+        var scriptReplyHandler = std.core.bind(this._handleScriptReply, this);
+        scriptReplyHandler <- scriptReplyPattern;
+    };
+
+    ns.Scripter.prototype.script = function(target) {
+        if (target && !this._scriptingWindows[target]) {
+            this._parent.invoke("initScript", target);
+            var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html");
+            scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this, target));
+            this._scriptingWindows[target] = scripting_gui;
+        }
+    };
+
+    ns.Scripter.prototype._handleScriptEvent = function(target, evt, cmd, val) {
+        if (evt == 'Close') {
+            system.print('Close\n'); // FIXME
+        }
+        else if (evt == 'ExecScript') {
+            // ExecScript Command Value
+            var request = {
+                request : 'script',
+                script : val
+            };
+            request -> target;
+        }
+    };
+
+    ns.Scripter.prototype._handleScriptReply = function(msg, sender) {
+        var win = this._scriptingWindows[sender];
+        if (!win) {
+            system.print("Get scripting reply for object I don't have a window for: " + sender + "\n");
+            return;
+        }
+        if (msg.value)
+            win.eval('addMessage(' + Escape.escapeString(msg.value.toString(), '"') + ')');
+    };
+
+})();

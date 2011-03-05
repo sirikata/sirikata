@@ -35,6 +35,7 @@
 
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
+#include "OgreSystemMouseHandler.hpp"
 #include "OgrePlugin.hpp"
 #include "task/Event.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
@@ -58,6 +59,10 @@
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
+
+#include "Protocol_JSMessage.pbj.hpp"
+#include <sirikata/core/util/KnownMessages.hpp>
+#include <sirikata/core/util/KnownScriptTypes.hpp>
 
 using namespace std;
 
@@ -281,9 +286,18 @@ Transfer::TransferPoolPtr OgreSystem::transferPool() {
     return mTransferPool;
 }
 
-void OgreSystem::suspend() {
+void OgreSystem::toggleSuspend() {
   mSuspended = !mSuspended;
 }
+
+void OgreSystem::suspend() {
+  mSuspended = true;
+}
+
+void OgreSystem::resume() {
+  mSuspended = false;
+}
+
 void OgreSystem::destroyRenderTarget(Ogre::ResourcePtr&name) {
     Ogre::TextureManager::getSingleton().remove(name);
 }
@@ -459,7 +473,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     OptionValue*configFile;
     OptionValue*ogreLogFile;
     OptionValue*purgeConfig;
-    OptionValue* keybindingFile;
     OptionValue*createWindow;
     OptionValue*ogreSceneManager;
     OptionValue*windowTitle;
@@ -467,13 +480,13 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     OptionValue*shadowFarDistance;
     OptionValue*renderBufferAutoMipmap;
     OptionValue*grabCursor;
+    OptionValue* backColor;
 
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","plugins.cfg",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
                            ogreLogFile=new OptionValue("logfile","Ogre.log",OptionValueType<String>(),"sets the ogre log file"),
                            purgeConfig=new OptionValue("purgeconfig","false",OptionValueType<bool>(),"Pops up the dialog asking for the screen resolution no matter what"),
-                           keybindingFile=new OptionValue("keybinding","keybinding.default",OptionValueType<String>(),"File to load key bindings from"),
                            createWindow=new OptionValue("window","true",OptionValueType<bool>(),"Render to a onscreen window"),
                            grabCursor=new OptionValue("grabcursor","false",OptionValueType<bool>(),"Grab cursor"),
                            windowTitle=new OptionValue("windowtitle","Sirikata",OptionValueType<String>(),"Window title name"),
@@ -492,10 +505,14 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
                            mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
+                           backColor = new OptionValue("back-color","<.71,.785,.91,1>",OptionValueType<Vector4f>(),"Background color to clear render viewport to."),
+
                            NULL);
     bool userAccepted=true;
 
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
+
+    mBackgroundColor = backColor->as<Vector4f>();
 
     // Initialize this first so we can get it to not spit out to stderr
     Ogre::LogManager * lm = OGRE_NEW Ogre::LogManager();
@@ -629,7 +646,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
-    allocMouseHandler(keybindingFile->as<String>());
+    allocMouseHandler();
     new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
 
     loadSystemLights();
@@ -811,7 +828,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     {
         assert(mPrimaryCamera == NULL);
         mPrimaryCamera = new Camera(this, mesh);
-        mPrimaryCamera->attach("", 0, 0);
+        mPrimaryCamera->attach("", 0, 0, mBackgroundColor);
         attachCamera("", mPrimaryCamera);
         // for now, always hide the original entity. In the future, this should
         // be controlled based on the type of view we have (1st vs 3rd person).
@@ -1088,69 +1105,240 @@ void OgreSystem::onDisconnected(SessionEventProviderPtr from, const SpaceObjectR
     mMouseHandler->alert("Disconnected", "Lost connection to space server...");
 }
 
+
+void OgreSystem::allocMouseHandler() {
+    mMouseHandler = new OgreSystemMouseHandler(this);
+}
+void OgreSystem::destroyMouseHandler() {
+    if (mMouseHandler) {
+        delete mMouseHandler;
+    }
+}
+
+void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
+    if (mMouseHandler != NULL)
+        mMouseHandler->tick(t);
+}
+
+
+namespace {
+
+bool anyIsBoolean(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(bool));
+}
+
+bool anyAsBoolean(const boost::any& a) {
+    return boost::any_cast<bool>(a);
+}
+
+bool anyIsFloat(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(float32));
+}
+
+float32 anyAsFloat(const boost::any& a) {
+    return boost::any_cast<float32>(a);
+}
+
+bool anyIsDouble(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(float64));
+}
+
+float64 anyAsDouble(const boost::any& a) {
+    return boost::any_cast<float64>(a);
+}
+
+bool anyIsNumeric(const boost::any& a) {
+    return anyIsFloat(a) || anyIsDouble(a);
+}
+
+float64 anyAsNumeric(const boost::any& a) {
+    if (anyIsFloat(a)) return anyAsFloat(a);
+    else return anyAsDouble(a);
+}
+
+bool anyIsString(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(String));
+}
+
+String anyAsString(const boost::any& a) {
+    return boost::any_cast<String>(a);
+}
+
+
+bool anyIsInvokable(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(Invokable*));
+}
+
+Invokable* anyAsInvokable(const boost::any& a) {
+    return boost::any_cast<Invokable*>(a);
+}
+
+bool anyIsObject(const boost::any& a) {
+    return (!a.empty() && a.type() == typeid(SpaceObjectReference));
+}
+
+SpaceObjectReference anyAsObject(const boost::any& a) {
+    return boost::any_cast<SpaceObjectReference>(a);
+}
+
+} // namespace
+
 boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
-  string name="";
-  /*Check the first param */
+    // Decode the command. First argument is the "function name"
+    if (params.empty() || !anyIsString(params[0]))
+        return NULL;
 
-  if(!params[0].empty() && params[0].type() == typeid(string) )
-  {
-    name = boost::any_cast<std::string>(params[0]);
-  }
+    string name = anyAsString(params[0]);
+    SILOG(ogre,detailed,"Invoking the function " << name);
 
-  SILOG(ogre,detailed,"Invoking the function " << name);
+    if(name == "createWindow")
+        return createWindow(params);
+    else if(name == "createWindowFile")
+        return createWindowFile(params);
+    else if(name == "createWindowHTML")
+        return createWindowHTML(params);
+    else if(name == "setInputHandler")
+        return setInputHandler(params);
+    else if(name == "quit")
+        quit();
+    else if (name == "suspend")
+        suspend();
+    else if (name == "toggleSuspend")
+        toggleSuspend();
+    else if (name == "resume")
+        resume();
+    else if (name == "screenshot")
+        screenshot("screenshot.png");
+    else if (name == "pick")
+        return pick(params);
+    else if (name == "bbox")
+        return bbox(params);
+    else if (name == "initScript")
+        return initScript(params);
 
-  if(name == "getChatWindow")
-  {
-    // create a chatwindow
-    // WebView mNager is already initialized by the ogre system
+    return boost::any();
+}
 
-
+boost::any OgreSystem::createWindow(const String& window_name, bool is_html, bool is_file, String content) {
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-
-		WebView* ui_wv = wvManager->getWebView("chat_terminal");
-
-		if(!ui_wv)
-		{
-
-      ui_wv = wvManager->createWebView("chat_terminal", "chat_terminal", 300, 300, OverlayPosition(RP_TOPLEFT));
-      ui_wv->loadFile("chat/prompt.html");
-      SILOG(ogre,detailed,"Returning a chat window.");
-	  }
+    WebView* ui_wv = wvManager->getWebView(window_name);
+    if(!ui_wv)
+    {
+        ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_TOPLEFT));
+        if (is_html)
+            ui_wv->loadHTML(content);
+        else if (is_file)
+            ui_wv->loadFile(content);
+        else
+            ui_wv->loadURL(content);
+    }
     Invokable* inn = ui_wv;
     boost::any result(inn);
     return result;
-  }
-  else if(name == "getWindow")
-  {
-    // get the name of this window
-    string window_name;
-    string html_script;
+}
 
-    if( (!params[1].empty() && params[1].type() == typeid(string))
-		&&
-	    (!params[2].empty() && params[2].type() == typeid(string))
-    )
-    {
-      window_name = boost::any_cast<std::string>(params[1]);
-      html_script = boost::any_cast<std::string>(params[2]);
-      WebViewManager* wvManager = WebViewManager::getSingletonPtr();
-      WebView* ui_wv = wvManager->getWebView(window_name);
-      if(!ui_wv)
-      {
-        ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_BOTTOMCENTER));
-        ui_wv->loadHTML(html_script);
-        SILOG(ogre,detailed,"Returning a new window.");
-      }
+boost::any OgreSystem::createWindow(vector<boost::any>& params) {
+    // Create a window using the specified url
+    if (params.size() < 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
 
-      Invokable* inn = ui_wv;
-      boost::any result(inn);
-      return result;
-   }
+    String window_name = anyAsString(params[1]);
+    String html_url = anyAsString(params[2]);
 
-  }
+    return createWindow(window_name, false, false, html_url);
+}
 
-  return NULL;
+boost::any OgreSystem::createWindowFile(vector<boost::any>& params) {
+    // Create a window using the specified url
+    if (params.size() < 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+
+    String window_name = anyAsString(params[1]);
+    String html_url = anyAsString(params[2]);
+
+    return createWindow(window_name, false, true, html_url);
+}
+
+boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
+    // Create a window using the specified HTML content
+    if (params.size() < 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+
+    String window_name = anyAsString(params[1]);
+    String html_script = anyAsString(params[2]);
+
+    return createWindow(window_name, true, false, html_script);
+}
+
+boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
+    if (params.size() < 2) return NULL;
+    if (!anyIsInvokable(params[1])) return NULL;
+
+    Invokable* handler = anyAsInvokable(params[1]);
+    mMouseHandler->setDelegate(handler);
+    return boost::any();
+}
+
+
+boost::any OgreSystem::pick(vector<boost::any>& params) {
+    if (params.size() < 3) return boost::any();
+    if (!anyIsNumeric(params[1])) return boost::any();
+    if (!anyIsNumeric(params[2])) return boost::any();
+
+    float x = anyAsNumeric(params[1]);
+    float y = anyAsNumeric(params[2]);
+    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1);
+    return boost::any(result);
+}
+
+
+boost::any OgreSystem::bbox(vector<boost::any>& params) {
+    if (params.size() < 3) return boost::any();
+    if (!anyIsObject(params[1])) return boost::any();
+    if (!anyIsBoolean(params[2])) return boost::any();
+
+    SpaceObjectReference objid = anyAsObject(params[1]);
+    bool setting = anyAsBoolean(params[2]);
+
+    if (mSceneEntities.find(objid) == mSceneEntities.end()) return boost::any();
+    Entity* ent = mSceneEntities.find(objid)->second;
+    ent->setSelected(setting);
+
+    return boost::any();
+}
+
+/**
+   This function sends out a message on KnownServices port
+   LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
+   object receives the message and attaches a JSObjectScript to the
+   HostedObject.
+
+   FIXME this should go away in favor of a default script loading instead.
+*/
+boost::any OgreSystem::initScript(vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!anyIsObject(params[1])) return boost::any();
+
+    SpaceObjectReference objid = anyAsObject(params[1]);
+
+    ProxyObjectPtr obj = mViewer->presence(mPresenceID)->getProxyObject(objid);
+
+    Sirikata::JS::Protocol::ScriptingInit init_script;
+
+    // Filter out the script type from rest of args
+    //String script_type = "js"; // FIXME how to decide this?
+    init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
+    init_script.set_messager(KnownMessages::INIT_SCRIPT);
+    String serializedInitScript;
+    init_script.SerializeToString(&serializedInitScript);
+
+    obj->sendMessage(
+        Services::LISTEN_FOR_SCRIPT_BEGIN,
+        MemoryReference(serializedInitScript.data(), serializedInitScript.length())
+    );
+
+    return boost::any();
 }
 
 }

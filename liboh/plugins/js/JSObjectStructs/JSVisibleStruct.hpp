@@ -25,7 +25,7 @@ public:
     //for decoding
     static JSVisibleStruct* decodeVisible(v8::Handle<v8::Value> senderVal,std::string& errorMessage);
 
-    
+
     //methods mapped to javascript's visible object
     bool getStillVisibleCPP();
     v8::Handle<v8::Value> toString();
@@ -33,7 +33,6 @@ public:
     v8::Handle<v8::Value> getStillVisible();
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
-
 
 
 private:

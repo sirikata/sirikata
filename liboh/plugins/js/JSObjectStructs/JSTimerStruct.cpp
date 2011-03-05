@@ -6,6 +6,7 @@
 #include <v8.h>
 #include "../JSLogging.hpp"
 #include <sirikata/core/network/IOTimer.hpp>
+#include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include "JSSuspendable.hpp"
 

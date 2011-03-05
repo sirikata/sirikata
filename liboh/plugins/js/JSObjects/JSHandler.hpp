@@ -10,11 +10,11 @@ namespace JS {
 namespace JSHandler{
 
 
-v8::Handle<v8::Value> __printContents(const v8::Arguments& args);
-v8::Handle<v8::Value> __suspend(const v8::Arguments& args);
-v8::Handle<v8::Value> __resume(const v8::Arguments& args);
-v8::Handle<v8::Value> __isSuspended(const v8::Arguments& args);
-v8::Handle<v8::Value> __clear(const v8::Arguments& args);
+v8::Handle<v8::Value> _printContents(const v8::Arguments& args);
+v8::Handle<v8::Value> _suspend(const v8::Arguments& args);
+v8::Handle<v8::Value> _resume(const v8::Arguments& args);
+v8::Handle<v8::Value> _isSuspended(const v8::Arguments& args);
+v8::Handle<v8::Value> _clear(const v8::Arguments& args);
 
 
 void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandlerStruct*& hand);

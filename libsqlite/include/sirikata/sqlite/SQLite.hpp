@@ -36,6 +36,7 @@
 #include <sirikata/sqlite/Platform.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/tss.hpp>
+#include <boost/thread/locks.hpp>
 #include <sqlite3.h>
 
 namespace Sirikata {

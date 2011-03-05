@@ -52,8 +52,7 @@
         addMessage(command);
 
         var arg_map = [
-          'ExecScript',
-          'Command', command
+          'Chat', command
         ];
         chrome.send("event", arg_map);
       }

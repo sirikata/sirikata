@@ -133,8 +133,8 @@ void GeometryInstance::computeTransformedBounds(const Meshdata& parent, const Ma
             Vector3f xpos = xform * geo.positions[ prim.indices[ii] ];
             if (bounds_out != NULL)
                 *bounds_out = (*bounds_out == BoundingBox3f3f::null()) ? BoundingBox3f3f(xpos, xpos) : bounds_out->merge(xpos);
-            if (radius_out != NULL)
-                *radius_out = std::max(*radius_out, sqrt(xpos.lengthSquared()));
+            if (radius_out != NULL && (((*radius_out)*(*radius_out))<xpos.lengthSquared()))
+                *radius_out = sqrt(xpos.lengthSquared());
         }
     }
 }

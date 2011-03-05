@@ -1,5 +1,5 @@
-/*  Sirikata Ogre Plugin
- *  CameraPath.hpp
+/*  Sirikata
+ *  InputBinding.hpp
  *
  *  Copyright (c) 2009, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,67 +30,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OGRE_CAMERA_PATH_HPP_
-#define _SIRIKATA_OGRE_CAMERA_PATH_HPP_
+#ifndef _SIRIKATA_INPUT_BINDING_HPP_
+#define _SIRIKATA_INPUT_BINDING_HPP_
 
 #include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/task/Time.hpp>
+#include "InputBindingEvent.hpp"
+#include "InputResponse.hpp"
 
 namespace Sirikata {
-namespace Graphics {
+namespace SimpleCamera {
 
-struct CameraPoint {
-    Vector3d position;
-    Quaternion orientation;
-    Task::DeltaTime dt;
-    Task::DeltaTime time;
-
-    CameraPoint(const Vector3d& pos, const Quaternion& orient, const Task::DeltaTime& _dt)
-     : position(pos),
-       orientation(orient),
-       dt(_dt),
-       time(Task::DeltaTime::zero())
-    {
-    }
-}; // struct CameraPoint
-
-
-class CameraPath {
+class InputBinding {
+    typedef std::map<InputBindingEvent, InputResponse*> Binding;
 public:
-    CameraPath();
+    typedef std::map<String, InputResponse*> InputResponseMap;
 
-    CameraPoint& operator[](int idx);
-    const CameraPoint& operator[](int idx) const;
+    InputBinding();
+    ~InputBinding();
 
-    uint32 numPoints() const;
-    bool empty() const;
+    void add(const InputBindingEvent& evt, InputResponse* response);
+    /** Add bindings by loading them from an options file.
+     *  \param filename name of file to load from.
+     *  \param responses map from strings, which are specified in the
+     *         configuration file, to InputResponses.
+     */
+    void addFromFile(const String& filename, InputResponseMap responses);
 
-    Task::DeltaTime startTime() const;
-    Task::DeltaTime endTime() const;
-
-    int32 clampKeyIndex(int32 idx) const;
-
-    Task::DeltaTime keyFrameTime(int32 idx) const;
-    void changeTimeDelta(int32 idx, const Task::DeltaTime& d_dt);
-
-    int32 insert(int32 idx, const Vector3d& pos, const Quaternion& orient, const Task::DeltaTime& dt);
-    int32 remove(int32 idx);
-
-    void load(const String& filename);
-    void save(const String& filename);
-
-    void normalizePath();
-    void computeDensities();
-    void computeTimes();
-
-    bool evaluate(const Task::DeltaTime& t, Vector3d* pos_out, Quaternion* orient_out);
+    bool handle(InputBindingEvent& evt);
 private:
-    std::vector<CameraPoint> mPathPoints;
-    std::vector<double> mDensities;
-    bool mDirty;
-};
+    Binding mResponses;
+}; // class InputBinding
 
-} // namespace Graphics
+} // namespace SimpleCamera
 } // namespace Sirikata
 
-#endif //_SIRIKATA_OGRE_CAMERA_PATH_HPP_
+#endif //_SIRIKATA_INPUT_BINDING_HPP_

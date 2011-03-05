@@ -1,7 +1,7 @@
 /*  Sirikata
- *  MouseHandler.hpp
+ *  graphics.em
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,26 +30,30 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OGRE_MOUSE_HANDLER_HPP_
-#define _SIRIKATA_OGRE_MOUSE_HANDLER_HPP_
+if (typeof(std) === "undefined") std = {};
+if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-namespace Sirikata {
-namespace Graphics {
+(
+function() {
 
-class MouseHandler {
-public:
-    virtual ~MouseHandler() {}
+    var ns = std.graphics;
 
-    virtual void alert(const String& title, const String& text) = 0;
+    /** The GUI class wraps the underlying GUI Invokable
+     *  objects. These present 2D user interface widgets to the user,
+     *  which are coded as HTML + Javascript pages.
+     */
+    ns.GUI = function(me) {
+        this._gui = me;
+    };
 
-    virtual void setParentGroupAndClear(const SpaceObjectReference &id) = 0;
-    virtual const SpaceObjectReference &getParentGroup() const = 0;
-    virtual void addToSelection(const ProxyObjectPtr &obj) = 0;
+    /** Bind a listener for events from this GUI. */
+    ns.GUI.prototype.bind = function(type, cb) {
+        this._gui.invoke("bind", type, cb);
+    };
 
-    virtual void tick(const Task::LocalTime& t) = 0;
-};
+    /** Evaluate the Javascript string inside the GUI context. */
+    ns.GUI.prototype.eval = function(js) {
+        this._gui.invoke("eval", js);
+    };
 
-} // namespace Graphics
-} // namespace Sirikata
-
-#endif //_SIRIKATA_OGRE_MOUSE_HANDLER_HPP_
+})();

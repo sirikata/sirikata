@@ -781,6 +781,7 @@ callExpression
  : ^(CALL memberExpression arguments) 
  | ^(ARRAY_INDEX callExpression {APP("[ "); } indexSuffix1 { APP(" ]"); })
  | ^(DOT callExpression { APP(".");} propertyReferenceSuffix1)
+ | ^(CALL callExpression arguments)
 ;
 	
 
@@ -1094,13 +1095,13 @@ unaryOps
 
 
 unaryExpression
-	: ^(POSTEXPR postfixExpression)
+        : postfixExpression
 	| ^(
 	
 	    (
-				   DELETE          {  APP("delete");}
+				   DELETE          {  APP("delete ");}
        | VOID          {   APP("void");}
-       | TYPEOF        {  APP("typeOf ");}
+       | TYPEOF        {  APP("typeof ");}
        | PLUSPLUS      {  APP("++");}
        | MINUSMINUS    {  APP("--");}
        | UNARY_PLUS    {  APP("+");}
@@ -1116,9 +1117,10 @@ unaryExpression
 	
 
 postfixExpression
-	: leftHandSideExpression ('++' { APP("++");})?
-	| leftHandSideExpression ('--'{ APP("--"); })?
-	;
+        :leftHandSideExpression
+        | ^(MINUSMINUS leftHandSideExpression) { APP("--");}
+	| ^(PLUSPLUS leftHandSideExpression) {APP("++");}
+        ;
 
 primaryExpression
 	: 'this' {APP("this");}

@@ -47,8 +47,7 @@
 
 #include "VWObject.hpp"
 
-#include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
 #include "PhysicalParameters.hpp"

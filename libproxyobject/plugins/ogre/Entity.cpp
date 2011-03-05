@@ -474,9 +474,9 @@ void Entity::processMesh(Transfer::URI const& meshFile)
     downloadMeshFile(meshFile);
 }
 
-bool Entity::createMeshWork(MeshdataPtr md) {
+void Entity::createMeshWork(MeshdataPtr md) {
     createMesh(md);
-    return true;
+    return;
 }
 Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectInfo::Texture::WrapMode w) {
     switch(w) {
@@ -1056,12 +1056,12 @@ bool Entity::tryInstantiateExistingMesh() {
     return false;
 }
 
-bool Entity::tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
-    if (tryInstantiateExistingMesh()) return true;
+void Entity::tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
+    if (tryInstantiateExistingMesh()) return;
 
     // Otherwise, follow the rest of the normal process.
-    mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, _1));
-    return true;
+    mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, std::tr1::placeholders::_1));
+    
 }
 
 void Entity::createMesh(MeshdataPtr mdptr) {
@@ -1074,7 +1074,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
         for (MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
-            std::string matname = hash+"_mat_"+boost::lexical_cast<string>(index);
+            std::string matname = hash+"_mat_"+boost::lexical_cast<std::string>(index);
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
@@ -1176,7 +1176,7 @@ void Entity::handleMeshParsed(MeshdataPtr md) {
         ResourceDownloadTask *dl = new ResourceDownloadTask(
             Transfer::URI(texURI), getScene()->transferPool(),
             mProxy->priority,
-           std::tr1::bind(&Entity::downloadFinished, this, _1, _2, md));
+           std::tr1::bind(&Entity::downloadFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, md));
         (*dl)();
     }
 }
