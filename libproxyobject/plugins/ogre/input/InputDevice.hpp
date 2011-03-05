@@ -185,7 +185,8 @@ typedef int32 KeyButton;
 enum KeyEvent {
     KEY_PRESSED,
     KEY_DOWN,
-    KEY_RELEASED
+    KEY_RELEASED,
+    KEY_REPEATED
 };
 
 /** The three types of drag events. The START event will only be

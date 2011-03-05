@@ -52,6 +52,7 @@ function() {
         this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
         this._simulator.inputHandler.onButtonPressed = std.core.bind(this.onButtonPressed, this);
         this._simulator.inputHandler.onButtonReleased = std.core.bind(this.onButtonReleased, this);
+        this._simulator.inputHandler.onButtonRepeated = std.core.bind(this.onButtonRepeated, this);
 
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
@@ -107,6 +108,9 @@ function() {
 
         if (evt.button == 's' && evt.modifier.ctrl)
             this._scripter.script(system.Self);
+    };
+
+    ns.DefaultGraphics.prototype.onButtonRepeated = function(evt) {
     };
 
     ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {

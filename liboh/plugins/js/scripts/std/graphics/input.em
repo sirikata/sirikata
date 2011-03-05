@@ -55,6 +55,8 @@ function() {
     ns.InputHandler.prototype._handle = function(evt) {
         if (evt.msg == 'button-pressed' && 'onButtonPressed' in this)
             this.onButtonPressed(evt);
+        if (evt.msg == 'button-repeat' && 'onButtonRepeated' in this)
+            this.onButtonRepeated(evt);
         if (evt.msg == 'button-up' && 'onButtonReleased' in this)
             this.onButtonReleased(evt);
         if (evt.msg == 'button-down' && 'onButtonDown' in this)

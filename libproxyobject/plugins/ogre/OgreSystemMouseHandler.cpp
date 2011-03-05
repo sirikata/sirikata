@@ -506,6 +506,15 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
                 mEvents.push_back(subId);
                 mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
             }
+            // Key Repeated
+            {
+                SubscriptionId subId = mParent->mInputManager->subscribeId(
+                    ButtonRepeated::getEventId(),
+                    std::tr1::bind(&OgreSystemMouseHandler::keyHandler, this, _1)
+                );
+                mEvents.push_back(subId);
+                mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
+            }
             // Key Released
             {
                 SubscriptionId subId = mParent->mInputManager->subscribeId(
@@ -611,6 +620,16 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
         if (button_pressed_ev) {
             event_data["msg"] = String("button-pressed");
+            event_data["button"] = keyButtonString(button_pressed_ev->mButton);
+            event_data["keycode"] = button_pressed_ev->mButton;
+            fillModifiers(event_data, button_pressed_ev->mModifier);
+        }
+    }
+
+    {
+        ButtonRepeatedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonRepeated>(inputev));
+        if (button_pressed_ev) {
+            event_data["msg"] = String("button-repeat");
             event_data["button"] = keyButtonString(button_pressed_ev->mButton);
             event_data["keycode"] = button_pressed_ev->mButton;
             fillModifiers(event_data, button_pressed_ev->mModifier);

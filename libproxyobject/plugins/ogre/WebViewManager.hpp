@@ -234,7 +234,7 @@ public:
 	*/
 	bool injectMouseUp(int buttonID);
 
-    bool injectKeyEvent(Input::KeyEvent type, Input::Modifier mod, Input::KeyButton button);
+    bool injectKeyEvent(bool pressed, Input::Modifier mod, Input::KeyButton button);
 
 	bool injectTextEvent(std::string utf8);
 

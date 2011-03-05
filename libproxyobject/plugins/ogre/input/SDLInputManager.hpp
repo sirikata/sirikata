@@ -32,6 +32,8 @@
 extern "C" typedef struct SDL_Surface SDL_Surface;
 extern "C" typedef Sirikata::uint32 SDL_WindowID;
 extern "C" typedef void* SDL_GLContext;
+extern "C" typedef union SDL_Event SDL_Event;
+
 #include "../task/EventManager.hpp"
 #include "InputManager.hpp"
 namespace Sirikata { namespace Input {
@@ -46,11 +48,21 @@ typedef std::tr1::shared_ptr<SDLMouse> SDLMousePtr;
 typedef std::tr1::shared_ptr<SDLJoystick> SDLJoystickPtr;
 typedef std::tr1::shared_ptr<SDLKeyboard> SDLKeyboardPtr;
 
+struct SDLKeyRepeatInfo {
+    SDLKeyRepeatInfo();
+    ~SDLKeyRepeatInfo();
+
+    SDL_Event* evt;
+    bool repeat;
+};
+typedef std::tr1::shared_ptr<SDLKeyRepeatInfo> SDLKeyRepeatInfoPtr;
+
 
 class SDLInputManager : public InputManager {
     SDL_WindowID mWindowID;
     SDL_GLContext mWindowContext;
     std::vector<SDLKeyboardPtr> mKeys;
+    std::vector<SDLKeyRepeatInfoPtr> mLastKeys;
     std::vector<SDLMousePtr> mMice;
     std::vector<SDLJoystickPtr> mJoy;
     unsigned int mWidth, mHeight;

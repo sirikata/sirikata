@@ -74,18 +74,32 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
 }
 bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                              GenEventManager *em,
-                             unsigned int button, bool newState, Modifier modifiers) {
+                             unsigned int button, bool newStateIsPressed, Modifier modifiers) {
     Modifier oldmodifiers = modifiers;
-    bool changed = changeButton(button, newState, oldmodifiers);
+    bool changed = changeButton(button, newStateIsPressed, oldmodifiers);
     if (changed) {
-        if (newState) {
+        if (newStateIsPressed) {
             if (oldmodifiers != modifiers) {
+                // If modifiers change, release old
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
             }
             em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
         } else {
             em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
         }
+    } else {
+        if (newStateIsPressed) {
+            if (oldmodifiers != modifiers) {
+                // If modifiers change, release old and press new
+                em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
+                em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+            }
+            else {
+                // Otherwise, we're really in repeat mode
+                em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
+            }
+        }
+        // Otherwise, we're getting repeats when the key is up....
     }
     return changed;
 }

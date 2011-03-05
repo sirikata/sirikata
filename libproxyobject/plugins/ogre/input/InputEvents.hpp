@@ -98,7 +98,7 @@ public:
     }
 
     bool pressed() {
-        return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) );
+        return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) || (mEvent == KEY_REPEATED) );
     }
 };
 typedef std::tr1::shared_ptr<ButtonEvent> ButtonEventPtr;
@@ -118,6 +118,22 @@ public:
     virtual ~ButtonPressed(){}
 };
 typedef std::tr1::shared_ptr<ButtonPressed> ButtonPressedEventPtr;
+
+/** Fired on repeats -- whenever a button has been pushed and held
+ * down.
+ */
+class ButtonRepeated :public ButtonEvent {
+public:
+    static const IdPair::Primary& getEventId(){
+        static IdPair::Primary retval("ButtonRepeated");
+        return retval;
+    }
+    ButtonRepeated(const InputDevicePtr &dev, unsigned int key, Modifier mod)
+        : ButtonEvent(getEventId(), dev, KEY_REPEATED, key, mod) {
+    }
+    virtual ~ButtonRepeated(){}
+};
+typedef std::tr1::shared_ptr<ButtonRepeated> ButtonRepeatedEventPtr;
 
 /** Fired whenever a button is no longer held down. */
 class ButtonReleased :public ButtonEvent {

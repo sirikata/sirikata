@@ -441,10 +441,9 @@ bool WebViewManager::injectMouseUp(int buttonID)
 	return false;
 }
 
-bool WebViewManager::injectKeyEvent(KeyEvent type, Modifier mods, KeyButton button) {
+bool WebViewManager::injectKeyEvent(bool pressed, Modifier mods, KeyButton button) {
     if (focusedWebView) {
         bool numpad = false;
-        bool pressed = (type == KEY_PRESSED);
         int vk_code = InputKeyToWebViewKey((SDL_scancode)button, numpad);
         int wvmods = InputModifiersToWebViewModifiers(mods, numpad);
 
@@ -872,7 +871,7 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
 
 	bool success = true;
 	if(e->getDevice()->isKeyboard()) {
-            success = this->injectKeyEvent(e->mEvent, e->mModifier, e->mButton);
+            success = this->injectKeyEvent(e->pressed(), e->mModifier, e->mButton);
 	}
 	if (success) {
 		return Sirikata::Task::EventResponse::cancel();
