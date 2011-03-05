@@ -378,7 +378,7 @@ bool JSSerializer::deserializeRegularObject(JSObjectScript* jsObjScript, Sirikat
 
 
 
-bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
+bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
     //check if there is a typeid field and what is the value for it
     bool isAddressable = false;

@@ -20,7 +20,7 @@ class JSSerializer
 public:
     static std::string serializeObject(v8::Local<v8::Value> v8Val);;
     static void serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage&);
-    static bool deserializeObject(JSObjectScript*, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo);
+    static bool deserializeObject(JSObjectScript*, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo);
     static void serializeInternalFields(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::JSMessage&);
     static void serializeAddressable(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::JSMessage&);
     static void serializeVisible(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&);

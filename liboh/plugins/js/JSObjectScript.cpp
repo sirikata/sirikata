@@ -463,7 +463,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 
 //creates a js object associated with the jsvisiblestruct
 //will enter and exit the context passed in to make the object before returning
-v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
+v8::Handle<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
 {
     v8::HandleScope handle_scope;
     ctxToCreateIn->Enter();
@@ -472,24 +472,54 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
+
+    v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
+    
     ctxToCreateIn->Exit();
 
-    return returner;
+    return returnerPers;
 }
 
 //attempts to make a new jsvisible struct...may be returned an existing one.
 //then wraps it as v8 object.
-v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
+v8::Handle<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
 {
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, isVisible);
     return createVisibleObject(jsvis,ctx);
 }
 
 
-
+//if can't find visible, will just return self object
+//this is a mess of a function to get things to work again.
+//this function will actually need to be super-cleaned up
 v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& proximateObj)
 {
-    return createVisibleObject(proximateObj,SpaceObjectReference::null(),false,mContext);
+    //return createVisibleObject(proximateObj,SpaceObjectReference::null(),false,mContext);
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    String errorMessage = "Error decoding visible object struct associated with self.  ";
+    v8::Handle<v8::Object> sysObj = getSystemObject();
+    v8::Local<v8::Value> self_obj = sysObj->Get(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
+    JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
+
+    if (self_vis ==NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+
+
+    
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj,*(self_vis->getToListenTo()));
+        
+    if (jsvis != NULL)
+    {
+        v8::Handle<v8::Object> returner = createVisibleObject(jsvis,mContext);
+        return returner;
+    }
+
+    //otherwise just return self
+    return self_obj;
+    //createVisibleObject(self_vis, mContext);
 }
 
 
@@ -501,7 +531,6 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
 {
     
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
-
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, true);
     
     // Invoke user callback
@@ -517,7 +546,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
         
-        v8::Local<v8::Object> newVisibleObj = createVisibleObject(jsvis, mContext);
+        v8::Handle<v8::Object> newVisibleObj = createVisibleObject(jsvis, mContext);
 
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext);
@@ -617,7 +646,7 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
 
 
     JSLOG(info,"Adding self field with sporef "<<myName<<" to world");
-    v8::Local<v8::Object> selfVisObj = createVisibleObject(myName, myName, true,mContext);
+    v8::Handle<v8::Object> selfVisObj = createVisibleObject(myName, myName, true,mContext);
     
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
@@ -1199,7 +1228,7 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     SpaceObjectReference to  (dst.space(), dst.object());
 
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,false);
-    v8::Local<v8::Object> returner =createVisibleObject(jsvis, mContext);
+    v8::Handle<v8::Object> returner =createVisibleObject(jsvis, mContext);
 
     return returner;
 }
