@@ -49,8 +49,8 @@ public:
         mAcross=Vector3f(2.0f*radius,2.0f*radius,2.0f*radius);
     }
     template <typename flt> BoundingBox(const BoundingBox<flt>&input) {
-      mMin=Vector3<real>(input.min());
-      mAcross=input.across();
+        mMin=Vector3<real>(input.mMin);
+        mAcross=input.mAcross;
     }
     BoundingBox(const Vector3<real>&imin,const Vector3<real>&imax){
         mMin=imin;
@@ -96,16 +96,18 @@ public:
     }
 
     BoundingBox& mergeIn(const BoundingBox<real>& other) {
-        mMin = min().min(other.min());
-        Vector3<real> mmax = max().max(other.max());
-        mAcross = Vector3f(mmax - mMin);
-        return *this;
+         Vector3<real> mmax = max().max(other.max());
+         Vector3<real> mmin= min().min(other.min());
+         mMin = mmin;
+         mAcross = Vector3f(mmax - mmin);
+         return *this;
     }
 
     BoundingBox& mergeIn(const Vector3<real>& other) {
-        mMin = min().min(other);
+        Vector3<real> mmin=min().min(other);
         Vector3<real> mmax = max().max(other);
-        mAcross = Vector3f(mmax - mMin);
+        mMin=mmin;
+        mAcross = Vector3f(mmax - mmin);
         return *this;
     }
 
