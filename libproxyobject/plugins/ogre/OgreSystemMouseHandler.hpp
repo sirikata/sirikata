@@ -148,39 +148,6 @@ private:
     // responses. *Not* used for receiving scripting requests, so it is randomly
     // selected.
     ODP::Port* mScriptingRequestPort;
-
-    class SubObjectIterator {
-        typedef Entity* value_type;
-        //typedef ssize_t difference_type;
-        typedef size_t size_type;
-        OgreSystem::SceneEntitiesMap::const_iterator mIter;
-        Entity *mParentEntity;
-        OgreSystem *mOgreSys;
-        void findNext() {
-            while (!end() && !((*mIter).second->getProxy().getParentProxy()->getObjectReference() == mParentEntity->id())) {
-                ++mIter;
-            }
-        }
-    public:
-        SubObjectIterator(Entity *parent) :
-                mParentEntity(parent),
-                mOgreSys(parent->getScene()) {
-            mIter = mOgreSys->mSceneEntities.begin();
-            findNext();
-        }
-        SubObjectIterator &operator++() {
-            ++mIter;
-            findNext();
-            return *this;
-        }
-        Entity *operator*() const {
-            return (*mIter).second;
-        }
-        bool end() const {
-            return (mIter == mOgreSys->mSceneEntities.end());
-        }
-    };
-
 };
 
 
