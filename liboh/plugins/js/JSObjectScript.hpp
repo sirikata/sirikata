@@ -197,13 +197,6 @@ public:
         mOnPresenceDisconnectedHandler = cb;
     }
 
-
-    //visible struct management: for auto-notifying visible structs for when
-    //they become visible and when they stop being visible (ie enter and leave
-    //query to pinto).
-    void deRegisterVisibleStruct(JSVisibleStruct* jsvis);
-
-
     
     JSObjectScriptManager* manager() const { return mManager; }
 
