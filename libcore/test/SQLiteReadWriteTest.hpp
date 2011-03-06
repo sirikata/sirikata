@@ -51,15 +51,11 @@ public:
         }
         return Sirikata::Persistence::ReadWriteHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
     }
-    Sirikata::Persistence::ReadWriteHandler*mDatabase;
     Sirikata::PluginManager plugins;
     SQLiteReadWriteTest() {
         plugins.load("sqlite");
-        mDatabase=createReadWritealHandlerFunction("");
     }
     ~SQLiteReadWriteTest(){
-        if (mDatabase)
-            delete mDatabase;
     }
     static SQLiteReadWriteTest*createSuite() {
         return new SQLiteReadWriteTest;
