@@ -329,7 +329,7 @@ bool JSObjectScript::deRegisterPosListener(SpaceObjectReference* sporef, SpaceOb
 {
     ProxyObjectPtr p;
     bool succeeded = false;
-    
+
     if (sporef == NULL)
     {
         //de-regestering pl from position listening to one of my own presences.
@@ -342,14 +342,14 @@ bool JSObjectScript::deRegisterPosListener(SpaceObjectReference* sporef, SpaceOb
         JSLOG(insane,"attempting to de-register position listener for visible object with sporef "<<*sporef);
         succeeded =  mParent->getProxyObjectFrom(ownPres,sporef,p);
     }
-    
+
     if (succeeded)
         p->PositionProvider::removeListener(pl);
     else
         JSLOG(error,"error de-registering to be a position listener.  could not find associated object in hosted object.");
 
     return succeeded;
-    
+
 }
 
 
@@ -370,7 +370,7 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(v8::Handle<v8::Array
 v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(JSWhenWatchedItemStruct* wwis)
 {
     v8::HandleScope handle_scope;
-    
+
     v8::Local<v8::Object> whenWatchedItemObj_local = mManager->mWhenWatchedItemTemplate->NewInstance();
     v8::Persistent<v8::Object> whenWatchedItemObj  = v8::Persistent<v8::Object>::New(whenWatchedItemObj_local);
 
@@ -443,7 +443,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
             return;
         }
 
-        
+
         //jswrap the object
         //should be in context from createVisibleObject call
         v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext);
@@ -474,10 +474,14 @@ v8::Handle<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvi
 
 
     v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
-    
+
     ctxToCreateIn->Exit();
 
     return returnerPers;
+}
+
+void JSObjectScript::deRegisterVisibleStruct(JSVisibleStruct* jsvis) {
+    NOT_IMPLEMENTED(js);
 }
 
 //attempts to make a new jsvisible struct...may be returned an existing one.
@@ -508,9 +512,9 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
 
 
 
-    
+
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj,*(self_vis->getToListenTo()));
-        
+
     if (jsvis != NULL)
     {
         v8::Handle<v8::Object> returner = createVisibleObject(jsvis,mContext);
@@ -529,10 +533,10 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
 //satisfies the solid angle query registered by querier
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
-    
+
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, true);
-    
+
     // Invoke user callback
     PresenceMapIter iter = mPresences.find(querier);
     if (iter == mPresences.end())
@@ -541,11 +545,11 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         return;
     }
 
-    
+
     //check callbacks
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
-        
+
         v8::Handle<v8::Object> newVisibleObj = createVisibleObject(jsvis, mContext);
 
         v8::HandleScope handle_scope;
@@ -647,7 +651,7 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
 
     JSLOG(info,"Adding self field with sporef "<<myName<<" to world");
     v8::Handle<v8::Object> selfVisObj = createVisibleObject(myName, myName, true,mContext);
-    
+
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
 }
@@ -753,7 +757,7 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
 }
 
 //take in whenPredAsString that should look something like: " x<3 && y > 2"
-//and then translates to [ util.create_when_watched_item(['x']), util.create_when_watched_item(['y'])  ] 
+//and then translates to [ util.create_when_watched_item(['x']), util.create_when_watched_item(['y'])  ]
 String JSObjectScript::tokenizeWhenPred(const String& whenPredAsString)
 {
     //even though using lexWhenPred grammar, still must make call to emerson init
@@ -768,7 +772,7 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedList(std::vector<JSWhenWa
 
     v8::HandleScope handle_scope;
 
-    
+
     v8::Handle<v8::Object> whenWatchedList = mManager->mWhenWatchedListTemplate->NewInstance();
     whenWatchedList->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_LIST_TYPEID_STRING)));
     whenWatchedList->SetInternalField(WHEN_WATCHED_LIST_TEMPLATE_FIELD,v8::External::New(jswwl));
