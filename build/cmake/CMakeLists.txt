@@ -1581,6 +1581,7 @@ libcore/test/TCPSSTConnectTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
 libcore/test/Vector3Test.hpp
+libcore/test/BoundingBoxTest.hpp
  )
 IF(NOT WIN32)
 SET(CXXTESTSources ${CXXTESTSources} libcore/test/ReadWriteHandlerTest.hpp libcore/test/SQLiteMinitransactionTest.hpp libcore/test/SQLiteReadWriteTest.hpp)
