@@ -666,10 +666,9 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
-
     JSLOG(info,"Adding self field with sporef "<<myName<<" to world");
     v8::Handle<v8::Object> selfVisObj = createVisiblePersistent(myName, myName, true,mContext);
-    
+
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
 }

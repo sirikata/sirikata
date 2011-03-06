@@ -16,20 +16,32 @@ namespace JS {
 JSPositionListener::JSPositionListener(JSObjectScript* script)
  :  jsObjScript(script),
     sporefToListenTo(NULL),
-    sporefToListenFrom(NULL)
+    sporefToListenFrom(NULL),
+    hasRegisteredListener(false)
 {
 }
 
 
 JSPositionListener::~JSPositionListener()
 {
-    deregisterAsPosListener();
+    if (hasRegisteredListener)
+        deregisterAsPosListener();
 
     if (sporefToListenTo != NULL)
         delete sporefToListenTo;
     if (sporefToListenFrom != NULL)
         delete sporefToListenFrom;
     
+}
+
+
+void JSPositionListener::destroyed()
+{
+    if (hasRegisteredListener)
+    {
+        hasRegisteredListener = false;
+        deregisterAsPosListener();
+    }
 }
 
 void JSPositionListener::setListenTo(const SpaceObjectReference* objToListenTo,const SpaceObjectReference* objToListenFrom)
@@ -56,27 +68,41 @@ void JSPositionListener::setListenTo(const SpaceObjectReference* objToListenTo,c
 }
 
 
-void JSPositionListener::registerAsPosListener()
+bool JSPositionListener::registerAsPosListener()
 {
+    if (hasRegisteredListener)
+        return true;
+
+
+    
     //initializes mLocation and mOrientation to correct starting values.
     if (sporefToListenTo == NULL)
     {
         JSLOG(error,"error in JSPositionListener.  Requesting to register as pos listener to null sporef.  Doing nothing");
-        return;
+        return false;
     }
     
     if ((sporefToListenFrom == NULL) ||
         (*sporefToListenFrom == SpaceObjectReference::null()))
     {
         JSLOG(insane,"This object has an invalid sporefToListenFrom.  Taking no action ");
-        return;
+        return false;
     }
     
-    jsObjScript->registerPosListener(sporefToListenTo,sporefToListenFrom,this,&mLocation,&mOrientation);
+    hasRegisteredListener = jsObjScript->registerPosListener(sporefToListenTo,sporefToListenFrom,this,&mLocation,&mOrientation);
+
+
+    return hasRegisteredListener;
 }
+
 
 void JSPositionListener::deregisterAsPosListener()
 {
+    if (!hasRegisteredListener)
+        return;
+
+    hasRegisteredListener =false;
+    
     if (sporefToListenTo != NULL)
         jsObjScript->deRegisterPosListener(sporefToListenTo,sporefToListenFrom,this);
 }

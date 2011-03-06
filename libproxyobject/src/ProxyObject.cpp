@@ -79,6 +79,7 @@ void ProxyObject::invalidate() {
 
 void ProxyObject::destroy() {
     ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
+    PositionProvider::notify(&PositionListener::destroyed);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
 

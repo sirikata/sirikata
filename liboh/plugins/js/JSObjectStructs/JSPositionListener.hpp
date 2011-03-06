@@ -40,6 +40,7 @@ struct JSPositionListener : public PositionListener
 
     
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
+    virtual void destroyed();
 
     //calls updateLocation on jspos, filling in mLocation, mOrientation, and mBounds
     //for the newLocation,newOrientation, and newBounds of updateLocation field.
@@ -54,10 +55,11 @@ protected:
     TimedMotionVector3f              mLocation;
     TimedMotionQuaternion         mOrientation;
     BoundingSphere3f                   mBounds;
-    
+
+
 
     //registers/deregisters position listener with associated jsobjectscript
-    void registerAsPosListener();
+    bool registerAsPosListener();
     void deregisterAsPosListener();
 
 private:
@@ -66,6 +68,8 @@ private:
     //funcIn specifies which function is asking passErrorChecks, which gets
     //mixed inot the errorMsg string if passErrorChecks returns true.
     bool passErrorChecks(String& errorMsg, const String& funcIn );
+
+    bool hasRegisteredListener;
     
 };
 

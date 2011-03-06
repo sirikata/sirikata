@@ -167,6 +167,7 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromNone(JSObjectScript*
     JSVisibleStruct* jsvis = checkNoListenFrom(whatsVisible);
     if (jsvis != NULL)
         return jsvis;
+
         
     //do not already have a jsvisiblestruct that is watching whatsvisible.
     //Creating a new one.
@@ -199,6 +200,9 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(JSObje
         SpaceToVisMapIter spVisIter = iter->second.find(toWhom);
         if (spVisIter != iter->second.end())
         {
+            if (visibleCurrently)
+                spVisIter->second->notifyVisible();
+
             //means we already have this visible struct.  Return it
             return spVisIter->second;
         }

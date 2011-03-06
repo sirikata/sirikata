@@ -9,7 +9,7 @@ system.print("\n\n Testing visible calls.\n\n");
 var haveCallback = false;
 var objToMvTowards;
 var inverseSpeed = 3;
-var CALLBACK_PERIOD = .5;
+var CALLBACK_PERIOD = 1;
 var CALLBACK_MAX_DISTANCE = 40;
 var PRINT_DEBUGGING = false;
 

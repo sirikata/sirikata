@@ -17,8 +17,7 @@ JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectRefere
     JSPositionListener::setListenTo(&whatsVisible,&toWhom);
 
     //only register as pos listener if still visible is true
-    if (*stillVisible)
-        JSPositionListener::registerAsPosListener();
+    *stillVisible = JSPositionListener::registerAsPosListener();
 }
 
 
@@ -65,7 +64,6 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
     returner = static_cast<JSVisibleStruct*>(ptr);
     if (returner == NULL)
         errorMessage += "Error in decode of visible object.  Internal field of object given cannot be casted to a JSVisibleStruct.";
-
 
     return returner;
 }

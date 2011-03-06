@@ -45,6 +45,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT PositionListener {
 public:
     virtual ~PositionListener() {}
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) = 0;
+    virtual void destroyed() = 0;
+    
 };
 
 }
