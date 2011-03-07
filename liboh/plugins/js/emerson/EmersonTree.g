@@ -163,7 +163,7 @@ statementList
                 {
 			        APP("; \n");					  
                 }
-            )+
+            )*
 	    );
 	
 variableStatement
@@ -257,10 +257,11 @@ ifStatement
             {
                 APP(" ) ");
             }
-            statement 
+            (statement 
             {
                 APP(" \n");
             }
+            )?
             (
                 {
                     APP(" else ");
@@ -1095,7 +1096,7 @@ unaryOps
 
 
 unaryExpression
-        : postfixExpression
+        : postfixExpression {printf("\n\nHREERE\n\n");}
 	| ^(
 	
 	    (
