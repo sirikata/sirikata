@@ -67,7 +67,7 @@ template<typename EventPtrType>
 WebViewCoord InputCoordToWebViewCoord(EventPtrType evt, float x, float y);
 
 unsigned int InputKeyToWebViewKey(SDL_scancode scancode, bool& numpad);
-int InputModifiersToWebViewModifiers(Modifier mod, bool numpad);
+int InputModifiersToWebViewModifiers(Modifier mod, bool repeat, bool numpad);
 
 }
 
@@ -441,13 +441,37 @@ bool WebViewManager::injectMouseUp(int buttonID)
 	return false;
 }
 
-bool WebViewManager::injectKeyEvent(bool pressed, Modifier mods, KeyButton button) {
+bool WebViewManager::injectKeyEvent(bool pressed, bool repeat, Modifier mods, KeyButton button) {
     if (focusedWebView) {
         bool numpad = false;
         int vk_code = InputKeyToWebViewKey((SDL_scancode)button, numpad);
-        int wvmods = InputModifiersToWebViewModifiers(mods, numpad);
+        int wvmods = InputModifiersToWebViewModifiers(mods, repeat, numpad);
 
         focusedWebView->injectKeyEvent(pressed, wvmods, vk_code, numpad);
+        return true;
+    }
+    return false;
+}
+
+bool WebViewManager::injectCut() {
+    if (focusedWebView) {
+        focusedWebView->injectCut();
+        return true;
+    }
+    return false;
+}
+
+bool WebViewManager::injectCopy() {
+    if (focusedWebView) {
+        focusedWebView->injectCopy();
+        return true;
+    }
+    return false;
+}
+
+bool WebViewManager::injectPaste() {
+    if (focusedWebView) {
+        focusedWebView->injectPaste();
         return true;
     }
     return false;
@@ -871,8 +895,16 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
 
 	bool success = true;
 	if(e->getDevice()->isKeyboard()) {
-            success = this->injectKeyEvent(e->pressed(), e->mModifier, e->mButton);
+            // Work around a problem with Berkelium where cut/copy/paste don't
+            // seem to get the same delay as other keyboard repeats. Instead,
+            // just filter the repeats out for these keys
+            if ( e->pressed() && !e->activelyPressed() && e->mModifier == MOD_CTRL &&
+                (e->mButton == SDL_SCANCODE_X || e->mButton == SDL_SCANCODE_C || e->mButton == SDL_SCANCODE_V) )
+                success = true; // Pretend we ate it
+            else
+                success = this->injectKeyEvent(e->pressed(), (e->pressed() && !e->activelyPressed()), e->mModifier, e->mButton);
 	}
+
 	if (success) {
 		return Sirikata::Task::EventResponse::cancel();
 	} else {
@@ -1058,7 +1090,7 @@ unsigned int InputKeyToWebViewKey(SDL_scancode scancode, bool& numpad)
 	}
 }
 
-int InputModifiersToWebViewModifiers(Modifier modifiers, bool numpad) {
+int InputModifiersToWebViewModifiers(Modifier modifiers, bool repeat, bool numpad) {
     int wvmods = 0;
 #ifdef HAVE_BERKELIUM
     using namespace Berkelium;
@@ -1074,6 +1106,8 @@ int InputModifiersToWebViewModifiers(Modifier modifiers, bool numpad) {
         wvmods |= META_MOD;
     if (numpad)
         wvmods |= KEYPAD_KEY;
+    if (repeat)
+        wvmods |= AUTOREPEAT_KEY;
 #endif
     return wvmods;
 }

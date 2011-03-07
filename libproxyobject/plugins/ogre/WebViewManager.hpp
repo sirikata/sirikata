@@ -234,7 +234,11 @@ public:
 	*/
 	bool injectMouseUp(int buttonID);
 
-    bool injectKeyEvent(bool pressed, Input::Modifier mod, Input::KeyButton button);
+    bool injectCut();
+    bool injectCopy();
+    bool injectPaste();
+
+    bool injectKeyEvent(bool pressed, bool repeat, Input::Modifier mod, Input::KeyButton button);
 
 	bool injectTextEvent(std::string utf8);
 

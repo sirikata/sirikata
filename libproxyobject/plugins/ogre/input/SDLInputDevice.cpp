@@ -378,6 +378,16 @@ static void init_button_conversion_maps() {
     INIT_SCANCODE_STRING_MAP(KP_9, prior);
 }
 
+bool keyIsModifier(Input::KeyButton b) {
+    return (b == SDL_SCANCODE_LSHIFT ||
+        b == SDL_SCANCODE_RSHIFT ||
+        b == SDL_SCANCODE_LCTRL ||
+        b == SDL_SCANCODE_RCTRL ||
+        b == SDL_SCANCODE_LALT ||
+        b == SDL_SCANCODE_RALT ||
+        b == SDL_SCANCODE_LGUI ||
+        b == SDL_SCANCODE_RGUI);
+}
 
 String keyButtonString(Input::KeyButton b) {
     ensure_initialized();

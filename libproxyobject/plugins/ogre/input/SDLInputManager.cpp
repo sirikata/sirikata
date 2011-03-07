@@ -259,21 +259,29 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
         EventPtr toFire;
         switch(event->type)
         {
-          case SDL_KEYDOWN:
           case SDL_KEYUP:
-            mKeys[event->key.which]->fireButton(
-                mKeys[event->key.which],
-                this,
-                (unsigned int)event->key.keysym.scancode,
-                (event->key.state == SDL_PRESSED),
-                modifiersFromSDL(event->key.keysym.mod));
-
-            if (event->key.state == SDL_PRESSED) {
-                *(mLastKeys[event->key.which]->evt) = *event;
-                mLastKeys[event->key.which]->repeat = true;
-            }
-            else {
+            if (!keyIsModifier((unsigned int)event->key.keysym.scancode)) {
+                mKeys[event->key.which]->fireButton(
+                    mKeys[event->key.which],
+                    this,
+                    (unsigned int)event->key.keysym.scancode,
+                    (event->key.state == SDL_PRESSED),
+                    modifiersFromSDL(event->key.keysym.mod));
                 mLastKeys[event->key.which]->repeat = false;
+            }
+            break;
+          case SDL_KEYDOWN:
+            if (!keyIsModifier((unsigned int)event->key.keysym.scancode)) {
+                if (!mLastKeys[event->key.which]->repeat) {
+                    mKeys[event->key.which]->fireButton(
+                        mKeys[event->key.which],
+                        this,
+                        (unsigned int)event->key.keysym.scancode,
+                        (event->key.state == SDL_PRESSED),
+                        modifiersFromSDL(event->key.keysym.mod));
+                    mLastKeys[event->key.which]->repeat = true;
+                    *(mLastKeys[event->key.which]->evt) = *event;
+                }
             }
             break;
           case SDL_MOUSEBUTTONDOWN:
@@ -439,7 +447,7 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
             mKeys[mLastKeys[ii]->evt->key.which],
             this,
             (unsigned int)mLastKeys[ii]->evt->key.keysym.scancode,
-            (mLastKeys[ii]->evt->key.state == SDL_PRESSED),
+            true,
             modifiersFromSDL(mLastKeys[ii]->evt->key.keysym.mod));
     }
 

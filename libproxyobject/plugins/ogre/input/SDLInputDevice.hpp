@@ -156,6 +156,7 @@ public:
 };
 
 
+bool keyIsModifier(Input::KeyButton b);
 String keyButtonString(Input::KeyButton b);
 String keyModifiersString(Input::Modifier m);
 String mouseButtonString(Input::MouseButton b);

@@ -97,8 +97,14 @@ public:
          mModifier(mod) {
     }
 
+    // Indicates if the button was in the depressed state.
     bool pressed() {
         return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) || (mEvent == KEY_REPEATED) );
+    }
+    // Indicates if the button was actively pressed, i.e. was pushed down
+    // instead of just held down
+    bool activelyPressed() {
+        return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) );
     }
 };
 typedef std::tr1::shared_ptr<ButtonEvent> ButtonEventPtr;
