@@ -128,7 +128,7 @@ tokens
 	
 
 program
-	: a=LTERM* sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
+	: a=LTERM*  sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
 
 	;
 
@@ -181,12 +181,13 @@ statement
 	;
 	
 statementBlock
- : '{' LTERM* '}'
+        : '{' LTERM* '}' 
 	| '{' LTERM* (statementList->statementList) LTERM* '}' 
-	;
+
+	; 
 	
 statementList
-	: statement (LTERM* statement)* -> ^(SLIST statement+)
+	: (LTERM* statement)+ -> ^(SLIST statement+)
 	;
 	
 variableStatement
@@ -218,7 +219,7 @@ initialiserNoIn
 	;
 	
 emptyStatement
-	: ';'
+        : LTERM* ';'
 	;
 	
 expressionStatement
@@ -549,14 +550,14 @@ multOps
 ;
 
 multiplicativeExpression
-	: (unaryExpression -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
+	: (unaryExpression  -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
 	;
 
 
 postfixExpression
- :leftHandSideExpression  -> leftHandSideExpression
- | leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
+ : leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
  | leftHandSideExpression '++' -> ^(PLUSPLUS leftHandSideExpression)
+ |leftHandSideExpression  -> leftHandSideExpression
   
 ;
 
