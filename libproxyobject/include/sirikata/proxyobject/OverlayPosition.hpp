@@ -69,13 +69,7 @@ public:
 	*
 	* @param	offsetTop	How many pixels from the top to offset the ViewportOverlay from the relative position.
 	*/
-	OverlayPosition(const RelativePosition &relPosition, short offsetLeft = 0, short offsetTop = 0)
-	{
-		usingRelative = true;
-		data.rel.position = relPosition;
-		data.rel.x = offsetLeft;
-		data.rel.y = offsetTop;
-	}
+	OverlayPosition(const RelativePosition &relPosition, short offsetLeft = 0, short offsetTop = 0);
 
 	/**
 	* Creates an absolutely-positioned OverlayPosition object.
@@ -84,22 +78,12 @@ public:
 	*
 	* @param	absoluteTop		The number of pixels from the top of the Viewport.
 	*/
-	OverlayPosition(short absoluteLeft, short absoluteTop)
-	{
-		usingRelative = false;
-		data.abs.left = absoluteLeft;
-		data.abs.top = absoluteTop;
-	}
+	OverlayPosition(short absoluteLeft, short absoluteTop);
 
 	/**
 	* Creates an empty OverlayPosition object (defaults to top-left corner).
 	*/
-	OverlayPosition()
-	{
-		usingRelative = false;
-		data.abs.left = 0;
-		data.abs.top = 0;
-	}
+	OverlayPosition();
 
 	bool usingRelative;
 	union {

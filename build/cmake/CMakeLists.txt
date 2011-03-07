@@ -1252,6 +1252,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/Invokable.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/OverlayPosition.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
