@@ -113,6 +113,9 @@ v8::Handle<v8::Value> JSVisibleStruct::printData()
 v8::Handle<v8::Value> JSVisibleStruct::visibleSendMessage (std::string& msgToSend)
 {
     //actually send the message to the entity
+    if ((sporefToListenFrom == NULL) || (*sporefToListenFrom == SpaceObjectReference::null()))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error trying to send message.  Do not have a presence associated with this object to send message out from.")));
+
     jsObjScript->sendMessageToEntity(sporefToListenTo,sporefToListenFrom,msgToSend);
     return v8::Undefined();
 }

@@ -1,9 +1,3 @@
-system.import('std/core/bind.js');
-system.import('test/duel/duelist.em');
-
-//default mesh to load for dueling game
-var DUELING_GAME_MESH = "meerkat:///danielrh/Poison-Bird.dae";
-
 
 //DuelingGame creates a presence in the virtual world.  Subscribers
 //(likely avatars in the virtual world) can send messages to this presence
@@ -12,6 +6,12 @@ var DUELING_GAME_MESH = "meerkat:///danielrh/Poison-Bird.dae";
 //can control his/her duelist (request it to move and fire) by sending
 //additional messages either to it or to the DuelingGame itself.
 
+
+system.import('std/core/bind.js');
+system.import('test/duel/duelist.em');
+
+//default mesh to load for dueling game
+var DUELING_GAME_MESH = "meerkat:///danielrh/Poison-Bird.dae";
 
 
 

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <sirikata/core/util/Platform.hpp>
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
+#include "../JSObjectStructs/JSPresenceStruct.hpp"
 #include "../JSObjectStructs/JSWhenStruct.hpp"
 
 
@@ -27,6 +28,22 @@ bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& 
 
     errorMessage += "Error decoding string in decodeString of JSObjectUtils.cpp.  ";
     return false;
+}
+
+//Tries to decode toDecode as either a presence struct or a visible struct (the
+//two classes that inherit from jsposition listener).
+JSPositionListener* decodeJSPosListener(v8::Handle<v8::Value> toDecode,String& errorMessage)
+{
+    //try to decode as presence first;
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(toDecode,errorMessage);
+    if (jspres != NULL)
+        return jspres;
+        
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(toDecode,errorMessage);
+    if (jsvis != NULL)
+        return jsvis;
+
+    return NULL;
 }
 
 

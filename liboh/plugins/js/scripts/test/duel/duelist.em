@@ -1,3 +1,12 @@
+
+
+//Each duelist is a presence in the world that is controlled by an external
+//controller.  The external controller can move the duelist and request the
+//duelist to "shoot" by sending messages to the duelist.
+//Each duelist has a single bullet.  See description of bullet in bullet.em.
+//A duelist can be killed when a bullet hits him/her.
+
+
 system.import('std/core/bind.js');
 system.import('std/movement/movement.em');
 system.import('std/test/duel/bullet.em');
@@ -7,18 +16,11 @@ var DUELIST_MESH                = "meerkat:///danielrh/Poison-Bird.dae";
 //scaling factor indicating how fast a duelist should move when
 //it receives a message to move translationally (ie, non-rotation).
 //higher is faster.  
-var DUELIST_TRANSLATIONAL_SPEED =                                     5;
+var DUELIST_TRANSLATIONAL_SPEED =  5;
 //scaling factor factor indicating how fast a duelist should rotate
 //when receivs a message to rotate.
 //higer is faster
-var DUELIST_ROTATIONAL_SPEED    =                                     1;
-
-
-//Each duelist is a presence in the world that is controlled by an external
-//controller.  The external controller can move the duelist and request the
-//duelist to "shoot" by sending messages to the duelist.
-//Each duelist has a single bullet.  See description of bullet in bullet.em.
-//A duelist can be killed when a bullet hits him/her.
+var DUELIST_ROTATIONAL_SPEED    =  1;
 
 
 
@@ -90,6 +92,7 @@ function duelistInitializationFunc(duelist, controller)
     //ie fire duelist.shootCallback if this entity receives a message object
     //from controller that has a field "duelist" that is equal to the duelist's
     //identifier *and* has a field "msgType" that is equal to the value "shoot".
+    //note: cleaning up pattern syntax is on the to-do list.
     duelist.shootCallback
        <- [new util.Pattern("duelist",duelist.duelistIdentifier), new util.Pattern("msgType","shoot")]
        <- controller;

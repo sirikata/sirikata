@@ -405,7 +405,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
 
-
+  
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
   instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);

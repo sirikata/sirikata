@@ -60,7 +60,7 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 {
     if (args.Length() != 5)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <visible object that can always send messages to, or null if want to send messages to self><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
 
 
     bool sendEveryone,recvEveryone,proxQueries;
@@ -82,15 +82,16 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
         canSendTo = jsPresStruct->getSporef();
     else
     {
-        //should try to decode as visible.  if decoding fails, throw error
+        //should try to decode as a jspositionListener.  if decoding fails, throw error
         errorMessageWhichArg= " 2.  ";
         errorMessage= errorMessageBase + errorMessageWhichArg;
 
-        JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args[1],errorMessage);
-        if (jsPresStruct == NULL)
+        JSPositionListener* jsposlist = decodeJSPosListener(args[1],errorMessage);
+
+        if (jsposlist == NULL)
             return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
-        canSendTo = jsvis->getToListenTo();
+        canSendTo = jsposlist->getToListenTo();
     }
 
 
@@ -404,12 +405,12 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
 
     // Sender
-    JSVisibleStruct* jsvis = NULL;
     if (! sender_val->IsNull())  //means that it's a valid sender
     {
-        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding JSVisibleStruct.  ";
-        JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(sender_val,errorMessage);
-        if (jsvis == NULL)
+        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding sender.  ";
+        JSPositionListener* jsposlist = decodeJSPosListener(sender_val,errorMessage);
+        
+        if (jsposlist == NULL)
             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
     }
 

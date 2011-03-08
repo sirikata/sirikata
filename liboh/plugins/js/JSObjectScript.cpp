@@ -315,7 +315,7 @@ bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObje
             *orient = p->getTimedMotionQuaternion();
     }
     else
-        JSLOG(error,"error registering to be a position listener. could not find associated object in hosted object.");
+        JSLOG(insane,"problem registering to be a position listener. could not find associated object in hosted object.");
 
     return succeeded;
 
@@ -528,6 +528,8 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
     v8::Local<v8::Value> self_obj = sysObj->Get(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
     JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
 
+    //lkjs;
+    
     if (self_vis ==NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
@@ -671,6 +673,8 @@ void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
 
     v8::Handle<v8::Object> sysObj = getSystemObject();
     sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
+
+//    lkjs;
 }
 
 
@@ -1563,6 +1567,7 @@ void JSObjectScript::removePresence(const SpaceObjectReference& sporef)
 //this function can be called to re-initialize the system object's state
 void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 {
+    //lkjs;
     DEPRECATED(js);
 }
 

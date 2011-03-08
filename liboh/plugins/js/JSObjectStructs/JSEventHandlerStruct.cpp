@@ -12,6 +12,7 @@
 #include "../JSLogging.hpp"
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
+#include "../JSObjects/JSObjectsUtils.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -45,37 +46,38 @@ JSEventHandlerStruct::~JSEventHandlerStruct()
     }
 }
 
-//sender should be of type ADDRESSABLE (see template defined in JSObjectScriptManager
-bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender)
+//sender should be of type VISIBLE (see template defined in JSObjectScriptManager
+bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> incoming_sender)
 {
     if (getIsSuspended() || getIsCleared())
         return false; //cannot match a suspended handler
 
     //decode the sender of the message
     String errorMessage = "[JS] Error encountered in matches of JSEventHandler.  Failed to decode sender of message as a visible object.  ";
-    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(sender, errorMessage);
-    if (jsvis == NULL)
+    JSPositionListener* jsposlist = decodeJSPosListener(incoming_sender,errorMessage);
+
+    if (jsposlist == NULL)
     {
-        SILOG(js,error,errorMessage);
+        JSLOG(error,errorMessage);
         return false;
     }
     
-    SpaceObjectReference* spref1 =  jsvis->getToListenTo();
+    SpaceObjectReference* spref1 =  jsposlist->getToListenTo();
 
 
     //decode the expected sender
-    if (! this->sender->IsNull())
+    if (! sender->IsNull())
     {
         String errorMessageExpectedSender = "[JS] Error encountered in matches of JSEventHandler.  Failed to decode expected sender of event handler.  ";
-        JSVisibleStruct* jsvisExpectedSender = JSVisibleStruct::decodeVisible(this->sender, errorMessageExpectedSender);
+        JSPositionListener* jsplExpectedSender = decodeJSPosListener(sender, errorMessageExpectedSender);
 
-        if (jsvisExpectedSender == NULL)
+        if (jsplExpectedSender == NULL)
         {
-            SILOG(js,error,errorMessageExpectedSender);
+            JSLOG(error,errorMessageExpectedSender);
             return false;
         }
 
-        SpaceObjectReference* spref2 = jsvisExpectedSender->getToListenTo();
+        SpaceObjectReference* spref2 = jsplExpectedSender->getToListenTo();
 
         //check if the senders match
         if ( (*spref1)  != (*spref2))  //the senders do not match.  do not fire
