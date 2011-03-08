@@ -98,22 +98,24 @@ void printException(v8::TryCatch& try_catch) {
     v8::Handle<v8::Message> message = try_catch.Message();
 
     // Print (filename):(line number): (message).
-    v8::String::Utf8Value filename(message->GetScriptResourceName());
-    const char* filename_string = ToCString(filename);
-    int linenum = message->GetLineNumber();
-    os << filename_string << ':' << linenum << ": " << exception_string << "\n";
-    // Print line of source code.
-    v8::String::Utf8Value sourceline(message->GetSourceLine());
-    const char* sourceline_string = ToCString(sourceline);
-    os << sourceline_string << "\n";
-    // Print wavy underline (GetUnderline is deprecated).
-    int start = message->GetStartColumn();
-    for (int i = 0; i < start; i++)
-        os << " ";
-    int end = message->GetEndColumn();
-    for (int i = start; i < end; i++)
-        os << "^";
-    os << "\n";
+    if (!message.IsEmpty()) {
+        v8::String::Utf8Value filename(message->GetScriptResourceName());
+        const char* filename_string = ToCString(filename);
+        int linenum = message->GetLineNumber();
+        os << filename_string << ':' << linenum << ": " << exception_string << "\n";
+        // Print line of source code.
+        v8::String::Utf8Value sourceline(message->GetSourceLine());
+        const char* sourceline_string = ToCString(sourceline);
+        os << sourceline_string << "\n";
+        // Print wavy underline (GetUnderline is deprecated).
+        int start = message->GetStartColumn();
+        for (int i = 0; i < start; i++)
+            os << " ";
+        int end = message->GetEndColumn();
+        for (int i = start; i < end; i++)
+            os << "^";
+        os << "\n";
+    }
     v8::String::Utf8Value stack_trace(try_catch.StackTrace());
     if (stack_trace.length() > 0) {
       const char* stack_trace_string = ToCString(stack_trace);
@@ -284,6 +286,14 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
+}
+
+v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
+    return ProtectedJSCallback(mContext, NULL, cb, argc, argv);
+}
+
+v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& cb) {
+    return ProtectedJSCallback(mContext, NULL, cb);
 }
 
 //checks to see if the associated space object reference exists in the script.
