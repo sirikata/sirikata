@@ -25,8 +25,8 @@ struct JSTimerStruct : public JSSuspendable
     
 
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
-    void evaluateCallback();
-
+    void evaluateCallback(const boost::system::error_code& error);
+    
     virtual v8::Handle<v8::Value>suspend();
     virtual v8::Handle<v8::Value>resume();
     virtual v8::Handle<v8::Value>clear();

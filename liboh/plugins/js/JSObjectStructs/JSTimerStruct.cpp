@@ -24,7 +24,7 @@ JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur,v8::Pers
    timeUntil(dur.toSeconds())
 {
     mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
+    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
     if (jscont != NULL)
         jscont->struct_registerSuspendable(this);
@@ -73,17 +73,14 @@ JSTimerStruct::~JSTimerStruct()
 }
 
 
-void JSTimerStruct::evaluateCallback()
+void JSTimerStruct::evaluateCallback(const boost::system::error_code& error)
 {
-    if (getIsCleared())
+    if (error != boost::asio::error::operation_aborted)
     {
-        JSLOG(info, "Error in evaluateCallback of JSTimerStruct.cpp.  Got a callback even though the timer should have been cleared.");
-        return;
+        jsObjScript->handleTimeoutContext(target,cb,jsContStruct);
+        if (jsContStruct != NULL)
+            jsContStruct->struct_deregisterSuspendable(this);
     }
-        
-    jsObjScript->handleTimeoutContext(target,cb,jsContStruct);
-    if (jsContStruct != NULL)
-        jsContStruct->struct_deregisterSuspendable(this);
 }
 
 
@@ -95,26 +92,27 @@ v8::Handle<v8::Value> JSTimerStruct::suspend()
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a timer that had already been cleared.")));
     }
     
+    JSLOG(insane,"suspending timer");
     mDeadlineTimer->cancel();
     return JSSuspendable::suspend();
 }
 
+
+//has more of a reset-type functionality than resume
+//if the time has not been cleared, then, cancel the current timer,
+//and start a new countdown to execute the callback.
 v8::Handle<v8::Value> JSTimerStruct::resume()
 {
-    if (! getIsSuspended())
-    {
-        JSLOG(info,"Error in JSTimerStruct.  Trying to resume a timer object that was not already suspended.");
-        return JSSuspendable::getIsSuspendedV8();
-    }
     if (getIsCleared())
     {
         JSLOG(info,"Error in JSTimerStruct.  Trying to resume a timer object that has already been cleared.  Taking no action");
         return JSSuspendable::getIsSuspendedV8();
     }
-    
+
+    mDeadlineTimer->cancel();
     
     mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
+    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
     
     return JSSuspendable::resume();
 }
@@ -150,7 +148,7 @@ v8::Handle<v8::Value> JSTimerStruct::struct_resetTimer(double timeInSecondsToRef
     
     mDeadlineTimer->cancel();
     mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeInSecondsToRefire));
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
+    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
     
     return JSSuspendable::resume();
 }
