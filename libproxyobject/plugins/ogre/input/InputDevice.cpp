@@ -154,7 +154,7 @@ void PointerDevice::firePointerClick(
         di.mOffsetY = 0;
         mDragInfo.insert(mDragInfo.begin(), di);
         em->fire(EventPtr(
-                 new MousePressedEvent(
+                new MousePressedEvent(
                     thisptr,
                     xPixel,
                     yPixel,
@@ -167,22 +167,28 @@ void PointerDevice::firePointerClick(
                 yPixel = (*iter).mDragY;
             }
             em->fire(EventPtr(
-                new MouseDragEvent(
-                    thisptr, DRAG_END,
-                    (*iter).mDragStartX,
-                    (*iter).mDragStartY,
-                    xPixel+(*iter).mOffsetX,
-                    yPixel+(*iter).mOffsetY,
-                    (*iter).mDragX+(*iter).mOffsetX,
-                    (*iter).mDragY+(*iter).mOffsetY,
-                    cursor, button, 0, 0, 0)));
+                    new MouseDragEvent(
+                        thisptr, DRAG_END,
+                        (*iter).mDragStartX,
+                        (*iter).mDragStartY,
+                        xPixel+(*iter).mOffsetX,
+                        yPixel+(*iter).mOffsetY,
+                        (*iter).mDragX+(*iter).mOffsetX,
+                        (*iter).mDragY+(*iter).mOffsetY,
+                        cursor, button, 0, 0, 0)));
         } else {
             em->fire(EventPtr(
-                new MouseClickEvent(
-                    thisptr,
-                    (*iter).mDragStartX,
-                    (*iter).mDragStartY,
-                    cursor, button)));
+                    new MouseClickEvent(
+                        thisptr,
+                        (*iter).mDragStartX,
+                        (*iter).mDragStartY,
+                        cursor, button)));
+            em->fire(EventPtr(
+                    new MouseReleasedEvent(
+                        thisptr,
+                        xPixel,
+                        yPixel,
+                        cursor, button)));
         }
         mDragInfo.erase(iter);
     }

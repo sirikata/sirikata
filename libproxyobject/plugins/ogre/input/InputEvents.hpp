@@ -343,8 +343,7 @@ public:
 };
 typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
 
-/** Event when the mouse was clicked (pressed and released
-    without moving) */
+/** Event when the mouse was pressed. Always sent. */
 class MousePressedEvent: public MouseDownEvent {
 public:
 
@@ -361,6 +360,24 @@ public:
     }
 };
 typedef std::tr1::shared_ptr<MousePressedEvent> MousePressedEventPtr;
+
+/** Event when the mouse was released. Always sent. */
+class MouseReleasedEvent: public MouseDownEvent {
+public:
+
+    static const IdPair::Primary getEventId() {
+        static IdPair::Primary retval("MouseReleasedEvent");
+        return retval;
+    }
+
+    MouseReleasedEvent(const PointerDevicePtr &dev,
+                    float x, float y,
+                    int cursorType, int button)
+        : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
+                         cursorType, button, 0, 0, 0) {
+    }
+};
+typedef std::tr1::shared_ptr<MouseReleasedEvent> MouseReleasedEventPtr;
 
 /** Event when the mouse was dragged. If this event fires, then
     you will not get a MouseClickEvent. */

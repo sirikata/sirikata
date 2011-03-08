@@ -53,27 +53,20 @@ function() {
         this._simulator.inputHandler.onButtonPressed = std.core.bind(this.onButtonPressed, this);
         this._simulator.inputHandler.onButtonReleased = std.core.bind(this.onButtonReleased, this);
         this._simulator.inputHandler.onButtonRepeated = std.core.bind(this.onButtonRepeated, this);
+        this._simulator.inputHandler.onMouseDrag = std.core.bind(this.onMouseDrag, this);
+        this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
+        this._simulator.inputHandler.onMousePress = std.core.bind(this.onMousePress, this);
+        this._simulator.inputHandler.onMouseRelease = std.core.bind(this.onMouseRelease, this);
 
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
+
+        this._dragging = null;
     };
 
     ns.DefaultGraphics.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);
-    };
-
-    ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
-        if (this._selected) {
-            this._simulator.bbox(this._selected, false);
-            this._selected = null;
-        }
-
-        var clicked = this._simulator.pick(evt.x, evt.y);
-        if (clicked) {
-            this._selected = clicked;
-            this._simulator.bbox(this._selected, true);
-        }
     };
 
 
@@ -82,7 +75,7 @@ function() {
     ns.DefaultGraphics.prototype.defaultVelocityScaling = 5;
     //by default how to scale rotational velocity from keypresses
     ns.DefaultGraphics.prototype.defaultRotationVelocityScaling = 1;
-    
+
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
         if (evt.button == 'escape') this._simulator.quit();
         if (evt.button == 'i') this._simulator.screenshot();
@@ -116,6 +109,30 @@ function() {
     ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
         std.movement.stopMove(this._pres);
         std.movement.stopRotate(this._pres);
+    };
+
+    ns.DefaultGraphics.prototype.onMouseDrag = function(evt) {
+    };
+
+    ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
+    };
+
+    ns.DefaultGraphics.prototype.onMousePress = function(evt) {
+        if (this._selected) {
+            this._simulator.bbox(this._selected, false);
+            this._selected = null;
+            this._dragging = null;
+        }
+
+        var clicked = this._simulator.pick(evt.x, evt.y);
+        if (clicked) {
+            this._selected = clicked;
+            this._simulator.bbox(this._selected, true);
+            this._dragging = new std.movement.MovableRemote(this._selected);
+        }
+    };
+
+    ns.DefaultGraphics.prototype.onMouseRelease = function(evt) {
     };
 
 })();

@@ -67,6 +67,10 @@ function() {
             this.onText(evt);
         if (evt.msg == 'mouse-hover' && 'onMouseHover' in this)
             this.onMouseHover(evt);
+        if (evt.msg == 'mouse-press' && 'onMousePress' in this)
+            this.onMousePress(evt);
+        if (evt.msg == 'mouse-release' && 'onMouseRelease' in this)
+            this.onMouseRelease(evt);
         if (evt.msg == 'mouse-click' && 'onMouseClick' in this)
             this.onMouseClick(evt);
         if (evt.msg == 'mouse-drag' && 'onMouseDrag' in this)

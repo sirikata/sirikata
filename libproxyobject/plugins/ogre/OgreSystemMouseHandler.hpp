@@ -79,6 +79,7 @@ private:
     Task::EventResponse textInputHandler(Task::EventPtr ev);
     Task::EventResponse mouseHoverHandler(Task::EventPtr ev);
     Task::EventResponse mousePressedHandler(Task::EventPtr ev);
+    Task::EventResponse mouseReleasedHandler(Task::EventPtr ev);
     Task::EventResponse mouseClickHandler(Task::EventPtr ev);
     Task::EventResponse mouseDragHandler(Task::EventPtr evbase);
     Task::EventResponse webviewHandler(Task::EventPtr ev);

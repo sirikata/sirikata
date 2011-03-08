@@ -370,6 +370,25 @@ EventResponse OgreSystemMouseHandler::mousePressedHandler(EventPtr ev) {
     return EventResponse::nop();
 }
 
+EventResponse OgreSystemMouseHandler::mouseReleasedHandler(EventPtr ev) {
+    std::tr1::shared_ptr<MouseReleasedEvent> mouseev (
+        std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(ev));
+    if (!mouseev)
+        return EventResponse::nop();
+
+    if (mParent->mPrimaryCamera) {
+        Camera *camera = mParent->mPrimaryCamera;
+        Time time = mParent->simTime();
+        int lhc=mLastHitCount;
+        hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
+        mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
+    }
+    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+    delegateEvent(inputev);
+
+    return EventResponse::nop();
+}
+
 EventResponse OgreSystemMouseHandler::mouseClickHandler(EventPtr ev) {
     std::tr1::shared_ptr<MouseClickEvent> mouseev (
         std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
@@ -564,6 +583,10 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
             std::tr1::bind(&OgreSystemMouseHandler::mousePressedHandler, this, _1)));
 
     mEvents.push_back(mParent->mInputManager->subscribeId(
+            MouseReleasedEvent::getEventId(),
+            std::tr1::bind(&OgreSystemMouseHandler::mouseReleasedHandler, this, _1)));
+
+    mEvents.push_back(mParent->mInputManager->subscribeId(
             MouseDragEvent::getEventId(),
             std::tr1::bind(&OgreSystemMouseHandler::mouseDragHandler, this, _1)));
 
@@ -679,6 +702,26 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["msg"] = String("mouse-hover");
             event_data["x"] = mouse_hover_ev->mX;
             event_data["y"] = mouse_hover_ev->mY;
+        }
+    }
+
+    {
+        MousePressedEventPtr mouse_press_ev (std::tr1::dynamic_pointer_cast<MousePressedEvent>(inputev));
+        if (mouse_press_ev) {
+            event_data["msg"] = String("mouse-press");
+            event_data["button"] = mouse_press_ev->mButton;
+            event_data["x"] = mouse_press_ev->mX;
+            event_data["y"] = mouse_press_ev->mY;
+        }
+    }
+
+    {
+        MouseReleasedEventPtr mouse_release_ev (std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(inputev));
+        if (mouse_release_ev) {
+            event_data["msg"] = String("mouse-release");
+            event_data["button"] = mouse_release_ev->mButton;
+            event_data["x"] = mouse_release_ev->mX;
+            event_data["y"] = mouse_release_ev->mY;
         }
     }
 
