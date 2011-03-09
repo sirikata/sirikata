@@ -252,6 +252,11 @@ private:
     // double locking...
     boost::mutex mRouteObjectMessageMutex;
     Sirikata::SizedThreadSafeQueue<ConnectionIDObjectMessagePair>mRouteObjectMessage;
+
+    // TimeSeries identifiers. Must include the ServerID for uniqueness, so we
+    // cache them so TimeSeries reports are fast
+    String mTimeSeriesObjects;
+
 }; // class Server
 
 } // namespace Sirikata

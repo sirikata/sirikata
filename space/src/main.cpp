@@ -105,6 +105,10 @@ int main(int argc, char** argv) {
 
     SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
 
+    String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
+    String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
+    Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(space_context, timeseries_options);
+
     Sirikata::SpaceNetwork* gNetwork = NULL;
     String network_type = GetOptionValue<String>(NETWORK_TYPE);
     if (network_type == "tcp")

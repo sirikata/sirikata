@@ -41,6 +41,7 @@
 #include "TimeProfiler.hpp"
 #include "Service.hpp"
 #include "Signal.hpp"
+#include <sirikata/core/trace/TimeSeries.hpp>
 
 #define FORCE_MONOTONIC_CLOCK 1
 
@@ -128,6 +129,8 @@ public:
     Network::IOService* ioService;
     Network::IOStrand* mainStrand;
     TimeProfiler* profiler;
+
+    Trace::TimeSeries* timeSeries;
 
     static Context* mainContextPtr;
 protected:

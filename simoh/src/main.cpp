@@ -97,6 +97,10 @@ int main(int argc, char** argv) {
 
     ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, gTrace, start_time, duration);
 
+    String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
+    String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
+    Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
+
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 
     ObjectHost* obj_host = new ObjectHost(ctx, gTrace, server_id_map);

@@ -117,6 +117,10 @@ int main (int argc, char** argv) {
     ObjectHostContext* ctx = new ObjectHostContext(oh_id, ios, mainStrand, trace, start_time, duration);
     Context::mainContextPtr = ctx;
 
+    String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
+    String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
+    Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
+
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
 
