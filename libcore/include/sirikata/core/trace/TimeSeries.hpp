@@ -60,7 +60,10 @@ class SIRIKATA_EXPORT TimeSeries {
     Context* mContext;
 }; // class TimeSeries
 
-class SIRIKATA_EXPORT TimeSeriesFactory : public Factory2<TimeSeries*,Context*,const String&> {
+class SIRIKATA_EXPORT TimeSeriesFactory :
+        public Factory2<TimeSeries*,Context*,const String&>,
+        public AutoSingleton<TimeSeriesFactory>
+{
   public:
     static TimeSeriesFactory& getSingleton();
     static void destroy();
