@@ -89,7 +89,19 @@ v8::Handle<v8::Value> resume(const v8::Arguments& args)
 
 }
 
+v8::Handle<v8::Value> isSuspended(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Incorrect number of arguments for isSuspended function of JSTimer.cpp.  Requires zero arguments.")) );
 
+    String errorMessage = "Error in isSuspended of JSTimer.cpp trying to decode jstimer.  ";
+    JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
+    if (jstimer == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    
+    return jstimer->getIsSuspendedV8();
+}
 
 
 }//JSTimer namespace
