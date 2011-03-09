@@ -1216,6 +1216,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return bbox(params);
     else if (name == "initScript")
         return initScript(params);
+    else if (name == "camera")
+        return getCamera(params);
 
     return boost::any();
 }
@@ -1339,6 +1341,27 @@ boost::any OgreSystem::initScript(vector<boost::any>& params) {
     );
 
     return boost::any();
+}
+
+boost::any OgreSystem::getCamera(vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+
+    Ogre::Camera* cam = mPrimaryCamera->getOgreCamera();
+
+    // Just returns a "struct" with basic camera info
+    Invokable::Dict camera_info;
+
+    float32 aspect = cam->getAspectRatio();
+    camera_info["aspectRatio"] = aspect;
+
+    float32 fovy = cam->getFOVy().valueRadians();
+    float32 fovx = fovy * aspect;
+    Invokable::Dict camera_fov;
+    camera_fov["x"] = fovx;
+    camera_fov["y"] = fovy;
+    camera_info["fov"] = camera_fov;
+
+    return camera_info;
 }
 
 }
