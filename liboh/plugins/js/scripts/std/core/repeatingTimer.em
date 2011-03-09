@@ -41,4 +41,8 @@ std.core.RepeatingTimer = function(period,callback)
     {
          return this.timer.reset();  
     };
+    this.isSuspended  = function ()
+    {
+        return this.timer.isSuspended();
+    };
 };

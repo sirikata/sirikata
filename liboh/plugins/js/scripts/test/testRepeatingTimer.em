@@ -11,4 +11,10 @@ function testCallback()
 
 var repTimer = new std.core.RepeatingTimer(3,testCallback);
 
+
+var isSuspended = repTimer.isSuspended();
+system.print("\n\n");
+system.print(isSuspended);
+system.print("\n\n");
+
 //in terminal try suspending and reset-ing repTimer.

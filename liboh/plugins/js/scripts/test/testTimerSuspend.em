@@ -12,3 +12,8 @@ function callback()
 var times = system.timeout(10,null,callback);
 
 times.suspend();
+
+var isSuspended = times.isSuspended();
+system.print("\n\n");
+system.print(isSuspended);
+system.print("\n\n");
