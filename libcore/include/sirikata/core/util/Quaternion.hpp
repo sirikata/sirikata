@@ -182,7 +182,7 @@ public:
     }
 
     Quaternion operator-(const Quaternion&other) const{
-        return Quaternion(Vector4<scalar>::operator+(other));
+        return Quaternion(Vector4<scalar>::operator-(other));
     }
 
     Quaternion operator-()const {
