@@ -1,7 +1,7 @@
 /*  Sirikata
- *  shim.em
+ *  vec3.em
  *
- *  Copyright (c) 2011, Bhupesh Chandra
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,19 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+system.import('std/core/pretty.em');
 
-/*
-  This is the main shim layer created between Emerson and C++. This is
-  because we want some basic functionality to be in C++ while creating
-  a layer of other essential functionalities directly in Emerson. We
-  save dev time with this and we are not too much bothered about
-  performance. IF performance degrades beyond tolerance, we will
-  implement those functionalities in C++.
-*/
-
-system.shim = new Object();
-
-system.import('std/shim/system.em');
-system.import('std/shim/presence.em');
-system.import('std/shim/vec3.em');
-system.import('std/shim/quaternion.em');
+system.prettyprint = function(x) {
+    system.print( std.core.pretty(x) + '\n' );
+};
