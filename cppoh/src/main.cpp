@@ -119,7 +119,7 @@ int main (int argc, char** argv) {
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
-    Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
+    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(ctx, timeseries_options);
 
 
     SSTConnectionManager* sstConnMgr = new SSTConnectionManager();
@@ -175,6 +175,7 @@ int main (int argc, char** argv) {
     delete sstConnMgr;
 
     delete ctx;
+    delete time_series;
 
     trace->shutdown();
     delete trace;

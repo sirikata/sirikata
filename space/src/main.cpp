@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
-    Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(space_context, timeseries_options);
+    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(space_context, timeseries_options);
 
     Sirikata::SpaceNetwork* gNetwork = NULL;
     String network_type = GetOptionValue<String>(NETWORK_TYPE);
@@ -290,6 +290,8 @@ int main(int argc, char** argv) {
 
     delete space_context;
     space_context = NULL;
+
+    delete time_series;
 
     delete mainStrand;
     delete osegStrand;
