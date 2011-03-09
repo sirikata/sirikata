@@ -98,6 +98,22 @@ public:
         return this->mLastSimTime.read();
     }
 
+    /** In a few, rare cases, you'll need the *actual* time representation
+     *  rather than an offset since the start of simulation. In those cases,
+     *  this method gives you the real time, in UTC. Note that this is still in
+     *  relation to a "global" epoch, so it is still not convertible directly
+     *  to, e.g. a Unix time. For that you'll need to use
+     *  Timer::getSpecifiedDate to get a relative offset.
+     *
+     *  NOTE: Only use these methods if you absolutely have to.
+     */
+    Time realTime() const {
+        return simTime() + (mEpoch.read()-Time::null()) + Timer::getUTCOffset();
+    }
+    Time recentRealTime() const {
+        return recentSimTime() + (mEpoch.read()-Time::null()) + Timer::getUTCOffset();
+    }
+
     void add(Service* ps) {
         mServices.push_back(ps);
         ps->start();

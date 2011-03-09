@@ -1,5 +1,5 @@
 /*  Sirikata
- *  TimeSeries.hpp
+ *  GraphiteTimeSeries.hpp
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,49 +30,53 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_TIME_SERIES_HPP_
-#define _SIRIKATA_TIME_SERIES_HPP_
+#ifndef _SIRIKATA_GRAPHITE_TIME_SERIES_HPP_
+#define _SIRIKATA_GRAPHITE_TIME_SERIES_HPP_
 
-#include <sirikata/core/util/Platform.hpp>
-#include <sirikata/core/util/Factory.hpp>
+#include <sirikata/core/trace/TimeSeries.hpp>
+#include <sirikata/core/network/Asio.hpp>
 
 namespace Sirikata {
-
-class Context;
-
 namespace Trace {
 
-/** TimeSeries tracks numeric, time series data. It's very generic, just
- *  reporting a value for a given key. Keys are just strings, but are encouraged
- *  to be hierarchical, split with '.', e.g. space.server0.objects, allowing the
- *  receiver to better organize data for exploration and display. Time values
- *  are read from the current context, so you only need to specify the key and
- *  value. Note that this data must *not* be sensitive to drops -- in order to
- *  remain low cost, implementations may drop the data if they cannot quickly
- *  and efficiently store or relay it.
+/** An implementation of TimeSeries which reports data to Graphite (actually to
+ *  graphites underlying storage carbon + whisper). Graphite provides storage of
+ *  numeric time-series data where resolution is reduced with age, allowing for
+ *  fixed total storage. It also provides nice graphing utilities for exploring
+ *  and inspecting the reported data.  See http://graphite.wikidot.com.
  */
-class SIRIKATA_EXPORT TimeSeries {
+class GraphiteTimeSeries : public TimeSeries {
   public:
-    TimeSeries(Context* ctx);
-    virtual ~TimeSeries();
+    GraphiteTimeSeries(Context* ctx, const String& host, uint16 port);
+    virtual ~GraphiteTimeSeries();
 
     virtual void report(const String& name, float64 val);
 
-  protected:
-    Context* mContext;
-}; // class TimeSeries
+  private:
+    void connect();
 
-class SIRIKATA_EXPORT TimeSeriesFactory :
-        public Factory2<TimeSeries*,Context*,const String&>,
-        public AutoSingleton<TimeSeriesFactory>
-{
-  public:
-    static TimeSeriesFactory& getSingleton();
-    static void destroy();
+    void handleResolve(const boost::system::error_code& err, Network::TCPResolver::iterator endpoint_iterator);
+    void tryConnect(Network::TCPResolver::iterator endpoint_iterator);
+    void handleConnect(const boost::system::error_code& err, Network::TCPResolver::iterator endpoint_iterator);
 
-    TimeSeriesFactory();
-    ~TimeSeriesFactory();
-};
+    void startSend();
+    void handleSent(const boost::system::error_code& err);
+
+    void cleanup();
+
+    String mHost;
+    uint16 mPort;
+
+    // Data is reported to graphite using a simple text based format sent over a
+    // TCP connection
+    Network::TCPResolver* mResolver;
+    Network::TCPSocket* mSocket;
+    bool mConnecting;
+    bool mTransmitting;
+
+    std::queue<String> mUpdates;
+    String mCurrentUpdate; // To avoid realloc issues with the queue during writes
+}; // class GraphiteTimeSeries
 
 } // namespace Trace
 } // namespace Sirikata

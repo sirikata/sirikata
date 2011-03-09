@@ -42,7 +42,7 @@ void InitOptions() {
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )
 
-        .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local,graphite",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohstreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=16384 --parallel-sockets=1 --no-delay=false",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
