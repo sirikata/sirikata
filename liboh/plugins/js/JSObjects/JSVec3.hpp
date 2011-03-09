@@ -52,13 +52,6 @@ void Vec3Fill(Handle<Object>& dest, const VecType& src) {
     dest->Set(JS_STRING(z), Number::New(src.z));
 }
 
-template<typename VecType>
-Handle<Value> CreateJSResult(Handle<Object>& orig, const VecType& src)
-{
-    Handle<Object> result = orig->Clone();
-    Vec3Fill(result, src);
-    return result;
-}
 
 Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
 
