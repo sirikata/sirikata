@@ -32,8 +32,8 @@
 
 system.import('graphics.em');
 system.import('std/movement/movement.em');
-system.import('std/movement/movableremote.em');
 system.import('std/script/scripter.em');
+system.import('std/graphics/drag/move.em');
 
 (
 function() {
@@ -61,7 +61,7 @@ function() {
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
 
-        this._dragging = null;
+        this._dragger = new std.graphics.MoveDragHandler(this._simulator);
     };
 
     ns.DefaultGraphics.prototype.invoke = function() {
@@ -115,44 +115,24 @@ function() {
         if (this._selected) {
             this._simulator.bbox(this._selected, false);
             this._selected = null;
-            this._dragging = null;
         }
 
         var clicked = this._simulator.pick(evt.x, evt.y);
         if (clicked) {
             this._selected = clicked;
             this._simulator.bbox(this._selected, true);
-            this._dragging = new std.movement.MovableRemote(this._selected);
         }
+
+        if (this._dragger) this._dragger.selected(this._selected);
+        this._dragger.onMousePress(evt);
     };
 
     ns.DefaultGraphics.prototype.onMouseDrag = function(evt) {
-        if (!this._dragging) return;
-
-        if (!this._dragging.dragPosition)
-            this._dragging.dragPosition = this._dragging.getPosition();
-
-        var centerAxis = this._simulator.cameraDirection();
-        var clickAxis = this._simulator.cameraDirection(evt.x, evt.y);
-
-        var lastClickAxis = this._lastClickAxis;
-        this._lastClickAxis = clickAxis;
-
-        if (!lastClickAxis) return;
-
-        var moveVector = this._dragging.getPosition().sub( this._pres.getPosition() );
-        var moveDistance = moveVector.dot(centerAxis);
-        var start = lastClickAxis.scale(moveDistance);
-        var end = clickAxis.scale(moveDistance);
-        var toMove = end.sub(start);
-        this._dragging.dragPosition = this._dragging.dragPosition.add(toMove);
-        this._dragging.setPosition(this._dragging.dragPosition);
+        this._dragger.onMouseDrag(evt);
     };
 
     ns.DefaultGraphics.prototype.onMouseRelease = function(evt) {
-        if (this._dragging)
-            this._dragging.dragPosition = null;
-        this._lastClickAxis = null;
+        this._dragger.onMouseRelease(evt);
     };
 
     ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
