@@ -183,13 +183,13 @@ void PointerDevice::firePointerClick(
                         (*iter).mDragStartX,
                         (*iter).mDragStartY,
                         cursor, button)));
-            em->fire(EventPtr(
-                    new MouseReleasedEvent(
-                        thisptr,
-                        xPixel,
-                        yPixel,
-                        cursor, button)));
         }
+        em->fire(EventPtr(
+                new MouseReleasedEvent(
+                    thisptr,
+                    xPixel,
+                    yPixel,
+                    cursor, button)));
         mDragInfo.erase(iter);
     }
 }
