@@ -713,10 +713,7 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
 {
     FIXME_GET_SPACE_OREF();
 
-    HostedObjectPtr obj = HostedObject::construct<HostedObject>(mParent->context(), mParent->getObjectHost(), UUID::random());
-    if (eci.scriptType != "")
-        obj->initializeScript(eci.scriptType, eci.scriptOpts);
-
+    HostedObjectPtr obj = mParent->getObjectHost()->createObject(UUID::random(), &eci.scriptType, &eci.scriptOpts);
 
     obj->connect(space,
         eci.loc,

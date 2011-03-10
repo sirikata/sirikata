@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Options.hpp
+ *  ObjectHost.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,34 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
-#define _SIRIKATA_CPPOH_OPTIONS_HPP_
-
-#define OPT_CONFIG_FILE          "cfg"
-
-#define OPT_OH_PLUGINS           "oh.plugins"
-
-#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
-#define STATS_SAMPLE_RATE    "stats.sample-rate"
-
-#define OPT_OH_OPTIONS           "objecthost"
-#define OPT_MAIN_SPACE           "mainspace"
-
-#define OPT_SIGFPE               "sigfpe"
-
-#define OPT_OBJECT_FACTORY       "object-factory"
-#define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
-
-
-#define OPT_DEFAULT_SCRIPT_TYPE         "default-script-type"
-#define OPT_DEFAULT_SCRIPT_OPTIONS      "default-script-opts"
-
+#include "ObjectHost.hpp"
+#include "Options.hpp"
+#include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {
 
-void InitCPPOHOptions();
+CppohObjectHost::CppohObjectHost(ObjectHostContext* ctx, Network::IOService*ioServ, const String& options)
+ : ObjectHost(ctx, ioServ, options)
+{
+    mDefaultScriptType = GetOptionValue<String>(OPT_DEFAULT_SCRIPT_TYPE);
+    mDefaultScriptOptions = GetOptionValue<String>(OPT_DEFAULT_SCRIPT_OPTIONS);
+}
+
+const String& CppohObjectHost::defaultScriptType() const {
+    return mDefaultScriptType;
+}
+
+const String& CppohObjectHost::defaultScriptOptions() const {
+    return mDefaultScriptOptions;
+}
 
 } // namespace Sirikata
-
-
-#endif //_SIRIKATA_CPPOH_OPTIONS_HPP_

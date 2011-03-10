@@ -89,7 +89,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 }
 
 
-
 //Need to define this function so that can register timeouts in jscript
 Network::IOService* HostedObject::getIOService()
 {
@@ -229,7 +228,7 @@ bool HostedObject::getProxyObjectFrom(const SpaceObjectReference*   spVisTo, con
     ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
     if (ohpmp.get() == NULL)
         return false;
-        
+
     p = ohpmp->getProxyObject(*sporef);
 
     if (p.get() == NULL)
@@ -262,7 +261,7 @@ bool HostedObject::getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& 
         SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy presence associated with "<<*sporef);
         return false;
     }
-    
+
     return true;
 }
 
@@ -638,7 +637,7 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
         Time locTime = localTime(sporef.space(),update_loc.t());
         loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
-        
+
         CONTEXT_OHTRACE(objectLoc,
             sporef.object().getAsUUID(),
             //getUUID(),
@@ -1241,7 +1240,3 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
 }
 
 }
-
-
-
-

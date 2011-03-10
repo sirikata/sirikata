@@ -36,7 +36,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
-#include <sirikata/oh/ObjectHost.hpp>
+#include "ObjectHost.hpp"
 #include <sirikata/mesh/LightInfo.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
 #include <sirikata/oh/HostedObject.hpp>
@@ -127,7 +127,7 @@ int main (int argc, char** argv) {
     SpaceID mainSpace(GetOptionValue<UUID>(OPT_MAIN_SPACE));
 
     String oh_options = GetOptionValue<String>(OPT_OH_OPTIONS);
-    ObjectHost *oh = new ObjectHost(ctx, ios, oh_options);
+    ObjectHost *oh = new CppohObjectHost(ctx, ios, oh_options);
 
     // Add all the spaces to the ObjectHost.  We used to have SpaceIDMap and
     // fill in the same ServerIDMap for all these. Now we just add the
