@@ -814,7 +814,7 @@ Time JSObjectScript::getHostedTime()
 }
 
 //Will compile and run code in the context ctx whose source is em_script_str.
-v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name)
+v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
@@ -822,33 +822,32 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     TryCatch try_catch;
 
     // Special casing emerson compilation
-    #ifdef EMERSON_COMPILE
+    v8::Handle<v8::String> source;
+#ifdef EMERSON_COMPILE
+    if (is_emerson) {
+        String em_script_str_new = em_script_str;
 
-    String em_script_str_new = em_script_str;
+        if(em_script_str.empty())
+            return v8::Undefined();
 
-    if(em_script_str.empty())
-        return v8::Undefined();
+        if(em_script_str.at(em_script_str.size() -1) != '\n')
+        {
+            em_script_str_new.push_back('\n');
+        }
 
-    if(em_script_str.at(em_script_str.size() -1) != '\n')
-    {
-        em_script_str_new.push_back('\n');
+        emerson_init();
+
+        JSLOG(insane, " Input Emerson script = \n" <<em_script_str_new);
+        String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+        JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+
+        source = v8::String::New(js_script_str.c_str(), js_script_str.size());
     }
+    else
+#endif
+        //assume the input string to be a valid js rather than emerson
+        source = v8::String::New(em_script_str.c_str(), em_script_str.size());
 
-    emerson_init();
-
-    String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-    JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
-
-
-
-    v8::Handle<v8::String> source = v8::String::New(js_script_str.c_str(), js_script_str.size());
-    #else
-
-
-    //assume the input string to be a valid js rather than emerson
-    v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
-    #endif
 
 
     //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
@@ -910,7 +909,7 @@ void JSObjectScript::checkWhens()
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx)
 {
     ScopedEvalContext sec(this, new_ctx);
-    return internalEval(mContext, em_script_str, em_script_name);
+    return internalEval(mContext, em_script_str, em_script_name, true);
 }
 
 
@@ -942,7 +941,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     v8Source += ");";
 
     ScriptOrigin cb_origin = cb->GetScriptOrigin();
-    v8::Handle<v8::Value> compileFuncResult = internalEval(ctx, v8Source, &cb_origin);
+    v8::Handle<v8::Value> compileFuncResult = internalEval(ctx, v8Source, &cb_origin, false);
 
     if (! compileFuncResult->IsFunction())
     {
@@ -1577,21 +1576,21 @@ void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
 }
 
 
-v8::Handle<v8::Function> JSObjectScript::functionValue(const String& em_script_str)
+v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_str)
 {
   v8::HandleScope handle_scope;
 
   static int32_t counter;
   std::stringstream sstream;
-  sstream <<  " __emerson_deserialized_function_" << counter << "__ = " << em_script_str << ";";
+  sstream <<  " __emerson_deserialized_function_" << counter << "__ = " << js_script_str << ";";
 
-  //const std::string new_code = std::string("(function () { return ") + em_script_str + "}());";
+  //const std::string new_code = std::string("(function () { return ") + js_script_str + "}());";
   // The function name is not required. It is being put in because emerson is not compiling "( function() {} )"; correctly
   const std::string new_code = sstream.str();
   counter++;
 
   v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
-  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code, &origin));
+  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code, &origin, false));
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
   return pf;

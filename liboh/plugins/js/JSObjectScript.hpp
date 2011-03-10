@@ -200,7 +200,8 @@ public:
 
     JSObjectScriptManager* manager() const { return mManager; }
 
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name);
+    // is_emerson controls whether this is compiled as emerson or javascript code.
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
 
     // A generic interface for invoking callback methods, used by other classes

@@ -34,7 +34,7 @@ JSWhenStruct::JSWhenStruct(v8::Handle<v8::Array>predArray, v8::Handle<v8::Functi
     whenCreatePredFunc(predArray);
     whenCreateCBFunc(callback);
 
-    
+
     //linking everything so that will be able to chek
     addWhenToContext();
     addWhenToScript();
@@ -89,7 +89,7 @@ void JSWhenStruct::whenCreateCBFunc(v8::Handle<v8::Function>callback)
 void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
 {
     JSLOG(insane, "building a list of watched items for predicate of when statement.  here is predicate: "<<whenPredAsString);
-    
+
     //whenPredAsString:  x < 3 + z || x.y.a > 2
     //tokenizedPred: [ util.create_when_watched_item(['x']),
     //util.create_when_watched(['x']),
@@ -101,9 +101,9 @@ void JSWhenStruct::buildWatchedItems(const String& whenPredAsString)
     JSLOG(insane,"when predicate function associated with tokenized predicate: "<<fncTokePred);
 
     v8::ScriptOrigin origin(v8::String::New("(whenpredicate)"));
-    v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,fncTokePred,&origin);
+    v8::Handle<v8::Value> compileFuncResult =   mObjScript->internalEval(mContext,fncTokePred,&origin,true);
 
-    
+
     String errorMessage = "Error building watched items in jswhenstruct.  Trying to decode a list of items to watch associated with the when predicate.  ";
     mWWLS = JSWhenWatchedListStruct::decodeWhenWatchedListStruct(compileFuncResult,errorMessage);
     if (mWWLS == NULL)
@@ -147,7 +147,7 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
 
     //still need to do something to parse out dependent parts;
     buildWatchedItems(whenPredAsString);
-    
+
 
     //compile function;
     //note: additional parentheses and semi-colon around outside of the
@@ -158,7 +158,7 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
 
     mContext->Enter();
     v8::ScriptOrigin origin(v8::String::New("(whenpredicate)"));
-    v8::Handle<v8::Value> compileFuncResult = mObjScript->internalEval(mContext, whenPredAsString, &origin);
+    v8::Handle<v8::Value> compileFuncResult = mObjScript->internalEval(mContext, whenPredAsString, &origin, true);
 
     if (! compileFuncResult->IsFunction())
     {
