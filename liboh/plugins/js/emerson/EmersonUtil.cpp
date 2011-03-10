@@ -22,6 +22,12 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 
 char* emerson_compile(const char* em_script_str)
 {
+    int garbage = 0;
+    return emerson_compile(em_script_str, garbage);
+}
+
+char* emerson_compile(const char* em_script_str, int& errorNum)
+{
 // printf("Trying to compile \n %s\n", em_script_str);
 
     pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
@@ -68,6 +74,7 @@ char* emerson_compile(const char* em_script_str)
     if (psr->pParser->rec->state->errorCount > 0)
     {
         fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
+        errorNum = ANTLR3_ERR_NOMEM;
     }
     else
     {

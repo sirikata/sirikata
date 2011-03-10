@@ -5,7 +5,7 @@ DIFF="diff"
 RM="rm"
 
 
-EMERSON_EXEC="../../../../../build/cmake/emerson"
+EMERSON_EXEC="../../../../../build/cmake/emerson -v -f"
 TEST_DIR="./tests"
 REF_DIR="./refs"
 

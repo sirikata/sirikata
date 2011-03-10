@@ -42,6 +42,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <string>
+#include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -62,7 +64,7 @@ int main	(int argc, char *argv[])
     // good on all platforms. This is a general rule - always use the ANTLR3 supplied
     // typedefs for pointers/types/etc.
     //
-    char*	    fName;
+    char*	    fName = "./input";
 
     // The ANTLR3 character input stream, which abstracts the input source such that
     // it is easy to provide input from different sources such as files, or 
@@ -127,15 +129,31 @@ int main	(int argc, char *argv[])
     // for this example, the input will always default to ./input if there is no explicit
     // argument.
     //
-	if (argc < 2 || argv[1] == NULL)
-	{
-		fName	="./input"; // Note in VS2005 debug, working directory must be configured
-	}
-	else
-	{
-		fName	= argv[1];
-	}
+    int c;
+    bool verbose= false;
+    while ((c = getopt(argc,argv,"f:v")) != -1)
+    {
+        switch (c)
+        {
+          case 'f':
+            fName = optarg;
+            break;
+          case 'v':
+            verbose = true;
+            break;
+        }
+    }
+    
+    // if (argc < 2 || argv[1] == NULL)
+    // {
+    //     fName	="./input"; // Note in VS2005 debug, working directory must be configured
+    // }
+    // else
+    // {
+    //     fName	= argv[1];
+    // }
 
+    
     // Create the input stream using the supplied file name
     // (Use antlr3AsciiFileStreamNew for UCS2/16bit input).
     //
@@ -149,8 +167,18 @@ int main	(int argc, char *argv[])
     {
         em_script_str_new.push_back('\n'); 
     }
-				
+
+    
     int errorNum = 0;
-    char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
+
+    if (verbose)
+        char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
+    else
+    {
+        char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), errorNum);
+        std::cout<<js_str;
+    }
+
+
     return errorNum;
 }
