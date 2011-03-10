@@ -61,8 +61,6 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
-        .addOption(new OptionValue(OPT_CAMERASCRIPT,"",OptionValueType<String>(),"The scripts the camera should startup with"))
-        .addOption(new OptionValue(OPT_CAMERASCRIPTTYPE,"js",OptionValueType<String>(),"The language the script is written in."))
         ;
 }
 
