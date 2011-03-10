@@ -6,6 +6,7 @@ import os
 REGRESSION_FOLDER                    =                               "tests/";
 TESTS_REGRESSION_FOLDER              =     REGRESSION_FOLDER + "testEmerson/";
 CORRECT_REGRESSION_FOLDER            =            REGRESSION_FOLDER + "refs/";
+CORRECT_REGRESSION_SUFFIX            =                                 ".out";
 EMERSON_UTIL_FOLDER                  =           REGRESSION_FOLDER + "utils/";
 EMERSON_COMPILED_FILENAME            =                "__EMERSON_compiled.js";
 EMERSON_COMPILED_OUTPUT              =        "__EMERSON_compiledRhinoed.txt";
@@ -61,7 +62,7 @@ def regressionPass(filenameToRegress, fileFolderToRegress, correctFolder, diffRe
 
 
     #run diff
-    result = runDiff(EMERSON_COMPILED_OUTPUT,correctFolder + '/'+filenameToRegress,diffResult);
+    result = runDiff(EMERSON_COMPILED_OUTPUT,correctFolder + '/'+filenameToRegress + CORRECT_REGRESSION_SUFFIX,diffResult);
 
 
     
