@@ -70,8 +70,8 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
   JSObjectScript* jsObjectScript     =           vstruct->jsObjScript;
   SpaceObjectReference* sporef       =      vstruct->sporefToListenTo;
   SpaceObjectReference* sporefVisTo  =    vstruct->sporefToListenFrom;
-  
-  
+
+
   // we don't want to serialize jsobjectscript for now
 
   // serialize SpaceObjectReference
@@ -255,12 +255,27 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
           int32_t i_value = prop_val->Int32Value();
           jsf_value.set_i_value(i_value);
         }
+        else if(prop_val->IsUint32())
+        {
+          uint32 ui_value = prop_val->Uint32Value();
+          jsf_value.set_ui_value(ui_value);
+        }
         else if(prop_val->IsString())
         {
           v8::String::Utf8Value msgBodyArgs2(prop_val);
           const char* cMsgBody2 = ToCString(msgBodyArgs2);
           std::string s_value(cMsgBody2);
           jsf_value.set_s_value(s_value);
+        }
+        else if(prop_val->IsNumber())
+        {
+            float64 d_value = prop_val->NumberValue();
+            jsf_value.set_d_value(d_value);
+        }
+        else if(prop_val->IsBoolean())
+        {
+            bool b_value = prop_val->BooleanValue();
+            jsf_value.set_b_value(b_value);
         }
 
     }
@@ -404,8 +419,8 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
     {
 
       SpaceObjectReference visibleObj;
-      SpaceObjectReference visibleTo; 
-      
+      SpaceObjectReference visibleTo;
+
 
       std::cout << "\n\nset internal field for type id \n\n";
       for(int i = 0; i < jsmessage.fields_size(); i++)
@@ -422,7 +437,7 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
 
       //visibleTo is always set to null spaceObjectReference
       visibleTo = SpaceObjectReference::null();
-      
+
 
       //error if not in context, won't be able to create a new v8 object.
       //should just abort here before seg faulting.
@@ -464,6 +479,11 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
           v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
           deserializeTo->Set(key, intval);
         }
+        else if(jsvalue.has_ui_value())
+        {
+          v8::Local<v8::Integer> uintval = v8::Integer::NewFromUnsigned(jsvalue.ui_value());
+          deserializeTo->Set(key, uintval);
+        }
         else if(jsvalue.has_o_value())
         {
           v8::Local<v8::Object> intDesObj = v8::Object::New();
@@ -478,6 +498,16 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
           v8::Handle<v8::Function> func = jsObjScript->functionValue(jsvalue.f_value());
           //v8::Local<v8::String> val = v8::String::New(str1, jsvalue.f_value().size());
           deserializeTo->Set(key, func);
+        }
+        else if(jsvalue.has_d_value())
+        {
+          v8::Local<v8::Number> dval = v8::Number::New(jsvalue.d_value());
+          deserializeTo->Set(key, dval);
+        }
+        else if(jsvalue.has_b_value())
+        {
+          v8::Handle<v8::Boolean> bval = v8::Boolean::New(jsvalue.b_value());
+          deserializeTo->Set(key, bval);
         }
 
     }
