@@ -621,6 +621,21 @@ void OgreSystemMouseHandler::setDelegate(Invokable* del) {
     mDelegate = del;
 }
 
+Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
+    Input::Modifier result;
+
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT))
+        result |= MOD_SHIFT;
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_CTRL))
+        result |= MOD_CTRL;
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_ALT))
+        result |= MOD_ALT;
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_GUI))
+        result |= MOD_GUI;
+
+        return result;
+}
+
 namespace {
 
 // Fills in modifier fields
@@ -702,6 +717,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["msg"] = String("mouse-hover");
             event_data["x"] = mouse_hover_ev->mX;
             event_data["y"] = mouse_hover_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 
@@ -712,6 +728,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_press_ev->mButton;
             event_data["x"] = mouse_press_ev->mX;
             event_data["y"] = mouse_press_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 
@@ -722,6 +739,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_release_ev->mButton;
             event_data["x"] = mouse_release_ev->mX;
             event_data["y"] = mouse_release_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 
@@ -732,6 +750,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_click_ev->mButton;
             event_data["x"] = mouse_click_ev->mX;
             event_data["y"] = mouse_click_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 
@@ -742,6 +761,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_drag_ev->mButton;
             event_data["x"] = mouse_drag_ev->mX;
             event_data["y"] = mouse_drag_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 

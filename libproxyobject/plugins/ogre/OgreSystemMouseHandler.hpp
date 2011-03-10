@@ -64,6 +64,11 @@ public:
 private:
     void delegateEvent(Input::InputEventPtr inputev);
 
+    // Gets the current set of modifiers from the input system. Used for mouse
+    // events exposed via Invokable interface since the internal mouse events
+    // don't come with modifiers.
+    Input::Modifier getCurrentModifiers() const;
+
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
 
