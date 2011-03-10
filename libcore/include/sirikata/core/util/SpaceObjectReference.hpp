@@ -45,12 +45,11 @@ typedef uint32 MessagePort;
  *  guaranteed to work in spaces other than the one they originated
  *  in.
  */
-class SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
+class SIRIKATA_EXPORT SpaceObjectReference : TotallyOrdered<SpaceObjectReference>{
   public:
-    SpaceObjectReference(){}
+    SpaceObjectReference();
     SpaceObjectReference(const SpaceID&sid,
-                         const ObjectReference&oref):mSpace(sid),
-                                                     mObject(oref) {}
+        const ObjectReference&oref);
     explicit SpaceObjectReference(const String& humanReadable){
         String::size_type where=humanReadable.find(":");
         if (where==String::npos) {

@@ -23,7 +23,7 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args);
 v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args);
 v8::Handle<v8::Value> checkEqual(const v8::Arguments& args);
 v8::Handle<v8::Value> dist(const v8::Arguments& args);
-
+bool isVisibleObject(v8::Handle<v8::Value> v8Val);
 
 
 }//end jsvisible namespace

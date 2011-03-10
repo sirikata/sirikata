@@ -123,14 +123,15 @@ MARK_AS_ADVANCED(
     CMAKE_C_FLAGS_DEFAULT
     CMAKE_EXE_LINKER_FLAGS_DEFAULT
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
-
+IF(WIN32)
+ELSE()
 SET(CMAKE_CXX_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
 SET( CMAKE_C_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
     "Built cflags with default settings."
     FORCE )
-
+ENDIF()
 
 # Profile build target
 SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
@@ -507,6 +508,8 @@ FIND_PACKAGE(OIS)
 IF(NOT OGRE_ROOT)
   IF(EXISTS ${PLATFORM_LIBS}/installed-ogre)
     SET(OGRE_ROOT ${PLATFORM_LIBS}/installed-ogre)
+  ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.7.2)
+    SET(OGRE_ROOT ${PLATFORM_LIBS}/ogre-1.7.2)
   ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.6.1)
     SET(OGRE_ROOT ${PLATFORM_LIBS}/ogre-1.6.1)
   ELSEIF(EXISTS ${PLATFORM_LIBS}/ogre-1.6.x)
@@ -538,11 +541,7 @@ IF(NOT SQLite3_ROOT)
   IF(WIN32)
     SET(SQLite3_ROOT ${PLATFORM_LIBS}/sqlite-3_6_16)
   ELSE()
-    IF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-      SET(SQLite3_ROOT ${PLATFORM_LIBS})
-    ELSE()
-      SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
-    ENDIF()
+    SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
   ENDIF()
 ENDIF()
 IF(NOT SQLite3_FOUND)
@@ -597,6 +596,15 @@ ENDIF()
 #ENDIF(NOT GLUT_FOUND)
 SET(GSL_ROOT ${PLATFORM_LIBS}/installed-gsl)
 FIND_PACKAGE(GSL)
+IF(GSL_FOUND)
+  SET(GSL_CXX_FLAGS "-DHAVE_GSL ${GSL_CXX_FLAGS}")
+ELSE()
+  MESSAGE(STATUS "GSL was not found: Will single sample in center of region to approximate integral.")
+  SET(GSL_CXX_FLAGS "")
+  SET(GSL_INCLUDE_DIR ${TOP_LEVEL}/externals/berkelium)
+  SET(GSL_LINK_DIRECTORIES)
+  SET(GSL_LIBRARIES)
+ENDIF()
 
 IF(WIN32)
 #dependency: berkelium
@@ -612,8 +620,14 @@ IF(WIN32)
     ENDIF()
   ENDIF()
   SET(BERKELIUM_TARGET_LIBRARIES)
+  SET(BERKELIUM_TARGET_BINARIES)
 ELSE()
   # FIXME real check for berkelium + chrome
+  SET(BERKELIUM_FOUND FALSE)
+  SET(BERKELIUM_INCLUDE_DIRS)
+  SET(BERKELIUM_TARGET_LIBRARIES)
+  SET(BERKELIUM_TARGET_BINARIES)
+  SET(BERKELIUM_LIBRARIES)
   IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     # This name is needed by the ADD_CHROME_APP macro
     SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
@@ -636,10 +650,10 @@ ELSE()
     FIND_PACKAGE(Chrome)
 
     IF(CHROME_FOUND)
-
       SET(BERKELIUM_FOUND TRUE)
       SET(BERKELIUM_INCLUDE_DIRS ${TOP_LEVEL}/externals/berkelium/include)
       SET(BERKELIUM_TARGET_LIBRARIES libberkelium)
+      SET(BERKELIUM_TARGET_LIBRARIES berkelium)
       SET(BERKELIUM_LIBRARIES)
     ELSE()
       MESSAGE(STATUS "Chrome wasn't found in dependencies/chromium")
@@ -1129,6 +1143,9 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
         ${LIBCORE_SOURCE_DIR}/service/TimeProfiler.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
+	${LIBCORE_SOURCE_DIR}/util/SpaceID.cpp
+	${LIBCORE_SOURCE_DIR}/util/ObjectReference.cpp
+	${LIBCORE_SOURCE_DIR}/util/SpaceObjectReference.cpp
 	${LIBCORE_SOURCE_DIR}/util/internal_sha2.cpp
 	${LIBCORE_SOURCE_DIR}/util/Logging.cpp
 	${LIBCORE_SOURCE_DIR}/util/Plugin.cpp
@@ -1145,6 +1162,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
+        ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
 	${LIBCORE_SOURCE_DIR}/sync/TimeSyncServer.cpp
 	${LIBCORE_SOURCE_DIR}/sync/TimeSyncClient.cpp
 )
@@ -1242,6 +1260,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/Invokable.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/OverlayPosition.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
@@ -1267,6 +1286,7 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/ogre)
 SET(CPPOH_SOURCES
   ${CPPOH_SOURCE_DIR}/main.cpp
   ${CPPOH_SOURCE_DIR}/Options.cpp
+  ${CPPOH_SOURCE_DIR}/ObjectHost.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1310,6 +1330,12 @@ SET(LIBCORE_PLUGIN_WEIGHTCONST_SOURCES
   ${LIBCORE_PLUGIN_WEIGHTCONST_DIR}/PluginInterface.cpp
   )
 
+SET(LIBCORE_PLUGIN_GRAPHITE_DIR ${LIBCORE_PLUGIN_DIR}/graphite)
+SET(LIBCORE_PLUGIN_GRAPHITE_SOURCES
+  ${LIBCORE_PLUGIN_GRAPHITE_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_GRAPHITE_DIR}/GraphiteTimeSeries.cpp
+  )
+
 SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR ${LIBCORE_PLUGIN_DIR}/servermap_tabular)
 SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES
   ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR}/PluginInterface.cpp
@@ -1332,22 +1358,16 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/OgreMeshRaytrace.cpp
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
-  ${GFX}/DragActions.cpp
-  ${GFX}/InputBinding.cpp
-  ${GFX}/InputBindingEvent.cpp
-  ${GFX}/InputResponse.cpp
   ${GFX}/task/EventManager.cpp
   ${GFX}/task/Event.cpp
   ${GFX}/task/UniqueId.cpp
   ${INPUT}/SDLInputManager.cpp
-  ${INPUT}/InputEventDescriptor.cpp
   ${INPUT}/InputEvents.cpp
   ${INPUT}/InputDevice.cpp
   ${INPUT}/SDLInputDevice.cpp
   ${GFX}/Entity.cpp
   ${GFX}/Camera.cpp
   ${GFX}/OgrePlugin.cpp
-  ${GFX}/CameraPath.cpp
 ${GFX}/resourceManager/CDNArchive.cpp
 ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
@@ -1409,6 +1429,11 @@ SET(LIBSPACE_PLUGIN_STANDARD_SOURCES
   ${LIBSPACE_PLUGIN_STANDARD_DIR}/AlwaysLocationUpdatePolicy.cpp
 )
 
+SET(LIBSPACE_PLUGIN_BULLETPHYSICS_DIR ${LIBSPACE_PLUGIN_DIR}/physics)
+SET(LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/PluginInterface.cpp
+  ${LIBSPACE_PLUGIN_BULLETPHYSICS_DIR}/BulletPhysicsService.cpp
+)
 
 SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/AggregateManager.cpp
@@ -1572,6 +1597,7 @@ libcore/test/TCPSSTConnectTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
 libcore/test/Vector3Test.hpp
+libcore/test/BoundingBoxTest.hpp
  )
 IF(NOT WIN32)
 SET(CXXTESTSources ${CXXTESTSources} libcore/test/ReadWriteHandlerTest.hpp libcore/test/SQLiteMinitransactionTest.hpp libcore/test/SQLiteReadWriteTest.hpp)
@@ -1758,6 +1784,7 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} tcpsst)
 
 ADD_PLUGIN_TARGET(weight-exp
                     SOURCES ${LIBCORE_PLUGIN_WEIGHTEXP_SOURCES}
+                    TARGET_CXXFLAGS ${GSL_CXX_FLAGS}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     LIBRARIES ${SIRIKATA_CORE_LIB}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
@@ -1765,6 +1792,7 @@ SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-exp)
 
 ADD_PLUGIN_TARGET(weight-sqr
                     SOURCES ${LIBCORE_PLUGIN_WEIGHTSQR_SOURCES}
+                    TARGET_CXXFLAGS ${GSL_CXX_FLAGS}
                     TARGET_LDFLAGS ${sirikata_LDFLAGS}
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
@@ -1776,6 +1804,13 @@ ADD_PLUGIN_TARGET(weight-const
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-const)
+
+ADD_PLUGIN_TARGET(graphite
+                    SOURCES ${LIBCORE_PLUGIN_GRAPHITE_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} graphite)
 
 ADD_PLUGIN_TARGET(servermap-tabular
                     SOURCES ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES}
@@ -1875,9 +1910,17 @@ ADD_PLUGIN_TARGET(bulletphysics
                     SOURCES ${LIBPROXYOBJECT_PLUGIN_BULLETPHYSICS_SOURCES}
                     TARGET_CXXFLAGS ${bullet_CFLAGS}
                     TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB})
+                    TARGET_LIBRARIES ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB} 
+                    LIBRARIES ${bullet_LIBRARIES} ${SIRIKATA_MESH_LIB} ${SIRIKATA_PROXYOBJECT_LIB} ${SIRIKATA_CORE_LIB}) 
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} bulletphysics)
+
+ADD_PLUGIN_TARGET(space-bulletphysics
+                    SOURCES ${LIBSPACE_PLUGIN_BULLETPHYSICS_SOURCES}
+		    TARGET_CXXFLAGS ${bullet_CFLAGS}
+                    TARGET_LDFLAGS ${bullet_LDFLAGS} ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB} ${bullet_LIBRARIES} ${SIRIKATA_SPACE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SPACE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} space-bulletphysics)
 ENDIF()
 
 
@@ -1931,18 +1974,19 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSWhen.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSWatched.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleStructMonitor.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedItemStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedListStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSFakerootStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSUtilStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchedStruct.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWatchable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSQuotedStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPositionListener.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSuspendable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSEventHandlerStruct.cpp
@@ -1987,6 +2031,9 @@ SET(LIBOH_PLUGIN_SIMPLECAMERA_SOURCES
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/PluginInterface.cpp
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/SimpleCameraObjectScript.cpp
  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/SimpleCameraObjectScriptManager.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputBinding.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputBindingEvent.cpp
+  ${LIBOH_PLUGIN_SIMPLECAMERA_DIR}/InputResponse.cpp
     )
 ADD_PLUGIN_TARGET(simplecamera
                     SOURCES ${LIBOH_PLUGIN_SIMPLECAMERA_SOURCES}
@@ -2217,7 +2264,7 @@ IF(CHROME_FOUND)
 
     ADD_CHROME_APP(
       APP ${CPPOH_BINARY_FILENAME}
-      DEPENDS ${CPPOH_BINARY}
+      DEPENDS ${CPPOH_BINARY} ${BERKELIUM_TARGET_LIBRARIES} ${BERKELIUM_TARGET_BINARIES}
       LINKS
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
@@ -2225,7 +2272,7 @@ IF(CHROME_FOUND)
       )
 
   ELSEIF(ISLINUX)
-    ADD_CHROME_SYMLINK_TARGET(TARGETNAME chrome_symlinks_for_sirikata DEPENDS libberkelium)
+    ADD_CHROME_SYMLINK_TARGET(TARGETNAME chrome_symlinks_for_sirikata DEPENDS ${BERKELIUM_TARGET_LIBRARIES})
   ENDIF()
 ENDIF()
 

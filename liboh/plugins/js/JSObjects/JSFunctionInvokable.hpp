@@ -19,7 +19,7 @@ namespace JS
     public:
     JSFunctionInvokable(v8::Persistent<v8::Function> _function, JSObjectScript* _script)
     : function_(_function), script_(_script){}
-    
+
     boost::any invoke(std::vector<boost::any>& params);
     private:
     v8::Persistent<v8::Function> function_;

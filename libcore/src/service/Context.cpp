@@ -44,6 +44,7 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
  : ioService(ios),
    mainStrand(strand),
    profiler( new TimeProfiler(name) ),
+   timeSeries(NULL),
    mFinishedTimer( Network::IOTimer::create(ios) ),
    mTrace(_trace),
    mEpoch(epoch),

@@ -640,13 +640,11 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
 {
     String uri = mDocument->getURI().toString();
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeGeometry(" << geometry << ") entered");
-
-    COLLADAFW::Mesh const* mesh = dynamic_cast<COLLADAFW::Mesh const*>(geometry);
-    if (!mesh) {
+	if (geometry->getType()!=COLLADAFW::Geometry::GEO_TYPE_MESH) {
         std::cerr << "ERROR: we only support collada Mesh\n";
         return true;
-        assert(false);
-    }
+	}
+    COLLADAFW::Mesh const* mesh = static_cast<COLLADAFW::Mesh const*>(geometry);
     mGeometryMap.insert(IndicesMultimap::value_type(geometry->getUniqueId(),mGeometries.size()));
     mGeometries.push_back(SubMeshGeometry());
     mExtraGeometryData.push_back(ExtraGeometryData());
@@ -1152,8 +1150,8 @@ bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* anima
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimation(" << animation << ") entered");
 
-    if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {
-        const COLLADAFW::AnimationCurve* curveAnimation = dynamic_cast<const COLLADAFW::AnimationCurve*>(animation);
+    if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {//makes sure static cast will work
+        const COLLADAFW::AnimationCurve* curveAnimation = static_cast<const COLLADAFW::AnimationCurve*>(animation);
         AnimationCurve* copy = &mAnimationCurves[animation->getUniqueId()];
 
         convertColladaFloatDoubleArray(curveAnimation->getInputValues(), copy->inputs);
@@ -1225,9 +1223,9 @@ bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* con
 {
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeController(" << controller << ") entered");
 
-    if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {
+    if (controller->getControllerType()==COLLADAFW::Controller::CONTROLLER_TYPE_SKIN) {//makes sure static_cast will work
         OCSkinController * copy = &mSkinControllers[controller->getUniqueId()];
-        const COLLADAFW::SkinController * skinController = dynamic_cast<const COLLADAFW::SkinController*>(controller);
+        const COLLADAFW::SkinController * skinController = static_cast<const COLLADAFW::SkinController*>(controller);
         copy->source = skinController->getSource();
         copy->skinControllerData = skinController->getSkinControllerData();
         for (unsigned int i=0;i<skinController->getJoints().getCount();++i) {

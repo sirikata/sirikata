@@ -10,7 +10,7 @@ namespace JS {
 namespace JSUtilObj{
 
 v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptCreateWhenTimeoutLT(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args);
@@ -24,7 +24,8 @@ v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args);
 
 
 v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args);
-
+v8::Handle<v8::Value> ScriptCreateWhenWatchedItem(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptCreateWhenWatchedList(const v8::Arguments& args);
 
 
 } //jsutilobj

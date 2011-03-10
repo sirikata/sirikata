@@ -275,8 +275,10 @@ v8::Handle<Object> JSContextStruct::struct_getFakeroot()
 
 v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
 {
-    return jsObjScript->getContextPosition(mContext,associatedPresence->getSporef() );
-    //return associatedPresence->struct_getPosition();
+    mContext->Enter();
+    v8::Handle<v8::Value> returner = associatedPresence->struct_getPosition();
+    mContext->Exit();
+    return returner;
 }
 
 void JSContextStruct::jsscript_print(const String& msg)

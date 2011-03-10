@@ -3,22 +3,19 @@
 import subprocess
 import sys
 
-#DIRECTORIES_SEARCH = ['analysis/', 'bench/','build/','cdn/','cppoh/','cseg/','demo/','doc/','externals/','libcore/','libproxyobject/','libspace/','pinto/','scripts/','simoh/','space/','tools/'];
-
-#Excludes build and externals and scripts
-DIRECTORIES_SEARCH = ['analysis/', 'bench/','cdn/','cppoh/','cseg/','demo/','doc/','libcore/','libmesh','liboh','libproxyobject/','libspace/','pinto/','simoh/','space/','tools/'];
-
+EXCLUDES = [ 'dependencies', 'externals', 'scripts', 'build/cmake', 'build/Frameworks', '.git', 'doc', 'docs' ]
 
 if __name__ == "__main__":
-
     if (len (sys.argv) < 2):
-        print("\n\nIncorrect usage: add in what you're grepping for\n\n");
+        print("\n\nIncorrect usage: add in what you're grepping for\n\n")
 
-    
-    #cmd = ['grep','-R', sys.argv[1]];
-    cmd = ['grep','-R'];
-    cmd += sys.argv[1:];
-    cmd += DIRECTORIES_SEARCH;
-    
+    relative_excludes = [ './' + ex for ex in EXCLUDES ]
+    EXCLUDES.extend(relative_excludes)
+
+    #cmd = ['grep','-R', sys.argv[1]]
+    cmd = ['grep','-R']
+    cmd += [ '--exclude-dir=' + e for e in EXCLUDES ]
+    cmd += sys.argv[1:]
+    cmd += [ '.' ]
+
     subprocess.call(cmd);
-    

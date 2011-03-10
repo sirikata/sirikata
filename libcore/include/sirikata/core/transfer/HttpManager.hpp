@@ -42,6 +42,10 @@
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <boost/thread/mutex.hpp>
+// Apple defines the check macro in AssertMacros.h, which screws up some code in boost's iostreams lib
+#ifdef check
+#undef check
+#endif
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>

@@ -42,7 +42,7 @@
 namespace Sirikata {
 namespace JS {
 
-class SIRIKATA_OH_EXPORT JSObjectScriptManager : public ObjectScriptManager {
+class JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
 
@@ -53,28 +53,31 @@ public:
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
     OptionSet* getOptions() const { return mOptions; }
+    String defaultScript() const;
 
     v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
 
-    //v8::Persistent<v8::ObjectTemplate> mPresenceTemplate;
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
-    v8::Persistent<v8::ObjectTemplate> mContextTemplate;
-    v8::Persistent<v8::ObjectTemplate> mUtilTemplate;
-    v8::Persistent<v8::ObjectTemplate> mInvokableObjectTemplate;
-    v8::Persistent<v8::ObjectTemplate> mFakerootTemplate;
-    v8::Persistent<v8::ObjectTemplate> mTimerTemplate;
-    v8::Persistent<v8::ObjectTemplate> mContextGlobalTemplate;
-    v8::Persistent<v8::ObjectTemplate> mWatchedTemplate;
-    v8::Persistent<v8::ObjectTemplate> mWhenTemplate;
-    v8::Persistent<v8::ObjectTemplate> mQuotedTemplate;
-    
+    v8::Persistent<v8::ObjectTemplate>   mContextTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mUtilTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mInvokableObjectTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mFakerootTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mTimerTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWhenTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mQuotedTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWhenWatchedItemTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mWhenWatchedListTemplate;
+
     void testPrint();
 
 private:
 
+    void createWhenWatchedItemTemplate();
+    void createWhenWatchedListTemplate();
     void createVisibleTemplate();
     void createSystemTemplate();
     void createHandlerTemplate();
@@ -85,15 +88,14 @@ private:
     void createFakerootTemplate();
     void createTimerTemplate();
     void createContextGlobalTemplate();
-    void createWatchedTemplate();
     void createWhenTemplate();
     void createQuotedTemplate();
-    
+
     void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
     void createTemplates();
 
-    
-    
+
+
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
@@ -101,6 +103,7 @@ private:
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
     OptionSet* mOptions;
+    OptionValue* mDefaultScript;
 };
 
 } // namespace JS

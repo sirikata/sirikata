@@ -44,14 +44,14 @@ namespace Mesh {
 
 // Typedefs for NodeIndices, which refer to scene graph nodes in the model
 typedef int32 NodeIndex;
-extern NodeIndex NullNodeIndex;
+extern SIRIKATA_MESH_EXPORT NodeIndex NullNodeIndex;
 typedef std::vector<NodeIndex> NodeIndexList;
 
 
 typedef std::vector<LightInfo> LightInfoList;
 typedef std::vector<std::string> TextureList;
 
-struct SIRIKATA_MESH_EXPORT Meshdata;
+struct Meshdata;
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
 
 /** Represents a skinned animation. A skinned animation is directly associated

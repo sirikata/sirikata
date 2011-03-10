@@ -15,8 +15,9 @@ extern "C" {
 
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree);
-char* emerson_compile(const char*);
-char* emerson_compile_diag(const char*, FILE*);
+char* emerson_compile(const char* em_script_str);
+char* emerson_compile(const char*, int& errorNum);
+char* emerson_compile_diag(const char*, FILE*,int& errorNum);
 
 
 

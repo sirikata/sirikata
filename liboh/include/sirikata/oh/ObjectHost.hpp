@@ -113,6 +113,11 @@ public:
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
 
+    virtual HostedObjectPtr createObject(const UUID &uuid, const String* script_type, const String* script_opts);
+
+    virtual const String& defaultScriptType() const = 0;
+    virtual const String& defaultScriptOptions() const = 0;
+
     // Space API - Provide info for ObjectHost to communicate with spaces
     void addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap);
 
@@ -134,7 +139,7 @@ public:
 
     /** Disconnect the object from the space. */
     void disconnect(SpaceObjectReference& sporef, const SpaceID& space);
-    
+
     /** Get offset of server time from client time for the given space. Should
      * only be called by objects with an active connection to that space.
      */
@@ -147,7 +152,7 @@ public:
     /** Primary ODP send function. */
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, const std::string& payload);
     bool send(SpaceObjectReference& sporefsrc, const SpaceID& space, const uint16 src_port, const UUID& dest, const uint16 dest_port, MemoryReference payload);
- 
+
 
 
 

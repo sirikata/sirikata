@@ -46,6 +46,7 @@ tokens
     WHEN_CHECKED_LIST_FIRST;
     WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
+    NOOP;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
     THROW;
@@ -128,8 +129,7 @@ tokens
 	
 
 program
-	: a=LTERM* sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
-
+	: a=LTERM*  sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
 	;
 
 sourceElements
@@ -161,7 +161,8 @@ functionBody
 
 // statements
 statement
-	: statementBlock
+	: noOpStatement
+        | statementBlock
 	| variableStatement
 	| emptyStatement
 	| expressionStatement
@@ -181,12 +182,17 @@ statement
 	;
 	
 statementBlock
- : '{' LTERM* '}'
+        : '{' LTERM* '}' 
 	| '{' LTERM* (statementList->statementList) LTERM* '}' 
-	;
-	
+	; 
+
+noOpStatement
+        : ';' -> ^(NOOP)
+        ;
+        
+        
 statementList
-	: statement (LTERM* statement)* -> ^(SLIST statement+)
+	: (LTERM* statement)+ -> ^(SLIST statement+)
 	;
 	
 variableStatement
@@ -218,7 +224,7 @@ initialiserNoIn
 	;
 	
 emptyStatement
-	: ';'
+        : LTERM* ';'
 	;
 	
 expressionStatement
@@ -401,7 +407,7 @@ memberExpressionSuffix
 	;
 
 callExpression
-    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> arguments | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
+    : (memberExpression LTERM* arguments -> ^(CALL memberExpression arguments)) (LTERM* arguments -> ^(CALL $callExpression arguments) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $callExpression indexSuffix1) | LTERM* propertyReferenceSuffix1 -> ^(DOT $callExpression propertyReferenceSuffix1)  )*
 	;
 	
 callExpressionSuffix
@@ -549,13 +555,16 @@ multOps
 ;
 
 multiplicativeExpression
-	: (unaryExpression -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
+	: (unaryExpression  -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
 	;
 
 
 postfixExpression
- :(leftHandSideExpression -> leftHandSideExpression) (('--' -> $postfixExpression '--') | ('++' -> $postfixExpression '++'))?
-	;
+ : leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
+ | leftHandSideExpression '++' -> ^(PLUSPLUS leftHandSideExpression)
+ |leftHandSideExpression  -> leftHandSideExpression
+  
+;
 
 
 unaryOps
@@ -572,7 +581,7 @@ unaryOps
 
 
 unaryExpression
-	: postfixExpression -> ^(POSTEXPR postfixExpression)
+	: postfixExpression -> postfixExpression
 	| unaryOps e=unaryExpression -> ^(unaryOps $e)
 	;
 	

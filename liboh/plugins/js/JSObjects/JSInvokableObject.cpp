@@ -2,7 +2,9 @@
 #include "../JSObjectScript.hpp"
 #include "JSFields.hpp"
 #include "JSFunctionInvokable.hpp"
+#include "JSInvokableUtil.hpp"
 
+#include <sirikata/core/network/Asio.hpp>
 #include <cassert>
 #include <vector>
 namespace Sirikata
@@ -11,8 +13,6 @@ namespace JS
 {
 namespace JSInvokableObject
 {
-
-
 
 v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 {
@@ -38,24 +38,7 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 
   //assert(args.Length() == 1);
   for(int i =0; i < args.Length(); i++)
-  {
-    /* Pushing only string params for now */
-    if(args[i]->IsString())
-    {
-      v8::String::AsciiValue str(args[i]);
-      string s = string(*str);
-      params.push_back(boost::any(s));
-    }
-    else if(args[i]->IsFunction())
-    {
-      v8::Handle<v8::Function> function = v8::Handle<v8::Function>::Cast(args[i]);
-      v8::Persistent<v8::Function> function_persist = v8::Persistent<v8::Function>::New(function);
-
-      JSFunctionInvokable* invokable = new JSFunctionInvokable(function_persist, caller);
-      Invokable* in = invokable;
-      params.push_back( boost::any(in));
-    }
-  }
+      params.push_back(InvokableUtil::V8ToAny(caller, args[i]));
 
   /* This is just a trampoline pattern */
 
@@ -64,16 +47,8 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
   {
     return v8::Undefined();
   }
-  Invokable* newInvokableObj = boost::any_cast<Invokable*>(b);
-  //Invokable* newInvokableObj = (boost::unsafe_any_cast<Invokable>(&b) );  //boost::any_cast<*>( invokableObj->invoke(params) );
-
-  Local<Object> tmpObj = caller->manager()->mInvokableObjectTemplate->NewInstance();
-  Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
-  tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(caller));
-  tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_SIMULATION_FIELD,External::New(  new JSInvokableObjectInt(newInvokableObj) ));
-  tmpObjP->SetInternalField(TYPEID_FIELD,External::New(  new String (JSINVOKABLE_TYPEID_STRING)));
-
-  return tmpObj;
+  Handle<Value> retval = InvokableUtil::AnyToV8(caller, b);
+  return retval;
 }
 
 boost::any JSInvokableObjectInt::invoke(std::vector<boost::any> &params)

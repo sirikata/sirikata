@@ -74,18 +74,32 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
 }
 bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                              GenEventManager *em,
-                             unsigned int button, bool newState, Modifier modifiers) {
+                             unsigned int button, bool newStateIsPressed, Modifier modifiers) {
     Modifier oldmodifiers = modifiers;
-    bool changed = changeButton(button, newState, oldmodifiers);
+    bool changed = changeButton(button, newStateIsPressed, oldmodifiers);
     if (changed) {
-        if (newState) {
+        if (newStateIsPressed) {
             if (oldmodifiers != modifiers) {
+                // If modifiers change, release old
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
             }
             em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
         } else {
             em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
         }
+    } else {
+        if (newStateIsPressed) {
+            if (oldmodifiers != modifiers) {
+                // If modifiers change, release old and press new
+                em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
+                em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+            }
+            else {
+                // Otherwise, we're really in repeat mode
+                em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
+            }
+        }
+        // Otherwise, we're getting repeats when the key is up....
     }
     return changed;
 }
@@ -140,7 +154,7 @@ void PointerDevice::firePointerClick(
         di.mOffsetY = 0;
         mDragInfo.insert(mDragInfo.begin(), di);
         em->fire(EventPtr(
-                 new MousePressedEvent(
+                new MousePressedEvent(
                     thisptr,
                     xPixel,
                     yPixel,
@@ -153,23 +167,29 @@ void PointerDevice::firePointerClick(
                 yPixel = (*iter).mDragY;
             }
             em->fire(EventPtr(
-                new MouseDragEvent(
-                    thisptr, DRAG_END,
-                    (*iter).mDragStartX,
-                    (*iter).mDragStartY,
-                    xPixel+(*iter).mOffsetX,
-                    yPixel+(*iter).mOffsetY,
-                    (*iter).mDragX+(*iter).mOffsetX,
-                    (*iter).mDragY+(*iter).mOffsetY,
-                    cursor, button, 0, 0, 0)));
+                    new MouseDragEvent(
+                        thisptr, DRAG_END,
+                        (*iter).mDragStartX,
+                        (*iter).mDragStartY,
+                        xPixel+(*iter).mOffsetX,
+                        yPixel+(*iter).mOffsetY,
+                        (*iter).mDragX+(*iter).mOffsetX,
+                        (*iter).mDragY+(*iter).mOffsetY,
+                        cursor, button, 0, 0, 0)));
         } else {
             em->fire(EventPtr(
-                new MouseClickEvent(
-                    thisptr,
-                    (*iter).mDragStartX,
-                    (*iter).mDragStartY,
-                    cursor, button)));
+                    new MouseClickEvent(
+                        thisptr,
+                        (*iter).mDragStartX,
+                        (*iter).mDragStartY,
+                        cursor, button)));
         }
+        em->fire(EventPtr(
+                new MouseReleasedEvent(
+                    thisptr,
+                    xPixel,
+                    yPixel,
+                    cursor, button)));
         mDragInfo.erase(iter);
     }
 }
@@ -226,7 +246,6 @@ void PointerDevice::firePointerMotion(
         }
     }
 }
-
 
 }
 }

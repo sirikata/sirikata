@@ -2,39 +2,22 @@
 #include "JSVisibleStruct.hpp"
 #include "../JSObjectScript.hpp"
 #include "../JSObjects/JSFields.hpp"
+#include "../JSLogging.hpp"
 #include <v8.h>
-#include "JSWatchable.hpp"
 
 namespace Sirikata {
 namespace JS {
 
 
-v8::Handle<v8::Value> JSVisibleStruct::dist(Vector3d* distTo)
+
+JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently)
+ : JSPositionListener(parent),
+   stillVisible(new bool(visibleCurrently))
 {
-    v8::HandleScope handle_scope;  //for garbage collection.
-    setFlag();
-    
-    if (distTo == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in call to dist of jsvisible object in jsvisiblestruct.cpp.  Must provide a vector to dist function.")) );
+    JSPositionListener::setListenTo(&whatsVisible,&toWhom);
 
-
-    float dist = (*mPosition - *distTo).length();
-
-    return v8::Number::New(dist);
-}
-
-
-
-
-JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently, const Vector3d& currentPosition, const Vector3f& currentVelocity)
- : JSWatchable(),
-   jsObjScript(parent),
-   whatIsVisible(new SpaceObjectReference(whatsVisible)),
-   visibleToWhom(new SpaceObjectReference( toWhom)),
-   stillVisible(new bool(visibleCurrently)),
-   mPosition(new Vector3d(currentPosition)),
-   mVelocity(new Vector3f(currentVelocity))
-{
+    //only register as pos listener if still visible is true
+    *stillVisible = JSPositionListener::registerAsPosListener();
 }
 
 
@@ -42,10 +25,8 @@ JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectRefere
 JSVisibleStruct::~JSVisibleStruct()
 {
     //do not delete jsObjScript: someone else is responsible for that.
-    delete whatIsVisible;
+    jsObjScript->deRegisterVisibleStruct(this);
     delete stillVisible;
-    delete mPosition;
-    delete mVelocity;
 }
 
 
@@ -56,7 +37,7 @@ JSVisibleStruct::~JSVisibleStruct()
 JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal, std::string& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    
+
     if (! senderVal->IsObject())
     {
         errorMessage += "Error in decode of visible object.  Should have received an object to decode.";
@@ -84,37 +65,36 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
     if (returner == NULL)
         errorMessage += "Error in decode of visible object.  Internal field of object given cannot be casted to a JSVisibleStruct.";
 
-
     return returner;
 }
 
 
-v8::Handle<v8::Value> JSVisibleStruct::returnProxyPosition()
+void JSVisibleStruct::notifyNotVisible()
 {
-    setFlag();
-    return jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
+    JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is no longer visible to "<<*sporefToListenFrom);
+    
+    *stillVisible = false;
+    JSPositionListener::deregisterAsPosListener();
 }
 
-Vector3d JSVisibleStruct::returnProxyPositionCPP()
+void JSVisibleStruct::notifyVisible()
 {
-    setFlag();
-    jsObjScript->returnProxyPosition(whatIsVisible,visibleToWhom,mPosition);
-    return *mPosition;
+    //if you were already visible, do nothing.  you should be registered okay.
+    if (*stillVisible == false)
+    {
+        JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is now visible to "<<*sporefToListenFrom);
+        *stillVisible = true;
+        JSPositionListener::registerAsPosListener();
+    }
 }
-
-Vector3f JSVisibleStruct::returnProxyVelocityCPP()
-{
-    return *mVelocity;
-}
-
 
 v8::Handle<v8::Value> JSVisibleStruct::toString()
 {
     v8::HandleScope handle_scope;  //for garbage collection.
 
-    std::string s = whatIsVisible->toString();
+    std::string s = sporefToListenTo->toString();
     v8::Local<v8::String> ret = v8::String::New(s.c_str(), s.length());
-    v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret); 
+    v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret);
     return pret;
 }
 
@@ -122,13 +102,10 @@ v8::Handle<v8::Value> JSVisibleStruct::toString()
 //just prints out associated space object reference, position, and whether still visible
 v8::Handle<v8::Value> JSVisibleStruct::printData()
 {
-    std::cout << "Printing Object Reference :" << whatIsVisible->toString() << "\n";
+    std::cout << "Printing Object Reference :" << sporefToListenTo->toString() << "\n";
     std::cout << "Still visible : "<<*stillVisible<<"\n";
-    if (*stillVisible)
-        jsObjScript->updatePosition(whatIsVisible,visibleToWhom,mPosition);
+    std::cout<<JSPositionListener::getPosition()<<"\n\n";
 
-    std::cout<<*mPosition<<"\n\n";
-    
     return v8::Undefined();
 }
 
@@ -136,7 +113,7 @@ v8::Handle<v8::Value> JSVisibleStruct::printData()
 v8::Handle<v8::Value> JSVisibleStruct::visibleSendMessage (std::string& msgToSend)
 {
     //actually send the message to the entity
-    jsObjScript->sendMessageToEntity(whatIsVisible,visibleToWhom,msgToSend);
+    jsObjScript->sendMessageToEntity(sporefToListenTo,sporefToListenFrom,msgToSend);
     return v8::Undefined();
 }
 
@@ -156,7 +133,7 @@ v8::Handle<v8::Value> JSVisibleStruct::getStillVisible()
 v8::Handle<v8::Value> JSVisibleStruct::checkEqual(JSVisibleStruct* jsvis)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    return v8::Boolean::New(  *whatIsVisible == *(jsvis->whatIsVisible));
+    return v8::Boolean::New(  *sporefToListenTo == *(jsvis->getToListenTo()));
 }
 
 

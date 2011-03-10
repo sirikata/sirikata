@@ -3,9 +3,10 @@
 
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
-
+#include "JSPositionListener.hpp"
 #include "JSContextStruct.hpp"
-#include "JSWatchable.hpp"
+
+
 namespace Sirikata {
 namespace JS {
 
@@ -14,7 +15,7 @@ class JSObjectScript;
 
 
 //note: only position and isConnected will actually set the flag of the watchable
-struct JSPresenceStruct :  public JSWatchable
+struct JSPresenceStruct : public JSPositionListener
 {
     JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,int presenceToken); //isConnected is false using this:
                                               //have no sporef
@@ -33,16 +34,11 @@ struct JSPresenceStruct :  public JSWatchable
 
     bool getIsConnected();
     v8::Handle<v8::Value> getIsConnectedV8();
-    
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
 
-    v8::Handle<v8::Value> struct_getPosition();
-    v8::Handle<v8::Value> struct_setVelocity(const Vector3f& newVel);
+
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries);
 
-    v8::Handle<v8::Value> distance(Vector3d* distTo);
-    
-    v8::Handle<v8::Value> struct_broadcastVisible(v8::Handle<v8::Object> toBroadcast);
     
     void addAssociatedContext(JSContextStruct*);
 
@@ -52,46 +48,46 @@ struct JSPresenceStruct :  public JSWatchable
     
     int getPresenceToken();
 
-    v8::Handle<v8::Value>  getOrientationFunction();
-    v8::Handle<v8::Value>  getVelocityFunction();
-    v8::Handle<v8::Value>  setPositionFunction(Vector3f newPos);
-    v8::Handle<v8::Value>  setVisualScaleFunction(float new_scale);
-    v8::Handle<v8::Value>  getVisualScaleFunction();
     v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
-    v8::Handle<v8::Value>  getOrientationVelFunction();
-    v8::Handle<v8::Value>  getVisualFunction();
+    v8::Handle<v8::Value>  struct_setVelocity(const Vector3f& newVel);
+    v8::Handle<v8::Value>  struct_setPosition(Vector3f newPos);
+    v8::Handle<v8::Value>  setVisualScaleFunction(float new_scale);
     v8::Handle<v8::Value>  setVisualFunction(String urilocation);
     v8::Handle<v8::Value>  setOrientationFunction(Quaternion newOrientation);
+    
+    v8::Handle<v8::Value>  getVisualScaleFunction();
+    v8::Handle<v8::Value>  getVisualFunction();
+
+
     v8::Handle<v8::Value>  runSimulation(String simname);
 
     v8::Handle<v8::Value>  toString()
     {
         v8::HandleScope handle_scope;
         String sporefReturner = "Presence unconnected";
-        if (sporef != NULL)
-            sporefReturner = sporef->toString();
+        if (sporefToListenTo != NULL)
+            sporefReturner = sporefToListenTo->toString();
         return v8::String::New(sporefReturner.c_str(), sporefReturner.length());
     }
     
     SpaceObjectReference* getSporef()
     {
-        return sporef;
+        return getToListenTo();
     }
-
 
 
 private:
     //data
-    JSObjectScript* jsObjScript;
-    SpaceObjectReference* sporef; //sporef associated with this presence.
     bool isConnected;
     bool hasConnectedCallback;
     int mPresenceToken;
-    
+
+    TimedMotionVector3f mLocation;
+    TimedMotionQuaternion mOrientation;
+
 
     ContextVector associatedContexts;
-    
     void clearPreviousConnectedCB();
 };
 

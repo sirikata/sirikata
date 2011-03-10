@@ -15,7 +15,7 @@ extern "C" {
 
 pANTLR3_STRING lexWhenPred_printAST(pANTLR3_BASE_TREE tree);
 char* lexWhenPred_compile(const char*);
-char* lexWhenPred_compile_diag(const char*, FILE*);
+char* lexWhenPred_compile_diag(const char*, FILE*,int& errorNum);
 
 
 /*

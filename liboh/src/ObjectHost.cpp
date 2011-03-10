@@ -99,6 +99,15 @@ ObjectHost::~ObjectHost()
     delete mScriptPlugins;
 }
 
+HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String* script_type, const String* script_opts) {
+    HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
+    if (script_type != NULL && script_opts != NULL)
+        ho->initializeScript(*script_type, *script_opts);
+    else
+        ho->initializeScript(this->defaultScriptType(), this->defaultScriptOptions());
+    return ho;
+}
+
 // Space API - Provide info for ObjectHost to communicate with spaces
 void ObjectHost::addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap) {
     SessionManager* smgr = new SessionManager(

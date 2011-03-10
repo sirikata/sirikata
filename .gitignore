@@ -86,3 +86,7 @@ docs/html
 
 # Ogre data
 libproxyobject/plugins/ogre/data/jquery
+
+# Emerson regression data
+liboh/plugins/js/emerson/regression/*.out
+liboh/plugins/js/emerson/regression/*.diff

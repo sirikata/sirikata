@@ -155,6 +155,17 @@ public:
     }
 };
 
+
+bool keyIsModifier(Input::KeyButton b);
+String keyButtonString(Input::KeyButton b);
+String keyModifiersString(Input::Modifier m);
+String mouseButtonString(Input::MouseButton b);
+String axisString(Input::AxisIndex i);
+Input::KeyButton keyButtonFromStrings(std::vector<String>& parts);
+Input::Modifier keyModifiersFromStrings(std::vector<String>& parts);
+Input::MouseButton mouseButtonFromStrings(std::vector<String>& parts);
+Input::AxisIndex axisFromStrings(std::vector<String>& parts);
+
 }
 }
 

@@ -670,6 +670,24 @@ void WebView::injectMouseUp(int xPos, int yPos)
     }
 }
 
+void WebView::injectCut() {
+#if defined(HAVE_BERKELIUM)
+    webView->cut();
+#endif
+}
+
+void WebView::injectCopy() {
+#if defined(HAVE_BERKELIUM)
+    webView->copy();
+#endif
+}
+
+void WebView::injectPaste() {
+#if defined(HAVE_BERKELIUM)
+    webView->paste();
+#endif
+}
+
 void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancode) {
 #if defined(HAVE_BERKELIUM)
 	webView->keyEvent(press, modifiers, vk_code, scancode);
@@ -909,7 +927,7 @@ void WebView::blitScrollImage(
     size_t height = shared_rect.height();
 
     Ogre::TexturePtr shadow = Ogre::TextureManager::getSingleton().createManual(
-        "_ _internal","_ _internal",
+        "_ _ webview scroll buffer _ _",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
         Ogre::TEX_TYPE_2D,
         Bitwise::firstPO2From(width), Bitwise::firstPO2From(height), 1, 1,
         PF_BYTE_BGRA
@@ -1192,7 +1210,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
     //just _1, _2 for now
     Invokable* invokable = boost::any_cast<Invokable*>(params[2]);
-    bind("event", std::tr1::bind(&WebView::translateParamsAndInvoke, this, invokable, _1, _2));
+    bind(event, std::tr1::bind(&WebView::translateParamsAndInvoke, this, invokable, _1, _2));
     Invokable* inv_result = this;
     return boost::any(inv_result);
 
@@ -1228,7 +1246,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
 {
   std::vector<boost::any> params;
   // Do the translation here
-  for(unsigned int i = 2 ; i < args.size(); i++)
+  for(unsigned int i = 0; i < args.size(); i++)
   {
     const char* s = args[i].begin();
 

@@ -49,8 +49,8 @@
 #define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
 
 
-#define OPT_CAMERASCRIPT         "camerascript"
-#define OPT_CAMERASCRIPTTYPE         "camerascripttype"
+#define OPT_DEFAULT_SCRIPT_TYPE         "default-script-type"
+#define OPT_DEFAULT_SCRIPT_OPTIONS      "default-script-opts"
 
 
 namespace Sirikata {

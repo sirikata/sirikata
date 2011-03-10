@@ -7,6 +7,8 @@
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
 #include "../JSObjectStructs/JSUtilStruct.hpp"
+#include "../JSObjectStructs/JSVisibleStruct.hpp"
+#include "../JSObjectStructs/JSPresenceStruct.hpp"
 #include <math.h>
 
 #include <sirikata/core/util/Random.hpp>
@@ -16,6 +18,113 @@
 namespace Sirikata{
 namespace JS{
 namespace JSUtilObj{
+
+//this function calculates when a condition of the scripted function should
+//be re-evaluated on a timer.  It's mostly for distances between objects.
+//one would say something like create_when_timeout_lt(a,b,6).  Which means,
+//fire the predicate when the distance from a to b is less than 6.  (Does this
+//time calculation based on the current velocities and positions of a and b.)
+//a or b can either be presences, vec3s, or visibles.
+v8::Handle<v8::Value> ScriptCreateWhenTimeoutLT(const v8::Arguments& args)
+{
+    if (args.Length() != 3)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenTimeoutLT: requires three arguments.  First two arguments should be either presences, vec3s, or visibles.  The last argument should be a number.")));
+
+    //check that last arg is a number
+    if (! NumericValidate(args[2]))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenTimeoutLT: requires three arguments.  First two arguments should be either presences, vec3s, or visibles.  The last argument should be a number.  In this case, the last arg was not a number.")));
+
+    double ltRHS = NumericExtract(args[2]);
+
+    String errorMsg1 = "Error decoding first arg of whenTimeoutLT as a presence, visible, or vec3.  ";
+    String errorMsg2 = "Error decoding second arg of whenTimeoutLT as a presence, visible, or vec3.  ";
+    //check if args are presences
+    JSPresenceStruct* presStruct_LHS_1 = JSPresenceStruct::decodePresenceStruct(args[0],errorMsg1);
+    JSPresenceStruct* presStruct_LHS_2 = JSPresenceStruct::decodePresenceStruct(args[1],errorMsg2);
+    //check if args are visibles
+    JSVisibleStruct* visStruct_LHS_1 = JSVisibleStruct::decodeVisible(args[0],errorMsg1);
+    JSVisibleStruct* visStruct_LHS_2 = JSVisibleStruct::decodeVisible(args[1],errorMsg2);
+    //check if args are vec3s
+    Vector3d vec3_LHS_1 = Vector3d::nil();
+    Vector3d vec3_LHS_2 = Vector3d::nil();
+    
+    bool Vec3Validate(Handle<Object>& src);
+    
+    
+    if ((presStruct_LHS_1 == NULL) && (visStruct_LHS_1 == NULL))
+    {
+        //check if the first arg is a vec3.;
+        //if it is not (and the upper check indicates that it wasn't a visible
+        //or a presence, throw error!
+        if (!Vec3ValValidate(args[0]))
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg1.c_str())));
+        
+        vec3_LHS_1 = Vec3ValExtract(args[0]);
+    }
+
+    //same thing for second arg
+    if ((presStruct_LHS_2 == NULL) && (visStruct_LHS_2 == NULL))
+    {
+        //check if the second arg is a vec3.;
+        //if it is not (and the upper check indicates that it wasn't a visible
+        //or a presence, throw error!
+        if (!Vec3ValValidate(args[1]))
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg2.c_str())));
+        
+        vec3_LHS_2 = Vec3ValExtract(args[1]);
+    }
+    
+    //grab the util object
+    String errorMessage = "Error in ScriptCreateWhenTimeoutLT of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
+
+    return jsutil->struct_createWhenTimeoutLT(presStruct_LHS_1,visStruct_LHS_1,vec3_LHS_1,presStruct_LHS_2, visStruct_LHS_2,vec3_LHS_2, ltRHS);
+}
+
+
+v8::Handle<v8::Value> ScriptCreateWhenWatchedItem(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
+
+    if (! args[0]->IsArray())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
+
+    v8::Handle<v8::Array> itemArray = v8::Handle<v8::Array>::Cast(args[0]->ToObject());
+
+
+    String errorMessage = "Error in ScriptCreateWhenWatchedItem of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
+
+    if (jsutil == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsutil->struct_createWhenWatchedItem(itemArray);
+}
+
+v8::Handle<v8::Value> ScriptCreateWhenWatchedList(const v8::Arguments& args)
+{
+    //check do not have too many arguments
+    if (args.Length() !=1)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedList: requires one argument (an array of createWhenWatchedItems).")));
+
+
+    //check that first arg is an array.
+    if (! args[0]->IsArray())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem of JSUtilObj.cpp.  First argument passed to create_when_watched_list should be an array each containing a single watched_item.")));
+
+    //try to decode object
+    String errorMessage = "Error in ScriptCreateWhenWatchedItem of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
+
+    if (jsutil == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+
+    v8::Handle<v8::Array> arrayOfItems = v8::Handle<v8::Array>::Cast(args[0]);
+
+    return jsutil->struct_createWhenWatchedList(arrayOfItems);
+}
 
 
 v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
@@ -39,22 +148,6 @@ v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
     return jsutil->struct_createQuotedObject(decodedString);
-}
-
-
-
-v8::Handle<v8::Value> ScriptCreateWatched(const v8::Arguments& args)
-{
-    if (args.Length() != 0)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWatched of JSUtilObj.cpp.  Watched constructor takes no args.")));
-    
-    String errorMessage = "Error in ScriptCreateWatched of JSUtilObj.cpp.  Cannot decode the jsobjscript field of the util object.  ";
-    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
-
-    if (jsutil == NULL)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
-    
-    return jsutil->struct_createWatched();
 }
 
 
@@ -89,57 +182,6 @@ v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args)
     return jsutil->struct_createWhen(arrayPredObj,funcCBObj);
 }
 
-
-//when:
-//1: a predicate function to check
-//2: a callback function to callback
-//3: null or a sampling period
-//4-end: list of watchable args this depends on
-//last few arguments are 
-// v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args)
-// {
-//     if (args.Length() <4)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  Requires at least 4 args: <predicate function> <callback function> <sampling period (or null if no sampling)> <first watchable arg> <second watchable arg> ...")) );
-
-//     //check can get jsobjscript passed in
-//     String errorMessage = "Error in ScriptCreateWhen of JSUtilObj.  Cannot decode jsobjectscript associated with util object. ";
-//     JSUtilStruct* jsutil = JSUtilStruct::decodeUtilObject(args.This(),errorMessage);
-//     if (jsutil == NULL)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-    
-//     //check args passed in
-//     if (! args[0]->IsFunction())
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  First argument should be a function (predicate of when statement).")));
-//     if (! args[1]->IsFunction())
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  Second argument should be a function (callback of when).")));
-//     if ((! args[2]->IsNull()) && (! args[2]->IsNumber()))
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateWhen of JSUtilObj.cpp.  Third argument should be a number or null (min sampling period).")));
-
-//     WatchableMap watchMap;
-    
-//     //check all of the watchable args
-//     for (int s=3; s < args.Length(); ++s)
-//     {
-//         String errorMessage = "Error decoding watchable arg of in ScriptWhenCreate of JSUtilObj.cpp.  ";
-//         JSWatchable* watchableArg = decodeWatchable(args[s],errorMessage);
-//         if (watchableArg ==NULL)
-//             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-
-//         watchMap[watchableArg] = true;
-//     }
-    
-//     v8::Persistent<v8::Function> per_pred = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(args[0]));
-//     v8::Persistent<v8::Function> per_cb   = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(args[1]));
-
-    
-//     float minPeriod = JSWhenStruct::WHEN_PERIOD_NOT_SET;
-//     if (args[2]->IsNumber())
-//         minPeriod = NumericExtract(args[2]);
-
-
-//     //create new when object;
-//     return jsutil->create_when(per_pred,per_cb,minPeriod,watchMap);
-// }
 
 
 //returns a random float from 0 to 1

@@ -34,7 +34,6 @@
 #define SIRIKATA_INPUT_InputEvents_HPP__
 
 #include "InputDevice.hpp"
-#include "InputEventDescriptor.hpp"
 
 namespace Sirikata {
 
@@ -64,8 +63,6 @@ public:
         os << &(*dev);
         return IdPair::Secondary(os.str());
     }
-
-    virtual EventDescriptor getDescriptor() const = 0;
 
     virtual ~InputEvent() {}
 
@@ -100,11 +97,13 @@ public:
          mModifier(mod) {
     }
 
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::Key(mButton, mEvent, mModifier);
-    }
-
+    // Indicates if the button was in the depressed state.
     bool pressed() {
+        return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) || (mEvent == KEY_REPEATED) );
+    }
+    // Indicates if the button was actively pressed, i.e. was pushed down
+    // instead of just held down
+    bool activelyPressed() {
         return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) );
     }
 };
@@ -125,6 +124,22 @@ public:
     virtual ~ButtonPressed(){}
 };
 typedef std::tr1::shared_ptr<ButtonPressed> ButtonPressedEventPtr;
+
+/** Fired on repeats -- whenever a button has been pushed and held
+ * down.
+ */
+class ButtonRepeated :public ButtonEvent {
+public:
+    static const IdPair::Primary& getEventId(){
+        static IdPair::Primary retval("ButtonRepeated");
+        return retval;
+    }
+    ButtonRepeated(const InputDevicePtr &dev, unsigned int key, Modifier mod)
+        : ButtonEvent(getEventId(), dev, KEY_REPEATED, key, mod) {
+    }
+    virtual ~ButtonRepeated(){}
+};
+typedef std::tr1::shared_ptr<ButtonRepeated> ButtonRepeatedEventPtr;
 
 /** Fired whenever a button is no longer held down. */
 class ButtonReleased :public ButtonEvent {
@@ -184,10 +199,6 @@ public:
         mAxis = axis;
         mValue = value;
     }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::Axis(mAxis);
-    }
 };
 typedef std::tr1::shared_ptr<AxisEvent> AxisEventPtr;
 
@@ -215,10 +226,6 @@ public:
     TextInputEvent(const InputDevicePtr &dev, char *text)
         : InputEvent(dev, IdPair(getEventId(), getSecondaryId(dev))),
                                  mText(text) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::Text();
     }
 };
 typedef std::tr1::shared_ptr<TextInputEvent> TextInputEventPtr;
@@ -257,10 +264,6 @@ public:
     MouseHoverEvent(const PointerDevicePtr &dev,
                float x, float y, int cursorType)
         : MouseEvent(IdPair(getEventId(), getSecondaryId(dev)), dev, x, y, cursorType) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MouseHover();
     }
 };
 typedef std::tr1::shared_ptr<MouseHoverEvent> MouseHoverEventPtr;
@@ -337,15 +340,10 @@ public:
         : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
                          cursorType, button, 0, 0, 0) {
     }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MouseClick(mButton);
-    }
 };
 typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
 
-/** Event when the mouse was clicked (pressed and released
-    without moving) */
+/** Event when the mouse was pressed. Always sent. */
 class MousePressedEvent: public MouseDownEvent {
 public:
 
@@ -360,12 +358,26 @@ public:
         : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
                          cursorType, button, 0, 0, 0) {
     }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MousePressed(mButton);
-    }
 };
 typedef std::tr1::shared_ptr<MousePressedEvent> MousePressedEventPtr;
+
+/** Event when the mouse was released. Always sent. */
+class MouseReleasedEvent: public MouseDownEvent {
+public:
+
+    static const IdPair::Primary getEventId() {
+        static IdPair::Primary retval("MouseReleasedEvent");
+        return retval;
+    }
+
+    MouseReleasedEvent(const PointerDevicePtr &dev,
+                    float x, float y,
+                    int cursorType, int button)
+        : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
+                         cursorType, button, 0, 0, 0) {
+    }
+};
+typedef std::tr1::shared_ptr<MouseReleasedEvent> MouseReleasedEventPtr;
 
 /** Event when the mouse was dragged. If this event fires, then
     you will not get a MouseClickEvent. */
@@ -388,10 +400,6 @@ public:
                          xend, yend, lastx, lasty, cursorType, button,
                          pressure, pressureMin, pressureMax) {
         mType = type;
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::MouseDrag(mButton, mType);
     }
 };
 typedef std::tr1::shared_ptr<MouseDragEvent> MouseDragEventPtr;
@@ -456,7 +464,6 @@ public:
         return mData2;
     }
 
-    virtual EventDescriptor getDescriptor() const;
 };
 typedef std::tr1::shared_ptr<WindowEvent> WindowEventPtr;
 
@@ -474,10 +481,6 @@ public:
     std::vector<std::string> mFilenames;
     DragAndDropEvent(const std::vector<std::string>&files, int x=0, int y=0)
         : Task::Event(getId()), mXCoord(x), mYCoord(y), mFilenames(files) {
-    }
-
-    virtual EventDescriptor getDescriptor() const {
-        return EventDescriptor::DragAndDrop();
     }
 };
 typedef std::tr1::shared_ptr<DragAndDropEvent> DragAndDropEventPtr;
@@ -502,8 +505,6 @@ public:
     WebViewEvent(const String &wvName, const String& name, const std::vector<String>& args);
     WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& args);
     virtual ~WebViewEvent();
-
-    virtual EventDescriptor getDescriptor() const;
 };
 typedef std::tr1::shared_ptr<WebViewEvent> WebViewEventPtr;
 

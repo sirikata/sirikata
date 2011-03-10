@@ -47,14 +47,14 @@ namespace Task {
  * a Secondary ID, which should contain a specific pointer or string value
  * identifying the specific instance of the thrown event.
  */
-class SIRIKATA_EXPORT IdPair {
+class IdPair {
 public:
 	/** The Secondary ID should attempt to specify the specific type of
 	 * event (specific enough to prevent a large number of listeners,
 	 * and generic enough not to force interested listeners to specify
 	 * only a Primary ID. Usually something like a filename string or
 	 * UUID, however the pointer is allowed to be anything. */
-	class SIRIKATA_EXPORT Secondary {
+	class Secondary {
 	public:
 		/** Pointers passed into the constructor should be cast to
 		 * an intptr_t when passed to the constructor. */
@@ -147,7 +147,7 @@ public:
 	 * However, the primary ID should not be generated during execution,
 	 * since each new ID requires adding another member to the internal
 	 * mapping from string to integer. */
-	class SIRIKATA_EXPORT Primary {
+	class Primary {
 	private:
 		int mId;
 		static int getUniqueId(const std::string &id);
@@ -255,7 +255,7 @@ enum EventHistory {
 };
 
 /** Base class for any events that are to be thrown */
-class SIRIKATA_EXPORT Event {
+class Event {
 protected:
 	/**
 	 * a IdPair used to determine which EventListeners are interested:

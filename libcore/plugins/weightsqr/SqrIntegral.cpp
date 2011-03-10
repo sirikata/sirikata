@@ -31,13 +31,13 @@
  */
 
 #include "SqrIntegral.hpp"
-
 extern "C" {
+#ifdef HAVE_GSL
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_monte.h>
 #include <gsl/gsl_monte_plain.h>
 #include <gsl/gsl_rng.h>
-
+#endif
 struct sqrParams{
     double constant_extent_rho;
     double constant_inner_speed_k;
@@ -71,10 +71,12 @@ double bandwidth_bound(double *x, size_t dim, void *v_params) {
 namespace Sirikata {
 SqrIntegral::SqrIntegral(bool normalize) {
     this->normalize=normalize;
+#ifdef HAVE_GSL
 	gsl_monte_plain_state *s = gsl_monte_plain_alloc(4);
 	gsl_rng *r = gsl_rng_alloc(gsl_rng_default);
     gsl_rng_r=r;
     gsl_monte_plane_state_s=s;
+#endif
     memset(cachedDimensions,0,sizeof(cachedDimensions));
     memset(cachedCutoff,0,sizeof(cachedCutoff));
     memset(cachedFlatness,0,sizeof(cachedFlatness));
@@ -103,8 +105,20 @@ double SqrIntegral::integrate(double cutoff, double flatness,const Vector3d&xymi
     double xl[4]={xymin.x,xymin.y,uvmin.x,uvmin.y};
     double xu[4]={xymax.x,xymax.y,uvmax.x,uvmax.y};
     double res1=0;
+#ifdef HAVE_GSL
     gsl_monte_function F0 = { &bandwidth_bound, 4, &params};
 	gsl_monte_plain_integrate(&F0, xl, xu, 4, NCALLS, (gsl_rng*)gsl_rng_r, (gsl_monte_plain_state*)gsl_monte_plane_state_s, &res1, error);
+#else
+    double xc[4];
+    double area=1.0;
+    for (int i=0;i<4;++i) {
+        area*=(xu[i]-xl[i]);
+        xc[i]=(xu[i]+xl[i])*.5;
+    }
+    res1=bandwidth_bound(xc,4,&params)*area;
+    error=0;
+    
+#endif
     //printf ("%lf, %lf\n",res1,*error);
     return res1;
 }

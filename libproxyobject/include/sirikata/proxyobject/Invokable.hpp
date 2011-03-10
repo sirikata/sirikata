@@ -13,6 +13,9 @@ namespace Sirikata
     public:
     virtual boost::any invoke(std::vector<boost::any>& params);
     virtual ~Invokable();
+
+    typedef std::vector<boost::any> Array;
+    typedef std::map<String, boost::any> Dict;
   };
 }
 

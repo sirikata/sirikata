@@ -81,7 +81,7 @@ public:
     template<class T> Vector3<T> downCast() const{
         return Vector3<T>((T)x,(T)y,(T)z);
     }
-    
+
     scalar operator[](const unsigned int i) const{
         assert(i<3);
         return v[i];
@@ -116,6 +116,7 @@ public:
     Vector3 operator*(scalar scale) const {
         return Vector3(x*scale,y*scale,z*scale);
     }
+    Vector3 scale(scalar scale) const { return (*this)*scale; }
     Vector3 operator/(scalar scale) const {
         return Vector3(x/scale,y/scale,z/scale);
     }
@@ -184,7 +185,7 @@ public:
     }
     bool operator!=(const Vector3&other)const {
         return x!=other.x||y!=other.y||z!=other.z;
-    }    
+    }
     Vector3 normal()const {
         scalar len=length();
         if (len>1e-08)

@@ -144,6 +144,12 @@ private:
     friend class ::Sirikata::SelfWeakPtr<VWObject>;
     friend class PerPresenceData;
 /// Private: Use "SelfWeakPtr<HostedObject>::construct(ObjectHost*)"
+    /** Create a new HostedObject. script_type and script_opts are treated as
+     * "use defaults" if you pass NULL and "use no script" if you pass empty
+     * strings.  Invalid values are equivalent to passing NULL, since no scripts
+     * can be instantiated -- there is no fallback to the default if you
+     * explicitly specify a script type and options.
+     */
     HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
 
 public:
@@ -203,6 +209,7 @@ public:
     /// Gets the proxy object representing this HostedObject inside space.
     ///const ProxyObjectPtr &getProxy(const SpaceID &space) const;
     ProxyObjectPtr getProxy(const SpaceID& space, const ObjectReference& oref);
+    bool getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p);
     const ProxyObjectPtr &getProxyConst(const SpaceID& space, const ObjectReference& oref) const;
 
 public:
@@ -217,7 +224,7 @@ public:
         to a space, talking to other objects within this object host, and
         persistence messages.
     */
-    
+
 
 
     virtual ProxyManagerPtr getProxyManager(const SpaceID& space,const ObjectReference& oref);

@@ -25,6 +25,9 @@ message JSFieldValue
 	optional int32 i_value = 2;
         optional JSMessage o_value = 3;
         optional string f_value = 4;
+        optional bool b_value = 5;
+	optional int32 ui_value = 6;
+        optional double d_value = 7;
 }
 
 
@@ -44,20 +47,4 @@ message JSField
 message JSMessage
 {
 	repeated JSField fields = 1;
-}
-
-
-message ScriptingRequest {
-    optional uint32 id = 1;
-    optional string body = 2;
-}
-
-message ScriptingReply {
-    optional uint32 id = 1;
-    optional string body = 2;
-}
-
-message ScriptingMessage {
-    repeated ScriptingRequest requests = 1;
-    repeated ScriptingReply replies = 2;
 }

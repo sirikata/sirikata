@@ -47,7 +47,6 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
-#include "MouseHandler.hpp"
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -73,6 +72,7 @@ class Camera;
 class CubeMap;
 struct IntersectResult;
 class CDNArchivePlugin;
+class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
 class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener
@@ -82,7 +82,6 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
 
-    Camera* mCamera;
     Vector4f mBackgroundColor;
 
     // FIXME because we don't have proper multithreaded support in cppoh, we
@@ -91,10 +90,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Network::IOWork* mParsingWork;
     Thread* mParsingThread;
 
-    class OgreSystemMouseHandler; // Defined in OgreSystemMouseHandler.cpp.
     friend class OgreSystemMouseHandler;
-    MouseHandler *mMouseHandler;
-    void allocMouseHandler(const String& keybinding_file);
+    OgreSystemMouseHandler *mMouseHandler;
+    void allocMouseHandler();
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
@@ -102,9 +100,11 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     Ogre::SceneManager *mSceneManager;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
+
     typedef std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> SceneEntitiesMap;
     SceneEntitiesMap mSceneEntities;
     std::list<Entity*> mMovingEntities;
+
     friend class Entity; //Entity will insert/delete itself from these arrays.
     friend class Camera; //CameraEntity will insert/delete itself from the scene cameras array.
     OptionValue*mWindowWidth;
@@ -146,7 +146,9 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     void screenshot(const String& filename);
 
+    void toggleSuspend();
     void suspend();
+    void resume();
 
     // Initiate quiting by indicating to the main loop that we want to shut down
     void quit();
@@ -206,7 +208,7 @@ public:
     const OptionSet*getOptions()const{
         return mOptions;
     }
-    void selectObject(Entity *obj, bool reset=true); // Defined in OgreSystemMouseHandler.cpp
+
     const Vector3d& getOffset()const {return mFloatingPointOffset;}
     void destroyRenderTarget(const String &name);
     ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
@@ -293,13 +295,35 @@ public:
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token) {};
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
-    virtual boost::any invoke(vector<boost::any>& params);
+    // Methods for handling Invokable actions
+    virtual boost::any invoke(std::vector<boost::any>& params);
+
+    // Helper which creates a WebView window, either
+    boost::any createWindow(const String& name, bool is_html, bool is_file, String content);
+    // Create a window using a URL
+    boost::any createWindow(std::vector<boost::any>& params);
+    // Create a window using a file
+    boost::any createWindowFile(std::vector<boost::any>& params);
+    // Create a window using HTML
+    boost::any createWindowHTML(std::vector<boost::any>& params);
+
+    // Set an input handler function which will be invoked for input
+    // events, e.g. mouse and keyboard
+    boost::any setInputHandler(std::vector<boost::any>& params);
+
+    boost::any pick(std::vector<boost::any>& params);
+    boost::any bbox(std::vector<boost::any>& params);
+
+    boost::any initScript(std::vector<boost::any>& params);
+
+    boost::any getCamera(std::vector<boost::any>& params);
+
+
     ~OgreSystem();
 
 private:
     ResourceDownloadPlanner *dlPlanner;
     void instantiateAllObjects(ProxyManagerPtr pop);
-
 };
 
 

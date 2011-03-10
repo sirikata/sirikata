@@ -73,6 +73,10 @@ int main(int argc, char** argv) {
 
     CSegContext* cseg_context = new CSegContext(server_id, ios, mainStrand, trace, start_time, duration);
 
+    String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
+    String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);
+    Trace::TimeSeries* time_series = Trace::TimeSeriesFactory::getSingleton().getConstructor(timeseries_type)(cseg_context, timeseries_options);
+
     BoundingBox3f region = GetOptionValue<BoundingBox3f>("region");
     Vector3ui32 layout = GetOptionValue<Vector3ui32>("layout");
 
@@ -117,6 +121,8 @@ int main(int argc, char** argv) {
 
     delete cseg_context;
     cseg_context = NULL;
+
+    delete time_series;
 
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);

@@ -89,7 +89,6 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
 }
 
 
-
 //Need to define this function so that can register timeouts in jscript
 Network::IOService* HostedObject::getIOService()
 {
@@ -163,7 +162,8 @@ Time HostedObject::currentLocalTime() {
 
 ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const ObjectReference& oref)
 {
-    PresenceDataMap::const_iterator it = mPresenceData->find(SpaceObjectReference(space,oref));
+    SpaceObjectReference toFind(space,oref);
+    PresenceDataMap::const_iterator it = mPresenceData->find(toFind);
     if (it == mPresenceData->end())
     {
         ProxyManagerPtr returner;
@@ -228,7 +228,7 @@ bool HostedObject::getProxyObjectFrom(const SpaceObjectReference*   spVisTo, con
     ProxyManagerPtr ohpmp = getProxyManager(spVisTo->space(),spVisTo->object());
     if (ohpmp.get() == NULL)
         return false;
-        
+
     p = ohpmp->getProxyObject(*sporef);
 
     if (p.get() == NULL)
@@ -243,11 +243,28 @@ ProxyObjectPtr HostedObject::getProxy(const SpaceID& space, const ObjectReferenc
 {
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
     if (proxy_manager == nullManPtr)
+    {
+        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy manager associated with "<<space<<"-"<<oref);
         return nullPtr;
+    }
 
     ProxyObjectPtr  proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
     return proxy_obj;
 }
+
+bool HostedObject::getProxy(const SpaceObjectReference* sporef, ProxyObjectPtr& p)
+{
+    p = getProxy(sporef->space(), sporef->object());
+
+    if (p.get() == NULL)
+    {
+        SILOG(oh,info, "[HO] In getProxy of HostedObject, have no proxy presence associated with "<<*sporef);
+        return false;
+    }
+
+    return true;
+}
+
 
 namespace {
 bool myisalphanum(char c) {
@@ -620,7 +637,7 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         Sirikata::Protocol::TimedMotionVector update_loc = update.location();
         Time locTime = localTime(sporef.space(),update_loc.t());
         loc = TimedMotionVector3f(locTime, MotionVector3f(update_loc.position(), update_loc.velocity()));
-        
+
         CONTEXT_OHTRACE(objectLoc,
             sporef.object().getAsUUID(),
             //getUUID(),
@@ -1223,7 +1240,3 @@ HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, co
 }
 
 }
-
-
-
-

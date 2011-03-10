@@ -9,13 +9,15 @@
 #include <sirikata/core/network/IOService.hpp>
 #include <map>
 #include "JSSuspendable.hpp"
+#include "JSWhenWatchedItemStruct.hpp"
+#include "JSWhenWatchedListStruct.hpp"
 
 
 namespace Sirikata {
 namespace JS {
 
 class JSObjectScript;
-class JSWatchable;
+
 
 struct JSWhenStruct : public JSSuspendable
 {
@@ -36,7 +38,7 @@ struct JSWhenStruct : public JSSuspendable
     
     bool checkPredAndRun();
 
-
+    void buildWatchedItems(const String& whenPredAsString);
     v8::Handle<v8::Value>struct_whenGetLastPredState();
 
 
@@ -47,19 +49,23 @@ private:
     void whenCreateCBFunc(v8::Handle<v8::Function>callback);
     bool evalPred();
     void runCallback();
-    void addWhenToContext();    
+    void addWhenToContext();
+    void addWhenToScript();    
     
     bool predState;        //predState is true if the predicate was true in the
                            //previous iteration.  Do not fire a callback if the
                            //predicate is true.  Only fire callback if predicate
                            //switches from false to true.
 
-  
+
     JSObjectScript* mObjScript;
     v8::Persistent<v8::Function> mPred;
     v8::Persistent<v8::Function> mCB;
     v8::Persistent<v8::Context>  mContext;
     JSContextStruct* jscont;
+    JSWhenWatchedListStruct* mWWLS;
+
+
 };
 
 

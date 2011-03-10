@@ -1,0 +1,1 @@
+bind(this._handleScriptRequest, this) <- scriptRequestPattern;

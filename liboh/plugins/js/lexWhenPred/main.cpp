@@ -151,6 +151,7 @@ int main	(int argc, char *argv[])
     }
 				
 
-    char* js_str = lexWhenPred_compile_diag((const char*)em_script_str_new.c_str(), stderr);
-    return 0;
+    int errorNum = 0;
+    char* js_str = lexWhenPred_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
+    return errorNum;
 }

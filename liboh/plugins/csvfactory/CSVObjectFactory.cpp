@@ -237,20 +237,11 @@ void CSVObjectFactory::generate()
                 }
 
                 HostedObjectPtr obj;
+                UUID objid_val = (objid_idx == -1 ? UUID::random() : UUID(objid, UUID::HumanReadable()));
+                String* script_type_val = (scriptType == "" ? NULL : &scriptType);
+                String* script_opts_val = (scriptType == "" ? NULL : &scriptOpts);
 
-                if(objid_idx == -1)
-                {
-                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID::random());
-                }
-                else
-                {
-                    obj = HostedObject::construct<HostedObject>(mContext, mOH, UUID(objid, UUID::HumanReadable()));
-                }
-
-
-                //obj->init();
-                if (scriptType != "")
-                    obj->initializeScript(scriptType, scriptOpts);
+                obj = mOH->createObject(objid_val, script_type_val, script_opts_val);
 
                 ObjectConnectInfo oci;
                 oci.object = obj;

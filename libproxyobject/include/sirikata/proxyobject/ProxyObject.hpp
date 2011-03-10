@@ -47,8 +47,7 @@
 
 #include "VWObject.hpp"
 
-#include <sirikata/core/transfer/TransferMediator.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
+#include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
 #include "PhysicalParameters.hpp"
@@ -177,6 +176,19 @@ public:
         return Vector3d(mLoc.position());
     }
 
+    /// returns the timed motion vector associated with this proxy object
+    /// necessary for bootstrapping positions of emerson objects.
+    inline const TimedMotionVector3f getTimedMotionVector() const{
+        return mLoc;
+    }
+
+    /// returns the timed motion quaternion this proxy object is holding.
+    /// Like getTimedMotionVector, this function is used to bootstrap positions
+    /// of emerson objects.
+    inline const TimedMotionQuaternion getTimedMotionQuaternion() const{
+        return mOrientation;
+    }
+    
     /// returns the last updated velocity for this object
     inline Vector3d getVelocity() const
     {

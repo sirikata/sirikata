@@ -36,8 +36,6 @@
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
 
-#include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/Range.hpp>
 
 #include <sirikata/mesh/Meshdata.hpp>

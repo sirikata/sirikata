@@ -61,8 +61,8 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
-        .addOption(new OptionValue(OPT_CAMERASCRIPT,"",OptionValueType<String>(),"The scripts the camera should startup with"))
-        .addOption(new OptionValue(OPT_CAMERASCRIPTTYPE,"js",OptionValueType<String>(),"The language the script is written in."))
+        .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
+        .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"--init-script=std/default.em",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
         ;
 }
 
