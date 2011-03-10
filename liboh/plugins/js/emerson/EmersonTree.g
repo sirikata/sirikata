@@ -132,7 +132,8 @@ functionBody
 
 // statements
 statement
-    : statementBlock
+    : noOpStatement
+    | statementBlock
     | variableStatement
     | expressionStatement
     | ifStatement
@@ -148,8 +149,15 @@ statement
     | tryStatement
     | msgSendStatement
     | msgRecvStatement
-	;
-	
+    ;   
+
+noOpStatement
+        : ^(NOOP
+          {
+          }
+        )
+        ;
+    
 statementBlock
 	: {APP(" {\n "); } statementList {  
             APP(" }\n");

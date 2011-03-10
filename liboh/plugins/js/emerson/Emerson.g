@@ -46,6 +46,7 @@ tokens
     WHEN_CHECKED_LIST_FIRST;
     WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
+    NOOP;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
     THROW;
@@ -129,7 +130,6 @@ tokens
 
 program
 	: a=LTERM*  sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
-
 	;
 
 sourceElements
@@ -161,7 +161,8 @@ functionBody
 
 // statements
 statement
-	: statementBlock
+	: noOpStatement
+        | statementBlock
 	| variableStatement
 	| emptyStatement
 	| expressionStatement
@@ -183,9 +184,13 @@ statement
 statementBlock
         : '{' LTERM* '}' 
 	| '{' LTERM* (statementList->statementList) LTERM* '}' 
-
 	; 
-	
+
+noOpStatement
+        : ';' -> ^(NOOP)
+        ;
+        
+        
 statementList
 	: (LTERM* statement)+ -> ^(SLIST statement+)
 	;
