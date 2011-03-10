@@ -111,12 +111,6 @@ function() {
         std.movement.stopRotate(this._pres);
     };
 
-    ns.DefaultGraphics.prototype.onMouseDrag = function(evt) {
-    };
-
-    ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
-    };
-
     ns.DefaultGraphics.prototype.onMousePress = function(evt) {
         if (this._selected) {
             this._simulator.bbox(this._selected, false);
@@ -132,7 +126,36 @@ function() {
         }
     };
 
+    ns.DefaultGraphics.prototype.onMouseDrag = function(evt) {
+        if (!this._dragging) return;
+
+        if (!this._dragging.dragPosition)
+            this._dragging.dragPosition = this._dragging.getPosition();
+
+        var centerAxis = this._simulator.cameraDirection();
+        var clickAxis = this._simulator.cameraDirection(evt.x, evt.y);
+
+        var lastClickAxis = this._lastClickAxis;
+        this._lastClickAxis = clickAxis;
+
+        if (!lastClickAxis) return;
+
+        var moveVector = this._dragging.getPosition().sub( this._pres.getPosition() );
+        var moveDistance = moveVector.dot(centerAxis);
+        var start = lastClickAxis.scale(moveDistance);
+        var end = clickAxis.scale(moveDistance);
+        var toMove = end.sub(start);
+        this._dragging.dragPosition = this._dragging.dragPosition.add(toMove);
+        this._dragging.setPosition(this._dragging.dragPosition);
+    };
+
     ns.DefaultGraphics.prototype.onMouseRelease = function(evt) {
+        if (this._dragging)
+            this._dragging.dragPosition = null;
+        this._lastClickAxis = null;
+    };
+
+    ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
     };
 
 })();

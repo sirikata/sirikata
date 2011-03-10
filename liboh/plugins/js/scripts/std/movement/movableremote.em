@@ -48,6 +48,13 @@ function() {
         this._remote = remote;
     };
 
+    ns.MovableRemote.prototype.getPosition = function() {
+        return this._remote.getPosition();
+    };
+    ns.MovableRemote.prototype.getOrientation = function() {
+        return this._remote.getOrientation();
+    };
+
     ns.MovableRemote.prototype.setPosition = function(pos) {
         {
             request : 'movable',
