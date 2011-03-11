@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/mesh/Platform.hpp>
 #include <sirikata/core/util/UUID.hpp>
 
 #include <sirikata/core/transfer/TransferData.hpp>
@@ -43,7 +43,7 @@
 namespace Sirikata {
 namespace Mesh {
 
-class SIRIKATA_EXPORT MeshSimplifier {
+class SIRIKATA_MESH_EXPORT MeshSimplifier {
 private:
 
   double invert(Matrix4x4f& inv, const Matrix4x4f& orig);

@@ -35,6 +35,9 @@
 #include <boost/functional/hash.hpp>
 
 #include <sirikata/core/util/Timer.hpp>
+#ifdef _WIN323
+#include <float.h>
+#endif
 #include <math.h>
 
 namespace Sirikata {
@@ -311,7 +314,13 @@ public:
   };
 
 };
-
+bool custom_isnan (double data) {
+#ifdef _WIN32
+    return _isnan(data);
+#else
+    return isnan(data);
+#endif
+}
 void computeCosts(std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
                   std::tr1::unordered_map<Vector3f, std::tr1::unordered_set<Vector3f, Vector3f::Hasher>, Vector3f::Hasher >& neighborVertices,
                   std::tr1::unordered_map<GeomPairContainer, float, GeomPairContainer::Hasher>& pairPriorities,
@@ -351,7 +360,7 @@ void computeCosts(std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionV
       Matrix4x4f Q = positionQs[position] + positionQs[neighborPosition];
       Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
       float cost = abs(vbar4f.dot(  Q * vbar4f )) ;
-      cost = ((cost <= 1e-12 || isnan(cost)) ? 1e15:cost);
+      cost = ((cost <= 1e-12 || custom_isnan(cost)) ? 1e15:cost);
 
       std::vector<GeomPairContainer>& opp =  overallPositionPairs[origPosition][origNeighborPosition];
 
