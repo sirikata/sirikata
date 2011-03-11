@@ -182,7 +182,7 @@ statement
 	;
 	
 statementBlock
-        : '{' LTERM* '}' 
+        : '{' LTERM* '}'   -> ^(NOOP)
 	| '{' LTERM* (statementList->statementList) LTERM* '}' 
 	; 
 

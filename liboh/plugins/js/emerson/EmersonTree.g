@@ -266,19 +266,24 @@ ifStatement
             }
             expression 
             {
-                APP(" ) ");
+                APP(" ) \n{");
             }
             (statement 
             {
                 APP(" \n");
             }
             )?
+            {
+                APP("\n}\n");
+            }
             (
                 {
-                    APP(" else ");
+                    APP("else \n{");
                 }
                 statement
-                
+                {
+                   APP("\n}");
+                }
             )?
         )
 	;

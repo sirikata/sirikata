@@ -24,3 +24,4 @@ printer(true,true);
 printer(true,false);
 printer(false,false);
 printer(false,true);
+
