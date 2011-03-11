@@ -66,8 +66,9 @@ REM "c:\Program Files (x86)\Microsoft Visual Studio 9\Common7\Tools\vsvars32.bat
 
 :end
 
-
+set ERRORLEV=0
 "c:\Program Files (x86)\CMake 2.8\bin\cmake" . -G "Visual Studio 9 2008" -DCMAKE_INSTALL_PREFIX=SirikataNightly
+IF ERRORLEVEL 1 SET ERRORLEV=1
 set vsconsoleoutput=1
 set vcconsoleoutput=1
 echo ClearBuilding... > warninglogvc9.txt
@@ -82,14 +83,16 @@ echo Building... > warninglogvc9.txt
 echo Building... > errorlogvc9.txt
 
 VCExpress.exe /build %1 /log warninglogvc9.txt /out errorlogvc9.txt sirikata.sln
+IF ERRORLEVEL 1 SET ERRORLEV=1
 type errorlogvc9.txt
 type warninglogvc9.txt
 echo Building... > iwarninglogvc9.txt
 echo Building... > ierrorlogvc9.txt
 
 if "%errorlevel%"=="0" VCExpress.exe /build %1 /log iwarninglogvc9.txt /out ierrorlogvc9.txt INSTALL.vcproj 
+IF ERRORLEVEL 1 SET ERRORLEV=1
 type ierrorlogvc9.txt
 type iwarninglogvc9.txt
-if "%errorlevel%"=="0" if "%1" == "Release" 7z a SirikataNightly.zip SirikataNightly
-if "%errorlevel%"=="0" exit 0
+if "%ERRORLEV%"=="0" if "%1" == "Release" 7z a SirikataNightly.zip SirikataNightly
+if "%ERRORLEV%"=="0" exit 0
 exit 1
