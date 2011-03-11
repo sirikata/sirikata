@@ -46,14 +46,12 @@ namespace Mesh {
 class SIRIKATA_EXPORT MeshSimplifier {
 private:
 
-  double invert(Matrix4x4f& inv, Matrix4x4f& orig);
+  double invert(Matrix4x4f& inv, const Matrix4x4f& orig);
 
   typedef struct QSlimStruct {
     float mCost;
-    int mGeomIdx, mPrimitiveIdx, mPrimitiveIndicesIdx;
-    enum VectorCombination {ONE_TWO, TWO_THREE, ONE_THREE} ;
+    int mGeomIdx, mIdx1, mIdx2;
 
-    VectorCombination mCombination;
 
     Vector3f mReplacementVector;
 
@@ -61,12 +59,11 @@ private:
       mCost = 1e-15;
     }
 
-    QSlimStruct(float cost, int i, int j, int k, VectorCombination c, Vector3f v) {
+    QSlimStruct(float cost, int i, int idx1, int idx2, Vector3f v) {
       mCost = cost;
       mGeomIdx = i;
-      mPrimitiveIdx = j;
-      mPrimitiveIndicesIdx = k;
-      mCombination = c;
+      mIdx1 = idx1;
+      mIdx2 = idx2;
       mReplacementVector = v;
     }
 

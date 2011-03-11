@@ -278,6 +278,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   std::tr1::unordered_set<String> textureSet; // Tracks textures so we can fill in
                                          // agg_mesh->textures when we're done
                                          // copying data in.
+
   for (uint32 i= 0; i < children.size(); i++) {
     UUID child_uuid = children[i];
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
@@ -298,7 +299,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     uint32 geoinst_idx;
     Matrix4x4f geoinst_pos_xform;
 
-    while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
+     while( geoinst_it.next(&geoinst_idx, &geoinst_pos_xform) ) {
       const GeometryInstance& geomInstance = m->instances[geoinst_idx];
       const SubMeshGeometry& smg = m->geometry[geomInstance.geometryIndex];
 
@@ -317,6 +318,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
            originalMeshBoundingBox.mergeIn(jth_vertex );
         }
       }
+
     }
 
     BoundingSphere3f originalMeshBounds = originalMeshBoundingBox.toBoundingSphere();
@@ -339,7 +341,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // Copy SubMeshGeometries. We loop through so we can reset the numInstances
       for(uint32 smgi = 0; smgi < m->geometry.size(); smgi++) {
           SubMeshGeometry smg = m->geometry[smgi];
-          smg.numInstances = 0;
+
           agg_mesh->geometry.push_back(smg);
       }
       // Copy Materials
@@ -357,7 +359,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
           m->lights.begin(),
           m->lights.end());
       // Copy Nodes. Loop through to adjust node indices.
-      uint32 noff = agg_mesh->nodes.size();
+      /*uint32 noff = agg_mesh->nodes.size();
       for(uint32 ni = 0; ni < m->nodes.size(); ni++) {
           Node n = m->nodes[ni];
           n.parent += noff;
@@ -366,7 +368,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
           for(uint32 ci = 0; ci < n.instanceChildren.size(); ci++)
               n.instanceChildren[ci] += noff;
           agg_mesh->nodes.push_back(n);
-      }
+        }*/
     }
 
     // And alwasy extract into convenience variables
@@ -435,7 +437,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
       // creating a new root node.
 
       agg_mesh->nodes.push_back( Node(trs * orig_geo_inst_xform) );
-      
+
       agg_mesh->rootNodes.push_back(geom_node_idx);
       // Overwrite the parent node to make this new one with the correct
       // transform the one we use.
@@ -444,7 +446,6 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
       // Increase ref count on instanced geometry
       SubMeshGeometry& smgRef = agg_mesh->geometry[geomInstance.geometryIndex];
-      smgRef.numInstances++;
 
       //Push the instance into the Meshdata data structure
       agg_mesh->instances.push_back(geomInstance);
@@ -471,28 +472,25 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
 
     mAggregateObjects[child_uuid]->mMeshdata = std::tr1::shared_ptr<Meshdata>();
   }
-  
-  //Simplify the mesh...
-  mMeshSimplifier.simplify(agg_mesh, 40000);
-  //std::cout << "Time spent simplifying: " << (Timer::now() - simpl_time_start) << "\n";
-  fflush(stdout);
 
-
-  //Time upload_time_start = Timer::now();
-
-  //... and now create the collada file, upload to the CDN and update LOC.
   const int MESHNAME_LEN = 1024;
   char localMeshName[MESHNAME_LEN];
   snprintf(localMeshName, MESHNAME_LEN, "%d_aggregate_mesh_%s.dae", aggObject->mTreeLevel, uuid.toString().c_str());
+  std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
+  agg_mesh->uri = cdnMeshName;
+  
+  //Simplify the mesh...
+  mMeshSimplifier.simplify(agg_mesh, 500);
+
+  //... and now create the collada file, upload to the CDN and update LOC. 
   mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
 
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
   system( cmdline.c_str()  );  
+  
 
   //Update loc
-
-  std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
   mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
 
   // Code to generate scene files for each level of the tree.
@@ -504,12 +502,13 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
            "\"mesh\",\"graphiconly\",\"tetrahedron\",,,,%f,%f,%f,%f,%f,%f,%f,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,\"%s\",,,,,,,,,,,,,,,,,,%f,,,,\n",
            bndsX, bndsY, bndsZ, 0.0, 0.0, 0.0, 1.0, cdnMeshName.c_str(), bnds.radius());
   scenefile.write(sceneline,strlen(sceneline));
-  scenefile.close();*/
-
+  scenefile.close();
+  */
   //Keep the meshstore's memory usage under control.
   boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
   if (mMeshStore.size() > 20)
     mMeshStore.clear();
+
 
   return true;
 }
@@ -621,6 +620,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
     static bool generated = false;
 
+    std::tr1::unordered_map<UUID, int, UUID::Hasher> childrenSizeSumMap;
     if (!generated) {
       std::vector<UUID> mIndividualObjects;
 
@@ -637,6 +637,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
             if (bnds.radius() < radius) {
               radius = bnds.radius();
             }
+            childrenSizeSumMap[it->first] += bnds.radius();
           }
 
           if (radius == INT_MAX) radius = 0;
@@ -654,8 +655,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
       getLeaves(mIndividualObjects);
 
       for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher >::iterator it = mAggregateObjects.begin(); it != mAggregateObjects.end(); it++)
-        {
-          assert(it->second);
+        {          
           if ( it->second->mChildren.size() > 0) {
             std::cout << it->second->mTreeLevel << " , "  << it->second->mLeaves.size() << "\n";
           }
@@ -672,17 +672,20 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
     
     Time curTime = Timer::now();
 
+    uint32 i = 0;
+
     for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher>::iterator it = mDirtyAggregateObjects.begin();
          it != mDirtyAggregateObjects.end(); it++)
     {
-      if (it->second->mNumObservers > 0)
+      if (it->second->mNumObservers > 0 ) { 
         std::cout << it->second->mTreeLevel << " :  " << it->second->mNumObservers  << " observers\n";
-
-      mObjectsByPriority[it->second->mNumObservers].push_back(it->second);
+      }
+      
+        mObjectsByPriority[ it->second->mNumObservers ].push_back(it->second);
     }
 
     bool returner = false;
-    for (std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > >::reverse_iterator it =  mObjectsByPriority.rbegin();
+    for (std::map<float, std::deque<std::tr1::shared_ptr<AggregateObject> > >::reverse_iterator it =  mObjectsByPriority.rbegin();
          it != mObjectsByPriority.rend(); it++)
     {
       if (it->second.size() > 0) {

@@ -112,11 +112,7 @@ struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
 
     SkinControllerList skinControllers;
 
-    //used only during simplification
-    std::vector< Matrix4x4f  > positionQs;
-    uint32 numInstances;
-    std::tr1::unordered_map<uint32, std::vector< std::pair<uint32, uint32> > > neighborPrimitives; // maps positionIdx to list of primitiveIdxes
-    /////////////////////////////////
+    
 
     /** Append the given SubMeshGeometry to the end of this one. Use the given
      *  transformation to transform the geometry before adding it.  This is a

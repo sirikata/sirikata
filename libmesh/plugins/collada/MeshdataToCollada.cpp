@@ -582,6 +582,13 @@ void emitNodeElements(const Meshdata& meshdata, COLLADASW::StreamWriter* streamW
         inst_it != meshdata.nodes[current.node].instanceChildren.end();
         inst_it++)
     {
+        if (isEmpty(meshdata, *inst_it, meshdata.nodes[*inst_it], 
+                      nodeGeoInstances, nodeLightInstances, nodeJoints,
+                      addedGeometriesList, materialRedirectionMap, addedLightsList))
+        {
+          continue;
+        }
+
         String inst_node_url = "#node-" + boost::lexical_cast<String>(*inst_it);
         COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
         instanceNode.add();
