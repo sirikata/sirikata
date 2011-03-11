@@ -605,51 +605,67 @@ scope{
        )
        ;
 
+memAndCallExpression
+: memberExpression
+| callExpression 
+;
+
 msgRecvStatement
  : ^(
-	    MESSAGE_RECV
-	    {
-					  APP("system.registerHandler( ");
-			}
+      MESSAGE_RECV
+      {
+        APP("system.registerHandler( ");
+      }
+      memAndCallExpression
+      {
+        APP(", null");
+        APP(", ");
+      } 
+      leftHandSideExpression
 
-					memberExpression
-     {
-            APP(", null");
-					  APP(", ");
-					} 
-     leftHandSideExpression
+    )
 
-			)
     {
-				  APP(", null) ");  // No sender case
-				}
+      APP(", null) ");  // No sender case
+    }
    
  |^(
-	    MESSAGE_RECV
-	    {
-					  APP("system.registerHandler( ");
-			}
-
-					memberExpression
-     {
-            APP(", null");
-					  APP(", ");
-					} 
-     leftHandSideExpression
-
-					
-					 {
-						  APP(", ");
-						}
-
-						memberExpression
-					
-				)
+    MESSAGE_RECV
     {
-				  APP(") "); // Case with sender
-				}
+      APP("system.registerHandler( ");
+    }
+    memAndCallExpression
+    {
+            APP(", null");
+            APP(", ");
+    } 
+    leftHandSideExpression
+    {
+      APP(", ");
+    }
+    memAndCallExpression
+   )
+   {
+      APP(") "); // Case with sender
+   }
 
+ |^(
+      MESSAGE_RECV
+      {
+        APP("system.registerHandler( ");
+      }
+      callExpression
+      {
+        APP(", null");
+        APP(", ");
+      } 
+      leftHandSideExpression
 
+    )
+
+    {
+      APP(", null) ");  // No sender case
+    }
 
 ;
 

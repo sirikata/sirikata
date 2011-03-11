@@ -349,10 +349,14 @@ msgSendStatement
 //msgRecvStatement
 // : (e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' )? -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression (LTERM | ';')-> ^($msgRecvStatement $e3) )? 
 
- msgRecvStatement
- : e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
- | e1=memberExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memberExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
+ memAndCallExpression
+ : callExpression -> callExpression
+ | memberExpression -> memberExpression
+ ;
 
+ msgRecvStatement
+ : e1=memAndCallExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
+ | e1=memAndCallExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
 ;
 // expressions
 expression
