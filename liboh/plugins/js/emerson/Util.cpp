@@ -152,7 +152,7 @@ void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 char* read_file(char* filename)
 {
     char * output = new char[20000];
-    strcpy(output, "\n\n");
+    //strcpy(output, "\n\n");
     ifstream myfile;
     myfile.open (filename);
     string line;

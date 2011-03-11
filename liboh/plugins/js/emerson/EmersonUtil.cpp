@@ -14,6 +14,9 @@ using namespace std;
 
 extern pANTLR3_UINT8  EmersonParserTokenNames[];
 
+
+pEmersonTree _treeParser;
+
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 {
     return emerson_printAST(tree,EmersonParserTokenNames);
@@ -87,6 +90,7 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
                                                                                       // DEPRECATED!!
 
         treePsr= EmersonTreeNew(nodes);
+        _treeParser = treePsr;
         js_str = (char*)treePsr->program(treePsr)->chars;
         nodes   ->free  (nodes);	    nodes	= NULL;
         treePsr ->free  (treePsr);	    treePsr	= NULL;
@@ -172,6 +176,7 @@ char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
                                                                                       // DEPRECATED!!
 
         treePsr= EmersonTreeNew(nodes);
+        _treeParser = treePsr;
         js_str = (char*)treePsr->program(treePsr)->chars;
 
         fprintf(dbg, "The generated code is \n %s \n", js_str);

@@ -49,6 +49,34 @@ using namespace std;
 
 extern pANTLR3_UINT8* EmersonParserTokenNames;
 
+
+void myDisplayRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer, pANTLR3_UINT8* tokenNames)
+{
+  pANTLR3_EXCEPTION exception = recognizer->state->exception;
+  
+  std::cout << "Exception type = " << exception->type << "\n";
+  if(exception->nextException)
+  {
+    std::cout << "There is another exception too.." << "\n\n";
+  }
+  /*
+  string filename = 
+  linenumber
+  character postion
+  type of error
+*/
+  std::string filename = _emersonInfo->fileInfo().fileName();
+  uint32_t line = _emersonInfo->fileInfo().line();
+
+  std::stringstream err_msg;
+
+  err_msg << "Error: " << filename << " at line " << line <<"\n";
+
+  cout << err_msg.str();
+
+}
+
+
 // Main entry point for this example
 //
 int main	(int argc, char *argv[])
@@ -166,10 +194,12 @@ int main	(int argc, char *argv[])
     int errorNum = 0;
 
     if (verbose)
-        char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
+
+        char* js_str = emerson_compile_diag(std::string(fName), (const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
+        //char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
     else
     {
-        char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), errorNum);
+        char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
         std::cout<<js_str;
     }
 

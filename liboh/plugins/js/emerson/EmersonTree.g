@@ -25,7 +25,7 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "Util.h"
-    #define APP(s) program_string->append(program_string, s);
+    #define APP(s)  adjustLineNumber(s)  //program_string->append(program_string, s);
     
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
@@ -41,7 +41,7 @@ options
     extern pEmersonTree _treeParser;
     void adjustLineNumber(const char* input)
     {
-      //program_string->append(program_string, input);
+      program_string->append(program_string, input);
       printf("Inside the adjust line number function\n");
       //count the number of line numbers
       for(int i = 0; i < strlen(input); i++)
@@ -51,6 +51,7 @@ options
         {
           // If you are adding this line number then do not include it
           //std::cout << "\ndecremented by one\n";
+          printf("decrementd by one\n");
           _treeParser->pTreeParser->rec->state->tokenStartLine--;
         } 
 
