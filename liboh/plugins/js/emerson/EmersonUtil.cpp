@@ -7,14 +7,14 @@
 #include "EmersonLexer.h"
 #include "EmersonParser.h"
 #include "EmersonTree.h"
-
+#include "EmersonInfo.h"
 
 using namespace std;
 
 
 extern pANTLR3_UINT8  EmersonParserTokenNames[];
 
-
+EmersonInfo* _emersonInfo;
 pEmersonTree _treeParser;
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
@@ -28,6 +28,28 @@ char* emerson_compile(const char* em_script_str)
     int garbage = 0;
     return emerson_compile(em_script_str, garbage);
 }
+
+
+// This version of the function should be called from the main compiler
+
+char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, void (*errorFunction)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))
+{
+  _emersonInfo = new EmersonInfo();
+  if(_originalFile.size() > 0 )
+  {
+    _emersonInfo->push(_originalFile);
+  }
+
+  if(errorFunction)
+  {
+    std:cout << "\nAssigned a function poiniter\n";
+    _emersonInfo->errorFunctionIs(errorFunction);
+  }
+  
+  return emerson_compile(em_script_str, errorNum);
+}
+
+// This is mor basic version of the function. Should be called from else where
 
 char* emerson_compile(const char* em_script_str, int& errorNum)
 {
@@ -73,6 +95,16 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
         exit(ANTLR3_ERR_NOMEM);
     }
 
+    // set the error function here
+
+    if(_emersonInfo && _emersonInfo->errorFunction())
+    {
+      std::cout << "\ngot a display error function\n";
+      psr->pParser->rec->displayRecognitionError = (void(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))_emersonInfo->errorFunction();;
+
+    
+    }
+
     emersonAST = psr->program(psr);
     if (psr->pParser->rec->state->errorCount > 0)
     {
@@ -114,8 +146,8 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
 char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
 {
     fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
-
-    pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
+    
+       pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
     pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
     char* js_str;
 
@@ -156,6 +188,8 @@ char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
         fprintf(dbg, "Out of memory trying to allocate parser\n");
         exit(ANTLR3_ERR_NOMEM);
     }
+
+    //psr->pParser->rec->displayRecognitionError = myDisplayRecognitionError;
 
     emersonAST = psr->program(psr);
     if (psr->pParser->rec->state->errorCount > 0)

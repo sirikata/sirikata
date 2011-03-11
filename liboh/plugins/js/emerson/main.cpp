@@ -38,17 +38,19 @@
 #include "EmersonLexer.h"
 #include "EmersonParser.h"
 #include "EmersonTree.h"
+#include "EmersonInfo.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <iomanip>
 
 using namespace std;
 
 extern pANTLR3_UINT8* EmersonParserTokenNames;
-
+extern EmersonInfo* _emersonInfo;
 
 void myDisplayRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer, pANTLR3_UINT8* tokenNames)
 {
@@ -195,11 +197,12 @@ int main	(int argc, char *argv[])
 
     if (verbose)
 
-        char* js_str = emerson_compile_diag(std::string(fName), (const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
-        //char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
+        //char* js_str = emerson_compile_diag(std::string(fName), (const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
+        char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
     else
     {
-        char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
+        //char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), errorNum);
+        char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError);
         std::cout<<js_str;
     }
 
