@@ -47,8 +47,8 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
     if (newState == true) {
         ButtonSet::iterator iter = buttonState.find(button);
         if (iter != buttonState.end()) {
-            if ((*iter).second != modifiers) {
-                modifiers = (*iter).second;
+            if ((*iter).second.mod != modifiers) {
+                modifiers = (*iter).second.mod;
                 changed = true;
             } else {
                 changed = false;
@@ -58,12 +58,15 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
         }
         if (changed) {
             // may have different set of modifiers.
-            buttonState.insert(ButtonSet::value_type(button,modifiers));
+            ButtonState newstate;
+            newstate.mod = modifiers;
+            newstate.lastTime = Time::null();
+            buttonState.insert(ButtonSet::value_type(button,newstate));
         }
     } else {
         ButtonSet::iterator iter = buttonState.find(button);
         if (iter != buttonState.end()) {
-            modifiers = (*iter).second;
+            modifiers = (*iter).second.mod;
             buttonState.erase(iter);
             changed = true;
         } else {
@@ -72,6 +75,7 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
     }
     return changed;
 }
+
 bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                              GenEventManager *em,
                              unsigned int button, bool newStateIsPressed, Modifier modifiers) {
@@ -84,6 +88,7 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
             }
             em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+            buttonState.find(button)->second.lastTime = Timer::now();
         } else {
             em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
         }
@@ -93,10 +98,17 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                 // If modifiers change, release old and press new
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
                 em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+                assert(buttonState.find(button) != buttonState.end());
+                buttonState.find(button)->second.lastTime == Timer::now();
             }
             else {
                 // Otherwise, we're really in repeat mode
-                em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
+                Time tnow = Timer::now();
+                if (tnow - buttonState.find(button)->second.lastTime > Duration::seconds(1.f/15) ) {
+                    em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
+                    assert(buttonState.find(button) != buttonState.end());
+                    buttonState.find(button)->second.lastTime = tnow;
+                }
             }
         }
         // Otherwise, we're getting repeats when the key is up....
