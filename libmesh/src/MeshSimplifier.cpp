@@ -35,8 +35,10 @@
 #include <boost/functional/hash.hpp>
 
 #include <sirikata/core/util/Timer.hpp>
-#ifdef _WIN323
+#ifdef _WIN32
 #include <float.h>
+#else
+#include <cmath>
 #endif
 #include <math.h>
 
@@ -318,7 +320,7 @@ bool custom_isnan (double data) {
 #ifdef _WIN32
     return _isnan(data);
 #else
-    return isnan(data);
+    return std::isnan(data);
 #endif
 }
 void computeCosts(std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionVectors,
