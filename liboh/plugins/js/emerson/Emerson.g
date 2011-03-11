@@ -129,7 +129,7 @@ tokens
 	
 
 program
-	: a=LTERM*  sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
+	: a=LTERM*  sourceElements? LTERM* EOF -> ^(PROG sourceElements?) // omitting LTERM and EOF
 	;
 
 sourceElements

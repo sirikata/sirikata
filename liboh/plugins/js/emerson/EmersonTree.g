@@ -45,11 +45,14 @@ program returns [pANTLR3_STRING  s]
                 pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
                 program_string = factory->newRaw(factory);
             }
-            sourceElements
-           )
-           {
-                s = program_string;
-           }
+            (
+              sourceElements
+
+            )?
+         )
+         {
+            s = program_string;
+         }
 	;
 
         
