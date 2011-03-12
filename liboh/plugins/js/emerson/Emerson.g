@@ -86,7 +86,7 @@ tokens
     LEFT_SHIFT;
     RIGHT_SHIFT;
     TRIPLE_SHIFT;
-    ADD;
+    ADD_OP;
     SUB;
     MULT;
     DIV;
@@ -94,7 +94,7 @@ tokens
     ARRAY_LITERAL;
     OBJ_LITERAL;
     NAME_VALUE;
-    DELETE;
+    DELETE_OP;
     VOID;
     TYPEOF;
     PLUSPLUS;
@@ -120,9 +120,9 @@ tokens
 
 @header
 {
-  #include <stdlib.h>;
-  #include <stdio.h>;
-  #include "Util.h";
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include "Util.h"
 }
 
 
@@ -543,7 +543,7 @@ shiftExpression
 
 
 addOps
-: '+' -> ^(ADD)
+: '+' -> ^(ADD_OP)
 | '-' -> ^(SUB)
 ;
 
@@ -572,7 +572,7 @@ postfixExpression
 
 
 unaryOps
-:'delete' -> ^(DELETE)
+:'delete' -> ^(DELETE_OP)
 | 'void' -> ^(VOID)
 | 'typeof' -> ^(TYPEOF)
 | '++'  -> ^(PLUSPLUS)
@@ -1154,4 +1154,3 @@ LTERM
 WhiteSpace // Tab, vertical tab, form feed, space, non-breaking space and any other unicode "space separator".
 	: ('\t' | '\v' | '\f' | ' ' | '\u00A0')	{$channel=HIDDEN;}
 	;
-

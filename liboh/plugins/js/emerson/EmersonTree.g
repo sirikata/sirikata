@@ -1075,7 +1075,7 @@ scope
 additiveExpression
 	: multiplicativeExpression
 	| ^(
-	     ADD 
+	     ADD_OP 
 						e1=additiveExpression
 						{
 						  APP(" + ");
@@ -1119,7 +1119,7 @@ multiplicativeExpression
 	;
 
 unaryOps
-: DELETE 
+: DELETE_OP 
 | VOID
 | TYPEOF
 | PLUSPLUS
@@ -1136,7 +1136,7 @@ unaryExpression
 	| ^(
 	
 	    (
-				   DELETE          {  APP("delete ");}
+				   DELETE_OP          {  APP("delete ");}
        | VOID          {   APP("void");}
        | TYPEOF        {  APP("typeof ");}
        | PLUSPLUS      {  APP("++");}
