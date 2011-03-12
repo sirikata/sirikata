@@ -4,23 +4,25 @@
 #include <antlr3.h>
 #include <string>
 #include <stack>
+#include "EmersonPlatform.hpp"
 
 using namespace std;
+using namespace Emerson;
 
 class FileInfo
 {
   string _fileName;
-  uint32_t _line;
-  uint32_t _charPos;
+  uint32 _line;
+  uint32 _charPos;
 
   public:
   FileInfo(){}
-  FileInfo(string fileName_, uint32_t line_, uint32_t charPos_):_fileName(fileName_), _line(line_), _charPos(charPos_){}
+  FileInfo(string fileName_, uint32 line_, uint32 charPos_):_fileName(fileName_), _line(line_), _charPos(charPos_){}
   inline string fileName() { return _fileName;}
-  inline uint32_t line() { return _line;}
-  inline uint32_t charPos() { return _charPos; }
-  inline void lineIs(uint32_t line_) { _line = line_;}
-  inline void charPosIs(uint32_t charPos_) { _charPos = charPos_ ;}
+  inline uint32 line() { return _line;}
+  inline uint32 charPos() { return _charPos; }
+  inline void lineIs(uint32 line_) { _line = line_;}
+  inline void charPosIs(uint32 charPos_) { _charPos = charPos_ ;}
 };
 
 class EmersonInfo
@@ -40,7 +42,7 @@ class EmersonInfo
 
   inline void* mismatchTokenFunction() { return mismatchTokenFunction_;}
   inline void mismatchTokenFunctionIs(void*(*_mismatchTokenFunction)(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST) ) { mismatchTokenFunction_ = (void*)_mismatchTokenFunction;}
-  
+
 
 
   void push(std::string fileName_){

@@ -81,9 +81,9 @@ void myDisplayRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer,
   type of error
 */
   std::string filename = _emersonInfo->fileInfo().fileName();
-  //uint32_t line = _emersonInfo->fileInfo().line();
-  uint32_t line = exception->line;
-  uint32_t charPos = exception->charPositionInLine;
+  //uint32 line = _emersonInfo->fileInfo().line();
+  uint32 line = exception->line;
+  uint32 charPos = exception->charPositionInLine;
 
   std::stringstream err_msg;
   //char* tokens = (char*)(tokenNames);
