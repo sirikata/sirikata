@@ -22,9 +22,9 @@ options
     #include <stdlib.h>
     #include <string.h>
     #include <antlr3.h>
-    #include "../emerson/Util.h"; 
+    #include "../emerson/Util.h"
 
-    #define APPLEX(s) program_string_lex->append(program_string_lex, s);           
+    #define APPLEX(s) program_string_lex->append(program_string_lex, s);
 }
 
 @members
