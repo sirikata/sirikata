@@ -90,3 +90,4 @@ libproxyobject/plugins/ogre/data/jquery
 # Emerson regression data
 liboh/plugins/js/emerson/regression/*.out
 liboh/plugins/js/emerson/regression/*.diff
+liboh/plugins/js/emerson/alt_regress/regressionResults.txt
