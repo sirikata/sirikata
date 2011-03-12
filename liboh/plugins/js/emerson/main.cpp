@@ -61,20 +61,21 @@ void myRecoverFromMismatchedSet(struct ANTLR3_BASE_RECOGNIZER_struct* _recognize
 
 void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct* _recognizer, ANTLR3_UINT32 _ttype, pANTLR3_BITSET_LIST _follow)
 {
+    return NULL;
 }
 
 
 void myDisplayRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer, pANTLR3_UINT8* tokenNames)
 {
   pANTLR3_EXCEPTION exception = recognizer->state->exception;
-  
+
   //std::cout << "Exception type = " << exception->type << "\n";
   if(exception->nextException)
   {
     //std::cout << "There is another exception too.." << "\n\n";
   }
   /*
-  string filename = 
+  string filename =
   linenumber
   character postion
   type of error
@@ -115,7 +116,7 @@ int main	(int argc, char *argv[])
     // good on all platforms. This is a general rule - always use the ANTLR3 supplied
     // typedefs for pointers/types/etc.
     //
-    char*	    fName = "./input";
+    const char*	    fName = "./input";
 
     // The ANTLR3 character input stream, which abstracts the input source such that
     // it is easy to provide input from different sources such as files, or
@@ -205,7 +206,7 @@ int main	(int argc, char *argv[])
 
     emerson_init();
 
-    char* em_script = read_file(fName);
+    const char* em_script = read_file(fName);
     string em_script_str = string(em_script);
     string em_script_str_new = em_script_str;
     if(em_script_str.at(em_script_str.size() -1) != '\n')

@@ -714,7 +714,7 @@ expressionNoIn
 assignmentExpression
 scope
 {
-  char* op;
+  const char* op;
 }
 
 	: ^(COND_EXPR conditionalExpression)
@@ -751,7 +751,7 @@ assignmentExpressionNoIn
 
 scope
 {
-  char* op;
+  const char* op;
 }
 	: ^(COND_EXPR_NOIN conditionalExpressionNoIn)
  | ^(
@@ -1002,7 +1002,7 @@ relationalOps
 relationalExpression
 scope
 {
-  char* op;
+  const char* op;
 }
 
 	: shiftExpression 
@@ -1030,7 +1030,7 @@ relationalOpsNoIn
 relationalExpressionNoIn
 scope
 {
-  char* op;
+  const char* op;
 }
 
 	: shiftExpression 
@@ -1056,7 +1056,7 @@ shiftOps
 shiftExpression
 scope
 {
- char* op; 
+ const char* op; 
 }
 	: additiveExpression
 	| ^(shiftOps 
