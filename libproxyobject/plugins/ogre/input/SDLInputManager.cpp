@@ -440,7 +440,7 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
 
     // Currently, SDL 1.3 is not using key repeat properly, so we need
     // to emulate key repeats.
-    for(int ii = 0; ii < mLastKeys.size(); ii++) {
+    for(uint32 ii = 0; ii < mLastKeys.size(); ii++) {
         if (!mLastKeys[ii]->repeat) continue;
 
         mKeys[mLastKeys[ii]->evt->key.which]->fireButton(

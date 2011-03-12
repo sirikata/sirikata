@@ -559,13 +559,13 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
 
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mParent(parent),
+   mDelegate(NULL),
+   mWhichRayObject(0),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
    mLastRenderStatsTime(Task::LocalTime::now()),
    mUIWidgetView(NULL),
-   mNewQueryAngle(0.f),
-   mWhichRayObject(0),
-   mDelegate(NULL)
+   mNewQueryAngle(0.f)
 {
     mLastHitCount=0;
     mLastHitX=0;
@@ -622,7 +622,7 @@ void OgreSystemMouseHandler::setDelegate(Invokable* del) {
 }
 
 Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
-    Input::Modifier result;
+    Input::Modifier result = MOD_NONE;
 
     if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT))
         result |= MOD_SHIFT;

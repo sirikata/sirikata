@@ -181,8 +181,8 @@ OgreSystem::OgreSystem(Context* ctx)
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
      mQuitRequested(false),
      mQuitRequestHandled(false),
-     mFloatingPointOffset(0,0,0),
      mSuspended(false),
+     mFloatingPointOffset(0,0,0),
      mPrimaryCamera(NULL)
 {
     increfcount();

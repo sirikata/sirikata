@@ -257,9 +257,9 @@ InputBindingEvent InputBindingEvent::fromString(const String& asString) {
     // First, split into sections by -'s
     std::vector<String> parts;
     int32 last_idx = -1, next_idx = 0;
-    while(next_idx != String::npos) {
+    while(next_idx != (int)String::npos) {
         next_idx = asString.find('-', last_idx+1);
-        String part = asString.substr(last_idx+1, (next_idx == String::npos ? String::npos : next_idx-last_idx-1));
+        String part = asString.substr(last_idx+1, (next_idx == (int)String::npos ? String::npos : next_idx-last_idx-1));
         parts.push_back(part);
         last_idx = next_idx;
     }

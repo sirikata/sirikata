@@ -377,8 +377,9 @@ private:
       mNumStreams(0), mCwnd(1), mRTOMicroseconds(10000000),
       mFirstRTO(true),  MAX_DATAGRAM_SIZE(1000), MAX_PAYLOAD_SIZE(1300),
       MAX_QUEUED_SEGMENTS(3000),
-      CC_ALPHA(0.8), mLastTransmitTime(Time::null()), inSendingMode(true), numSegmentsSent(0),
-      mNumInitialRetransmissionAttempts(0)
+      CC_ALPHA(0.8), mLastTransmitTime(Time::null()),
+      mNumInitialRetransmissionAttempts(0),
+      inSendingMode(true), numSegmentsSent(0)
   {
       mDatagramLayer = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
       mDatagramLayer->listenOn(

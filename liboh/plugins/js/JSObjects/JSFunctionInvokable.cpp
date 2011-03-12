@@ -33,7 +33,7 @@ namespace JS
 
    if (base_offset) argv[0] = v8::Handle<v8::Value>();
 
-   for(int i = 0; i < params.size(); i++)
+   for(uint32 i = 0; i < params.size(); i++)
        argv[base_offset+i] = InvokableUtil::AnyToV8(script_, params[i]);
 
   //TryCatch try_catch;

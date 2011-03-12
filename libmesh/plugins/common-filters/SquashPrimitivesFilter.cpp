@@ -90,7 +90,7 @@ FilterDataPtr SquashPrimitivesFilter::apply(FilterDataPtr input) {
                 if (matched_mat_idx == -1) {
                     matched_mat_idx = mat_binding_it->second;
                 }
-                else if (matched_mat_idx != mat_binding_it->second) {
+                else if (matched_mat_idx != (int)mat_binding_it->second) {
                     valid_squash = false;
                     break;
                 }

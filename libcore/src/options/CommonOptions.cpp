@@ -83,7 +83,7 @@ void InitOptions() {
 
 void FakeParseOptions() {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
-    int argc = 1; char* argv[2] = { "bogus", NULL };
+    int argc = 1; const char* argv[2] = { "bogus", NULL };
     options->parse(argc, argv);
 }
 

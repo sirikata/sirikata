@@ -105,7 +105,7 @@ public:
 
         // Strip any [] around the list
         int32 list_start = 0, list_end = value.size();
-        while(list_start < value.size()) {
+        while(list_start < (int32)value.size()) {
             if (value[list_start] == '[') {
                 list_start++;
                 break;
@@ -132,7 +132,7 @@ public:
 
         while(true) {
             comma = (int32)value.find(',', last_comma+1);
-            if (comma > list_end || comma == std::string::npos)
+            if (comma > list_end || comma == (int32)std::string::npos)
                 comma = list_end;
             std::string elem = value.substr(last_comma+1, (comma-(last_comma+1)));
             if (elem.size() > 0)

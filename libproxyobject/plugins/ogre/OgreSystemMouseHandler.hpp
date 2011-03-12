@@ -103,14 +103,14 @@ private:
 
     void onUIAction(WebView* webview, const JSArguments& args);
 
-    int mWhichRayObject;
-
     OgreSystem *mParent;
     std::vector<Task::SubscriptionId> mEvents;
     typedef std::multimap<Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
 
     Invokable* mDelegate;
+
+    int mWhichRayObject;
 
     struct UIInfo {
         UIInfo()

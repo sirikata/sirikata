@@ -38,6 +38,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
 #include "Protocol_Empty.pbj.hpp"
 #include <sirikata/core/network/PBJDebug.hpp>

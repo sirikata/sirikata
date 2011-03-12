@@ -51,7 +51,7 @@ MonoVWObjectScript::ArgumentMap ParseArguments(const String& value) {
 
     // Strip any whitespace around the list
     int32 list_start = 0, list_end = value.size();
-    while(list_start < value.size()) {
+    while(list_start < (int32)value.size()) {
         if (value[list_start] == ' ' || value[list_start] == '\t')
             list_start++;
         else
@@ -70,7 +70,7 @@ MonoVWObjectScript::ArgumentMap ParseArguments(const String& value) {
 
     while(true) {
         space = (int32)value.find(' ', last_space+1);
-        if (space > list_end || space == std::string::npos)
+        if (space > list_end || space == (int32)std::string::npos)
             space = list_end;
         std::string elem = value.substr(last_space+1, (space-(last_space+1)));
         if (elem.size() > 0) {

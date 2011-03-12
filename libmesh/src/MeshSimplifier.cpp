@@ -523,7 +523,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
   totalVertices = positionQs.size();
   std::cout <<  agg_mesh->uri << " : agg_mesh->uri, " << totalVertices << " : totalVertices;\n";
-  if (totalVertices <= numVerticesLeft) return;
+  if ((int32)totalVertices <= numVerticesLeft) return;
 
   computeCosts(positionVectors, neighborVertices, pairPriorities, positionQs,  overallPositionPairs, overallPositionMapping, vertexPairs);
 
@@ -531,7 +531,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
   //Modify all triangles that had either of the two vertices to point to the new vertex.
   std::tr1::unordered_map<int, std::tr1::unordered_map<int,int>  > vertexMapping1;
 
-  while (totalVertices - removedPositions.size() > numVerticesLeft && vertexPairs.size() > 0) {
+  while ((int32)(totalVertices - removedPositions.size()) > numVerticesLeft && vertexPairs.size() > 0) {
    // std::cout << vertexPairs.size() <<  " : vertexPairs.size\n";
     //std::cout << (totalVertices - removedPositions.size()) << " : totalVertices - removedPositions.size()\n";
 
@@ -545,13 +545,13 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     uint32 idx2 = top.mVertexIdx2;
 
     while (vertexMapping.find(idx) != vertexMapping.end()) {
-      if (idx == vertexMapping[idx]) {
+        if ((int32)idx == vertexMapping[idx]) {
         break;
       }
       idx = vertexMapping[idx];
     }
     while (vertexMapping.find(idx2) != vertexMapping.end()) {
-      if (idx2 == vertexMapping[idx2]) {
+      if ((int32)idx2 == vertexMapping[idx2]) {
         break;
       }
       idx2 = vertexMapping[idx2];
@@ -570,7 +570,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
       {
         uint32 curct = *it;
         while (vertexMapping.find(curct) != vertexMapping.end()) {
-          if (curct == vertexMapping[curct]) {
+          if ((int32)curct == vertexMapping[curct]) {
             break;
           }
           curct = vertexMapping[curct];

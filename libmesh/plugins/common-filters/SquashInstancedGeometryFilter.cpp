@@ -54,13 +54,13 @@ public:
             source_ids.push_back(mbm_it->first);
         std::sort(source_ids.begin(), source_ids.end());
 
-        for(int i = 0; i < source_ids.size(); i++)
+        for(uint32 i = 0; i < source_ids.size(); i++)
             this->push_back( mbm.find(source_ids[i])->second );
     }
 
     bool operator<(const MaterialList& rhs) {
         if (size() < rhs.size()) return true;
-        for(int i = 0; i < size(); i++) {
+        for(uint32 i = 0; i < size(); i++) {
             if ((*this)[i] == rhs[i]) continue;
             return ((*this)[i] < rhs[i]);
         }
