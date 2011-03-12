@@ -39,6 +39,8 @@
 #include "EmersonParser.h"
 #include "EmersonTree.h"
 #include "EmersonInfo.h"
+#include "EmersonException.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -54,7 +56,6 @@ extern EmersonInfo* _emersonInfo;
 
 void myRecoverFromMismatchedSet(struct ANTLR3_BASE_RECOGNIZER_struct* _recognizer, pANTLR3_BITSET_LIST _follow)
 {
-  std::cout << "Inside myRecoverFromMismatchedSet\n";  
 }
 
 
@@ -89,13 +90,13 @@ void myDisplayRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer,
   //err_msg << "Error: " << filename << " at line " << line << " at position " << charPos << "near""\n";
   std::string expected(" ");
   pANTLR3_COMMON_TOKEN currToken = (pANTLR3_COMMON_TOKEN)exception->token;
+
+
   //std::string tokenText((char*)(currToken->tokText.chars));
   //cout << "token text = " << tokenText << "\n";
-  err_msg << "Error: " << filename << ":" << line << ":" << charPos << " :: " << "near " << exception->c  << ", expecting " << expected <<"\n";
-  cout << err_msg.str();
-  int e;
-  throw e;
-
+  err_msg << "Error: " << filename << " at line " << line << ":" << charPos << "\n";
+  err_msg << "Additional Info: " << (char*)(exception->message) << "\n";
+  throw EmersonException(err_msg.str());
 }
 
 
@@ -222,8 +223,16 @@ int main	(int argc, char *argv[])
     else
     {
         //char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), errorNum);
-        char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError);
-        std::cout<<js_str;
+        try
+        {
+          char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError);
+          std::cout<<js_str;
+        }
+        catch(EmersonException e)
+        {
+          std::cerr << e.msg() << "\n";
+          return errorNum;
+        }
     }
 
 

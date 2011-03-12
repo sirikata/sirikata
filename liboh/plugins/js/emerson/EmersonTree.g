@@ -25,7 +25,7 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "Util.h"
-    #define APP(s)  adjustLineNumber(s)  //program_string->append(program_string, s);
+    #define APP(s)  program_string->append(program_string, s);
     
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
@@ -39,34 +39,7 @@ options
     ANTLR3_UINT32 program_line;
     ANTLR3_UINT32 line_pos;
     extern pEmersonTree _treeParser;
-    void adjustLineNumber(const char* input)
-    {
-      program_string->append(program_string, input);
-      printf("Inside the adjust line number function\n");
-      //count the number of line numbers
-      for(int i = 0; i < strlen(input); i++)
-      {
-        //std::cout << "Inside the for loop\n";
-        if(input[i] == '\n')
-        {
-          // If you are adding this line number then do not include it
-          //std::cout << "\ndecremented by one\n";
-          printf("decrementd by one\n");
-          _treeParser->pTreeParser->rec->state->tokenStartLine--;
-        } 
-
-      }
-
-      program_line = _treeParser->pTreeParser->rec->state->tokenStartLine;
-
-      //l_pos cannot be adjusted this way
-  
-      //update the global info 
-      //_emersonInfo->fileInfo().lineIs(*prog_line);
-      //_emersonInfo->fileInfo().charPosIs(*l_pos);
-  
-    }
-
+    
 }
 
 

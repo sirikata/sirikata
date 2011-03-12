@@ -1,5 +1,7 @@
 #include "EmersonUtil.h"
 #include "Util.h"
+#include "EmersonException.h"
+
 #include <antlr3.h>
 #include <iostream>
 #include <fstream>
@@ -43,7 +45,6 @@ char* emerson_compile(std::string _originalFile, const char* em_script_str, int&
 
   if(errorFunction)
   {
-    std:cout << "\nAssigned a function poiniter\n";
     _emersonInfo->errorFunctionIs(errorFunction);
   }
 
@@ -102,15 +103,20 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
 
     if(_emersonInfo && _emersonInfo->errorFunction())
     {
-      std::cout << "\ngot a display error function\n";
       psr->pParser->rec->displayRecognitionError = (void(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))_emersonInfo->errorFunction();;
 
       psr->pParser->rec->recoverFromMismatchedToken = (void*(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST))_emersonInfo->mismatchTokenFunction(); 
     }
 
     
-
-    emersonAST = psr->program(psr);
+    try
+    {
+      emersonAST = psr->program(psr);
+    }
+    catch(EmersonException e)
+    {
+      throw e;
+    }
     if (psr->pParser->rec->state->errorCount > 0)
     {
         fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
