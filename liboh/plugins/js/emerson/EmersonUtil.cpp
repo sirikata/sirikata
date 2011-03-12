@@ -13,6 +13,7 @@ using namespace std;
 
 
 extern pANTLR3_UINT8  EmersonParserTokenNames[];
+extern void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST);
 
 EmersonInfo* _emersonInfo;
 pEmersonTree _treeParser;
@@ -45,6 +46,8 @@ char* emerson_compile(std::string _originalFile, const char* em_script_str, int&
     std:cout << "\nAssigned a function poiniter\n";
     _emersonInfo->errorFunctionIs(errorFunction);
   }
+
+  _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
   
   return emerson_compile(em_script_str, errorNum);
 }
@@ -102,8 +105,10 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
       std::cout << "\ngot a display error function\n";
       psr->pParser->rec->displayRecognitionError = (void(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))_emersonInfo->errorFunction();;
 
-    
+      psr->pParser->rec->recoverFromMismatchedToken = (void*(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST))_emersonInfo->mismatchTokenFunction(); 
     }
+
+    
 
     emersonAST = psr->program(psr);
     if (psr->pParser->rec->state->errorCount > 0)
