@@ -50,7 +50,7 @@
 #include <iomanip>
 
 using namespace std;
-
+using namespace Emerson;
 extern pANTLR3_UINT8* EmersonParserTokenNames;
 extern EmersonInfo* _emersonInfo;
 

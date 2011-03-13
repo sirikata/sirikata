@@ -6,28 +6,25 @@
 #include <stack>
 #include "EmersonPlatform.hpp"
 
-using namespace std;
-using namespace Emerson;
-
 class FileInfo
 {
-  string _fileName;
-  uint32 _line;
-  uint32 _charPos;
+  std::string _fileName;
+  Emerson::uint32 _line;
+  Emerson::uint32 _charPos;
 
   public:
   FileInfo(){}
-  FileInfo(string fileName_, uint32 line_, uint32 charPos_):_fileName(fileName_), _line(line_), _charPos(charPos_){}
-  inline string fileName() { return _fileName;}
-  inline uint32 line() { return _line;}
-  inline uint32 charPos() { return _charPos; }
-  inline void lineIs(uint32 line_) { _line = line_;}
-  inline void charPosIs(uint32 charPos_) { _charPos = charPos_ ;}
+  FileInfo(std::string fileName_, Emerson::uint32 line_, Emerson::uint32 charPos_):_fileName(fileName_), _line(line_), _charPos(charPos_){}
+  inline std::string fileName() { return _fileName;}
+  inline Emerson::uint32 line() { return _line;}
+  inline Emerson::uint32 charPos() { return _charPos; }
+  inline void lineIs(Emerson::uint32 line_) { _line = line_;}
+  inline void charPosIs(Emerson::uint32 charPos_) { _charPos = charPos_ ;}
 };
 
 class EmersonInfo
 {
-  stack<FileInfo> _fileStack;
+  std::stack<FileInfo> _fileStack;
   //void (*errorFunction_)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*);
   void* errorFunction_;
   void* mismatchTokenFunction_;
