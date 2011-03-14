@@ -856,8 +856,9 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     if (try_catch.HasCaught()) {
         v8::String::Utf8Value error(try_catch.Exception());
         String uncaught( *error);
-        uncaught = "Uncaught excpetion " + uncaught + "\nwhen trying to run script: "+ em_script_str;
+        uncaught = "Uncaught exception " + uncaught + "\nwhen trying to run script: "+ em_script_str;
         JSLOG(error, uncaught);
+        printException(try_catch);
         return v8::ThrowException( v8::Exception::Error(v8::String::New(uncaught.c_str())));
     }
 
