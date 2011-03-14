@@ -761,6 +761,8 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_drag_ev->mButton;
             event_data["x"] = mouse_drag_ev->mX;
             event_data["y"] = mouse_drag_ev->mY;
+            event_data["dx"] = mouse_drag_ev->deltaX();
+            event_data["dy"] = mouse_drag_ev->deltaY();
             fillModifiers(event_data, getCurrentModifiers());
         }
     }
