@@ -25,7 +25,7 @@ struct JSPresenceStruct : public JSPositionListener
 
     void connect(const SpaceObjectReference& _sporef);
     void disconnect();
-    
+
     v8::Handle<v8::Value> registerOnProxRemovedEventHandler(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb);
 
@@ -39,13 +39,13 @@ struct JSPresenceStruct : public JSPositionListener
 
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries);
 
-    
+
     void addAssociatedContext(JSContextStruct*);
 
     v8::Persistent<v8::Function> mOnProxRemovedEventHandler;
     v8::Persistent<v8::Function> mOnProxAddedEventHandler;
     v8::Persistent<v8::Function> mOnConnectedCallback;
-    
+
     int getPresenceToken();
 
     v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
@@ -55,8 +55,7 @@ struct JSPresenceStruct : public JSPositionListener
     v8::Handle<v8::Value>  setVisualScaleFunction(float new_scale);
     v8::Handle<v8::Value>  setVisualFunction(String urilocation);
     v8::Handle<v8::Value>  setOrientationFunction(Quaternion newOrientation);
-    
-    v8::Handle<v8::Value>  getVisualScaleFunction();
+
     v8::Handle<v8::Value>  getVisualFunction();
 
 
@@ -70,7 +69,7 @@ struct JSPresenceStruct : public JSPositionListener
             sporefReturner = sporefToListenTo->toString();
         return v8::String::New(sporefReturner.c_str(), sporefReturner.length());
     }
-    
+
     SpaceObjectReference* getSporef()
     {
         return getToListenTo();

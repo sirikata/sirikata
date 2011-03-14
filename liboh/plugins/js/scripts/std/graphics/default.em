@@ -35,6 +35,7 @@ system.import('std/movement/movement.em');
 system.import('std/script/scripter.em');
 system.import('std/graphics/drag/move.em');
 system.import('std/graphics/drag/rotate.em');
+system.import('std/graphics/drag/scale.em');
 
 (
 function() {
@@ -64,7 +65,8 @@ function() {
 
         this._draggers = {
             move: new std.graphics.MoveDragHandler(this._simulator),
-            rotate: new std.graphics.RotateDragHandler(this._simulator)
+            rotate: new std.graphics.RotateDragHandler(this._simulator),
+            scale: new std.graphics.ScaleDragHandler(this._simulator)
         };
     };
 
@@ -130,6 +132,8 @@ function() {
         if (evt.button == 1) {
             if (evt.modifier.ctrl)
                 this._dragger = this._draggers.rotate;
+            else if (evt.modifier.alt)
+                this._dragger = this._draggers.scale;
             else
                 this._dragger = this._draggers.move;
         }

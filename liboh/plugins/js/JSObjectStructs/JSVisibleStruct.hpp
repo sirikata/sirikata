@@ -34,7 +34,6 @@ public:
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
 
-    v8::Handle<v8::Value> struct_getScale();
     v8::Handle<v8::Value> struct_getVisual();
 
 private:

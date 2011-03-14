@@ -60,7 +60,8 @@ function() {
             setPosition : std.core.bind(this._handleSetPos, this),
             setVelocity : std.core.bind(this._handleSetVel, this),
             setOrientation : std.core.bind(this._handleSetRot, this),
-            setRotationalVelocity : std.core.bind(this._handleSetRotVel, this)
+            setRotationalVelocity : std.core.bind(this._handleSetRotVel, this),
+            setScale : std.core.bind(this._handleSetScale, this)
         };
     };
 
@@ -97,6 +98,10 @@ function() {
 
     ns.Movable.prototype._handleSetRotVel = function(msg, sender) {
         std.movement.rotate(this._pres, msg.orientvel);
+    };
+
+    ns.Movable.prototype._handleSetScale = function(msg, sender) {
+        std.movement.scaleTo(this._pres, msg.scale);
     };
 
 })();

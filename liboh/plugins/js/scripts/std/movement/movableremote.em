@@ -51,8 +51,17 @@ function() {
     ns.MovableRemote.prototype.getPosition = function() {
         return this._remote.getPosition();
     };
+    ns.MovableRemote.prototype.getVelocity = function() {
+        return this._remote.getVelocity();
+    };
     ns.MovableRemote.prototype.getOrientation = function() {
         return this._remote.getOrientation();
+    };
+    ns.MovableRemote.prototype.getOrientationVel = function() {
+        return this._remote.getOrientationVel();
+    };
+    ns.MovableRemote.prototype.getScale = function() {
+        return this._remote.getScale();
     };
 
     ns.MovableRemote.prototype.setPosition = function(pos) {
@@ -84,6 +93,14 @@ function() {
             request : 'movable',
             action : 'setRotationalVelocity',
             orientvel : orientvel
+        } -> this._remote;
+    };
+
+    ns.MovableRemote.prototype.setScale = function(scale) {
+        {
+            request : 'movable',
+            action : 'setScale',
+            scale : scale
         } -> this._remote;
     };
 

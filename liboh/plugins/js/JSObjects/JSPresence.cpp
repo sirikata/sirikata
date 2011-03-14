@@ -134,7 +134,7 @@ v8::Handle<v8::Value>distance(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Presence needs to be a vec3")));
 
     Vector3d vec3 = Vec3Extract(argObj);
-    
+
     return jspres->struct_getDistance(vec3);
 }
 
@@ -378,8 +378,7 @@ Handle<v8::Value> getScale(const v8::Arguments& args)
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-
-    return mStruct->getVisualScaleFunction();
+    return mStruct->struct_getScale();
 }
 
 

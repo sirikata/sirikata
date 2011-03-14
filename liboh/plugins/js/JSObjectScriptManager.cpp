@@ -109,6 +109,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(sin),v8::FunctionTemplate::New(JSUtilObj::ScriptSinFunction));
     mUtilTemplate->Set(JS_STRING(rand),v8::FunctionTemplate::New(JSUtilObj::ScriptRandFunction));
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
+    mUtilTemplate->Set(JS_STRING(exp),v8::FunctionTemplate::New(JSUtilObj::ScriptExpFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
     mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
     mUtilTemplate->Set(v8::String::New("create_when_watched_item"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedItem));

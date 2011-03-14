@@ -1,5 +1,5 @@
 /*  Sirikata
- *  movement.em
+ *  scale.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,56 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-if (typeof(std) === "undefined") std = {};
-if (typeof(std.movement) === "undefined") std.movement = {};
+system.import('std/movement/movableremote.em');
+system.import('std/graphics/drag/handler.em');
 
-(
-function() {
+/** ScaleDragHandler responds to drag events by scaling the selected object.
+ */
+std.graphics.ScaleDragHandler = std.graphics.DragHandler.extend(
+    {
+        init: function(gfx) {
+            this._super(gfx);
+        },
 
-    var ns = std.movement;
+        selected: function(obj) {
+            this._dragging = obj ?
+                new std.movement.MovableRemote(obj) : null;
+        },
 
-    ns.position = function(pres, pos) {
-        pres.setPosition(pos);
-    };
+        onMouseDrag: function(evt) {
+            if (!this._dragging) return;
 
-    ns.move = function(pres, dir, amount) {
-        var orient = pres.getOrientation();
-        var vel = orient.mul(dir);
-        if (amount)
-            vel = vel.scale(amount);
-        pres.setVelocity(vel);
-    };
+            if (!this._dragging.dragScale)
+                this._dragging.dragScale = this._dragging.getScale();
 
-    ns.stopMove = function(pres) {
-        ns.move(pres, new util.Vec3(0,0,0), 0);
-    };
+            var cameraAxis = this._graphics.cameraDirection();
 
-    ns.orientation = function(pres, orient) {
-        pres.setOrientation(orient);
-    };
+            var sensitivity = 5.0;
+            var scale_amt = util.exp( sensitivity * evt.dy);
+            this._dragging.setScale( scale_amt * this._dragging.dragScale );
+        },
 
-    ns.rotate = function(pres) {
-        if (arguments.length == 2) { // quaternion
-            pres.setOrientationVel(orient);
+        onMouseRelease: function(evt) {
+            if (this._dragging)
+                this._dragging.dragScale = null;
+            this._lastClickAxis = null;
         }
-        else if (arguments.length == 3) { // axis-angle
-            var about = arguments[1];
-            var amount = arguments[2];
-            pres.setOrientationVel(new util.Quaternion(about, amount));
-        }
-    };
-
-    ns.stopRotate = function(pres) {
-        ns.rotate(pres, new util.Vec3(1,0,0), 0);
-    };
-
-    ns.scaleBy = function(pres, scale) {
-        pres.setScale( pres.getScale(scale) * scale );
-    };
-
-    ns.scaleTo = function(pres, scale) {
-        pres.setScale(scale);
-    };
-
-
-})();
+    }
+);
