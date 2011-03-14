@@ -1,5 +1,5 @@
 /*  Sirikata
- *  move.em
+ *  handler.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,49 +30,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('std/movement/movableremote.em');
-system.import('std/graphics/drag/handler.em');
+if (typeof(std) === "undefined") std = {};
+if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-/** MoveDragHandler responds to drag events by moving a selected object.
+/** DragHandler is the base class for objects which respond to drag
+ *  events. It just tracks the graphics object for subclasses and
+ *  provides default, empty handlers for all drag mouse handler
+ *  events.
  */
-std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
+std.graphics.DragHandler = system.Class.extend(
     {
         init: function(gfx) {
-            this._super(gfx);
+            this._graphics = gfx;
         },
-
         selected: function(obj) {
-            this._dragging = obj ?
-                new std.movement.MovableRemote(obj) : null;
         },
-
+        onMousePress: function(evt) {
+        },
         onMouseDrag: function(evt) {
-            if (!this._dragging) return;
-
-            if (!this._dragging.dragPosition)
-                this._dragging.dragPosition = this._dragging.getPosition();
-
-            var centerAxis = this._graphics.cameraDirection();
-            var clickAxis = this._graphics.cameraDirection(evt.x, evt.y);
-
-            var lastClickAxis = this._lastClickAxis;
-            this._lastClickAxis = clickAxis;
-
-            if (!lastClickAxis) return;
-
-            var moveVector = this._dragging.getPosition().sub( this._graphics.presence.getPosition() );
-            var moveDistance = moveVector.dot(centerAxis);
-            var start = lastClickAxis.scale(moveDistance);
-            var end = clickAxis.scale(moveDistance);
-            var toMove = end.sub(start);
-            this._dragging.dragPosition = this._dragging.dragPosition.add(toMove);
-            this._dragging.setPosition(this._dragging.dragPosition);
         },
-
         onMouseRelease: function(evt) {
-            if (this._dragging)
-                this._dragging.dragPosition = null;
-            this._lastClickAxis = null;
         }
     }
 );

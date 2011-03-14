@@ -43,6 +43,7 @@
 system.shim = new Object();
 
 system.import('std/shim/system.em');
+system.import('std/shim/class.em');
 system.import('std/shim/presence.em');
 system.import('std/shim/vec3.em');
 system.import('std/shim/quaternion.em');
