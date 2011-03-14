@@ -54,8 +54,8 @@ function() {
         ns.move(pres, new util.Vec3(0,0,0), 0);
     };
 
-    ns.orientation = function(pres, pos) {
-        pres.setPosition(pos);
+    ns.orientation = function(pres, orient) {
+        pres.setOrientation(orient);
     };
 
     ns.rotate = function(pres) {

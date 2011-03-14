@@ -34,6 +34,7 @@ system.import('graphics.em');
 system.import('std/movement/movement.em');
 system.import('std/script/scripter.em');
 system.import('std/graphics/drag/move.em');
+system.import('std/graphics/drag/rotate.em');
 
 (
 function() {
@@ -61,7 +62,10 @@ function() {
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
 
-        this._dragger = new std.graphics.MoveDragHandler(this._simulator);
+        this._draggers = {
+            move: new std.graphics.MoveDragHandler(this._simulator),
+            rotate: new std.graphics.RotateDragHandler(this._simulator)
+        };
     };
 
     ns.DefaultGraphics.prototype.invoke = function() {
@@ -123,16 +127,25 @@ function() {
             this._simulator.bbox(this._selected, true);
         }
 
-        if (this._dragger) this._dragger.selected(this._selected);
-        this._dragger.onMousePress(evt);
+        if (evt.button == 1) {
+            if (evt.modifier.ctrl)
+                this._dragger = this._draggers.rotate;
+            else
+                this._dragger = this._draggers.move;
+        }
+        if (this._dragger) {
+            this._dragger.selected(this._selected);
+            this._dragger.onMousePress(evt);
+        }
     };
 
     ns.DefaultGraphics.prototype.onMouseDrag = function(evt) {
-        this._dragger.onMouseDrag(evt);
+        if (this._dragger) this._dragger.onMouseDrag(evt);
     };
 
     ns.DefaultGraphics.prototype.onMouseRelease = function(evt) {
-        this._dragger.onMouseRelease(evt);
+        if (this._dragger) this._dragger.onMouseRelease(evt);
+        delete this._dragger;
     };
 
     ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
