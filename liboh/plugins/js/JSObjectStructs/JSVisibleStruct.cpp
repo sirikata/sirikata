@@ -72,7 +72,7 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
 void JSVisibleStruct::notifyNotVisible()
 {
     JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is no longer visible to "<<*sporefToListenFrom);
-    
+
     *stillVisible = false;
     JSPositionListener::deregisterAsPosListener();
 }
@@ -134,6 +134,15 @@ v8::Handle<v8::Value> JSVisibleStruct::checkEqual(JSVisibleStruct* jsvis)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(  *sporefToListenTo == *(jsvis->getToListenTo()));
+}
+
+
+v8::Handle<v8::Value> JSVisibleStruct::struct_getScale() {
+    return jsObjScript->getVisualScaleFunction(sporefToListenTo);
+}
+
+v8::Handle<v8::Value> JSVisibleStruct::struct_getVisual() {
+    return jsObjScript->getVisualFunction(sporefToListenTo);
 }
 
 
