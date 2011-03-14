@@ -48,6 +48,9 @@ public:
     static void setSystemClockOffset(const Duration &skew);
     static Duration getSystemClockOffset();
     static Time getSpecifiedDate(const std::string&datestring);
+    // Get offset to convert local time (the standard for most of this API) to UTC.
+    static Duration getUTCOffset();
+
     Timer();
     ~Timer();
 

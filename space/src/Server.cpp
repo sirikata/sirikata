@@ -74,7 +74,8 @@ Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, Loc
    mMigrationSendRunning(false),
    mShutdownRequested(false),
    mObjectHostConnectionManager(NULL),
-   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer")))
+   mRouteObjectMessage(Sirikata::SizedResourceMonitor(GetOptionValue<size_t>("route-object-message-buffer"))),
+   mTimeSeriesObjects(String("space.server") + boost::lexical_cast<String>(ctx->id()) + ".objects")
 {
     mContext->mCSeg = mCSeg;
     mContext->mObjectSessionManager = this;
@@ -557,6 +558,7 @@ void Server::finishAddObject(const UUID& obj_id)
     // Create and store the connection
     ObjectConnection* conn = new ObjectConnection(obj_id, mObjectHostConnectionManager, sc.conn_id);
     mObjects[obj_id] = conn;
+    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 
     //TODO: assumes each server process is assigned only one region... perhaps we should enforce this constraint
     //for cleaner semantics?
@@ -653,6 +655,7 @@ void Server::handleDisconnect(const UUID& obj_id, ObjectConnection* conn) {
     mForwarder->removeObjectConnection(obj_id);
 
     mObjects.erase(obj_id);
+    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
 
     ObjectReference obj(obj_id);
     ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
@@ -762,6 +765,7 @@ void Server::handleMigration(const UUID& obj_id)
 
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
+    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
     mLocalForwarder->addActiveConnection(obj_conn);
 
 
@@ -920,6 +924,7 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
 
             mLocalForwarder->removeActiveConnection(obj_id);
             mObjects.erase(obj_id);
+            mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
             ObjectReference obj(obj_id);
             notify(&ObjectSessionListener::sessionClosed, mObjectSessions[obj]);
             delete mObjectSessions[obj];
@@ -1006,6 +1011,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     mLocalForwarder->removeActiveConnection( obj_id );
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
+    mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
     mLocalForwarder->addActiveConnection(obj_conn);
 
 
@@ -1108,4 +1114,3 @@ void Server::killObjectConnection(const UUID& obj_id)
 
 
 } // namespace Sirikata
-

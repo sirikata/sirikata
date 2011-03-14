@@ -57,7 +57,7 @@ void InputBinding::addFromFile(const String& filename, InputResponseMap response
     std::ifstream fp(filename.c_str());
     boost::program_options::parsed_options parsed_opts =
         boost::program_options::parse_config_file(fp, opts_desc, true);
-    for(int i = 0; i < parsed_opts.options.size(); i++) {
+    for(uint32 i = 0; i < parsed_opts.options.size(); i++) {
         assert(parsed_opts.options[i].value.size() == 1);
         InputBindingEvent ibe = InputBindingEvent::fromString(parsed_opts.options[i].string_key);
         if (!ibe.valid()) {

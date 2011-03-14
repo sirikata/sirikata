@@ -25,7 +25,7 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "Util.h"
-    #define APP(s) program_string->append(program_string, s);
+    #define APP(s)  program_string->append(program_string, s);
     
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
@@ -36,6 +36,10 @@ options
 @members
 {
     pANTLR3_STRING program_string;
+    ANTLR3_UINT32 program_line;
+    ANTLR3_UINT32 line_pos;
+    extern pEmersonTree _treeParser;
+    
 }
 
 
@@ -45,11 +49,14 @@ program returns [pANTLR3_STRING  s]
                 pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
                 program_string = factory->newRaw(factory);
             }
-            sourceElements
-           )
-           {
-                s = program_string;
-           }
+            (
+              sourceElements
+
+            )?
+         )
+         {
+            s = program_string;
+         }
 	;
 
         
@@ -132,7 +139,8 @@ functionBody
 
 // statements
 statement
-    : statementBlock
+    : noOpStatement
+    | statementBlock
     | variableStatement
     | expressionStatement
     | ifStatement
@@ -148,8 +156,15 @@ statement
     | tryStatement
     | msgSendStatement
     | msgRecvStatement
-	;
-	
+    ;   
+
+noOpStatement
+        : ^(NOOP
+          {
+          }
+        )
+        ;
+    
 statementBlock
 	: {APP(" {\n "); } statementList {  
             APP(" }\n");
@@ -163,7 +178,7 @@ statementList
                 {
 			        APP("; \n");					  
                 }
-            )+
+            )*
 	    );
 	
 variableStatement
@@ -255,18 +270,24 @@ ifStatement
             }
             expression 
             {
-                APP(" ) ");
+                APP(" ) \n{");
             }
-            statement 
+            (statement 
             {
                 APP(" \n");
             }
+            )?
+            {
+                APP("\n}\n");
+            }
             (
                 {
-                    APP(" else ");
+                    APP("else \n{");
                 }
                 statement
-                
+                {
+                   APP("\n}");
+                }
             )?
         )
 	;
@@ -588,51 +609,67 @@ scope{
        )
        ;
 
+memAndCallExpression
+: memberExpression
+| callExpression 
+;
+
 msgRecvStatement
  : ^(
-	    MESSAGE_RECV
-	    {
-					  APP("system.registerHandler( ");
-			}
+      MESSAGE_RECV
+      {
+        APP("system.registerHandler( ");
+      }
+      memAndCallExpression
+      {
+        APP(", null");
+        APP(", ");
+      } 
+      leftHandSideExpression
 
-					memberExpression
-     {
-            APP(", null");
-					  APP(", ");
-					} 
-     leftHandSideExpression
+    )
 
-			)
     {
-				  APP(", null) ");  // No sender case
-				}
+      APP(", null) ");  // No sender case
+    }
    
  |^(
-	    MESSAGE_RECV
-	    {
-					  APP("system.registerHandler( ");
-			}
-
-					memberExpression
-     {
-            APP(", null");
-					  APP(", ");
-					} 
-     leftHandSideExpression
-
-					
-					 {
-						  APP(", ");
-						}
-
-						memberExpression
-					
-				)
+    MESSAGE_RECV
     {
-				  APP(") "); // Case with sender
-				}
+      APP("system.registerHandler( ");
+    }
+    memAndCallExpression
+    {
+            APP(", null");
+            APP(", ");
+    } 
+    leftHandSideExpression
+    {
+      APP(", ");
+    }
+    memAndCallExpression
+   )
+   {
+      APP(") "); // Case with sender
+   }
 
+ |^(
+      MESSAGE_RECV
+      {
+        APP("system.registerHandler( ");
+      }
+      callExpression
+      {
+        APP(", null");
+        APP(", ");
+      } 
+      leftHandSideExpression
 
+    )
+
+    {
+      APP(", null) ");  // No sender case
+    }
 
 ;
 
@@ -677,7 +714,7 @@ expressionNoIn
 assignmentExpression
 scope
 {
-  char* op;
+  const char* op;
 }
 
 	: ^(COND_EXPR conditionalExpression)
@@ -714,7 +751,7 @@ assignmentExpressionNoIn
 
 scope
 {
-  char* op;
+  const char* op;
 }
 	: ^(COND_EXPR_NOIN conditionalExpressionNoIn)
  | ^(
@@ -965,7 +1002,7 @@ relationalOps
 relationalExpression
 scope
 {
-  char* op;
+  const char* op;
 }
 
 	: shiftExpression 
@@ -993,7 +1030,7 @@ relationalOpsNoIn
 relationalExpressionNoIn
 scope
 {
-  char* op;
+  const char* op;
 }
 
 	: shiftExpression 
@@ -1019,7 +1056,7 @@ shiftOps
 shiftExpression
 scope
 {
- char* op; 
+ const char* op; 
 }
 	: additiveExpression
 	| ^(shiftOps 
@@ -1038,7 +1075,7 @@ scope
 additiveExpression
 	: multiplicativeExpression
 	| ^(
-	     ADD 
+	     ADD_OP 
 						e1=additiveExpression
 						{
 						  APP(" + ");
@@ -1082,7 +1119,7 @@ multiplicativeExpression
 	;
 
 unaryOps
-: DELETE 
+: DELETE_OP 
 | VOID
 | TYPEOF
 | PLUSPLUS
@@ -1095,11 +1132,11 @@ unaryOps
 
 
 unaryExpression
-        : postfixExpression
+        : postfixExpression 
 	| ^(
 	
 	    (
-				   DELETE          {  APP("delete ");}
+				   DELETE_OP          {  APP("delete ");}
        | VOID          {   APP("void");}
        | TYPEOF        {  APP("typeof ");}
        | PLUSPLUS      {  APP("++");}

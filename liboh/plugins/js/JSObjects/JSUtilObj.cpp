@@ -47,10 +47,10 @@ v8::Handle<v8::Value> ScriptCreateWhenTimeoutLT(const v8::Arguments& args)
     //check if args are vec3s
     Vector3d vec3_LHS_1 = Vector3d::nil();
     Vector3d vec3_LHS_2 = Vector3d::nil();
-    
+
     bool Vec3Validate(Handle<Object>& src);
-    
-    
+
+
     if ((presStruct_LHS_1 == NULL) && (visStruct_LHS_1 == NULL))
     {
         //check if the first arg is a vec3.;
@@ -58,7 +58,7 @@ v8::Handle<v8::Value> ScriptCreateWhenTimeoutLT(const v8::Arguments& args)
         //or a presence, throw error!
         if (!Vec3ValValidate(args[0]))
             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg1.c_str())));
-        
+
         vec3_LHS_1 = Vec3ValExtract(args[0]);
     }
 
@@ -70,10 +70,10 @@ v8::Handle<v8::Value> ScriptCreateWhenTimeoutLT(const v8::Arguments& args)
         //or a presence, throw error!
         if (!Vec3ValValidate(args[1]))
             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg2.c_str())));
-        
+
         vec3_LHS_2 = Vec3ValExtract(args[1]);
     }
-    
+
     //grab the util object
     String errorMessage = "Error in ScriptCreateWhenTimeoutLT of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
     JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This(),errorMessage);
@@ -138,7 +138,7 @@ v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args)
     bool stringArgDecodeSuccess = decodeString(args[0], decodedString, errorMessageStrDec);
     if (! stringArgDecodeSuccess)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessageStrDec.c_str(), errorMessageStrDec.length())));
-        
+
 
     //try decoding the util object.
     String errorMessage = "Error in ScriptCreateQuotedObject of JSUtilObj.cpp.  Cannot decode the jsutil field of the util object.  ";
@@ -203,7 +203,7 @@ v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("sqrt function requires one argument.")) );
 
     v8::Handle<v8::Value> toSqrt = args[0];
-    
+
     double d_toSqrt = NumericExtract(toSqrt);
 
     if (d_toSqrt < 0)
@@ -219,7 +219,7 @@ v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to acos.")) );
 
     v8::Handle<v8::Value> toSqrt = args[0];
-    
+
     double d_toSqrt = NumericExtract(toSqrt);
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
@@ -232,9 +232,9 @@ v8::Handle<v8::Value> ScriptCosFunction(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to cos.")) );
 
     v8::Handle<v8::Value> toSqrt = args[0];
-    
+
     double d_toSqrt = NumericExtract(toSqrt);
-    
+
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
     return v8::Number::New(cos(d_toSqrt));
@@ -246,9 +246,9 @@ v8::Handle<v8::Value> ScriptSinFunction(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to sin.")) );
 
     v8::Handle<v8::Value> toSqrt = args[0];
-    
+
     double d_toSqrt = NumericExtract(toSqrt);
-    
+
 
     return v8::Number::New(sin(d_toSqrt));
 }
@@ -259,9 +259,9 @@ v8::Handle<v8::Value> ScriptAsinFunction(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to asin.")) );
 
     v8::Handle<v8::Value> toSqrt = args[0];
-    
+
     double d_toSqrt = NumericExtract(toSqrt);
-    
+
 
     //return v8::Handle<v8::Number>::New(sqrt(d_toSqrt));
     return v8::Number::New(asin(d_toSqrt));
@@ -277,7 +277,20 @@ v8::Handle<v8::Value> ScriptPowFunction(const v8::Arguments& args)
     double exponent = NumericExtract(args[1]);
 
     double returner = pow(base,exponent);
-    
+
+    return v8::Number::New( returner );
+}
+
+v8::Handle<v8::Value> ScriptExpFunction(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: exp function requires 1 argument.")) );
+
+    v8::HandleScope handle_scope;
+    double exponent = NumericExtract(args[0]);
+
+    double returner = exp(exponent);
+
     return v8::Number::New( returner );
 }
 
@@ -292,7 +305,7 @@ v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args)
     double numToAbs     = NumericExtract(args[0]);
 
     return v8::Number::New( fabs(numToAbs) );
-    
+
 }
 
 

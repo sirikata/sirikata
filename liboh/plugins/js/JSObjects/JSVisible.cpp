@@ -40,7 +40,7 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: argument to dist method of Visible needs to be a vec3")));
 
     Vector3d vec3 = Vec3Extract(argObj);
-    
+
     return jsvis->struct_getDistance(vec3);
 }
 
@@ -59,6 +59,59 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
     return jsvis->struct_getPosition();
 }
 
+
+Handle<v8::Value> getVelocity(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to getVelocity method of Visible")));
+
+    std::string errorMessage = "In getVelocity function of visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsvis->struct_getVelocity();
+}
+
+Handle<v8::Value> getOrientation(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to getOrientation method of Visible")));
+
+    std::string errorMessage = "In getOrientation function of visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsvis->struct_getOrientation();
+}
+
+Handle<v8::Value> getOrientationVel(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to getOrientationVel method of Visible")));
+
+    std::string errorMessage = "In getOrientationVel function of visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsvis->struct_getOrientationVel();
+}
+
+
+Handle<v8::Value> getScale(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to getOrientationVel method of Visible")));
+
+    std::string errorMessage = "In getOrientationVel function of visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+
+    return jsvis->struct_getScale();
+}
 
 v8::Handle<v8::Value> toString(const v8::Arguments& args)
 {

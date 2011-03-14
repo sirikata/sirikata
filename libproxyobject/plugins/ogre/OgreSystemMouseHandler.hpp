@@ -64,6 +64,11 @@ public:
 private:
     void delegateEvent(Input::InputEventPtr inputev);
 
+    // Gets the current set of modifiers from the input system. Used for mouse
+    // events exposed via Invokable interface since the internal mouse events
+    // don't come with modifiers.
+    Input::Modifier getCurrentModifiers() const;
+
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
 
@@ -79,6 +84,7 @@ private:
     Task::EventResponse textInputHandler(Task::EventPtr ev);
     Task::EventResponse mouseHoverHandler(Task::EventPtr ev);
     Task::EventResponse mousePressedHandler(Task::EventPtr ev);
+    Task::EventResponse mouseReleasedHandler(Task::EventPtr ev);
     Task::EventResponse mouseClickHandler(Task::EventPtr ev);
     Task::EventResponse mouseDragHandler(Task::EventPtr evbase);
     Task::EventResponse webviewHandler(Task::EventPtr ev);
@@ -97,14 +103,14 @@ private:
 
     void onUIAction(WebView* webview, const JSArguments& args);
 
-    int mWhichRayObject;
-
     OgreSystem *mParent;
     std::vector<Task::SubscriptionId> mEvents;
     typedef std::multimap<Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
 
     Invokable* mDelegate;
+
+    int mWhichRayObject;
 
     struct UIInfo {
         UIInfo()

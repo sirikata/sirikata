@@ -38,10 +38,15 @@ function() {
 
     var ns = std.movement;
 
+    ns.position = function(pres, pos) {
+        pres.setPosition(pos);
+    };
+
     ns.move = function(pres, dir, amount) {
         var orient = pres.getOrientation();
         var vel = orient.mul(dir);
-        vel = vel.scale(amount);
+        if (amount)
+            vel = vel.scale(amount);
         pres.setVelocity(vel);
     };
 
@@ -49,12 +54,31 @@ function() {
         ns.move(pres, new util.Vec3(0,0,0), 0);
     };
 
-    ns.rotate = function(pres, about, amount) {
-        pres.setOrientationVel(new util.Quaternion(about, amount));
+    ns.orientation = function(pres, orient) {
+        pres.setOrientation(orient);
+    };
+
+    ns.rotate = function(pres) {
+        if (arguments.length == 2) { // quaternion
+            pres.setOrientationVel(orient);
+        }
+        else if (arguments.length == 3) { // axis-angle
+            var about = arguments[1];
+            var amount = arguments[2];
+            pres.setOrientationVel(new util.Quaternion(about, amount));
+        }
     };
 
     ns.stopRotate = function(pres) {
         ns.rotate(pres, new util.Vec3(1,0,0), 0);
+    };
+
+    ns.scaleBy = function(pres, scale) {
+        pres.setScale( pres.getScale(scale) * scale );
+    };
+
+    ns.scaleTo = function(pres, scale) {
+        pres.setScale(scale);
     };
 
 

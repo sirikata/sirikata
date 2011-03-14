@@ -41,7 +41,7 @@ void emerson_printRewriteStream(pANTLR3_REWRITE_RULE_TOKEN_STREAM rwStream)
       pANTLR3_COMMON_TOKEN token = tree->getToken(tree);
       if( !(emerson_isImaginaryToken(token)))
       {
-          printf((const char*)token->getText(token)->chars);
+          printf("%s", (const char*)token->getText(token)->chars);
       }
 
       tree = (pANTLR3_BASE_TREE)rwStream->_next(rwStream);
@@ -83,7 +83,7 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree, pANTLR3_UINT8* parserTok
       for	(i = 0; i < n; i++)
       {
           t   = (pANTLR3_BASE_TREE) tree->children->get(tree->children, i);
-          
+
           if  (i > 0)
           {
               string->append8(string, " ");
@@ -91,12 +91,12 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree, pANTLR3_UINT8* parserTok
           string->appendS(string, emerson_printAST(t,parserTokenNames));
       }
   }
-  
+
   if(tree->isNilNode(tree) == ANTLR3_FALSE)
   {
       string->append8(string,")");
   }
-  
+
   return  string;
 }
 
@@ -130,7 +130,7 @@ void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 
     if(ptr!= NULL && ptr->children != NULL)
     {
-        
+
         ANTLR3_UINT32 n = ptr->getChildCount(ptr);
         if(n == 1)
         {
@@ -149,10 +149,10 @@ void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 
 
 
-char* read_file(char* filename)
+char* read_file(const char* filename)
 {
     char * output = new char[20000];
-    strcpy(output, "\n\n");
+    //strcpy(output, "\n\n");
     ifstream myfile;
     myfile.open (filename);
     string line;
@@ -171,7 +171,7 @@ char* read_file(char* filename)
     {
         cout << "Could not open the file " << filename << endl;
     }
-    
+
     return NULL;
 }
 
@@ -219,4 +219,3 @@ int  emerson_isAKeyword(const char* word)
 
   return 0;
 }
-

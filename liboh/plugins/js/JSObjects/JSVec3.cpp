@@ -120,66 +120,6 @@ Handle<Value> Vec3Constructor(const Arguments& args) {
     return self;
 }
 
-#define DefineVec3UnaryOperator(cname, name, op)      \
-    Handle<Value> cname(const Arguments& args) {        \
-        Handle<Object> self = args.This();              \
-                                                        \
-        if (args.Length() != 0)                                         \
-            return v8::ThrowException( v8::Exception::Error(v8::String::New("Vec3." #name " should take zero parameters.")) ); \
-                                                                        \
-        Vec3CheckAndExtract(lhs, self);                                 \
-        Handle<Value> result = CreateJSResult(self, ((lhs).*op)());     \
-                                                                        \
-        return result;                                                  \
-    }
-
-#define DefineVec3BinaryOperator(cname, name, op)       \
-    Handle<Value> cname(const Arguments& args) {      \
-        Handle<Object> self = args.This();              \
-                                                        \
-        if (args.Length() != 1)                                         \
-            return v8::ThrowException( v8::Exception::Error(v8::String::New("Vec3." #name " should take one parameter.")) ); \
-                                                                        \
-        Handle<Object> rhs_obj = Handle<Object>::Cast(args[0]);         \
-                                                                        \
-        Vec3CheckAndExtract(lhs, self);                                 \
-        Vec3CheckAndExtract(rhs, rhs_obj);                              \
-        Handle<Value> result = CreateJSResult(self, ((lhs).*op)(rhs));  \
-                                                                        \
-        return result;                                                  \
-    }
-
-
-DefineVec3BinaryOperator(Vec3Add, add, &Vector3d::operator+);
-static Vector3d(Vector3d::*subtract_op)(const Vector3d&other) const = &Vector3d::operator-;
-DefineVec3BinaryOperator(Vec3Sub, sub, subtract_op);
-DefineVec3BinaryOperator(Vec3Cross, cross, &Vector3d::cross);
-DefineVec3UnaryOperator(Vec3Normal, normal, &Vector3d::normal);
-DefineVec3BinaryOperator(Vec3Reflect, reflect, &Vector3d::reflect);
-DefineVec3BinaryOperator(Vec3Max, max, &Vector3d::max);
-DefineVec3BinaryOperator(Vec3Min, min, &Vector3d::min);
-DefineVec3BinaryOperator(Vec3ComponentMultiply, componentMultiply, &Vector3d::componentMultiply);
-
-DefineVec3BinaryOperator(Vec3Dot, dot, &Vector3d::dot);
-DefineVec3UnaryOperator(Vec3Length, length, &Vector3d::length);
-DefineVec3UnaryOperator(Vec3LengthSquared, lengthSquared, &Vector3d::lengthSquared);
-
-Handle<Value> Vec3Scale(const Arguments& args) {
-    Handle<Object> self = args.This();
-
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Vec3.scale should take one parameter.")) );
-    Handle<Object> rhs_obj = Handle<Object>::Cast(args[0]);
-    Vec3CheckAndExtract(lhs, self);
-    NumericCheckAndExtract(rhs, rhs_obj);
-    Handle<Value> result = CreateJSResult(self, lhs * rhs);
-    return result;
-}
-
-static Vector3d(Vector3d::*neg_op)() const = &Vector3d::operator-;
-DefineVec3UnaryOperator(Vec3Neg, neg, neg_op);
-
-
 Handle<Value> Vec3ToString(const Arguments& args) {
     Handle<Object> self = args.This();
     Vec3CheckAndExtract(self_val, self);
@@ -194,21 +134,6 @@ Handle<FunctionTemplate> CreateVec3Template() {
 
     // Vec3 prototype
     Local<ObjectTemplate> vec3_prototype_templ = vec3_constructor_templ->PrototypeTemplate();
-    vec3_prototype_templ->Set(JS_STRING(add), v8::FunctionTemplate::New(Vec3Add));
-    vec3_prototype_templ->Set(JS_STRING(sub), v8::FunctionTemplate::New(Vec3Sub));
-    vec3_prototype_templ->Set(JS_STRING(neg), v8::FunctionTemplate::New(Vec3Neg));
-    vec3_prototype_templ->Set(JS_STRING(cross), v8::FunctionTemplate::New(Vec3Cross));
-    vec3_prototype_templ->Set(JS_STRING(normal), v8::FunctionTemplate::New(Vec3Normal));
-    vec3_prototype_templ->Set(JS_STRING(reflect), v8::FunctionTemplate::New(Vec3Reflect));
-    vec3_prototype_templ->Set(JS_STRING(max), v8::FunctionTemplate::New(Vec3Max));
-    vec3_prototype_templ->Set(JS_STRING(min), v8::FunctionTemplate::New(Vec3Min));
-    vec3_prototype_templ->Set(JS_STRING(componentMul), v8::FunctionTemplate::New(Vec3ComponentMultiply));
-    vec3_prototype_templ->Set(JS_STRING(scale), v8::FunctionTemplate::New(Vec3Scale));
-
-    vec3_prototype_templ->Set(JS_STRING(dot), v8::FunctionTemplate::New(Vec3Dot));
-    vec3_prototype_templ->Set(JS_STRING(length), v8::FunctionTemplate::New(Vec3Length));
-    vec3_prototype_templ->Set(JS_STRING(lengthSquared), v8::FunctionTemplate::New(Vec3LengthSquared));
-
     vec3_prototype_templ->Set(JS_STRING(toString), v8::FunctionTemplate::New(Vec3ToString));
 
     // Vec3 instance

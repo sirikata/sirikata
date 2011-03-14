@@ -63,7 +63,7 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     isConnected = true;
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosListener();
-    
+
     if (hasConnectedCallback)
         jsObjScript->handleTimeoutContext(mOnConnectedCallback,NULL);
 }
@@ -89,12 +89,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion new
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::getVisualScaleFunction()
-{
-    return jsObjScript->getVisualScaleFunction(sporefToListenTo);
-}
 
-    
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
     jsObjScript->setQueryAngleFunction(sporefToListenTo, new_qa);
@@ -127,14 +122,14 @@ v8::Handle<v8::Value> JSPresenceStruct::setConnectedCB(v8::Handle<v8::Function> 
 JSPresenceStruct::~JSPresenceStruct()
 {
     clearPreviousConnectedCB();
-    
+
     for (ContextVector::iterator iter = associatedContexts.begin(); iter != associatedContexts.end(); ++iter)
         (*iter)->presenceDied();
 
 }
 
 void JSPresenceStruct::disconnect()
-{    
+{
     if (! getIsConnected())
         JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
 
@@ -149,7 +144,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 
 v8::Handle<v8::Value>JSPresenceStruct::getVisualFunction()
 {
-    return jsObjScript->getVisualFunction(sporefToListenTo);    
+    return jsObjScript->getVisualFunction(sporefToListenTo);
 }
 
 
@@ -169,7 +164,7 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
     tmpObj->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
     return tmpObj;
 }
-    
+
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries)
 {
@@ -192,7 +187,7 @@ v8::Handle<v8::Value> JSPresenceStruct::registerOnProxRemovedEventHandler(v8::Ha
 
     return v8::Boolean::New(true);
 }
-    
+
 v8::Handle<v8::Value> JSPresenceStruct::registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb)
 {
     v8::HandleScope handle_scope;
@@ -209,7 +204,7 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVe
     if (!getIsConnected())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling setVelocity on presence.  The presence is not connected to any space, and therefore has no velocity to set.")));
 
-    
+
     jsObjScript->setVelocityFunction(sporefToListenTo,newVel);
     return v8::Undefined();
 }
@@ -218,28 +213,28 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVe
 JSPresenceStruct* JSPresenceStruct::decodePresenceStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    
+
     if (! toDecode->IsObject())
     {
         errorMessage += "Error in decode of JSPresneceStruct.  Should have received an object to decode.";
         return NULL;
     }
-        
+
     v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
-        
+
     //now check internal field count
     if (toDecodeObject->InternalFieldCount() != PRESENCE_FIELD_COUNT)
     {
         errorMessage += "Error in decode of JSPresneceStruct.  Object given does not have adequate number of internal fields for decode.";
         return NULL;
     }
-        
+
     //now actually try to decode each.
     //decode the jsVisibleStruct field
     v8::Local<v8::External> wrapJSPresStructObj;
     wrapJSPresStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(PRESENCE_FIELD_PRESENCE));
     void* ptr = wrapJSPresStructObj->Value();
-    
+
     JSPresenceStruct* returner;
     returner = static_cast<JSPresenceStruct*>(ptr);
     if (returner == NULL)

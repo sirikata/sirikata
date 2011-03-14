@@ -70,6 +70,16 @@
 
 namespace Sirikata { namespace Input {
 
+SDLKeyRepeatInfo::SDLKeyRepeatInfo() {
+    evt = new SDL_Event();
+    repeat = false;
+}
+
+SDLKeyRepeatInfo::~SDLKeyRepeatInfo() {
+    delete evt;
+}
+
+
 static const IdPair::Primary &getWindowEventId(SDL_WindowEventID sdlId) {
 
     static IdPair::Primary unknownId("UnknownWindowEvent");
@@ -204,8 +214,9 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
     int numKeys = SDL_GetNumKeyboards();
     for (int i =0 ;i < numKeys; ++i) {
         mKeys.push_back(SDLKeyboardPtr(new SDLKeyboard(i)));
-		mKeys.back()->setInputManager(this);
+        mKeys.back()->setInputManager(this);
         mAllDevices.insert(mKeys.back());
+        mLastKeys.push_back(SDLKeyRepeatInfoPtr(new SDLKeyRepeatInfo()));
     }
     int numMice = SDL_GetNumMice();
     for (int i =0 ;i < numMice; ++i) {
@@ -248,14 +259,30 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
         EventPtr toFire;
         switch(event->type)
         {
-          case SDL_KEYDOWN:
           case SDL_KEYUP:
-            mKeys[event->key.which]->fireButton(
-                mKeys[event->key.which],
-                this,
-                (unsigned int)event->key.keysym.scancode,
-                (event->key.state == SDL_PRESSED),
-                modifiersFromSDL(event->key.keysym.mod));
+            if (!keyIsModifier((unsigned int)event->key.keysym.scancode)) {
+                mKeys[event->key.which]->fireButton(
+                    mKeys[event->key.which],
+                    this,
+                    (unsigned int)event->key.keysym.scancode,
+                    (event->key.state == SDL_PRESSED),
+                    modifiersFromSDL(event->key.keysym.mod));
+                mLastKeys[event->key.which]->repeat = false;
+            }
+            break;
+          case SDL_KEYDOWN:
+            if (!keyIsModifier((unsigned int)event->key.keysym.scancode)) {
+                if (!mLastKeys[event->key.which]->repeat) {
+                    mKeys[event->key.which]->fireButton(
+                        mKeys[event->key.which],
+                        this,
+                        (unsigned int)event->key.keysym.scancode,
+                        (event->key.state == SDL_PRESSED),
+                        modifiersFromSDL(event->key.keysym.mod));
+                    mLastKeys[event->key.which]->repeat = true;
+                    *(mLastKeys[event->key.which]->evt) = *event;
+                }
+            }
             break;
           case SDL_MOUSEBUTTONDOWN:
           case SDL_MOUSEBUTTONUP:
@@ -410,6 +437,21 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
             SILOG(ogre,error,"I don't know what this event is!\n");
         }
     }
+
+    // Currently, SDL 1.3 is not using key repeat properly, so we need
+    // to emulate key repeats.
+    for(uint32 ii = 0; ii < mLastKeys.size(); ii++) {
+        if (!mLastKeys[ii]->repeat) continue;
+
+        mKeys[mLastKeys[ii]->evt->key.which]->fireButton(
+            mKeys[mLastKeys[ii]->evt->key.which],
+            this,
+            (unsigned int)mLastKeys[ii]->evt->key.keysym.scancode,
+            true,
+            modifiersFromSDL(mLastKeys[ii]->evt->key.keysym.mod));
+    }
+
+
     /*
     int oldmouse = SDL_SelectMouse(-1);
     for (unsigned int i = 0; i < mMice.size(); ++i) {

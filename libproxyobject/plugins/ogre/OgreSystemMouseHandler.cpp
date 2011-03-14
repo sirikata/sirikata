@@ -370,6 +370,25 @@ EventResponse OgreSystemMouseHandler::mousePressedHandler(EventPtr ev) {
     return EventResponse::nop();
 }
 
+EventResponse OgreSystemMouseHandler::mouseReleasedHandler(EventPtr ev) {
+    std::tr1::shared_ptr<MouseReleasedEvent> mouseev (
+        std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(ev));
+    if (!mouseev)
+        return EventResponse::nop();
+
+    if (mParent->mPrimaryCamera) {
+        Camera *camera = mParent->mPrimaryCamera;
+        Time time = mParent->simTime();
+        int lhc=mLastHitCount;
+        hoverEntity(camera, time, mouseev->mXStart, mouseev->mYStart, true, &lhc, mWhichRayObject);
+        mouseOverWebView(camera, time, mouseev->mXStart, mouseev->mYStart, true, false);
+    }
+    InputEventPtr inputev (std::tr1::dynamic_pointer_cast<InputEvent>(ev));
+    delegateEvent(inputev);
+
+    return EventResponse::nop();
+}
+
 EventResponse OgreSystemMouseHandler::mouseClickHandler(EventPtr ev) {
     std::tr1::shared_ptr<MouseClickEvent> mouseev (
         std::tr1::dynamic_pointer_cast<MouseClickEvent>(ev));
@@ -506,6 +525,15 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
                 mEvents.push_back(subId);
                 mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
             }
+            // Key Repeated
+            {
+                SubscriptionId subId = mParent->mInputManager->subscribeId(
+                    ButtonRepeated::getEventId(),
+                    std::tr1::bind(&OgreSystemMouseHandler::keyHandler, this, _1)
+                );
+                mEvents.push_back(subId);
+                mDeviceSubscriptions.insert(DeviceSubMap::value_type(&*ev->mDevice, subId));
+            }
             // Key Released
             {
                 SubscriptionId subId = mParent->mInputManager->subscribeId(
@@ -531,13 +559,13 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
 
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
  : mParent(parent),
+   mDelegate(NULL),
+   mWhichRayObject(0),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
    mLastRenderStatsTime(Task::LocalTime::now()),
    mUIWidgetView(NULL),
-   mNewQueryAngle(0.f),
-   mWhichRayObject(0),
-   mDelegate(NULL)
+   mNewQueryAngle(0.f)
 {
     mLastHitCount=0;
     mLastHitX=0;
@@ -553,6 +581,10 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
     mEvents.push_back(mParent->mInputManager->subscribeId(
             MousePressedEvent::getEventId(),
             std::tr1::bind(&OgreSystemMouseHandler::mousePressedHandler, this, _1)));
+
+    mEvents.push_back(mParent->mInputManager->subscribeId(
+            MouseReleasedEvent::getEventId(),
+            std::tr1::bind(&OgreSystemMouseHandler::mouseReleasedHandler, this, _1)));
 
     mEvents.push_back(mParent->mInputManager->subscribeId(
             MouseDragEvent::getEventId(),
@@ -589,6 +621,21 @@ void OgreSystemMouseHandler::setDelegate(Invokable* del) {
     mDelegate = del;
 }
 
+Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
+    Input::Modifier result = MOD_NONE;
+
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_SHIFT))
+        result |= MOD_SHIFT;
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_CTRL))
+        result |= MOD_CTRL;
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_ALT))
+        result |= MOD_ALT;
+    if (mParent->getInputManager()->isModifierDown(Input::MOD_GUI))
+        result |= MOD_GUI;
+
+        return result;
+}
+
 namespace {
 
 // Fills in modifier fields
@@ -611,6 +658,16 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
         if (button_pressed_ev) {
             event_data["msg"] = String("button-pressed");
+            event_data["button"] = keyButtonString(button_pressed_ev->mButton);
+            event_data["keycode"] = button_pressed_ev->mButton;
+            fillModifiers(event_data, button_pressed_ev->mModifier);
+        }
+    }
+
+    {
+        ButtonRepeatedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonRepeated>(inputev));
+        if (button_pressed_ev) {
+            event_data["msg"] = String("button-repeat");
             event_data["button"] = keyButtonString(button_pressed_ev->mButton);
             event_data["keycode"] = button_pressed_ev->mButton;
             fillModifiers(event_data, button_pressed_ev->mModifier);
@@ -660,6 +717,29 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["msg"] = String("mouse-hover");
             event_data["x"] = mouse_hover_ev->mX;
             event_data["y"] = mouse_hover_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
+        }
+    }
+
+    {
+        MousePressedEventPtr mouse_press_ev (std::tr1::dynamic_pointer_cast<MousePressedEvent>(inputev));
+        if (mouse_press_ev) {
+            event_data["msg"] = String("mouse-press");
+            event_data["button"] = mouse_press_ev->mButton;
+            event_data["x"] = mouse_press_ev->mX;
+            event_data["y"] = mouse_press_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
+        }
+    }
+
+    {
+        MouseReleasedEventPtr mouse_release_ev (std::tr1::dynamic_pointer_cast<MouseReleasedEvent>(inputev));
+        if (mouse_release_ev) {
+            event_data["msg"] = String("mouse-release");
+            event_data["button"] = mouse_release_ev->mButton;
+            event_data["x"] = mouse_release_ev->mX;
+            event_data["y"] = mouse_release_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 
@@ -670,6 +750,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_click_ev->mButton;
             event_data["x"] = mouse_click_ev->mX;
             event_data["y"] = mouse_click_ev->mY;
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 
@@ -680,6 +761,9 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
             event_data["button"] = mouse_drag_ev->mButton;
             event_data["x"] = mouse_drag_ev->mX;
             event_data["y"] = mouse_drag_ev->mY;
+            event_data["dx"] = mouse_drag_ev->deltaX();
+            event_data["dy"] = mouse_drag_ev->deltaY();
+            fillModifiers(event_data, getCurrentModifiers());
         }
     }
 

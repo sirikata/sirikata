@@ -1,5 +1,7 @@
 #include "EmersonUtil.h"
 #include "Util.h"
+#include "EmersonException.h"
+
 #include <antlr3.h>
 #include <iostream>
 #include <fstream>
@@ -7,12 +9,16 @@
 #include "EmersonLexer.h"
 #include "EmersonParser.h"
 #include "EmersonTree.h"
-
+#include "EmersonInfo.h"
 
 using namespace std;
 
 
 extern pANTLR3_UINT8  EmersonParserTokenNames[];
+extern void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST);
+
+EmersonInfo* _emersonInfo;
+pEmersonTree _treeParser;
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 {
@@ -21,6 +27,35 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 
 
 char* emerson_compile(const char* em_script_str)
+{
+    int garbage = 0;
+    return emerson_compile(em_script_str, garbage);
+}
+
+
+// This version of the function should be called from the main compiler
+
+char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, void (*errorFunction)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))
+{
+  _emersonInfo = new EmersonInfo();
+  if(_originalFile.size() > 0 )
+  {
+    _emersonInfo->push(_originalFile);
+  }
+
+  if(errorFunction)
+  {
+    _emersonInfo->errorFunctionIs(errorFunction);
+  }
+
+  _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
+  
+  return emerson_compile(em_script_str, errorNum);
+}
+
+// This is mor basic version of the function. Should be called from else where
+
+char* emerson_compile(const char* em_script_str, int& errorNum)
 {
 // printf("Trying to compile \n %s\n", em_script_str);
 
@@ -64,10 +99,28 @@ char* emerson_compile(const char* em_script_str)
         exit(ANTLR3_ERR_NOMEM);
     }
 
-    emersonAST = psr->program(psr);
+    // set the error function here
+
+    if(_emersonInfo && _emersonInfo->errorFunction())
+    {
+      psr->pParser->rec->displayRecognitionError = (void(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))_emersonInfo->errorFunction();;
+
+      psr->pParser->rec->recoverFromMismatchedToken = (void*(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST))_emersonInfo->mismatchTokenFunction(); 
+    }
+
+    
+    try
+    {
+      emersonAST = psr->program(psr);
+    }
+    catch(EmersonException e)
+    {
+      throw e;
+    }
     if (psr->pParser->rec->state->errorCount > 0)
     {
         fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
+        errorNum = ANTLR3_ERR_NOMEM;
     }
     else
     {
@@ -80,6 +133,7 @@ char* emerson_compile(const char* em_script_str)
                                                                                       // DEPRECATED!!
 
         treePsr= EmersonTreeNew(nodes);
+        _treeParser = treePsr;
         js_str = (char*)treePsr->program(treePsr)->chars;
         nodes   ->free  (nodes);	    nodes	= NULL;
         treePsr ->free  (treePsr);	    treePsr	= NULL;
@@ -103,8 +157,8 @@ char* emerson_compile(const char* em_script_str)
 char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
 {
     fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
-
-    pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
+    
+       pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
     pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
     char* js_str;
 
@@ -146,6 +200,8 @@ char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
         exit(ANTLR3_ERR_NOMEM);
     }
 
+    //psr->pParser->rec->displayRecognitionError = myDisplayRecognitionError;
+
     emersonAST = psr->program(psr);
     if (psr->pParser->rec->state->errorCount > 0)
     {
@@ -165,6 +221,7 @@ char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
                                                                                       // DEPRECATED!!
 
         treePsr= EmersonTreeNew(nodes);
+        _treeParser = treePsr;
         js_str = (char*)treePsr->program(treePsr)->chars;
 
         fprintf(dbg, "The generated code is \n %s \n", js_str);

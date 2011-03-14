@@ -46,6 +46,10 @@
 #define OPT_CDN_HOST             "cdn.host"
 #define OPT_CDN_SERVICE          "cdn.service"
 
+#define OPT_TRACE_TIMESERIES           "trace.timeseries"
+#define OPT_TRACE_TIMESERIES_OPTIONS   "trace.timeseries-options"
+
+
 namespace Sirikata {
 
 SIRIKATA_FUNCTION_EXPORT void InitOptions();

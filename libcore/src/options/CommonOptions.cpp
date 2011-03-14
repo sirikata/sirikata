@@ -42,7 +42,7 @@ void InitOptions() {
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )
 
-        .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local,graphite",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 
         .addOption(new OptionValue("ohstreamlib","tcpsst",Sirikata::OptionValueType<String>(),"Which library to use to communicate with the object host"))
         .addOption(new OptionValue("ohstreamoptions","--send-buffer-size=16384 --parallel-sockets=1 --no-delay=false",Sirikata::OptionValueType<String>(),"TCPSST stream options such as how many bytes to collect for sending during an ongoing asynchronous send call."))
@@ -75,12 +75,15 @@ void InitOptions() {
 
         .addOption(new OptionValue(OPT_CDN_HOST, "cdn.sirikata.com", Sirikata::OptionValueType<String>(), "Hostname for CDN server."))
         .addOption(new OptionValue(OPT_CDN_SERVICE, "http", Sirikata::OptionValueType<String>(), "Service to access CDN by."))
+
+        .addOption(new OptionValue(OPT_TRACE_TIMESERIES, "null", Sirikata::OptionValueType<String>(), "Service to report TimeSeries data to."))
+        .addOption(new OptionValue(OPT_TRACE_TIMESERIES_OPTIONS, "", Sirikata::OptionValueType<String>(), "Options for TimeSeries reporting service."))
       ;
 }
 
 void FakeParseOptions() {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
-    int argc = 1; char* argv[2] = { "bogus", NULL };
+    int argc = 1; const char* argv[2] = { "bogus", NULL };
     options->parse(argc, argv);
 }
 

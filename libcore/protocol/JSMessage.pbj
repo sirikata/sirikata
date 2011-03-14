@@ -25,6 +25,9 @@ message JSFieldValue
 	optional int32 i_value = 2;
         optional JSMessage o_value = 3;
         optional string f_value = 4;
+        optional bool b_value = 5;
+	optional int32 ui_value = 6;
+        optional double d_value = 7;
 }
 
 

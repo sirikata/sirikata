@@ -18,8 +18,8 @@ class JSObjectScript;
 struct JSVisibleStruct : public JSPositionListener
 {
     friend class JSVisibleStructMonitor;
-    
-public:    
+
+public:
     ~JSVisibleStruct();
 
     //for decoding
@@ -34,9 +34,10 @@ public:
     v8::Handle<v8::Value> visibleSendMessage (std::string& msgToSend);
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
 
+    v8::Handle<v8::Value> struct_getVisual();
 
 private:
-        
+
     JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently);
 
     //these notifiers should only be called by the friend class JSVisibleStructMonitor

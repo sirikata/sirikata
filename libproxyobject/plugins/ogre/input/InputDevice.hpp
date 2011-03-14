@@ -35,6 +35,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/Timer.hpp>
 #include "../task/EventManager.hpp"
 #include "../task/Event.hpp"
 
@@ -185,7 +186,8 @@ typedef int32 KeyButton;
 enum KeyEvent {
     KEY_PRESSED,
     KEY_DOWN,
-    KEY_RELEASED
+    KEY_RELEASED,
+    KEY_REPEATED
 };
 
 /** The three types of drag events. The START event will only be
@@ -224,7 +226,11 @@ protected:
     std::string mName;
     InputManager *mManager;
 
-    typedef std::tr1::unordered_map<unsigned int, Modifier> ButtonSet;
+    struct ButtonState {
+        Modifier mod;
+        Time lastTime;
+    };
+    typedef std::tr1::unordered_map<unsigned int, ButtonState> ButtonSet;
     typedef std::vector<AxisValue> AxisVector;
 
     ButtonSet buttonState;
@@ -232,6 +238,7 @@ protected:
 
     bool changeButton(unsigned int button, bool newState, Modifier &mod);
     bool changeAxis(unsigned int axis, AxisValue newValue);
+
 public:
     const std::string &getName() const {
         return mName;
@@ -273,7 +280,7 @@ public:
     inline bool getButton(unsigned int button, Modifier mod) const {
         ButtonSet::const_iterator iter = buttonState.find(button);
         if (iter != buttonState.end()) {
-            return (*iter).second == mod;
+            return (*iter).second.mod == mod;
         } else {
             return false;
         }
@@ -281,7 +288,7 @@ public:
     inline const Modifier *getButton(unsigned int button) const {
         ButtonSet::const_iterator iter = buttonState.find(button);
         if (iter != buttonState.end()) {
-            return &((*iter).second);
+            return &((*iter).second.mod);
         } else {
             return NULL;
         }

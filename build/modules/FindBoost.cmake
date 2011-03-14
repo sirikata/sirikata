@@ -438,12 +438,14 @@ ELSE (_boost_IN_CACHE)
         )
       STRING(REGEX REPLACE "([0-9])\\.([0-9])\\.[0-9]" "\\1\\2"
         _boost_COMPILER_VERSION ${_boost_COMPILER_VERSION})
+      SET(_other_boost_COMPILER xxxdoesnotexistxx)
       IF(APPLE)
         IF(Boost_MINOR_VERSION)
           IF(${Boost_MINOR_VERSION} GREATER 35)
             # In Boost 1.36.0 and newer, the mangled compiler name used
             # on Mac OS X/Darwin is "xgcc".
             SET(_boost_COMPILER "-xgcc${_boost_COMPILER_VERSION}")
+            SET(_other_boost_COMPILER "-gcc${_boost_COMPILER_VERSION}")
           ELSE(${Boost_MINOR_VERSION} GREATER 35)
             # In Boost <= 1.35.0, there is no mangled compiler name for
             # the Mac OS X/Darwin version of GCC.
@@ -499,6 +501,8 @@ ELSE (_boost_IN_CACHE)
     FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_RELEASE
         NAMES  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}-${Boost_LIB_VERSION}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}-${Boost_LIB_VERSION}
+	       ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}-${Boost_LIB_VERSION}
+               ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}-${Boost_LIB_VERSION}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}
@@ -509,6 +513,8 @@ ELSE (_boost_IN_CACHE)
     FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_DEBUG
         NAMES  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}-${_boost_ABI_TAG}-${Boost_LIB_VERSION}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}-${Boost_LIB_VERSION}
+               ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}-${_boost_ABI_TAG}-${Boost_LIB_VERSION}
+               ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}-${Boost_LIB_VERSION}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}-${_boost_ABI_TAG}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}
                ${Boost_LIB_PREFIX}boost_${COMPONENT}-${_boost_ABI_TAG}
@@ -519,6 +525,8 @@ ELSE (_boost_IN_CACHE)
       FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_RELEASE
           NAMES  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}-${Boost_LIB_VERSION}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}-${Boost_LIB_VERSION}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}
@@ -529,6 +537,8 @@ ELSE (_boost_IN_CACHE)
       FIND_LIBRARY(Boost_${UPPERCOMPONENT}_LIBRARY_DEBUG
           NAMES  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}-${_boost_ABI_TAG}-${Boost_LIB_VERSION}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}-${_boost_ABI_TAG}-${Boost_LIB_VERSION}
+                 ${Boost_LIB_PREFIX}boost_${COMPONENT}${_other_boost_COMPILER}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}-${Boost_LIB_VERSION}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}-${_boost_ABI_TAG}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}${_boost_MULTITHREADED}${_boost_STATIC_TAG}${_boost_ABI_TAG}
                  ${Boost_LIB_PREFIX}boost_${COMPONENT}-${_boost_ABI_TAG}

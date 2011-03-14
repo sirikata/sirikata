@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     for(int argi = 1; argi < argc; argi++) {
         std::string arg_str(argv[argi]);
         if(arg_str.substr(0, 9) == "--options") {
-            int equal_idx = arg_str.find('=');
+            uint32 equal_idx = arg_str.find('=');
             if (equal_idx != std::string::npos) {
                 std::string options_args = arg_str.substr(equal_idx+1);
                 char * buff = new char[1000];
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
         arg_str = arg_str.substr(2);
         // Split filter name and args
         std::string filter_name, filter_args;
-        int equal_idx = arg_str.find('=');
+        uint32 equal_idx = arg_str.find('=');
         if (equal_idx != std::string::npos) {
             filter_name = arg_str.substr(0, equal_idx);
             filter_args = arg_str.substr(equal_idx+1);

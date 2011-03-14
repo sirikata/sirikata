@@ -149,12 +149,13 @@ public:
             }
             bool ok = mParent->object->send(mParent->mListenPort,mObj->uuid(),mParent->mListenPort,mPartialSend);
             static bool first=true;
-            if (first)
-            if (ok) {
-                first=false;
-                SILOG(oh,error,"SENDING to "<<mParent->mListenPort);
-            }else {
-                SILOG(oh,error,"not sending to "<<mParent->mListenPort);
+            if (first) {
+                if (ok) {
+                    first=false;
+                    SILOG(oh,error,"SENDING to "<<mParent->mListenPort);
+                }else {
+                    SILOG(oh,error,"not sending to "<<mParent->mListenPort);
+                }
             }
 
         }
@@ -515,10 +516,11 @@ bool UnreliableHitPointScenario::generateOnePing(const Time& t, PingInfo* result
         {
             MessageFlow comparator;
             comparator.cumulativeProbability=which;
-            if (rand()<mFractionMessagesUniform*RAND_MAX)
+            if (rand()<mFractionMessagesUniform*RAND_MAX) {
                 where=mSendCDF.begin()+which*(mSendCDF.size()-1);
-            else
+            } else {
                 where=std::lower_bound(mSendCDF.begin(),mSendCDF.end(),comparator);
+            }
         }
         if (where==mSendCDF.end()) {
             --where;

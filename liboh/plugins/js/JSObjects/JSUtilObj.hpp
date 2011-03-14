@@ -20,6 +20,7 @@ v8::Handle<v8::Value> ScriptCosFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptRandFunction(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptPowFunction(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptExpFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args);
 
 

@@ -111,7 +111,7 @@ private:
 
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher> mDirtyAggregateObjects;
 
-  std::map<uint16, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
+  std::map<float, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
 
   std::vector<UUID>& getChildren(const UUID& uuid);
 

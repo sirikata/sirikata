@@ -34,6 +34,7 @@
 
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOStrand.hpp>
 
 int main(int argc, char** argv) {
     using namespace Sirikata;

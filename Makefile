@@ -29,8 +29,8 @@ clean:
 	( test -e Makefile && $(MAKE) clean $(*) ) || true
 
 DEPVC8REV=HEAD
-DEPVC9REV=12
-DEPOSXREV=47
+DEPVC9REV=14
+DEPOSXREV=51
 DEPSOURCE=41
 DEPARCHINDEP=7
 #========== Dependencies ===========

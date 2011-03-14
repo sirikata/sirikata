@@ -67,9 +67,19 @@ InternalIOStrand::InternalIOStrand(IOService &io)
 {
 }
 
+InternalIOStrand::InternalIOStrand(IOService* io)
+ : boost::asio::io_service::strand(io->asioService())
+{
+}
+
 
 TCPSocket::TCPSocket(IOService&io):
     boost::asio::ip::tcp::socket(io.asioService())
+{
+}
+
+TCPSocket::TCPSocket(IOService* io):
+    boost::asio::ip::tcp::socket(io->asioService())
 {
 }
 
@@ -80,6 +90,11 @@ TCPSocket::~TCPSocket()
 
 TCPListener::TCPListener(IOService&io, const boost::asio::ip::tcp::endpoint&ep):
     boost::asio::ip::tcp::acceptor(io.asioService(),ep)
+{
+}
+
+TCPListener::TCPListener(IOService* io, const boost::asio::ip::tcp::endpoint&ep):
+    boost::asio::ip::tcp::acceptor(io->asioService(),ep)
 {
 }
 
@@ -98,6 +113,11 @@ TCPResolver::TCPResolver(IOService&io)
 {
 }
 
+TCPResolver::TCPResolver(IOService* io)
+    : boost::asio::ip::tcp::resolver(io->asioService())
+{
+}
+
 TCPResolver::~TCPResolver()
 {
 }
@@ -105,6 +125,11 @@ TCPResolver::~TCPResolver()
 
 UDPSocket::UDPSocket(IOService&io):
     boost::asio::ip::udp::socket(io.asioService())
+{
+}
+
+UDPSocket::UDPSocket(IOService*io):
+    boost::asio::ip::udp::socket(io->asioService())
 {
 }
 
@@ -117,12 +142,22 @@ UDPResolver::UDPResolver(IOService&io)
 {
 }
 
+UDPResolver::UDPResolver(IOService* io)
+    : boost::asio::ip::udp::resolver(io->asioService())
+{
+}
+
+
 UDPResolver::~UDPResolver()
 {
 }
 
 DeadlineTimer::DeadlineTimer(IOService& io)
     : boost::asio::deadline_timer(io.asioService()) {
+}
+
+DeadlineTimer::DeadlineTimer(IOService* io)
+    : boost::asio::deadline_timer(io->asioService()) {
 }
 
 

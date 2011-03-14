@@ -175,7 +175,7 @@ bool MaterialEffectInfo::operator==(const MaterialEffectInfo& rhs) const {
         reflectivity == rhs.reflectivity &&
         textures.size() == rhs.textures.size();
     if (!basic) return false;
-    for(int i = 0; i < textures.size(); i++) {
+    for(uint32 i = 0; i < textures.size(); i++) {
         if (textures[i] != rhs.textures[i]) return false;
     }
     return true;
@@ -239,7 +239,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
         // First, if we emptied out, try to handle the next root.
         if (mStack.empty()) {
             mRoot++;
-            if (mRoot >= mMesh->rootNodes.size()) return false;
+            if (mRoot >= (int32)mMesh->rootNodes.size()) return false;
 
             NodeState st;
             st.index = mMesh->rootNodes[mRoot];
@@ -253,7 +253,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
 
         if (node.step == NodeState::Nodes) {
             node.currentChild++;
-            if (node.currentChild >= mMesh->nodes[node.index].children.size()) {
+            if (node.currentChild >= (int)mMesh->nodes[node.index].children.size()) {
                 node.step = NodeState::InstanceNodes;
                 node.currentChild = -1;
                 continue;
@@ -270,7 +270,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
 
         if (node.step == NodeState::InstanceNodes) {
             node.currentChild++;
-            if (node.currentChild >= mMesh->nodes[node.index].instanceChildren.size()) {
+            if (node.currentChild >= (int)mMesh->nodes[node.index].instanceChildren.size()) {
                 node.step = NodeState::InstanceGeometries;
                 node.currentChild = -1;
                 continue;
@@ -279,8 +279,8 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             NodeState st;
             st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
             st.step = NodeState::Nodes;
-            st.currentChild = -1;  
-            st.transform = node.transform * mMesh->nodes[ st.index ].transform; 
+            st.currentChild = -1;
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
             mStack.push(st);
             continue;
         }
@@ -290,7 +290,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             // list of instance geometries. Instead, we have to iterate over all
             // instance geometries for all nodes.
             node.currentChild++;
-            if (node.currentChild >= mMesh->instances.size()) {
+            if (node.currentChild >= (int)mMesh->instances.size()) {
                 node.step = NodeState::Done;
                 continue;
             }
@@ -300,7 +300,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             // Otherwise, just yield the information
             *geo_idx = node.currentChild;
             *xform = node.transform;
-            
+
             return true;
         }
 
@@ -326,7 +326,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
         // First, if we emptied out, try to handle the next root.
         if (mStack.empty()) {
             mRoot++;
-            if (mRoot >= mMesh->rootNodes.size()) return false;
+            if (mRoot >= (int)mMesh->rootNodes.size()) return false;
 
             NodeState st;
             st.index = mMesh->rootNodes[mRoot];
@@ -340,7 +340,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
 
         if (node.step == NodeState::Nodes) {
             node.currentChild++;
-            if (node.currentChild >= mMesh->nodes[node.index].children.size()) {
+            if (node.currentChild >= (int)mMesh->nodes[node.index].children.size()) {
                 node.step = NodeState::InstanceNodes;
                 node.currentChild = -1;
                 continue;
@@ -357,7 +357,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
 
         if (node.step == NodeState::InstanceNodes) {
             node.currentChild++;
-            if (node.currentChild >= mMesh->nodes[node.index].instanceChildren.size()) {
+            if (node.currentChild >= (int)mMesh->nodes[node.index].instanceChildren.size()) {
                 node.step = NodeState::InstanceLights;
                 node.currentChild = -1;
                 continue;
@@ -377,7 +377,7 @@ bool Meshdata::LightInstanceIterator::next(uint32* light_idx, Matrix4x4f* xform)
             // list of instance lights. Instead, we have to iterate over all
             // instance lights for all nodes.
             node.currentChild++;
-            if (node.currentChild >= mMesh->lightInstances.size()) {
+            if (node.currentChild >= (int)mMesh->lightInstances.size()) {
                 node.step = NodeState::Done;
                 continue;
             }

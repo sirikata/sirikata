@@ -46,6 +46,7 @@ tokens
     WHEN_CHECKED_LIST_FIRST;
     WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
+    NOOP;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
     THROW;
@@ -85,7 +86,7 @@ tokens
     LEFT_SHIFT;
     RIGHT_SHIFT;
     TRIPLE_SHIFT;
-    ADD;
+    ADD_OP;
     SUB;
     MULT;
     DIV;
@@ -93,7 +94,7 @@ tokens
     ARRAY_LITERAL;
     OBJ_LITERAL;
     NAME_VALUE;
-    DELETE;
+    DELETE_OP;
     VOID;
     TYPEOF;
     PLUSPLUS;
@@ -119,17 +120,16 @@ tokens
 
 @header
 {
-  #include <stdlib.h>;
-  #include <stdio.h>;
-  #include "Util.h";
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include "Util.h"
 }
 
 
 	
 
 program
-	: a=LTERM* sourceElements LTERM* EOF -> ^(PROG sourceElements) // omitting LTERM and EOF
-
+	: a=LTERM*  sourceElements? LTERM* EOF -> ^(PROG sourceElements?) // omitting LTERM and EOF
 	;
 
 sourceElements
@@ -161,7 +161,8 @@ functionBody
 
 // statements
 statement
-	: statementBlock
+	: noOpStatement
+        | statementBlock
 	| variableStatement
 	| emptyStatement
 	| expressionStatement
@@ -181,12 +182,17 @@ statement
 	;
 	
 statementBlock
- : '{' LTERM* '}'
+        : '{' LTERM* '}'   -> ^(NOOP)
 	| '{' LTERM* (statementList->statementList) LTERM* '}' 
-	;
-	
+	; 
+
+noOpStatement
+        : ';' -> ^(NOOP)
+        ;
+        
+        
 statementList
-	: statement (LTERM* statement)* -> ^(SLIST statement+)
+	: (LTERM* statement)+ -> ^(SLIST statement+)
 	;
 	
 variableStatement
@@ -218,7 +224,7 @@ initialiserNoIn
 	;
 	
 emptyStatement
-	: ';'
+        : LTERM* ';'
 	;
 	
 expressionStatement
@@ -343,10 +349,14 @@ msgSendStatement
 //msgRecvStatement
 // : (e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' )? -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression (LTERM | ';')-> ^($msgRecvStatement $e3) )? 
 
- msgRecvStatement
- : e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
- | e1=memberExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memberExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
+ memAndCallExpression
+ : callExpression -> callExpression
+ | memberExpression -> memberExpression
+ ;
 
+ msgRecvStatement
+ : e1=memAndCallExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
+ | e1=memAndCallExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
 ;
 // expressions
 expression
@@ -533,7 +543,7 @@ shiftExpression
 
 
 addOps
-: '+' -> ^(ADD)
+: '+' -> ^(ADD_OP)
 | '-' -> ^(SUB)
 ;
 
@@ -549,20 +559,20 @@ multOps
 ;
 
 multiplicativeExpression
-	: (unaryExpression -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
+	: (unaryExpression  -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
 	;
 
 
 postfixExpression
- :leftHandSideExpression  -> leftHandSideExpression
- | leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
+ : leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
  | leftHandSideExpression '++' -> ^(PLUSPLUS leftHandSideExpression)
+ |leftHandSideExpression  -> leftHandSideExpression
   
 ;
 
 
 unaryOps
-:'delete' -> ^(DELETE)
+:'delete' -> ^(DELETE_OP)
 | 'void' -> ^(VOID)
 | 'typeof' -> ^(TYPEOF)
 | '++'  -> ^(PLUSPLUS)
@@ -1144,4 +1154,3 @@ LTERM
 WhiteSpace // Tab, vertical tab, form feed, space, non-breaking space and any other unicode "space separator".
 	: ('\t' | '\v' | '\f' | ' ' | '\u00A0')	{$channel=HIDDEN;}
 	;
-

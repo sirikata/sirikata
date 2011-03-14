@@ -47,8 +47,8 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
     if (newState == true) {
         ButtonSet::iterator iter = buttonState.find(button);
         if (iter != buttonState.end()) {
-            if ((*iter).second != modifiers) {
-                modifiers = (*iter).second;
+            if ((*iter).second.mod != modifiers) {
+                modifiers = (*iter).second.mod;
                 changed = true;
             } else {
                 changed = false;
@@ -58,12 +58,15 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
         }
         if (changed) {
             // may have different set of modifiers.
-            buttonState.insert(ButtonSet::value_type(button,modifiers));
+            ButtonState newstate;
+            newstate.mod = modifiers;
+            newstate.lastTime = Time::null();
+            buttonState.insert(ButtonSet::value_type(button,newstate));
         }
     } else {
         ButtonSet::iterator iter = buttonState.find(button);
         if (iter != buttonState.end()) {
-            modifiers = (*iter).second;
+            modifiers = (*iter).second.mod;
             buttonState.erase(iter);
             changed = true;
         } else {
@@ -72,20 +75,43 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
     }
     return changed;
 }
+
 bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                              GenEventManager *em,
-                             unsigned int button, bool newState, Modifier modifiers) {
+                             unsigned int button, bool newStateIsPressed, Modifier modifiers) {
     Modifier oldmodifiers = modifiers;
-    bool changed = changeButton(button, newState, oldmodifiers);
+    bool changed = changeButton(button, newStateIsPressed, oldmodifiers);
     if (changed) {
-        if (newState) {
+        if (newStateIsPressed) {
             if (oldmodifiers != modifiers) {
+                // If modifiers change, release old
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
             }
             em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+            buttonState.find(button)->second.lastTime = Timer::now();
         } else {
             em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
         }
+    } else {
+        if (newStateIsPressed) {
+            if (oldmodifiers != modifiers) {
+                // If modifiers change, release old and press new
+                em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
+                em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
+                assert(buttonState.find(button) != buttonState.end());
+                buttonState.find(button)->second.lastTime == Timer::now();
+            }
+            else {
+                // Otherwise, we're really in repeat mode
+                Time tnow = Timer::now();
+                if (tnow - buttonState.find(button)->second.lastTime > Duration::seconds(1.f/15) ) {
+                    em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
+                    assert(buttonState.find(button) != buttonState.end());
+                    buttonState.find(button)->second.lastTime = tnow;
+                }
+            }
+        }
+        // Otherwise, we're getting repeats when the key is up....
     }
     return changed;
 }
@@ -140,7 +166,7 @@ void PointerDevice::firePointerClick(
         di.mOffsetY = 0;
         mDragInfo.insert(mDragInfo.begin(), di);
         em->fire(EventPtr(
-                 new MousePressedEvent(
+                new MousePressedEvent(
                     thisptr,
                     xPixel,
                     yPixel,
@@ -153,23 +179,29 @@ void PointerDevice::firePointerClick(
                 yPixel = (*iter).mDragY;
             }
             em->fire(EventPtr(
-                new MouseDragEvent(
-                    thisptr, DRAG_END,
-                    (*iter).mDragStartX,
-                    (*iter).mDragStartY,
-                    xPixel+(*iter).mOffsetX,
-                    yPixel+(*iter).mOffsetY,
-                    (*iter).mDragX+(*iter).mOffsetX,
-                    (*iter).mDragY+(*iter).mOffsetY,
-                    cursor, button, 0, 0, 0)));
+                    new MouseDragEvent(
+                        thisptr, DRAG_END,
+                        (*iter).mDragStartX,
+                        (*iter).mDragStartY,
+                        xPixel+(*iter).mOffsetX,
+                        yPixel+(*iter).mOffsetY,
+                        (*iter).mDragX+(*iter).mOffsetX,
+                        (*iter).mDragY+(*iter).mOffsetY,
+                        cursor, button, 0, 0, 0)));
         } else {
             em->fire(EventPtr(
-                new MouseClickEvent(
-                    thisptr,
-                    (*iter).mDragStartX,
-                    (*iter).mDragStartY,
-                    cursor, button)));
+                    new MouseClickEvent(
+                        thisptr,
+                        (*iter).mDragStartX,
+                        (*iter).mDragStartY,
+                        cursor, button)));
         }
+        em->fire(EventPtr(
+                new MouseReleasedEvent(
+                    thisptr,
+                    xPixel,
+                    yPixel,
+                    cursor, button)));
         mDragInfo.erase(iter);
     }
 }

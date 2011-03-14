@@ -1097,7 +1097,17 @@ void Entity::createMesh(MeshdataPtr mdptr) {
 
         /// FIXME: set bounds, bounding radius here
         Ogre::ManualResourceLoader *reload;
-        Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=OGRE_NEW MeshdataManualLoader(md))));
+        Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
+#ifdef _WIN32
+#ifdef NDEBUG
+			OGRE_NEW
+#else
+			new
+#endif
+#else
+			OGRE_NEW 
+#endif
+			MeshdataManualLoader(md))));
         reload->prepareResource(&*mo);
         reload->loadResource(&*mo);
 

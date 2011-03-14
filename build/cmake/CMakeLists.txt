@@ -123,14 +123,15 @@ MARK_AS_ADVANCED(
     CMAKE_C_FLAGS_DEFAULT
     CMAKE_EXE_LINKER_FLAGS_DEFAULT
     CMAKE_SHARED_LINKER_FLAGS_DEFAULT )
-
+IF(WIN32)
+ELSE()
 SET(CMAKE_CXX_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
     "Built cxxflags with default settings."
     FORCE )
 SET( CMAKE_C_FLAGS_DEBUG "-g2 -D_DEBUG" CACHE STRING
     "Built cflags with default settings."
     FORCE )
-
+ENDIF()
 
 # Profile build target
 SET(CMAKE_CXX_FLAGS_PROFILE "-g2 -O3 -pg -DNDEBUG" CACHE STRING
@@ -619,8 +620,14 @@ IF(WIN32)
     ENDIF()
   ENDIF()
   SET(BERKELIUM_TARGET_LIBRARIES)
+  SET(BERKELIUM_TARGET_BINARIES)
 ELSE()
   # FIXME real check for berkelium + chrome
+  SET(BERKELIUM_FOUND FALSE)
+  SET(BERKELIUM_INCLUDE_DIRS)
+  SET(BERKELIUM_TARGET_LIBRARIES)
+  SET(BERKELIUM_TARGET_BINARIES)
+  SET(BERKELIUM_LIBRARIES)
   IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
     # This name is needed by the ADD_CHROME_APP macro
     SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
@@ -643,10 +650,10 @@ ELSE()
     FIND_PACKAGE(Chrome)
 
     IF(CHROME_FOUND)
-
       SET(BERKELIUM_FOUND TRUE)
       SET(BERKELIUM_INCLUDE_DIRS ${TOP_LEVEL}/externals/berkelium/include)
       SET(BERKELIUM_TARGET_LIBRARIES libberkelium)
+      SET(BERKELIUM_TARGET_LIBRARIES berkelium)
       SET(BERKELIUM_LIBRARIES)
     ELSE()
       MESSAGE(STATUS "Chrome wasn't found in dependencies/chromium")
@@ -1155,6 +1162,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/util/RegionWeightCalculator.cpp
         ${LIBCORE_SOURCE_DIR}/trace/BatchedBuffer.cpp
         ${LIBCORE_SOURCE_DIR}/trace/Trace.cpp
+        ${LIBCORE_SOURCE_DIR}/trace/TimeSeries.cpp
 	${LIBCORE_SOURCE_DIR}/sync/TimeSyncServer.cpp
 	${LIBCORE_SOURCE_DIR}/sync/TimeSyncClient.cpp
 )
@@ -1252,6 +1260,7 @@ SET(LIBPROXYOBJECT_SOURCES
                   ${LIBPROXYOBJECT_SOURCE_DIR}/Invokable.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/ProxyObject.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/VWObject.cpp
+                  ${LIBPROXYOBJECT_SOURCE_DIR}/OverlayPosition.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/SimulationFactory.cpp
                   ${LIBPROXYOBJECT_SOURCE_DIR}/OrphanLocUpdateManager.cpp
     )
@@ -1277,6 +1286,7 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/ogre)
 SET(CPPOH_SOURCES
   ${CPPOH_SOURCE_DIR}/main.cpp
   ${CPPOH_SOURCE_DIR}/Options.cpp
+  ${CPPOH_SOURCE_DIR}/ObjectHost.cpp
   ${ObjectHostBinary_PBJ_CPP_FILES}
  )
 
@@ -1318,6 +1328,12 @@ SET(LIBCORE_PLUGIN_WEIGHTSQR_SOURCES
 SET(LIBCORE_PLUGIN_WEIGHTCONST_DIR ${LIBCORE_PLUGIN_DIR}/weightconst)
 SET(LIBCORE_PLUGIN_WEIGHTCONST_SOURCES
   ${LIBCORE_PLUGIN_WEIGHTCONST_DIR}/PluginInterface.cpp
+  )
+
+SET(LIBCORE_PLUGIN_GRAPHITE_DIR ${LIBCORE_PLUGIN_DIR}/graphite)
+SET(LIBCORE_PLUGIN_GRAPHITE_SOURCES
+  ${LIBCORE_PLUGIN_GRAPHITE_DIR}/PluginInterface.cpp
+  ${LIBCORE_PLUGIN_GRAPHITE_DIR}/GraphiteTimeSeries.cpp
   )
 
 SET(LIBCORE_PLUGIN_SERVERMAP_TABULAR_DIR ${LIBCORE_PLUGIN_DIR}/servermap_tabular)
@@ -1581,6 +1597,7 @@ libcore/test/TCPSSTConnectTest.hpp
 #libcore/test/ThreadSafeQueueTest.hpp
 libcore/test/TR1Test.hpp
 libcore/test/Vector3Test.hpp
+libcore/test/BoundingBoxTest.hpp
  )
 IF(NOT WIN32)
 SET(CXXTESTSources ${CXXTESTSources} libcore/test/ReadWriteHandlerTest.hpp libcore/test/SQLiteMinitransactionTest.hpp libcore/test/SQLiteReadWriteTest.hpp)
@@ -1787,6 +1804,13 @@ ADD_PLUGIN_TARGET(weight-const
                     LIBRARIES ${SIRIKATA_CORE_LIB} ${GSL_LIBRARIES}
                     TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} weight-const)
+
+ADD_PLUGIN_TARGET(graphite
+                    SOURCES ${LIBCORE_PLUGIN_GRAPHITE_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    LIBRARIES ${SIRIKATA_CORE_LIB}
+                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB})
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} graphite)
 
 ADD_PLUGIN_TARGET(servermap-tabular
                     SOURCES ${LIBCORE_PLUGIN_SERVERMAP_TABULAR_SOURCES}
@@ -2240,7 +2264,7 @@ IF(CHROME_FOUND)
 
     ADD_CHROME_APP(
       APP ${CPPOH_BINARY_FILENAME}
-      DEPENDS ${CPPOH_BINARY}
+      DEPENDS ${CPPOH_BINARY} ${BERKELIUM_TARGET_LIBRARIES} ${BERKELIUM_TARGET_BINARIES}
       LINKS
       ${CMAKE_CURRENT_BINARY_DIR}/chrome/berkelium
       ${CMAKE_CURRENT_BINARY_DIR}/*.dylib
@@ -2248,7 +2272,7 @@ IF(CHROME_FOUND)
       )
 
   ELSEIF(ISLINUX)
-    ADD_CHROME_SYMLINK_TARGET(TARGETNAME chrome_symlinks_for_sirikata DEPENDS libberkelium)
+    ADD_CHROME_SYMLINK_TARGET(TARGETNAME chrome_symlinks_for_sirikata DEPENDS ${BERKELIUM_TARGET_LIBRARIES})
   ENDIF()
 ENDIF()
 

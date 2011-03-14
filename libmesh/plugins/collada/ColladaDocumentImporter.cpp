@@ -240,7 +240,7 @@ void ColladaDocumentImporter::translateNodes() {
                 // have been processed yet, so we wouldn't be able to lookup an
                 // index.
 
-                for(int inst_idx = 0; inst_idx < curnode.node->getInstanceNodes().getCount(); inst_idx++) {
+                for(uint32 inst_idx = 0; inst_idx < curnode.node->getInstanceNodes().getCount(); inst_idx++) {
                     COLLADAFW::UniqueId child_id = curnode.node->getInstanceNodes()[inst_idx]->getInstanciatedObjectId();
                     COLLADAFW::UniqueId node_id = curnode.node->getUniqueId();
 
@@ -1161,7 +1161,7 @@ bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* anima
         // FIXME tangents
     }
     else {
-        COLLADA_LOG(error, "Unsupported animation type encountered: " << animation->getAnimationType());
+        COLLADA_LOG(error, "Unsupported animation type encountered: " << (int)animation->getAnimationType());
     }
 
     return true;
@@ -1174,7 +1174,7 @@ bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList cons
 
     AnimationBindings* copy = &mAnimationBindings[animationList->getUniqueId()];
     const COLLADAFW::AnimationList::AnimationBindings& orig = animationList->getAnimationBindings();
-    for(int i = 0; i < orig.getCount(); i++)
+    for(uint32 i = 0; i < orig.getCount(); i++)
         copy->push_back( orig[i] );
 
     return true;
@@ -1233,7 +1233,7 @@ bool ColladaDocumentImporter::writeController ( COLLADAFW::Controller const* con
         }
     }
     else {
-        COLLADA_LOG(error, "Unsupported controller type encountered: " << controller->getControllerType());
+        COLLADA_LOG(error, "Unsupported controller type encountered: " << (int)controller->getControllerType());
     }
 
     return true;

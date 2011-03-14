@@ -104,7 +104,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
         //FIXME: this assumes all the texture URIs are the same in materials[i].textures
         const MaterialEffectInfo::Texture& texture = meshdata.materials[i].textures[0];
         if (textureURIToEffectIndexMap.find(texture.uri) != textureURIToEffectIndexMap.end() &&
-            textureURIToEffectIndexMap[texture.uri] != i
+            textureURIToEffectIndexMap[texture.uri] != (int32)i
            )
           {
             materialRedirectionMap[i] = textureURIToEffectIndexMap[texture.uri];
@@ -118,7 +118,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
           String colorEncoding = colorEncodingStr;
 
           if (textureURIToEffectIndexMap.find(colorEncoding) != textureURIToEffectIndexMap.end() &&
-              textureURIToEffectIndexMap[colorEncoding] != i
+              textureURIToEffectIndexMap[colorEncoding] != (int32)i
               )
             {
               materialRedirectionMap[i] = textureURIToEffectIndexMap[colorEncoding];
@@ -226,6 +226,9 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
               case MaterialEffectInfo::Texture::SPECULAR:
                 effectProfile.setSpecular(colorOrTexture);
                 effectProfileEmpty = false;
+                break;
+              default:
+                SILOG(collada, error, "[COLLADA] Unhandled texture type during effect export:" << (int32)texture.affecting);
                 break;
             }
 
@@ -426,7 +429,7 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
           triangles.prepareToAppendValues();
 
-          for( int k = 0; k < meshdata.geometry[i].primitives[j].indices.size(); k++ )
+          for(uint32 k = 0; k < meshdata.geometry[i].primitives[j].indices.size(); k++ )
           {
               if (meshdata.geometry[i].texUVs.size() > 0) {
                 triangles.appendValues(meshdata.geometry[i].primitives[j].indices[k],
@@ -495,6 +498,9 @@ public:
                 break;
               case LightInfo::DIRECTIONAL:
                 light = new COLLADASW::DirectionalLight(streamWriter, light_name);
+                break;
+              default:
+                SILOG(collada, error, "[COLLADA] Unhandled light type during light export:" << (int32)light_info.mType);
                 break;
             }
 
@@ -582,6 +588,13 @@ void emitNodeElements(const Meshdata& meshdata, COLLADASW::StreamWriter* streamW
         inst_it != meshdata.nodes[current.node].instanceChildren.end();
         inst_it++)
     {
+        if (isEmpty(meshdata, *inst_it, meshdata.nodes[*inst_it],
+                      nodeGeoInstances, nodeLightInstances, nodeJoints,
+                      addedGeometriesList, materialRedirectionMap, addedLightsList))
+        {
+          continue;
+        }
+
         String inst_node_url = "#node-" + boost::lexical_cast<String>(*inst_it);
         COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
         instanceNode.add();
@@ -688,7 +701,7 @@ public:
       for(uint32 root_i = 0; root_i < meshdata.nodes.size(); root_i++) {
           if (meshdata.nodes[root_i].parent != NullNodeIndex) continue;
 
-          if (isEmpty(meshdata, root_i, meshdata.nodes[root_i], 
+          if (isEmpty(meshdata, root_i, meshdata.nodes[root_i],
                       nodeGeoInstances, nodeLightInstances, nodeJoints,
                       addedGeometriesList, materialRedirectionMap, addedLightsList))
             {
@@ -720,7 +733,7 @@ public:
 
               // If we've finished handling all children, handle non-node
               // children, i.e. instance nodes, instance lights, instance geometries
-              if (current.currentChild >= meshdata.nodes[current.node].children.size()) {
+              if (current.currentChild >= (int32)meshdata.nodes[current.node].children.size()) {
                   emitNodeElements(
                       meshdata, mSW, current,
                       nodeGeoInstances, nodeLightInstances, nodeJoints,
@@ -782,20 +795,20 @@ public:
       //  4. Light instances
 
       // We need one outer node to hold all the others to manage our
-      // global transform. 
+      // global transform.
       COLLADASW::Node* globalNode = NULL;
-      
+
       globalNode = new COLLADASW::Node( streamWriter );
       String node_name = "globalTransformNode";
       globalNode->setNodeId(node_name);
       globalNode->setNodeName( COLLADASW::Utils::checkNCName( COLLADABU::NativeString(node_name) ) );
       globalNode->setType(COLLADASW::Node::NODE);
-      
+
       globalNode->start();
       double mat[4][4];
       convertMatrixForCollada(meshdata.globalTransform, mat);
       globalNode->addMatrix(mat);
-     
+
 
       // For the visual scene, we shouldn't be generating any real nodes
       // here. We should only be instancing the root nodes.  All the other node
@@ -803,27 +816,27 @@ public:
       // already been emitted in the library.
       for(uint32 root_i = 0; root_i < meshdata.rootNodes.size(); root_i++) {
           // Create instance node
-          
-          const Sirikata::Mesh::Node& node = meshdata.nodes[meshdata.rootNodes[root_i]];          
 
-          if (isEmpty(meshdata, meshdata.rootNodes[root_i], node, 
+          const Sirikata::Mesh::Node& node = meshdata.nodes[meshdata.rootNodes[root_i]];
+
+          if (isEmpty(meshdata, meshdata.rootNodes[root_i], node,
                       nodeGeoInstances, nodeLightInstances, nodeJoints,
                       addedGeometriesList, materialRedirectionMap, addedLightsList))
             {
               continue;
             }
-          
+
 
           String inst_node_url = "#node-" + boost::lexical_cast<String>(meshdata.rootNodes[root_i]);
           COLLADASW::InstanceNode instanceNode(streamWriter, inst_node_url);
           instanceNode.add();
       }
 
-      
+
       globalNode->end();
       delete globalNode;
       globalNode = NULL;
-      
+
 
       closeVisualScene();
       closeLibrary();

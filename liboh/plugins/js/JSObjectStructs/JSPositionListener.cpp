@@ -31,7 +31,7 @@ JSPositionListener::~JSPositionListener()
         delete sporefToListenTo;
     if (sporefToListenFrom != NULL)
         delete sporefToListenFrom;
-    
+
 }
 
 
@@ -74,21 +74,21 @@ bool JSPositionListener::registerAsPosListener()
         return true;
 
 
-    
+
     //initializes mLocation and mOrientation to correct starting values.
     if (sporefToListenTo == NULL)
     {
         JSLOG(error,"error in JSPositionListener.  Requesting to register as pos listener to null sporef.  Doing nothing");
         return false;
     }
-    
+
     if ((sporefToListenFrom == NULL) ||
         (*sporefToListenFrom == SpaceObjectReference::null()))
     {
         JSLOG(insane,"This object has an invalid sporefToListenFrom.  Taking no action ");
         return false;
     }
-    
+
     hasRegisteredListener = jsObjScript->registerPosListener(sporefToListenTo,sporefToListenFrom,this,&mLocation,&mOrientation);
 
 
@@ -102,7 +102,7 @@ void JSPositionListener::deregisterAsPosListener()
         return;
 
     hasRegisteredListener =false;
-    
+
     if (sporefToListenTo != NULL)
         jsObjScript->deRegisterPosListener(sporefToListenTo,sporefToListenFrom,this);
 }
@@ -131,8 +131,8 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
     mLocation    = newLocation;
     mOrientation = newOrient;
     mBounds      = newBounds;
-    
-    //if I received an updated location and I am associated with an object that 
+
+    //if I received an updated location and I am associated with an object that
     //I am listeningFrom, then I should propagate this update to visible structs
     //that may not know about updates to this presence.
     if (sporefToListenFrom != NULL)
@@ -140,7 +140,7 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
         if (*sporefToListenFrom != SpaceObjectReference::null())
             jsObjScript->checkForwardUpdate(*sporefToListenFrom,newLocation,newOrient,newBounds);
     }
-    
+
 }
 
 Vector3f JSPositionListener::getPosition()
@@ -162,13 +162,19 @@ Quaternion JSPositionListener::getOrientation()
     return mOrientation.position(jsObjScript->getHostedTime()).normal();
 }
 
+
+BoundingSphere3f JSPositionListener::getBounds()
+{
+    return mBounds;
+}
+
 v8::Handle<v8::Value> JSPositionListener::struct_getPosition()
 {
     String errorMsg;
     if (! passErrorChecks(errorMsg,"getPosition"))
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
 
-    
+
     v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
     return CreateJSResult(curContext,getPosition());
 }
@@ -180,7 +186,7 @@ v8::Handle<v8::Value>JSPositionListener::struct_getVelocity()
     if (! passErrorChecks(errorMsg,"getVelocity"))
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
 
-    
+
     v8::Handle<v8::Context> curContext = v8::Context::GetCurrent();
     return CreateJSResult(curContext,getVelocity());
 }
@@ -205,6 +211,16 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientation()
     return CreateJSResult(curContext,getOrientation());
 }
 
+v8::Handle<v8::Value> JSPositionListener::struct_getScale()
+{
+    String errorMsg;
+    if (! passErrorChecks(errorMsg,"getScale"))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
+
+    v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
+    return CreateJSResult(curContext,getBounds().radius());
+}
+
 v8::Handle<v8::Value> JSPositionListener::struct_getDistance(const Vector3d& distTo)
 {
     String errorMsg;
@@ -213,7 +229,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getDistance(const Vector3d& dis
 
     Vector3d curPos = Vector3d(getPosition());
     double distVal = (distTo - curPos).length();
-    
+
     v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
     return CreateJSResult(curContext,distVal);
 }

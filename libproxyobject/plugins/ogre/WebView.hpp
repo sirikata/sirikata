@@ -355,6 +355,10 @@ namespace Graphics {
 		*/
 		void injectMouseUp(int xPos, int yPos);
 
+            void injectCut();
+            void injectCopy();
+            void injectPaste();
+
             void injectKeyEvent(bool press, int modifiers, int vk_code, int raw_scancode);
 
 		void injectTextEvent(std::string utf8);

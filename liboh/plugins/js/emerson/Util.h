@@ -8,12 +8,12 @@
 
 using namespace std;
 
-typedef map<const char*, char*> keymap;
-typedef pair<const char*, char*> keypair;
+typedef map<const char*, const char*> keymap;
+typedef pair<const char*, const char*> keypair;
 
 
 int emerson_isAKeyword(const char*);
-char* read_file(char*);
+char* read_file(const char*);
 std::string emerson_escapeSingleQuotes(const char* stringSequence);
 std::string replaceAllInstances(std::string initialString, std::string toReplace, std::string toReplaceWith);
 int emerson_init();

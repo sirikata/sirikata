@@ -47,7 +47,17 @@ Timer::Timer() {
 Timer::~Timer() {
     delete mStart;
 }
+
 static boost::posix_time::ptime gEpoch(boost::posix_time::time_from_string(std::string("2009-03-12 23:59:59.000")));
+
+Duration Timer::getUTCOffset() {
+    // There is probably a better way to get this offset, but hopefully this covers
+    // both time zone and DST.
+    static boost::posix_time::time_duration raw_utc_offset = boost::posix_time::microsec_clock::universal_time() - boost::posix_time::microsec_clock::local_time();
+    static Duration utc_offset = Duration::microseconds(raw_utc_offset.total_microseconds());
+    return utc_offset;
+}
+
 Time Timer::getSpecifiedDate(const std::string&dat) {
     boost::posix_time::time_duration since_epoch=boost::posix_time::time_from_string(dat)-gEpoch;
     return Time::null() + Duration::microseconds(since_epoch.total_microseconds());

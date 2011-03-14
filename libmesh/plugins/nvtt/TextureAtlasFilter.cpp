@@ -287,13 +287,13 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
         // put this as the outer loop so we replace the entire uv set with a
         // new, filtered copy so we make sure we don't double-transform any of
         // the coordinates.
-        for(int tex_set_idx = 0; tex_set_idx < submesh.texUVs.size(); tex_set_idx++) {
+        for(uint32 tex_set_idx = 0; tex_set_idx < submesh.texUVs.size(); tex_set_idx++) {
             SubMeshGeometry::TextureSet& tex_set = submesh.texUVs[tex_set_idx];
             std::vector<float> new_uvs = tex_set.uvs;
 
             // Each prim defines a material mapping, so we need to split the
             // texture coordinates up by prim.
-            for(int prim_idx = 0; prim_idx < submesh.primitives.size(); prim_idx++) {
+            for(uint32 prim_idx = 0; prim_idx < submesh.primitives.size(); prim_idx++) {
                 SubMeshGeometry::Primitive& prim = submesh.primitives[prim_idx];
                 int mat_id = prim.materialId;
 
@@ -310,12 +310,12 @@ MeshdataPtr TextureAtlasFilter::apply(MeshdataPtr md) {
                 // Do transformation for each texture that has a URI. Some may
                 // be duplicates, some may not have a URI, but doing them all
                 // ensures we catch everything.
-                for(int mat_tex_idx = 0; mat_tex_idx < mat.textures.size(); mat_tex_idx++) {
+                for(uint32 mat_tex_idx = 0; mat_tex_idx < mat.textures.size(); mat_tex_idx++) {
                     MaterialEffectInfo::Texture& real_tex = mat.textures[mat_tex_idx];
                     if (tex_info.find(real_tex.uri) == tex_info.end()) continue;
                     TexInfo& final_tex_info = tex_info[real_tex.uri];
 
-                    for(int index_idx = 0; index_idx < prim.indices.size(); index_idx++) {
+                    for(uint32 index_idx = 0; index_idx < prim.indices.size(); index_idx++) {
                         int index = prim.indices[index_idx];
 
                         float new_u, new_v;

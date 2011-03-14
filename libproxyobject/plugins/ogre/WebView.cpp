@@ -670,6 +670,24 @@ void WebView::injectMouseUp(int xPos, int yPos)
     }
 }
 
+void WebView::injectCut() {
+#if defined(HAVE_BERKELIUM)
+    webView->cut();
+#endif
+}
+
+void WebView::injectCopy() {
+#if defined(HAVE_BERKELIUM)
+    webView->copy();
+#endif
+}
+
+void WebView::injectPaste() {
+#if defined(HAVE_BERKELIUM)
+    webView->paste();
+#endif
+}
+
 void WebView::injectKeyEvent(bool press, int modifiers, int vk_code, int scancode) {
 #if defined(HAVE_BERKELIUM)
 	webView->keyEvent(press, modifiers, vk_code, scancode);

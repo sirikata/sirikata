@@ -97,7 +97,13 @@ public:
          mModifier(mod) {
     }
 
+    // Indicates if the button was in the depressed state.
     bool pressed() {
+        return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) || (mEvent == KEY_REPEATED) );
+    }
+    // Indicates if the button was actively pressed, i.e. was pushed down
+    // instead of just held down
+    bool activelyPressed() {
         return ( (mEvent == KEY_PRESSED) || (mEvent == KEY_DOWN) );
     }
 };
@@ -118,6 +124,22 @@ public:
     virtual ~ButtonPressed(){}
 };
 typedef std::tr1::shared_ptr<ButtonPressed> ButtonPressedEventPtr;
+
+/** Fired on repeats -- whenever a button has been pushed and held
+ * down.
+ */
+class ButtonRepeated :public ButtonEvent {
+public:
+    static const IdPair::Primary& getEventId(){
+        static IdPair::Primary retval("ButtonRepeated");
+        return retval;
+    }
+    ButtonRepeated(const InputDevicePtr &dev, unsigned int key, Modifier mod)
+        : ButtonEvent(getEventId(), dev, KEY_REPEATED, key, mod) {
+    }
+    virtual ~ButtonRepeated(){}
+};
+typedef std::tr1::shared_ptr<ButtonRepeated> ButtonRepeatedEventPtr;
 
 /** Fired whenever a button is no longer held down. */
 class ButtonReleased :public ButtonEvent {
@@ -321,8 +343,7 @@ public:
 };
 typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
 
-/** Event when the mouse was clicked (pressed and released
-    without moving) */
+/** Event when the mouse was pressed. Always sent. */
 class MousePressedEvent: public MouseDownEvent {
 public:
 
@@ -339,6 +360,24 @@ public:
     }
 };
 typedef std::tr1::shared_ptr<MousePressedEvent> MousePressedEventPtr;
+
+/** Event when the mouse was released. Always sent. */
+class MouseReleasedEvent: public MouseDownEvent {
+public:
+
+    static const IdPair::Primary getEventId() {
+        static IdPair::Primary retval("MouseReleasedEvent");
+        return retval;
+    }
+
+    MouseReleasedEvent(const PointerDevicePtr &dev,
+                    float x, float y,
+                    int cursorType, int button)
+        : MouseDownEvent(getEventId(), dev, x, y, x, y, x, y,
+                         cursorType, button, 0, 0, 0) {
+    }
+};
+typedef std::tr1::shared_ptr<MouseReleasedEvent> MouseReleasedEventPtr;
 
 /** Event when the mouse was dragged. If this event fires, then
     you will not get a MouseClickEvent. */

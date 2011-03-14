@@ -51,15 +51,11 @@ public:
         }
         return Sirikata::Persistence::MinitransactionHandlerFactory::getSingleton().getConstructor("sqlite")(arg);
     }
-    Sirikata::Persistence::MinitransactionHandler*mDatabase;
     Sirikata::PluginManager plugins;
     SQLiteMinitransactionTest() {
         plugins.load("sqlite");
-        mDatabase=createMinitransactionalHandlerFunction("");
     }
     ~SQLiteMinitransactionTest(){
-        if (mDatabase)
-            delete mDatabase;
     }
     static SQLiteMinitransactionTest*createSuite() {
         return new SQLiteMinitransactionTest;

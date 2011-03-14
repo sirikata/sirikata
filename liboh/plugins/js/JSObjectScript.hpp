@@ -106,8 +106,8 @@ public:
     String tokenizeWhenPred(const String& whenPredAsString);
     void addWhen(JSWhenStruct* whenToAdd);
     void removeWhen(JSWhenStruct* whenToRemove);
-    
-    
+
+
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -123,13 +123,13 @@ public:
 
     /** Print the given string to the current output. */
     void print(const String& str);
-    
+
 
     v8::Handle<v8::Value> createWhenWatchedItem(v8::Handle<v8::Array> itemArray);
     v8::Handle<v8::Value> createWhenWatchedItem(JSWhenWatchedItemStruct* wwis);
     v8::Handle<v8::Value> createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec);
 
-    
+
 
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
@@ -148,7 +148,7 @@ public:
     void create_entity(EntityCreateInfo& eci);
 
 
-    
+
     //handling basic datatypes for JSPresences
     v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
     v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
@@ -168,7 +168,7 @@ public:
     v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
     v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
-    
+
     /** create a new presence of this entity */
     v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
@@ -182,7 +182,7 @@ public:
     //registering position listeners to receive updates from loc
     bool registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient);
     bool deRegisterPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl);
-    
+
 
     /** Register an event pattern matcher and handler. */
     JSEventHandlerStruct* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
@@ -197,12 +197,18 @@ public:
         mOnPresenceDisconnectedHandler = cb;
     }
 
-    
+
     JSObjectScriptManager* manager() const { return mManager; }
 
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name);
+    // is_emerson controls whether this is compiled as emerson or javascript code.
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
 
+    // A generic interface for invoking callback methods, used by other classes
+    // that have JSObjectScript* (e.g. Invokable). Probably needs a version for
+    // contexts if the function was bound within a context
+    v8::Handle<v8::Value> invokeCallback(v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
+    v8::Handle<v8::Value> invokeCallback(v8::Handle<v8::Function>& cb);
 
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
@@ -234,10 +240,10 @@ private:
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
-    
+
     void checkWhens();
 
-    
+
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 

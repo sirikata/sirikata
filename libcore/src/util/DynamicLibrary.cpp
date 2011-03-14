@@ -67,17 +67,17 @@ String DynamicLibrary::GetExecutablePath() {
 #elif SIRIKATA_PLATFORM == PLATFORM_LINUX
     // boost::filesystem can't chase symlinks, do it manually
     const char* selfExe = "/proc/self/exe";
-#define PATH_MAX 1024
-    char bin_dir[PATH_MAX + 1];
-    int bin_dir_size = readlink(selfExe, bin_dir, PATH_MAX);
-    if (bin_dir_size < 0 || bin_dir_size > PATH_MAX) {
+#define SIRIKATA_DL_PATH_MAX 1024
+    char bin_dir[SIRIKATA_DL_PATH_MAX + 1];
+    int bin_dir_size = readlink(selfExe, bin_dir, SIRIKATA_DL_PATH_MAX);
+    if (bin_dir_size < 0 || bin_dir_size > SIRIKATA_DL_PATH_MAX) {
         SILOG(core,fatal,"Couldn't read self symlink to setup dynamic loading paths.");
         return "";
     }
     bin_dir[bin_dir_size] = 0;
     boost::filesystem::path exe_path(String(bin_dir, bin_dir_size));
     return exe_path.parent_path().string();
-#undef PATH_MAX
+#undef SIRIKATA_DL_PATH_MAX
 #else
     return "";
 #endif
@@ -166,7 +166,7 @@ bool DynamicLibrary::load() {
     mHandle = dlopen(mPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (mHandle == NULL) {
         // Try any registered search paths
-        for(int i = 0; mHandle == NULL && i < DL_search_paths.size(); i++)
+        for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++)
             mHandle = dlopen(
                 (boost::filesystem::path(DL_search_paths[i]) / mPath).string().c_str(),
                 RTLD_LAZY | RTLD_GLOBAL

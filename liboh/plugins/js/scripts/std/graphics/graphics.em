@@ -46,6 +46,7 @@ function() {
      *  clicks.
      */
     ns.Graphics = function(pres, name) {
+        this.presence = pres;
         this._simulator = pres.runSimulation(name);
         this.inputHandler = new std.graphics.InputHandler(this);
     };
@@ -98,6 +99,34 @@ function() {
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createBrowser = function(name, url) {
         return new ns.GUI(simulator.invoke("createWindow", name, url));
+    };
+
+    /** Get basic camera description. This is read-only data. */
+    ns.Graphics.prototype.camera = function() {
+        return this.invoke("camera");
+    };
+
+    /** Compute a vector indicating the direction a particular point in the
+     *  camera's viewport points. (x,y) should be in the range (-1,-1)-(1,1),
+     *  the same as the values provided by mouse click and drag events.  If no
+     *  arguments are passed, this returns the central direction, i.e. the same
+     *  as cameraDirection(0,0).
+     */
+    ns.Graphics.prototype.cameraDirection = function(x, y) {
+        var orient = this.presence.getOrientation();
+
+        if (!x && !y)
+            return orient.zAxis().neg();
+
+        var cam = this.invoke("camera");
+        var xRadian = util.sin(cam.fov.x * .5) * x;
+        var yRadian = util.sin(cam.fov.y * .5) * y;
+
+        var zpart = orient.zAxis().neg().mul( util.cos(cam.fov.y * .5) );
+        var xpart = orient.xAxis().mul(xRadian);
+        var ypart = orient.yAxis().mul(yRadian);
+        var dir = xpart.add(ypart).add(zpart);
+        return dir;
     };
 
 })();

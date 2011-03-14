@@ -16,40 +16,42 @@ class JSObjectScript;
 struct JSPositionListener : public PositionListener
 {
     friend class JSSerializer;
-    
+
     JSPositionListener(JSObjectScript* script);
     ~JSPositionListener();
 
     void setListenTo(const SpaceObjectReference* objToListenTo,const SpaceObjectReference* objToListenFrom);
-    
+
     virtual Vector3f     getPosition();
     virtual Vector3f     getVelocity();
     virtual Quaternion   getOrientation();
     virtual Quaternion   getOrientationVelocity();
-    
+    virtual BoundingSphere3f   getBounds();
+
     virtual v8::Handle<v8::Value> struct_getPosition();
     virtual v8::Handle<v8::Value> struct_getVelocity();
     virtual v8::Handle<v8::Value> struct_getOrientation();
     virtual v8::Handle<v8::Value> struct_getOrientationVel();
+    virtual v8::Handle<v8::Value> struct_getScale();
 
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
-    
+
     //simple accessors for sporef fields
     SpaceObjectReference* getToListenTo();
     SpaceObjectReference* getToListenFrom();
 
-    
+
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
     virtual void destroyed();
 
     //calls updateLocation on jspos, filling in mLocation, mOrientation, and mBounds
     //for the newLocation,newOrientation, and newBounds of updateLocation field.
     void updateOtherJSPosListener(JSPositionListener* jspos);
-    
+
 protected:
     //data
     JSObjectScript*                jsObjScript;
-    SpaceObjectReference*     sporefToListenTo; 
+    SpaceObjectReference*     sporefToListenTo;
     SpaceObjectReference*   sporefToListenFrom;
 
     TimedMotionVector3f              mLocation;
@@ -70,7 +72,7 @@ private:
     bool passErrorChecks(String& errorMsg, const String& funcIn );
 
     bool hasRegisteredListener;
-    
+
 };
 
 

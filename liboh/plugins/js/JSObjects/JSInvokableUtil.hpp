@@ -147,7 +147,7 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
     else if (val.type() == typeid(Sirikata::Invokable::Array)) {
         Sirikata::Invokable::Array native_arr = boost::any_cast<Sirikata::Invokable::Array>(val);
         v8::Local<v8::Array> arr = v8::Array::New();
-        for(int ii = 0; ii < native_arr.size(); ii++) {
+        for(uint32 ii = 0; ii < native_arr.size(); ii++) {
             v8::Handle<v8::Value> rhs = AnyToV8(parent, native_arr[ii]);
             if (!rhs.IsEmpty())
                 arr->Set(ii, rhs);

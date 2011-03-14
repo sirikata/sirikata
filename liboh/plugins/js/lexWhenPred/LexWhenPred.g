@@ -27,9 +27,9 @@ tokens
 
 @header
 {
-  #include <stdlib.h>;
-  #include <stdio.h>;
-  #include "../emerson/Util.h";
+  #include <stdlib.h>
+  #include <stdio.h>
+  #include "../emerson/Util.h"
 }
 
 

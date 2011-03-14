@@ -51,7 +51,7 @@ public:
         }
     }
     virtual ~AutoSingleton() {
-        if (sInstance.get()==this)
+        if ((const AutoSingleton<T>*)sInstance.get()==(const AutoSingleton<T>*)this)
             sInstance.release();
     }
     static void destroy() {

@@ -119,79 +119,6 @@ Handle<Value> QuaternionConstructor(const Arguments& args) {
     return self;
 }
 
-#define DefineQuaternionUnaryOperator(cname, name, op)  \
-    Handle<Value> cname(const Arguments& args) {        \
-        Handle<Object> self = args.This();              \
-                                                        \
-        if (args.Length() != 0)                                         \
-            return v8::ThrowException( v8::Exception::Error(v8::String::New("Quaternion." #name " should take zero parameters.")) ); \
-                                                                        \
-        QuaternionCheckAndExtract(lhs, self);                           \
-        Handle<Value> result = CreateJSResult(self, ((lhs).*op)()); \
-                                                                        \
-        return result;                                                  \
-}
-
-#define DefineQuaternionBinaryOperator(cname, name, op) \
-    Handle<Value> cname(const Arguments& args) {        \
-        Handle<Object> self = args.This();              \
-                                                        \
-        if (args.Length() != 1)                                         \
-            return v8::ThrowException( v8::Exception::Error(v8::String::New("Quaternion." #name " should take one parameter.")) ); \
-                                                                        \
-        Handle<Object> rhs_obj = Handle<Object>::Cast(args[0]);         \
-                                                                        \
-        QuaternionCheckAndExtract(lhs, self);                           \
-        QuaternionCheckAndExtract(rhs, rhs_obj);                        \
-        Handle<Value> result = CreateJSResult(self, ((lhs).*op)(rhs)); \
-                                                                        \
-        return result;                                                  \
-    }
-
-
-DefineQuaternionBinaryOperator(QuaternionAdd, add, &Quaternion::operator+);
-static Quaternion(Quaternion::*subtract_op)(const Quaternion&other) const = &Quaternion::operator-;
-DefineQuaternionBinaryOperator(QuaternionSub, sub, subtract_op);
-DefineQuaternionUnaryOperator(QuaternionNormal, normal, &Quaternion::normal);
-
-static Quaternion(Quaternion::*neg_op)() const = &Quaternion::operator-;
-DefineQuaternionUnaryOperator(QuaternionNeg, neg, neg_op);
-
-DefineQuaternionUnaryOperator(QuaternionInv, inv, &Quaternion::inverse);
-
-
-// We handle multiplication manually because rhs could be scalar, vector, or quaternion
-Handle<Value> QuaternionMul(const Arguments& args) {
-    Handle<Object> self = args.This();
-
-    if (args.Length() != 1)                                             \
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Quaternion.mul should take one parameter.")) );
-
-    QuaternionCheckAndExtract(lhs, self);
-
-    Handle<Object> rhs_obj = Handle<Object>::Cast(args[0]);
-
-    Handle<Value> result;
-
-    if (NumericValidate(rhs_obj)) {
-        double rhs = NumericExtract(rhs_obj);
-        result = CreateJSResult(self, lhs * rhs);
-    }
-    else if (Vec3Validate(rhs_obj)) {
-        Vector3d rhs = Vec3Extract(rhs_obj);
-        result = CreateJSResult(rhs_obj, lhs * rhs);
-    }
-    else if (QuaternionValidate(rhs_obj)) {
-        Quaternion rhs = QuaternionExtract(rhs_obj);
-        result = CreateJSResult(rhs_obj, lhs * rhs);
-    }
-    else {
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Quaternion.mul parameter must be numeric, Vec3, or Quaternion.")) );
-    }
-
-    return result;
-}
-
 Handle<Value> QuaternionToString(const Arguments& args) {
     Handle<Object> self = args.This();
     QuaternionCheckAndExtract(self_val, self);
@@ -206,13 +133,6 @@ Handle<FunctionTemplate> CreateQuaternionTemplate() {
 
     // Quaternion prototype
     Local<ObjectTemplate> quat_prototype_templ = quat_constructor_templ->PrototypeTemplate();
-    quat_prototype_templ->Set(JS_STRING(add), v8::FunctionTemplate::New(QuaternionAdd));
-    quat_prototype_templ->Set(JS_STRING(sub), v8::FunctionTemplate::New(QuaternionSub));
-    quat_prototype_templ->Set(JS_STRING(neg), v8::FunctionTemplate::New(QuaternionNeg));
-    quat_prototype_templ->Set(JS_STRING(normal), v8::FunctionTemplate::New(QuaternionNormal));
-    quat_prototype_templ->Set(JS_STRING(inv), v8::FunctionTemplate::New(QuaternionInv));
-
-    quat_prototype_templ->Set(JS_STRING(mul), v8::FunctionTemplate::New(QuaternionMul));
 
     quat_prototype_templ->Set(JS_STRING(toString), v8::FunctionTemplate::New(QuaternionToString));
 
