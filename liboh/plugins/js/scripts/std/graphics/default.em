@@ -33,9 +33,9 @@
 system.require('graphics.em');
 system.require('std/movement/movement.em');
 system.require('std/script/scripter.em');
-system.require('std/graphics/drag/move.em');
-system.require('std/graphics/drag/rotate.em');
-system.require('std/graphics/drag/scale.em');
+system.require('drag/move.em');
+system.require('drag/rotate.em');
+system.require('drag/scale.em');
 
 (
 function() {

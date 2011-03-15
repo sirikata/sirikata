@@ -224,7 +224,21 @@ private:
         EvalContext();
         EvalContext(const EvalContext& rhs);
 
+        // Current directory the script being evaluated was in,
+        // e.g. ../../liboh/plugins/js/scripts/std/movement
         boost::filesystem::path currentScriptDir;
+        // Current base import-path directory the script was found in,
+        // e.g. for the above it might look like
+        // ../../liboh/plugins/js/scripts/.
+        // This is used to provide nice relative paths in exceptions.
+        boost::filesystem::path currentScriptBaseDir;
+
+        // Gets the full, but relative, path for the script. In the
+        // above example this would be std/movement because the
+        // currentScriptBaseDir is stripped off to leave just the
+        // relative part.
+        boost::filesystem::path getFullRelativeScriptDir() const;
+
         std::ostream* currentOutputStream;
     };
     // This is a helper which adds an EvalContext to the stack and ensures that
@@ -244,12 +258,14 @@ private:
 
     std::set<String> mImportedFiles;
 
-    // Resolve a relative path for import to an absolute path.
-    boost::filesystem::path resolveImport(const String& filename);
+    // Resolve a relative path for import to an absolute
+    // path. "Returns" the full path of the file as well as the import
+    // base path.
+    void resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out);
     // Perform an import on the absolute path filename. This performs no
     // resolution and *always* performs the import, even if the file has already
     // been imported.
-    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename);
+    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir);
 
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);

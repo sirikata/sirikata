@@ -178,13 +178,32 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
 
 JSObjectScript::EvalContext::EvalContext()
  : currentScriptDir(),
+   currentScriptBaseDir(),
    currentOutputStream(&std::cout)
 {}
 
 JSObjectScript::EvalContext::EvalContext(const EvalContext& rhs)
  : currentScriptDir(rhs.currentScriptDir),
+   currentScriptBaseDir(rhs.currentScriptBaseDir),
    currentOutputStream(rhs.currentOutputStream)
 {}
+
+boost::filesystem::path JSObjectScript::EvalContext::getFullRelativeScriptDir() const {
+    using namespace boost::filesystem;
+
+    path result;
+    // Scan through all matching parts
+    path::const_iterator script_it, base_it;
+    for(script_it = currentScriptDir.begin(), base_it = currentScriptBaseDir.begin(); base_it != currentScriptBaseDir.end(); script_it++, base_it++) {
+        assert(*script_it == *base_it);
+    }
+    // Get any leftover script parts
+    while(script_it != currentScriptDir.end()) {
+        result /= *script_it;
+        script_it++;
+    }
+    return result;
+}
 
 
 JSObjectScript::ScopedEvalContext::ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx)
@@ -1146,36 +1165,42 @@ v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOri
     return protectedEval(contents, origin, new_ctx);
 }
 
-boost::filesystem::path JSObjectScript::resolveImport(const String& filename) {
+void JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out) {
     using namespace boost::filesystem;
 
     // Search through the import paths to find the file to import, searching the
     // current directory first if it is non-empty.
-    path full_filename;
     path filename_as_path(filename);
     assert(!mEvalContextStack.empty());
     EvalContext& ctx = mEvalContextStack.top();
     if (!ctx.currentScriptDir.empty()) {
         path fq = ctx.currentScriptDir / filename_as_path;
-        if (boost::filesystem::exists(fq))
-            full_filename = fq;
-    }
-    if (full_filename.empty()) {
-        std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
-        // Always search the current directory as a last resort
-        search_paths.push_back(".");
-        for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
-            path fq = path(*pit) / filename_as_path;
-            if (boost::filesystem::exists(fq)) {
-                full_filename = fq;
-                break;
-            }
+        if (boost::filesystem::exists(fq)) {
+            *full_file_out = fq;
+            *base_path_out = ctx.currentScriptBaseDir;
+            return;
         }
     }
-    return full_filename;
+
+    std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+    // Always search the current directory as a last resort
+    search_paths.push_back(".");
+    for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
+        path base_path(*pit);
+        path fq = base_path / filename_as_path;
+        if (boost::filesystem::exists(fq)) {
+            *full_file_out = fq;
+            *base_path_out = base_path;
+            return;
+        }
+    }
+
+    *full_file_out = path();
+    *base_path_out = path();
+    return;
 }
 
-v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename) {
+v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
@@ -1205,15 +1230,17 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
 
     EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx);
-    new_ctx.currentScriptDir = full_filename.parent_path().string();
-    ScriptOrigin origin(v8::String::New(full_filename.string().c_str()));
+    new_ctx.currentScriptDir = full_filename.parent_path();
+    new_ctx.currentScriptBaseDir = full_base_dir;
+    ScriptOrigin origin( v8::String::New( (new_ctx.getFullRelativeScriptDir() / full_filename.filename()).string().c_str() ) );
     mImportedFiles.insert( full_filename.string() );
     return protectedEval(contents, &origin, new_ctx);
 }
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     JSLOG(detailed, "Importing: " << filename);
-    boost::filesystem::path full_filename = resolveImport(filename);
+    boost::filesystem::path full_filename, full_base;
+    resolveImport(filename, &full_filename, &full_base);
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {
@@ -1221,12 +1248,13 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
         errorMessage+=filename;
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
-    return absoluteImport(full_filename);
+    return absoluteImport(full_filename, full_base);
 }
 
 v8::Handle<v8::Value> JSObjectScript::require(const String& filename) {
     JSLOG(detailed, "Requiring: " << filename);
-    boost::filesystem::path full_filename = resolveImport(filename);
+    boost::filesystem::path full_filename, full_base;
+    resolveImport(filename, &full_filename, &full_base);
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {
@@ -1238,7 +1266,7 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename) {
         JSLOG(detailed, " Skipping already imported file: " << filename);
         return v8::Undefined();
     }
-    return absoluteImport(full_filename);
+    return absoluteImport(full_filename, full_base);
 }
 
 
