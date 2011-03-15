@@ -296,6 +296,23 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
     return v8::Undefined();
 }
 
+v8::Handle<v8::Value> ScriptRequire(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Require only takes one parameter: the name of the file to import.")) );
+
+    v8::Handle<v8::Value> filename = args[0];
+
+    StringCheckAndExtract(native_filename, filename);
+    String errorMessage = "Error decoding JSObjectScript from system object in ScriptImport of JSSystem.cpp.  ";
+    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    if (target_script == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    target_script->require(native_filename);
+    return v8::Undefined();
+}
+
 
 v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args)
 {

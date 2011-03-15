@@ -300,6 +300,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::ScriptImport));
+    system_templ->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::ScriptRequire));
     system_templ->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::ScriptEval));
     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));

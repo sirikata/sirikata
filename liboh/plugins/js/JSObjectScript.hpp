@@ -140,6 +140,11 @@ public:
     /** Import a file, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> import(const String& filename);
 
+    /** Require a file, executing its contents in the root object's scope iff it
+     *  has not yet been imported.
+     */
+    v8::Handle<v8::Value> require(const String& filename);
+
     /** reboot the state of the script, basically reset the state */
     void reboot();
 
@@ -236,6 +241,15 @@ private:
     friend class ScopedEvalContext;
 
     std::stack<EvalContext> mEvalContextStack;
+
+    std::set<String> mImportedFiles;
+
+    // Resolve a relative path for import to an absolute path.
+    boost::filesystem::path resolveImport(const String& filename);
+    // Perform an import on the absolute path filename. This performs no
+    // resolution and *always* performs the import, even if the file has already
+    // been imported.
+    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename);
 
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);

@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('std/core/pretty.em');
+system.require('std/core/pretty.em');
 
 system.prettyprint = function(x) {
     system.print( std.core.pretty(x) + '\n' );

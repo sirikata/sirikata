@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('graphics.em');
-system.import('std/movement/movement.em');
-system.import('std/script/scripter.em');
-system.import('std/graphics/drag/move.em');
-system.import('std/graphics/drag/rotate.em');
-system.import('std/graphics/drag/scale.em');
+system.require('graphics.em');
+system.require('std/movement/movement.em');
+system.require('std/script/scripter.em');
+system.require('std/graphics/drag/move.em');
+system.require('std/graphics/drag/rotate.em');
+system.require('std/graphics/drag/scale.em');
 
 (
 function() {

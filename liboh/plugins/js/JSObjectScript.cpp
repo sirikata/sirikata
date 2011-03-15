@@ -1146,10 +1146,7 @@ v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOri
     return protectedEval(contents, origin, new_ctx);
 }
 
-v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
+boost::filesystem::path JSObjectScript::resolveImport(const String& filename) {
     using namespace boost::filesystem;
 
     // Search through the import paths to find the file to import, searching the
@@ -1175,14 +1172,14 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
             }
         }
     }
+    return full_filename;
+}
 
-    // If we still haven't filled this in, we just can't find the file.
-    if (full_filename.empty())
-    {
-        std::string errorMessage("Couldn't find file for import named");
-        errorMessage+=filename;
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
-    }
+v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+
+    JSLOG(detailed, " Performing import on absolute path: " << full_filename.string());
 
     // Now try to read in and run the file.
     FILE * pFile;
@@ -1206,13 +1203,43 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     if (result != lSize)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
 
+    EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx);
     new_ctx.currentScriptDir = full_filename.parent_path().string();
-    ScriptOrigin origin(v8::String::New(filename.c_str()));
+    ScriptOrigin origin(v8::String::New(full_filename.string().c_str()));
+    mImportedFiles.insert( full_filename.string() );
     return protectedEval(contents, &origin, new_ctx);
 }
 
+v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
+    JSLOG(detailed, "Importing: " << filename);
+    boost::filesystem::path full_filename = resolveImport(filename);
+    // If we still haven't filled this in, we just can't find the file.
+    if (full_filename.empty())
+    {
+        std::string errorMessage("Couldn't find file for import named");
+        errorMessage+=filename;
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+    }
+    return absoluteImport(full_filename);
+}
 
+v8::Handle<v8::Value> JSObjectScript::require(const String& filename) {
+    JSLOG(detailed, "Requiring: " << filename);
+    boost::filesystem::path full_filename = resolveImport(filename);
+    // If we still haven't filled this in, we just can't find the file.
+    if (full_filename.empty())
+    {
+        std::string errorMessage("Couldn't find file for require named");
+        errorMessage += filename;
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+    }
+    if (mImportedFiles.find(full_filename.string()) != mImportedFiles.end()) {
+        JSLOG(detailed, " Skipping already imported file: " << filename);
+        return v8::Undefined();
+    }
+    return absoluteImport(full_filename);
+}
 
 
 // need to ensure that the sender object is an visible of type spaceobject reference rather than just having an object reference;

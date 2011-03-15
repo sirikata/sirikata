@@ -33,7 +33,7 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-system.import('gui.em');
+system.require('gui.em');
 
 (
 function() {
@@ -132,4 +132,4 @@ function() {
 })();
 
 // Import additional utilities that anybody using this class will need.
-system.import('input.em');
+system.require('input.em');

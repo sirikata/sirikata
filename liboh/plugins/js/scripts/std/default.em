@@ -32,8 +32,8 @@
 
 
 // A sane, simple, default. Only includes functionality from libraries.
-system.import('std/script/scriptable.em');
-system.import('std/movement/movable.em');
+system.require('std/script/scriptable.em');
+system.require('std/movement/movable.em');
 
 scriptable = new std.script.Scriptable();
 system.onPresenceConnected(

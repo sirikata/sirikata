@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('std/core/bind.js');
-system.import('std/escape.em');
+system.require('std/core/bind.js');
+system.require('std/escape.em');
 
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.script) === "undefined") std.script = {};

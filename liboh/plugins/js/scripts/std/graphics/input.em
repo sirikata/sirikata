@@ -33,7 +33,7 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-system.import('std/core/bind.js');
+system.require('std/core/bind.js');
 
 (
 function() {
