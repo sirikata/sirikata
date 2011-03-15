@@ -529,22 +529,10 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectRefer
 //this function will actually need to be super-cleaned up
 v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& proximateObj)
 {
-    //return createVisibleObject(proximateObj,SpaceObjectReference::null(),false,mContext);
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
-    String errorMessage = "Error decoding visible object struct associated with self.  ";
-    v8::Handle<v8::Object> sysObj = getSystemObject();
-    v8::Local<v8::Value> self_obj = sysObj->Get(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
-    JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
-
-    //lkjs;
-    
-    if (self_vis ==NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj,*(self_vis->getToListenTo()));
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj);
 
     if (jsvis != NULL)
     {
@@ -552,10 +540,43 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
         return returnerPers;
     }
 
+    //lkjs;
     //otherwise just return self
-    return self_obj;
+    return v8::Undefined();
     //createVisibleObject(self_vis, mContext);
 }
+
+// v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& proximateObj)
+// {
+//     //return createVisibleObject(proximateObj,SpaceObjectReference::null(),false,mContext);
+//     v8::HandleScope handle_scope;
+//     v8::Context::Scope context_scope(mContext);
+
+//     String errorMessage = "Error decoding visible object struct associated with self.  ";
+//     v8::Handle<v8::Object> sysObj = getSystemObject();
+//     v8::Local<v8::Value> self_obj = sysObj->Get(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
+//     JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
+
+//     //lkjs;
+    
+//     if (self_vis ==NULL)
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+
+//     JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj,*(self_vis->getToListenTo()));
+
+//     if (jsvis != NULL)
+//     {
+//         v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext);
+//         return returnerPers;
+//     }
+
+//     //lkjs;
+//     //otherwise just return self
+//     return self_obj;
+//     //createVisibleObject(self_vis, mContext);
+// }
+
 
 
 
@@ -623,14 +644,6 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 
     mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
-
-    // For some reason, this *must* come before addPresence(). It can also be
-    // called anywhere *inside* addPresence, so there must be some issue with
-    // the Context::Scope or HandleScope.
-    addSelfField(name);
-
-
-
     //check for callbacks associated with presence connection
 
     //means that this is the first presence that has been added to the space
@@ -673,19 +686,6 @@ void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, int t
 }
 
 
-void JSObjectScript::addSelfField(const SpaceObjectReference& myName)
-{
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-    JSLOG(info,"Adding self field with sporef "<<myName<<" to world");
-    v8::Handle<v8::Object> selfVisObj = createVisiblePersistent(myName, myName, true,mContext);
-
-    v8::Handle<v8::Object> sysObj = getSystemObject();
-    sysObj->Set(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME), selfVisObj);
-
-//    lkjs;
-}
 
 
 
@@ -693,11 +693,6 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
-
-    v8::Handle<v8::Object> sysObj = getSystemObject();
-    // Remove Self variable
-    if (sysObj->Has(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME)))
-        sysObj->Delete(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
 
 
     // Remove from system.presences array

@@ -267,9 +267,6 @@ private:
 
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
 
-    void addSelfField(const SpaceObjectReference& myName);
-
-
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     JSEventHandlerList mQueuedHandlerEventsAdd;

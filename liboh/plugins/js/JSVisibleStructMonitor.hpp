@@ -35,6 +35,7 @@ public:
     //sporefVisibleFrom associated with them.  Otherwise, returns the visiblestruct
     JSVisibleStruct* checkVisStructExists(const SpaceObjectReference& sporefVisible, const SpaceObjectReference& sporefVisibleFrom);
 
+    JSVisibleStruct* checkVisStructExists(const SpaceObjectReference& sporefVisible);
 
     //when pinto tells me that an object with sporef sporefVisible is now within
     //the query of presence with sporefVisibleTo, this function should get

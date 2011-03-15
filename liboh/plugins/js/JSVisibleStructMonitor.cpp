@@ -85,6 +85,26 @@ JSVisibleStruct* JSVisibleStructMonitor::checkVisStructExists(const SpaceObjectR
     return checkListenFromVisStructs(sporefVisible,sporefVisibleFrom);
 }
 
+JSVisibleStruct* JSVisibleStructMonitor::checkVisStructExists(const SpaceObjectReference& sporefVisible)
+{
+    ListenFromMapIter iter= mObjectsToFollow.find(sporefVisible);
+
+    if (iter != mObjectsToFollow.end())
+    {
+        JSVisibleStruct* jsvis = NULL;
+        for (SpaceToVisMapIter stvmi = iter->second.begin(); stvmi  != iter->second.end(); ++stvmi)
+        {
+            if (stvmi->second->getStillVisibleCPP())
+                return stvmi->second;
+
+            jsvis = stvmi->second;
+        }
+        return jsvis;
+    }
+
+    return NULL;
+}
+
 
 //This function runs through the map that does not know from whom an object is
 //visible.
