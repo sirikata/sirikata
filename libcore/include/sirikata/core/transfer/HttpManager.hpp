@@ -177,7 +177,11 @@ private:
         const HttpCallback cb;
         const HTTP_METHOD method;
         HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, HttpCallback _cb)
-            : addr(_addr), req(_req), cb(_cb), method(meth) {}
+            : addr(_addr), req(_req), cb(_cb), method(meth), mNumTries(0) {}
+
+        friend class HttpManager;
+    protected:
+        uint32 mNumTries;
     };
 
     //Holds a queue of requests to be made

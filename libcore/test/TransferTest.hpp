@@ -65,9 +65,29 @@ public:
     boost::mutex mNumCbsMutex;
     int mNumCbs;
 
+    std::string mCdnHost;
+    std::string mCdnService;
+    std::string mCdnDnsUriPrefix;
+    std::string mCdnDownloadUriPrefix;
+
+    std::string mDnsTest1;
+    std::string mHashTest1;
+    int mHashTest1Size;
+    std::string mHashTest2;
+
     void setUp() {
         InitOptions();
         FakeParseOptions();
+        ParseOptionsFile("transfertest.cfg", false);
+        mCdnHost = GetOptionValue<String>(OPT_CDN_HOST);
+        mCdnService = GetOptionValue<String>(OPT_CDN_SERVICE);
+        mCdnDnsUriPrefix = GetOptionValue<String>(OPT_CDN_DNS_URI_PREFIX);
+        mCdnDownloadUriPrefix = GetOptionValue<String>(OPT_CDN_DOWNLOAD_URI_PREFIX);
+
+        mDnsTest1 = "/test/duck.dae"; // /original/0";
+        mHashTest1 = "332d81633b62944fa87d3fa66e0eeda6288f67499a73e2ad1b8f1388a939045a";
+        mHashTest1Size = 284312;
+        mHashTest2 = "25f5ff38a5db9465c871947c5e805d707d734bf50fb4e52793f03483afa5c22a";
     }
 
     void tearDown() {
@@ -80,7 +100,7 @@ public:
         using std::tr1::placeholders::_2;
         using std::tr1::placeholders::_3;
 
-        Network::Address addr("cdn.sirikata.com", "http");
+        Network::Address addr(mCdnHost, mCdnService);
         std::map<std::string, std::string>::const_iterator it;
         std::ostringstream request_stream;
         boost::unique_lock<boost::mutex> lock(mMutex);
@@ -92,8 +112,8 @@ public:
          * http status is 200
          */
         request_stream.str("");
-        request_stream << "HEAD /dns/global/jkusnerz/Boulder_Spire_01.mesh HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "HEAD " << mCdnDnsUriPrefix << mDnsTest1 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Connection: close\r\n\r\n";
 
@@ -124,8 +144,8 @@ public:
          * content length is present and correct, status code is 200
          */
         request_stream.str("");
-        request_stream << "HEAD /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "HEAD " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Connection: close\r\n\r\n";
 
@@ -138,7 +158,7 @@ public:
         if(mHttpResponse) {
             it = mHttpResponse->getHeaders().find("Content-Length");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
-            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
             TS_ASSERT( !(mHttpResponse->getData()) );
@@ -152,8 +172,8 @@ public:
          * check content length = correct size of file
          */
         request_stream.str("");
-        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Connection: close\r\n\r\n";
 
@@ -170,7 +190,7 @@ public:
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
         }
 
 
@@ -181,9 +201,9 @@ public:
          * content length = range size, http status code 200
          */
         request_stream.str("");
-        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
         request_stream << "Range: bytes=10-20\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Connection: close\r\n\r\n";
 
@@ -216,8 +236,8 @@ public:
          * check content length = correct size of file
          */
         request_stream.str("");
-        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n\r\n";
 
         SILOG(transfer, debug, "Issuing persistent get file request");
@@ -233,7 +253,7 @@ public:
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
         }
 
         /*
@@ -242,8 +262,8 @@ public:
          * http status code 200, Content-Encoding = gzip
          */
         request_stream.str("");
-        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
 
@@ -263,7 +283,7 @@ public:
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == 11650);
+            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
         }
 
 
@@ -271,11 +291,12 @@ public:
          * Do a GET request with accept-encoding set AND make it a range request
          * check content length present, content length = range size,
          * http status code 200, Content-Encoding = gzip, check actual bytes
+         * Note: some web servers will turn off gzip for bytes < 200
          */
         request_stream.str("");
-        request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
-        request_stream << "Range: bytes=10-20\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
+        request_stream << "Range: bytes=10-220\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
 
@@ -295,18 +316,7 @@ public:
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
             TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == 11);
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(0) == 'i');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(1) == 'a');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(2) == 'l');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(3) == 'i');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(4) == 'z');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(5) == 'e');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(6) == 'r');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(7) == '_');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(8) == 'v');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(9) == '1');
-            TS_ASSERT(*mHttpResponse->getData()->dataAt(10) == '.');
+            TS_ASSERT(mHttpResponse->getContentLength() == 211);
         }
 
 
@@ -318,8 +328,8 @@ public:
          * and make sur ethey are equal
          */
         request_stream.str("");
-        request_stream << "GET /files/global/af8e8a2c90802c7639e2026ce5f03f253130a7fe5ee79da0397416d4fc393c47 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest2 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Accept-Encoding: deflate, gzip\r\n\r\n";
 
@@ -331,8 +341,8 @@ public:
         std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> compressed = mHttpResponse;
 
         request_stream.str("");
-        request_stream << "GET /files/global/af8e8a2c90802c7639e2026ce5f03f253130a7fe5ee79da0397416d4fc393c47 HTTP/1.1\r\n";
-        request_stream << "Host: cdn.sirikata.com\r\n";
+        request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest2 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
         request_stream << "Accept: */*\r\n\r\n";
 
         SILOG(transfer, debug, "Issuing uncompresed get file request");
@@ -423,8 +433,8 @@ public:
         mNumCbs = 20;
         for(int i=0; i<20; i++) {
             request_stream.str("");
-            request_stream << "GET /files/global/ddde4f8bed9a8bc97d8cbd4137c63efd5e625fabbbe695bc26756a3f5f430aa4 HTTP/1.1\r\n";
-            request_stream << "Host: cdn.sirikata.com\r\n";
+            request_stream << "GET " << mCdnDownloadUriPrefix << "/" << mHashTest1 << " HTTP/1.1\r\n";
+            request_stream << "Host: " << mCdnHost << "\r\n";
             request_stream << "Accept: */*\r\n";
             request_stream << "Accept-Encoding: deflate, gzip\r\n";
             request_stream << "\r\n";
@@ -453,7 +463,7 @@ public:
                 TS_ASSERT(response->getStatusCode() == 200);
                 TS_ASSERT(response->getData());
                 TS_ASSERT(response->getData()->length() == (uint64)response->getContentLength());
-                TS_ASSERT(response->getContentLength() == 11650);
+                TS_ASSERT(response->getContentLength() == mHashTest1Size);
             }
         } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
             TS_FAIL("HTTP Request parsing failed");
@@ -521,14 +531,16 @@ protected:
             std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response, VerifyFinished cb) {
         SILOG(transfer, debug, "verifying metadata for " << request->getURI().toString());
         TS_ASSERT(response);
-        TS_ASSERT(response->getSize() == mFileSize);
-        TS_ASSERT(response->getFingerprint() == mHash);
-        TS_ASSERT(response->getURI() == mURI);
-        mMetadata = response;
+        if (response) {
+            TS_ASSERT(response->getSize() == mFileSize);
+            TS_ASSERT(response->getFingerprint() == mHash);
+            TS_ASSERT(response->getURI() == mURI);
+            mMetadata = response;
 
-        {
-            boost::unique_lock<boost::mutex> lock(mut);
-            mGotResponse = true;
+            {
+                boost::unique_lock<boost::mutex> lock(mut);
+                mGotResponse = true;
+            }
         }
         cb();
     }
@@ -577,6 +589,12 @@ public:
         //Make sure chunk given is part of file
         SILOG(transfer, debug, "Verifying metadata response for chunk " << mURI.toString());
         std::tr1::shared_ptr<Transfer::Chunk> chunk;
+        TS_ASSERT(mMetadata);
+        if(!mMetadata) {
+            cb();
+            return;
+        }
+
         const Transfer::ChunkList & chunks = mMetadata->getChunkList();
         for (Transfer::ChunkList::const_iterator it = chunks.begin(); it != chunks.end(); it++) {
             if(it->getHash() == mChunkHash) {
