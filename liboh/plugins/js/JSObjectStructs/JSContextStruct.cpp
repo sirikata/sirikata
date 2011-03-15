@@ -233,17 +233,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot call execute on a context that has already been cleared.")) );
     }
 
-    
-    int argc = args.Length(); //args to function.  first argument is going to be
-                              //a 
+
+    //copying arguments over to arg array for execution.
+    int argc = args.Length() -1; 
     Handle<Value>* argv = new Handle<Value>[argc];
 
-    
-    //putting fakeroot in argv0
-    argv[0] = struct_getFakeroot();
     for (int s=1; s < args.Length(); ++s)
-        argv[s] = args[s];
-
+        argv[s-1] = args[s];
     
     v8::Handle<v8::Value> returner =  jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
     

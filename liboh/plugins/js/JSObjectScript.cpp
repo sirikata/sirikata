@@ -948,18 +948,12 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     }
 
     //check if any errors occurred during compile.
-    if (! try_catch.HasCaught())
-    {
-        String exception;
-        String errorMessage = "  Error in CompileFunctionInContext.  Could not decode the exception as string when compiling function.  ";
-        bool decodedException = decodeString(try_catch.Exception(), exception, errorMessage);
-        if (! decodedException)
-            JSLOG(error, errorMessage);
-
-        String returnedError = "Uncaught exception when compiling function in context.  " + exception;
-        JSLOG(error, returnedError);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(returnedError.c_str(), returnedError.length())));
+    if (try_catch.HasCaught()) {
+        JSLOG(error,"Error in compileFunctionInContext");
+        printException(try_catch);
+        return try_catch.Exception();
     }
+
 
     JSLOG(insane, "Successfully compiled function in context.  Passing back function object.");
     return compileFuncResult;
@@ -1016,19 +1010,11 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
         result = funcInCtx->Call(ctx->Global(), argc, argv);
     }
 
-
     //check if any errors have occurred.
-    if (! try_catch.HasCaught())
-    {
-        String exception;
-        String errorMessage = "  Error in executeJSFunctionInContext.  Could not decode the exception as string when compiling function.  ";
-        bool decodedException = decodeString(try_catch.Exception(), exception, errorMessage);
-        if (! decodedException)
-            JSLOG(error, errorMessage);
-
-        String returnedError = "Uncaught exception when compiling function in context.  " + exception;
-        JSLOG(error, returnedError);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(returnedError.c_str(), returnedError.length())));
+    if (try_catch.HasCaught()) {
+        JSLOG(error,"Error in executeJSFunctionInContext");
+        printException(try_catch);
+        return try_catch.Exception();
     }
 
     return result;
