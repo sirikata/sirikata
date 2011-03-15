@@ -28,14 +28,22 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 
 char* emerson_compile(const char* em_script_str)
 {
-    int garbage = 0;
-    return emerson_compile(em_script_str, garbage);
+    FILE* no_dbg = NULL;
+    return emerson_compile(em_script_str, no_dbg);
 }
 
+char* emerson_compile(const char* em_script_str, FILE* dbg) {
+    int errorNum;
+    return emerson_compile(em_script_str, errorNum, dbg);
+}
 
 // This version of the function should be called from the main compiler
 
-char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, void (*errorFunction)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))
+char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, EmersonErrorFuncType error_cb) {
+    return emerson_compile(_originalFile, em_script_str, errorNum, error_cb, NULL);
+}
+
+char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg)
 {
   _emersonInfo = new EmersonInfo();
   if(_originalFile.size() > 0 )
@@ -49,15 +57,19 @@ char* emerson_compile(std::string _originalFile, const char* em_script_str, int&
   }
 
   _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
-  
-  return emerson_compile(em_script_str, errorNum);
+
+  return emerson_compile(em_script_str, errorNum, dbg);
+}
+
+char* emerson_compile(const char* em_script_str, int& errorNum) {
+    return emerson_compile(em_script_str, errorNum, NULL);
 }
 
 // This is mor basic version of the function. Should be called from else where
 
-char* emerson_compile(const char* em_script_str, int& errorNum)
+char* emerson_compile(const char* em_script_str, int& errorNum, FILE* dbg)
 {
-// printf("Trying to compile \n %s\n", em_script_str);
+    if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
     pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
     pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
@@ -70,10 +82,11 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
     pANTLR3_COMMON_TREE_NODE_STREAM	nodes;
     pEmersonTree treePsr;
 
-    
+
     if (input == NULL)
     {
         fprintf(stderr, "Unable to create input stream");
+        if (dbg != NULL) fprintf(dbg, "Unable to create input stream");
         exit(ANTLR3_ERR_NOMEM);
     }
 
@@ -81,13 +94,15 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
     if ( lxr == NULL )
     {
         fprintf(stderr, "Unable to create the lexer due to malloc() failure1\n");
+        if (dbg != NULL) fprintf(dbg, "Unable to create the lexer due to malloc() failure1\n");
         exit(ANTLR3_ERR_NOMEM);
     }
     tstream = antlr3CommonTokenStreamSourceNew(ANTLR3_SIZE_HINT, TOKENSOURCE(lxr));
-    
+
     if (tstream == NULL)
     {
         fprintf(stderr, "Out of memory trying to allocate token stream\n");
+        if (dbg != NULL) fprintf(dbg, "Out of memory trying to allocate token stream\n");
         exit(ANTLR3_ERR_NOMEM);
     }
 
@@ -96,6 +111,7 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
     if (psr == NULL)
     {
         fprintf(stderr, "Out of memory trying to allocate parser\n");
+        if (dbg != NULL) fprintf(dbg, "Out of memory trying to allocate parser\n");
         exit(ANTLR3_ERR_NOMEM);
     }
 
@@ -105,10 +121,10 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
     {
       psr->pParser->rec->displayRecognitionError = (void(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*))_emersonInfo->errorFunction();;
 
-      psr->pParser->rec->recoverFromMismatchedToken = (void*(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST))_emersonInfo->mismatchTokenFunction(); 
+      psr->pParser->rec->recoverFromMismatchedToken = (void*(*)(struct ANTLR3_BASE_RECOGNIZER_struct*, ANTLR3_UINT32, pANTLR3_BITSET_LIST))_emersonInfo->mismatchTokenFunction();
     }
 
-    
+
     try
     {
       emersonAST = psr->program(psr);
@@ -120,10 +136,13 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
     if (psr->pParser->rec->state->errorCount > 0)
     {
         fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
+        if (dbg != NULL) fprintf(dbg, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
         errorNum = ANTLR3_ERR_NOMEM;
     }
     else
     {
+        if (dbg != NULL) fprintf(dbg, "Emerson Tree after parsing \n%s\n", emerson_printAST(emersonAST.tree)->chars);
+
         //printf("Emerson Tree after parsing \n%s\n", emerson_printAST(emersonAST.tree)->chars);
         nodes = antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE
                                                                                       // HINT
@@ -135,13 +154,16 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
         treePsr= EmersonTreeNew(nodes);
         _treeParser = treePsr;
         js_str = (char*)treePsr->program(treePsr)->chars;
+
+        if (dbg != NULL) fprintf(dbg, "The generated code is \n %s \n", js_str);
+
         nodes   ->free  (nodes);	    nodes	= NULL;
         treePsr ->free  (treePsr);	    treePsr	= NULL;
     }
-    
+
     psr->free(psr);
     psr= NULL;
-    
+
     tstream->free  (tstream);
     tstream= NULL;
 
@@ -149,99 +171,6 @@ char* emerson_compile(const char* em_script_str, int& errorNum)
     lxr= NULL;
 
     input->close (input);
-    input= NULL;
-
-    return js_str;
-}
-
-char* emerson_compile_diag(const char* em_script_str, FILE* dbg, int & errorNum)
-{
-    fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
-    
-       pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
-    pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
-    char* js_str;
-
-    pEmersonLexer lxr;
-    pEmersonParser psr;
-    pANTLR3_COMMON_TOKEN_STREAM tstream;
-    EmersonParser_program_return emersonAST;
-    pANTLR3_COMMON_TREE_NODE_STREAM	nodes;
-    pEmersonTree treePsr;
-    
-    if (input == NULL)
-    {
-        fprintf(stderr, "Unable to create input stream");
-        fprintf(dbg, "Unable to create input stream");
-        exit(ANTLR3_ERR_NOMEM);
-    }
-
-    lxr = EmersonLexerNew(input);
-    if ( lxr == NULL )
-    {
-        fprintf(stderr, "Unable to create the lexer due to malloc() failure1\n");
-        fprintf(dbg, "Unable to create the lexer due to malloc() failure1\n");
-        exit(ANTLR3_ERR_NOMEM);
-    }
-    tstream = antlr3CommonTokenStreamSourceNew(ANTLR3_SIZE_HINT, TOKENSOURCE(lxr));
-
-    if (tstream == NULL)
-    {
-        fprintf(stderr, "Out of memory trying to allocate token stream\n");
-        fprintf(dbg, "Out of memory trying to allocate token stream\n");
-        exit(ANTLR3_ERR_NOMEM);
-    }
-    
-    psr = EmersonParserNew(tstream);  // CParserNew is generated by ANTLR3
-    if (psr == NULL)
-    {
-        fprintf(stderr, "Out of memory trying to allocate parser\n");
-        fprintf(dbg, "Out of memory trying to allocate parser\n");
-        exit(ANTLR3_ERR_NOMEM);
-    }
-
-    //psr->pParser->rec->displayRecognitionError = myDisplayRecognitionError;
-
-    emersonAST = psr->program(psr);
-    if (psr->pParser->rec->state->errorCount > 0)
-    {
-        fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
-        fprintf(stderr, "The parser returned %d errors, tree walking aborted.\n", psr->pParser->rec->state->errorCount);
-        errorNum = ANTLR3_ERR_NOMEM;
-    }
-    else
-    {
-
-        fprintf(dbg, "Emerson Tree after parsing \n%s\n", emerson_printAST(emersonAST.tree)->chars);
-        nodes = antlr3CommonTreeNodeStreamNewTree(emersonAST.tree, ANTLR3_SIZE_HINT); // sIZE
-                                                                                      // HINT
-                                                                                      // WILL
-                                                                                      // SOON
-                                                                                      // BE
-                                                                                      // DEPRECATED!!
-
-        treePsr= EmersonTreeNew(nodes);
-        _treeParser = treePsr;
-        js_str = (char*)treePsr->program(treePsr)->chars;
-
-        fprintf(dbg, "The generated code is \n %s \n", js_str);
-
-
-        nodes->free(nodes);
-        nodes = NULL;
-        treePsr->free(treePsr);
-        treePsr	= NULL;
-    }
-    psr->free(psr);
-    psr= NULL;
-    
-    tstream->free(tstream);
-    tstream= NULL;
-
-    lxr->free(lxr);
-    lxr= NULL;
-
-    input->close(input);
     input= NULL;
 
     return js_str;

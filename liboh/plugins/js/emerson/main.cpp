@@ -216,26 +216,20 @@ int main	(int argc, char *argv[])
 
 
     int errorNum = 0;
-
+    FILE* dbgFile = NULL;
     if (verbose)
+        dbgFile = stderr;
 
-        //char* js_str = emerson_compile_diag(std::string(fName), (const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
-        char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
-    else
+    try
     {
-        //char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), errorNum);
-        try
-        {
-          char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError);
-          std::cout<<js_str;
-        }
-        catch(EmersonException e)
-        {
-          std::cerr << e.msg() << "\n";
-          return errorNum;
-        }
+        char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError, dbgFile);
+        std::cout<<js_str;
     }
-
+    catch(EmersonException e)
+    {
+        std::cerr << e.msg() << "\n";
+        return errorNum;
+    }
 
     return errorNum;
 }
