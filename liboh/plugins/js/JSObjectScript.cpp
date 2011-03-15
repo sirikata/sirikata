@@ -558,7 +558,7 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
     JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
 
     //lkjs;
-    
+
     if (self_vis ==NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
@@ -858,7 +858,9 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         emerson_init();
 
         JSLOG(insane, " Input Emerson script = \n" <<em_script_str_new);
-        String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
+        const char* js_script_cstr = emerson_compile(em_script_str_new.c_str());
+        String js_script_str;
+        if (js_script_cstr != NULL) js_script_str = String(js_script_cstr);
         JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
         source = v8::String::New(js_script_str.c_str(), js_script_str.size());

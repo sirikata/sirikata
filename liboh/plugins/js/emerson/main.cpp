@@ -223,7 +223,8 @@ int main	(int argc, char *argv[])
     try
     {
         char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError, dbgFile);
-        std::cout<<js_str;
+        if (js_str)
+            std::cout<<js_str;
     }
     catch(EmersonException e)
     {
