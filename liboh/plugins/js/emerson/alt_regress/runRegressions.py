@@ -19,7 +19,7 @@ class RegressionResults:
     COMPILE_ERROR        = 1;
     DIFF_FAILED          = 2;
     REGRESSION_SUCCEEDED = 3;
-    
+
 
 
 
@@ -42,36 +42,37 @@ The results of the diff are stored in the diffResult list.
 
 If debug is false, then cleans up the intermediat emerson_compiled_filename
 
-Returns RegressionResult value 
+Returns RegressionResult value
 '''
-def regressionPass(filenameToRegress, fileFolderToRegress, correctFolder, diffResult, debug=False):
-    
+def regressionPass(filenameToRegress, fileFolderToRegress, correctFolder, debug=False):
+
     #compiles filenameToRegress to EMERSON_COMPILED_FILENAME
     compileSucceeded = emersonCompile(fileFolderToRegress+'/'+filenameToRegress,EMERSON_COMPILED_FILENAME);
+
     if (not compileSucceeded):
-        diffResult.append("COMPILE_ERROR");
-        return RegressionResults.COMPILE_ERROR;
+        diffResult = "COMPILE_ERROR"
+        return RegressionResults.COMPILE_ERROR, diffResult
 
     #runs EMERSON_COMPILED_FILENAME through rhino
     runRhino(EMERSON_COMPILED_FILENAME,EMERSON_COMPILED_OUTPUT);
 
-    
+
     if (not debug):
         #cleans up the EMERSON_COMPILED_FILENAME
         subprocess.call('rm ' + EMERSON_COMPILED_FILENAME, shell=True);
 
 
     #run diff
-    result = runDiff(EMERSON_COMPILED_OUTPUT,correctFolder + '/'+filenameToRegress + CORRECT_REGRESSION_SUFFIX,diffResult);
+    result, diffResult = runDiff(EMERSON_COMPILED_OUTPUT,correctFolder + '/'+filenameToRegress + CORRECT_REGRESSION_SUFFIX);
 
 
-    
+
     if (not debug):
         #cleans up the EMERSON_COMPILED_OUTPUT
         subprocess.call('rm ' + EMERSON_COMPILED_OUTPUT, shell=True);
-     
-    return result;
-        
+
+    return result, diffResult
+
 
 '''
 Requests Emerson compiler to compile the file with filename toCompile and output its results to
@@ -110,7 +111,7 @@ diff against each other.
 
 diffResult is a list.  We append the result of the diff to the end of it.
 '''
-def runDiff(filenameDiff1, filenameDiff2,diffResult):
+def runDiff(filenameDiff1, filenameDiff2):
     #hack-ish.  piping the output of the diff command to a file, then re-reading the
     #file all at once, appending it to diffResult, and deleting file
     filer = open(EMERSON_TMP_DIFF_RESULT_FILENAME,'w');
@@ -121,17 +122,17 @@ def runDiff(filenameDiff1, filenameDiff2,diffResult):
     #read the file into a string that we append to diffResult
     filer    = open(EMERSON_TMP_DIFF_RESULT_FILENAME,'r');
     allDiffs = filer.read();
-    
-    diffResult.append(allDiffs);
+
+    diffResult = allDiffs
     filer.close();
 
     #remove the temporary file that the diff was saved to
     subprocess.call('rm ' + EMERSON_TMP_DIFF_RESULT_FILENAME, shell=True);
-    
-    if (len(allDiffs) == 0):
-        return RegressionResults.REGRESSION_SUCCEEDED;
 
-    return RegressionResults.DIFF_FAILED;
+    if (len(allDiffs) == 0):
+        return RegressionResults.REGRESSION_SUCCEEDED, diffResult
+
+    return RegressionResults.DIFF_FAILED, diffResult
 
 
 
@@ -143,13 +144,14 @@ in that folder, and pretty-prints summary results as well as saving more in-dept
 def runAllRegressions():
     filenamesToRegress = gatherFilenames(TESTS_REGRESSION_FOLDER);
 
-    regResults  = [];
-    diffResults = [];
-    for s in filenamesToRegress:
-        regOutcome = regressionPass(s,TESTS_REGRESSION_FOLDER,CORRECT_REGRESSION_FOLDER,diffResults);
-        regResults.append(regOutcome);
+    resultFile = open (REGRESSION_RESULTS_FILENAME,'w')
 
-    printAllResults(regResults,diffResults,filenamesToRegress,REGRESSION_RESULTS_FILENAME);
+    for s in filenamesToRegress:
+        regOutcome, diffResult = regressionPass(s,TESTS_REGRESSION_FOLDER,CORRECT_REGRESSION_FOLDER);
+        printResult(regOutcome,diffResult,s,resultFile);
+
+    resultFile.flush();
+    resultFile.close();
 
 '''
 Returns all files in folderToGatherFrom that have a suffix .em.
@@ -159,7 +161,7 @@ directory.
 def gatherFilenames(folderToGatherFrom):
     allFiles = os.listdir(folderToGatherFrom);
     return [x for x in allFiles if x.endswith('.em')]
-    
+
 
 '''
 regResults is a list of RegressionResults
@@ -174,40 +176,27 @@ vectors should be of equal length.)
 This function prints only high-level pass/fail information to stdout.  It saves more detailed
 information about diffs to file named by filenameToPrintDetailsTo.
 '''
-def printAllResults(regResults,diffResults,associatedFilenames,filenameToPrintDetailsTo):
-    if ((len(regResults) != len(diffResults)) or (len(regResults) != len(associatedFilenames))):
-        print("can only print results over vectors of equal length");
-        print(len(regResults));
-        print(len(diffResults));
-        print(len(associatedFilenames));
+def printResult(regResult,diffResult,associatedFilename,fileToPrintDetailsTo):
+    fileToPrintDetailsTo.write("\n\n*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n");
+    msg = "";
+
+    if (regResult == RegressionResults.COMPILE_ERROR):
+        msg = associatedFilename + " ........... FAILED: compile error";
+    elif (regResult == RegressionResults.DIFF_FAILED):
+        msg = associatedFilename + " ........... FAILED: diff failed";
+    elif (regResult == RegressionResults.REGRESSION_SUCCEEDED):
+        msg = associatedFilename + " ........... passed";
+    else:
+        print("\n\nUnknown regression result: " + str(regResult) + " for filename " + associatedFilename + ".  Aborting\n\n");
         assert False;
 
-    filer = open (filenameToPrintDetailsTo,'w');
-    for s in range (0, len(regResults)):
-        filer.write("\n\n*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n");
-        msg = "";
-        
-        if (regResults[s] == RegressionResults.COMPILE_ERROR):
-            msg = associatedFilenames[s] + " ........... FAILED: compile error";
-        elif (regResults[s] == RegressionResults.DIFF_FAILED):
-            msg = associatedFilenames[s] + " ........... FAILED: diff failed";
-        elif (regResults[s] == RegressionResults.REGRESSION_SUCCEEDED):
-            msg = associatedFilenames[s] + " ........... passed";
-        else:
-            print("\n\nUnknown regression result: " + str(regResults[s]) + " for filename " + associatedFilenames[s] + ".  Aborting\n\n");
-            assert False;
-
-        print(msg);
-        filer.write(msg);
-        filer.write("\n\n");
-        filer.write("Diff results:\n");
-        filer.write(diffResults[s]);
-        filer.write("\n\n");
-            
-    filer.flush();
-    filer.close();
+    print(msg);
+    fileToPrintDetailsTo.write(msg);
+    fileToPrintDetailsTo.write("\n\n");
+    fileToPrintDetailsTo.write("Diff results:\n");
+    fileToPrintDetailsTo.write(diffResult);
+    fileToPrintDetailsTo.write("\n\n");
 
 
-    
 if __name__ == "__main__":
     runAllRegressions();
