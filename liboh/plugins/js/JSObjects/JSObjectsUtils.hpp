@@ -11,6 +11,7 @@ namespace JS{
 
 class JSWatchable;
 
+
 JSPositionListener* decodeJSPosListener(v8::Handle<v8::Value> toDecode,String& errorMessage);
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage);
 bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, String& errorMessage);

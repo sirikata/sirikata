@@ -96,6 +96,19 @@ bool JSPositionListener::registerAsPosListener()
 }
 
 
+v8::Handle<v8::Value> JSPositionListener::sendMessage (std::string& msgToSend)
+{
+    //actually send the message to the entity
+    if ((sporefToListenFrom == NULL) || (*sporefToListenFrom == SpaceObjectReference::null()) ||
+        (sporefToListenTo   == NULL) || (*sporefToListenTo   == SpaceObjectReference::null()))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error trying to send message.  Do not have a presence associated with this object to send message out from, or do not have sporef to send to.")));
+
+    jsObjScript->sendMessageToEntity(sporefToListenTo,sporefToListenFrom,msgToSend);
+    return v8::Undefined();
+}
+
+
+
 void JSPositionListener::deregisterAsPosListener()
 {
     if (!hasRegisteredListener)

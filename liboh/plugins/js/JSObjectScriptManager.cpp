@@ -405,6 +405,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
 
 
+  //using JSVisible sendmessage so that don't have to re-write a bunch of code.
+  proto_t->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
+  
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 

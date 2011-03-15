@@ -6,7 +6,7 @@
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
 #include "../JSObjectStructs/JSPresenceStruct.hpp"
 #include "../JSObjectStructs/JSWhenStruct.hpp"
-
+#include "../JSObjectStructs/JSPositionListener.hpp"
 
 namespace Sirikata{
 namespace JS{
