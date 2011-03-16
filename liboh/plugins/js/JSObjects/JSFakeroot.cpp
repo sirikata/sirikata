@@ -11,6 +11,7 @@
 #include "JSFields.hpp"
 #include "JSSystem.hpp"
 #include "JSObjectsUtils.hpp"
+#include "../JSSystemNames.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
@@ -92,6 +93,11 @@ v8::Handle<v8::Value> root_import(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     return jsfake->struct_import(native_filename);
+}
+
+v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args)
+{
+    return v8::String::New( JSSystemNames::EMERSON_VERSION);
 }
 
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)

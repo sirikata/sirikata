@@ -233,6 +233,7 @@ void JSObjectScriptManager::createFakerootTemplate()
     
     mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
     mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
+    mFakerootTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSFakeroot::root_getVersion));
 
 }
 

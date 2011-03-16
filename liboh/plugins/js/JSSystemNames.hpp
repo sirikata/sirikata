@@ -8,8 +8,8 @@ namespace JS {
 namespace JSSystemNames {
 
 
+static const char* EMERSON_VERSION              =     "0.0.001";
 static const char* SYSTEM_OBJECT_NAME           =      "system";
-//static const char* FAKEROOT_OBJECT_NAME         =    "fakeroot";
 static const char* FAKEROOT_OBJECT_NAME         =      "system";
 static const char* ADDRESSABLE_ARRAY_NAME       = "addressable";
 static const char* PRESENCES_ARRAY_NAME         =   "presences";
