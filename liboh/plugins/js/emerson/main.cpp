@@ -208,6 +208,7 @@ int main	(int argc, char *argv[])
 
     const char* em_script = read_file(fName);
     string em_script_str = string(em_script);
+    delete[] em_script;
     string em_script_str_new = em_script_str;
     if(em_script_str.at(em_script_str.size() -1) != '\n')
     {
