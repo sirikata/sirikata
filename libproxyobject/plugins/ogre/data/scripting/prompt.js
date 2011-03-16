@@ -19,10 +19,16 @@ function addMessage(msg) {
     results.getSession().setValue( results.getSession().getValue() + msg + '\n' );
 }
 
+submitting = false;
 function runCommand() {
+    if (submitting) return;
+
     var command = editor.getSession().getValue();
+    if (command.length == 0 || command.trim().length == 0) return;
+
     // Clear with a timer because we're still getting the \n from the editor on Shift-Enter
-    setTimeout( function() { editor.getSession().setValue(''); }, 100);
+    submitting = true;
+    setTimeout( function() { editor.getSession().setValue(''); submitting = false; }, 100);
 
     addMessage('>>> ' + command);
     appendMessage(command);
