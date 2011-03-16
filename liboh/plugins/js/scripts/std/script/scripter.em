@@ -56,7 +56,7 @@ function() {
     ns.Scripter.prototype.script = function(target) {
         if (target && !this._scriptingWindows[target]) {
             this._parent.invoke("initScript", target);
-            var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html");
+            var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html", 400, 500);
             scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this, target));
             this._scriptingWindows[target] = scripting_gui;
         }
