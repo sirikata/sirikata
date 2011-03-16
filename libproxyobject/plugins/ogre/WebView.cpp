@@ -1239,6 +1239,14 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
       return boost::any();
   }
 
+  if(name == "show") {
+      this->show();
+  }
+
+  if(name == "hide") {
+      this->hide();
+  }
+
   return boost::any();
 }
 
