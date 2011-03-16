@@ -8,7 +8,8 @@
 #include "../JSSystemNames.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "JSSuspendable.hpp"
-
+#include "JSEventHandlerStruct.hpp"
+#include "../JSPattern.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -30,12 +31,6 @@ struct JSContextStruct : public JSSuspendable
     static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
 
     
-    v8::Handle<v8::Value>  struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
-    v8::Handle<v8::Value>  struct_getAssociatedPresPosition();
-    v8::Handle<v8::Value>  struct_sendHome(const String& toSend);
-    //string argument is the filename that we're trying to open and execute
-    //contents of.
-    v8::Handle<v8::Value>  struct_import(const String& toImportFrom);
 
     //contexts can be suspended (suspends all suspendables within the context)
     //resumed (takes all suspendables in context and calls resume on them)
@@ -47,10 +42,21 @@ struct JSContextStruct : public JSSuspendable
     
     v8::Handle<v8::Value>  struct_suspendContext();
     v8::Handle<v8::Value>  struct_resumeContext();
-    
+
+    //returns an object that contains the fakeroot/system object associated with
+    //this context
     v8::Handle<v8::Object> struct_getFakeroot();
 
 
+    //creates a new jseventhandlerstruct and wraps it in a js object
+    //registers the jseventhandlerstruct both with this context and
+    //jsobjectscript
+    v8::Handle<v8::Value>  struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
+    
+
+    //when add a handler, timer, when inside of context, want to register them.
+    //That way, when call suspend on context and resume on context, can
+    //suspend/resume them.
     void struct_registerSuspendable   (JSSuspendable* toRegister);
     void struct_deregisterSuspendable (JSSuspendable* toDeregister);
     
@@ -58,6 +64,15 @@ struct JSContextStruct : public JSSuspendable
     void jsscript_print(const String& msg);
     void presenceDied();
 
+    v8::Handle<v8::Value>  struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
+    v8::Handle<v8::Value>  struct_getAssociatedPresPosition();
+    v8::Handle<v8::Value>  struct_sendHome(const String& toSend);
+    //string argument is the filename that we're trying to open and execute
+    //contents of.
+    v8::Handle<v8::Value>  struct_import(const String& toImportFrom);
+    //requests jsobjscript to create an event handler in the context associated
+    //wth jscontextstruct.  registers this handler as well through struct_registerSuspendable
+    v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
     
     //********data
     

@@ -6,6 +6,8 @@
 #include "JSContextStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "../JSObjectScript.hpp"
+#include "JSEventHandlerStruct.hpp"
+#include "../JSPattern.hpp"
 
 
 namespace Sirikata{
@@ -34,6 +36,16 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_import(const String& toImportFrom
 v8::Handle<v8::Value> JSFakerootStruct::struct_canImport()
 {
     return v8::Boolean::New(canImport);
+}
+
+
+v8::Handle<v8::Value> JSFakerootStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
+{
+    if (!canRecv)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to receive messages.")));
+
+    
+    return associatedContext->struct_makeEventHandlerObject(native_patterns, target_persist, cb_persist, sender_persist);
 }
 
 v8::Handle<v8::Value> JSFakerootStruct::struct_canSendMessage()

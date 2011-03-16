@@ -17,16 +17,16 @@
 namespace Sirikata {
 namespace JS {
 
-JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender)
+JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender, JSContextStruct* jscs)
  : JSSuspendable(),
    pattern(_pattern),
    target(_target),
    cb(_cb),
    sender(_sender),
-   jscont(NULL)
+   jscont(jscs)
 {
     v8::HandleScope handle_scope;
-    jscont = JSContextStruct::getJSContextStruct();
+
     if (jscont != NULL)
         jscont->struct_registerSuspendable(this);
 

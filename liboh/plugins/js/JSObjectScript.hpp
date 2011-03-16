@@ -188,8 +188,8 @@ public:
 
 
     /** Register an event pattern matcher and handler. */
-    JSEventHandlerStruct* registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,v8::Persistent<v8::Object>& sender);
-    v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand);
+    void registerHandler(JSEventHandlerStruct* jsehs);
+    v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs);
 
     void deleteHandler(JSEventHandlerStruct* toDelete);
 

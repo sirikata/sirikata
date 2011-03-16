@@ -1227,93 +1227,22 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, v8::Persist
 }
 
 
-// v8::Handle<v8::Value> JSObjectScript::import(const String& filename)
-// {
-//     v8::HandleScope handle_scope;
-//     v8::Context::Scope context_scope(mContext);
 
-//     using namespace boost::filesystem;
-
-//     // Search through the import paths to find the file to import, searching the
-//     // current directory first if it is non-empty.
-//     path full_filename;
-//     path filename_as_path(filename);
-//     assert(!mEvalContextStack.empty());
-//     EvalContext& ctx = mEvalContextStack.top();
-//     if (!ctx.currentScriptDir.empty()) {
-//         path fq = ctx.currentScriptDir / filename_as_path;
-//         if (boost::filesystem::exists(fq))
-//             full_filename = fq;
-//     }
-//     if (full_filename.empty()) {
-//         std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
-//         // Always search the current directory as a last resort
-//         search_paths.push_back(".");
-//         for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
-//             path fq = path(*pit) / filename_as_path;
-//             if (boost::filesystem::exists(fq)) {
-//                 full_filename = fq;
-//                 break;
-//             }
-//         }
-//     }
-
-//     // If we still haven't filled this in, we just can't find the file.
-//     if (full_filename.empty())
-//     {
-//         std::string errorMessage("Couldn't find file for import named");
-//         errorMessage+=filename;
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
-//     }
-
-//     // Now try to read in and run the file.
-//     FILE * pFile;
-//     long lSize;
-//     char * buffer;
-//     long result;
-
-//     pFile = fopen (full_filename.string().c_str(), "r" );
-//     if (pFile == NULL)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't open file for import.")) );
-
-//     fseek (pFile , 0 , SEEK_END);
-//     lSize = ftell (pFile);
-//     rewind (pFile);
-
-//     std::string contents(lSize, '\0');
-
-//     result = fread (&(contents[0]), 1, lSize, pFile);
-//     fclose (pFile);
-
-//     if (result != lSize)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
-
-//     EvalContext new_ctx(ctx);
-//     new_ctx.currentScriptDir = full_filename.parent_path().string();
-//     ScriptOrigin origin(v8::String::New(filename.c_str()));
-//     return protectedEval(contents, &origin, new_ctx);
-// }
-
-
-
-
-// need to ensure that the sender object is an visible of type spaceobject reference rather than just having an object reference;
-JSEventHandlerStruct* JSObjectScript::registerHandler(const PatternList& pattern, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb, v8::Persistent<v8::Object>& sender)
+//tries to add the handler struct to the list of event handlers.
+//if am in the middle of processing an event handler, defers the
+//addition to after the event has finished.
+void JSObjectScript::registerHandler(JSEventHandlerStruct* jsehs)
 {
-    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(pattern, target, cb,sender);
-
     if ( mHandlingEvent)
     {
         //means that we're in the process of handling an event, and therefore
         //cannot push onto the event handlers list.  instead, add it to another
         //vector, which are additional changes to make after we've tried to
         //match all events.
-        mQueuedHandlerEventsAdd.push_back(new_handler);
+        mQueuedHandlerEventsAdd.push_back(jsehs);
     }
     else
-        mEventHandlers.push_back(new_handler);
-
-    return new_handler;
+        mEventHandlers.push_back(jsehs);
 }
 
 
@@ -1338,11 +1267,12 @@ void JSObjectScript::printAllHandlerLocations()
  */
 v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst)
 {
+    v8::HandleScope handle_scope;
     SpaceObjectReference from(src.space(), src.object());
     SpaceObjectReference to  (dst.space(), dst.object());
 
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,false);
-    v8::Handle<v8::Object> returner =createVisiblePersistent(jsvis, mContext);
+    v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext);
 
     return returner;
 }
@@ -1366,7 +1296,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     if (! parsed)
     {
         JSLOG(error,"Cannot parse the message that I received on this port");
-        assert(false);
+        return;
     }
 
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
@@ -1483,8 +1413,13 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 //This function takes in a jseventhandler, and wraps a javascript object with
 //it.  The function is called by registerEventHandler in JSSystem, which returns
 //the js object this function creates to the user.
-v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand)
+v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
 {
+    if (jscs == NULL)
+        mContext->Enter();
+    else
+        jscs->mContext->Enter();
+    
     v8::Context::Scope context_scope(mContext);
     v8::HandleScope handle_scope;
 
@@ -1494,6 +1429,12 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
 
+
+    if (jscs == NULL)
+        mContext->Exit();
+    else
+        jscs->mContext->Exit();
+    
     return returner;
 }
 
