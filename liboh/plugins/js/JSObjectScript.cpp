@@ -150,7 +150,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
     }
 
 
-    if (result.IsEmpty())
+    if (try_catch.HasCaught())
     {
         // FIXME what should we do with this exception?
         printException(try_catch);
@@ -884,7 +884,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         uncaught = "Uncaught exception " + uncaught + "\nwhen trying to run script: "+ em_script_str;
         JSLOG(error, uncaught);
         printException(try_catch);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(uncaught.c_str())));
+        return try_catch.ReThrow();
     }
 
 
@@ -902,7 +902,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     if (try_catch2.HasCaught()) {
         printException(try_catch2);
-        return try_catch2.Exception();
+        return try_catch2.ReThrow();
     }
 
 
