@@ -1,10 +1,7 @@
 <html>
-  <head>
-    <link href="prompt.css" rel="stylesheet" type="text/css" />
-  </head>
   <body>
-    <div id="Results" class="codeedit"></div>
-    <div id="Command" class="codeedit"></div>
+    <div class="editborder"><div id="Results" class="codeedit"></div></div>
+    <div class="editborder"><div id="Command" class="codeedit"></div></div>
 
     <button type="button" onclick="runCommand()">Run</button>
     <button type="button" onclick="closePrompt()">Close</button>
@@ -14,6 +11,7 @@
     <script src="../ace/build/src/theme-dawn.js" type="text/javascript" charset="utf-8"></script>
     <script src="../ace/build/src/mode-javascript.js" type="text/javascript" charset="utf-8"></script>
     <script src="prompt.js" type="text/javascript" charset="utf-8"></script>
+    <link href="prompt.css" rel="stylesheet" type="text/css" />
     <script>
       $(document).ready(function() {
         var theme = "ace/theme/dawn";
