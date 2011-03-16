@@ -84,6 +84,8 @@ function() {
         }
         if (msg.value)
             win.eval('addMessage(' + Escape.escapeString(msg.value.toString(), '"') + ')');
+        else if (msg.exception)
+            win.eval('addMessage(' + Escape.escapeString('Exception: ' + msg.exception.toString(), '"') + ')');
     };
 
 })();

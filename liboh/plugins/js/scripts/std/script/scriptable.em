@@ -52,10 +52,16 @@ function() {
 
     ns.Scriptable.prototype._handleScriptRequest = function(msg, sender) {
         var cmd = msg.script;
-        var result = system.eval(cmd);
+        var result = undefined, excep = undefined;
+        try {
+            result = system.eval(cmd);
+        } catch (ex) {
+            excep = ex;
+        }
         var retmsg = {
             reply : 'script',
-            value : result
+            value : result,
+            exception : excep
         };
         retmsg -> sender;
     };
