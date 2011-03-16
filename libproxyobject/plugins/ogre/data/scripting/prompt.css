@@ -1,0 +1,16 @@
+.command {
+    border-width: 1px 1px 1px 1px;
+    border-color: black;
+    border-style: solid;
+    padding: 0px;
+}
+
+body {
+    overflow: hidden;
+}
+
+div.codeedit {
+    min-width: 200px;
+    min-height: 200px;
+    position: relative;
+}
