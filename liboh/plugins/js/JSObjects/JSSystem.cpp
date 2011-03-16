@@ -57,13 +57,14 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 //argument 2: true/false.  can I send messages to everyone?
 //argument 3: true/false.  can I receive messages from everyone?
 //argument 4: true/false.  can I make my own prox queries
+//argument 5: true/false.  can I import
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 {
-    if (args.Length() != 5)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>")) );
+    if (args.Length() != 6)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>")) );
 
 
-    bool sendEveryone,recvEveryone,proxQueries;
+    bool sendEveryone,recvEveryone,proxQueries,canImport;
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
@@ -114,8 +115,13 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     if (! decodeBool(args[4],proxQueries, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
+    //import decode
+    errorMessageWhichArg= " 6.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[5],canImport, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
-    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries);
+    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport);
 }
 
 
@@ -291,7 +297,7 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
 
 
-    target_script->import(native_filename);
+    target_script->import(native_filename, NULL);
 
     return v8::Undefined();
 }

@@ -222,16 +222,17 @@ void JSObjectScriptManager::createFakerootTemplate()
     mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::root_timeout));
     mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::root_print));
 
+    mFakerootTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSFakeroot::root_import));
 
+    
     //check what permissions fake root is loaded with
     mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
     mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
     mFakerootTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSFakeroot::root_canProx));
-
+    mFakerootTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSFakeroot::root_canImport));
+    
     mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
     mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
-
-    //add basic templates: vec3, quat, math
 
 }
 

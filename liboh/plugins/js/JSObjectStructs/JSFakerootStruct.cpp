@@ -12,11 +12,12 @@ namespace Sirikata{
 namespace JS{
 
 
-JSFakerootStruct::JSFakerootStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox)
+JSFakerootStruct::JSFakerootStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox,bool import)
  : associatedContext(jscont),
    canSend(send),
    canRecv(receive),
-   canProx(prox)
+   canProx(prox),
+   canImport(import)
 {
 }
 
@@ -25,6 +26,15 @@ JSFakerootStruct::~JSFakerootStruct()
 {
 }
 
+v8::Handle<v8::Value> JSFakerootStruct::struct_import(const String& toImportFrom)
+{
+    return associatedContext->struct_import(toImportFrom);
+}
+
+v8::Handle<v8::Value> JSFakerootStruct::struct_canImport()
+{
+    return v8::Boolean::New(canImport);
+}
 
 v8::Handle<v8::Value> JSFakerootStruct::struct_canSendMessage()
 {
@@ -55,7 +65,7 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_print(const String& msg)
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value> JSFakerootStruct::struct_sendHome(String& toSend)
+v8::Handle<v8::Value> JSFakerootStruct::struct_sendHome(const String& toSend)
 {
     return associatedContext->struct_sendHome(toSend);
 }

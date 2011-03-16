@@ -21,18 +21,26 @@ class JSUtilObjStruct;
 
 struct JSContextStruct : public JSSuspendable
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, v8::Handle<v8::ObjectTemplate> contGlobTempl);
     ~JSContextStruct();
 
-
+    //looks in current context and returns the current context as pointer to
+    //user.  if unsuccessful, return null.
     static JSContextStruct* getJSContextStruct();
     static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
 
     
     v8::Handle<v8::Value>  struct_executeScript(v8::Handle<v8::Function> funcToCall,const v8::Arguments& args);
     v8::Handle<v8::Value>  struct_getAssociatedPresPosition();
-    v8::Handle<v8::Value>  struct_sendHome(String& toSend);
+    v8::Handle<v8::Value>  struct_sendHome(const String& toSend);
+    //string argument is the filename that we're trying to open and execute
+    //contents of.
+    v8::Handle<v8::Value>  struct_import(const String& toImportFrom);
 
+    //contexts can be suspended (suspends all suspendables within the context)
+    //resumed (takes all suspendables in context and calls resume on them)
+    //or cleared (marks all objects native to this context and its chilren as
+    //ready for garbage collection)  (also clears all suspendables in the context).
     virtual v8::Handle<v8::Value> suspend();
     virtual v8::Handle<v8::Value> resume();
     virtual v8::Handle<v8::Value> clear();
@@ -43,8 +51,6 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Object> struct_getFakeroot();
 
 
-    
-
     void struct_registerSuspendable   (JSSuspendable* toRegister);
     void struct_deregisterSuspendable (JSSuspendable* toDeregister);
     
@@ -52,9 +58,6 @@ struct JSContextStruct : public JSSuspendable
     void jsscript_print(const String& msg);
     void presenceDied();
 
-
-
-    
     
     //********data
     

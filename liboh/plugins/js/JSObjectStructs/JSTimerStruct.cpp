@@ -110,6 +110,9 @@ v8::Handle<v8::Value> JSTimerStruct::resume()
     }
 
     mDeadlineTimer->cancel();
+
+    if (jsContStruct != NULL)
+        jsContStruct->struct_registerSuspendable(this);
     
     mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));

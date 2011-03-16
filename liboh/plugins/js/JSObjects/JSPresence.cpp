@@ -82,7 +82,7 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     String strDecodeErrorMessage = "Error decoding string as first argument of runSimulation to jspresence.  ";
-    String simname = ""; //string to decode to.
+    String simname; //string to decode to.
     bool decodeStrSuccessful = decodeString(args[0],simname,strDecodeErrorMessage);
     if (! decodeStrSuccessful)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );

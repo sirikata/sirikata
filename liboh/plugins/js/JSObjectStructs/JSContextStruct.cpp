@@ -13,12 +13,12 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, v8::Handle<v8::ObjectTemplate> contGlobTempl)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,v8::Handle<v8::ObjectTemplate> contGlobTempl)
  : JSSuspendable(),
    jsObjScript(parent),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
-   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries)),
+   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries,canImport)),
    mUtil(NULL),
    mContext(v8::Context::New(NULL, contGlobTempl)),
    isSuspended(false)
@@ -45,6 +45,14 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 }
 
+
+
+//string argument is the filename that we're trying to open and execute
+//contents of.
+v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom)
+{
+    return jsObjScript->import(toImportFrom,&mContext);
+}
 
 
 
@@ -176,7 +184,7 @@ v8::Handle<v8::Value> JSContextStruct::resume()
 //this function asks the jsObjScript to send a message from the presence associated
 //with associatedPresence to the object with spaceobjectreference mHomeObject.
 //The message contains the object toSend.
-v8::Handle<v8::Value> JSContextStruct::struct_sendHome(String& toSend)
+v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
 {
     if (getIsCleared())
     {

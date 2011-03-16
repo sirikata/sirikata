@@ -101,7 +101,7 @@ public:
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
-    v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries);
+    v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport);
 
     String tokenizeWhenPred(const String& whenPredAsString);
     void addWhen(JSWhenStruct* whenToAdd);
@@ -137,8 +137,11 @@ public:
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name);
 
-    /** Import a file, executing its contents in the root object's scope. */
-    v8::Handle<v8::Value> import(const String& filename);
+    /** Import a file, executing its contents in contextCtx's root object's
+     * scope. Pass in NULL to contextCtx to just execute in JSObjectScript's
+     * mContext's root object's scope
+     */
+    v8::Handle<v8::Value> import(const String& filename, v8::Persistent<v8::Context>* contextCtx);
 
     /** reboot the state of the script, basically reset the state */
     void reboot();
@@ -257,7 +260,7 @@ private:
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
-
+    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, v8::Persistent<v8::Context>* ctxEvalIn);
 
 
     v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);

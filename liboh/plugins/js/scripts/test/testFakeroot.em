@@ -38,6 +38,7 @@ function proxCallback(visibleBack)
                                           visibleBack,
                                           true,
                                           true,
+                                          true,
                                           true);
 
     newContext.execute(functionToExecuteInContext);

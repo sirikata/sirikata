@@ -260,16 +260,16 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // This is required. So do NOT remove. It is
     // not the same as libraray
     // TODO: hardcoded
-    import("std/shim.em");
+    import("std/shim.em",NULL);
 
     String script_name = init_script->as<String>();
     if (script_name.empty()) {
         JSLOG(info,"Importing default script.");
-        import(mManager->defaultScript());
+        import(mManager->defaultScript(),NULL);
     }
     else {
         JSLOG(info,"Have an initial script to import from " + script_name );
-        import(script_name);
+        import(script_name,NULL);
     }
 
     // Subscribe for session events
@@ -905,9 +905,18 @@ void JSObjectScript::checkWhens()
 //defaults to internalEvaling with mContext, and does a ScopedEvalContext.
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx)
 {
-    ScopedEvalContext sec(this, new_ctx);
-    return internalEval(mContext, em_script_str, em_script_name, true);
+    return protectedEval(em_script_str, em_script_name,new_ctx,NULL);
 }
+
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, v8::Persistent<v8::Context>* ctxEvalIn)
+{
+    ScopedEvalContext sec(this, new_ctx);
+    if (ctxEvalIn == NULL)
+        return internalEval(mContext, em_script_str, em_script_name, true);
+
+    return internalEval(*ctxEvalIn, em_script_str, em_script_name, true);
+}
+
 
 
 
@@ -1127,9 +1136,18 @@ v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOri
     return protectedEval(contents, origin, new_ctx);
 }
 
-v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
+
+//takes in a name of a file to read from and execute all instructions within.
+//also takes in a context to do so in.  If this context is null, just use
+//mContext instead.
+v8::Handle<v8::Value> JSObjectScript::import(const String& filename, v8::Persistent<v8::Context>* contextCtx)
+{
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
+    if (contextCtx == NULL)
+        mContext->Enter();
+    else
+        (*contextCtx)->Enter();
+
 
     using namespace boost::filesystem;
 
@@ -1190,8 +1208,91 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename) {
     EvalContext new_ctx(ctx);
     new_ctx.currentScriptDir = full_filename.parent_path().string();
     ScriptOrigin origin(v8::String::New(filename.c_str()));
-    return protectedEval(contents, &origin, new_ctx);
+
+
+    //Perform evaluation in correct context + exit that context and return
+    v8::Handle<v8::Value> returner;
+    if (contextCtx == NULL)
+    {
+        returner = protectedEval(contents, &origin, new_ctx,&mContext);
+        mContext->Exit();
+    }
+    else
+    {
+        returner = protectedEval(contents, &origin, new_ctx,contextCtx);
+        (*contextCtx)->Exit();
+    }
+
+    return returner;
 }
+
+
+// v8::Handle<v8::Value> JSObjectScript::import(const String& filename)
+// {
+//     v8::HandleScope handle_scope;
+//     v8::Context::Scope context_scope(mContext);
+
+//     using namespace boost::filesystem;
+
+//     // Search through the import paths to find the file to import, searching the
+//     // current directory first if it is non-empty.
+//     path full_filename;
+//     path filename_as_path(filename);
+//     assert(!mEvalContextStack.empty());
+//     EvalContext& ctx = mEvalContextStack.top();
+//     if (!ctx.currentScriptDir.empty()) {
+//         path fq = ctx.currentScriptDir / filename_as_path;
+//         if (boost::filesystem::exists(fq))
+//             full_filename = fq;
+//     }
+//     if (full_filename.empty()) {
+//         std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+//         // Always search the current directory as a last resort
+//         search_paths.push_back(".");
+//         for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
+//             path fq = path(*pit) / filename_as_path;
+//             if (boost::filesystem::exists(fq)) {
+//                 full_filename = fq;
+//                 break;
+//             }
+//         }
+//     }
+
+//     // If we still haven't filled this in, we just can't find the file.
+//     if (full_filename.empty())
+//     {
+//         std::string errorMessage("Couldn't find file for import named");
+//         errorMessage+=filename;
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+//     }
+
+//     // Now try to read in and run the file.
+//     FILE * pFile;
+//     long lSize;
+//     char * buffer;
+//     long result;
+
+//     pFile = fopen (full_filename.string().c_str(), "r" );
+//     if (pFile == NULL)
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't open file for import.")) );
+
+//     fseek (pFile , 0 , SEEK_END);
+//     lSize = ftell (pFile);
+//     rewind (pFile);
+
+//     std::string contents(lSize, '\0');
+
+//     result = fread (&(contents[0]), 1, lSize, pFile);
+//     fclose (pFile);
+
+//     if (result != lSize)
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
+
+//     EvalContext new_ctx(ctx);
+//     new_ctx.currentScriptDir = full_filename.parent_path().string();
+//     ScriptOrigin origin(v8::String::New(filename.c_str()));
+//     return protectedEval(contents, &origin, new_ctx);
+// }
 
 
 
@@ -1497,12 +1598,13 @@ void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
 //who created you.
 //proxQueries means that you can issue proximity queries yourself, and latch on
 //callbacks for them.
-v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries)
+//canImport means that you can import files/libraries into your code.
+v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport)
 {
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, mManager->mContextGlobalTemplate);
+    JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,mManager->mContextGlobalTemplate);
 
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));

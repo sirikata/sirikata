@@ -4,7 +4,7 @@
 // system.print("\nCreate context\n");
 
 var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true);
+var newContext = system.create_context(whichPresence,null,true,true,true,true);
 
 
 x = 5;

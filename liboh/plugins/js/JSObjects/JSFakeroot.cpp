@@ -10,6 +10,7 @@
 #include "../JSObjectStructs/JSContextStruct.hpp"
 #include "JSFields.hpp"
 #include "JSSystem.hpp"
+#include "JSObjectsUtils.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
@@ -41,6 +42,17 @@ v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
     return jsfake->struct_canRecvMessage();    
 }
 
+v8::Handle<v8::Value> root_canImport(const v8::Arguments& args)
+{
+    String errorMessage = "Error decoding the fakeroot object from root_canImport.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jsfake->struct_canImport();
+}
+
 
 v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
 {
@@ -53,6 +65,34 @@ v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
     return jsfake->struct_canProx();
 }
 
+
+v8::Handle<v8::Value> root_import(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Import only takes one parameter: the name of the file to import.")) );
+
+    v8::Handle<v8::Value> filename = args[0];
+
+
+
+    //decode the filename to import from.
+    String strDecodeErrorMessage = "Error decoding string as first argument of root_import of jsfakeroot.  ";
+    String native_filename; //string to decode to.
+    bool decodeStrSuccessful = decodeString(args[0],native_filename,strDecodeErrorMessage);
+    if (! decodeStrSuccessful)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
+
+
+
+    //decode the fakeroot object
+    String errorMessage = "Error decoding the fakeroot object from root_import.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jsfake->struct_import(native_filename);
+}
 
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
 {

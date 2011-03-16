@@ -15,7 +15,7 @@ class JSContextStruct;
 
 struct JSFakerootStruct
 {
-    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox);
+    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import);
     ~JSFakerootStruct();
 
     static JSFakerootStruct* decodeRootStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -24,13 +24,16 @@ struct JSFakerootStruct
     v8::Handle<v8::Value> struct_canSendMessage();
     v8::Handle<v8::Value> struct_canRecvMessage();
     v8::Handle<v8::Value> struct_canProx();
+    v8::Handle<v8::Value> struct_canImport();
+    
     v8::Handle<v8::Value> struct_getPosition();
     v8::Handle<v8::Value> struct_print(const String& msg);    
-    v8::Handle<v8::Value> struct_sendHome(String& toSend);
+    v8::Handle<v8::Value> struct_sendHome(const String& toSend);
+    v8::Handle<v8::Value> struct_import(const String& toImportFrom);
     
     //associated data 
     JSContextStruct* associatedContext;
-    bool canSend, canRecv, canProx;
+    bool canSend, canRecv, canProx,canImport;
 };
 
 
