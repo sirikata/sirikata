@@ -24,7 +24,7 @@ function runCommand() {
     // Clear with a timer because we're still getting the \n from the editor on Shift-Enter
     setTimeout( function() { editor.getSession().setValue(''); }, 100);
 
-    addMessage(command);
+    addMessage('>>> ' + command);
     appendMessage(command);
 
     var arg_map = [
