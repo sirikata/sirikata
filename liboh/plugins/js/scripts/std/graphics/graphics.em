@@ -94,14 +94,14 @@ function() {
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createGUI = function(name, url, width, height) {
         if (width && height)
-            return new ns.GUI(simulator.invoke("createWindowFile", name, url, width, height));
+            return new ns.GUI(this._simulator.invoke("createWindowFile", name, url, width, height));
         else
-            return new ns.GUI(simulator.invoke("createWindowFile", name, url));
+            return new ns.GUI(this._simulator.invoke("createWindowFile", name, url));
     };
 
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createBrowser = function(name, url) {
-        return new ns.GUI(simulator.invoke("createWindow", name, url));
+        return new ns.GUI(this._simulator.invoke("createWindow", name, url));
     };
 
     /** Get basic camera description. This is read-only data. */

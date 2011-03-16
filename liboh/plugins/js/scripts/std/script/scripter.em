@@ -46,7 +46,13 @@ function() {
      */
     ns.Scripter = function(parent) {
         this._parent = parent;
-        this._scriptingWindows = {};
+        this._scriptedObjects = {};
+
+        var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html", 400, 600);
+        scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this));
+        this._scriptingWindow = scripting_gui;
+        this._scriptingWindow.hide();
+
         // Listen for replies
         var scriptReplyPattern = new util.Pattern("reply", "script");
         var scriptReplyHandler = std.core.bind(this._handleScriptReply, this);
@@ -54,20 +60,25 @@ function() {
     };
 
     ns.Scripter.prototype.script = function(target) {
-        if (target && !this._scriptingWindows[target]) {
-            this._parent.invoke("initScript", target);
-            var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html", 400, 500);
-            scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this, target));
-            this._scriptingWindows[target] = scripting_gui;
-        }
+        if (!target) return;
+
+        this._parent.invoke("initScript", target);
+        this._scriptingWindow.eval('addObject(' + Escape.escapeString(target.toString(), '"') + ');');
+        this._scriptingWindow.show();
+        this._scriptedObjects[target.toString()] = target;
     };
 
-    ns.Scripter.prototype._handleScriptEvent = function(target, evt, cmd, val) {
+    ns.Scripter.prototype._handleScriptEvent = function(evt, objid, val) {
         if (evt == 'Close') {
             system.print('Close\n'); // FIXME
         }
         else if (evt == 'ExecScript') {
             // ExecScript Command Value
+            var target = this._scriptedObjects[objid];
+            if (!target) {
+                system.prettyprint('Received ExecScript UI event for unknown object:' + objid);
+                return;
+            }
             var request = {
                 request : 'script',
                 script : val
@@ -77,15 +88,12 @@ function() {
     };
 
     ns.Scripter.prototype._handleScriptReply = function(msg, sender) {
-        var win = this._scriptingWindows[sender];
-        if (!win) {
-            system.print("Get scripting reply for object I don't have a window for: " + sender + "\n");
-            return;
-        }
+        var win = this._scriptingWindow;
+
         if (msg.value)
-            win.eval('addMessage(' + Escape.escapeString(msg.value.toString(), '"') + ')');
+            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(msg.value.toString(), '"') + ')');
         else if (msg.exception)
-            win.eval('addMessage(' + Escape.escapeString('Exception: ' + msg.exception.toString(), '"') + ')');
+            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + Escape.escapeString('Exception: ' + msg.exception.toString(), '"') + ')');
     };
 
 })();

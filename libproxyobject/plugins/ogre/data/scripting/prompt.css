@@ -21,3 +21,7 @@ div.editborder {
     border-style: solid;
     margin: 10px;
 }
+
+.ui-widget {
+    font-size: 12px;
+}

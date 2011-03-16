@@ -1,36 +1,22 @@
 <html>
   <body>
-    <div class="editborder"><div id="Results" class="codeedit"></div></div>
-    <div class="editborder"><div id="Command" class="codeedit"></div></div>
+    <div id="edittabs">
+      <ul id="edittab_titles"></ul>
+    </div>
 
     <button type="button" onclick="runCommand()">Run</button>
     <button type="button" onclick="closePrompt()">Close</button>
 
     <script src="../jquery/js/jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../jquery/js/jquery-ui-1.8.5.custom.min.js" type="text/javascript" charset="utf-8"></script>
+    <link href="../jquery_themes/redmond/jquery-ui-1.8.6.custom.css" rel="stylesheet" type="text/css" />
+
     <script src="../ace/build/src/ace-uncompressed.js" type="text/javascript" charset="utf-8"></script>
     <script src="../ace/build/src/theme-dawn.js" type="text/javascript" charset="utf-8"></script>
     <script src="../ace/build/src/mode-javascript.js" type="text/javascript" charset="utf-8"></script>
+
     <script src="prompt.js" type="text/javascript" charset="utf-8"></script>
     <link href="prompt.css" rel="stylesheet" type="text/css" />
-    <script>
-      $(document).ready(function() {
-        var theme = "ace/theme/dawn";
-        var JavaScriptMode = require("ace/mode/javascript").Mode;
-
-        editor = ace.edit("Command");
-        editor.setTheme(theme);
-        editor.getSession().setMode(new JavaScriptMode());
-        editor.renderer.setShowGutter(false);
-
-        results = ace.edit("Results");
-        results.setTheme(theme);
-        results.getSession().setMode(new JavaScriptMode());
-        results.renderer.setShowGutter(false);
-        results.setReadOnly(true);
-
-        registerHotkeys("#Command");
-      });
-    </script>
 
   </body>
 </html>
