@@ -56,7 +56,7 @@ public:
 
   void mergeData(const Transfer::SparseData &dataToMerge);
 
-  virtual void operator()();
+  virtual void operator()(std::tr1::shared_ptr<ResourceDownloadTask> thisptr);
 
   bool isStarted() {
     return mStarted;
@@ -64,11 +64,13 @@ public:
 
 protected:
 
-  void metadataFinished(std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-            std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
+  void metadataFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
+                        std::tr1::shared_ptr<Transfer::MetadataRequest> request,
+                        std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response);
 
-  void chunkFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-            std::tr1::shared_ptr<const Transfer::DenseData> response);
+  void chunkFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
+                     std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+                     std::tr1::shared_ptr<const Transfer::DenseData> response);
 
 
   bool mStarted;

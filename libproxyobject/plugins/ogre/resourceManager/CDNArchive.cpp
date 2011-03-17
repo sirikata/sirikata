@@ -2,7 +2,7 @@
  *  CDNArchive.cpp
  *
  *  Copyright (c) 2009, Stanford University
- *  All rights reserved. Go Bears! We beat you 34-28!
+ *  All rights reserved. Go Card! We won 48-14!
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are
