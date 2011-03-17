@@ -96,10 +96,10 @@ function() {
     ns.Scripter.prototype._handleScriptReply = function(msg, sender) {
         var win = this._scriptingWindow;
 
-        if (msg.value)
-            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(msg.value.toString(), '"') + ')');
-        else if (msg.exception)
-            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + Escape.escapeString('Exception: ' + msg.exception.toString(), '"') + ')');
+        if (msg.value !== undefined)
+            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(std.core.pretty(msg.value), '"') + ')');
+        if (msg.exception !== undefined)
+            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString('Exception: ' + std.core.pretty(msg.exception), '"') + ')');
     };
 
     ns.Scripter.prototype._handlePrint = function(msg, sender) {
