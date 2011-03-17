@@ -22,6 +22,7 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptEvalContext(const v8::Arguments& args, JSContextStruct* jscs);
 v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info);
 void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 v8::Handle<v8::Value> Print(const v8::Arguments& args);

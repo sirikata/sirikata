@@ -135,7 +135,7 @@ public:
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
 
     /** Eval a string, executing its contents in the root object's scope. */
-    v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name);
+    v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
     /** Import a file, executing its contents in contextCtx's root object's
      * scope. Pass in NULL to contextCtx to just execute in JSObjectScript's
@@ -261,6 +261,7 @@ private:
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
     v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, v8::Persistent<v8::Context>* ctxEvalIn);
+
 
 
     v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);

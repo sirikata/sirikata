@@ -33,7 +33,8 @@ struct JSFakerootStruct
     v8::Handle<v8::Value> struct_import(const String& toImportFrom);
 
     v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
-    
+
+    JSContextStruct* getContext();
     
     //associated data 
     JSContextStruct* associatedContext;

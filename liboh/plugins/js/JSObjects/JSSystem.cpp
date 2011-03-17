@@ -305,6 +305,11 @@ v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args)
 
 v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args)
 {
+    return ScriptEvalContext(args, NULL);
+}
+
+v8::Handle<v8::Value> ScriptEvalContext(const v8::Arguments& args, JSContextStruct* jscs)
+{
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Eval only takes one parameter: the program text to evaluate.")) );
 
@@ -317,7 +322,7 @@ v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
     ScriptOrigin origin = args.Callee()->GetScriptOrigin();
-    return target_script->eval(native_contents, &origin);
+    return target_script->eval(native_contents, &origin,jscs);
 }
 
 

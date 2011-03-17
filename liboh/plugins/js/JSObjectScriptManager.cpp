@@ -235,6 +235,11 @@ void JSObjectScriptManager::createFakerootTemplate()
     mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
     mFakerootTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSFakeroot::root_getVersion));
 
+    //this doesn't work now.
+    //mFakerootTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSFakeroot::root_scriptEval));
+
+
+//lkjs;
 }
 
 
@@ -315,7 +320,7 @@ void JSObjectScriptManager::createSystemTemplate()
     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
     system_templ->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
-    //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
+
 
     //math, vec, quaternion, etc.
     //add the system template to the global template

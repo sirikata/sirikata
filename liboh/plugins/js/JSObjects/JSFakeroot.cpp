@@ -12,6 +12,7 @@
 #include "JSSystem.hpp"
 #include "JSObjectsUtils.hpp"
 #include "../JSSystemNames.hpp"
+#include "../JSObjectStructs/JSFakerootStruct.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
@@ -152,11 +153,21 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
     JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
 
     return jsfake->struct_sendHome(serialized_message);
 }
 
+
+v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
+{
+    String errorMessage       = "Error calling eval in context.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct( args.This(), errorMessage);
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+    
+    return JSSystem::ScriptEvalContext(args, jsfake->getContext());
+}
 
 
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)

@@ -540,42 +540,10 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
         return returnerPers;
     }
 
-    //lkjs;
-    //otherwise just return self
+
+    //otherwise return undefined
     return v8::Undefined();
-    //createVisibleObject(self_vis, mContext);
 }
-
-// v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& proximateObj)
-// {
-//     //return createVisibleObject(proximateObj,SpaceObjectReference::null(),false,mContext);
-//     v8::HandleScope handle_scope;
-//     v8::Context::Scope context_scope(mContext);
-
-//     String errorMessage = "Error decoding visible object struct associated with self.  ";
-//     v8::Handle<v8::Object> sysObj = getSystemObject();
-//     v8::Local<v8::Value> self_obj = sysObj->Get(v8::String::New(JSSystemNames::VISIBLE_SELF_NAME));
-//     JSVisibleStruct* self_vis = JSVisibleStruct::decodeVisible(self_obj,errorMessage);
-
-//     //lkjs;
-    
-//     if (self_vis ==NULL)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-
-//     JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj,*(self_vis->getToListenTo()));
-
-//     if (jsvis != NULL)
-//     {
-//         v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext);
-//         return returnerPers;
-//     }
-
-//     //lkjs;
-//     //otherwise just return self
-//     return self_obj;
-//     //createVisibleObject(self_vis, mContext);
-// }
 
 
 
@@ -899,7 +867,13 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 void JSObjectScript::checkWhens()
 {
     for (WhenMapIter iter = mWhens.begin(); iter!= mWhens.end(); ++iter)
+    {
+        std::cout<<"\n\n";
+        std::cout<<mWhens.size();
+        std::cout<<"\n\n";
+        std::cout.flush();
         iter->first->checkPredAndRun();
+    }
 }
 
 //defaults to internalEvaling with mContext, and does a ScopedEvalContext.
@@ -1129,11 +1103,15 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Fu
 }
 
 
-
-v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOrigin* origin) {
+v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOrigin* origin,JSContextStruct* jscs)
+{
     EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx);
-    return protectedEval(contents, origin, new_ctx);
+
+    if (jscs == NULL)
+        return protectedEval(contents, origin, new_ctx, NULL);
+
+    return protectedEval(contents, origin, new_ctx,&(jscs->mContext));
 }
 
 

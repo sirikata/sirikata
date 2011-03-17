@@ -48,6 +48,11 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_makeEventHandlerObject(const Patt
     return associatedContext->struct_makeEventHandlerObject(native_patterns, target_persist, cb_persist, sender_persist);
 }
 
+JSContextStruct* JSFakerootStruct::getContext()
+{
+    return associatedContext;
+}
+
 v8::Handle<v8::Value> JSFakerootStruct::struct_canSendMessage()
 {
     v8::HandleScope handle_scope;  //for garbage collection.

@@ -310,7 +310,7 @@ void JSContextStruct::jsscript_print(const String& msg)
 
 void JSContextStruct::presenceDied()
 {
-    SILOG(js,error,"[JS] Incorrectly handling presence destructions in context struct.  Need additional code.");
+    JSLOG(error,"[JS] Incorrectly handling presence destructions in context struct.  Need additional code.");
 }
 
 
