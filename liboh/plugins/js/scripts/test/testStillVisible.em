@@ -46,11 +46,11 @@ function timeoutCallback()
     system.print("\nThis is numStillVis: " + numStillVis.toString());
     system.print("\n\nThis is numVis:  " + numVis.toString());
     system.print("\n\n");
-    system.timeout(2,null,timeoutCallback);
+    system.timeout(2,timeoutCallback);
 }
 
 
 
 system.presences[0].setQueryAngle(.4);
 
-system.timeout(2,null,timeoutCallback);
+system.timeout(2,timeoutCallback);

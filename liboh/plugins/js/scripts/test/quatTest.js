@@ -233,7 +233,7 @@ function firstTimerCallback()
     system.print(velocityer);
 
     
-    system.timeout(5,null,secondTimerCallback);
+    system.timeout(5,secondTimerCallback);
 }
 
 function secondTimerCallback()
@@ -254,7 +254,7 @@ function secondTimerCallback()
     //system.presences[0].setOrientationVel(quatVel);
     system.presences[0].setOrientation(quatVel);
 
-    system.timeout(3,null,thirdTimerCallback);
+    system.timeout(3,thirdTimerCallback);
 }
 
 
@@ -277,7 +277,7 @@ function thirdTimerCallback()
     //system.presences[0].setOrientationVel(quatVel);
     system.presences[0].setOrientation(quatVel);
 
-    system.timeout(3,null,stopCallback);
+    system.timeout(3,stopCallback);
 }
 
 
@@ -289,7 +289,7 @@ function quatSubtract(q1, q2)
 
 function callFirstTimeout()
 {
-    system.timeout(3,null,firstTimerCallback);
+    system.timeout(3,firstTimerCallback);
 }
 
 function run() {

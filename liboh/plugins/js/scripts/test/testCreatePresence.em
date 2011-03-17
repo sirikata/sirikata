@@ -19,7 +19,7 @@ function newPresCallback()
     system.print("\n\nThis is the position of the new presence: " + newPosString + "\n\n");
 
 
-    system.timeout(5,null,function(){
+    system.timeout(5,function(){
                        newPresMove(system.presences[1]);
                                   });
 

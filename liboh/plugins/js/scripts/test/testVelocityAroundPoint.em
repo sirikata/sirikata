@@ -7,7 +7,7 @@ function leftCallback()
 {
     system.print("\n\nBegin move left\n\n");
     system.presences[0].setVelocity(new system.Vec3(amountToMoveLeft,0,0));
-    system.timeout(2,null,stopCallback);
+    system.timeout(2,stopCallback);
     turnLeft = false;
 }
 
@@ -16,7 +16,7 @@ function rightCallback()
     system.print("\n\nBegin move right \n\n");
     system.presences[0].setVelocity(new system.Vec3(amountToMoveRight,0,0));
 
-    system.timeout(2,null,stopCallback);
+    system.timeout(2,stopCallback);
     turnLeft = true;
 }
 
@@ -28,16 +28,13 @@ function stopCallback()
 
     if (turnLeft)
     {
-        system.timeout(1,null,leftCallback);
+        system.timeout(1,leftCallback);
     }
     else
     {
-        system.timeout(1,null,rightCallback);                        
+        system.timeout(1,rightCallback);
     }
 }
 
 
-system.timeout(2,null,leftCallback);
-
-
-
+system.timeout(2,leftCallback);

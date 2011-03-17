@@ -227,12 +227,11 @@ v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args)
 v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextStruct* jscont)
 {
 
-    if (args.Length() != 3)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second is target val, and third argumnet is callback")) );
+    if (args.Length() != 2)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second is callback")) );
 
     v8::Handle<v8::Value> dur         = args[0];
-    v8::Handle<v8::Value> target_val  = args[1];
-    v8::Handle<v8::Value> cb_val      = args[2];
+    v8::Handle<v8::Value> cb_val      = args[1];
 
     // Duration
     double native_dur = 0;
@@ -242,14 +241,6 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
         native_dur = dur->Int32Value();
     else
         return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  First argument incorrect: duration cannot be cast to float.")) );
-
-    // Target
-    if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Second argument incorrect: target isn't null or valid object.")) );
-
-    v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
-    v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
-
 
     // Function
     if (!cb_val->IsFunction())
@@ -267,11 +258,11 @@ v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextSt
         if (target_script == NULL)
             return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-        return target_script->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);
+        return target_script->create_timeout(Duration::seconds(native_dur), cb_persist, jscont);
     }
 
     //means that this is the
-    return jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), target_persist, cb_persist,jscont);
+    return jscont->jsObjScript->create_timeout(Duration::seconds(native_dur), cb_persist, jscont);
 }
 
 
@@ -426,7 +417,7 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
     {
         String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding sender.  ";
         JSPositionListener* jsposlist = decodeJSPosListener(sender_val,errorMessage);
-        
+
         if (jsposlist == NULL)
             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
     }

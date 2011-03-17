@@ -138,7 +138,7 @@ function timerCallback()
     }
 
     //reset timer
-    system.timeout(CALLBACK_PERIOD,null,timerCallback);
+    system.timeout(CALLBACK_PERIOD,timerCallback);
 }
 
 
@@ -153,6 +153,6 @@ function moveFarAway()
 
 
 //establish timer to move towards.
-system.timeout(1,null,timerCallback);
+system.timeout(1,timerCallback);
 
 system.presences[0].setQueryAngle(.2);

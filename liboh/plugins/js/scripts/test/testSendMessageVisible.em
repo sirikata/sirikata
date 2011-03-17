@@ -16,7 +16,7 @@ function broadcastIt()
     }
     
     system.presences[0].broadcastVisible(toBroadcast);
-    system.timeout(7,null,broadcastIt);
+    system.timeout(7,broadcastIt);
 }
 
 function proxAddedCallback(objAdded)
@@ -27,6 +27,5 @@ function proxAddedCallback(objAdded)
 
 system.presences[0].onProxAdded(proxAddedCallback);
 
-system.timeout(7,null,broadcastIt);
+system.timeout(7,broadcastIt);
 system.presences[0].setQueryAngle(.0000001);
-

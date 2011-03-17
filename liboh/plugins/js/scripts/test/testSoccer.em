@@ -87,7 +87,7 @@ function createTeamObject(ball)
             setVelocity(playerToWander,angle,team.playerSpeed);
         }            
 
-        system.timeout(team.playerWanderPeriod,null,
+        system.timeout(team.playerWanderPeriod,
                        function ()
                        {
                          team.playerWander(playerToWander);
@@ -230,5 +230,3 @@ function playSoccer(team)
         team.ball);
     
 }
-
-

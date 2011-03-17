@@ -65,7 +65,7 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::registerAsPosListener();
 
     if (hasConnectedCallback)
-        jsObjScript->handleTimeoutContext(mOnConnectedCallback,NULL);
+        jsObjScript->handleTimeoutContext(mOnConnectedCallback, (JSContextStruct*)NULL);
 }
 
 void JSPresenceStruct::clearPreviousConnectedCB()

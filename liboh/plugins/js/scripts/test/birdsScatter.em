@@ -57,7 +57,7 @@ function evasiveManeuvers(camLocation,curPosition)
     var velocityDirection = new util.Vec3(curPosition.x-camLocation.x,0, curPosition.z-camLocation.z);
     var newVel = scalarMultVec(howFastToEvadeConst, (normalizeVector(velocityDirection)));
     system.presences[0].setVelocity(newVel);
-    system.timeout(howLongToFlee,null,regularOperationCallback);
+    system.timeout(howLongToFlee,regularOperationCallback);
     
 }
 
@@ -322,7 +322,7 @@ function orientationCallback()
     system.presences[0].setOrientation(setQuaternion);
 
     if (runOrientationCallback)
-        system.timeout(orientationCallbackResolution,null,orientationCallback);
+        system.timeout(orientationCallbackResolution,orientationCallback);
 }
 
 function cancelOrientationCallback()
@@ -351,7 +351,7 @@ function dartingAboutCallback()
     }
 
     if (runDartingAboutCallback)
-        system.timeout(dartingAboutCallbackPeriod,null,dartingAboutCallback);
+        system.timeout(dartingAboutCallbackPeriod,dartingAboutCallback);
 }
 
 dartingAboutCallback();
@@ -431,4 +431,3 @@ function callDartingAbout()
         }
     }
 }
-

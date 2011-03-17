@@ -58,7 +58,7 @@ function() {
 
         if (this._printerTimeout)
             this._printerTimeout.reset();
-        this._printerTimeout = system.timeout(60, null, std.core.bind(this._handlePrinterTimeout, this));
+        this._printerTimeout = system.timeout(60, std.core.bind(this._handlePrinterTimeout, this));
 
         var cmd = msg.script;
         var result = undefined, excep = undefined;

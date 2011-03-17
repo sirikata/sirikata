@@ -14,7 +14,7 @@ function callbackHelper()
 {
     system.print("\ngot into callback func\n");
     this.userCallback();
-    this.timer = system.timeout(this.period,null,this.callback);
+    this.timer = system.timeout(this.period,this.callback);
     system.print('\n\n');
 }
 
@@ -24,7 +24,7 @@ function RepeatingTimer(period, callback)
     this.period       = period;
     this.userCallback = callback;
     this.callback     = std.core.bind(callbackHelper,this);
-    this.timer        = system.timeout(this.period,null,this.callback);
+    this.timer        = system.timeout(this.period,this.callback);
     this.suspend   = function ()
     {
         this.timer.suspend();

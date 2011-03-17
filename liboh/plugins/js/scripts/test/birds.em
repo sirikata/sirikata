@@ -45,7 +45,7 @@ function getAveragePosition()
 
 function runTimerFunction()
 {
-    system.timeout(3,null,timerCallback);
+    system.timeout(3,timerCallback);
 }
 
 function timerCallback()
@@ -185,7 +185,7 @@ var locationResponseHandler = system.registerHandler(locationResponseCallback,nu
 
 
 // lkjs;
-// system.setTimeout(1,null,positionPoller);
+// system.setTimeout(1,positionPoller);
 
 
 

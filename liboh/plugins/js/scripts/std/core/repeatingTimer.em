@@ -32,7 +32,7 @@ std.core.RepeatingTimer = function(period,callback)
     this.period       = period;
     this.userCallback = callback;
     this.callback     = std.core.bind(callbackHelper,this);
-    this.timer        = system.timeout(this.period,null,this.callback);
+    this.timer        = system.timeout(this.period,this.callback);
     this.suspend      = function ()
     {
         return this.timer.suspend();

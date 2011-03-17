@@ -1116,11 +1116,11 @@ void JSObjectScript::print(const String& str) {
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
 {
     //create timerstruct
     Network::IOService* ioserve = mParent->getIOService();
-    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,target,cb,jscont,ioserve);
+    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,cb,jscont,ioserve);
 
     v8::HandleScope handle_scope;
 
@@ -1138,13 +1138,13 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 
 
 //third arg may be null to evaluate in global context
-v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
+v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
     if (jscontext == NULL)
-        return ProtectedJSCallback(mContext, &target, cb);
+        return ProtectedJSCallback(mContext, NULL, cb);
 
 
-    return ProtectedJSCallback(jscontext->mContext, &target, cb);
+    return ProtectedJSCallback(jscontext->mContext, NULL, cb);
 }
 
 
