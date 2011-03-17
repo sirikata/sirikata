@@ -267,7 +267,7 @@ void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
     } else {
         std::ostringstream request_stream;
         bool chunkReq = false;
-        request_stream << "GET " << CDN_DOWNLOAD_URI_PREFIX << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
+        request_stream << "GET " << CDN_DOWNLOAD_URI_PREFIX << "/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
         if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
             chunkReq = true;
             request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
