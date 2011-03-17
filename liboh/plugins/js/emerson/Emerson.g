@@ -328,17 +328,23 @@ throwStatement
 	: 'throw' expression (LTERM | ';') -> ^(THROW expression)
 	;
 
+
 tryStatement
-	: ('try' LTERM* statementBlock LTERM* -> ^(TRY statementBlock))(finallyClause -> ^($tryStatement finallyClause)| catchClause (LTERM* finallyClause -> ^($tryStatement catchClause finallyClause))?) 
-	;
-       
-catchClause
-	: 'catch' LTERM* '(' LTERM* Identifier LTERM* ')' LTERM* statementBlock -> ^(CATCH Identifier statementBlock)
-	;
-	
-finallyClause
-	: 'finally' LTERM* statementBlock -> ^( FINALLY statementBlock )
-	;
+        : 'try' LTERM* statementBlock LTERM* catchFinallyBlock -> ^(TRY statementBlock catchFinallyBlock)
+        ;
+
+catchFinallyBlock
+        : catchBlock LTERM* finallyBlock?  -> catchBlock finallyBlock?
+        | finallyBlock                     -> finallyBlock
+        ;
+
+catchBlock
+        : 'catch' LTERM* '(' LTERM* Identifier LTERM* ')' LTERM* statementBlock -> ^(CATCH Identifier statementBlock )
+        ;
+
+finallyBlock
+        : 'finally' LTERM*  statementBlock  -> ^(FINALLY statementBlock)
+        ;
 
 
 msgSendStatement

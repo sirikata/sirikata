@@ -537,15 +537,44 @@ whenCheckedListSubsequent
         )
     ;
         
-    
 
 tryStatement
-    : ^(TRY 
-	      statementBlock 
-          finallyClause?
-        ) 
-	;
-       
+        : ^(TRY
+            {
+                APP("try\n");
+            }
+            statementBlock
+            catchFinallyBlock
+           )
+        ;
+
+catchFinallyBlock
+        : catchBlock finallyBlock?
+        | finallyBlock
+        ;
+
+catchBlock
+        : ^(CATCH
+            {
+                APP("catch (");
+            }
+            Identifier
+            {
+                APP((const char*)$Identifier.text->chars);
+                APP( ")\n");
+            }
+            statementBlock
+           )
+        ;
+
+finallyBlock
+        : ^(FINALLY
+            {
+                APP("finally \n");
+            }
+            statementBlock
+           )
+        ;
 
 msgSendStatement
 scope{
