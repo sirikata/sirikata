@@ -32,6 +32,7 @@
 
 system.require('std/core/bind.js');
 system.require('std/escape.em');
+system.require('std/core/pretty.em');
 
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.script) === "undefined") std.script = {};
@@ -57,6 +58,11 @@ function() {
         var scriptReplyPattern = new util.Pattern("reply", "script");
         var scriptReplyHandler = std.core.bind(this._handleScriptReply, this);
         scriptReplyHandler <- scriptReplyPattern;
+
+        // Listen for print events
+        var printPattern = new util.Pattern("request", "print");
+        var printHandler = std.core.bind(this._handlePrint, this);
+        printHandler <- printPattern;
     };
 
     ns.Scripter.prototype.script = function(target) {
@@ -94,6 +100,15 @@ function() {
             win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(msg.value.toString(), '"') + ')');
         else if (msg.exception)
             win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + Escape.escapeString('Exception: ' + msg.exception.toString(), '"') + ')');
+    };
+
+    ns.Scripter.prototype._handlePrint = function(msg, sender) {
+        var win = this._scriptingWindow;
+
+        if (msg.print) {
+            var to_print = msg.print;
+            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(std.core.pretty(to_print), '"') + ')');
+        }
     };
 
 })();

@@ -32,6 +32,23 @@
 
 system.require('std/core/pretty.em');
 
+(function() {
+     // Scope of this function hides the real print function and the callback from direct manipulation.
+     var realprint = system.print;
+     var printhandler = undefined;
+
+     system.onPrint = function(cb) {
+         printhandler = cb;
+     };
+     system.print = function() {
+         if (printhandler !== undefined && printhandler !== null)
+             printhandler.apply(this, arguments);
+         else
+             realprint.apply(this, arguments);
+     };
+ }
+)();
+
 system.prettyprint = function(x) {
-    system.print( std.core.pretty(x) + '\n' );
+    system.print( std.core.pretty(x) );
 };
