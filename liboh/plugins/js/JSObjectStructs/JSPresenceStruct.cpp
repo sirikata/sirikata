@@ -6,6 +6,8 @@
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
 #include "JSPositionListener.hpp"
+#include "JSContextStruct.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -168,7 +170,8 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport)
 {
-    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport);
+    JSContextStruct* dummy;
+    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,dummy);
 }
 
 

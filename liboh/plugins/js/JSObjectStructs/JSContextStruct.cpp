@@ -260,6 +260,42 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
 
 
+//presStruct: who the messages that this context's fakeroot sends will
+//be from
+//canMessage: who you can always send messages to.
+//sendEveryone creates fakeroot that can send messages to everyone besides just
+//who created you.
+//recvEveryone means that you can receive messages from everyone besides just
+//who created you.
+//proxQueries means that you can issue proximity queries yourself, and latch on
+//callbacks for them.
+//canImport means that you can import files/libraries into your code.
+v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct)
+{
+    JSContextStruct* new_jscs      = NULL;
+    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,new_jscs);
+
+    //register the new context as a child of the previous one
+    struct_registerSuspendable(new_jscs);
+    
+    return returner;
+}
+
+
+//returns a wrapped version of the presence that this context is associated
+//with.
+v8::Local<v8::Object>  JSContextStruct::struct_getPresence()
+{
+    return jsObjScript->wrapPresence(associatedPresence,&mContext);
+}
+
+JSPresenceStruct* JSContextStruct::struct_getPresenceCPP()
+{
+    return associatedPresence;
+}
+
+
+
 //creates a new jseventhandlerstruct and wraps it in a js object
 //registers the jseventhandlerstruct both with this context and
 //jsobjectscript

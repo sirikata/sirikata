@@ -73,6 +73,22 @@ struct JSContextStruct : public JSSuspendable
     //requests jsobjscript to create an event handler in the context associated
     //wth jscontextstruct.  registers this handler as well through struct_registerSuspendable
     v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
+
+
+    //presStruct: who the messages that this context's fakeroot sends will
+    //be from canMessage: who you can always send messages to.  sendEveryone creates
+    //fakeroot that can send messages to everyone besides just who created you.
+    //recvEveryone means that you can receive messages from everyone besides just
+    //who created you.  proxQueries means that you can issue proximity queries
+    //yourself, and latch on callbacks for them.  canImport means that you can
+    //import files/libraries into your code.
+    //creates a new context, and hangs the child into suspendables map.
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct);
+
+
+    //returns a v8 object that wraps the c++ presence
+    v8::Local<v8::Object>  struct_getPresence();
+    JSPresenceStruct* struct_getPresenceCPP();
     
     //********data
     
@@ -104,9 +120,12 @@ struct JSContextStruct : public JSSuspendable
     //all associated objects that will need to be suspended/resumed if context
     //is suspended/resumed
     SuspendableMap associatedSuspendables;
+
 };
 
 typedef std::vector<JSContextStruct*> ContextVector;
+typedef ContextVector::iterator ContextVecIter;
+
 
 }//end namespace js
 }//end namespace sirikata

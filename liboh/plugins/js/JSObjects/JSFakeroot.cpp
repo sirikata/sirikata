@@ -159,6 +159,120 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 }
 
 
+
+v8::Handle<v8::Value> root_getPresence(const v8::Arguments& args)
+{
+    //check 0 args (shouldn't need any)
+    if (args.Length() != 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in root_getPresence.  Requires exactly 0 arguments to get a presence from a fakeroot")));
+
+    //decode root
+    String errorMessage = "Error decoding the fakeroot object from root_getPresence.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
+    
+    
+    return jsfake->struct_getPresence();
+}
+
+
+//fake root in context can already send messages to who instantiated it and
+//receive messages from who instantiated it.
+//messages sent out of it get stamped with a port number automatically
+
+//argument 0: the presence that the context is associated with.  (will use
+//this as sender of messages).  If this arg is null, then just passes through
+//the parent context's presence
+//argument 1: a visible object that can always send messages to.  if null, will
+//use same spaceobjectreference as one passed in for arg0.
+//argument 2: true/false.  can I send messages to everyone?
+//argument 3: true/false.  can I receive messages from everyone?
+//argument 4: true/false.  can I make my own prox queries
+//argument 5: true/false.  can I import
+v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
+{
+    if (args.Length() != 6)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>")) );
+
+
+    bool sendEveryone,recvEveryone,proxQueries,canImport;
+    String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
+    String errorMessageWhichArg,errorMessage;
+
+    //jsfakeroot decode
+    String errorMsgFakeroot  = "Error decoding fakeroot when creating new context.  ";
+    JSFakerootStruct* jsfake = JSFakerootStruct::decodeRootStruct(args.This(),errorMsgFakeroot);
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMsgFakeroot.c_str())));
+
+    
+    //jspresstruct decode
+    JSPresenceStruct* jsPresStruct = NULL;
+    if (args[0]->IsNull())
+        jsPresStruct = jsfake->struct_getPresenceCPP();
+    else
+    {
+        errorMessageWhichArg= " 1.  ";
+        errorMessage= errorMessageBase + errorMessageWhichArg;
+        jsPresStruct = JSPresenceStruct::decodePresenceStruct(args[0],errorMessage);
+        if (jsPresStruct == NULL)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+    }
+
+
+    //getting who can sendTo
+    SpaceObjectReference* canSendTo = NULL;
+    if (args[1]->IsNull())
+        canSendTo = jsPresStruct->getSporef();
+    else
+    {
+        //should try to decode as a jspositionListener.  if decoding fails, throw error
+        errorMessageWhichArg= " 2.  ";
+        errorMessage= errorMessageBase + errorMessageWhichArg;
+
+        JSPositionListener* jsposlist = decodeJSPosListener(args[1],errorMessage);
+
+        if (jsposlist == NULL)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+        canSendTo = jsposlist->getToListenTo();
+    }
+
+
+    //send everyone decode
+    errorMessageWhichArg= " 3.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[2],sendEveryone, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+    //recv everyone decode
+    errorMessageWhichArg= " 4.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[3],recvEveryone, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+
+    //recv everyone decode
+    errorMessageWhichArg= " 5.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[4],proxQueries, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+    //import decode
+    errorMessageWhichArg= " 6.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[5],canImport, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+
+
+    return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,jsPresStruct);
+}
+
+
+
 v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 {
     String errorMessage       = "Error calling eval in context.  ";

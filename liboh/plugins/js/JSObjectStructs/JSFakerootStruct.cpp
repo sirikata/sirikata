@@ -53,6 +53,34 @@ JSContextStruct* JSFakerootStruct::getContext()
     return associatedContext;
 }
 
+//creates and returns a new context object.  arguments should be described in
+//JSObjects/JSFakeroot.cpp
+//new context will have at most as many permissions as parent context.
+v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct)
+{
+    sendEveryone &= canSend;
+    recvEveryone &= canRecv;
+    proxQueries  &= canProx;
+    canImport    &= canImport;
+    
+    return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,canImport, presStruct);
+}
+
+
+JSPresenceStruct* JSFakerootStruct::struct_getPresenceCPP()
+{
+    return associatedContext->struct_getPresenceCPP();
+}
+
+
+//returns a wrapped presence object associated with the presence
+//that the context of this fakeroot is associated with
+v8::Handle<v8::Value> JSFakerootStruct::struct_getPresence()
+{
+    return associatedContext->struct_getPresence();
+}
+
+
 v8::Handle<v8::Value> JSFakerootStruct::struct_canSendMessage()
 {
     v8::HandleScope handle_scope;  //for garbage collection.

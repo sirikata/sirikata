@@ -1475,12 +1475,33 @@ v8::Handle<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
 
     // Create the object for the new presence
 
-    Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
-    js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToAdd));
-    js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
+    Local<Object> js_pres =wrapPresence(presToAdd,&mContext);
 
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
+    return js_pres;
+}
+
+
+//should be called from something that already has declared a handlescope,
+//wraps the presence in a v8 object and returns it.
+v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
+{
+    if (ctxToWrapIn == NULL)
+        mContext->Enter();
+    else
+        (*ctxToWrapIn)->Enter();
+    
+    Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
+    js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToWrap));
+    js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
+
+
+    if (ctxToWrapIn == NULL)
+        mContext->Exit();
+    else
+        (*ctxToWrapIn)->Exit();
+    
     return js_pres;
 }
 
@@ -1508,6 +1529,8 @@ void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
 
 
 
+//lkjs: will be deprecated when change system to fakeroot.
+
 //presAssociatedWith: who the messages that this context's fakeroot sends will
 //be from
 //canMessage: who you can always send messages to.
@@ -1518,16 +1541,16 @@ void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
 //proxQueries means that you can issue proximity queries yourself, and latch on
 //callbacks for them.
 //canImport means that you can import files/libraries into your code.
-v8::Handle<v8::Value> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport)
+//last field returns the created context struct by reference
+v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, JSContextStruct*& internalContextField)
 {
     v8::HandleScope handle_scope;
 
-    v8::Handle<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    JSContextStruct* internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,mManager->mContextGlobalTemplate);
+    v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
+    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,mManager->mContextGlobalTemplate);
 
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
-
 
     return returner;
 }

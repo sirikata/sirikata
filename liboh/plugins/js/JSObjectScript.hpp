@@ -101,8 +101,8 @@ public:
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
-    v8::Handle<v8::Value> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport);
-
+    v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, JSContextStruct*& internalContextField);
+    
     String tokenizeWhenPred(const String& whenPredAsString);
     void addWhen(JSWhenStruct* whenToAdd);
     void removeWhen(JSWhenStruct* whenToRemove);
@@ -172,6 +172,10 @@ public:
     v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
 
+
+    //wraps the c++ presence structure in a v8 object.
+    v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
+    
     /** create a new presence of this entity */
     v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
