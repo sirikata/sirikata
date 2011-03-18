@@ -2,9 +2,7 @@
 //    1) That you can create a new context from within another context (nesting)
 //    2) The child context cannot do things that the parent wasn't capable of.
 
-
-var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true,true);
+system.import('test/testContexts/baseContextTest.em');
 
 
 function testContext()

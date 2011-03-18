@@ -1463,9 +1463,9 @@ v8::Handle<v8::Object> JSObjectScript::addConnectedPresence(const SpaceObjectRef
     return addPresence(presToAdd);
 }
 
-v8::Handle<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
+v8::Local<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
 {
-    HandleScope handle_scope;
+    //HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
 
     // Get the presences array
@@ -1541,13 +1541,15 @@ void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
 //proxQueries means that you can issue proximity queries yourself, and latch on
 //callbacks for them.
 //canImport means that you can import files/libraries into your code.
+//canCreatePres is whether have capability to create presences
+//canCreateEnt is whether have capability to create entities
 //last field returns the created context struct by reference
-v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, JSContextStruct*& internalContextField)
+v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,JSContextStruct*& internalContextField)
 {
     v8::HandleScope handle_scope;
 
     v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,mManager->mContextGlobalTemplate);
+    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,canCreatePres,canCreateEnt,mManager->mContextGlobalTemplate);
 
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
@@ -1627,11 +1629,13 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.
-v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback )
+v8::Local<v8::Object> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, v8::Persistent<v8::Context>* ctxIn )
 {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
+    if (ctxIn == NULL)
+        mContext->Enter();
+    else
+        (*ctxIn)->Enter();
+    
 
     //presuming that we are connecting to the same space;
     FIXME_GET_SPACE_OREF();
@@ -1651,8 +1655,14 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     //create a presence object associated with this presence and return it;
 
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this, callback,presToke);
-    v8::Handle<v8::Object> js_pres = addPresence(presToAdd);
+    v8::Local<v8::Object> js_pres = addPresence(presToAdd);
     mUnconnectedPresences.push_back(presToAdd);
+
+    if (ctxIn == NULL)
+        mContext->Exit();
+    else
+        (*ctxIn)->Exit();
+    
     return js_pres;
 }
 

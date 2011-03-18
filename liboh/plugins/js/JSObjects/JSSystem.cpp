@@ -41,7 +41,7 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
     if (target_script == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(jsobjErrorMessage.c_str(),jsobjErrorMessage.length())));
 
-    return target_script->create_presence(newMesh,v8::Handle<v8::Function>::Cast(args[1]));
+    return target_script->create_presence(newMesh,v8::Handle<v8::Function>::Cast(args[1]),NULL);
 }
 
 
@@ -58,13 +58,15 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 //argument 3: true/false.  can I receive messages from everyone?
 //argument 4: true/false.  can I make my own prox queries
 //argument 5: true/false.  can I import
+//argument 6: true/false.  can I create presences
+//argument 7: true/false.  can I create entities
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 {
-    if (args.Length() != 6)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>")) );
+    if (args.Length() !=8)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>,<bool, can I create presences?>,<bool, can I create entities?>")) );
 
 
-    bool sendEveryone,recvEveryone,proxQueries,canImport;
+    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt;
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
@@ -121,7 +123,21 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     if (! decodeBool(args[5],canImport, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
 
-    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport);
+    //can create presences
+    errorMessageWhichArg= " 7.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[6],canCreatePres, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+
+    //can create entities
+    errorMessageWhichArg= " 8.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[7],canCreateEnt, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+    
+    
+    
+    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt);
 }
 
 

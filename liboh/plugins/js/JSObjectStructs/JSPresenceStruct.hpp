@@ -37,7 +37,7 @@ struct JSPresenceStruct : public JSPositionListener
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
 
 
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt);
 
 
     void addAssociatedContext(JSContextStruct*);

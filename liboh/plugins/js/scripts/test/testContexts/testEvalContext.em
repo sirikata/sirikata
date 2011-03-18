@@ -2,9 +2,8 @@
 
 system.print("\n\nShould be able to see that x=3 after this.\n\n");
 
-var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true,true);
 
+system.import('test/testContexts/baseContextTest.em');
 
 function testContext()
 {

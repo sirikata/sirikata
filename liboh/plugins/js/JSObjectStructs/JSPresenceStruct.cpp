@@ -168,10 +168,10 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport)
+v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt)
 {
     JSContextStruct* dummy;
-    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,dummy);
+    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,dummy);
 }
 
 

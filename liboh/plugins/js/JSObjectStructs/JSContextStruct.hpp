@@ -10,6 +10,7 @@
 #include "JSSuspendable.hpp"
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
+#include "../JSEntityCreateInfo.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -22,7 +23,7 @@ class JSUtilObjStruct;
 
 struct JSContextStruct : public JSSuspendable
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, v8::Handle<v8::ObjectTemplate> contGlobTempl);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,v8::Handle<v8::ObjectTemplate> contGlobTempl);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -52,8 +53,15 @@ struct JSContextStruct : public JSSuspendable
     //registers the jseventhandlerstruct both with this context and
     //jsobjectscript
     v8::Handle<v8::Value>  struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
-    
 
+    //create presence with mesh associated with string newMesh, and initFunction
+    //to be called when presence is connected
+    v8::Local<v8::Object> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc);
+
+    //create presence in the place, and with the script specified in eci
+    v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
+
+    
     //when add a handler, timer, when inside of context, want to register them.
     //That way, when call suspend on context and resume on context, can
     //suspend/resume them.
@@ -82,16 +90,17 @@ struct JSContextStruct : public JSSuspendable
     //who created you.  proxQueries means that you can issue proximity queries
     //yourself, and latch on callbacks for them.  canImport means that you can
     //import files/libraries into your code.
+    //canCreatePres is whether have capability to create presences
+    //canCreateEnt is whether have capability to create entities
     //creates a new context, and hangs the child into suspendables map.
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct);
-
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, JSPresenceStruct* presStruct);
+    
 
     //returns a v8 object that wraps the c++ presence
     v8::Local<v8::Object>  struct_getPresence();
     JSPresenceStruct* struct_getPresenceCPP();
     
     //********data
-    
     JSObjectScript* jsObjScript;
 
     //a pointer to the local presence that is associated with this context.  for

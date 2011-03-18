@@ -1,9 +1,7 @@
 ///This function tests the execute context code.  From system, create a context, print in the context, and execute from the new context
 
 
-
-var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true,true);
+system.import('test/testContexts/baseContextTest.em');
 
 
 x = 5;

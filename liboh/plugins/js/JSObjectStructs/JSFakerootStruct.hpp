@@ -4,7 +4,7 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 #include "../JSPattern.hpp"
-
+#include "../JSEntityCreateInfo.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -17,7 +17,7 @@ class JSPresenceStruct;
 
 struct JSFakerootStruct
 {
-    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import);
+    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity);
     ~JSFakerootStruct();
 
     static JSFakerootStruct* decodeRootStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -38,16 +38,26 @@ struct JSFakerootStruct
 
 
     JSPresenceStruct* struct_getPresenceCPP();
+
+    //if have the capability to create presences, create a new presence with
+    //mesh newMesh and executes initFunc, which gets executed onConnected.
+    //if do not have the capability, throws an error.
+    v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc);
+
+    //if have the capability to create presences, create a new presence with
+    //mesh newMesh and executes initFunc, which gets executed onConnected.
+    //if do not have the capability, throws an error.
+    v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
     
     v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
 
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, JSPresenceStruct* presStruct);
     
     JSContextStruct* getContext();
     
     //associated data 
     JSContextStruct* associatedContext;
-    bool canSend, canRecv, canProx,canImport;
+    bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt;
 };
 
 

@@ -8,18 +8,20 @@
 #include "../JSObjectScript.hpp"
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
-
+#include "../JSEntityCreateInfo.hpp"
 
 namespace Sirikata{
 namespace JS{
 
 
-JSFakerootStruct::JSFakerootStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox,bool import)
+JSFakerootStruct::JSFakerootStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox,bool import, bool createPres, bool createEnt)
  : associatedContext(jscont),
    canSend(send),
    canRecv(receive),
    canProx(prox),
-   canImport(import)
+   canImport(import),
+   canCreatePres(createPres),
+   canCreateEnt(createEnt)
 {
 }
 
@@ -56,14 +58,16 @@ JSContextStruct* JSFakerootStruct::getContext()
 //creates and returns a new context object.  arguments should be described in
 //JSObjects/JSFakeroot.cpp
 //new context will have at most as many permissions as parent context.
-v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct)
+v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt,JSPresenceStruct* presStruct)
 {
     sendEveryone &= canSend;
     recvEveryone &= canRecv;
     proxQueries  &= canProx;
-    canImport    &= canImport;
+    import       &= canImport;
+    createPres   &= canCreatePres;
+    createEnt    &= canCreateEnt;
     
-    return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,canImport, presStruct);
+    return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,import,createPres,createEnt,presStruct);
 }
 
 
@@ -71,6 +75,30 @@ JSPresenceStruct* JSFakerootStruct::struct_getPresenceCPP()
 {
     return associatedContext->struct_getPresenceCPP();
 }
+
+
+//if have the capability to create presences, create a new presence with
+//mesh newMesh and executes initFunc, which gets executed onConnected.
+//if do not have the capability, throws an error.
+v8::Handle<v8::Value> JSFakerootStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
+{
+    if (! canCreatePres)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create presences.")));
+
+    return associatedContext->struct_createPresence(newMesh, initFunc);
+}
+
+//if have the capability to create presences, create a new presence with
+//mesh newMesh and executes initFunc, which gets executed onConnected.
+//if do not have the capability, throws an error.
+v8::Handle<v8::Value> JSFakerootStruct::struct_createEntity(EntityCreateInfo& eci)
+{
+    if (! canCreateEnt)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create entities.")));
+
+    return associatedContext->struct_createEntity(eci);
+}
+
 
 
 //returns a wrapped presence object associated with the presence

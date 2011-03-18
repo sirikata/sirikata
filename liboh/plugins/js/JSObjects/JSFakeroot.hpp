@@ -31,9 +31,14 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args);
 
+v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args);
+
+
 v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args);
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args);
 v8::Handle<v8::Value> root_getPresence(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args);
 
 
 }//end jsfakeroot namespace

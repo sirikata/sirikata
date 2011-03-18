@@ -238,9 +238,11 @@ void JSObjectScriptManager::createFakerootTemplate()
     //this doesn't work now.
     //mFakerootTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSFakeroot::root_scriptEval));
     mFakerootTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSFakeroot::root_createContext));
-
-//    mFakerootTemplate->Set(v8::String::New("getPresence"),v8::FunctionTemplate::New(JSFakeroot::root_getPresence));
+    mFakerootTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSFakeroot::root_createPresence));
+    mFakerootTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSFakeroot::root_createEntity));
     
+//    mFakerootTemplate->Set(v8::String::New("getPresence"),v8::FunctionTemplate::New(JSFakeroot::root_getPresence));
+
 
 }
 

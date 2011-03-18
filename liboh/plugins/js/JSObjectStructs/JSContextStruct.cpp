@@ -11,17 +11,17 @@
 #include "JSUtilStruct.hpp"
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
-
+#include "../JSEntityCreateInfo.hpp"
 
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,v8::Handle<v8::ObjectTemplate> contGlobTempl)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,v8::Handle<v8::ObjectTemplate> contGlobTempl)
  : JSSuspendable(),
    jsObjScript(parent),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
-   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries,canImport)),
+   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt)),
    mUtil(NULL),
    mContext(v8::Context::New(NULL, contGlobTempl)),
    isSuspended(false)
@@ -270,10 +270,12 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 //proxQueries means that you can issue proximity queries yourself, and latch on
 //callbacks for them.
 //canImport means that you can import files/libraries into your code.
-v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,JSPresenceStruct* presStruct)
+//canCreatePres is whether have capability to create presences
+//canCreateEnt is whether have capability to create entities
+v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, JSPresenceStruct* presStruct)
 {
     JSContextStruct* new_jscs      = NULL;
-    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,new_jscs);
+    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,new_jscs);
 
     //register the new context as a child of the previous one
     struct_registerSuspendable(new_jscs);
@@ -293,6 +295,19 @@ JSPresenceStruct* JSContextStruct::struct_getPresenceCPP()
 {
     return associatedPresence;
 }
+
+
+v8::Local<v8::Object> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
+{
+    return jsObjScript->create_presence(newMesh,initFunc,&mContext);
+}
+
+v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci)
+{
+    jsObjScript->create_entity(eci);
+    return v8::Undefined();
+}
+
 
 
 

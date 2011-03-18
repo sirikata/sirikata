@@ -13,8 +13,9 @@
 #include "JSObjectsUtils.hpp"
 #include "../JSSystemNames.hpp"
 #include "../JSObjectStructs/JSFakerootStruct.hpp"
-
+#include "../JSEntityCreateInfo.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
+#include "JSVec3.hpp"
 
 
 namespace Sirikata {
@@ -178,6 +179,116 @@ v8::Handle<v8::Value> root_getPresence(const v8::Arguments& args)
 }
 
 
+
+//first arg is a mesh to be associated with the presence
+//second arg is an initialization function for the presence.
+v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence>")));
+
+    //check args.
+    //mesh arg
+    String newMesh = "";
+    String errorMessage = "Error decoding first argument of create_presence.  Should be a string corresponding to mesh uri.  ";
+    bool stringDecodeSuccessful = decodeString(args[0], newMesh, errorMessage);
+    if (! stringDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    //callback function arg
+    if (! args[1]->IsFunction())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that the second argument passed in be a function")));
+
+    
+    //decode root
+    String errorMessageFRoot = "Error decoding the fakeroot object from root_createPresence.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageFRoot);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
+    
+    return jsfake->struct_createPresence(newMesh, v8::Handle<v8::Function>::Cast(args[1]));
+}
+
+
+//first argument is the position of the new entity
+//second argument is the name of the file to execute scripts from
+//third argument is the mesh file to use.
+v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
+{
+    if (args.Length() != 6)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script filename>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
+
+
+    //decode root
+    String errorMessageFRoot = "Error decoding the fakeroot object from root_createEntity.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageFRoot);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
+    
+    
+    // get the location from the args
+
+    //get position
+    Handle<Object> val_obj = ObjectCast(args[0]);
+    if( !Vec3Validate(val_obj))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
+
+    Vector3d pos(Vec3Extract(val_obj));
+
+    //getting script type
+    v8::String::Utf8Value strScriptType(args[1]);
+    const char* cstrType = ToCString(strScriptType);
+    String scriptType(cstrType);
+
+    // get the script to attach from the args
+    //script is a string args
+    v8::String::Utf8Value scriptOpters(args[2]);
+    const char* cstrOpts = ToCString(scriptOpters);
+    String scriptOpts (cstrOpts);
+    scriptOpts = "--init-script="+scriptOpts;
+
+    //get the mesh to represent as
+    v8::String::Utf8Value mesh_str(args[3]);
+    const char* mesh_cstr = ToCString(mesh_str);
+    String mesh(mesh_cstr);
+
+    //get the scale
+    Handle<Object> scale_arg = ObjectCast(args[4]);
+    if (!NumericValidate(scale_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
+
+    float scale  =  NumericExtract(scale_arg);
+
+    //get the solid angle
+    Handle<Object> qa_arg = ObjectCast(args[5]);
+    if (!NumericValidate(qa_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
+
+    SolidAngle new_qa(NumericExtract(qa_arg));
+
+
+
+    //parse a bunch of arguments here
+    EntityCreateInfo eci;
+    eci.scriptType = scriptType;
+    eci.mesh = mesh;
+    eci.scriptOpts = scriptOpts;
+
+
+    eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
+
+    eci.solid_angle = new_qa;
+    eci.scale = scale;
+
+
+    return jsfake->struct_createEntity(eci);
+}
+
+
+
+
 //fake root in context can already send messages to who instantiated it and
 //receive messages from who instantiated it.
 //messages sent out of it get stamped with a port number automatically
@@ -191,13 +302,15 @@ v8::Handle<v8::Value> root_getPresence(const v8::Arguments& args)
 //argument 3: true/false.  can I receive messages from everyone?
 //argument 4: true/false.  can I make my own prox queries
 //argument 5: true/false.  can I import
+//argument 6: true/false.  can I create presences.
+//argument 7: true/false.  can I create presences.
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 {
-    if (args.Length() != 6)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>")) );
+    if (args.Length() != 8)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code?>, <bool, can I create presences?>,<bool, can I create entities?>")) );
 
 
-    bool sendEveryone,recvEveryone,proxQueries,canImport;
+    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt;
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
@@ -218,7 +331,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
         errorMessage= errorMessageBase + errorMessageWhichArg;
         jsPresStruct = JSPresenceStruct::decodePresenceStruct(args[0],errorMessage);
         if (jsPresStruct == NULL)
-            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
     }
 
 
@@ -235,7 +348,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
         JSPositionListener* jsposlist = decodeJSPosListener(args[1],errorMessage);
 
         if (jsposlist == NULL)
-            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
         canSendTo = jsposlist->getToListenTo();
     }
@@ -245,30 +358,43 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     errorMessageWhichArg= " 3.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[2],sendEveryone, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     //recv everyone decode
     errorMessageWhichArg= " 4.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[3],recvEveryone, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
 
     //recv everyone decode
     errorMessageWhichArg= " 5.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[4],proxQueries, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     //import decode
     errorMessageWhichArg= " 6.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[5],canImport, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
 
+    //can create presences
+    errorMessageWhichArg= " 7.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[6],canCreatePres, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+    
+    //can create entities
+    errorMessageWhichArg= " 8.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[7],canCreateEnt, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+    
 
-    return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,jsPresStruct);
+    
+    return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,jsPresStruct);
 }
 
 

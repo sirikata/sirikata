@@ -54,21 +54,12 @@
 #include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
 #include "JSObjectStructs/JSWhenStruct.hpp"
 #include "JSVisibleStructMonitor.hpp"
+#include "JSEntityCreateInfo.hpp"
 
 
 namespace Sirikata {
 namespace JS {
 
-struct EntityCreateInfo
-{
-    String scriptType;
-    String scriptOpts;
-    SpaceID spaceID;
-    Location loc;
-    float  scale;
-    String mesh;
-    SolidAngle solid_angle;
-};
 
 
 
@@ -101,7 +92,7 @@ public:
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
-    v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, JSContextStruct*& internalContextField);
+    v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,JSContextStruct*& internalContextField);
     
     String tokenizeWhenPred(const String& whenPredAsString);
     void addWhen(JSWhenStruct* whenToAdd);
@@ -177,7 +168,7 @@ public:
     v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
     
     /** create a new presence of this entity */
-    v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback );
+    v8::Local<v8::Object> create_presence(const String& newMesh, v8::Handle<v8::Function> callback, v8::Persistent<v8::Context>* ctxIn );
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
     v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
@@ -298,7 +289,7 @@ private:
 
     // Adds/removes presences from the javascript's system.presences array.
     v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,int token);
-    v8::Handle<v8::Object> addPresence(JSPresenceStruct* presToAdd);
+    v8::Local<v8::Object> addPresence(JSPresenceStruct* presToAdd);
     void removePresence(const SpaceObjectReference& sporef);
 
 

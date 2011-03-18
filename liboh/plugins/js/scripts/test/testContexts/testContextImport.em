@@ -1,7 +1,5 @@
 
-var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true,true);
-
+system.import('test/testContexts/baseContextTest.em');
 
 function testContext()
 {
