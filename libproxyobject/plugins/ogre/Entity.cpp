@@ -112,6 +112,8 @@ Entity::Entity(OgreSystem *scene,
     mMovingIter(scene->mMovingEntities.end()),
     mHaveURIHash(false)
 {
+    mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
+
     mSceneNode->setInheritScale(false);
     addToScene(NULL);
 
@@ -505,13 +507,15 @@ class MaterialManualLoader : public Ogre::ManualResourceLoader {
     const MaterialEffectInfo* mMat;
     String mName;
     String mURI;
-    Entity::TextureBindingsMap* mTextureFingerprints;
+    std::tr1::shared_ptr<Entity::TextureBindingsMap> mTextureFingerprints;
 public:
     MaterialManualLoader(MeshdataPtr mdptr,
                          const String name,
                          const MaterialEffectInfo&mat,
                          const std::string uri,
-                         Entity::TextureBindingsMap* textureFingerprints):mTextureFingerprints(textureFingerprints) {
+                         std::tr1::shared_ptr<Entity::TextureBindingsMap> textureFingerprints): 
+                                                     mTextureFingerprints(textureFingerprints) 
+    {
         mMeshdataPtr = mdptr;
         mName = name;
         mMat=&mat;
@@ -1093,7 +1097,7 @@ void Entity::createMesh(MeshdataPtr mdptr) {
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
-                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (mdptr, matname,*mat, mURIString, &mTextureFingerprints)));
+                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (mdptr, matname,*mat, mURIString, mTextureFingerprints)));
 
                 reload->prepareResource(&*matPtr);
                 reload->loadResource(&*matPtr);                
@@ -1163,10 +1167,10 @@ void Entity::createMesh(MeshdataPtr mdptr) {
 void Entity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
   std::tr1::shared_ptr<const DenseData> response, MeshdataPtr md) {
 
-  if (mActiveCDNArchive && mTextureFingerprints.find(request->getURI().toString()) == mTextureFingerprints.end() ) {
+  if (mActiveCDNArchive && mTextureFingerprints->find(request->getURI().toString()) == mTextureFingerprints->end() ) {
       String id = request->getURI().toString() + request->getMetadata().getFingerprint().toString();
 
-      mTextureFingerprints[request->getURI().toString()] = id;
+      (*mTextureFingerprints)[request->getURI().toString()] = id;
       
       fixOgreURI(id);
       CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(response));
