@@ -155,6 +155,21 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
 }
 
 
+namespace {
+
+// For some reason, V8 isn't providing this, so we have to be able to figure out
+// the correct list ourselves.
+std::vector<String> getOwnPropertyNames() {
+    v8::Local<v8::Array> properties = v8Obj->GetPropertyNames();
+
+    for( unsigned int i = 0; i < properties->Length(); i++)
+    {
+        v8::Local<v8::Value> prop_name = properties->Get(i);
+        v8::Local<v8::Value> prop_val = v8Obj->Get(properties->Get(i));
+    }
+}
+
+}
 
 
 void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage& jsmessage)
