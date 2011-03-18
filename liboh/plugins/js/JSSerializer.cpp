@@ -157,16 +157,35 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
 
 namespace {
 
+std::vector<String> getPropertyNames(v8::Local<v8::Object> obj) {
+    std::vector<String> results;
+
+    v8::Local<v8::Array> properties = obj->GetPropertyNames();
+    for(uint32 i = 0; i < properties->Length(); i++) {
+        v8::Local<v8::Value> prop_name = properties->Get(i);
+          v8::String::Utf8Value prop_name_utf(prop_name);
+          results.push_back(String(ToCString(prop_name_utf)));
+    }
+
+    return results;
+}
+
 // For some reason, V8 isn't providing this, so we have to be able to figure out
 // the correct list ourselves.
-std::vector<String> getOwnPropertyNames() {
-    v8::Local<v8::Array> properties = v8Obj->GetPropertyNames();
+std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
+    std::vector<String> all_props = getPropertyNames(obj);
+    if (obj->GetPrototype()->IsUndefined() || obj->GetPrototype()->IsNull())
+        return all_props;
 
-    for( unsigned int i = 0; i < properties->Length(); i++)
-    {
-        v8::Local<v8::Value> prop_name = properties->Get(i);
-        v8::Local<v8::Value> prop_val = v8Obj->Get(properties->Get(i));
+    std::vector<String> results;
+    std::vector<String> prototype_props = getPropertyNames(v8::Local<v8::Object>::Cast(obj->GetPrototype()));
+
+    for(int i = 0; i < all_props.size(); i++) {
+        if (std::find(prototype_props.begin(), prototype_props.end(), all_props[i]) == prototype_props.end())
+            results.push_back(all_props[i]);
     }
+
+    return results;
 }
 
 }
@@ -200,12 +219,13 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
       }
     }
 
-    v8::Local<v8::Array> properties = v8Obj->GetPropertyNames();
+    std::vector<String> properties = getOwnPropertyNames(v8Obj);
+    properties.push_back("prototype");
 
-    for( unsigned int i = 0; i < properties->Length(); i++)
+    for( unsigned int i = 0; i < properties.size(); i++)
     {
-        v8::Local<v8::Value> prop_name = properties->Get(i);
-        v8::Local<v8::Value> prop_val = v8Obj->Get(properties->Get(i));
+        String prop_name = properties[i];
+        v8::Local<v8::Value> prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
 
 
         /* This is a little gross, but currently necessary. If something is
@@ -237,10 +257,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
 
         // create a JSField out of this
-        v8::String::Utf8Value msgBodyArgs1(prop_name);
-
-        const char* cMsgBody1 = ToCString(msgBodyArgs1);
-        std::string cStrMsgBody1(cMsgBody1);
+        std::string cStrMsgBody1(prop_name);
 
         std::string name = cStrMsgBody1;
         /* Check if the value is an object */
