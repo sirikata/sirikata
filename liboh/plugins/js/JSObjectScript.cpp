@@ -58,6 +58,7 @@
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
+#include "emerson/EmersonException.h"
 #include "lexWhenPred/LexWhenPredUtil.h"
 #include "emerson/Util.h"
 #include "JSSystemNames.hpp"
@@ -833,6 +834,33 @@ Time JSObjectScript::getHostedTime()
     return mParent->currentLocalTime();
 }
 
+namespace {
+
+class EmersonParserException {
+public:
+    EmersonParserException(uint32 li, uint32 pos, const String& msg)
+     : line(li), position(pos), message(msg)
+    {}
+
+    uint32 line;
+    uint32 position;
+    String message;
+
+    String toString() const {
+        std::stringstream err_msg;
+        err_msg << "SyntaxError at line " << line << " position " << position << ":\n";
+        // FIXME it would be nice to give them the same ^ pointer we do for V8 errors.
+        err_msg << message;
+        return err_msg.str();
+    }
+};
+
+void handleEmersonRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer, pANTLR3_UINT8* tokenNames) {
+    pANTLR3_EXCEPTION exception = recognizer->state->exception;
+    throw EmersonParserException(exception->line, exception->charPositionInLine, (const char*)exception->message);
+}
+}
+
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson)
 {
@@ -858,22 +886,24 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         emerson_init();
 
         JSLOG(insane, " Input Emerson script = \n" <<em_script_str_new);
-        const char* js_script_cstr = emerson_compile(em_script_str_new.c_str());
-        String js_script_str;
-        if (js_script_cstr != NULL) js_script_str = String(js_script_cstr);
-        JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+        try {
+            int em_compile_err = 0;
+            v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
+            const char* js_script_cstr = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), em_compile_err, handleEmersonRecognitionError);
+            String js_script_str;
+            if (js_script_cstr != NULL) js_script_str = String(js_script_cstr);
+            JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
-        source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+            source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+        }
+        catch(EmersonParserException e) {
+            return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
+        }
     }
     else
 #endif
         //assume the input string to be a valid js rather than emerson
         source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
-
-
-    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
 
     // Compile
     //note, because using compile command, will run in the mContext context
