@@ -77,7 +77,7 @@ public:
     virtual ~JSObjectScript();
 
     // SessionEventListener Interface
-    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token);
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,HostedObject::PresenceToken token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
     Time getHostedTime();
@@ -98,7 +98,12 @@ public:
     void addWhen(JSWhenStruct* whenToAdd);
     void removeWhen(JSWhenStruct* whenToRemove);
 
-
+    //function gets called when presences are connected.  functToCall is the
+    //function that gets called back.  Does so in context associated with
+    //jscont.  Binds first arg to presence object associated with jspres.
+    //mostly used for contexts and presences to execute their callbacks on
+    //connection and disconnection events.
+    void handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres);
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -137,7 +142,7 @@ public:
     /** reboot the state of the script, basically reset the state */
     void reboot();
 
-    Handle<v8::Context> context() { return mContext;}
+    Handle<v8::Context> context() { return mContext->mContext;}
     /** create a new entity at the run time */
     void create_entity(EntityCreateInfo& eci);
 
@@ -168,7 +173,7 @@ public:
     v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
     
     /** create a new presence of this entity */
-    v8::Local<v8::Object> create_presence(const String& newMesh, v8::Handle<v8::Function> callback, v8::Persistent<v8::Context>* ctxIn );
+    v8::Local<v8::Object> create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx);
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
     v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
@@ -187,13 +192,6 @@ public:
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs);
 
     void deleteHandler(JSEventHandlerStruct* toDelete);
-
-    void registerOnPresenceConnectedHandler(v8::Persistent<v8::Function>& cb) {
-        mOnPresenceConnectedHandler = cb;
-    }
-    void registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function>& cb) {
-        mOnPresenceDisconnectedHandler = cb;
-    }
 
 
     JSObjectScriptManager* manager() const { return mManager; }
@@ -245,13 +243,8 @@ private:
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-
-
-    // Handlers for presence connection events
-    v8::Persistent<v8::Function> mOnPresenceConnectedHandler;
-    v8::Persistent<v8::Function> mOnPresenceDisconnectedHandler;
-
-
+    //lkjs;
+    JSContextStruct* mContext;
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
@@ -274,24 +267,37 @@ private:
 
 
     HostedObjectPtr mParent;
-    v8::Persistent<v8::Context> mContext;
+    //v8::Persistent<v8::Context> mContext;
 
+    //This function returns to you the current value of present token and
+    //incrmenets presenceToken so that get a unique one each time.  If
+    //presenceToken is equal to default_presence_token, increments one beyond it
+    //so that don't start inadvertently returning the DEFAULT_PRESENCE_TOKEN;
+    HostedObject::PresenceToken incrementPresenceToken();
 
-
+    
     Handle<Object> getSystemObject();
     Handle<Object> getGlobalObject();
     void printAllHandlerLocations();
-    void initializePresences(Handle<Object>& system_obj);
-    void populateSystemObject(Handle<Object>& system_obj );
+
 
 
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
 
     // Adds/removes presences from the javascript's system.presences array.
-    v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,int token);
+    //returns the jspresstruct associated with new object through via presToAdd
+    v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token,JSPresenceStruct*& presToAdd);
     v8::Local<v8::Object> addPresence(JSPresenceStruct* presToAdd);
-    void removePresence(const SpaceObjectReference& sporef);
 
+
+    //looks through all previously connected presneces (located in mPresences).
+    //returns the corresponding jspresencestruct that has a spaceobjectreference
+    //that matches sporef.
+    JSPresenceStruct* findPresence(const SpaceObjectReference& sporef);
+
+    //debugging code to output the sporefs of all the presences that I have in mPresences
+    void printMPresences();
+    
 
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
@@ -300,8 +306,8 @@ private:
 
     WhenMap mWhens;
 
-    void callbackUnconnected(const SpaceObjectReference& name, int token);
-    int presenceToken;
+    void callbackUnconnected(const SpaceObjectReference& name, HostedObject::PresenceToken token);
+    HostedObject::PresenceToken presenceToken;
     uint64 hiddenObjectCount;
 
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;

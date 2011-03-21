@@ -14,20 +14,24 @@ namespace JS {
 
 
 //this constructor is called when the presence associated
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback, int presenceToken)
+JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    isConnected(false),
    hasConnectedCallback(true),
-   mPresenceToken(presenceToken)
+   mPresenceToken(presenceToken),
+   mContext(ctx)
 {
+
 }
 
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, int presenceToken)
+
+JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent),
    isConnected(true),
    hasConnectedCallback(false),
-   mPresenceToken(presenceToken)
+   mPresenceToken(presenceToken),
+   mContext(ctx)
 {
     JSPositionListener::setListenTo(&_sporef,&_sporef);
     JSPositionListener::registerAsPosListener();
@@ -47,7 +51,7 @@ bool JSPresenceStruct::getIsConnected()
     return isConnected;
 }
 
-int JSPresenceStruct::getPresenceToken()
+HostedObject::PresenceToken JSPresenceStruct::getPresenceToken()
 {
     return mPresenceToken;
 }
@@ -66,9 +70,20 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosListener();
 
-    if (hasConnectedCallback)
-        jsObjScript->handleTimeoutContext(mOnConnectedCallback,NULL);
+
+    callConnectedCallback();
 }
+
+
+void JSPresenceStruct::callConnectedCallback()
+{
+    if (hasConnectedCallback)
+        jsObjScript->handlePresCallback(mOnConnectedCallback,mContext,this);
+
+    if (mContext != NULL)
+        mContext->checkContextConnectCallback(this);
+}
+
 
 void JSPresenceStruct::clearPreviousConnectedCB()
 {
@@ -136,6 +151,11 @@ void JSPresenceStruct::disconnect()
         JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
 
     isConnected = false;
+
+
+    if (mContext != NULL)
+        mContext->checkContextDisconnectCallback(this);
+
 }
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)

@@ -28,7 +28,7 @@ struct JSContextStruct : public JSSuspendable
 
     //looks in current context and returns the current context as pointer to
     //user.  if unsuccessful, return null.
-    static JSContextStruct* getJSContextStruct();
+//    static JSContextStruct* getJSContextStruct();
     static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
 
     
@@ -97,17 +97,40 @@ struct JSContextStruct : public JSSuspendable
     
 
     //returns a v8 object that wraps the c++ presence
-    v8::Local<v8::Object>  struct_getPresence();
-    JSPresenceStruct* struct_getPresenceCPP();
+    //v8::Local<v8::Object>  struct_getPresence();
+    //JSPresenceStruct* struct_getPresenceCPP();
+
+
+
+    //register cb_persist as the default handler that gets thrown
+    v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
+    v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
+    void checkContextConnectCallback(JSPresenceStruct* jspres);
+    void checkContextDisconnectCallback(JSPresenceStruct* jspres);
+    
+
     
     //********data
     JSObjectScript* jsObjScript;
+    
+    //this is the context that any and all objects will be run in.
+    v8::Persistent<v8::Context> mContext;
 
+private:
+    
+    //a function to call within this context for when a presence that was
+    //created from within this context gets connected.
+    bool hasOnConnectedCallback;
+    v8::Persistent<v8::Function> cbOnConnected;
+    bool hasOnDisconnectedCallback;
+    v8::Persistent<v8::Function> cbOnDisconnected;
+    
+    
     //a pointer to the local presence that is associated with this context.  for
     //instance, when you call getPosition on the fakeroot object, you actually
     //end up returning the position of this presence.  you send messages from
-    //this presence, etc.
-    JSPresenceStruct* associatedPresence; 
+    //this presence, etc.  Can be null.
+    JSPresenceStruct* associatedPresence;
 
     //homeObject is the spaceobjectreference of an object that you can always
     //send messages to regardless of permissions
@@ -121,8 +144,6 @@ struct JSContextStruct : public JSSuspendable
     //context.  
     JSUtilObjStruct* mUtil;
     
-    //this is the context that any and all objects will be run in.
-    v8::Persistent<v8::Context> mContext;
 
     bool isSuspended;
     
@@ -130,10 +151,23 @@ struct JSContextStruct : public JSSuspendable
     //is suspended/resumed
     SuspendableMap associatedSuspendables;
 
-};
+    //working with presence wrappers: check if associatedPresence is null and throw exception if is.
+#define NullPresenceCheck(funcName)        \
+    String fname (funcName);               \
+    if (associatedPresence == NULL)        \
+    {                                      \
+        String errorMessage = "Error in " + fname + " of JSContextStruct.  Have no default presence to perform action with."; \
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
+    }
+
+
+
+    
+}; //end class
 
 typedef std::vector<JSContextStruct*> ContextVector;
 typedef ContextVector::iterator ContextVecIter;
+
 
 
 }//end namespace js

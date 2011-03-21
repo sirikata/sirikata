@@ -472,46 +472,46 @@ v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args)
 {
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected.")) );
+    // if (args.Length() != 1)
+    //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected.")) );
 
-    v8::Handle<v8::Value> cb_val = args[0];
-    if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected().  Must contain callback function.")) );
+    // v8::Handle<v8::Value> cb_val = args[0];
+    // if (!cb_val->IsFunction())
+    //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected().  Must contain callback function.")) );
 
-    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
-
-
-    String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceConnected of JSSystem.cpp.  ";
-    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
-    if (target_script == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+    // v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    // v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
 
-    target_script->registerOnPresenceConnectedHandler(cb_persist);
+    // String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceConnected of JSSystem.cpp.  ";
+    // JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    // if (target_script == NULL)
+    //     return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+
+    // target_script->registerOnPresenceConnectedHandler(cb_persist);
 
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args) {
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected.")) );
+    // if (args.Length() != 1)
+    //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected.")) );
 
-    v8::Handle<v8::Value> cb_val = args[0];
-    if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected().  Must contain callback function.")) );
+    // v8::Handle<v8::Value> cb_val = args[0];
+    // if (!cb_val->IsFunction())
+    //     return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected().  Must contain callback function.")) );
 
-    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+    // v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    // v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
 
-    String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceDisconnected of JSSystem.cpp.  ";
-    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
-    if (target_script == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+    // String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceDisconnected of JSSystem.cpp.  ";
+    // JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+    // if (target_script == NULL)
+    //     return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
 
-    target_script->registerOnPresenceDisconnectedHandler(cb_persist);
+    // target_script->registerOnPresenceDisconnectedHandler(cb_persist);
 
     return v8::Undefined();
 }

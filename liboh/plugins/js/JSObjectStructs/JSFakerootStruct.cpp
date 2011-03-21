@@ -58,6 +58,8 @@ JSContextStruct* JSFakerootStruct::getContext()
 //creates and returns a new context object.  arguments should be described in
 //JSObjects/JSFakeroot.cpp
 //new context will have at most as many permissions as parent context.
+//note: if presStruct is null, just means use the one that is associated with
+//this fakeroot's context
 v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt,JSPresenceStruct* presStruct)
 {
     sendEveryone &= canSend;
@@ -66,15 +68,22 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReferenc
     import       &= canImport;
     createPres   &= canCreatePres;
     createEnt    &= canCreateEnt;
+
     
     return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,import,createPres,createEnt,presStruct);
 }
 
-
-JSPresenceStruct* JSFakerootStruct::struct_getPresenceCPP()
+v8::Handle<v8::Value> JSFakerootStruct::struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist)
 {
-    return associatedContext->struct_getPresenceCPP();
+    return associatedContext->struct_registerOnPresenceConnectedHandler(cb_persist);
 }
+
+v8::Handle<v8::Value> JSFakerootStruct::struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist)
+{
+    return associatedContext->struct_registerOnPresenceDisconnectedHandler(cb_persist);
+}
+
+
 
 
 //if have the capability to create presences, create a new presence with
@@ -101,12 +110,6 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_createEntity(EntityCreateInfo& ec
 
 
 
-//returns a wrapped presence object associated with the presence
-//that the context of this fakeroot is associated with
-v8::Handle<v8::Value> JSFakerootStruct::struct_getPresence()
-{
-    return associatedContext->struct_getPresence();
-}
 
 
 v8::Handle<v8::Value> JSFakerootStruct::struct_canSendMessage()
@@ -176,7 +179,6 @@ JSFakerootStruct* JSFakerootStruct::decodeRootStruct(v8::Handle<v8::Value> toDec
 
     return returner;
 }
-
 
 
 } //end namespace JS

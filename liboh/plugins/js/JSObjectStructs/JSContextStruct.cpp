@@ -64,35 +64,83 @@ v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom
 //if successful, returns the JSContextStruct associated with that fakeroot
 //object.
 //if unsuccessful, returns NULL.
-JSContextStruct* JSContextStruct::getJSContextStruct()
-{
-    v8::HandleScope handle_scope;
+// JSContextStruct* JSContextStruct::getJSContextStruct()
+// {
+//     v8::HandleScope handle_scope;
     
-    v8::Handle<v8::Context> currContext = v8::Context::GetCurrent();
-    if (currContext->Global()->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
-    {
-        v8::Handle<v8::Value> fakerootVal = currContext->Global()->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
-        String errorMessage; //error message isn't important in this case.  Not
-                             //an error to not be within a js context struct.
-        JSFakerootStruct* jsfakeroot = JSFakerootStruct::decodeRootStruct(fakerootVal,errorMessage);
+//     v8::Handle<v8::Context> currContext = v8::Context::GetCurrent();
+//     if (currContext->Global()->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
+//     {
+//         v8::Handle<v8::Value> fakerootVal = currContext->Global()->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
+//         String errorMessage; //error message isn't important in this case.  Not
+//                              //an error to not be within a js context struct.
+//         JSFakerootStruct* jsfakeroot = JSFakerootStruct::decodeRootStruct(fakerootVal,errorMessage);
 
-        if (jsfakeroot == NULL)
-            return NULL;
+//         if (jsfakeroot == NULL)
+//             return NULL;
         
-        return jsfakeroot->associatedContext;
-    }
-
-    return NULL;
-}
+//         return jsfakeroot->getContext();
+//     }
+//     return NULL;
+// }
 
 
 JSContextStruct::~JSContextStruct()
 {
     delete mFakeroot;
     delete mHomeObject;
+
+    if (hasOnConnectedCallback)
+        cbOnConnected.Dispose();
+
+    if (hasOnDisconnectedCallback)
+        cbOnDisconnected.Dispose();
+    
+    
     if (! getIsCleared())
         mContext.Dispose();
+    
 }
+
+
+
+void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
+{
+    if (getIsSuspended() || getIsCleared())
+        return;
+
+    if (hasOnConnectedCallback)
+        jsObjScript->handlePresCallback(cbOnConnected,this,jspres);
+}
+void JSContextStruct::checkContextDisconnectCallback(JSPresenceStruct* jspres)
+{
+    if (getIsSuspended() || getIsCleared())
+        return;
+                
+    if (hasOnDisconnectedCallback)
+        jsObjScript->handlePresCallback(cbOnDisconnected,this,jspres);
+}
+
+v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist)
+{
+    if (hasOnConnectedCallback)
+        cbOnConnected.Dispose();
+
+    cbOnConnected = cb_persist;
+    hasOnConnectedCallback = true;
+}
+v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist)
+{
+    if (hasOnDisconnectedCallback)
+        cbOnDisconnected.Dispose();
+        
+    cbOnDisconnected = cb_persist;
+    hasOnDisconnectedCallback = true;
+}
+
+
+
+
 
 
 v8::Handle<v8::Value> JSContextStruct::clear()
@@ -189,6 +237,9 @@ v8::Handle<v8::Value> JSContextStruct::resume()
 //The message contains the object toSend.
 v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
 {
+
+    NullPresenceCheck("Context: sendHome");
+    
     if (getIsCleared())
     {
         JSLOG(error,"Error when sending home.  This context object was already cleared.");
@@ -272,9 +323,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 //canImport means that you can import files/libraries into your code.
 //canCreatePres is whether have capability to create presences
 //canCreateEnt is whether have capability to create entities
+//if presStruct is null, just use the presence that is associated with this
+//context (which may be null as well).
 v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, JSPresenceStruct* presStruct)
 {
+    if (presStruct == NULL)
+        presStruct = associatedPresence;
     JSContextStruct* new_jscs      = NULL;
+
     v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,new_jscs);
 
     //register the new context as a child of the previous one
@@ -284,22 +340,10 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 }
 
 
-//returns a wrapped version of the presence that this context is associated
-//with.
-v8::Local<v8::Object>  JSContextStruct::struct_getPresence()
-{
-    return jsObjScript->wrapPresence(associatedPresence,&mContext);
-}
-
-JSPresenceStruct* JSContextStruct::struct_getPresenceCPP()
-{
-    return associatedPresence;
-}
-
 
 v8::Local<v8::Object> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
 {
-    return jsObjScript->create_presence(newMesh,initFunc,&mContext);
+    return jsObjScript->create_presence(newMesh,initFunc,this);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci)
@@ -307,6 +351,9 @@ v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci
     jsObjScript->create_entity(eci);
     return v8::Undefined();
 }
+
+
+
 
 
 
@@ -348,6 +395,8 @@ v8::Handle<Object> JSContextStruct::struct_getFakeroot()
 
 v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
 {
+    NullPresenceCheck("Context: getAssociatedPresPosition");
+    
     mContext->Enter();
     v8::Handle<v8::Value> returner = associatedPresence->struct_getPosition();
     mContext->Exit();
@@ -363,6 +412,7 @@ void JSContextStruct::presenceDied()
 {
     JSLOG(error,"[JS] Incorrectly handling presence destructions in context struct.  Need additional code.");
 }
+
 
 
 }//js namespace

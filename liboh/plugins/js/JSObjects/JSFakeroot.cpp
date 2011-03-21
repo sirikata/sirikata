@@ -69,6 +69,9 @@ v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
 }
 
 
+
+
+
 v8::Handle<v8::Value> root_import(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -157,25 +160,6 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
 
     return jsfake->struct_sendHome(serialized_message);
-}
-
-
-
-v8::Handle<v8::Value> root_getPresence(const v8::Arguments& args)
-{
-    //check 0 args (shouldn't need any)
-    if (args.Length() != 0)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in root_getPresence.  Requires exactly 0 arguments to get a presence from a fakeroot")));
-
-    //decode root
-    String errorMessage = "Error decoding the fakeroot object from root_getPresence.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
-    
-    
-    return jsfake->struct_getPresence();
 }
 
 
@@ -323,9 +307,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     
     //jspresstruct decode
     JSPresenceStruct* jsPresStruct = NULL;
-    if (args[0]->IsNull())
-        jsPresStruct = jsfake->struct_getPresenceCPP();
-    else
+    if (! args[0]->IsNull())
     {
         errorMessageWhichArg= " 1.  ";
         errorMessage= errorMessageBase + errorMessageWhichArg;
@@ -419,7 +401,7 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
     
-    return JSSystem::ScriptTimeoutContext(args, jsfake->associatedContext);
+    return JSSystem::ScriptTimeoutContext(args, jsfake->getContext());
 }
 
 
@@ -522,14 +504,78 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 }
 
 
-v8::Handle<v8::Value> root_toString(const v8::Arguments& args)
+
+v8::Handle<v8::Value> root_onPresenceConnected(const v8::Arguments& args)
 {
-    //note to string probably should not serialize fakeroot object, but instead
-    //should just be a keyword for you should do this on your end
-    std::cout<<"\n\nIn JSFakeroot.cpp.  Haven't finished root_toString.\n\n";
-    assert(false);
-    return v8::Undefined();
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected.")) );
+
+    v8::Handle<v8::Value> cb_val = args[0];
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceConnected().  Must contain callback function.")) );
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+
+    //now decode fakeroot
+    String errorMessageDecodeRoot = "Error decoding the fakeroot object from root_OnPresenceConnected.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageDecodeRoot);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
+
+    return jsfake->struct_registerOnPresenceConnectedHandler(cb_persist);
 }
+
+
+v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected.")) );
+
+    v8::Handle<v8::Value> cb_val = args[0];
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected().  Must contain callback function.")) );
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+
+    //now decode fakeroot
+    String errorMessageDecodeRoot = "Error decoding the fakeroot object from root_OnPresenceDisconnected.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageDecodeRoot);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
+
+    return jsfake->struct_registerOnPresenceDisconnectedHandler(cb_persist);
+}
+
+
+// v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args) {
+//     if (args.Length() != 1)
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected.")) );
+
+//     v8::Handle<v8::Value> cb_val = args[0];
+//     if (!cb_val->IsFunction())
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected().  Must contain callback function.")) );
+
+//     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+//     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+
+//     String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceDisconnected of JSSystem.cpp.  ";
+//     JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
+//     if (target_script == NULL)
+//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+//     target_script->registerOnPresenceDisconnectedHandler(cb_persist);
+
+//     return v8::Undefined();
+// }
+
+
 
 
 

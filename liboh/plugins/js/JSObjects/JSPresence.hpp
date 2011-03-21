@@ -11,10 +11,10 @@
 
 namespace Sirikata
 {
-  namespace JS
-  {
-    namespace JSPresence
-    {
+namespace JS
+{
+namespace JSPresence
+{
 
     bool isPresence(v8::Handle<v8::Value> v8Val);
 
@@ -47,8 +47,6 @@ namespace Sirikata
     v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args);
     v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args);
 
-
-
     bool getURI(const v8::Arguments& args,std::string& returner);
     v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);
 
@@ -57,7 +55,8 @@ namespace Sirikata
 
     v8::Handle<v8::Value>distance(const v8::Arguments& args);
 
-    }
-  }
-}
+    
+} //end namespace JSPresence
+} //end namespace JS
+} //end namespace Sirikata
 #endif

@@ -30,15 +30,17 @@ struct JSFakerootStruct
     
     v8::Handle<v8::Value> struct_getPosition();
 
-    //returns the presence that is associated with the jscontext
-    v8::Handle<v8::Value> struct_getPresence();
+
     v8::Handle<v8::Value> struct_print(const String& msg);    
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);
     v8::Handle<v8::Value> struct_import(const String& toImportFrom);
 
+    //returns the presence that is associated with the jscontext
+    // v8::Handle<v8::Value> struct_getPresence();
+    // JSPresenceStruct* struct_getPresenceCPP();
 
-    JSPresenceStruct* struct_getPresenceCPP();
 
+    
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
     //if do not have the capability, throws an error.
@@ -54,7 +56,12 @@ struct JSFakerootStruct
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, JSPresenceStruct* presStruct);
     
     JSContextStruct* getContext();
+
+    v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
+    v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
     
+    
+private:
     //associated data 
     JSContextStruct* associatedContext;
     bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt;

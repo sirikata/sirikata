@@ -202,9 +202,7 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 
     PresenceDataMap::const_iterator smapIter;
     for (smapIter = mPresenceData->begin(); smapIter != mPresenceData->end(); ++smapIter)
-    {
         ss.push_back(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
-    }
 }
 
 
@@ -320,7 +318,7 @@ void HostedObject::connect(
         const String& mesh,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        int token)
+        PresenceToken token)
 {
     connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd, token);
 }
@@ -336,7 +334,7 @@ void HostedObject::connect(
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        int token)
+        PresenceToken token)
 {
     if (spaceID == SpaceID::null())
         return;
@@ -390,7 +388,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -408,7 +406,7 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,int token)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,PresenceToken token)
 {
     if (info.server == NullServerID)
     {
@@ -451,7 +449,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
-    HO_LOG(warning,"Notifying of connected object" << obj << " to space " << space);
+    HO_LOG(warning,"Notifying of connected object " << obj << " to space " << space);
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref, token);
 }
 

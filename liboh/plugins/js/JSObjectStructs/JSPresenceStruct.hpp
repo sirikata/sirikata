@@ -17,9 +17,9 @@ class JSObjectScript;
 //note: only position and isConnected will actually set the flag of the watchable
 struct JSPresenceStruct : public JSPositionListener
 {
-    JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,int presenceToken); //isConnected is false using this:
-                                              //have no sporef
-    JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef,int presenceToken);
+    //isConnected is false using this: have no sporef.
+    JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken); 
+    JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
     ~JSPresenceStruct();
 
 
@@ -29,9 +29,10 @@ struct JSPresenceStruct : public JSPositionListener
     v8::Handle<v8::Value> registerOnProxRemovedEventHandler(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb);
 
-    static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
+    static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,std::string& errorMessage);
 
 
+    
     bool getIsConnected();
     v8::Handle<v8::Value> getIsConnectedV8();
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
@@ -46,7 +47,7 @@ struct JSPresenceStruct : public JSPositionListener
     v8::Persistent<v8::Function> mOnProxAddedEventHandler;
     v8::Persistent<v8::Function> mOnConnectedCallback;
 
-    int getPresenceToken();
+    HostedObject::PresenceToken getPresenceToken();
 
     v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
@@ -77,14 +78,22 @@ struct JSPresenceStruct : public JSPositionListener
 
 
 private:
+
+    //this function checks if we have a callback associated with this presence.
+    //Then it asks jsobjectscript to call the callback
+    void callConnectedCallback();
+    
+
+    
     //data
     bool isConnected;
     bool hasConnectedCallback;
-    int mPresenceToken;
+    HostedObject::PresenceToken mPresenceToken;
 
     TimedMotionVector3f mLocation;
     TimedMotionQuaternion mOrientation;
 
+    JSContextStruct* mContext;
 
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();

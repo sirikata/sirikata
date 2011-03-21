@@ -46,6 +46,9 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 
 }
 
+
+
+
 //changine this function to actually do something
 //args should contain a string that can be converted to a uri
 //FIXME: Should maybe also have a callback function inside

@@ -178,9 +178,8 @@ void JSObjectScriptManager::createTemplates()
 
     createWhenWatchedItemTemplate();
     createWhenWatchedListTemplate();
-    createFakerootTemplate();
-    createContextTemplate();
-    createContextGlobalTemplate();
+
+
     createHandlerTemplate();
     createVisibleTemplate();
 
@@ -189,7 +188,9 @@ void JSObjectScriptManager::createTemplates()
     createJSInvokableObjectTemplate();
     createPresenceTemplate();
     createSystemTemplate();
-
+    createFakerootTemplate();
+    createContextTemplate();
+    createContextGlobalTemplate();
     //createTriggerableTemplate();
 }
 
@@ -224,14 +225,15 @@ void JSObjectScriptManager::createFakerootTemplate()
 
     mFakerootTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSFakeroot::root_import));
 
-    
+
+
     //check what permissions fake root is loaded with
     mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
     mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
     mFakerootTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSFakeroot::root_canProx));
     mFakerootTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSFakeroot::root_canImport));
     
-    mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
+//    mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
     mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
     mFakerootTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSFakeroot::root_getVersion));
 
@@ -240,8 +242,13 @@ void JSObjectScriptManager::createFakerootTemplate()
     mFakerootTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSFakeroot::root_createContext));
     mFakerootTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSFakeroot::root_createPresence));
     mFakerootTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSFakeroot::root_createEntity));
-    
-//    mFakerootTemplate->Set(v8::String::New("getPresence"),v8::FunctionTemplate::New(JSFakeroot::root_getPresence));
+
+    mFakerootTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSFakeroot::root_onPresenceConnected));
+    mFakerootTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSFakeroot::root_onPresenceDisconnected));
+
+    mFakerootTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
+
+
 
 
 }

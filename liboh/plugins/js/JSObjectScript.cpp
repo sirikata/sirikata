@@ -226,32 +226,35 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     mEvalContextStack.push(EvalContext());
 
     v8::HandleScope handle_scope;
-    mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
+    //mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
+    SpaceObjectReference sporef = SpaceObjectReference::null();
+    //lkjs;
+    mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,mManager->mContextGlobalTemplate);
+    
+    //lkjs;
+    // Local<Object> global_obj = mContext->mContext->Global();
+    // // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
+    // // The template actually generates the root objects prototype, not the root
+    // // itself.
+    // Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+    // global_proto->SetInternalField(0, External::New(this));
+    // // And we add an internal field to the system object as well to make it
+    // // easier to find the pointer in different calls. Note that in this case we
+    // // don't use the prototype -- non-global objects work as we would expect.
+    // Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
+    // system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
+    // system_obj->SetInternalField(TYPEID_FIELD,External::New(new String(SYSTEM_TYPEID_STRING)));
 
 
-    Local<Object> global_obj = mContext->Global();
-    // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
-    // The template actually generates the root objects prototype, not the root
-    // itself.
-    Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
-    global_proto->SetInternalField(0, External::New(this));
-    // And we add an internal field to the system object as well to make it
-    // easier to find the pointer in different calls. Note that in this case we
-    // don't use the prototype -- non-global objects work as we would expect.
-    Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
-    system_obj->SetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD,External::New(this));
-    system_obj->SetInternalField(TYPEID_FIELD,External::New(new String(SYSTEM_TYPEID_STRING)));
+    // JSUtilStruct* utilObjStruct = new JSUtilStruct(NULL,this);
+    // Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
+    // util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(utilObjStruct));
+    // util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 
 
-    JSUtilStruct* utilObjStruct = new JSUtilStruct(NULL,this);
-    Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
-    util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(utilObjStruct));
-    util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
-
-
-
+    //lkjs;
     //hangs math, presences, and addressable off of system_obj
-    initializePresences(system_obj);
+    //initializePresences(system_obj);
 
     mHandlingEvent = false;
 
@@ -284,16 +287,17 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
         onConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN);
 
+
     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
 
 }
 
 v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
-    return ProtectedJSCallback(mContext, NULL, cb, argc, argv);
+    return ProtectedJSCallback(mContext->mContext, NULL, cb, argc, argv);
 }
 
 v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& cb) {
-    return ProtectedJSCallback(mContext, NULL, cb);
+    return ProtectedJSCallback(mContext->mContext, NULL, cb);
 }
 
 //checks to see if the associated space object reference exists in the script.
@@ -456,17 +460,17 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 
         //jswrap the object
         //should be in context from createVisibleObject call
-        v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext);
+        v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext->mContext);
 
         v8::HandleScope handle_scope;
-        v8::Context::Scope context_scope(mContext);
+        v8::Context::Scope context_scope(mContext->mContext);
 
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { outOfRangeObject };
         //FIXME: Potential memory leak: when will removedProxObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
-        ProtectedJSCallback(mContext, NULL, iter->second->mOnProxRemovedEventHandler, argc, argv);
+        ProtectedJSCallback(mContext->mContext, NULL, iter->second->mOnProxRemovedEventHandler, argc, argv);
     }
 }
 
@@ -530,13 +534,13 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectRefer
 v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& proximateObj)
 {
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
+    v8::Context::Scope context_scope(mContext->mContext);
 
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj);
 
     if (jsvis != NULL)
     {
-        v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext);
+        v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext->mContext);
         return returnerPers;
     }
 
@@ -545,15 +549,22 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
     return v8::Undefined();
 }
 
+//debugging code to output the sporefs of all the presences that I have in mPresences
+void JSObjectScript::printMPresences()
+{
+    std::cout<<"\n\n";
+    std::cout<<"Printing mPresences with size: "<< mPresences.size()<<"\n";
+    for (PresenceMapIter iter = mPresences.begin(); iter != mPresences.end(); ++iter)
+        std::cout<<"pres: "<<iter->first<<"\n";
 
-
+    std::cout<<"\n\n";
+}
 
 
 //Gets called by notifier when PINTO states that proximateObject originally
 //satisfies the solid angle query registered by querier
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
-
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, true);
 
@@ -565,21 +576,21 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         return;
     }
 
-
+    
     //check callbacks
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
-        v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(jsvis, mContext);
+        v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(jsvis, mContext->mContext);
 
         v8::HandleScope handle_scope;
-        v8::Context::Scope context_scope(mContext);
+        v8::Context::Scope context_scope(mContext->mContext);
 
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { newVisibleObj };
         //FIXME: Potential memory leak: when will newAddrObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object.");
-        ProtectedJSCallback(mContext, NULL, iter->second->mOnProxAddedEventHandler, argc, argv);
+        ProtectedJSCallback(mContext->mContext, NULL, iter->second->mOnProxAddedEventHandler, argc, argv);
     }
 }
 
@@ -594,8 +605,9 @@ JSInvokableObject::JSInvokableObjectInt* JSObjectScript::runSimulation(const Spa
 
 
 
-void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int token)
+void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
+    
     //register for scripting messages from user
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
@@ -615,18 +627,13 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     //check for callbacks associated with presence connection
 
     //means that this is the first presence that has been added to the space
+
     if (token == HostedObject::DEFAULT_PRESENCE_TOKEN)
     {
         // Add to system.presences array
-        v8::Handle<v8::Object> new_pres = addConnectedPresence(name,token);
-
-        // Invoke user callback
-        if ( !mOnPresenceConnectedHandler.IsEmpty() && !mOnPresenceConnectedHandler->IsUndefined() && !mOnPresenceConnectedHandler->IsNull() )
-        {
-            int argc = 1;
-            v8::Handle<v8::Value> argv[1] = { new_pres };
-            ProtectedJSCallback(mContext, NULL, mOnPresenceConnectedHandler, argc, argv);
-        }
+        JSPresenceStruct* jspres = NULL;
+        v8::Handle<v8::Object> new_pres = addConnectedPresence(name,token,jspres);
+        mContext->checkContextConnectCallback(jspres);
     }
     else
     {
@@ -637,7 +644,7 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
 }
 
 
-void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, int token)
+void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
 
     for (PresenceVec::iterator iter = mUnconnectedPresences.begin(); iter != mUnconnectedPresences.end(); ++iter)
@@ -659,18 +666,10 @@ void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, int t
 
 void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
+    JSPresenceStruct* jspres = findPresence(name);
 
-
-    // Remove from system.presences array
-    removePresence(name);
-
-    //FIXME: need to have separate disconnection handlers for each presence.
-
-    // FIXME this should get the presence but its already been deleted
-    if ( !mOnPresenceDisconnectedHandler.IsEmpty() && !mOnPresenceDisconnectedHandler->IsUndefined() && !mOnPresenceDisconnectedHandler->IsNull() )
-        ProtectedJSCallback(mContext, NULL, mOnPresenceDisconnectedHandler);
+    if (jspres != NULL)
+        jspres->disconnect();
 }
 
 
@@ -697,20 +696,20 @@ void JSObjectScript::reboot()
 {
   // Need to delete the existing context? v8 garbage collects?
 
-  v8::HandleScope handle_scope;
-  mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
-  Local<Object> global_obj = mContext->Global();
-  Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
-  global_proto->SetInternalField(0, External::New(this));
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
+  // v8::HandleScope handle_scope;
+  // mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
+  // Local<Object> global_obj = mContext->Global();
+  // Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
+  // global_proto->SetInternalField(0, External::New(this));
+  // Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
 
-  populateSystemObject(system_obj);
+  // populateSystemObject(system_obj);
 
-  //delete all handlers
-  for (int s=0; s < (int) mEventHandlers.size(); ++s)
-      delete mEventHandlers[s];
+  // //delete all handlers
+  // for (int s=0; s < (int) mEventHandlers.size(); ++s)
+  //     delete mEventHandlers[s];
 
-  mEventHandlers.clear();
+  // mEventHandlers.clear();
 
 }
 
@@ -727,7 +726,8 @@ JSObjectScript::~JSObjectScript()
 
     mEventHandlers.clear();
 
-    mContext.Dispose();
+    //lkjs;
+    //mContext.Dispose();
 }
 
 
@@ -886,7 +886,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 {
     ScopedEvalContext sec(this, new_ctx);
     if (ctxEvalIn == NULL)
-        return internalEval(mContext, em_script_str, em_script_name, true);
+        return internalEval(mContext->mContext, em_script_str, em_script_name, true);
 
     return internalEval(*ctxEvalIn, em_script_str, em_script_name, true);
 }
@@ -1084,10 +1084,23 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
 {
     if (jscontext == NULL)
-        return ProtectedJSCallback(mContext, &target, cb);
+        return ProtectedJSCallback(mContext->mContext, &target, cb);
 
 
     return ProtectedJSCallback(jscontext->mContext, &target, cb);
+}
+
+
+//calls funcToCall in jscont, binding jspres bound as first arg.
+//mostly used for contexts and presences to execute their callbacks on
+//connection and disconnection events
+void JSObjectScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres)
+{
+    v8::HandleScope handle_scope;
+    jscont->mContext->Enter();
+    v8::Handle<v8::Value> js_pres =wrapPresence(jspres,&(jscont->mContext));
+    executeInContext(jscont->mContext,funcToCall,1,&js_pres);
+    jscont->mContext->Exit();
 }
 
 
@@ -1097,7 +1110,7 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object
 v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext)
 {
     if (jscontext == NULL)
-        return ProtectedJSCallback(mContext, NULL,cb);
+        return ProtectedJSCallback(mContext->mContext, NULL,cb);
 
     return ProtectedJSCallback(*jscontext,NULL, cb);
 }
@@ -1122,7 +1135,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, v8::Persist
 {
     v8::HandleScope handle_scope;
     if (contextCtx == NULL)
-        mContext->Enter();
+        mContext->mContext->Enter();
     else
         (*contextCtx)->Enter();
 
@@ -1192,8 +1205,8 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, v8::Persist
     v8::Handle<v8::Value> returner;
     if (contextCtx == NULL)
     {
-        returner = protectedEval(contents, &origin, new_ctx,&mContext);
-        mContext->Exit();
+        returner = protectedEval(contents, &origin, new_ctx,&(mContext->mContext));
+        mContext->mContext->Exit();
     }
     else
     {
@@ -1250,7 +1263,7 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     SpaceObjectReference to  (dst.space(), dst.object());
 
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,false);
-    v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext);
+    v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
 
     return returner;
 }
@@ -1259,7 +1272,7 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
 void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
+    v8::Context::Scope context_scope(mContext->mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
 
 
@@ -1300,7 +1313,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
             int argc = 2;
 
             Handle<Value> argv[2] = { obj, msgSender };
-            ProtectedJSCallback(mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
+            ProtectedJSCallback(mContext->mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;
         }
@@ -1394,11 +1407,11 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
 {
     if (jscs == NULL)
-        mContext->Enter();
+        mContext->mContext->Enter();
     else
         jscs->mContext->Enter();
     
-    v8::Context::Scope context_scope(mContext);
+    v8::Context::Scope context_scope(mContext->mContext);
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mHandlerTemplate->NewInstance();
@@ -1409,7 +1422,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
 
 
     if (jscs == NULL)
-        mContext->Exit();
+        mContext->mContext->Exit();
     else
         jscs->mContext->Exit();
     
@@ -1422,14 +1435,14 @@ Handle<Object> JSObjectScript::getGlobalObject()
 {
   // we really don't need a persistent handle
   //Local handles should work
-  return mContext->Global();
+  return mContext->mContext->Global();
 }
 
 
 Handle<Object> JSObjectScript::getSystemObject()
 {
   HandleScope handle_scope;
-  Local<Object> global_obj = mContext->Global();
+  Local<Object> global_obj = mContext->mContext->Global();
   // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
   // The template actually generates the root objects prototype, not the root
   // itself.
@@ -1445,19 +1458,9 @@ Handle<Object> JSObjectScript::getSystemObject()
 
 
 
-//called to build the presences array as well as to build the presence keyword
-void JSObjectScript::initializePresences(Handle<Object>& system_obj)
+v8::Handle<v8::Object> JSObjectScript::addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token,JSPresenceStruct*& presToAdd)
 {
-    v8::Context::Scope context_scope(mContext);
-    // Create the space for the presences, they get filled in by
-    // onConnected/onDisconnected calls
-    v8::Local<v8::Array> arrayObj = v8::Array::New();
-    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
-}
-
-v8::Handle<v8::Object> JSObjectScript::addConnectedPresence(const SpaceObjectReference& sporef,int token)
-{
-    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef,token);
+    presToAdd = new JSPresenceStruct(this, sporef,mContext,token);
     // Add to our internal map
     mPresences[sporef] = presToAdd;
     return addPresence(presToAdd);
@@ -1466,7 +1469,7 @@ v8::Handle<v8::Object> JSObjectScript::addConnectedPresence(const SpaceObjectRef
 v8::Local<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
 {
     //HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
+    v8::Context::Scope context_scope(mContext->mContext);
 
     // Get the presences array
     v8::Local<v8::Array> presences_array =
@@ -1475,7 +1478,7 @@ v8::Local<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
 
     // Create the object for the new presence
 
-    Local<Object> js_pres =wrapPresence(presToAdd,&mContext);
+    Local<Object> js_pres =wrapPresence(presToAdd,&(mContext->mContext));
 
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
@@ -1488,7 +1491,7 @@ v8::Local<v8::Object> JSObjectScript::addPresence(JSPresenceStruct* presToAdd)
 v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
 {
     if (ctxToWrapIn == NULL)
-        mContext->Enter();
+        mContext->mContext->Enter();
     else
         (*ctxToWrapIn)->Enter();
     
@@ -1498,7 +1501,7 @@ v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap,
 
 
     if (ctxToWrapIn == NULL)
-        mContext->Exit();
+        mContext->mContext->Exit();
     else
         (*ctxToWrapIn)->Exit();
     
@@ -1557,53 +1560,22 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     return returner;
 }
 
-
-
-void JSObjectScript::removePresence(const SpaceObjectReference& sporef)
+//looks through all previously connected presneces (located in mPresences).
+//returns the corresponding jspresencestruct that has a spaceobjectreference
+//that matches sporef.
+JSPresenceStruct* JSObjectScript::findPresence(const SpaceObjectReference& sporef)
 {
-    // Find and remove from internal storage
     PresenceMap::iterator internal_it = mPresences.find(sporef);
-    if (internal_it == mPresences.end()) {
-        JSLOG(error, "Got removePresence call for Presence that wasn't being tracked.");
-        return;
+    if (internal_it == mPresences.end())
+    {
+        JSLOG(error, "Got findPresence call for Presence that wasn't being tracked.");
+        return NULL;
     }
-    JSPresenceStruct* presence = internal_it->second;
-    delete presence;
-    mPresences.erase(internal_it);
 
-    // Get presences array, find and remove from that array.
-    HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-    v8::Local<v8::Array> presences_array
-        = v8::Local<v8::Array>::Cast(getSystemObject()->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
-    // FIXME this is really annoying and completely unsafe. system.presences
-    // shouldn't really be an array
-    int32 remove_idx = -1;
-    for(uint32 i = 0; i < presences_array->Length(); i++) {
-        v8::Local<v8::Object> pres_i =
-            v8::Local<v8::Object>::Cast(presences_array->Get(i));
-        v8::Local<v8::External> pres_handle =
-            v8::Local<v8::External>::Cast(pres_i->GetInternalField(PRESENCE_FIELD_PRESENCE));
-        if (((JSPresenceStruct*)pres_handle->Value()) == presence) {
-            remove_idx = i;
-            break;
-        }
-    }
-    if (remove_idx == -1) {
-        JSLOG(error, "Couldn't find presence in system.presences array.");
-        return;
-    }
-    for(uint32 i = remove_idx; i < presences_array->Length()-1; i++)
-        presences_array->Set(i, presences_array->Get(i+1));
-    presences_array->Delete(presences_array->Length()-1);
+    return internal_it->second;
 }
 
-//this function can be called to re-initialize the system object's state
-void JSObjectScript::populateSystemObject(Handle<Object>& system_obj)
-{
-    //lkjs;
-    DEPRECATED(js);
-}
+
 
 
 v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_str)
@@ -1620,7 +1592,7 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
   counter++;
 
   v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
-  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext, new_code, &origin, false));
+  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, new_code, &origin, false));
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
   return pf;
@@ -1629,12 +1601,12 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.
-v8::Local<v8::Object> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, v8::Persistent<v8::Context>* ctxIn )
+v8::Local<v8::Object> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx)
 {
-    if (ctxIn == NULL)
-        mContext->Enter();
+    if (jsctx == NULL)
+        mContext->mContext->Enter();
     else
-        (*ctxIn)->Enter();
+        jsctx->mContext->Enter();
     
 
     //presuming that we are connecting to the same space;
@@ -1646,24 +1618,41 @@ v8::Local<v8::Object> JSObjectScript::create_presence(const String& newMesh, v8:
     //Arbitrarily saying that we're just going to use a simple bounding sphere.
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
 
-
-    int presToke = presenceToken;
-    ++presenceToken;
+    HostedObject::PresenceToken presToke = incrementPresenceToken();
     mParent->connect(space,startingLoc,bs, newMesh,UUID::null(),NULL,presToke);
 
 
     //create a presence object associated with this presence and return it;
 
-    JSPresenceStruct* presToAdd = new JSPresenceStruct(this, callback,presToke);
+    JSPresenceStruct* presToAdd;
+    if (jsctx == NULL)
+        presToAdd = new JSPresenceStruct(this,callback,mContext,presToke);
+    else
+        presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);
+
+    
     v8::Local<v8::Object> js_pres = addPresence(presToAdd);
     mUnconnectedPresences.push_back(presToAdd);
 
-    if (ctxIn == NULL)
-        mContext->Exit();
+    if (jsctx == NULL)
+        mContext->mContext->Exit();
     else
-        (*ctxIn)->Exit();
+        jsctx->mContext->Exit();
     
     return js_pres;
+}
+
+//This function returns to you the current value of present token and incrmenets
+//presenceToken so that get a unique one each time.  If presenceToken is equal
+//to default_presence_token, increments one beyond it so that don't start inadvertently
+//returning the DEFAULT_PRESENCE_TOKEN;
+HostedObject::PresenceToken JSObjectScript::incrementPresenceToken()
+{
+    HostedObject::PresenceToken returner = presenceToken++;
+    if (returner == HostedObject::DEFAULT_PRESENCE_TOKEN)
+        return incrementPresenceToken();
+
+    return returner;
 }
 
 
@@ -1702,7 +1691,7 @@ void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef,
 v8::Handle<v8::Value> JSObjectScript::getVisualScaleFunction(const SpaceObjectReference* sporef)
 {
     float curscale = mParent->requestCurrentBounds(sporef->space(),sporef->object()).radius();
-    return CreateJSResult(mContext, curscale);
+    return CreateJSResult(mContext->mContext, curscale);
 }
 
 void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, float newscale)
