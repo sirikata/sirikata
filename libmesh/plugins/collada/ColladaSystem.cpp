@@ -49,7 +49,7 @@
 #include <iostream>
 #include <fstream>
 
-#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, msg);
 
 using namespace std;
 using namespace Sirikata;

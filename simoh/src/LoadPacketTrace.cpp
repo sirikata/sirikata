@@ -203,7 +203,7 @@ void LoadPacketTrace::stop() {
     mPingPoller->stop();
     mGeneratePingPoller->stop();
 }
-#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+#define OH_LOG(level,msg) SILOG(oh,level,msg)
 void LoadPacketTrace::generatePairs() {
 
     if (mPacketTrace.empty()) {

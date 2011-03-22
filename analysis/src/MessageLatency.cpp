@@ -34,8 +34,8 @@
 #include "MessageLatency.hpp"
 #include <sirikata/core/options/CommonOptions.hpp>
 
-#define INFO_LOG(msg) SILOG(message_latency_analysis,insane,"[MSG_LAT_ANLS] " << msg)
-#define ERROR_LOG(msg) SILOG(message_latency_analysis,error,"[MSG_LAT_ANLS] " << msg)
+#define INFO_LOG(msg) SILOG(msg_lat_anls,insane,msg)
+#define ERROR_LOG(msg) SILOG(msg_lat_anls,error,msg)
 
 namespace Sirikata {
 

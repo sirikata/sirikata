@@ -41,7 +41,7 @@
 
 using namespace Sirikata::Network;
 
-#define MP_LOG(lvl,msg) SILOG(masterpinto,lvl,"[MASTERPINTO] " << msg);
+#define MP_LOG(lvl,msg) SILOG(masterpinto,lvl, msg);
 
 namespace Sirikata {
 

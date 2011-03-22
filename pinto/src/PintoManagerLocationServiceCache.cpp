@@ -32,7 +32,7 @@
 
 #include "PintoManagerLocationServiceCache.hpp"
 
-#define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,"[PINTO] " << msg)
+#define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,msg)
 
 namespace Sirikata {
 
