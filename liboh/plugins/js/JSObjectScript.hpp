@@ -121,8 +121,13 @@ public:
     v8::Handle<v8::Value> createWhenWatchedItem(JSWhenWatchedItemStruct* wwis);
     v8::Handle<v8::Value> createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec);
 
+    //takes the c++ object jspres, creates a new visible object out of it, if we
+    //don't already have a c++ visible object associated with it (if we do, use
+    //that one), wraps that c++ object in v8, and returns it as a v8 object to
+    //user
+    v8::Persistent<v8::Object> presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont);
 
-
+    
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb, JSContextStruct* jscont);
 

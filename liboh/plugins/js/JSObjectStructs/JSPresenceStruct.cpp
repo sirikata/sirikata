@@ -33,7 +33,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
    mPresenceToken(presenceToken),
    mContext(ctx)
 {
-    JSPositionListener::setListenTo(&_sporef,&_sporef);
+    JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosListener();
 }
 
@@ -170,6 +170,11 @@ v8::Handle<v8::Value>JSPresenceStruct::getVisualFunction()
     return jsObjScript->getVisualFunction(sporefToListenTo);
 }
 
+//returns this presence as a visible object.
+v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
+{
+    return jsObjScript->presToVis(this,mContext);
+}
 
 
 /*

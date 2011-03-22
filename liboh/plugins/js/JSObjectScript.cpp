@@ -868,6 +868,17 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
     return internalEval(jscs->mContext, em_script_str, em_script_name, true);
 }
 
+//takes the c++ object jspres, creates a new visible object out of it, if we
+//don't already have a c++ visible object associated with it (if we do, use
+//that one), wraps that c++ object in v8, and returns it as a v8 object to
+//user
+v8::Persistent<v8::Object> JSObjectScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
+{
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),true);
+    return createVisiblePersistent(jsvis, jscont->mContext);
+}
+
+
 
 
 

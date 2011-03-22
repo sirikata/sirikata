@@ -47,6 +47,22 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 }
 
 
+//this function allows the presence to return a visible object version of
+//itself.  Requires no args
+v8::Handle<v8::Value> toVisible(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: calling presence's toVisible function should not take any args.")) );
+
+    String errorMessage = "Error in toVisible while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    return jspres->toVisible();
+}
+
 
 
 //changine this function to actually do something

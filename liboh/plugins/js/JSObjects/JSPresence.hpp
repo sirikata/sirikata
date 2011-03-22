@@ -16,46 +16,50 @@ namespace JS
 namespace JSPresence
 {
 
-    bool isPresence(v8::Handle<v8::Value> v8Val);
+bool isPresence(v8::Handle<v8::Value> v8Val);
 
-    v8::Handle<v8::Value>  setMesh(const v8::Arguments& args);
-    v8::Handle<v8::Value>  getMesh(const v8::Arguments& args);
+v8::Handle<v8::Value>  setMesh(const v8::Arguments& args);
+v8::Handle<v8::Value>  getMesh(const v8::Arguments& args);
 
-    v8::Handle<v8::Value>  setPosition(const v8::Arguments& args);
-    v8::Handle<v8::Value>  getPosition(const v8::Arguments& args);
-
-
-    v8::Handle<v8::Value>  getVelocity(const v8::Arguments& args);
-    v8::Handle<v8::Value>  setVelocity(const v8::Arguments& args);
+v8::Handle<v8::Value>  setPosition(const v8::Arguments& args);
+v8::Handle<v8::Value>  getPosition(const v8::Arguments& args);
 
 
-    v8::Handle<v8::Value>  getOrientation(const v8::Arguments& args);
-    v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args);
+v8::Handle<v8::Value>  getVelocity(const v8::Arguments& args);
+v8::Handle<v8::Value>  setVelocity(const v8::Arguments& args);
 
-    v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args);
-    v8::Handle<v8::Value>  getOrientationVel(const v8::Arguments& args);
 
-    v8::Handle<v8::Value>  setScale(const v8::Arguments& args);
-    v8::Handle<v8::Value>  getScale(const v8::Arguments& args);
+v8::Handle<v8::Value>  getOrientation(const v8::Arguments& args);
+v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args);
 
-    v8::Handle<v8::Value>  setQueryAngle(const v8::Arguments& args);
+v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args);
+v8::Handle<v8::Value>  getOrientationVel(const v8::Arguments& args);
 
-    v8::Handle<v8::Value> toString(const v8::Arguments& args);
-    v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);
-    void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
+v8::Handle<v8::Value>  setScale(const v8::Arguments& args);
+v8::Handle<v8::Value>  getScale(const v8::Arguments& args);
 
-    v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args);
-    v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args);
+v8::Handle<v8::Value>  setQueryAngle(const v8::Arguments& args);
 
-    bool getURI(const v8::Arguments& args,std::string& returner);
-    v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);
+v8::Handle<v8::Value> toString(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);
+void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 
-    v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info);
-    void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSetTo,const AccessorInfo& info);
+v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args);
 
-    v8::Handle<v8::Value>distance(const v8::Arguments& args);
+bool getURI(const v8::Arguments& args,std::string& returner);
+v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);
 
-    
+v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info);
+void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSetTo,const AccessorInfo& info);
+
+
+v8::Handle<v8::Value>distance(const v8::Arguments& args);
+
+v8::Handle<v8::Value> toVisible(const v8::Arguments& args);
+
+
+
 } //end namespace JSPresence
 } //end namespace JS
 } //end namespace Sirikata

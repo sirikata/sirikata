@@ -59,6 +59,9 @@ struct JSPresenceStruct : public JSPositionListener
 
     v8::Handle<v8::Value>  getVisualFunction();
 
+    //returns this presence as a visible object.
+    v8::Persistent<v8::Object>  toVisible();
+
 
     v8::Handle<v8::Value>  runSimulation(String simname);
 

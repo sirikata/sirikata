@@ -230,7 +230,6 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSSystem::root_canProx));
     mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
     
-//    mSystemTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSSystem::root_toString));
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
@@ -242,6 +241,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
     mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
+    
 
     mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
     mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
@@ -387,7 +387,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
-
+  //convert this presence object into a visible object
+  proto_t->Set(v8::String::New("toVisible"),v8::FunctionTemplate::New(JSPresence::toVisible));
+  
   
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();

@@ -28,11 +28,16 @@ public:
     //new one.
     //If there is no associated local presence that his monitoring the presence,
     //then toWhom should be SpaceObjectReference::null();
+    //note: when creating a visible struct that is associated with a presence,
+    //you should provide the same sporef for both whatsVisible and toWhom.
     JSVisibleStruct* createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently);
 
     
     //Returns null if do not have a visible struct that has sporefVisible and
-    //sporefVisibleFrom associated with them.  Otherwise, returns the visiblestruct
+    //sporefVisibleFrom associated with them.  Otherwise, returns the
+    //visiblestruct.  Note, when looking for a visible struct associated with a 
+    //presence, you should provide the presence's sporef for both sporefVisible
+    //and sporefVisibleFrom
     JSVisibleStruct* checkVisStructExists(const SpaceObjectReference& sporefVisible, const SpaceObjectReference& sporefVisibleFrom);
 
     JSVisibleStruct* checkVisStructExists(const SpaceObjectReference& sporefVisible);
