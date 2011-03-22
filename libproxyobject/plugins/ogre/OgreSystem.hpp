@@ -306,6 +306,8 @@ public:
     boost::any createWindowFile(std::vector<boost::any>& params);
     // Create a window using HTML
     boost::any createWindowHTML(std::vector<boost::any>& params);
+    // Dynamically load a javscript UI module
+    boost::any addModuleToUI(std::vector<boost::any>& params);
 
     // Set an input handler function which will be invoked for input
     // events, e.g. mouse and keyboard

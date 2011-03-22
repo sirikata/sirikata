@@ -99,6 +99,12 @@ function() {
             return new ns.GUI(this._simulator.invoke("createWindowFile", name, url));
     };
 
+    /** Request that the given URL be added as a module in the UI. */
+    ns.Graphics.prototype.addGUIModule = function(name, url) {
+    	system.print("adding GUI module");
+    	return new ns.GUI(this._simulator.invoke("addModuleToUI", name, url));
+    };
+    
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createBrowser = function(name, url) {
         return new ns.GUI(this._simulator.invoke("createWindow", name, url));

@@ -558,13 +558,13 @@ EventResponse OgreSystemMouseHandler::deviceListener(EventPtr evbase) {
 }
 
 OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
- : mParent(parent),
+ : mUIWidgetView(NULL),
+   mParent(parent),
    mDelegate(NULL),
    mWhichRayObject(0),
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
    mLastRenderStatsTime(Task::LocalTime::now()),
-   mUIWidgetView(NULL),
    mNewQueryAngle(0.f)
 {
     mLastHitCount=0;
@@ -850,11 +850,9 @@ void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& arg
     }
 }
 
-void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
-    fpsUpdateTick(t);
-    renderStatsUpdateTick(t);
-
+void OgreSystemMouseHandler::ensureUI() {
     if(!mUIWidgetView) {
+        printf("Creating UI Widget\n");
         mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget","ui_widget",
             mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
             OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));
@@ -862,6 +860,13 @@ void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
         mUIWidgetView->loadFile("chrome/ui.html");
         mUIWidgetView->setTransparent(true);
     }
+}
+
+void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
+    fpsUpdateTick(t);
+    renderStatsUpdateTick(t);
+
+    ensureUI();
 }
 
 }

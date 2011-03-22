@@ -46,6 +46,18 @@ function alert_permanent(title, text) {
 	});
 }
 
+function alert_message(title, text) {
+	console.log("WHAT THE FUCK");
+	var $dialog = $('<div></div>')
+	.html(text)
+	.dialog({
+		closeOnEscape: true,
+		draggable: true,
+		resizable: true,
+		title: title
+	});
+}
+
 $(document).ready(function() {
 	
 	var options = {copyClassAttr: true, minWidth: 120, arrowSrc: 'arrow_right.gif', onClick: function(e, menuItem){

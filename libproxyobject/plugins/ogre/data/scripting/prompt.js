@@ -15,7 +15,7 @@ Editor = function(objid) {
     var tabname = 'tab-' + objid;
     var tabeditor = 'tab-' + objid + '-editor';
     var tabresults = 'tab-' + objid + '-results';
-    $('#edittabs').append('<div id="' + tabname + '">' +
+    $('#edittabs').append('<div class="editorthumb" id="' + tabname + '">' +
                           '<div class="editborder"><div id="' + tabresults + '" class="codeedit"></div></div>' +
                           '<div class="editborder"><div id="' + tabeditor + '" class="codeedit"></div></div>' +
                           '</div>');
@@ -27,6 +27,7 @@ Editor = function(objid) {
     updateCurEditor();
 
     this.object = objid;
+    this.tabname = tabname;
 
     var theme = "ace/theme/dawn";
     var JavaScriptMode = require("ace/mode/javascript").Mode;
@@ -141,23 +142,19 @@ Editor.prototype.editHistoryForward = function() {
     this.updateEditorHistory();
 };
 
-Editor.prototype.closePrompt = function() {
-    var arg_map = [
-        'Close',
-        this.object
-    ];
-    chrome.send("event", arg_map);
-};
-
-editor_inited = false;
-
 function addObject(objid) {
-    if (!editor_inited) {
-        $('#edittabs').tabs({ select: function(event, ui) { updateCurEditor(ui.index); } });
-        editor_inited = true;
-    }
-
-    curEditor = new Editor(objid);
+	var gotIt = false;
+	for (var i=0; i<editors.length; i++) {
+		if (editors[i].object == objid) {
+			gotIt = true;
+			$('#edittabs').tabs('select', i);
+			break;
+		}
+	}
+	if (gotIt == false) {
+		curEditor = new Editor(objid);
+	}
+	$( "#emerson-prompt-dialog" ).dialog( "open" );
 }
 
 function addMessage(objid, msg) {
@@ -165,9 +162,25 @@ function addMessage(objid, msg) {
         curEditor.addMessage(msg);
 }
 
+function dialogClosed() {
+	while (editors.length > 0) {
+		closePrompt();
+	}
+}
+
 function closePrompt() {
-    if (curEditor)
-        curEditor.closePrompt(msg);
+	var selectedIndex = $('#edittabs').tabs('option', 'selected');
+	console.log("selected index = " + selectedIndex);
+	delete editors[selectedIndex].results;
+	delete editors[selectedIndex].editor;
+	$("#" + editors[selectedIndex].tabname).remove();
+	$('#edittabs').tabs('remove', selectedIndex);
+	editors.splice(selectedIndex, 1);
+	if (editors.length == 0) {
+		$( "#emerson-prompt-dialog" ).dialog( "close" );
+	} else {
+		updateCurEditor();
+	}
 }
 
 function runCommand() {
@@ -184,3 +197,42 @@ function editHistoryForward() {
     if (curEditor)
         curEditor.editorHistoryForward();
 };
+
+$(document).ready(function() {
+	$LAB
+    .script("../ace/build/src/ace-uncompressed.js")
+    .script("../ace/build/src/theme-dawn.js")
+    .script("../ace/build/src/mode-javascript.js").wait();
+	
+	$('<div />').attr({id:'emerson-prompt-dialog', title:'Emerson Scripting'})
+		.append($("<div />").attr({id:'edittabs'})
+				.append($("<ul />").attr({id:'edittab_titles'}).append(''))
+		)
+	.appendTo('body');
+	
+	/*<div id="edittabs">
+		<ul id="edittab_titles"></ul>
+	</div>*/
+
+	$('#edittabs').tabs({ select: function(event, ui) { updateCurEditor(ui.index); } });
+	
+	$( "#emerson-prompt-dialog" ).dialog({
+		autoOpen: false,
+		height: 'auto',
+		width: 450,
+		modal: false,
+		buttons: {
+			Run: runCommand,
+			"Close Tab": closePrompt
+		},
+		close: dialogClosed
+	});
+	
+	/*<button type="button" onclick="runCommand()">Run</button>
+	<button type="button" onclick="closePrompt()">Close</button>*/
+
+	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../jquery_themes/redmond/jquery-ui-1.8.6.custom.css'})
+	$("head").append(newcsslink);
+	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'})
+	$("head").append(newcsslink);
+});
