@@ -276,21 +276,21 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& c
 
 //checks to see if the associated space object reference exists in the script.
 //if it does, then make the position listener a subscriber to its pos updates.
-bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient)
+bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient)
 {
     ProxyObjectPtr p;
     bool succeeded = false;
-    if (sporef ==NULL)
+    if ((ownPres_toListenFrom ==NULL) || (*ownPres_toListenFrom == SpaceObjectReference::null()))
     {
         //trying to set to one of my own presence's postion listeners
-        JSLOG(insane,"attempting to register position listener for one of my own presences with sporef "<<*ownPres);
-        succeeded = mParent->getProxy(ownPres,p);
+        JSLOG(insane,"attempting to register position listener for one of my own presences with sporef "<<*ownPres_toListenFrom);
+        succeeded = mParent->getProxy(sporef_toListenTo,p);
     }
     else
     {
         //trying to get a non-local proxy object
-        JSLOG(insane,"attempting to register position listener for a visible object with sporef "<<*sporef);
-        succeeded = mParent->getProxyObjectFrom(ownPres,sporef,p);
+        JSLOG(insane,"attempting to register position listener for a visible object with sporef "<<*sporef_toListenTo);
+        succeeded = mParent->getProxyObjectFrom(ownPres_toListenFrom,sporef_toListenTo,p);
     }
 
     //if actually had associated proxy object, then update loc and orientation.
@@ -519,7 +519,6 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         return;
     }
 
-    
     //check callbacks
     if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
     {
@@ -565,7 +564,6 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     //check for callbacks associated with presence connection
 
     //means that this is the first presence that has been added to the space
-
     if (token == HostedObject::DEFAULT_PRESENCE_TOKEN)
     {
         JSPresenceStruct* jspres = addConnectedPresence(name,token);

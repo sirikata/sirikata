@@ -20,6 +20,8 @@ struct JSPositionListener : public PositionListener
     JSPositionListener(JSObjectScript* script);
     ~JSPositionListener();
 
+    //objToListenTo for presence objects contains the sporef following
+    //objToListenFrom for presence object contains null
     void setListenTo(const SpaceObjectReference* objToListenTo,const SpaceObjectReference* objToListenFrom);
 
     virtual Vector3f     getPosition();

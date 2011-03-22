@@ -73,8 +73,6 @@ bool JSPositionListener::registerAsPosListener()
     if (hasRegisteredListener)
         return true;
 
-
-
     //initializes mLocation and mOrientation to correct starting values.
     if (sporefToListenTo == NULL)
     {
@@ -82,15 +80,7 @@ bool JSPositionListener::registerAsPosListener()
         return false;
     }
 
-    if ((sporefToListenFrom == NULL) ||
-        (*sporefToListenFrom == SpaceObjectReference::null()))
-    {
-        JSLOG(insane,"This object has an invalid sporefToListenFrom.  Taking no action ");
-        return false;
-    }
-
     hasRegisteredListener = jsObjScript->registerPosListener(sporefToListenTo,sporefToListenFrom,this,&mLocation,&mOrientation);
-
 
     return hasRegisteredListener;
 }
