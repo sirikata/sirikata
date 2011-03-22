@@ -94,6 +94,13 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_eval(const String& native_content
     return associatedContext->struct_eval(native_contents,sOrigin);
 }
 
+//create a timer that will fire in dur seconds from now, that will bind the
+//this parameter to target and that will fire the callback cb.
+v8::Handle<v8::Value> JSFakerootStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+{
+    return associatedContext->struct_createTimeout(dur,target,cb);
+}
+
 
 
 //if have the capability to create presences, create a new presence with

@@ -69,10 +69,6 @@ class JSObjectScript : public ObjectScript,
 {
 
 public:
-
-    static JSObjectScript* decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage);
-
-
     JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
     virtual ~JSObjectScript();
 
@@ -275,9 +271,7 @@ private:
     //so that don't start inadvertently returning the DEFAULT_PRESENCE_TOKEN;
     HostedObject::PresenceToken incrementPresenceToken();
 
-    
-    Handle<Object> getSystemObject();
-    Handle<Object> getGlobalObject();
+
     void printAllHandlerLocations();
 
 

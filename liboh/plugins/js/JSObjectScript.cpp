@@ -226,12 +226,10 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     mEvalContextStack.push(EvalContext());
 
     v8::HandleScope handle_scope;
-    //mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
+
     SpaceObjectReference sporef = SpaceObjectReference::null();
-    //lkjs;
     mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate);
     
-
     mHandlingEvent = false;
 
 
@@ -371,40 +369,8 @@ v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(JSWhenWatchedItemStr
 }
 
 
-JSObjectScript* JSObjectScript::decodeSystemObject(v8::Handle<v8::Value> toDecode, String& errorMessage)
-{
-    v8::HandleScope handle_scope;  //for garbage collection.
 
-    if (! toDecode->IsObject())
-    {
-        errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Should have received an object to decode.";
-        return NULL;
-    }
-
-    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
-
-    //now check internal field count
-    if (toDecodeObject->InternalFieldCount() != SYSTEM_TEMPLATE_FIELD_COUNT)
-    {
-        errorMessage += "Error in decode of system object in JSObjectScript.  Object given does not have adequate number of internal fields for decode.";
-        return NULL;
-    }
-
-    //now actually try to decode each.
-    //decode the jsObjectScript field
-    v8::Local<v8::External> wrapJSObjScript;
-    wrapJSObjScript = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(SYSTEM_TEMPLATE_JSOBJSCRIPT_FIELD));
-    void* ptr = wrapJSObjScript->Value();
-
-    JSObjectScript* returner;
-    returner = static_cast<JSObjectScript*>(ptr);
-    if (returner == NULL)
-        errorMessage += "Error in decode of system object in JSObjectScript.cpp.  Internal field of object given cannot be casted to a JSObjectScript.";
-
-    return returner;
-}
-
-
+//lkjs;
 //this is the callback that fires when proximateObject no longer receives
 //updates from loc (ie the object in the world associated with proximate object
 //is outside of querier's standing query registered to pinto).
@@ -455,6 +421,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 //will enter and exit the context passed in to make the object before returning
 v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
 {
+    //lkjs;
     v8::HandleScope handle_scope;
     ctxToCreateIn->Enter();
 
@@ -536,7 +503,7 @@ void JSObjectScript::printMPresences()
     std::cout<<"\n\n";
 }
 
-
+//lkjs;
 //Gets called by notifier when PINTO states that proximateObject originally
 //satisfies the solid angle query registered by querier
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
@@ -580,18 +547,13 @@ JSInvokableObject::JSInvokableObjectInt* JSObjectScript::runSimulation(const Spa
 
 
 
-
 void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
-    
     //register for scripting messages from user
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
 
     v8::HandleScope handle_scope;
-
-
-    Handle<Object> system_obj = getSystemObject();
 
     //register port for messaging
     mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
@@ -1043,7 +1005,6 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
-
     return returner;
 }
 
@@ -1401,33 +1362,6 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
 
 
 
-Handle<Object> JSObjectScript::getGlobalObject()
-{
-  // we really don't need a persistent handle
-  //Local handles should work
-  return mContext->mContext->Global();
-}
-
-
-Handle<Object> JSObjectScript::getSystemObject()
-{
-  HandleScope handle_scope;
-  Local<Object> global_obj = mContext->mContext->Global();
-  // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
-  // The template actually generates the root objects prototype, not the root
-  // itself.
-  Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
-  // And we add an internal field to the system object as well to make it
-  // easier to find the pointer in different calls. Note that in this case we
-  // don't use the prototype -- non-global objects work as we would expect.
-  Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
-
-  Persistent<Object> ret_obj = Persistent<Object>::New(system_obj);
-  return ret_obj;
-}
-
-
-
 JSPresenceStruct*  JSObjectScript::addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token)
 {
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this, sporef,mContext,token);
@@ -1483,8 +1417,6 @@ void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
 
 
 
-//lkjs: will be deprecated when change system to fakeroot.
-
 //presAssociatedWith: who the messages that this context's fakeroot sends will
 //be from
 //canMessage: who you can always send messages to.
@@ -1522,7 +1454,6 @@ JSPresenceStruct* JSObjectScript::findPresence(const SpaceObjectReference& spore
         JSLOG(error, "Got findPresence call for Presence that wasn't being tracked.");
         return NULL;
     }
-
     return internal_it->second;
 }
 

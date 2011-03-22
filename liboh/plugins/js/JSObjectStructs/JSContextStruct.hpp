@@ -95,7 +95,10 @@ struct JSContextStruct : public JSSuspendable
     //creates a new context, and hangs the child into suspendables map.
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
     
-
+    //create a timer that will fire in dur seconds from now, that will bind the
+    //this parameter to target and that will fire the callback cb.
+    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+    
     //Tries to eval the emerson code in native_contents that came from origin
     //sOrigin inside of this context.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);

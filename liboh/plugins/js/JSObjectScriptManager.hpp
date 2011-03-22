@@ -57,7 +57,6 @@ public:
 
     v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
-    v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
 
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
@@ -79,7 +78,6 @@ private:
     void createWhenWatchedItemTemplate();
     void createWhenWatchedListTemplate();
     void createVisibleTemplate();
-    void createSystemTemplate();
     void createHandlerTemplate();
     void createPresenceTemplate();
     void createContextTemplate();

@@ -342,20 +342,42 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
 
 
-//presStruct: who the messages that this context's fakeroot sends will
-//be from
-//canMessage: who you can always send messages to.
-//sendEveryone creates fakeroot that can send messages to everyone besides just
-//who created you.
-//recvEveryone means that you can receive messages from everyone besides just
-//who created you.
-//proxQueries means that you can issue proximity queries yourself, and latch on
-//callbacks for them.
-//canImport means that you can import files/libraries into your code.
-//canCreatePres is whether have capability to create presences
-//canCreateEnt is whether have capability to create entities
-//if presStruct is null, just use the presence that is associated with this
-//context (which may be null as well).
+//create a timer that will fire in dur seconds from now, that will bind the
+//this parameter to target and that will fire the callback cb.
+v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+{
+    //the timer that's created automatically registers as a suspendable with
+    //this context.
+    return jsObjScript->create_timeout(dur, target,cb, this);
+}
+
+
+
+
+/**
+presStruct: who the messages that this context's fakeroot sends will
+be from
+
+canMessage: who you can always send messages to.
+
+sendEveryone creates fakeroot that can send messages to everyone besides just
+who created you.
+
+recvEveryone means that you can receive messages from everyone besides just
+who created you.
+
+proxQueries means that you can issue proximity queries yourself, and latch on
+callbacks for them.
+
+canImport means that you can import files/libraries into your code.
+
+canCreatePres is whether have capability to create presences
+
+canCreateEnt is whether have capability to create entities
+
+if presStruct is null, just use the presence that is associated with this
+context (which may be null as well).
+*/
 v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval,JSPresenceStruct* presStruct)
 {
     if (presStruct == NULL)

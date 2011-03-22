@@ -58,6 +58,11 @@ struct JSFakerootStruct
     //calls eval on the fakeroot's context associated with this fakeroot.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
+
+    //create a timer that will fire in dur seconds from now, that will bind the
+    //this parameter to target and that will fire the callback cb.
+    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+
     
     
 private:

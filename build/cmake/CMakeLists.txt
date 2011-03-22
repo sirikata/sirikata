@@ -1968,7 +1968,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSUtil.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVec3.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
+  #${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSUtilObj.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp

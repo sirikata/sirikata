@@ -1,3 +1,6 @@
+//If this script works correctly, after calling it, you should see
+//it print every 3 seconds the messages in fuccToReExec (with 5 as argAsString.
+
 
 system.import('test/testContexts/baseContextTest.em');
 
@@ -5,7 +8,6 @@ function testContext()
 {
     var x = new Object();
     x.x = 5;
-    newContext.execute(toExecute,x,system);
     newContext.execute(toExecute,x,system);
 }
 

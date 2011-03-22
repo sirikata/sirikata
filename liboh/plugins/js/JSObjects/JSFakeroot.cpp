@@ -9,7 +9,6 @@
 #include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSContextStruct.hpp"
 #include "JSFields.hpp"
-#include "JSSystem.hpp"
 #include "JSObjectsUtils.hpp"
 #include "../JSSystemNames.hpp"
 #include "../JSObjectStructs/JSFakerootStruct.hpp"
@@ -413,16 +412,50 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 {
+
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second is target val, and third argumnet is callback")) );
+
+    v8::Handle<v8::Value> dur         = args[0];
+    v8::Handle<v8::Value> target_val  = args[1];
+    v8::Handle<v8::Value> cb_val      = args[2];
+
+
     //just returns the ScriptTimeout function
     String errorMessage      =  "Error decoding fakeroot in root_timeout of JSFakeroot.cpp.  ";
     JSFakerootStruct* jsfake = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-    
-    return JSSystem::ScriptTimeoutContext(args, jsfake->getContext());
-}
 
+
+    // Duration
+    double native_dur = 0;
+    if (dur->IsNumber())
+        native_dur = dur->NumberValue();
+    else if (dur->IsInt32())
+        native_dur = dur->Int32Value();
+    else
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  First argument incorrect: duration cannot be cast to float.")) );
+
+    // Target
+    if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Second argument incorrect: target isn't null or valid object.")) );
+
+    v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
+    v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
+
+
+    // Function
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Third argument incorrect: callback isn't a function.")) );
+
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    return jsfake->struct_createTimeout(Duration::seconds(native_dur), target_persist, cb_persist);
+}
 
 
 /** Registers a handler to be invoked for events that match the
@@ -486,7 +519,7 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     // Sender
     if (! sender_val->IsNull())  //means that it's a valid sender
     {
-        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding sender.  ";
+        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSFakeroot.cpp.  Having trouble decoding sender.  ";
         JSPositionListener* jsposlist = decodeJSPosListener(sender_val,errorMessage);
         
         if (jsposlist == NULL)
@@ -506,15 +539,10 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    String errorMessage = "Error decoding JSObjectScript from system object in ScriptRegisterHandler of JSSystem.cpp.  ";
-    JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
-    if (target_script == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-
     
     //now decode fakeroot
     String errorMessageDecodeRoot = "Error decoding the fakeroot object from root_registerHandler.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageDecodeRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
