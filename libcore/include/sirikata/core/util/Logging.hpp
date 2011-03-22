@@ -49,6 +49,10 @@ enum LOGGING_LEVEL {
     detailed=8192,
     insane=32768
 };
+
+SIRIKATA_FUNCTION_EXPORT const String& LogModuleString(const char* base);
+SIRIKATA_FUNCTION_EXPORT const char* LogLevelString(LOGGING_LEVEL lvl, const char* lvl_as_string);
+
 } }
 #if 1
 # ifdef DEBUG_ALL
@@ -70,12 +74,14 @@ enum LOGGING_LEVEL {
             std::cerr << __log_stream.str();                            \
         }                                                               \
     } while (0)
-# define SILOG(module,lvl,value) SILOGNOCR(module,lvl,value << std::endl)
+# define SILOGBARE(module,lvl,value) SILOGNOCR(module,lvl,value << std::endl)
 #else
 # define SILOGP(module,lvl) false
 # define SILOGNOCR(module,lvl,value)
-# define SILOG(module,lvl,value)
+# define SILOGBARE(module,lvl,value)
 #endif
+
+#define SILOG(module,lvl,value) SILOGBARE(module,lvl, "[" << Sirikata::Logging::LogModuleString(#module) << "] " << Sirikata::Logging::LogLevelString(Sirikata::Logging::lvl, #lvl) << ": " << value)
 
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX
 // FIXME only works on GCC

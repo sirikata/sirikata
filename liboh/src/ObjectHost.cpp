@@ -48,7 +48,7 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include <sirikata/core/service/Context.hpp>
 
-#define OH_LOG(lvl,msg) SILOG(oh,lvl,"[OH] " << msg)
+#define OH_LOG(lvl,msg) SILOG(oh,lvl,msg)
 
 namespace Sirikata {
 

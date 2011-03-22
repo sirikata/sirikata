@@ -33,7 +33,7 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/service/TimeProfiler.hpp>
 
-#define PROFILER_LOG(level,msg) SILOG(profiler,level,"[PROFILER] " << msg)
+#define PROFILER_LOG(level,msg) SILOG(profiler,level,msg)
 
 namespace Sirikata {
 

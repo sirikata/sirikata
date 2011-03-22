@@ -5,23 +5,35 @@
     overflow-y: auto;
 }
 
-body {
-    overflow: hidden;
-}
-
 div.codeedit {
     min-width: 200px;
     min-height: 200px;
     position: relative;
+    margin: 0;
+    padding: 0;
 }
 
 div.editborder {
-    border-width: 2px;
-    border-color: black;
-    border-style: solid;
-    margin: 10px;
+    border: 2px solid #000;
+    margin: 3px;
+    padding: 3px;
 }
 
-.ui-widget {
-    font-size: 12px;
+div.editorthumb {
+	margin: 0; padding: 0;
 }
+
+div#edittabs {
+    margin: 0;
+    padding: 0;
+}
+
+div#emerson-prompt-dialog {
+    padding-left: 1px;
+    padding-right: 1px;
+    padding-top: 4px;
+    padding-bottom: 0px;
+    margin: 2px;
+}
+
+.ui-widget { font-size: 0.9em; }

@@ -660,6 +660,8 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     //finish instantiation here
     instantiateAllObjects(proxyManager);
 
+    mMouseHandler->ensureUI();
+
     return true;
 }
 namespace {
@@ -1133,6 +1135,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return createWindow(params);
     else if(name == "createWindowFile")
         return createWindowFile(params);
+    else if(name == "addModuleToUI")
+        return addModuleToUI(params);
     else if(name == "createWindowHTML")
         return createWindowHTML(params);
     else if(name == "setInputHandler")
@@ -1155,6 +1159,9 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return initScript(params);
     else if (name == "camera")
         return getCamera(params);
+    else {
+        SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
+    }
 
     return boost::any();
 }
@@ -1199,6 +1206,21 @@ boost::any OgreSystem::createWindowFile(vector<boost::any>& params) {
     uint32 height = (params.size() > 4 && Invokable::anyIsNumeric(params[4])) ? Invokable::anyAsNumeric(params[4]) : 300;
 
     return createWindow(window_name, false, true, html_url, width, height);
+}
+
+boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
+    if (params.size() != 3) return NULL;
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+
+    String window_name = anyAsString(params[1]);
+    String html_url = anyAsString(params[2]);
+
+    if (!mMouseHandler) return NULL;
+
+    //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url + "')");
+    Invokable* inn = mMouseHandler->mUIWidgetView;
+    boost::any result(inn);
+    return result;
 }
 
 boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {

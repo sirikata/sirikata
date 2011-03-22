@@ -39,7 +39,7 @@
 #include <sirikata/core/util/Random.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 
-#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+#define OH_LOG(level,msg) SILOG(oh,level,msg)
 
 using namespace Sirikata;
 using namespace Sirikata::Network;
@@ -117,7 +117,7 @@ void ObjectHost::connect(
     BoundingSphere3f init_bounds = obj->bounds();
 
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
-    
+
     mSessionManager.connect(
         sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, "",
         connect_cb, migrate_cb, stream_created_cb, disconnected_cb

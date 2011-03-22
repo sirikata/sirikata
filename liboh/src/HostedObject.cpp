@@ -64,7 +64,7 @@
 #include "Protocol_Prox.pbj.hpp"
 
 
-#define HO_LOG(lvl,msg) SILOG(ho,lvl,"[HO] " << msg);
+#define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
 

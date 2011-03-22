@@ -40,7 +40,7 @@
 #include "Protocol_Session.pbj.hpp"
 #include <sirikata/core/util/Platform.hpp>
 
-#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+#define OH_LOG(level,msg) SILOG(oh,level,msg)
 
 using namespace Sirikata::Network;
 
@@ -304,7 +304,7 @@ void SessionManager::connect(
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
 
-    
+
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
     mObjectConnections.add(
@@ -754,7 +754,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
     assert(!session_msg.has_connect());
     SpaceObjectReference sporef_obj(mSpace,ObjectReference(msg->dest_object()));
-    
+
     if (session_msg.has_connect_response()) {
         Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
 

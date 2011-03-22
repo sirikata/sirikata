@@ -44,7 +44,7 @@
 using namespace Sirikata::Network;
 using namespace Sirikata;
 
-#define TCPNET_LOG(level,msg) SILOG(tcpnetwork,level,"[TCPNET] " << msg)
+#define TCPNET_LOG(level,msg) SILOG(tcpnet,level,msg)
 
 namespace Sirikata {
 
