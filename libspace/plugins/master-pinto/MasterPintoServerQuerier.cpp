@@ -142,7 +142,7 @@ void MasterPintoServerQuerier::tryServerUpdate() {
     }
 
     if (mMaxRadiusDirty) {
-        mMaxRadius = false;
+        mMaxRadiusDirty = false;
         Sirikata::Protocol::MasterPinto::ILargestObjectUpdate update = msg.mutable_largest();
         update.set_radius(mMaxRadius);
     }
@@ -185,6 +185,10 @@ void MasterPintoServerQuerier::handleServerReceived(Chunk& data, const Network::
         for(int32 i = 0; i < update.change_size(); i++) {
             Sirikata::Protocol::MasterPinto::PintoResult result = update.change(i);
             MP_LOG(debug, "Event received from master pinto: " << result.server() << (result.addition() ? " added" : " removed"));
+            if (result.addition())
+                notify(&PintoServerQuerierListener::addRelevantServer, result.server());
+            else
+                notify(&PintoServerQuerierListener::removeRelevantServer, result.server());
         }
     }
 }
