@@ -14,14 +14,15 @@ namespace Sirikata{
 namespace JS{
 
 
-JSFakerootStruct::JSFakerootStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox,bool import, bool createPres, bool createEnt)
+JSFakerootStruct::JSFakerootStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox,bool import, bool createPres, bool createEnt, bool evalable)
  : associatedContext(jscont),
    canSend(send),
    canRecv(receive),
    canProx(prox),
    canImport(import),
    canCreatePres(createPres),
-   canCreateEnt(createEnt)
+   canCreateEnt(createEnt),
+   canEval(evalable)
 {
 }
 
@@ -60,7 +61,7 @@ JSContextStruct* JSFakerootStruct::getContext()
 //new context will have at most as many permissions as parent context.
 //note: if presStruct is null, just means use the one that is associated with
 //this fakeroot's context
-v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt,JSPresenceStruct* presStruct)
+v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct)
 {
     sendEveryone &= canSend;
     recvEveryone &= canRecv;
@@ -68,9 +69,9 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_createContext(SpaceObjectReferenc
     import       &= canImport;
     createPres   &= canCreatePres;
     createEnt    &= canCreateEnt;
-
+    evalable     &= canEval;
     
-    return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,import,createPres,createEnt,presStruct);
+    return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,import,createPres,createEnt,evalable,presStruct);
 }
 
 v8::Handle<v8::Value> JSFakerootStruct::struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist)
@@ -83,6 +84,15 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_registerOnPresenceDisconnectedHan
     return associatedContext->struct_registerOnPresenceDisconnectedHandler(cb_persist);
 }
 
+
+v8::Handle<v8::Value> JSFakerootStruct::struct_eval(const String& native_contents, ScriptOrigin* sOrigin)
+{
+    if (!canEval)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to call eval directly.")));
+
+    
+    return associatedContext->struct_eval(native_contents,sOrigin);
+}
 
 
 

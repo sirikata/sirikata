@@ -288,13 +288,14 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 //argument 5: true/false.  can I import
 //argument 6: true/false.  can I create presences.
 //argument 7: true/false.  can I create presences.
+//argument 8: true/false.  can I call eval directly through fakeroot object.
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 {
-    if (args.Length() != 8)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code?>, <bool, can I create presences?>,<bool, can I create entities?>")) );
+    if (args.Length() != 9)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code?>, <bool, can I create presences?>,<bool, can I create entities?>,<bool, can I call eval directly?>")) );
 
 
-    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt;
+    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval;
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
@@ -373,23 +374,41 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[7],canCreateEnt, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-    
 
+    //can eval
+    errorMessageWhichArg= " 9.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[8],canEval, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+ 
     
-    return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,jsPresStruct);
+    
+    return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,jsPresStruct);
 }
 
 
 
 v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 {
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Eval only takes one parameter: the program text to evaluate.")) );
+
+    v8::Handle<v8::Value> contents = args[0];
+
+    StringCheckAndExtract(native_contents, contents);
+
+    
     String errorMessage       = "Error calling eval in context.  ";
     JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct( args.This(), errorMessage);
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-    
-    return JSSystem::ScriptEvalContext(args, jsfake->getContext());
+
+    ScriptOrigin origin = args.Callee()->GetScriptOrigin();
+
+    return jsfake->struct_eval(native_contents,&origin);
 }
+
+
 
 
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
@@ -551,32 +570,6 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
 
     return jsfake->struct_registerOnPresenceDisconnectedHandler(cb_persist);
 }
-
-
-// v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args) {
-//     if (args.Length() != 1)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected.")) );
-
-//     v8::Handle<v8::Value> cb_val = args[0];
-//     if (!cb_val->IsFunction())
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onPresenceDisconnected().  Must contain callback function.")) );
-
-//     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-//     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
-
-
-//     String errorMessage = "Error decoding JSObjectScript from system object in ScriptOnPresenceDisconnected of JSSystem.cpp.  ";
-//     JSObjectScript* target_script = JSObjectScript::decodeSystemObject(args.This(), errorMessage);
-//     if (target_script == NULL)
-//         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-
-//     target_script->registerOnPresenceDisconnectedHandler(cb_persist);
-
-//     return v8::Undefined();
-// }
-
-
-
 
 
 

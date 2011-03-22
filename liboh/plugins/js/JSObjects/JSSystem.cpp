@@ -60,13 +60,14 @@ v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args)
 //argument 5: true/false.  can I import
 //argument 6: true/false.  can I create presences
 //argument 7: true/false.  can I create entities
+//argument 8: true/false.  can I call eval
 v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
 {
-    if (args.Length() !=8)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>,<bool, can I create presences?>,<bool, can I create entities?>")) );
+    if (args.Length() !=9)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code>,<bool, can I create presences?>,<bool, can I create entities?>, <bool, can I call eval>")) );
 
 
-    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt;
+    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval;
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
@@ -135,9 +136,15 @@ v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args)
     if (! decodeBool(args[7],canCreateEnt, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
     
+    //can eval
+    errorMessageWhichArg= " 9.  ";
+    errorMessage= errorMessageBase + errorMessageWhichArg;
+    if (! decodeBool(args[8],canEval, errorMessage))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())) );
     
     
-    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt);
+    
+    return jsPresStruct->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval);
 }
 
 

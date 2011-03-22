@@ -92,7 +92,7 @@ public:
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
     //this function returns a context with
-    v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,JSContextStruct*& internalContextField);
+    v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,bool canEval, JSContextStruct*& internalContextField);
     
     String tokenizeWhenPred(const String& whenPredAsString);
     void addWhen(JSWhenStruct* whenToAdd);
@@ -137,7 +137,7 @@ public:
      * scope. Pass in NULL to contextCtx to just execute in JSObjectScript's
      * mContext's root object's scope
      */
-    v8::Handle<v8::Value> import(const String& filename, v8::Persistent<v8::Context>* contextCtx);
+    v8::Handle<v8::Value> import(const String& filename, JSContextStruct* jscs);
 
     /** reboot the state of the script, basically reset the state */
     void reboot();
@@ -173,7 +173,7 @@ public:
     v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
     
     /** create a new presence of this entity */
-    v8::Local<v8::Object> create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx);
+    v8::Persistent<v8::Object> create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx);
     v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
     v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
@@ -248,7 +248,7 @@ private:
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
-    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, v8::Persistent<v8::Context>* ctxEvalIn);
+    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs);
 
 
 
@@ -285,9 +285,9 @@ private:
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
 
     // Adds/removes presences from the javascript's system.presences array.
-    //returns the jspresstruct associated with new object through via presToAdd
-    v8::Handle<v8::Object> addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token,JSPresenceStruct*& presToAdd);
-    v8::Local<v8::Object> addPresence(JSPresenceStruct* presToAdd);
+    //returns the jspresstruct associated with new object
+    JSPresenceStruct* addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token);
+
 
 
     //looks through all previously connected presneces (located in mPresences).

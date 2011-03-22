@@ -17,7 +17,7 @@ class JSPresenceStruct;
 
 struct JSFakerootStruct
 {
-    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity);
+    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity,bool eval);
     ~JSFakerootStruct();
 
     static JSFakerootStruct* decodeRootStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -35,11 +35,6 @@ struct JSFakerootStruct
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);
     v8::Handle<v8::Value> struct_import(const String& toImportFrom);
 
-    //returns the presence that is associated with the jscontext
-    // v8::Handle<v8::Value> struct_getPresence();
-    // JSPresenceStruct* struct_getPresenceCPP();
-
-
     
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
@@ -53,18 +48,22 @@ struct JSFakerootStruct
     
     v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
 
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, JSPresenceStruct* presStruct);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct);
     
     JSContextStruct* getContext();
 
     v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
+
+    //calls eval on the fakeroot's context associated with this fakeroot.
+    v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
+
     
     
 private:
     //associated data 
     JSContextStruct* associatedContext;
-    bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt;
+    bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt,canEval;
 };
 
 

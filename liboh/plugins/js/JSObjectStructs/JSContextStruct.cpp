@@ -16,17 +16,26 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,v8::Handle<v8::ObjectTemplate> contGlobTempl)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl)
  : JSSuspendable(),
    jsObjScript(parent),
+   mContext(v8::Context::New(NULL, contGlobTempl)),
+   hasOnConnectedCallback(false),
+   hasOnDisconnectedCallback(false),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
-   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt)),
-   mUtil(NULL),
-   mContext(v8::Context::New(NULL, contGlobTempl)),
-   isSuspended(false)
+   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
+   mUtil(NULL)
+{
+    createContextObjects();
+}
+
+//performs the initialization and population of util object, fakeroot object,
+//and fakeroot object's presences array.
+void JSContextStruct::createContextObjects()
 {
     v8::HandleScope handle_scope;
+    mContext->Enter();
     
     v8::Local<v8::Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
@@ -42,10 +51,20 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     fakeroot_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(FAKEROOT_TYPEID_STRING)));
 
 
+
+    
+    v8::Local<v8::Array> arrayObj = v8::Array::New();
+    fakeroot_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
+
+    //populates internal jscontextstruct field
+    fakerootObj = v8::Persistent<v8::Object>::New(fakeroot_obj);
+
     JSUtilStruct* mUtil = new JSUtilStruct(this,jsObjScript);
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
+
+    mContext->Exit();
 }
 
 
@@ -54,35 +73,17 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
 //contents of.
 v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom)
 {
-    return jsObjScript->import(toImportFrom,&mContext);
+    return jsObjScript->import(toImportFrom,this);
 }
 
 
+//Tries to eval the emerson code in native_contents that came from origin
+//sOrigin inside of this context.
+v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents, ScriptOrigin* sOrigin)
+{
+    return jsObjScript->eval(native_contents, sOrigin,this);
+}
 
-//looks in the current context for a fakeroot object.
-//tries to decode that fakeroot object as a cpp fakeroot.
-//if successful, returns the JSContextStruct associated with that fakeroot
-//object.
-//if unsuccessful, returns NULL.
-// JSContextStruct* JSContextStruct::getJSContextStruct()
-// {
-//     v8::HandleScope handle_scope;
-    
-//     v8::Handle<v8::Context> currContext = v8::Context::GetCurrent();
-//     if (currContext->Global()->Has(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)))
-//     {
-//         v8::Handle<v8::Value> fakerootVal = currContext->Global()->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME));
-//         String errorMessage; //error message isn't important in this case.  Not
-//                              //an error to not be within a js context struct.
-//         JSFakerootStruct* jsfakeroot = JSFakerootStruct::decodeRootStruct(fakerootVal,errorMessage);
-
-//         if (jsfakeroot == NULL)
-//             return NULL;
-        
-//         return jsfakeroot->getContext();
-//     }
-//     return NULL;
-// }
 
 
 JSContextStruct::~JSContextStruct()
@@ -99,19 +100,44 @@ JSContextStruct::~JSContextStruct()
     
     if (! getIsCleared())
         mContext.Dispose();
-    
 }
 
+//lkjs/FIXME: check if it already exists first;
+v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct* jspres)
+{
+    v8::HandleScope handle_scope;
+    mContext->Enter();
+    
+    // Get the presences array
+    v8::Local<v8::Array> presences_array =
+        v8::Local<v8::Array>::Cast(fakerootObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+    uint32 new_pos = presences_array->Length();
+
+    // Create the object for the new presence
+    v8::Local<v8::Object> js_pres =jsObjScript->wrapPresence(jspres,&(mContext));
+
+    // Insert into the presences array
+    presences_array->Set(v8::Number::New(new_pos), js_pres);
+
+    mContext->Exit();
+
+    return v8::Persistent<v8::Object>::New(js_pres);
+}
 
 
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
 {
+    addToPresencesArray(jspres);
+
+    //check whether should evaluate any further callbacks.
     if (getIsSuspended() || getIsCleared())
         return;
 
     if (hasOnConnectedCallback)
         jsObjScript->handlePresCallback(cbOnConnected,this,jspres);
 }
+
+
 void JSContextStruct::checkContextDisconnectCallback(JSPresenceStruct* jspres)
 {
     if (getIsSuspended() || getIsCleared())
@@ -128,7 +154,10 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceConnectedHandler
 
     cbOnConnected = cb_persist;
     hasOnConnectedCallback = true;
+
+    return cbOnConnected;
 }
+
 v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist)
 {
     if (hasOnDisconnectedCallback)
@@ -136,6 +165,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
         
     cbOnDisconnected = cb_persist;
     hasOnDisconnectedCallback = true;
+
+    return cbOnDisconnected;
 }
 
 
@@ -325,13 +356,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 //canCreateEnt is whether have capability to create entities
 //if presStruct is null, just use the presence that is associated with this
 //context (which may be null as well).
-v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, JSPresenceStruct* presStruct)
+v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval,JSPresenceStruct* presStruct)
 {
     if (presStruct == NULL)
         presStruct = associatedPresence;
     JSContextStruct* new_jscs      = NULL;
 
-    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,new_jscs);
+    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,new_jscs);
 
     //register the new context as a child of the previous one
     struct_registerSuspendable(new_jscs);
@@ -341,7 +372,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 
 
 
-v8::Local<v8::Object> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
+v8::Persistent<v8::Object> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
 {
     return jsObjScript->create_presence(newMesh,initFunc,this);
 }
@@ -351,9 +382,6 @@ v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci
     jsObjScript->create_entity(eci);
     return v8::Undefined();
 }
-
-
-
 
 
 

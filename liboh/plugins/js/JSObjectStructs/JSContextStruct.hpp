@@ -23,12 +23,11 @@ class JSUtilObjStruct;
 
 struct JSContextStruct : public JSSuspendable
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,v8::Handle<v8::ObjectTemplate> contGlobTempl);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
     //user.  if unsuccessful, return null.
-//    static JSContextStruct* getJSContextStruct();
     static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
 
     
@@ -56,7 +55,7 @@ struct JSContextStruct : public JSSuspendable
 
     //create presence with mesh associated with string newMesh, and initFunction
     //to be called when presence is connected
-    v8::Local<v8::Object> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc);
+    v8::Persistent<v8::Object> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc);
 
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
@@ -92,15 +91,15 @@ struct JSContextStruct : public JSSuspendable
     //import files/libraries into your code.
     //canCreatePres is whether have capability to create presences
     //canCreateEnt is whether have capability to create entities
+    //canEval is whether have capability to call system.eval directly in context
     //creates a new context, and hangs the child into suspendables map.
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, JSPresenceStruct* presStruct);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
     
 
-    //returns a v8 object that wraps the c++ presence
-    //v8::Local<v8::Object>  struct_getPresence();
-    //JSPresenceStruct* struct_getPresenceCPP();
-
-
+    //Tries to eval the emerson code in native_contents that came from origin
+    //sOrigin inside of this context.
+    v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
+    
 
     //register cb_persist as the default handler that gets thrown
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
@@ -108,6 +107,9 @@ struct JSContextStruct : public JSSuspendable
     void checkContextConnectCallback(JSPresenceStruct* jspres);
     void checkContextDisconnectCallback(JSPresenceStruct* jspres);
     
+    //Adds the following presence to the presence array associated with the
+    //fakeroot object that is associated with this context.
+    v8::Persistent<v8::Object> addToPresencesArray(JSPresenceStruct* jspres);
 
     
     //********data
@@ -117,6 +119,10 @@ struct JSContextStruct : public JSSuspendable
     v8::Persistent<v8::Context> mContext;
 
 private:
+
+    //performs the initialization and population of util object, fakeroot object,
+    //and fakeroot object's presences array.
+    void createContextObjects();
     
     //a function to call within this context for when a presence that was
     //created from within this context gets connected.
@@ -139,13 +145,15 @@ private:
     //a pointer to the fakeroot struct that will be used as a system-like object
     //inside of the context.  
     JSFakerootStruct* mFakeroot;
+    //mFakeroot in a v8 wrapper.  also, its persistent!
+    v8::Persistent<v8::Object> fakerootObj;
+    
 
+    
     //struct associated with the Emerson util object that is associated with this
     //context.  
     JSUtilObjStruct* mUtil;
     
-
-    bool isSuspended;
     
     //all associated objects that will need to be suspended/resumed if context
     //is suspended/resumed
