@@ -41,6 +41,7 @@ namespace Sirikata {
 class RedisObjectSegmentation : public ObjectSegmentation {
 public:
     RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port);
+    ~RedisObjectSegmentation();
 
     virtual OSegEntry cacheLookup(const UUID& obj_id);
     virtual OSegEntry lookup(const UUID& obj_id);
@@ -51,7 +52,29 @@ public:
 
     virtual bool clearToMigrate(const UUID& obj_id);
     virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
+
+
+    // Redis event handlers
+    void addRead();
+    void delRead();
+    void addWrite();
+    void delWrite();
+    void cleanup();
+
+    // Helper handlers, public since redis needs C functions as callbacks, which
+    // then invoke these to complete operations.
+    void finishReadObject(const UUID& obj_id, const String& data_str);
+    void failReadObject(const UUID& obj_id);
+    void finishWriteNewObject(const UUID& obj_id);
+
 private:
+    // If the appropriate flag is set, starts and stops read/write operations
+    void startRead();
+    void startWrite();
+
+    void readHandler(const boost::system::error_code& ec);
+    void writeHandler(const boost::system::error_code& ec);
+
     CoordinateSegmentation* mCSeg;
     OSegCache* mCache;
 
@@ -59,6 +82,8 @@ private:
     OSegMap mOSeg;
 
     redisAsyncContext* mRedisContext;
+    boost::asio::posix::stream_descriptor* mRedisFD; // Wrapped hiredis file descriptor
+    bool mReading, mWriting;
 };
 
 } // namespace Sirikata
