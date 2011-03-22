@@ -34,12 +34,13 @@
 #define _SIRIKATA_REDIS_OBJECT_SEGMENTATION_HPP_
 
 #include <sirikata/space/ObjectSegmentation.hpp>
+#include <hiredis/async.h>
 
 namespace Sirikata {
 
 class RedisObjectSegmentation : public ObjectSegmentation {
 public:
-    RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache);
+    RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port);
 
     virtual OSegEntry cacheLookup(const UUID& obj_id);
     virtual OSegEntry lookup(const UUID& obj_id);
@@ -56,6 +57,8 @@ private:
 
     typedef std::tr1::unordered_map<UUID, OSegEntry, UUID::Hasher> OSegMap;
     OSegMap mOSeg;
+
+    redisAsyncContext* mRedisContext;
 };
 
 } // namespace Sirikata

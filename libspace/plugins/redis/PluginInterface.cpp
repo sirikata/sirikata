@@ -41,14 +41,20 @@ namespace Sirikata {
 
 static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("space_redis", NULL,
-        NULL);
+        new OptionValue("host","127.0.0.1",Sirikata::OptionValueType<String>(),"Redis host to connect to."),
+        new OptionValue("port","6379",Sirikata::OptionValueType<uint32>(),"Redis port to connect to."),
+        NULL
+    );
 }
 
 static ObjectSegmentation* createRedisOSeg(SpaceContext* ctx, Network::IOStrand* oseg_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& args) {
-    OptionSet* optionsSet = OptionSet::getOptions("space_redis",NULL);
+    OptionSet* optionsSet = OptionSet::getOptions("space_redis", NULL);
     optionsSet->parse(args);
 
-    return new RedisObjectSegmentation(ctx, oseg_strand, cseg, cache);
+    String redis_host = optionsSet->referenceOption("host")->as<String>();
+    uint32 redis_port = optionsSet->referenceOption("port")->as<uint32>();
+
+    return new RedisObjectSegmentation(ctx, oseg_strand, cseg, cache, redis_host, redis_port);
 }
 
 } // namespace Sirikata

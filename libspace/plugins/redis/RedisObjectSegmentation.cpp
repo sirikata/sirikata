@@ -36,11 +36,23 @@
 
 namespace Sirikata {
 
-RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache)
+void globalRedisErrorHandler(const redisAsyncContext *c, int status) {
+    if (status == REDIS_OK) return;
+    REDISOSEG_LOG(error, "Global error handler: " << c->errstr);
+}
+
+RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port)
  : ObjectSegmentation(con, o_strand),
    mCSeg(cseg),
    mCache(cache)
 {
+    mRedisContext = redisAsyncConnect(redis_host.c_str(), redis_port);
+    if (mRedisContext->err) {
+        REDISOSEG_LOG(error, "Failed to connect to redis: " << mRedisContext->errstr);
+        redisAsyncDisconnect(mRedisContext);
+        mRedisContext = NULL;
+    }
+    redisAsyncSetDisconnectCallback(mRedisContext, globalRedisErrorHandler);
 }
 
 OSegEntry RedisObjectSegmentation::cacheLookup(const UUID& obj_id) {
