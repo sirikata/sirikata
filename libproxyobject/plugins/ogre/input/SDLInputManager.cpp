@@ -287,21 +287,32 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
           case SDL_MOUSEBUTTONDOWN:
           case SDL_MOUSEBUTTONUP:
           if (mHasKeyboardFocus) {
-            mMice[event->button.which]->fireButton(
-                mMice[event->button.which],
-                this,
-                event->button.button,
-                (event->button.state == SDL_PRESSED),
-                (1<<SDL_GetCurrentCursor(event->button.which))>>1);
-            mMice[event->button.which]->firePointerClick(
-                mMice[event->button.which],
-                this,
-                (2.0*(float)event->button.x)/mWidth - 1,
-                1 - (2.0*(float)event->button.y)/mHeight,
-                SDL_GetCurrentCursor(event->button.which),
-                event->button.button,
-                event->button.state == SDL_PRESSED);
-            }
+              // SDL seems to sometimes handle scroll wheels oddly, treating
+              // them as buttons rather than a different scroll wheel...
+              if (event->button.button == SDL_BUTTON_WHEELUP || event->button.button == SDL_BUTTON_WHEELDOWN) {
+                  float amt = (event->button.button == SDL_BUTTON_WHEELUP) ? 1 : -1; /* Magnitude chosen arbitrarily... */
+                  mMice[event->button.which]->fireWheel(
+                      mMice[event->button.which],
+                      this,
+                      0,
+                      amt);
+              } else {
+                  mMice[event->button.which]->fireButton(
+                      mMice[event->button.which],
+                      this,
+                      event->button.button,
+                      (event->button.state == SDL_PRESSED),
+                      (1<<SDL_GetCurrentCursor(event->button.which))>>1);
+                  mMice[event->button.which]->firePointerClick(
+                      mMice[event->button.which],
+                      this,
+                      (2.0*(float)event->button.x)/mWidth - 1,
+                      1 - (2.0*(float)event->button.y)/mHeight,
+                      SDL_GetCurrentCursor(event->button.which),
+                      event->button.button,
+                      event->button.state == SDL_PRESSED);
+              }
+          }
             break;
           case SDL_JOYBUTTONDOWN:
           case SDL_JOYBUTTONUP:

@@ -151,28 +151,22 @@ void emerson_createTreeMirrorImage(pANTLR3_BASE_TREE ptr)
 
 char* read_file(const char* filename)
 {
-    char * output = new char[20000];
-    //strcpy(output, "\n\n");
     ifstream myfile;
     myfile.open (filename);
-    string line;
-    if (myfile.is_open())
-    {
-        while (! myfile.eof() )
-        {
-            getline (myfile,line);
-            strcat(output, line.c_str());
-            strcat(output, "\n");
-        }
-        myfile.close();
-        return output;
-    }
-    else
-    {
-        cout << "Could not open the file " << filename << endl;
-    }
+    if (!myfile.is_open()) return NULL;
 
-    return NULL;
+    myfile.seekg(0, ios::end);
+    int length = myfile.tellg();
+    myfile.seekg(0, ios::beg);
+
+    char* output = new char [length+1];
+    output[length] = '\0';
+
+    // read data as a block:
+    myfile.read(output, length);
+    myfile.close();
+
+    return output;
 }
 
 

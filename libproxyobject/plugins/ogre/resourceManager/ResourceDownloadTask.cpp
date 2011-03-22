@@ -48,7 +48,7 @@ ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoo
 }
 
 ResourceDownloadTask::~ResourceDownloadTask()
-{
+{  
 //FIXME: How do we unsubscribe from an active download?!?!?!
 }
 
@@ -62,7 +62,8 @@ void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
 }
 
 
-void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> request,
+void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
+                                         std::tr1::shared_ptr<ChunkRequest> request,
             std::tr1::shared_ptr<const DenseData> response)
 {
     if (response != NULL) {
@@ -73,33 +74,33 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ChunkRequest> requ
     }
 }
 
-void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<MetadataRequest> request,
-            std::tr1::shared_ptr<RemoteFileMetadata> response)
+void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
+                                            std::tr1::shared_ptr<MetadataRequest> request,
+                                            std::tr1::shared_ptr<RemoteFileMetadata> response)
 {
   if (response != NULL) {
 
     //TODO: Support files with more than 1 chunk
     assert(response->getChunkList().size() == 1);
 
-    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, *response, response->getChunkList().front(), mPriority,
-            std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, std::tr1::placeholders::_1,
-                std::tr1::placeholders::_2)));
+    TransferRequestPtr req(new Transfer::ChunkRequest(mURI, *response,
+                                                      response->getChunkList().front(), mPriority,
+                                                      std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, thisptr, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
     mTransferPool->addRequest(req);
   }
   else {
       SILOG(ogre,error,"Failed metadata download");
   }
- }
+}
 
-void ResourceDownloadTask::operator()()
+void ResourceDownloadTask::operator() ( std::tr1::shared_ptr<ResourceDownloadTask> thisptr)
 {
+  mStarted = true;
 
- mStarted = true;
-
- TransferRequestPtr req(
+  TransferRequestPtr req(
      new MetadataRequest(mURI, mPriority, std::tr1::bind(
-             &ResourceDownloadTask::metadataFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+                                                         &ResourceDownloadTask::metadataFinished, this, thisptr, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
 
  mTransferPool->addRequest(req);
 }

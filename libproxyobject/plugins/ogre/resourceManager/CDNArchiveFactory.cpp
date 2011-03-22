@@ -79,15 +79,21 @@ unsigned int CDNArchiveFactory::addArchive(const String& uri, const SparseData &
 
 void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogre::String& uri, const SparseData &rbuffer)
 {
-    std::tr1::unordered_map<std::string,SparseData>::iterator where=CDNArchiveFiles.find(uri);
+  std::tr1::unordered_map<std::string,SparseData>::iterator where=CDNArchiveFiles.find(uri);
   if (where!=CDNArchiveFiles.end()) {
-    SILOG(resource,error,"File "<<uri<<" Already exists in CDNArchive!!!");
+    SILOG(resource,detailed,"File "<<uri<<" Already exists in CDNArchive!!!");
   }
-  SILOG(resource,detailed,"File "<<uri<<" Adding to CDNArchive "<<(size_t)this);
-  CDNArchiveFiles[uri]=rbuffer;
+  else {
+    SILOG(resource,detailed,"File "<<uri<<" Adding to CDNArchive "<<(size_t)this);
+    CDNArchiveFiles[uri]=rbuffer;
+  }
 
-  CDNArchivePackages[archiveName].push_back(uri);
-  SILOG(resource,detailed,"File "<<uri<<" Added to CDNArchive "<<(size_t)this<< " success "<<(CDNArchiveFiles.find(uri)!=CDNArchiveFiles.end())<<" archive size "<<CDNArchiveFiles.size());
+  if (std::find(CDNArchivePackages[archiveName].begin(), CDNArchivePackages[archiveName].end(), uri) == 
+                CDNArchivePackages[archiveName].end() )
+  {
+    CDNArchivePackages[archiveName].push_back(uri);
+    SILOG(resource,detailed,"File "<<uri<<" Added to CDNArchive "<<(size_t)this<< " success "<<(CDNArchiveFiles.find(uri)!=CDNArchiveFiles.end())<<" archive size "<<CDNArchiveFiles.size());
+  }
 }
 
 void CDNArchiveFactory::addArchiveData(unsigned int archiveName, const String &uri, const SparseData &rbuffer)

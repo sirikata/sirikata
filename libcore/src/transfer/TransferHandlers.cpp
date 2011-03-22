@@ -69,6 +69,8 @@ const unsigned int HttpChunkHandler::MEMORY_LRU_CACHE_SIZE = 1024 * 1024 * 50; /
 HttpNameHandler::HttpNameHandler()
  : CDN_HOST_NAME(GetOptionValue<String>(OPT_CDN_HOST)),
    CDN_SERVICE(GetOptionValue<String>(OPT_CDN_SERVICE)),
+   CDN_DNS_URI_PREFIX(GetOptionValue<String>(OPT_CDN_DNS_URI_PREFIX)),
+
    mCdnAddr(CDN_HOST_NAME, CDN_SERVICE)
 {
 }
@@ -79,7 +81,7 @@ HttpNameHandler::~HttpNameHandler() {
 
 void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
     std::ostringstream request_stream;
-    request_stream << "HEAD /dns/global" << request->getURI().fullpath() << " HTTP/1.1\r\n";
+    request_stream << "HEAD " << CDN_DNS_URI_PREFIX << request->getURI().fullpath() << " HTTP/1.1\r\n";
     request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
     request_stream << "Accept: * /*\r\n\r\n";
 
@@ -189,6 +191,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
 HttpChunkHandler::HttpChunkHandler()
  : CDN_HOST_NAME(GetOptionValue<String>(OPT_CDN_HOST)),
    CDN_SERVICE(GetOptionValue<String>(OPT_CDN_SERVICE)),
+   CDN_DOWNLOAD_URI_PREFIX(GetOptionValue<String>(OPT_CDN_DOWNLOAD_URI_PREFIX)),
    mCdnAddr(CDN_HOST_NAME, CDN_SERVICE)
 {
 
@@ -264,7 +267,7 @@ void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
     } else {
         std::ostringstream request_stream;
         bool chunkReq = false;
-        request_stream << "GET /files/global/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
+        request_stream << "GET " << CDN_DOWNLOAD_URI_PREFIX << "/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
         if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
             chunkReq = true;
             request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";

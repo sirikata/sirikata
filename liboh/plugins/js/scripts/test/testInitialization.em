@@ -36,4 +36,4 @@ function broadcastNotSelf(objectToSend)
 
 
 
-system.timeout(150,null,timerCallback);
+system.timeout(150,timerCallback);

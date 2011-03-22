@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('std/movement/movableremote.em');
-system.import('std/graphics/drag/handler.em');
+system.require('std/movement/movableremote.em');
+system.require('std/graphics/drag/handler.em');
 
 /** ScaleDragHandler responds to drag events by scaling the selected object.
  */

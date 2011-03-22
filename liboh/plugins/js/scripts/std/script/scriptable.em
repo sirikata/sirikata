@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('std/core/bind.js');
+system.require('std/core/bind.js');
 
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.script) === "undefined") std.script = {};
@@ -51,13 +51,41 @@ function() {
     };
 
     ns.Scriptable.prototype._handleScriptRequest = function(msg, sender) {
+        if (!this._printer || sender != this._printer) {
+            this._printer = sender;
+            system.onPrint( std.core.bind(this._handlePrint, this) );
+        }
+
+        if (this._printerTimeout)
+            this._printerTimeout.reset();
+        this._printerTimeout = system.timeout(60, std.core.bind(this._handlePrinterTimeout, this));
+
         var cmd = msg.script;
-        var result = system.eval(cmd);
+        var result = undefined, excep = undefined;
+        try {
+            result = system.eval(cmd);
+        } catch (ex) {
+            excep = ex;
+        }
         var retmsg = {
             reply : 'script',
-            value : result
+            value : result,
+            exception : excep
         };
         retmsg -> sender;
+    };
+
+    ns.Scriptable.prototype._handlePrint = function() {
+        var print_msg = {
+            request: 'print',
+            print: (arguments.length == 1 ? arguments[0] : arguments)
+        };
+        print_msg -> this._printer;
+    };
+
+    ns.Scriptable.prototype._handlePrinterTimeout = function() {
+        system.onPrint(undefined);
+        this._timerPrintout = null;
     };
 
 })();

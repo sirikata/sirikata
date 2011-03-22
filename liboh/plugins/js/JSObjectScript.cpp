@@ -58,6 +58,7 @@
 #include "JSObjects/JSFields.hpp"
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
+#include "emerson/EmersonException.h"
 #include "lexWhenPred/LexWhenPredUtil.h"
 #include "emerson/Util.h"
 #include "JSSystemNames.hpp"
@@ -150,7 +151,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
     }
 
 
-    if (result.IsEmpty())
+    if (try_catch.HasCaught())
     {
         // FIXME what should we do with this exception?
         printException(try_catch);
@@ -178,13 +179,32 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
 
 JSObjectScript::EvalContext::EvalContext()
  : currentScriptDir(),
+   currentScriptBaseDir(),
    currentOutputStream(&std::cout)
 {}
 
 JSObjectScript::EvalContext::EvalContext(const EvalContext& rhs)
  : currentScriptDir(rhs.currentScriptDir),
+   currentScriptBaseDir(rhs.currentScriptBaseDir),
    currentOutputStream(rhs.currentOutputStream)
 {}
+
+boost::filesystem::path JSObjectScript::EvalContext::getFullRelativeScriptDir() const {
+    using namespace boost::filesystem;
+
+    path result;
+    // Scan through all matching parts
+    path::const_iterator script_it, base_it;
+    for(script_it = currentScriptDir.begin(), base_it = currentScriptBaseDir.begin(); base_it != currentScriptBaseDir.end(); script_it++, base_it++) {
+        assert(*script_it == *base_it);
+    }
+    // Get any leftover script parts
+    while(script_it != currentScriptDir.end()) {
+        result /= *script_it;
+        script_it++;
+    }
+    return result;
+}
 
 
 JSObjectScript::ScopedEvalContext::ScopedEvalContext(JSObjectScript* _parent, const EvalContext& _ctx)
@@ -479,6 +499,7 @@ v8::Handle<v8::Value> JSObjectScript::findVisible(const SpaceObjectReference& pr
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
 
+
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj);
 
     if (jsvis != NULL)
@@ -707,6 +728,33 @@ Time JSObjectScript::getHostedTime()
     return mParent->currentLocalTime();
 }
 
+namespace {
+
+class EmersonParserException {
+public:
+    EmersonParserException(uint32 li, uint32 pos, const String& msg)
+     : line(li), position(pos), message(msg)
+    {}
+
+    uint32 line;
+    uint32 position;
+    String message;
+
+    String toString() const {
+        std::stringstream err_msg;
+        err_msg << "SyntaxError at line " << line << " position " << position << ":\n";
+        // FIXME it would be nice to give them the same ^ pointer we do for V8 errors.
+        err_msg << message;
+        return err_msg.str();
+    }
+};
+
+void handleEmersonRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer, pANTLR3_UINT8* tokenNames) {
+    pANTLR3_EXCEPTION exception = recognizer->state->exception;
+    throw EmersonParserException(exception->line, exception->charPositionInLine, (const char*)exception->message);
+}
+}
+
 //Will compile and run code in the context ctx whose source is em_script_str.
 v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson)
 {
@@ -732,20 +780,24 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         emerson_init();
 
         JSLOG(insane, " Input Emerson script = \n" <<em_script_str_new);
-        String js_script_str = string(emerson_compile(em_script_str_new.c_str()));
-        JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+        try {
+            int em_compile_err = 0;
+            v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
+            const char* js_script_cstr = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), em_compile_err, handleEmersonRecognitionError);
+            String js_script_str;
+            if (js_script_cstr != NULL) js_script_str = String(js_script_cstr);
+            JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
-        source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+            source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+        }
+        catch(EmersonParserException e) {
+            return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
+        }
     }
     else
 #endif
         //assume the input string to be a valid js rather than emerson
         source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
-
-
-    //v8::Handle<v8::String> source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
 
     // Compile
     //note, because using compile command, will run in the mContext context
@@ -756,7 +808,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         uncaught = "Uncaught exception " + uncaught + "\nwhen trying to run script: "+ em_script_str;
         JSLOG(error, uncaught);
         printException(try_catch);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(uncaught.c_str())));
+        return try_catch.ReThrow();
     }
 
 
@@ -774,7 +826,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     if (try_catch2.HasCaught()) {
         printException(try_catch2);
-        return try_catch2.Exception();
+        return try_catch2.ReThrow();
     }
 
 
@@ -806,11 +858,6 @@ void JSObjectScript::checkWhens()
     }
 }
 
-//defaults to internalEvaling with mContext, and does a ScopedEvalContext.
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx)
-{
-    return protectedEval(em_script_str, em_script_name,new_ctx,NULL);
-}
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs)
 {
@@ -989,11 +1036,11 @@ void JSObjectScript::print(const String& str) {
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
 {
     //create timerstruct
     Network::IOService* ioserve = mParent->getIOService();
-    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,target,cb,jscont,ioserve);
+    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,cb,jscont,ioserve);
 
     v8::HandleScope handle_scope;
 
@@ -1010,13 +1057,13 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 
 
 //third arg may be null to evaluate in global context
-v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext)
+v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
     if (jscontext == NULL)
-        return ProtectedJSCallback(mContext->mContext, &target, cb);
+        return ProtectedJSCallback(mContext->mContext, NULL, cb);
 
 
-    return ProtectedJSCallback(jscontext->mContext, &target, cb);
+    return ProtectedJSCallback(jscontext->mContext, NULL, cb);
 }
 
 
@@ -1060,48 +1107,58 @@ v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOri
 //takes in a name of a file to read from and execute all instructions within.
 //also takes in a context to do so in.  If this context is null, just use
 //mContext instead.
-v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct*  contextCtx)
+void JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out,JSContextStruct* contextCtx)
 {
     v8::HandleScope handle_scope;
+    
     if (contextCtx == NULL)
-        mContext->mContext->Enter();
-    else
-        contextCtx->mContext->Enter();
+        contextCtx = mContext;
 
+    
+    contextCtx->mContext->Enter();
 
     using namespace boost::filesystem;
 
     // Search through the import paths to find the file to import, searching the
     // current directory first if it is non-empty.
-    path full_filename;
     path filename_as_path(filename);
     assert(!mEvalContextStack.empty());
     EvalContext& ctx = mEvalContextStack.top();
     if (!ctx.currentScriptDir.empty()) {
         path fq = ctx.currentScriptDir / filename_as_path;
-        if (boost::filesystem::exists(fq))
-            full_filename = fq;
-    }
-    if (full_filename.empty()) {
-        std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
-        // Always search the current directory as a last resort
-        search_paths.push_back(".");
-        for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
-            path fq = path(*pit) / filename_as_path;
-            if (boost::filesystem::exists(fq)) {
-                full_filename = fq;
-                break;
-            }
+        if (boost::filesystem::exists(fq)) {
+            *full_file_out = fq;
+            *base_path_out = ctx.currentScriptBaseDir;
+            return;
         }
     }
 
-    // If we still haven't filled this in, we just can't find the file.
-    if (full_filename.empty())
-    {
-        std::string errorMessage("Couldn't find file for import named");
-        errorMessage+=filename;
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+    std::list<String> search_paths = mManager->getOptions()->referenceOption("import-paths")->as< std::list<String> >();
+    // Always search the current directory as a last resort
+    search_paths.push_back(".");
+    for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
+        path base_path(*pit);
+        path fq = base_path / filename_as_path;
+        if (boost::filesystem::exists(fq)) {
+            *full_file_out = fq;
+            *base_path_out = base_path;
+            return;
+        }
     }
+
+    *full_file_out = path();
+    *base_path_out = path();
+
+
+    contextCtx->mContext->Exit();
+    
+    return;
+}
+
+v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscont)
+{
+    v8::HandleScope handle_scope;
+    JSLOG(detailed, " Performing import on absolute path: " << full_filename.string());
 
     // Now try to read in and run the file.
     FILE * pFile;
@@ -1125,25 +1182,52 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
     if (result != lSize)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Failure reading file for import.")) );
 
+    EvalContext& ctx = mEvalContextStack.top();
     EvalContext new_ctx(ctx);
-    new_ctx.currentScriptDir = full_filename.parent_path().string();
-    ScriptOrigin origin(v8::String::New(filename.c_str()));
+
+    new_ctx.currentScriptDir = full_filename.parent_path();
+    new_ctx.currentScriptBaseDir = full_base_dir;
+    ScriptOrigin origin( v8::String::New( (new_ctx.getFullRelativeScriptDir() / full_filename.filename()).string().c_str() ) );
+    mImportedFiles.insert( full_filename.string() );
+    return  protectedEval(contents, &origin, new_ctx,jscont);
+}
 
 
-    //Perform evaluation in correct context + exit that context and return
-    v8::Handle<v8::Value> returner;
-    if (contextCtx == NULL)
+v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont)
+{
+    JSLOG(detailed, "Importing: " << filename);
+    boost::filesystem::path full_filename, full_base;
+    resolveImport(filename, &full_filename, &full_base,jscont);
+    // If we still haven't filled this in, we just can't find the file.
+    if (full_filename.empty())
     {
-        returner = protectedEval(contents, &origin, new_ctx,mContext);
-        mContext->mContext->Exit();
+        std::string errorMessage("Couldn't find file for import named");
+        errorMessage+=filename;
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
-    else
+    return absoluteImport(full_filename, full_base,jscont);
+}
+
+
+
+v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextStruct* jscont)
+{
+    JSLOG(detailed, "Requiring: " << filename);
+    boost::filesystem::path full_filename, full_base;
+    resolveImport(filename, &full_filename, &full_base,jscont);
+    // If we still haven't filled this in, we just can't find the file.
+    if (full_filename.empty())
     {
-        returner = protectedEval(contents, &origin, new_ctx,contextCtx);
-        contextCtx->mContext->Exit();
+        std::string errorMessage("Couldn't find file for require named");
+        errorMessage += filename;
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+    }
+    if (mImportedFiles.find(full_filename.string()) != mImportedFiles.end()) {
+        JSLOG(detailed, " Skipping already imported file: " << filename);
+        return v8::Undefined();
     }
 
-    return returner;
+    return absoluteImport(full_filename, full_base,jscont);
 }
 
 

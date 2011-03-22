@@ -208,6 +208,7 @@ int main	(int argc, char *argv[])
 
     const char* em_script = read_file(fName);
     string em_script_str = string(em_script);
+    delete[] em_script;
     string em_script_str_new = em_script_str;
     if(em_script_str.at(em_script_str.size() -1) != '\n')
     {
@@ -216,26 +217,21 @@ int main	(int argc, char *argv[])
 
 
     int errorNum = 0;
-
+    FILE* dbgFile = NULL;
     if (verbose)
+        dbgFile = stderr;
 
-        //char* js_str = emerson_compile_diag(std::string(fName), (const char*)em_script_str_new.c_str(), stderr, errorNum, &myDisplayRecognitionError);
-        char* js_str = emerson_compile_diag((const char*)em_script_str_new.c_str(), stderr,errorNum);
-    else
+    try
     {
-        //char* js_str = emerson_compile((const char*)em_script_str_new.c_str(), errorNum);
-        try
-        {
-          char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError);
-          std::cout<<js_str;
-        }
-        catch(EmersonException e)
-        {
-          std::cerr << e.msg() << "\n";
-          return errorNum;
-        }
+        char* js_str = emerson_compile(std::string(fName), (const char*)em_script_str_new.c_str(), errorNum, &myDisplayRecognitionError, dbgFile);
+        if (js_str)
+            std::cout<<js_str;
     }
-
+    catch(EmersonException e)
+    {
+        std::cerr << e.msg() << "\n";
+        return errorNum;
+    }
 
     return errorNum;
 }

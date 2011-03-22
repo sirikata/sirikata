@@ -76,6 +76,14 @@ v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom
     return jsObjScript->import(toImportFrom,this);
 }
 
+//string argument is the filename that we're trying to open and execute
+//contents of.
+v8::Handle<v8::Value>  JSContextStruct::struct_require(const String& toRequireFrom)
+{
+    return jsObjScript->require(toRequireFrom,this);
+}
+
+
 
 //Tries to eval the emerson code in native_contents that came from origin
 //sOrigin inside of this context.
@@ -344,11 +352,11 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
-v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(const Duration& dur,  v8::Persistent<v8::Function>& cb)
 {
     //the timer that's created automatically registers as a suspendable with
     //this context.
-    return jsObjScript->create_timeout(dur, target,cb, this);
+    return jsObjScript->create_timeout(dur, cb, this);
 }
 
 

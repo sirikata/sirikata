@@ -1,176 +1,22 @@
 <html>
-  <head>
-    <style type="text/css">
-      .command {
-        border-width: 1px 1px 1px 1px;
-        border-color: black;
-        border-style: solid;
-        padding: 0px;
-      }
-    </style>
-    <script language="javascript" type="text/javascript">
-      
-      function copyToClipboard()
-      {
-        var copiedTxt = document.selection.createRange();
-        copiedTxt.execCommand("Copy");
-      }
-      
-      function pasteFromClipboard()
-      {
-
-        var command_area = document.getElementById('Command');
-        command_area.focus();
-        //document.Form1.txtArea.focus();
-        var pastedText = command_area.createTextRange();
-        command_area.value = pastedText;
-        //pastedText.execCommand("Paste");
-      }
-
-      function pageScroll() {
-        window.scrollBy(0,1000); // horizontal and vertical scroll increments
-      }
-      var lastMessages = new Array();
-      var last_msg_index = undefined;
-
-      function appendMessage(msg)
-      {
-        lastMessages.push(msg);
-        last_msg_index = lastMessages.length -1;
-      }
-      function displayCommand(msg)
-      {
-        var command_area = document.getElementById('Command');
-        command_area.value = msg;
-      }
-
-      function filterMessage(msg, node) {
-        // Filter a message for special characters and convert them to
-        // display nicely using html
-
-        // Convert tabs to 4 spaces
-        msg = msg.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;');
-
-        var sub_msgs = msg.split('\n');
-
-        for(var i = 0; i < sub_msgs.length; i++) {
-          var p = document.createElement('p');
-          node.appendChild( p );
-          p.appendChild( document.createTextNode(sub_msgs[i]) );
-        }
-      }
-
-      function addMessage(msg) {
-        var new_p = document.createElement('div');
-        filterMessage(msg, new_p);
-        new_p.className = 'command';
-        var results_div = document.getElementById('Results');
-        results_div.appendChild( new_p );
-
-        setTimeout('pageScroll()',100);
-      }
-
-      function clearCommand() {
-        var command_area = document.getElementById('Command');
-        command_area.value = '';
-      }
-
-      function runCommand() {
-        var command_area = document.getElementById('Command');
-        var command = command_area.value;
-        command_area.value = '';
-
-        addMessage(command);
-	appendMessage(command);
-
-        var arg_map = [
-          'ExecScript',
-          'Command', command
-        ];
-        chrome.send("event", arg_map);
-      }
-
-      // We track key up and key down to make shift + enter trigger a send
-      function registerHotkeys() {
-        var command_area = document.getElementById('Command');
-        command_area.onkeydown = handleCodeKeyDown;
-        command_area.onkeyup = handleCodeKeyUp;
-      }
-      var shift_down = false;
-      var ctrl_down = false;
-
-      function handleCodeKeyDown(evt) {
-        if (evt.shiftKey)
-          shift_down = true;
-        if (evt.keyCode == 13 && shift_down) {
-          runCommand();
-          // We set a timeout because the addition of the new line occurs *after* this handler
-          setTimeout('clearCommand()',1);
-        }
-				if(evt.ctrlKey)
-				{
-				  ctrl_down = true;
-				}
-				if(ctrl_down && evt.keyCode == 86)
-				{
-          pasteFromClipboard();
-				}
-				else if(ctrl_down && evt.keyCode == 67)
-				{
-				  copyToClipboard();  
-				}
-        if(evt.keyCode == 40)
-        {
-	  if(last_msg_index < (lastMessages.length -1) )
-	  {
-	    last_msg_index++;
-	    displayCommand(lastMessages[last_msg_index]);  
-	  }
-	  else if(last_msg_index == lastMessages.length -1)
-	  {
-	    displayCommand(lastMessages[lastMessages.length -1]);  
-	  }
-	}
-      }
-      function handleCodeKeyUp(evt) {
-        if (evt.shiftKey)
-          shift_down = false;
-				if(evt.ctrlKey)
-				{
-				  ctrl_down = false;
-				}
-				if(evt.keyCode == 38)
-				{
-				  if(last_msg_index > 0)
-					{
-            displayCommand(lastMessages[last_msg_index]);
-					  last_msg_index--;
-					}
-					else if(last_msg_index == 0)
-					{
-					  
-            displayCommand(lastMessages[0]);
-					}
-				}
-      }
-
-      function closePrompt() {
-        var arg_map = [
-          'Close'
-        ];
-        chrome.send("event", arg_map);
-      }
-    </script>
-  </head>
-  <body onload="registerHotkeys()">
-    <div id="Results">
+  <body>
+    <div id="edittabs">
+      <ul id="edittab_titles"></ul>
     </div>
-    <div>
-      <form>
-        <textarea id="Command" name="Command" rows="5" cols="30"></textarea><br>
-        <button type="button" onclick="runCommand()">Run</button>
-        <button type="button" onclick="closePrompt()">Close</button>
-      </form>
-    </div>
+
+    <button type="button" onclick="runCommand()">Run</button>
+    <button type="button" onclick="closePrompt()">Close</button>
+
+    <script src="../jquery/js/jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../jquery/js/jquery-ui-1.8.5.custom.min.js" type="text/javascript" charset="utf-8"></script>
+    <link href="../jquery_themes/redmond/jquery-ui-1.8.6.custom.css" rel="stylesheet" type="text/css" />
+
+    <script src="../ace/build/src/ace-uncompressed.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../ace/build/src/theme-dawn.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../ace/build/src/mode-javascript.js" type="text/javascript" charset="utf-8"></script>
+
+    <script src="prompt.js" type="text/javascript" charset="utf-8"></script>
+    <link href="prompt.css" rel="stylesheet" type="text/css" />
+
   </body>
 </html>

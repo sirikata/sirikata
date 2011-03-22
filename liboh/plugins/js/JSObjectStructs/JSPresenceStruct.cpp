@@ -82,6 +82,7 @@ void JSPresenceStruct::callConnectedCallback()
 
     if (mContext != NULL)
         mContext->checkContextConnectCallback(this);
+
 }
 
 

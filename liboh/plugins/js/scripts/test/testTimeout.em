@@ -10,5 +10,4 @@ function timerCallback()
 
 
 
-system.timeout(10,null,timerCallback);
-
+system.timeout(10,timerCallback);

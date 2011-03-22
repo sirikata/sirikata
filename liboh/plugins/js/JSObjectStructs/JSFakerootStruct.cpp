@@ -31,8 +31,21 @@ JSFakerootStruct::~JSFakerootStruct()
 {
 }
 
+
+v8::Handle<v8::Value> JSFakerootStruct::struct_require(const String& toRequireFrom)
+{
+    //require uses the same capability as import
+    if (! canImport)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to require.")));
+    
+    return associatedContext->struct_require(toRequireFrom);
+}
+
 v8::Handle<v8::Value> JSFakerootStruct::struct_import(const String& toImportFrom)
 {
+    if (! canImport)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to import.")));
+    
     return associatedContext->struct_import(toImportFrom);
 }
 
@@ -96,9 +109,9 @@ v8::Handle<v8::Value> JSFakerootStruct::struct_eval(const String& native_content
 
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
-v8::Handle<v8::Value> JSFakerootStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb)
+v8::Handle<v8::Value> JSFakerootStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb)
 {
-    return associatedContext->struct_createTimeout(dur,target,cb);
+    return associatedContext->struct_createTimeout(dur,cb);
 }
 
 

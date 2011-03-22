@@ -100,6 +100,7 @@ private:
 	//TODO: should get these from settings
     const std::string CDN_HOST_NAME;
     const std::string CDN_SERVICE;
+    const std::string CDN_DNS_URI_PREFIX;
 	const Network::Address mCdnAddr;
 
 public:
@@ -132,6 +133,7 @@ private:
     //TODO: should get these from settings
     const std::string CDN_HOST_NAME;
     const std::string CDN_SERVICE;
+    const std::string CDN_DOWNLOAD_URI_PREFIX;
     const Network::Address mCdnAddr;
     static const unsigned int DISK_LRU_CACHE_SIZE;
     static const unsigned int MEMORY_LRU_CACHE_SIZE;

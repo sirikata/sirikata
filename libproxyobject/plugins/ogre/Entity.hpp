@@ -67,7 +67,7 @@ protected:
     TextureBindingsMap mTextureBindings;
 
     uint32 mRemainingDownloads; // Downloads remaining before loading can occur
-    TextureBindingsMap mTextureFingerprints;
+    std::tr1::shared_ptr<TextureBindingsMap> mTextureFingerprints;
 
     typedef std::vector<Ogre::Light*> LightList;
     LightList mLights;

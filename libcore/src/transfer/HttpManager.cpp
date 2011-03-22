@@ -357,7 +357,16 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         SILOG(transfer, warning, "EOF was true or bytes_transferred==0 and the parser wasn't finished, so connection is broken");
         socket->close();
         decrement_connection(req->addr);
-        add_req(req);
+
+        req->mNumTries++;
+        if (req->mNumTries > 10) {
+            //This means this connection has gotten an error over 100 times. Let's stop trying
+            //TODO: this should probably be configurable
+            req->cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, boost::asio::error::eof);
+        } else {
+            add_req(req);
+        }
+
         processQueue();
         return;
     } else {

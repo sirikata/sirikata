@@ -15,6 +15,12 @@ class JSContextStruct;
 class JSEventHandlerStruct;
 class JSPresenceStruct;
 
+
+
+//Most calls in this class just go straight through into associated context to
+//make a sibling call.  Split fakeroot into intermediate layer between v8-bound
+//calls and jscontextstruct to make tracking of capabilities explicit, and easy
+//to check without having to dig through a lot of other code.
 struct JSFakerootStruct
 {
     JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity,bool eval);
@@ -34,7 +40,7 @@ struct JSFakerootStruct
     v8::Handle<v8::Value> struct_print(const String& msg);    
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);
     v8::Handle<v8::Value> struct_import(const String& toImportFrom);
-
+    v8::Handle<v8::Value> struct_require(const String& toRequireFrom);
     
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
@@ -61,7 +67,7 @@ struct JSFakerootStruct
 
     //create a timer that will fire in dur seconds from now, that will bind the
     //this parameter to target and that will fire the callback cb.
-    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
 
     
     

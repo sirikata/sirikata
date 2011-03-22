@@ -245,6 +245,7 @@ void JSObjectScriptManager::createFakerootTemplate()
     mFakerootTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSFakeroot::root_onPresenceDisconnected));
 
     mFakerootTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
+    mFakerootTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSFakeroot::root_require));
     
 }
 
@@ -293,46 +294,6 @@ void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> temp
     tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
 }
 
-
-
-// //it looks like I can't figure out how to inherit system template functionality
-// //from object template.
-// void JSObjectScriptManager::createSystemTemplate()
-// {
-//     v8::HandleScope handle_scope;
-//     mGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-//     // An internal field holds the JSObjectScript*
-//     mGlobalTemplate->SetInternalFieldCount(1);
-
-//     // And we expose some functionality directly
-//     v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
-//     // An internal field holds the JSObjectScript*
-//     system_templ->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
-
-//     // Functions / types
-//     system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
-//     system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
-//     system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::ScriptImport));
-//     system_templ->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::ScriptEval));
-//     system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
-//     system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
-//     system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
-
-
-//     //when creating a context, should also optionally take in a callback for what should happen if presence associated gets disconnected from space;
-//     system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
-
-//     system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
-//     system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
-//     system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-//     system_templ->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
-
-
-//     //math, vec, quaternion, etc.
-//     //add the system template to the global template
-//     mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
-//     mGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
-// }
 
 
 

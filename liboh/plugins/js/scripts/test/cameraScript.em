@@ -17,7 +17,7 @@ function broadcastPosition()
 
     system.__broadcast(positionObjectToSend);
 
-    system.timeout(messageSendingInterval,null,broadcastPosition);
+    system.timeout(messageSendingInterval,broadcastPosition);
 }
 
 
@@ -28,6 +28,4 @@ function updateAndBroadcastCallback()
 }
 
 
-system.timeout(130,null,updateAndBroadcastCallback);
-
-
+system.timeout(130,updateAndBroadcastCallback);

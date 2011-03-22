@@ -1120,76 +1120,13 @@ void OgreSystem::tickInputHandler(const Task::LocalTime& t) const {
         mMouseHandler->tick(t);
 }
 
-
-namespace {
-
-bool anyIsBoolean(const boost::any& a) {
-    return (!a.empty() && a.type() == typeid(bool));
-}
-
-bool anyAsBoolean(const boost::any& a) {
-    return boost::any_cast<bool>(a);
-}
-
-bool anyIsFloat(const boost::any& a) {
-    return (!a.empty() && a.type() == typeid(float32));
-}
-
-float32 anyAsFloat(const boost::any& a) {
-    return boost::any_cast<float32>(a);
-}
-
-bool anyIsDouble(const boost::any& a) {
-    return (!a.empty() && a.type() == typeid(float64));
-}
-
-float64 anyAsDouble(const boost::any& a) {
-    return boost::any_cast<float64>(a);
-}
-
-bool anyIsNumeric(const boost::any& a) {
-    return anyIsFloat(a) || anyIsDouble(a);
-}
-
-float64 anyAsNumeric(const boost::any& a) {
-    if (anyIsFloat(a)) return anyAsFloat(a);
-    else return anyAsDouble(a);
-}
-
-bool anyIsString(const boost::any& a) {
-    return (!a.empty() && a.type() == typeid(String));
-}
-
-String anyAsString(const boost::any& a) {
-    return boost::any_cast<String>(a);
-}
-
-
-bool anyIsInvokable(const boost::any& a) {
-    return (!a.empty() && a.type() == typeid(Invokable*));
-}
-
-Invokable* anyAsInvokable(const boost::any& a) {
-    return boost::any_cast<Invokable*>(a);
-}
-
-bool anyIsObject(const boost::any& a) {
-    return (!a.empty() && a.type() == typeid(SpaceObjectReference));
-}
-
-SpaceObjectReference anyAsObject(const boost::any& a) {
-    return boost::any_cast<SpaceObjectReference>(a);
-}
-
-} // namespace
-
 boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
     // Decode the command. First argument is the "function name"
-    if (params.empty() || !anyIsString(params[0]))
+    if (params.empty() || !Invokable::anyIsString(params[0]))
         return NULL;
 
-    string name = anyAsString(params[0]);
+    string name = Invokable::anyAsString(params[0]);
     SILOG(ogre,detailed,"Invoking the function " << name);
 
     if(name == "createWindow")
@@ -1222,12 +1159,12 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     return boost::any();
 }
 
-boost::any OgreSystem::createWindow(const String& window_name, bool is_html, bool is_file, String content) {
+boost::any OgreSystem::createWindow(const String& window_name, bool is_html, bool is_file, String content, uint32 width, uint32 height) {
     WebViewManager* wvManager = WebViewManager::getSingletonPtr();
     WebView* ui_wv = wvManager->getWebView(window_name);
     if(!ui_wv)
     {
-        ui_wv = wvManager->createWebView(window_name, window_name, 300, 300, OverlayPosition(RP_TOPLEFT));
+        ui_wv = wvManager->createWebView(window_name, window_name, width, height, OverlayPosition(RP_TOPLEFT));
         if (is_html)
             ui_wv->loadHTML(content);
         else if (is_file)
@@ -1236,48 +1173,52 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, boo
             ui_wv->loadURL(content);
     }
     Invokable* inn = ui_wv;
-    boost::any result(inn);
-    return result;
+    return Invokable::asAny(inn);
 }
 
 boost::any OgreSystem::createWindow(vector<boost::any>& params) {
     // Create a window using the specified url
     if (params.size() < 3) return NULL;
-    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return NULL;
 
-    String window_name = anyAsString(params[1]);
-    String html_url = anyAsString(params[2]);
-
-    return createWindow(window_name, false, false, html_url);
+    String window_name = Invokable::anyAsString(params[1]);
+    String html_url = Invokable::anyAsString(params[2]);
+    uint32 width = (params.size() > 3 && Invokable::anyIsNumeric(params[3])) ? Invokable::anyAsNumeric(params[3]) : 300;
+    uint32 height = (params.size() > 4 && Invokable::anyIsNumeric(params[4])) ? Invokable::anyAsNumeric(params[4]) : 300;
+    return createWindow(window_name, false, false, html_url, width, height);
 }
 
 boost::any OgreSystem::createWindowFile(vector<boost::any>& params) {
     // Create a window using the specified url
     if (params.size() < 3) return NULL;
-    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return NULL;
 
-    String window_name = anyAsString(params[1]);
-    String html_url = anyAsString(params[2]);
+    String window_name = Invokable::anyAsString(params[1]);
+    String html_url = Invokable::anyAsString(params[2]);
+    uint32 width = (params.size() > 3 && Invokable::anyIsNumeric(params[3])) ? Invokable::anyAsNumeric(params[3]) : 300;
+    uint32 height = (params.size() > 4 && Invokable::anyIsNumeric(params[4])) ? Invokable::anyAsNumeric(params[4]) : 300;
 
-    return createWindow(window_name, false, true, html_url);
+    return createWindow(window_name, false, true, html_url, width, height);
 }
 
 boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
     // Create a window using the specified HTML content
     if (params.size() < 3) return NULL;
-    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return NULL;
 
-    String window_name = anyAsString(params[1]);
-    String html_script = anyAsString(params[2]);
+    String window_name = Invokable::anyAsString(params[1]);
+    String html_script = Invokable::anyAsString(params[2]);
+    uint32 width = (params.size() > 3 && Invokable::anyIsNumeric(params[3])) ? Invokable::anyAsNumeric(params[3]) : 300;
+    uint32 height = (params.size() > 4 && Invokable::anyIsNumeric(params[4])) ? Invokable::anyAsNumeric(params[4]) : 300;
 
-    return createWindow(window_name, true, false, html_script);
+    return createWindow(window_name, true, false, html_script, width, height);
 }
 
 boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
     if (params.size() < 2) return NULL;
-    if (!anyIsInvokable(params[1])) return NULL;
+    if (!Invokable::anyIsInvokable(params[1])) return NULL;
 
-    Invokable* handler = anyAsInvokable(params[1]);
+    Invokable* handler = Invokable::anyAsInvokable(params[1]);
     mMouseHandler->setDelegate(handler);
     return boost::any();
 }
@@ -1285,23 +1226,23 @@ boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
 
 boost::any OgreSystem::pick(vector<boost::any>& params) {
     if (params.size() < 3) return boost::any();
-    if (!anyIsNumeric(params[1])) return boost::any();
-    if (!anyIsNumeric(params[2])) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+    if (!Invokable::anyIsNumeric(params[2])) return boost::any();
 
-    float x = anyAsNumeric(params[1]);
-    float y = anyAsNumeric(params[2]);
+    float x = Invokable::anyAsNumeric(params[1]);
+    float y = Invokable::anyAsNumeric(params[2]);
     SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1);
-    return boost::any(result);
+    return Invokable::asAny(result);
 }
 
 
 boost::any OgreSystem::bbox(vector<boost::any>& params) {
     if (params.size() < 3) return boost::any();
-    if (!anyIsObject(params[1])) return boost::any();
-    if (!anyIsBoolean(params[2])) return boost::any();
+    if (!Invokable::anyIsObject(params[1])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[2])) return boost::any();
 
-    SpaceObjectReference objid = anyAsObject(params[1]);
-    bool setting = anyAsBoolean(params[2]);
+    SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
+    bool setting = Invokable::anyAsBoolean(params[2]);
 
     if (mSceneEntities.find(objid) == mSceneEntities.end()) return boost::any();
     Entity* ent = mSceneEntities.find(objid)->second;
@@ -1320,9 +1261,9 @@ boost::any OgreSystem::bbox(vector<boost::any>& params) {
 */
 boost::any OgreSystem::initScript(vector<boost::any>& params) {
     if (params.size() < 2) return boost::any();
-    if (!anyIsObject(params[1])) return boost::any();
+    if (!Invokable::anyIsObject(params[1])) return boost::any();
 
-    SpaceObjectReference objid = anyAsObject(params[1]);
+    SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
 
     ProxyObjectPtr obj = mViewer->presence(mPresenceID)->getProxyObject(objid);
 
@@ -1352,16 +1293,16 @@ boost::any OgreSystem::getCamera(vector<boost::any>& params) {
     Invokable::Dict camera_info;
 
     float32 aspect = cam->getAspectRatio();
-    camera_info["aspectRatio"] = aspect;
+    camera_info["aspectRatio"] = Invokable::asAny(aspect);
 
     float32 fovy = cam->getFOVy().valueRadians();
     float32 fovx = fovy * aspect;
     Invokable::Dict camera_fov;
-    camera_fov["x"] = fovx;
-    camera_fov["y"] = fovy;
-    camera_info["fov"] = camera_fov;
+    camera_fov["x"] = Invokable::asAny(fovx);
+    camera_fov["y"] = Invokable::asAny(fovy);
+    camera_info["fov"] = Invokable::asAny(camera_fov);
 
-    return camera_info;
+    return Invokable::asAny(camera_info);
 }
 
 }

@@ -1,0 +1,27 @@
+.ace_scroller {
+    overflow-x: auto;
+}
+.ace_editor .ace_sb {
+    overflow-y: auto;
+}
+
+body {
+    overflow: hidden;
+}
+
+div.codeedit {
+    min-width: 200px;
+    min-height: 200px;
+    position: relative;
+}
+
+div.editborder {
+    border-width: 2px;
+    border-color: black;
+    border-style: solid;
+    margin: 10px;
+}
+
+.ui-widget {
+    font-size: 12px;
+}

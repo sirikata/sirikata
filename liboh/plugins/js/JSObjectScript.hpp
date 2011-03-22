@@ -82,7 +82,7 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    v8::Handle<v8::Value> handleTimeoutContext(v8::Handle<v8::Object> target, v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
+    v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
     v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
 
     v8::Handle<v8::Value> executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
@@ -124,7 +124,7 @@ public:
 
 
     /** Set a timeout with a callback. */
-    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
+    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb, JSContextStruct* jscont);
 
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
@@ -134,6 +134,11 @@ public:
      * mContext's root object's scope
      */
     v8::Handle<v8::Value> import(const String& filename, JSContextStruct* jscs);
+
+    /** Require a file, executing its contents in the root object's scope iff it
+     *  has not yet been imported.
+     */
+    v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont);
 
     /** reboot the state of the script, basically reset the state */
     void reboot();
@@ -211,7 +216,21 @@ private:
         EvalContext();
         EvalContext(const EvalContext& rhs);
 
+        // Current directory the script being evaluated was in,
+        // e.g. ../../liboh/plugins/js/scripts/std/movement
         boost::filesystem::path currentScriptDir;
+        // Current base import-path directory the script was found in,
+        // e.g. for the above it might look like
+        // ../../liboh/plugins/js/scripts/.
+        // This is used to provide nice relative paths in exceptions.
+        boost::filesystem::path currentScriptBaseDir;
+
+        // Gets the full, but relative, path for the script. In the
+        // above example this would be std/movement because the
+        // currentScriptBaseDir is stripped off to leave just the
+        // relative part.
+        boost::filesystem::path getFullRelativeScriptDir() const;
+
         std::ostream* currentOutputStream;
     };
     // This is a helper which adds an EvalContext to the stack and ensures that
@@ -229,6 +248,17 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
+    std::set<String> mImportedFiles;
+
+    // Resolve a relative path for import to an absolute
+    // path. "Returns" the full path of the file as well as the import
+    // base path.
+    void resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out, JSContextStruct* jscs);
+    // Perform an import on the absolute path filename. This performs no
+    // resolution and *always* performs the import, even if the file has already
+    // been imported.
+    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscs);
+
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
@@ -243,7 +273,6 @@ private:
     JSContextStruct* mContext;
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    v8::Handle<v8::Value> protectedEval(const String& script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx);
     v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs);
 
 

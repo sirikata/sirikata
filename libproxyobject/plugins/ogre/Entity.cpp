@@ -112,6 +112,8 @@ Entity::Entity(OgreSystem *scene,
     mMovingIter(scene->mMovingEntities.end()),
     mHaveURIHash(false)
 {
+    mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
+
     mSceneNode->setInheritScale(false);
     addToScene(NULL);
 
@@ -436,12 +438,13 @@ void Entity::downloadMeshFile(Transfer::URI const& uri)
 {
     assert( !uri.empty() );
 
-    ResourceDownloadTask *dl = new ResourceDownloadTask(
+    std::tr1::shared_ptr<ResourceDownloadTask> dl = 
+      std::tr1::shared_ptr<ResourceDownloadTask> (new ResourceDownloadTask(
         uri, getScene()->transferPool(),
         mProxy->priority,
         std::tr1::bind(&Entity::MeshDownloaded,
-            this, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
-    (*dl)();
+                       this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+    (*dl)( dl);
 }
 
 
@@ -500,17 +503,22 @@ void fixupTextureUnitState(Ogre::TextureUnitState*tus, const MaterialEffectInfo:
 
 }
 class MaterialManualLoader : public Ogre::ManualResourceLoader {
-    MaterialEffectInfo mMat;
-    std::string mName;
+    MeshdataPtr mMeshdataPtr; 
+    const MaterialEffectInfo* mMat;
+    String mName;
     String mURI;
-    Entity::TextureBindingsMap mTextureFingerprints;
+    std::tr1::shared_ptr<Entity::TextureBindingsMap> mTextureFingerprints;
 public:
-    MaterialManualLoader(const std::string &name,
+    MaterialManualLoader(MeshdataPtr mdptr,
+                         const String name,
                          const MaterialEffectInfo&mat,
                          const std::string uri,
-                         const Entity::TextureBindingsMap& textureFingerprints):mTextureFingerprints(textureFingerprints) {
-        mName=name;
-        mMat=mat;
+                         std::tr1::shared_ptr<Entity::TextureBindingsMap> textureFingerprints): 
+                                                     mTextureFingerprints(textureFingerprints) 
+    {
+        mMeshdataPtr = mdptr;
+        mName = name;
+        mMat=&mat;
         mURI=uri;
     }
     void prepareResource(Ogre::Resource*r){}
@@ -520,16 +528,16 @@ public:
         material->setCullingMode(CULL_NONE);
         Ogre::Technique* tech=material->getTechnique(0);
         bool useAlpha=false;
-        if (mMat.textures.empty()) {
+        if (mMat->textures.empty()) {
             Ogre::Pass*pass=tech->getPass(0);
             pass->setDiffuse(ColourValue(1,1,1,1));
             pass->setAmbient(ColourValue(1,1,1,1));
             pass->setSelfIllumination(ColourValue(0,0,0,0));
             pass->setSpecular(ColourValue(1,1,1,1));
         }
-        for (size_t i=0;i<mMat.textures.size();++i) {
-            if (mMat.textures[i].affecting==MaterialEffectInfo::Texture::OPACITY&&
-                (mMat.textures[i].uri.length()||mMat.textures[i].color.w<1.0)){
+        for (size_t i=0;i<mMat->textures.size();++i) {
+            if (mMat->textures[i].affecting==MaterialEffectInfo::Texture::OPACITY&&
+                (mMat->textures[i].uri.length()||mMat->textures[i].color.w<1.0)){
                 useAlpha=true;
                 break;
             }
@@ -542,9 +550,9 @@ public:
             pass->setSelfIllumination(ColourValue(0,0,0,0));
             pass->setSpecular(ColourValue(0,0,0,0));
         }
-        for (size_t i=0;i<mMat.textures.size();++i) {
-            MaterialEffectInfo::Texture&tex=mMat.textures[i];
-            Ogre::Pass*pass=tech->getPass(0);
+        for (size_t i=0;i<mMat->textures.size();++i) {
+          MaterialEffectInfo::Texture tex=mMat->textures[i];
+          Ogre::Pass*pass=tech->getPass(0);
 /*
             if (tex.uri.length()&&tech->getNumPasses()<=valid_passes) {
                 pass=tech->createPass();
@@ -603,8 +611,8 @@ public:
                 }
             }else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) {
                 String texURI = mURI.substr(0, mURI.rfind("/")+1) + tex.uri;
-                Entity::TextureBindingsMap::iterator where = mTextureFingerprints.find(texURI);
-                if (where!=mTextureFingerprints.end()) {
+                Entity::TextureBindingsMap::iterator where = mTextureFingerprints->find(texURI);
+                if (where!=mTextureFingerprints->end()) {
                     String ogreTextureName = where->second;
                     fixOgreURI(ogreTextureName);
                     Ogre::TextureUnitState*tus;
@@ -640,9 +648,11 @@ public:
                         pass->setSpecular(ColourValue(0,0,0,0));
 */
                         //pass->setIlluminationStage(IS_PER_LIGHT);
-                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
-                        fixupTextureUnitState(tus,tex);
-                        tus->setColourOperation(LBO_MODULATE);
+                        if (pass->getTextureUnitState(ogreTextureName) == 0) {
+                          tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                          fixupTextureUnitState(tus,tex);
+                          tus->setColourOperation(LBO_MODULATE);
+                        }
 
                         break;
                       case MaterialEffectInfo::Texture::AMBIENT:
@@ -656,7 +666,7 @@ public:
                         pass->setSpecular(ColourValue(0,0,0,0));
 
                         pass->setAmbient(ColourValue(1,1,1,1));
-                        tus->setColourOperation(LBO_MODULATE);
+                        //tus->setColourOperation(LBO_MODULATE);
 
                         pass->setIlluminationStage(IS_AMBIENT);
                         break;
@@ -666,10 +676,12 @@ public:
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSpecular(ColourValue(0,0,0,0));
 */
-                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
-                        fixupTextureUnitState(tus,tex);
-//                        pass->setSelfIllumination(ColourValue(1,1,1,1));
-                        tus->setColourOperation(LBO_ADD);
+                        if (pass->getTextureUnitState(ogreTextureName) == 0) {
+                          tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                          fixupTextureUnitState(tus,tex);
+                          //pass->setSelfIllumination(ColourValue(1,1,1,1));
+                          tus->setColourOperation(LBO_ADD);
+                        }
 
                         //pass->setIlluminationStage(IS_DECAL);
                         break;
@@ -679,15 +691,16 @@ public:
                             ++valid_passes;
                         }
 
-
                         pass->setDiffuse(ColourValue(0,0,0,0));
                         pass->setAmbient(ColourValue(0,0,0,0));
                         pass->setSelfIllumination(ColourValue(0,0,0,0));
                         //pass->setIlluminationStage(IS_PER_LIGHT);
 
-                        tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
-                        fixupTextureUnitState(tus,tex);
-                        tus->setColourOperation(LBO_MODULATE);
+                        if (pass->getTextureUnitState(ogreTextureName) == 0) {
+                          tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                          fixupTextureUnitState(tus,tex);
+                          tus->setColourOperation(LBO_MODULATE);
+                        }
                         pass->setSpecular(ColourValue(1,1,1,1));
                         break;
                       default:
@@ -702,8 +715,9 @@ public:
 
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
-    Meshdata md;
+    MeshdataPtr mdptr;
     Ogre::VertexData * createVertexData(const SubMeshGeometry &submesh, int vertexCount, Ogre::HardwareVertexBufferSharedPtr&vbuf) {
+        
         using namespace Ogre;
         Ogre::VertexData *vertexData = OGRE_NEW Ogre::VertexData();
         VertexDeclaration* vertexDecl = vertexData->vertexDeclaration;
@@ -757,7 +771,7 @@ class MeshdataManualLoader : public Ogre::ManualResourceLoader {
     }
 public:
 
-    MeshdataManualLoader(const Meshdata&meshdata):md(meshdata) {
+    MeshdataManualLoader(MeshdataPtr meshdata):mdptr(meshdata) {
     }
 
     void prepareResource(Ogre::Resource*r) {
@@ -773,6 +787,9 @@ public:
 
     void getMeshStats(bool* useSharedBufferOut, size_t* totalVertexCountOut) {
         using namespace Ogre;
+
+        const Meshdata& md = *mdptr;
+
         bool useSharedBuffer = true;
         for(GeometryInstanceList::const_iterator geoinst_it = md.instances.begin(); geoinst_it != md.instances.end(); geoinst_it++) {
             const GeometryInstance& geoinst = *geoinst_it;
@@ -830,6 +847,8 @@ public:
 
     void traverseNodes(Ogre::Resource* r, const bool useSharedBuffer, const size_t totalVertexCount) {
         using namespace Ogre;
+        const Meshdata& md = *mdptr;
+
         SHA256 sha = md.hash;
         String hash = sha.convertToHexString();
 
@@ -1078,21 +1097,13 @@ void Entity::createMesh(MeshdataPtr mdptr) {
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
-                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (matname,*mat, mURIString, mTextureFingerprints)));
+                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (mdptr, matname,*mat, mURIString, mTextureFingerprints)));
 
                 reload->prepareResource(&*matPtr);
-                reload->loadResource(&*matPtr);
-
+                reload->loadResource(&*matPtr);                
             }
         }
-        Ogre::MaterialPtr base_mat = matm.getByName("baseogremat");
-        for(TextureList::const_iterator tex_it = md.textures.begin(); tex_it != md.textures.end(); tex_it++){
-          std::string matname = hash + "_texture_" + (*tex_it);
-            Ogre::MaterialPtr mat = base_mat->clone(matname);
-            String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*tex_it);
-            String ogreTextureName = "Cache/" + mTextureFingerprints[texURI];
-            mat->getTechnique(0)->getPass(0)->createTextureUnitState(ogreTextureName,0);
-        }
+        
         Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
 
         /// FIXME: set bounds, bounding radius here
@@ -1107,13 +1118,14 @@ void Entity::createMesh(MeshdataPtr mdptr) {
 #else
 			OGRE_NEW 
 #endif
-			MeshdataManualLoader(md))));
+			MeshdataManualLoader(mdptr))));
         reload->prepareResource(&*mo);
-        reload->loadResource(&*mo);
+        reload->loadResource(&*mo);        
 
         bool check = mm.resourceExists(hash);
 
-        loadMesh(hash);
+        loadMesh(hash);        
+        
     }
     // Lights
     int light_idx = 0;
@@ -1153,17 +1165,20 @@ void Entity::createMesh(MeshdataPtr mdptr) {
 }
 
 void Entity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
-    std::tr1::shared_ptr<const DenseData> response, MeshdataPtr md) {
+  std::tr1::shared_ptr<const DenseData> response, MeshdataPtr md) {
 
-    mTextureFingerprints[request->getURI().toString()] = request->getIdentifier();
-    if (mActiveCDNArchive) {
-        String id = request->getIdentifier();
-        fixOgreURI(id);
-        CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(response));
-    }
-    mRemainingDownloads--;
-    if (mRemainingDownloads == 0)
-        mScene->context()->mainStrand->post(std::tr1::bind(&Entity::createMeshWork, this, md));
+  if (mActiveCDNArchive && mTextureFingerprints->find(request->getURI().toString()) == mTextureFingerprints->end() ) {
+      String id = request->getURI().toString() + request->getMetadata().getFingerprint().toString();
+
+      (*mTextureFingerprints)[request->getURI().toString()] = id;
+      
+      fixOgreURI(id);
+      CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(response));
+  }
+
+  mRemainingDownloads--;
+  if (mRemainingDownloads == 0)
+    mScene->context()->mainStrand->post(std::tr1::bind(&Entity::createMeshWork, this, md));
 }
 
 void Entity::handleMeshParsed(MeshdataPtr md) {
@@ -1183,11 +1198,13 @@ void Entity::handleMeshParsed(MeshdataPtr md) {
     for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
       String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
 
-        ResourceDownloadTask *dl = new ResourceDownloadTask(
-            Transfer::URI(texURI), getScene()->transferPool(),
-            mProxy->priority,
-           std::tr1::bind(&Entity::downloadFinished, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, md));
-        (*dl)();
+      std::tr1::shared_ptr<ResourceDownloadTask> dl =
+        std::tr1::shared_ptr<ResourceDownloadTask>(new ResourceDownloadTask(
+                                                  Transfer::URI(texURI), getScene()->transferPool(),
+                                                  mProxy->priority,
+                                                  std::tr1::bind(&Entity::downloadFinished, this,
+                                                  std::tr1::placeholders::_1, std::tr1::placeholders::_2, md)));
+        (*dl) (dl);
     }
 }
 

@@ -30,7 +30,7 @@ clean:
 
 DEPVC8REV=HEAD
 DEPVC9REV=14
-DEPOSXREV=51
+DEPOSXREV=53
 DEPSOURCE=41
 DEPARCHINDEP=7
 #========== Dependencies ===========
@@ -59,8 +59,7 @@ distributions:
 	svn co -r$(DEPARCHINDEP) http://sirikatamachindep.googlecode.com/svn/trunk/ dependencies/machindependencies
 
 update-dependencies: distributions
-	git submodule init || true
-	git submodule update || true
+	git submodule update --init --recursive || true
 	case "`uname`" in \
 		*arwin*) \
 			cd dependencies && svn update -r$(DEPOSXREV) \

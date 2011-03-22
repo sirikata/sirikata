@@ -9,7 +9,7 @@ function callback()
     system.print('\n\nGot into callback\n\n');
 }
 
-var times = system.timeout(10,null,callback);
+var times = system.timeout(10,callback);
 
 times.suspend();
 

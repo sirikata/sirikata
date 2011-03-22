@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.import('std/movement/movableremote.em');
-system.import('std/graphics/drag/handler.em');
+system.require('std/movement/movableremote.em');
+system.require('std/graphics/drag/handler.em');
 
 /** RotateDragHandler responds to drag events by moving a selected object.
  */

@@ -299,7 +299,7 @@ public:
     virtual boost::any invoke(std::vector<boost::any>& params);
 
     // Helper which creates a WebView window, either
-    boost::any createWindow(const String& name, bool is_html, bool is_file, String content);
+    boost::any createWindow(const String& name, bool is_html, bool is_file, String content, uint32 width, uint32 height);
     // Create a window using a URL
     boost::any createWindow(std::vector<boost::any>& params);
     // Create a window using a file

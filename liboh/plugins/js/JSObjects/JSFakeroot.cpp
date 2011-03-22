@@ -32,6 +32,24 @@ v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args)
     return jsfake->struct_canSendMessage();
 }
 
+v8::Handle<v8::Value> root_require(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Require only takes one parameter: the name of the file to import.")) );
+
+    v8::Handle<v8::Value> filename = args[0];
+
+    StringCheckAndExtract(native_filename, filename);
+    String errorMessage = "Error decoding the fakeroot object from root_canSendMessage.  ";
+    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
+
+    return jsfake->struct_require(native_filename);
+}
+
+
 
 v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
 {
@@ -413,12 +431,11 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 {
 
-    if (args.Length() != 3)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second is target val, and third argumnet is callback")) );
+    if (args.Length() != 2)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second argumnet is callback")) );
 
     v8::Handle<v8::Value> dur         = args[0];
-    v8::Handle<v8::Value> target_val  = args[1];
-    v8::Handle<v8::Value> cb_val      = args[2];
+    v8::Handle<v8::Value> cb_val      = args[1];
 
 
     //just returns the ScriptTimeout function
@@ -436,25 +453,18 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     else if (dur->IsInt32())
         native_dur = dur->Int32Value();
     else
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  First argument incorrect: duration cannot be cast to float.")) );
-
-    // Target
-    if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Second argument incorrect: target isn't null or valid object.")) );
-
-    v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
-    v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSFakeroot.cpp.  First argument incorrect: duration cannot be cast to float.")) );
 
 
     // Function
     if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Third argument incorrect: callback isn't a function.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSFakeroot.cpp.  Second argument incorrect: callback isn't a function.")) );
 
 
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    return jsfake->struct_createTimeout(Duration::seconds(native_dur), target_persist, cb_persist);
+    return jsfake->struct_createTimeout(Duration::seconds(native_dur), cb_persist);
 }
 
 

@@ -149,7 +149,7 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
 void SDLMouse::fireWheel(const SDLMousePtr &thisptr,
                          SDLInputManager *em, int xrel, int yrel) {
     float to_axis (em->mWheelToAxis->as<float>());
-    SILOG(input,debug,"WHEEL: " << xrel << "; " << yrel);
+    SILOG(input,detailed,"WHEEL: " << xrel << "; " << yrel);
     fireAxis(thisptr, em, WHEELX, AxisValue::fromCentered(to_axis*xrel));
     fireAxis(thisptr, em, WHEELY, AxisValue::fromCentered(to_axis*yrel));
 }

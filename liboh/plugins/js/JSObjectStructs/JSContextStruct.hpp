@@ -77,6 +77,10 @@ struct JSContextStruct : public JSSuspendable
     //string argument is the filename that we're trying to open and execute
     //contents of.
     v8::Handle<v8::Value>  struct_import(const String& toImportFrom);
+    //string argument is the filename that we're trying to open and execute
+    //contents of.
+    v8::Handle<v8::Value>  struct_require(const String& toRequireFrom);
+    
     //requests jsobjscript to create an event handler in the context associated
     //wth jscontextstruct.  registers this handler as well through struct_registerSuspendable
     v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
@@ -95,9 +99,8 @@ struct JSContextStruct : public JSSuspendable
     //creates a new context, and hangs the child into suspendables map.
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
     
-    //create a timer that will fire in dur seconds from now, that will bind the
-    //this parameter to target and that will fire the callback cb.
-    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Object>& target, v8::Persistent<v8::Function>& cb);
+    //create a timer that will fire cb in dur seconds from now,
+    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
     
     //Tries to eval the emerson code in native_contents that came from origin
     //sOrigin inside of this context.

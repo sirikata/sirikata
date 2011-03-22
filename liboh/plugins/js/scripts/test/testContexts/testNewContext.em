@@ -29,8 +29,8 @@ function printXMultiple()
 {
     var xAsString = x.toString();
     system.print("This is x: " + xAsString + "\n");
-    system.timeout(5, null, printXMultiple);
+    system.timeout(5, printXMultiple);
 }
 
 
-system.timeout(5, null, printXMultiple);
+system.timeout(5, printXMultiple);

@@ -33,7 +33,7 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-system.import('gui.em');
+system.require('gui.em');
 
 (
 function() {
@@ -92,13 +92,16 @@ function() {
     };
 
     /** Request that the given URL be presented as a widget. */
-    ns.Graphics.prototype.createGUI = function(name, url) {
-        return new ns.GUI(simulator.invoke("createWindowFile", name, url));
+    ns.Graphics.prototype.createGUI = function(name, url, width, height) {
+        if (width && height)
+            return new ns.GUI(this._simulator.invoke("createWindowFile", name, url, width, height));
+        else
+            return new ns.GUI(this._simulator.invoke("createWindowFile", name, url));
     };
 
     /** Request that the given URL be presented as a widget. */
     ns.Graphics.prototype.createBrowser = function(name, url) {
-        return new ns.GUI(simulator.invoke("createWindow", name, url));
+        return new ns.GUI(this._simulator.invoke("createWindow", name, url));
     };
 
     /** Get basic camera description. This is read-only data. */
@@ -132,4 +135,4 @@ function() {
 })();
 
 // Import additional utilities that anybody using this class will need.
-system.import('input.em');
+system.require('input.em');

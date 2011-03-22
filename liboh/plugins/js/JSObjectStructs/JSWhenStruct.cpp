@@ -236,7 +236,7 @@ bool JSWhenStruct::evalPred()
     v8::HandleScope handle_scope;
 
     //the function passed in shouldn't take any arguments
-    v8::Handle<v8::Value>predReturner = mObjScript->handleTimeoutContext(mPred,NULL);
+    v8::Handle<v8::Value>predReturner = mObjScript->handleTimeoutContext(mPred, (JSContextStruct*)NULL);
 
     String dummyErrorMessage;
     bool decodedVal;
@@ -257,7 +257,7 @@ void JSWhenStruct::runCallback()
     v8::HandleScope handle_scope;
 
     //the function passed in shouldn't take any arguments
-    mObjScript->handleTimeoutContext(mCB,NULL);
+    mObjScript->handleTimeoutContext(mCB, (JSContextStruct*)NULL);
 }
 
 

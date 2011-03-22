@@ -56,4 +56,14 @@ function() {
         this._gui.invoke("eval", js);
     };
 
+    /** Hides the GUI window. */
+    ns.GUI.prototype.hide = function() {
+        this._gui.invoke("hide");
+    };
+
+    /** Shows the GUI window. */
+    ns.GUI.prototype.show = function() {
+        this._gui.invoke("show");
+    };
+
 })();

@@ -33,8 +33,8 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.movement) === "undefined") std.movement = {};
 
-system.import('std/core/bind.js');
-system.import('std/movement/movement.em');
+system.require('std/core/bind.js');
+system.require('std/movement/movement.em');
 
 (
 function() {

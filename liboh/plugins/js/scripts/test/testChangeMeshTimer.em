@@ -18,7 +18,7 @@ function callback_change_mesh()
         onOriginalMesh = true;
         system.presences[0].setMesh(originalMesh);
     }
-    system.timeout(5,null,timeoutFunction);
+    system.timeout(5,timeoutFunction);
 }
 
 function timeoutFunction()
@@ -26,5 +26,4 @@ function timeoutFunction()
     callback_change_mesh();
 }
 
-system.timeout(5,null,timeoutFunction);
-
+system.timeout(5,timeoutFunction);
