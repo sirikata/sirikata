@@ -152,9 +152,9 @@ function addObject(objid) {
 		}
 	}
 	if (gotIt == false) {
-		curEditor = new Editor(objid);
+	    $( "#emerson-prompt-dialog" ).dialog( "open" );
+	    curEditor = new Editor(objid);
 	}
-	$( "#emerson-prompt-dialog" ).dialog( "open" );
 }
 
 function addMessage(objid, msg) {
