@@ -24,14 +24,14 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    hasOnDisconnectedCallback(false),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
-   mFakeroot(new JSFakerootStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
+   mSystem(new JSSystemStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
    mUtil(NULL)
 {
     createContextObjects();
 }
 
-//performs the initialization and population of util object, fakeroot object,
-//and fakeroot object's presences array.
+//performs the initialization and population of util object, system object,
+//and system object's presences array.
 void JSContextStruct::createContextObjects()
 {
     v8::HandleScope handle_scope;
@@ -46,18 +46,18 @@ void JSContextStruct::createContextObjects()
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
-    v8::Local<v8::Object> fakeroot_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
-    fakeroot_obj->SetInternalField(FAKEROOT_TEMAPLATE_FIELD, v8::External::New(mFakeroot));
-    fakeroot_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(FAKEROOT_TYPEID_STRING)));
+    v8::Local<v8::Object> system_obj = v8::Local<v8::Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
+    system_obj->SetInternalField(SYSTEM_TEMPLATE_SYSTEM_FIELD, v8::External::New(mSystem));
+    system_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(SYSTEM_TYPEID_STRING)));
 
 
 
     
     v8::Local<v8::Array> arrayObj = v8::Array::New();
-    fakeroot_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
+    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 
     //populates internal jscontextstruct field
-    fakerootObj = v8::Persistent<v8::Object>::New(fakeroot_obj);
+    systemObj = v8::Persistent<v8::Object>::New(system_obj);
 
     JSUtilStruct* mUtil = new JSUtilStruct(this,jsObjScript);
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
@@ -96,7 +96,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents
 
 JSContextStruct::~JSContextStruct()
 {
-    delete mFakeroot;
+    delete mSystem;
     delete mHomeObject;
 
     if (hasOnConnectedCallback)
@@ -118,7 +118,7 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
     
     // Get the presences array
     v8::Local<v8::Array> presences_array =
-        v8::Local<v8::Array>::Cast(fakerootObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+        v8::Local<v8::Array>::Cast(systemObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
     uint32 new_pos = presences_array->Length();
 
     // Create the object for the new presence
@@ -184,7 +184,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
 
 v8::Handle<v8::Value> JSContextStruct::clear()
 {
-    JSLOG(error,"Error.  Have not finished writing context clear's cleanup methods.  For instance, may want to delete fakeroot and homeobject.");
+    JSLOG(error,"Error.  Have not finished writing context clear's cleanup methods.  For instance, may want to delete system and homeobject.");
 
     assert(false);
     
@@ -363,12 +363,12 @@ v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(const Duration& dur,
 
 
 /**
-presStruct: who the messages that this context's fakeroot sends will
+presStruct: who the messages that this context's system sends will
 be from
 
 canMessage: who you can always send messages to.
 
-sendEveryone creates fakeroot that can send messages to everyone besides just
+sendEveryone creates system that can send messages to everyone besides just
 who created you.
 
 recvEveryone means that you can receive messages from everyone besides just
@@ -432,7 +432,7 @@ v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const Patt
 
 
 
-v8::Handle<Object> JSContextStruct::struct_getFakeroot()
+v8::Handle<Object> JSContextStruct::struct_getSystem()
 {
   HandleScope handle_scope;
   Local<Object> global_obj = mContext->Global();
@@ -443,7 +443,7 @@ v8::Handle<Object> JSContextStruct::struct_getFakeroot()
   // And we add an internal field to the system object as well to make it
   // easier to find the pointer in different calls. Note that in this case we
   // don't use the prototype -- non-global objects work as we would expect.
-  Local<Object> froot_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME)));
+  Local<Object> froot_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
 
   Persistent<Object> ret_obj = Persistent<Object>::New(froot_obj);
   

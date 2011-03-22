@@ -1,5 +1,5 @@
-#ifndef __SIRIKATA_JS_FAKEROOT_STRUCT_HPP__
-#define __SIRIKATA_JS_FAKEROOT_STRUCT_HPP__
+#ifndef __SIRIKATA_JS_SYSTEM_STRUCT_HPP__
+#define __SIRIKATA_JS_SYSTEM_STRUCT_HPP__
 
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
@@ -18,15 +18,15 @@ class JSPresenceStruct;
 
 
 //Most calls in this class just go straight through into associated context to
-//make a sibling call.  Split fakeroot into intermediate layer between v8-bound
+//make a sibling call.  Split system into intermediate layer between v8-bound
 //calls and jscontextstruct to make tracking of capabilities explicit, and easy
 //to check without having to dig through a lot of other code.
-struct JSFakerootStruct
+struct JSSystemStruct
 {
-    JSFakerootStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity,bool eval);
-    ~JSFakerootStruct();
+    JSSystemStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity,bool eval);
+    ~JSSystemStruct();
 
-    static JSFakerootStruct* decodeRootStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
+    static JSSystemStruct* decodeSystemStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
 
     //regular members
     v8::Handle<v8::Value> struct_canSendMessage();
@@ -61,7 +61,7 @@ struct JSFakerootStruct
     v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
 
-    //calls eval on the fakeroot's context associated with this fakeroot.
+    //calls eval on the system's context associated with this system.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
 

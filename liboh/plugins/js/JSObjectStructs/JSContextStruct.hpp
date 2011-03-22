@@ -4,7 +4,7 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 #include <vector>
-#include "JSFakerootStruct.hpp"
+#include "JSSystemStruct.hpp"
 #include "../JSSystemNames.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "JSSuspendable.hpp"
@@ -43,9 +43,9 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value>  struct_suspendContext();
     v8::Handle<v8::Value>  struct_resumeContext();
 
-    //returns an object that contains the fakeroot/system object associated with
+    //returns an object that contains the system/system object associated with
     //this context
-    v8::Handle<v8::Object> struct_getFakeroot();
+    v8::Handle<v8::Object> struct_getSystem();
 
 
     //creates a new jseventhandlerstruct and wraps it in a js object
@@ -86,9 +86,9 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
 
 
-    //presStruct: who the messages that this context's fakeroot sends will
+    //presStruct: who the messages that this context's system sends will
     //be from canMessage: who you can always send messages to.  sendEveryone creates
-    //fakeroot that can send messages to everyone besides just who created you.
+    //system that can send messages to everyone besides just who created you.
     //recvEveryone means that you can receive messages from everyone besides just
     //who created you.  proxQueries means that you can issue proximity queries
     //yourself, and latch on callbacks for them.  canImport means that you can
@@ -114,7 +114,7 @@ struct JSContextStruct : public JSSuspendable
     void checkContextDisconnectCallback(JSPresenceStruct* jspres);
     
     //Adds the following presence to the presence array associated with the
-    //fakeroot object that is associated with this context.
+    //system object that is associated with this context.
     v8::Persistent<v8::Object> addToPresencesArray(JSPresenceStruct* jspres);
 
     
@@ -126,8 +126,8 @@ struct JSContextStruct : public JSSuspendable
 
 private:
 
-    //performs the initialization and population of util object, fakeroot object,
-    //and fakeroot object's presences array.
+    //performs the initialization and population of util object, system object,
+    //and system object's presences array.
     void createContextObjects();
     
     //a function to call within this context for when a presence that was
@@ -139,7 +139,7 @@ private:
     
     
     //a pointer to the local presence that is associated with this context.  for
-    //instance, when you call getPosition on the fakeroot object, you actually
+    //instance, when you call getPosition on the system object, you actually
     //end up returning the position of this presence.  you send messages from
     //this presence, etc.  Can be null.
     JSPresenceStruct* associatedPresence;
@@ -148,11 +148,11 @@ private:
     //send messages to regardless of permissions
     SpaceObjectReference* mHomeObject;  
 
-    //a pointer to the fakeroot struct that will be used as a system-like object
+    //a pointer to the system struct that will be used as a system-like object
     //inside of the context.  
-    JSFakerootStruct* mFakeroot;
-    //mFakeroot in a v8 wrapper.  also, its persistent!
-    v8::Persistent<v8::Object> fakerootObj;
+    JSSystemStruct* mSystem;
+    //mSystem in a v8 wrapper.  also, its persistent!
+    v8::Persistent<v8::Object> systemObj;
     
 
     

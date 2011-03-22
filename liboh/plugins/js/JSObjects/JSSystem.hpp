@@ -1,6 +1,6 @@
 
-#ifndef __SIRIKATA_JS_FAKEROOT_HPP__
-#define __SIRIKATA_JS_FAKEROOT_HPP__
+#ifndef __SIRIKATA_JS_SYSTEM_HPP__
+#define __SIRIKATA_JS_SYSTEM_HPP__
 
 #include <sirikata/oh/Platform.hpp>
 
@@ -13,7 +13,7 @@
 
 namespace Sirikata {
 namespace JS {
-namespace JSFakeroot {
+namespace JSSystem {
 
 
 v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args);
@@ -45,7 +45,7 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args);
 
 
 
-}//end jsfakeroot namespace
+}//end jssystem namespace
 }//end js namespace
 }//end sirikata
 

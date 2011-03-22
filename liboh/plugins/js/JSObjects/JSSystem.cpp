@@ -1,4 +1,4 @@
-#include "JSFakeroot.hpp"
+#include "JSSystem.hpp"
 
 #include <sirikata/oh/Platform.hpp>
 
@@ -11,7 +11,7 @@
 #include "JSFields.hpp"
 #include "JSObjectsUtils.hpp"
 #include "../JSSystemNames.hpp"
-#include "../JSObjectStructs/JSFakerootStruct.hpp"
+#include "../JSObjectStructs/JSSystemStruct.hpp"
 #include "../JSEntityCreateInfo.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "JSVec3.hpp"
@@ -19,12 +19,12 @@
 
 namespace Sirikata {
 namespace JS {
-namespace JSFakeroot {
+namespace JSSystem {
 
 v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding the fakeroot object from root_canSendMessage.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(), errorMessage);
+    String errorMessage = "Error decoding the system object from root_canSendMessage.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -40,8 +40,8 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
     v8::Handle<v8::Value> filename = args[0];
 
     StringCheckAndExtract(native_filename, filename);
-    String errorMessage = "Error decoding the fakeroot object from root_canSendMessage.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(), errorMessage);
+    String errorMessage = "Error decoding the system object from root_canSendMessage.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
@@ -53,8 +53,8 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
 
 v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding the fakeroot object from root_canRecvMessage.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage = "Error decoding the system object from root_canRecvMessage.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -64,8 +64,8 @@ v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
 
 v8::Handle<v8::Value> root_canImport(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding the fakeroot object from root_canImport.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage = "Error decoding the system object from root_canImport.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -76,8 +76,8 @@ v8::Handle<v8::Value> root_canImport(const v8::Arguments& args)
 
 v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding the fakeroot object from root_canProx.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage = "Error decoding the system object from root_canProx.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -99,7 +99,7 @@ v8::Handle<v8::Value> root_import(const v8::Arguments& args)
 
 
     //decode the filename to import from.
-    String strDecodeErrorMessage = "Error decoding string as first argument of root_import of jsfakeroot.  ";
+    String strDecodeErrorMessage = "Error decoding string as first argument of root_import of jssystem.  ";
     String native_filename; //string to decode to.
     bool decodeStrSuccessful = decodeString(args[0],native_filename,strDecodeErrorMessage);
     if (! decodeStrSuccessful)
@@ -107,9 +107,9 @@ v8::Handle<v8::Value> root_import(const v8::Arguments& args)
 
 
 
-    //decode the fakeroot object
-    String errorMessage = "Error decoding the fakeroot object from root_import.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    //decode the system object
+    String errorMessage = "Error decoding the system object from root_import.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -124,8 +124,8 @@ v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args)
 
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding the fakeroot object from root_getPosition.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage = "Error decoding the system object from root_getPosition.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -138,8 +138,8 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args)
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in root_print.  Requires exactly one argument: a string to print.")));
     
-    String errorMessage = "Error decoding the fakeroot object from root_print.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage = "Error decoding the system object from root_print.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
@@ -170,8 +170,8 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
     String serialized_message = JSSerializer::serializeObject(v8Object);
     
     
-    String errorMessage = "Error decoding the fakeroot object from root_print.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage = "Error decoding the system object from root_print.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
@@ -202,8 +202,8 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 
     
     //decode root
-    String errorMessageFRoot = "Error decoding the fakeroot object from root_createPresence.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageFRoot);
+    String errorMessageFRoot = "Error decoding the system object from root_createPresence.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
@@ -222,8 +222,8 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
 
     //decode root
-    String errorMessageFRoot = "Error decoding the fakeroot object from root_createEntity.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageFRoot);
+    String errorMessageFRoot = "Error decoding the system object from root_createEntity.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
@@ -305,7 +305,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 //argument 5: true/false.  can I import
 //argument 6: true/false.  can I create presences.
 //argument 7: true/false.  can I create presences.
-//argument 8: true/false.  can I call eval directly through fakeroot object.
+//argument 8: true/false.  can I call eval directly through system object.
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 {
     if (args.Length() != 9)
@@ -316,11 +316,11 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
     String errorMessageWhichArg,errorMessage;
 
-    //jsfakeroot decode
-    String errorMsgFakeroot  = "Error decoding fakeroot when creating new context.  ";
-    JSFakerootStruct* jsfake = JSFakerootStruct::decodeRootStruct(args.This(),errorMsgFakeroot);
+    //jssystem decode
+    String errorMsgSystem  = "Error decoding system when creating new context.  ";
+    JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMsgSystem);
     if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMsgFakeroot.c_str())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMsgSystem.c_str())));
 
     
     //jspresstruct decode
@@ -416,7 +416,7 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 
     
     String errorMessage       = "Error calling eval in context.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct( args.This(), errorMessage);
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct( args.This(), errorMessage);
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
@@ -439,8 +439,8 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 
 
     //just returns the ScriptTimeout function
-    String errorMessage      =  "Error decoding fakeroot in root_timeout of JSFakeroot.cpp.  ";
-    JSFakerootStruct* jsfake = JSFakerootStruct::decodeRootStruct(args.This(),errorMessage);
+    String errorMessage      =  "Error decoding system in root_timeout of JSSystem.cpp.  ";
+    JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
@@ -453,12 +453,12 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     else if (dur->IsInt32())
         native_dur = dur->Int32Value();
     else
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSFakeroot.cpp.  First argument incorrect: duration cannot be cast to float.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  First argument incorrect: duration cannot be cast to float.")) );
 
 
     // Function
     if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSFakeroot.cpp.  Second argument incorrect: callback isn't a function.")) );
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("In ScriptTimeout of JSSystem.cpp.  Second argument incorrect: callback isn't a function.")) );
 
 
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
@@ -529,7 +529,7 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     // Sender
     if (! sender_val->IsNull())  //means that it's a valid sender
     {
-        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSFakeroot.cpp.  Having trouble decoding sender.  ";
+        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding sender.  ";
         JSPositionListener* jsposlist = decodeJSPosListener(sender_val,errorMessage);
         
         if (jsposlist == NULL)
@@ -550,9 +550,9 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
     
-    //now decode fakeroot
-    String errorMessageDecodeRoot = "Error decoding the fakeroot object from root_registerHandler.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageDecodeRoot);
+    //now decode system
+    String errorMessageDecodeRoot = "Error decoding the system object from root_registerHandler.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageDecodeRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
@@ -575,9 +575,9 @@ v8::Handle<v8::Value> root_onPresenceConnected(const v8::Arguments& args)
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
 
-    //now decode fakeroot
-    String errorMessageDecodeRoot = "Error decoding the fakeroot object from root_OnPresenceConnected.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageDecodeRoot);
+    //now decode system
+    String errorMessageDecodeRoot = "Error decoding the system object from root_OnPresenceConnected.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageDecodeRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
@@ -599,9 +599,9 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
 
-    //now decode fakeroot
-    String errorMessageDecodeRoot = "Error decoding the fakeroot object from root_OnPresenceDisconnected.  ";
-    JSFakerootStruct* jsfake  = JSFakerootStruct::decodeRootStruct(args.This(),errorMessageDecodeRoot);
+    //now decode system
+    String errorMessageDecodeRoot = "Error decoding the system object from root_OnPresenceDisconnected.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageDecodeRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
@@ -613,7 +613,7 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
 
 
 
-}//end jsfakeroot namespace
+}//end jssystem namespace
 }//end js namespace
 }//end sirikata
 

@@ -1980,7 +1980,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedItemStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenWatchedListStruct.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSFakerootStruct.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSystemStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSUtilStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSVisibleStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSWhenStruct.cpp
@@ -1994,7 +1994,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVisible.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFakeroot.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
   ${EMERSON_SOURCES}
   ${EMERSON_WHEN_PRED_SRCS}

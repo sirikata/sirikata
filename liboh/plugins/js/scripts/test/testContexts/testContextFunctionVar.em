@@ -6,7 +6,7 @@ system.import('test/testContexts/baseContextTest.em');
 
 x = 5;
 
-var  toExecute = function (fakeroot,argPassedIn, argPassedIn2)
+var  toExecute = function (argPassedIn, argPassedIn2)
 {
     x = 7;
     argPassedIn2.print("Inside of toExecute\n");

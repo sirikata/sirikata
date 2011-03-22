@@ -1499,10 +1499,10 @@ void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
 
 
 
-//presAssociatedWith: who the messages that this context's fakeroot sends will
+//presAssociatedWith: who the messages that this context's system sends will
 //be from
 //canMessage: who you can always send messages to.
-//sendEveryone creates fakeroot that can send messages to everyone besides just
+//sendEveryone creates system that can send messages to everyone besides just
 //who created you.
 //recvEveryone means that you can receive messages from everyone besides just
 //who created you.

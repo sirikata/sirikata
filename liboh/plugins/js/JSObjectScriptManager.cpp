@@ -38,7 +38,7 @@
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
 #include "JSObjects/JSVisible.hpp"
-#include "JSObjects/JSFakeroot.hpp"
+#include "JSObjects/JSSystem.hpp"
 
 #include "JSObjects/JSUtilObj.hpp"
 #include "JSObjects/JSHandler.hpp"
@@ -186,8 +186,7 @@ void JSObjectScriptManager::createTemplates()
     createTimerTemplate();
     createJSInvokableObjectTemplate();
     createPresenceTemplate();
-//    createSystemTemplate();
-    createFakerootTemplate();
+    createSystemTemplate();
     createContextTemplate();
     createContextGlobalTemplate();
 }
@@ -208,44 +207,44 @@ void JSObjectScriptManager::createTimerTemplate()
 }
 
 
-void JSObjectScriptManager::createFakerootTemplate()
+void JSObjectScriptManager::createSystemTemplate()
 {
     v8::HandleScope handle_scope;
-    mFakerootTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mSystemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
-    mFakerootTemplate->SetInternalFieldCount(FAKEROOT_TEMPLATE_FIELD_COUNT);
+    mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
 
-    mFakerootTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSFakeroot::root_sendHome));
-    mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::root_registerHandler));
-    mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::root_timeout));
-    mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::root_print));
+    mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
+    mSystemTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSSystem::root_registerHandler));
+    mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
+    mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
-    mFakerootTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSFakeroot::root_import));
+    mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
 
     //check what permissions fake root is loaded with
-    mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
-    mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
-    mFakerootTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSFakeroot::root_canProx));
-    mFakerootTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSFakeroot::root_canImport));
+    mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
+    mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
+    mSystemTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSSystem::root_canProx));
+    mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
     
-//    mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
-    mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
-    mFakerootTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSFakeroot::root_getVersion));
+//    mSystemTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSSystem::root_toString));
+    mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
+    mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
     //this doesn't work now.
-    mFakerootTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSFakeroot::root_scriptEval));
-    mFakerootTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSFakeroot::root_createContext));
-    mFakerootTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSFakeroot::root_createPresence));
-    mFakerootTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSFakeroot::root_createEntity));
+    mSystemTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::root_scriptEval));
+    mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
+    mSystemTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::root_createPresence));
+    mSystemTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::root_createEntity));
 
-    mFakerootTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSFakeroot::root_onPresenceConnected));
-    mFakerootTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSFakeroot::root_onPresenceDisconnected));
+    mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
+    mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
 
-    mFakerootTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
-    mFakerootTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSFakeroot::root_require));
+    mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
+    mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
     
 }
 
@@ -279,7 +278,7 @@ void JSObjectScriptManager::createContextGlobalTemplate()
     v8::HandleScope handle_scope;
     // And we expose some functionality directly
     mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME),mFakerootTemplate);
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME),mSystemTemplate);
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
 }
 
