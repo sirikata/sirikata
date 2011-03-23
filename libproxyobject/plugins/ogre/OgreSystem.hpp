@@ -292,7 +292,6 @@ public:
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);
 
     // SessionEventListener Interface
-    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token) {};
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
     // Methods for handling Invokable actions

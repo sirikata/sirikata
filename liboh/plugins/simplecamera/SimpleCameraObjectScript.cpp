@@ -98,7 +98,7 @@ void SimpleCameraObjectScript::attachScript(const String& script_name)
 {
 }
 
-void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int token) {
+void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token) {
     mID = name;
     mSelfProxy = mParent->self(mID);
 
