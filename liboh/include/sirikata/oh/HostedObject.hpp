@@ -235,10 +235,10 @@ public:
     void tick();
 
 
-    typedef int64_t PresenceToken;
+    typedef int64 PresenceToken;
     const static PresenceToken DEFAULT_PRESENCE_TOKEN = -1;
 
-    
+
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
         message, however any other message must wait until you receive the RetObj

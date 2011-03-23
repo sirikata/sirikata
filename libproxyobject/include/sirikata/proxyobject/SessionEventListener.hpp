@@ -53,7 +53,7 @@ public:
      *  \param from the SessionEventProvider the event originates from
      *  \param name the name of the object in the space
      */
-    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int64_t token) {};
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token) {};
 
     /** Invoked upon disconnection.
      *  \param from the SessionEventProvider the event originates from
