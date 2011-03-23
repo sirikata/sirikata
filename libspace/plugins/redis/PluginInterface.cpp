@@ -43,6 +43,7 @@ static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("space_redis", NULL,
         new OptionValue("host","127.0.0.1",Sirikata::OptionValueType<String>(),"Redis host to connect to."),
         new OptionValue("port","6379",Sirikata::OptionValueType<uint32>(),"Redis port to connect to."),
+        new OptionValue("prefix","",Sirikata::OptionValueType<String>(),"Prefix for redis keys, allowing you to provide 'namespaces' so multiple spaces can share the same redis database."),
         NULL
     );
 }
@@ -53,8 +54,9 @@ static ObjectSegmentation* createRedisOSeg(SpaceContext* ctx, Network::IOStrand*
 
     String redis_host = optionsSet->referenceOption("host")->as<String>();
     uint32 redis_port = optionsSet->referenceOption("port")->as<uint32>();
+    String redis_prefix = optionsSet->referenceOption("prefix")->as<String>();
 
-    return new RedisObjectSegmentation(ctx, oseg_strand, cseg, cache, redis_host, redis_port);
+    return new RedisObjectSegmentation(ctx, oseg_strand, cseg, cache, redis_host, redis_port, redis_prefix);
 }
 
 } // namespace Sirikata

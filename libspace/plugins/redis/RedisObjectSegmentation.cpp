@@ -195,12 +195,13 @@ void globalRedisDeleteFinished(redisAsyncContext* c, void* _reply, void* privdat
 
 } // namespace
 
-RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port)
+RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port, const String& redis_prefix)
  : ObjectSegmentation(con, o_strand),
    mCSeg(cseg),
    mCache(cache),
    mRedisHost(redis_host),
    mRedisPort(redis_port),
+   mRedisPrefix(redis_prefix),
    mRedisContext(NULL),
    mRedisFD(NULL),
    mReading(false),
@@ -350,7 +351,7 @@ OSegEntry RedisObjectSegmentation::lookup(const UUID& obj_id) {
     ri->oseg = this;
     ri->obj = obj_id;
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisLookupObjectReadFinished, ri, "GET %s", obj_id.toString().c_str());
+    redisAsyncCommand(mRedisContext, globalRedisLookupObjectReadFinished, ri, "GET %s%s", mRedisPrefix.c_str(), obj_id.toString().c_str());
     return OSegEntry::null();
 }
 
@@ -399,7 +400,7 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
     String valstr = os.str();
     REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SET %s %b", obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SET %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
 }
 
 void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id) {
@@ -427,7 +428,7 @@ void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius
     String valstr = os.str();
     REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisAddMigratedObjectWriteFinished, wi, "SET %s %b", obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+    redisAsyncCommand(mRedisContext, globalRedisAddMigratedObjectWriteFinished, wi, "SET %s%s %b", mRedisPrefix.c_str(), obj_id.toString().c_str(), valstr.c_str(), valstr.size());
 }
 
 void RedisObjectSegmentation::finishWriteMigratedObject(const UUID& obj_id, ServerID ackTo) {
@@ -456,7 +457,7 @@ void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
     wi->oseg = this;
     wi->obj = obj_id;
     ensureConnected();
-    redisAsyncCommand(mRedisContext, globalRedisDeleteFinished, wi, "DEL %s", obj_id.toString().c_str());
+    redisAsyncCommand(mRedisContext, globalRedisDeleteFinished, wi, "DEL %s%s", mRedisPrefix.c_str(), obj_id.toString().c_str());
 }
 
 bool RedisObjectSegmentation::clearToMigrate(const UUID& obj_id) {

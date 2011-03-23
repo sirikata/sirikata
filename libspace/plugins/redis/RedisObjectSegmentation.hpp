@@ -40,7 +40,7 @@ namespace Sirikata {
 
 class RedisObjectSegmentation : public ObjectSegmentation {
 public:
-    RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port);
+    RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port, const String& redis_prefix);
     ~RedisObjectSegmentation();
 
     virtual void start();
@@ -93,6 +93,7 @@ private:
 
     String mRedisHost;
     uint16 mRedisPort;
+    String mRedisPrefix;
 
     redisAsyncContext* mRedisContext;
     boost::asio::posix::stream_descriptor* mRedisFD; // Wrapped hiredis file descriptor
