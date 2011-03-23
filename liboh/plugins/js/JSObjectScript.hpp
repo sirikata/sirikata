@@ -145,8 +145,6 @@ public:
      */
     v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont);
 
-    /** reboot the state of the script, basically reset the state */
-    void reboot();
 
     Handle<v8::Context> context() { return mContext->mContext;}
     /** create a new entity at the run time */

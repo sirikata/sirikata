@@ -28,6 +28,9 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    mUtil(NULL)
 {
     createContextObjects();
+    
+    //no need to register this context with it's parent context because that's
+    //taken care of in the createContext function of this class.
 }
 
 //performs the initialization and population of util object, system object,
@@ -178,21 +181,24 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
 }
 
 
-
-
-
-
+//Destroys all objects that were created in this context + all of this context's
+//subcontexts.
 v8::Handle<v8::Value> JSContextStruct::clear()
 {
-    JSLOG(error,"Error.  Have not finished writing context clear's cleanup methods.  For instance, may want to delete system and homeobject.");
-
-    assert(false);
+    JSLOG(insane,"Clearing a context.  Hopefully it works!");
     
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->clear();
     
+
+    systemObj.Dispose();
+    if (hasOnConnectedCallback)
+        cbOnConnected.Dispose();
+    if (hasOnDisconnectedCallback)
+        cbOnDisconnected.Dispose();
+
     mContext.Dispose();
-    
+        
     return JSSuspendable::clear();
 }
 
@@ -209,7 +215,7 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
     {
-        JSLOG(error,"Strangeness in registerSuspendable of JSContextStruct.  Trying to re-register a suspendable with the context that was already registered.  Likely an error.");
+        JSLOG(info,"Strangeness in registerSuspendable of JSContextStruct.  Trying to re-register a suspendable with the context that was already registered.  Unlikely to be an error, but thought I should mention it.");
         return;
     }
 

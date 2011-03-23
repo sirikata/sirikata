@@ -1,6 +1,6 @@
 //If this script works correctly, after calling it, you should see
 //it print every 3 seconds the messages in fuccToReExec (with 5 as argAsString.
-
+//note.  use this to also test context suspend and resume and clear
 
 system.import('test/testContexts/baseContextTest.em');
 

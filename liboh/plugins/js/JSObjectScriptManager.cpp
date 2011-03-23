@@ -270,7 +270,8 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
     mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
     mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
-
+    mContextTemplate->Set(v8::String::New("clear"), v8::FunctionTemplate::New(JSContext::ScriptClear));
+    
 }
 
 void JSObjectScriptManager::createContextGlobalTemplate()

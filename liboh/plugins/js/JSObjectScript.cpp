@@ -643,27 +643,6 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
 }
 
 
-void JSObjectScript::reboot()
-{
-  // Need to delete the existing context? v8 garbage collects?
-
-  // v8::HandleScope handle_scope;
-  // mContext = v8::Context::New(NULL, mManager->mGlobalTemplate);
-  // Local<Object> global_obj = mContext->Global();
-  // Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
-  // global_proto->SetInternalField(0, External::New(this));
-  // Local<Object> system_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
-
-  // populateSystemObject(system_obj);
-
-  // //delete all handlers
-  // for (int s=0; s < (int) mEventHandlers.size(); ++s)
-  //     delete mEventHandlers[s];
-
-  // mEventHandlers.clear();
-
-}
-
 void JSObjectScript::debugPrintString(std::string cStrMsgBody) const
 {
     JSLOG(debug,"Is it working: " << cStrMsgBody);

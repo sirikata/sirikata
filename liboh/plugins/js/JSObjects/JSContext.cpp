@@ -25,7 +25,7 @@ v8::Handle<v8::Value> ScriptSuspend(const v8::Arguments& args)
     String errorMessage = "Error decoding the context struct while calling suspend in JScontext.cpp.  ";
     JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
     if (jscont == NULL)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     return jscont->suspend();
 }
@@ -39,13 +39,25 @@ v8::Handle<v8::Value> ScriptResume(const v8::Arguments& args)
     String errorMessage = "Error decoding the context struct while calling resume in JScontext.cpp.  ";
     JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
     if (jscont == NULL)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     return jscont->resume();
 }
     
 
+//Destroys all objects that were created in this context + all of this context's subcontexts.
+v8::Handle<v8::Value> ScriptClear(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptClear of JSContext.cpp through context.  Clear takes zero arguments")));
 
+    String errorMessage = "Error decoding the context struct while calling clear in JScontext.cpp.  ";
+    JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
+    if (jscont == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jscont->clear();
+}
 
 
 v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)

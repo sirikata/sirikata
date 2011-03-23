@@ -74,11 +74,10 @@ JSTimerStruct::~JSTimerStruct()
 
 void JSTimerStruct::evaluateCallback(const boost::system::error_code& error)
 {
-    if (error != boost::asio::error::operation_aborted)
+    //if (error != boost::asio::error::operation_aborted)
+    if (! error )
     {
         jsObjScript->handleTimeoutContext(cb,jsContStruct);
-        if (jsContStruct != NULL)
-            jsContStruct->struct_deregisterSuspendable(this);
     }
 }
 
@@ -110,9 +109,6 @@ v8::Handle<v8::Value> JSTimerStruct::resume()
 
     mDeadlineTimer->cancel();
 
-    if (jsContStruct != NULL)
-        jsContStruct->struct_registerSuspendable(this);
-    
 
     mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
