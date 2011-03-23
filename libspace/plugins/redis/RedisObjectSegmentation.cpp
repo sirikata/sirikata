@@ -46,6 +46,8 @@ void globalRedisConnectHandler(const redisAsyncContext *c) {
 void globalRedisDisconnectHandler(const redisAsyncContext *c, int status) {
     if (status == REDIS_OK) return;
     REDISOSEG_LOG(error, "Global error handler: " << c->errstr);
+    RedisObjectSegmentation* oseg = (RedisObjectSegmentation*)c->data;
+    oseg->disconnected();
 }
 
 void globalRedisAddRead(void *privdata) {
@@ -207,13 +209,15 @@ RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOS
 }
 
 RedisObjectSegmentation::~RedisObjectSegmentation() {
-    delete mRedisFD;
-    mRedisFD = NULL;
+    cleanup();
 }
 
 void RedisObjectSegmentation::start() {
     ObjectSegmentation::start();
+    connect();
+}
 
+void RedisObjectSegmentation::connect() {
     mRedisContext = redisAsyncConnect(mRedisHost.c_str(), mRedisPort);
     if (mRedisContext->err) {
         REDISOSEG_LOG(error, "Failed to connect to redis: " << mRedisContext->errstr);
@@ -222,6 +226,11 @@ void RedisObjectSegmentation::start() {
     } else {
         REDISOSEG_LOG(insane, "Optimistically connected to redis.");
     }
+
+    // This appears to be the only way to get a non-static 'argument' to the
+    // connect and disconnect callbacks.
+    mRedisContext->data = (void*)this;
+
     redisAsyncSetConnectCallback(mRedisContext, globalRedisConnectHandler);
     redisAsyncSetDisconnectCallback(mRedisContext, globalRedisDisconnectHandler);
 
@@ -236,6 +245,21 @@ void RedisObjectSegmentation::start() {
     using boost::asio::posix::stream_descriptor;
     mRedisFD = new stream_descriptor(mContext->ioService->asioService());
     mRedisFD->assign(mRedisContext->c.fd);
+
+    // Force one command through. This ensures the connection gets fully
+    // initialized. Otherwise, we can end up leaving the connection idle, the
+    // server disconnects, and because haven't started anything, the next
+    // command fails and *then* we get the disconnect event. Performing one
+    // command ensures we'll get the disconnect event ASAP after it occurs.
+    redisAsyncCommand(mRedisContext, NULL, NULL, "PING");
+}
+
+void RedisObjectSegmentation::ensureConnected() {
+    if (mRedisContext == NULL) connect();
+}
+
+void RedisObjectSegmentation::disconnected() {
+    cleanup();
 }
 
 void RedisObjectSegmentation::addRead() {
@@ -270,6 +294,12 @@ void RedisObjectSegmentation::delWrite() {
 
 void RedisObjectSegmentation::cleanup() {
     REDISOSEG_LOG(insane, "Cleanup");
+
+    mRedisContext = NULL;
+    delete mRedisFD;
+    mRedisFD = NULL;
+    mReading = false;
+    mWriting = false;
 }
 
 void RedisObjectSegmentation::startRead() {
@@ -319,6 +349,7 @@ OSegEntry RedisObjectSegmentation::lookup(const UUID& obj_id) {
     RedisObjectOperationInfo* ri = new RedisObjectOperationInfo();
     ri->oseg = this;
     ri->obj = obj_id;
+    ensureConnected();
     redisAsyncCommand(mRedisContext, globalRedisLookupObjectReadFinished, ri, "GET %s", obj_id.toString().c_str());
     return OSegEntry::null();
 }
@@ -367,6 +398,7 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
     os << mContext->id() << ":" << radius;
     String valstr = os.str();
     REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
+    ensureConnected();
     redisAsyncCommand(mRedisContext, globalRedisAddNewObjectWriteFinished, wi, "SET %s %b", obj_id.toString().c_str(), valstr.c_str(), valstr.size());
 }
 
@@ -394,6 +426,7 @@ void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius
     os << mContext->id() << ":" << radius;
     String valstr = os.str();
     REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
+    ensureConnected();
     redisAsyncCommand(mRedisContext, globalRedisAddMigratedObjectWriteFinished, wi, "SET %s %b", obj_id.toString().c_str(), valstr.c_str(), valstr.size());
 }
 
@@ -422,6 +455,7 @@ void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
     RedisObjectOperationInfo* wi = new RedisObjectOperationInfo();
     wi->oseg = this;
     wi->obj = obj_id;
+    ensureConnected();
     redisAsyncCommand(mRedisContext, globalRedisDeleteFinished, wi, "DEL %s", obj_id.toString().c_str());
 }
 

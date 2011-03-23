@@ -60,6 +60,7 @@ public:
 
 
     // Redis event handlers
+    void disconnected();
     void addRead();
     void delRead();
     void addWrite();
@@ -74,6 +75,9 @@ public:
     void finishWriteMigratedObject(const UUID& obj_id, ServerID ackTo);
 
 private:
+    void connect();
+    void ensureConnected();
+
     // If the appropriate flag is set, starts and stops read/write operations
     void startRead();
     void startWrite();
