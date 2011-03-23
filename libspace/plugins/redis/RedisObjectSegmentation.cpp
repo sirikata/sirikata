@@ -129,6 +129,31 @@ void globalRedisAddNewObjectWriteFinished(redisAsyncContext* c, void* _reply, vo
         freeReplyObject(reply);
 }
 
+void globalRedisDeleteFinished(redisAsyncContext* c, void* _reply, void* privdata) {
+    redisReply *reply = (redisReply*)_reply;
+    RedisObjectOperationInfo* wi = (RedisObjectOperationInfo*)privdata;
+
+    if (reply == NULL) {
+        REDISOSEG_LOG(error, "Unknown redis error when deleting object " << wi->obj.toString());
+    }
+    else if (reply->type == REDIS_REPLY_ERROR) {
+        REDISOSEG_LOG(error, "Redis error when deleting object " << wi->obj.toString() << ": " << String(reply->str, reply->len));
+        wi->oseg->failReadObject(wi->obj);
+    }
+    else if (reply->type == REDIS_REPLY_INTEGER) {
+        if (reply->integer != 1)
+            REDISOSEG_LOG(error, "Redis error when deleting object " << wi->obj.toString() << ", got incorrect return value: " << reply->integer);
+    }
+    else {
+        REDISOSEG_LOG(error, "Unexpected redis reply type when deleting object " << wi->obj.toString() << ": " << reply->type);
+    }
+
+    delete wi;
+
+    if (reply != NULL)
+        freeReplyObject(reply);
+}
+
 } // namespace
 
 RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port)
@@ -305,6 +330,10 @@ void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius
 
 void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
     mOSeg.erase(obj_id);
+    RedisObjectOperationInfo* wi = new RedisObjectOperationInfo();
+    wi->oseg = this;
+    wi->obj = obj_id;
+    redisAsyncCommand(mRedisContext, globalRedisDeleteFinished, wi, "DEL %s", obj_id.toString().c_str());
 }
 
 bool RedisObjectSegmentation::clearToMigrate(const UUID& obj_id) {
