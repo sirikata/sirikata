@@ -43,6 +43,9 @@ public:
     RedisObjectSegmentation(SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, const String& redis_host, uint32 redis_port);
     ~RedisObjectSegmentation();
 
+    virtual void start();
+    virtual void stop();
+
     virtual OSegEntry cacheLookup(const UUID& obj_id);
     virtual OSegEntry lookup(const UUID& obj_id);
 
@@ -80,6 +83,11 @@ private:
 
     typedef std::tr1::unordered_map<UUID, OSegEntry, UUID::Hasher> OSegMap;
     OSegMap mOSeg;
+
+    bool mStopping;
+
+    String mRedisHost;
+    uint16 mRedisPort;
 
     redisAsyncContext* mRedisContext;
     boost::asio::posix::stream_descriptor* mRedisFD; // Wrapped hiredis file descriptor

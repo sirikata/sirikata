@@ -164,10 +164,23 @@ RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOS
  : ObjectSegmentation(con, o_strand),
    mCSeg(cseg),
    mCache(cache),
+   mStopping(false),
+   mRedisHost(redis_host),
+   mRedisPort(redis_port),
+   mRedisContext(NULL),
+   mRedisFD(NULL),
    mReading(false),
    mWriting(false)
 {
-    mRedisContext = redisAsyncConnect(redis_host.c_str(), redis_port);
+}
+
+RedisObjectSegmentation::~RedisObjectSegmentation() {
+    delete mRedisFD;
+    mRedisFD = NULL;
+}
+
+void RedisObjectSegmentation::start() {
+    mRedisContext = redisAsyncConnect(mRedisHost.c_str(), mRedisPort);
     if (mRedisContext->err) {
         REDISOSEG_LOG(error, "Failed to connect to redis: " << mRedisContext->errstr);
         redisAsyncDisconnect(mRedisContext);
@@ -191,10 +204,10 @@ RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOS
     mRedisFD->assign(mRedisContext->c.fd);
 }
 
-RedisObjectSegmentation::~RedisObjectSegmentation() {
-    delete mRedisFD;
-    mRedisFD = NULL;
+void RedisObjectSegmentation::stop() {
+    mStopping = true;
 }
+
 
 void RedisObjectSegmentation::addRead() {
     REDISOSEG_LOG(insane, "Add read");
@@ -231,13 +244,13 @@ void RedisObjectSegmentation::cleanup() {
 }
 
 void RedisObjectSegmentation::startRead() {
-    if (!mReading) return;
+    if (mStopping || !mReading) return;
     mRedisFD->async_read_some(boost::asio::null_buffers(),
         boost::bind(&RedisObjectSegmentation::readHandler, this, boost::asio::placeholders::error));
 }
 
 void RedisObjectSegmentation::startWrite() {
-    if (!mWriting) return;
+    if (mStopping || !mWriting) return;
     mRedisFD->async_write_some(boost::asio::null_buffers(),
         boost::bind(&RedisObjectSegmentation::writeHandler, this, boost::asio::placeholders::error));
 }
@@ -273,6 +286,7 @@ OSegEntry RedisObjectSegmentation::lookup(const UUID& obj_id) {
     if (it != mOSeg.end()) return it->second;
 
     // Otherwise, kick off the lookup process and return null
+    if (mStopping) return OSegEntry::null();
     RedisObjectOperationInfo* ri = new RedisObjectOperationInfo();
     ri->oseg = this;
     ri->obj = obj_id;
@@ -282,6 +296,7 @@ OSegEntry RedisObjectSegmentation::lookup(const UUID& obj_id) {
 
 void RedisObjectSegmentation::finishReadObject(const UUID& obj_id, const String& data_str) {
     REDISOSEG_LOG(detailed, "Finished reading OSEG entry for object " << obj_id.toString());
+    if (mStopping) return;
 
     OSegEntry data(OSegEntry::null());
 
@@ -304,10 +319,13 @@ void RedisObjectSegmentation::finishReadObject(const UUID& obj_id, const String&
 
 void RedisObjectSegmentation::failReadObject(const UUID& obj_id) {
     REDISOSEG_LOG(error, "Failed to read OSEG entry for object " << obj_id.toString());
+    if (mStopping) return;
     mLookupListener->osegLookupCompleted(obj_id, OSegEntry::null());
 }
 
 void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
+    if (mStopping) return;
+
     mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
 
     RedisObjectOperationInfo* wi = new RedisObjectOperationInfo();
@@ -325,14 +343,19 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
 
 void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id) {
     REDISOSEG_LOG(detailed, "Finished writing OSEG entry for object " << obj_id.toString());
+    if (mStopping) return;
     mWriteListener->osegWriteFinished(obj_id);
 }
 
 void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) {
+    if (mStopping) return;
+
     mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
 }
 
 void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
+    if (mStopping) return;
+
     mOSeg.erase(obj_id);
     RedisObjectOperationInfo* wi = new RedisObjectOperationInfo();
     wi->oseg = this;
@@ -341,11 +364,15 @@ void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
 }
 
 bool RedisObjectSegmentation::clearToMigrate(const UUID& obj_id) {
+    if (mStopping) return false;
+
     REDISOSEG_LOG(error, "RedisObjectSegmentation got clearToMigrate call which should be impossible with single server.");
     return false;
 }
 
 void RedisObjectSegmentation::migrateObject(const UUID& obj_id, const OSegEntry& new_server_id) {
+    if (mStopping) return;
+
     REDISOSEG_LOG(error, "RedisObjectSegmentation got migrateObject call which should be impossible with single server.");
 }
 
