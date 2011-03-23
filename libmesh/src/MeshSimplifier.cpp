@@ -654,21 +654,28 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
       SubMeshGeometry::TextureSet ts;
       ts.stride = curGeometry.texUVs[j].stride;
       texUVs.push_back(ts);
-
     }
 
+    std::tr1::unordered_map<Vector3f, uint32, Vector3f::Hasher> vector3fSet;
+    
     for (uint32 j = 0 ; j < curGeometry.positions.size() ; j++) {
       if (vertexMapping.find(j) == vertexMapping.end()) {
+        
+        if (vector3fSet.find(curGeometry.positions[j]) != vector3fSet.end()) {
+          oldToNewMap[j] = vector3fSet[ curGeometry.positions[j] ]; 
+          continue;
+        }
+
         oldToNewMap[j] = positions.size();
+
+        vector3fSet[ curGeometry.positions[j] ] = positions.size();
 
         positions.push_back(curGeometry.positions[j]);
 
         if (j < curGeometry.normals.size())
           normals.push_back(curGeometry.normals[j]);
 
-        if (j < curGeometry.texUVs.size())
-          texUVs.push_back(curGeometry.texUVs[j]);
-
+        
         for (uint32 k = 0; k < curGeometry.texUVs.size(); k++) {
           unsigned int stride = curGeometry.texUVs[k].stride;   
           if (stride*j < curGeometry.texUVs[k].uvs.size()) {
