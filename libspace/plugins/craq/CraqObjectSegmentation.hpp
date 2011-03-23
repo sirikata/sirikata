@@ -52,10 +52,6 @@ class CraqObjectSegmentation;
 #include "craq_hybrid/asyncCraqUtil.hpp"
 #include <boost/thread/mutex.hpp>
 
-#include "Protocol_OSeg.pbj.hpp"
-
-#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
-
 //#define CRAQ_DEBUG
 #define CRAQ_CACHE
 
@@ -74,14 +70,12 @@ namespace Sirikata
 
   static const int CRAQ_NOT_FOUND_SIT_OUT   =  500; //that's ms
 
-class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipient
+class CraqObjectSegmentation : public ObjectSegmentation
   {
   private:
       typedef std::tr1::unordered_map<UUID, CraqEntry, UUID::Hasher> ObjectSet;
 
     CoordinateSegmentation* mCSeg; //will be used in lookup call
-
-      Router<Message*>* mOSegServerMessageService;
 
     double checkOwnTimeDur;
     int checkOwnTimeCount;
@@ -180,19 +174,12 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
     OSegCache* mCraqCache;
     //end building for the cache
 
-
-      Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
-      Message* mFrontMigAck;
-      void handleNewMigAckMessages();
-      void trySendMigAcks();
-
     void beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken);
     void callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken);
 
       bool shouldLog();
 
     SpaceContext* ctx;
-    bool mReceivedStopRequest;
 
   public:
       CraqObjectSegmentation (SpaceContext* con, Network::IOStrand* o_strand, CoordinateSegmentation* cseg, OSegCache* cache, char unique);
@@ -205,20 +192,21 @@ class CraqObjectSegmentation : public ObjectSegmentation, public MessageRecipien
       virtual void addNewObject(const UUID& obj_id, float radius);
       virtual void addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool);
       virtual void removeObject(const UUID& obj_id);
-      virtual void receiveMessage(Message* msg);
       virtual bool clearToMigrate(const UUID& obj_id);
       virtual void craqGetResult(CraqOperationResult* cor);
       virtual void craqSetResult(CraqOperationResult* cor);
       virtual void stop();
 
       virtual int getPushback();
-      
+
       AtomicValue<int> mOSegQueueLen;//(0);
 
-
       Sirikata::Protocol::OSeg::MigrateMessageAcknowledge* generateAcknowledgeMessage(const UUID &obj_id, float radius, ServerID serverToAckTo);
+
+      virtual void handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
+      virtual void handleUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
+
       void processMigrateMessageAcknowledge(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
-      void processMigrateMessageMove(const Sirikata::Protocol::OSeg::MigrateMessageMove& msg);
       void processUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
 
   };

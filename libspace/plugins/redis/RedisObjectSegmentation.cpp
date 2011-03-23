@@ -78,6 +78,13 @@ struct RedisObjectOperationInfo {
     RedisObjectSegmentation* oseg;
     UUID obj;
 };
+// State tracking for migrate changes. If we need to generate an ack, this
+// requires additional info
+struct RedisObjectMigratedOperationInfo {
+    RedisObjectSegmentation* oseg;
+    UUID obj;
+    ServerID ackTo;
+};
 
 void globalRedisLookupObjectReadFinished(redisAsyncContext* c, void* _reply, void* privdata) {
     redisReply *reply = (redisReply*)_reply;
@@ -133,6 +140,32 @@ void globalRedisAddNewObjectWriteFinished(redisAsyncContext* c, void* _reply, vo
         freeReplyObject(reply);
 }
 
+void globalRedisAddMigratedObjectWriteFinished(redisAsyncContext* c, void* _reply, void* privdata) {
+    redisReply *reply = (redisReply*)_reply;
+    RedisObjectMigratedOperationInfo* wi = (RedisObjectMigratedOperationInfo*)privdata;
+
+    if (reply == NULL) {
+        REDISOSEG_LOG(error, "Unknown redis error when writing migrated object " << wi->obj.toString());
+    }
+    else if (reply->type == REDIS_REPLY_ERROR) {
+        REDISOSEG_LOG(error, "Redis error when writing migrated object " << wi->obj.toString() << ": " << String(reply->str, reply->len));
+    }
+    else if (reply->type == REDIS_REPLY_STATUS) {
+        if (String(reply->str, reply->len) == String("OK"))
+            wi->oseg->finishWriteMigratedObject(wi->obj, wi->ackTo);
+        else
+            REDISOSEG_LOG(error, "Redis error when writing migrated object " << wi->obj.toString() << ": " << String(reply->str, reply->len));
+    }
+    else {
+        REDISOSEG_LOG(error, "Unexpected redis reply type when writing migrated object " << wi->obj.toString() << ": " << reply->type);
+    }
+
+    delete wi;
+
+    if (reply != NULL)
+        freeReplyObject(reply);
+}
+
 void globalRedisDeleteFinished(redisAsyncContext* c, void* _reply, void* privdata) {
     redisReply *reply = (redisReply*)_reply;
     RedisObjectOperationInfo* wi = (RedisObjectOperationInfo*)privdata;
@@ -164,7 +197,6 @@ RedisObjectSegmentation::RedisObjectSegmentation(SpaceContext* con, Network::IOS
  : ObjectSegmentation(con, o_strand),
    mCSeg(cseg),
    mCache(cache),
-   mStopping(false),
    mRedisHost(redis_host),
    mRedisPort(redis_port),
    mRedisContext(NULL),
@@ -180,6 +212,8 @@ RedisObjectSegmentation::~RedisObjectSegmentation() {
 }
 
 void RedisObjectSegmentation::start() {
+    ObjectSegmentation::start();
+
     mRedisContext = redisAsyncConnect(mRedisHost.c_str(), mRedisPort);
     if (mRedisContext->err) {
         REDISOSEG_LOG(error, "Failed to connect to redis: " << mRedisContext->errstr);
@@ -203,11 +237,6 @@ void RedisObjectSegmentation::start() {
     mRedisFD = new stream_descriptor(mContext->ioService->asioService());
     mRedisFD->assign(mRedisContext->c.fd);
 }
-
-void RedisObjectSegmentation::stop() {
-    mStopping = true;
-}
-
 
 void RedisObjectSegmentation::addRead() {
     REDISOSEG_LOG(insane, "Add read");
@@ -344,13 +373,46 @@ void RedisObjectSegmentation::addNewObject(const UUID& obj_id, float radius) {
 void RedisObjectSegmentation::finishWriteNewObject(const UUID& obj_id) {
     REDISOSEG_LOG(detailed, "Finished writing OSEG entry for object " << obj_id.toString());
     if (mStopping) return;
+
+    mCache->insert(obj_id, mOSeg[obj_id]);
     mWriteListener->osegWriteFinished(obj_id);
 }
 
-void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool) {
+void RedisObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool generateAck) {
     if (mStopping) return;
 
     mOSeg[obj_id] = OSegEntry(mContext->id(), radius);
+
+    RedisObjectMigratedOperationInfo* wi = new RedisObjectMigratedOperationInfo();
+    wi->oseg = this;
+    wi->obj = obj_id;
+    wi->ackTo = (generateAck ? idServerAckTo : NullServerID);
+    // Note: currently we're keeping compatibility with Redis 1.2. This means
+    // that there aren't hashes on the server. Instead, we create and parse them
+    // ourselves. This isn't so bad since they are all fixed format anyway.
+    std::ostringstream os;
+    os << mContext->id() << ":" << radius;
+    String valstr = os.str();
+    REDISOSEG_LOG(insane, "SET " << obj_id.toString() << " " << valstr);
+    redisAsyncCommand(mRedisContext, globalRedisAddMigratedObjectWriteFinished, wi, "SET %s %b", obj_id.toString().c_str(), valstr.c_str(), valstr.size());
+}
+
+void RedisObjectSegmentation::finishWriteMigratedObject(const UUID& obj_id, ServerID ackTo) {
+    REDISOSEG_LOG(detailed, "Finished writing OSEG entry for migrated object " << obj_id.toString());
+    if (mStopping) return;
+
+    mCache->insert(obj_id, mOSeg[obj_id]);
+
+    if (ackTo != NullServerID) {
+        Sirikata::Protocol::OSeg::MigrateMessageAcknowledge oseg_ack_msg;
+        oseg_ack_msg.set_m_servid_from(mContext->id());
+        oseg_ack_msg.set_m_servid_to(ackTo);
+        oseg_ack_msg.set_m_message_destination(ackTo);
+        oseg_ack_msg.set_m_message_from(mContext->id());
+        oseg_ack_msg.set_m_objid(obj_id);
+        oseg_ack_msg.set_m_objradius( mOSeg[obj_id].radius() );
+        queueMigAck(oseg_ack_msg);
+    }
 }
 
 void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
@@ -366,14 +428,37 @@ void RedisObjectSegmentation::removeObject(const UUID& obj_id) {
 bool RedisObjectSegmentation::clearToMigrate(const UUID& obj_id) {
     if (mStopping) return false;
 
-    REDISOSEG_LOG(error, "RedisObjectSegmentation got clearToMigrate call which should be impossible with single server.");
-    return false;
+    assert(mOSeg.find(obj_id) != mOSeg.end());
+    // FIXME should return false in some cases, like when it is already
+    // migrating to or from this server
+    return true;
 }
 
 void RedisObjectSegmentation::migrateObject(const UUID& obj_id, const OSegEntry& new_server_id) {
     if (mStopping) return;
 
-    REDISOSEG_LOG(error, "RedisObjectSegmentation got migrateObject call which should be impossible with single server.");
+    // We "migrate" the object by removing it. The other server is responsible
+    // for updating Redis
+    mOSeg.erase(obj_id);
+
+}
+
+void RedisObjectSegmentation::handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg) {
+    if (mStopping) return;
+
+    OSegEntry data(msg.m_servid_from(), msg.m_objradius());
+    UUID obj_id = msg.m_objid();
+
+    mCache->insert(obj_id, data);
+
+    // Finally, this lets the server know the migration has been acked and the
+    // object can disconnect
+    mWriteListener->osegMigrationAcknowledged(obj_id);
+}
+
+void RedisObjectSegmentation::handleUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg) {
+    // Just a cache invalidation/update
+    mCache->insert(update_oseg_msg.m_objid(), OSegEntry(update_oseg_msg.servid_obj_on(), update_oseg_msg.m_objradius()));
 }
 
 } // namespace Sirikata

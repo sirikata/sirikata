@@ -53,7 +53,7 @@ typedef uint16 ServerMessagePort;
 #define SERVER_PORT_MIGRATION                  4
 #define SERVER_PORT_CSEG_CHANGE                6
 #define SERVER_PORT_LOAD_STATUS                7
-#define SERVER_PORT_OSEG_MIGRATE_MOVE          8
+// 8 was previously SERVER_PORT_OSEG_MIGRATE_MOVE
 #define SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE   9
 #define SERVER_PORT_OSEG_UPDATE                15
 #define SERVER_PORT_FORWARDER_WEIGHT_UPDATE    16

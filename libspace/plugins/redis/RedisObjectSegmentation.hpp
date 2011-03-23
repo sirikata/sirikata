@@ -44,7 +44,6 @@ public:
     ~RedisObjectSegmentation();
 
     virtual void start();
-    virtual void stop();
 
     virtual OSegEntry cacheLookup(const UUID& obj_id);
     virtual OSegEntry lookup(const UUID& obj_id);
@@ -55,6 +54,9 @@ public:
 
     virtual bool clearToMigrate(const UUID& obj_id);
     virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
+
+    virtual void handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
+    virtual void handleUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg);
 
 
     // Redis event handlers
@@ -69,6 +71,7 @@ public:
     void finishReadObject(const UUID& obj_id, const String& data_str);
     void failReadObject(const UUID& obj_id);
     void finishWriteNewObject(const UUID& obj_id);
+    void finishWriteMigratedObject(const UUID& obj_id, ServerID ackTo);
 
 private:
     // If the appropriate flag is set, starts and stops read/write operations
@@ -83,8 +86,6 @@ private:
 
     typedef std::tr1::unordered_map<UUID, OSegEntry, UUID::Hasher> OSegMap;
     OSegMap mOSeg;
-
-    bool mStopping;
 
     String mRedisHost;
     uint16 mRedisPort;
