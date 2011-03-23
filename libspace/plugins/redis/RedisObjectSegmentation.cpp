@@ -90,6 +90,10 @@ void globalRedisLookupObjectReadFinished(redisAsyncContext* c, void* _reply, voi
         REDISOSEG_LOG(error, "Redis error when reading object " << wi->obj.toString() << ": " << String(reply->str, reply->len));
         wi->oseg->failReadObject(wi->obj);
     }
+    else if (reply->type == REDIS_REPLY_NIL) {
+        REDISOSEG_LOG(error, "Redis got nil when reading object.");
+        wi->oseg->failReadObject(wi->obj);
+    }
     else if (reply->type == REDIS_REPLY_STRING) {
         wi->oseg->finishReadObject(wi->obj, String(reply->str, reply->len));
     }
