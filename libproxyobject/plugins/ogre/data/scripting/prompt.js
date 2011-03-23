@@ -103,13 +103,13 @@ Editor.prototype.registerHotkeys = function() {
     canon.addCommand(
         {
             name: 'history-back',
-            exec: function(env, args, request) { editorHistoryBack(); }
+            exec: function(env, args, request) { editHistoryBack(); }
         }
     );
     canon.addCommand(
         {
             name: 'history-forward',
-            exec: function(env, args, request) { editorHistoryForward(); }
+            exec: function(env, args, request) { editHistoryForward(); }
         }
     );
 
@@ -127,7 +127,7 @@ Editor.prototype.registerHotkeys = function() {
 
 Editor.prototype.updateEditorHistory = function() {
     if (this.last_msg_index != undefined)
-        this.displayCommand( this.lastMessages[last_msg_index] );
+        this.displayCommand( this.lastMessages[this.last_msg_index] );
 };
 
 Editor.prototype.editHistoryBack = function() {
@@ -190,12 +190,12 @@ function runCommand() {
 
 function editHistoryBack() {
     if (curEditor)
-        curEditor.editorHistoryBack();
+        curEditor.editHistoryBack();
 };
 
 function editHistoryForward() {
     if (curEditor)
-        curEditor.editorHistoryForward();
+        curEditor.editHistoryForward();
 };
 
 $(document).ready(function() {
