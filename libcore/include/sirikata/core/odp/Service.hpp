@@ -69,6 +69,10 @@ public:
     virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
     virtual Port* bindODPPort(const SpaceObjectReference& sor) = 0;
 
+    /** Get a random, unused ODP port. */
+    virtual PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref) = 0;
+    virtual PortID unusedODPPort(const SpaceObjectReference& sor) = 0;
+
     /** Register a handler for messages that arrive on unbound ports.  By
      *  default there is no handler and such messages are ignored.  Note that
      *  this handler will not be invoked for messages arriving at a bound port

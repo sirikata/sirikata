@@ -42,7 +42,7 @@
 namespace Sirikata {
 namespace Trace {
 
-#define TRACE_DROP(nam) ((mContext->trace()->drops.n[::Sirikata::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::Sirikata::Trace::Drops::nam]))
+#define TRACE_DROP(nam) ((mContext->trace()->drops.n[::Sirikata::Trace::Drops::nam]=#nam )&&++(mContext->trace()->drops.d[::Sirikata::Trace::Drops::nam])); SILOG(drop,insane,#nam)
 
 struct Drops {
     enum {

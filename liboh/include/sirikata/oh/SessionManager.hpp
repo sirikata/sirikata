@@ -165,6 +165,9 @@ private:
     // successful response and we have time sync info. It does some
     // additional setup work (sst stream) and then invokes the real callback
     void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb);
+    // This gets invoked after full migration occurs. It does additional setup
+    // work (new sst stream to new space server) and invokes the real callback.
+    void handleObjectFullyMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server, MigratedCallback real_cb);
 
     void retryOpenConnection(const SpaceObjectReference& sporef_uuid,ServerID sid);
 

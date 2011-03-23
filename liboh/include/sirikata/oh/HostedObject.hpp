@@ -325,6 +325,8 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
+    virtual ODP::PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual ODP::PortID unusedODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
 
 

@@ -459,6 +459,7 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 }
 
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
+    HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
     //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
@@ -883,6 +884,14 @@ ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference
 
 ODP::Port* HostedObject::bindODPPort(const SpaceObjectReference& sor) {
     return mDelegateODPService->bindODPPort(sor);
+}
+
+ODP::PortID HostedObject::unusedODPPort(const SpaceID& space, const ObjectReference& objref) {
+    return mDelegateODPService->unusedODPPort(space, objref);
+}
+
+ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
+    return mDelegateODPService->unusedODPPort(sor);
 }
 
 void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {

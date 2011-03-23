@@ -313,7 +313,11 @@ void SessionManager::connect(
 		       _1, _2, _3, _4, _5, _6, _7,
             connect_cb
         ),
-        migrate_cb, stream_created_cb, disconn_cb
+        std::tr1::bind(&SessionManager::handleObjectFullyMigrated, this,
+		       _1, _2, _3,
+            migrate_cb
+        ),
+        stream_created_cb, disconn_cb
     );
 
     // Get a connection to request
@@ -828,7 +832,19 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     real_cb(space, obj, server, loc, orient, bnds, mesh);
 
     SSTStream::connectStream(
-        SSTEndpoint(spaceobj, OBJECT_SPACE_PORT),
+        SSTEndpoint(spaceobj, 0), // Local port is random
+        SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
+        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+    );
+}
+
+void SessionManager::handleObjectFullyMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server, MigratedCallback real_cb) {
+    SpaceObjectReference spaceobj(space, obj);
+
+    real_cb(space, obj, server);
+
+    SSTStream::connectStream(
+        SSTEndpoint(spaceobj, 0), // Local port is random
         SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
         std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
     );
@@ -852,7 +868,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
     if (err != SST_IMPL_SUCCESS) {
         // retry creating an SST stream from the space server to object 'obj'.
         SSTStream::connectStream(
-            SSTEndpoint(spaceobj, OBJECT_SPACE_PORT),
+            SSTEndpoint(spaceobj, 0), // Local port is random
             SSTEndpoint(SpaceObjectReference(spaceobj.space(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
             std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
         );
