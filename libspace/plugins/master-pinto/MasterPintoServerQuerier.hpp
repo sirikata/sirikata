@@ -63,6 +63,9 @@ public:
     virtual void updateQuery(const SolidAngle& min_angle);
 
 private:
+    // Connection management
+    void connect();
+
     // Handlers for mServerStream
     void handleServerConnection(Network::Stream::ConnectionStatus status, const std::string &reason);
     void handleServerReceived(Network::Chunk& data, const Network::Stream::PauseReceiveCallback& pause);
@@ -81,6 +84,7 @@ private:
     String mHost;
     String mPort;
 
+    bool mConnecting;
     bool mConnected;
     bool mGaveID;
 

@@ -48,6 +48,7 @@ namespace Sirikata {
 MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const String& params)
  : mContext(ctx),
    mIOStrand(ctx->ioService->createStrand()),
+   mConnecting(false),
    mConnected(false),
    mGaveID(false),
    mRegion(),
@@ -59,13 +60,6 @@ MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const Stri
 {
     OptionSet* optionsSet = OptionSet::getOptions("space_master_pinto",NULL);
     optionsSet->parse(params);
-
-    String server_protocol = optionsSet->referenceOption(OPT_MASTER_PINTO_PROTOCOL)->as<String>();
-    String server_protocol_options = optionsSet->referenceOption(OPT_MASTER_PINTO_PROTOCOL_OPTIONS)->as<String>();
-
-    OptionSet* server_protocol_optionset = StreamFactory::getSingleton().getOptionParser(server_protocol)(server_protocol_options);
-
-    mServerStream = StreamFactory::getSingleton().getConstructor(server_protocol)(mIOStrand, server_protocol_optionset);
 
     mHost = optionsSet->referenceOption(OPT_MASTER_PINTO_HOST)->as<String>();
     mPort = optionsSet->referenceOption(OPT_MASTER_PINTO_PORT)->as<String>();
@@ -80,6 +74,20 @@ MasterPintoServerQuerier::~MasterPintoServerQuerier() {
 }
 
 void MasterPintoServerQuerier::start() {
+    connect();
+}
+
+void MasterPintoServerQuerier::connect() {
+    if (mConnecting) return;
+
+    mConnecting = true;
+
+    OptionSet* optionsSet = OptionSet::getOptions("space_master_pinto",NULL);
+    String server_protocol = optionsSet->referenceOption(OPT_MASTER_PINTO_PROTOCOL)->as<String>();
+    String server_protocol_options = optionsSet->referenceOption(OPT_MASTER_PINTO_PROTOCOL_OPTIONS)->as<String>();
+    OptionSet* server_protocol_optionset = StreamFactory::getSingleton().getOptionParser(server_protocol)(server_protocol_options);
+    mServerStream = StreamFactory::getSingleton().getConstructor(server_protocol)(mIOStrand, server_protocol_optionset);
+
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -121,11 +129,13 @@ void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle) {
 }
 
 void MasterPintoServerQuerier::tryServerUpdate() {
-    if (!mConnected)
-        return;
-
     if (!mRegionDirty && !mMaxRadiusDirty && !mAggregateQueryDirty)
         return;
+
+    if (!mConnected) {
+        connect();
+        return;
+    }
 
     Sirikata::Protocol::MasterPinto::PintoMessage msg;
 
@@ -158,6 +168,8 @@ void MasterPintoServerQuerier::tryServerUpdate() {
 }
 
 void MasterPintoServerQuerier::handleServerConnection(Network::Stream::ConnectionStatus status, const std::string &reason) {
+    mConnecting = false;
+
     if (status == Network::Stream::Connected) {
         MP_LOG(debug, "Connected to master pinto server.");
         mConnected = true;
@@ -168,6 +180,8 @@ void MasterPintoServerQuerier::handleServerConnection(Network::Stream::Connectio
     }
     else if (status == Network::Stream::Disconnected) {
         MP_LOG(debug, "Disconnected from pinto server.");
+        mConnected = false;
+        mGaveID = false;
     }
 }
 
