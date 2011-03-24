@@ -55,7 +55,13 @@ namespace Sirikata {
 class AggregateManager {
 private:
 
-  SpaceContext* mContext;
+  Thread* mAggregationThread;    
+  Sirikata::AtomicValue<bool> mShutdownAggregationThread;
+  Network::IOService* mAggregationService;
+  Network::IOStrand* mAggregationStrand;
+  Network::IOWork* mIOWork;
+
+ 
   LocationService* mLoc;
 
   ModelsSystem* mModelsSystem;
@@ -73,7 +79,7 @@ private:
 
     bool generatedLastRound;
 
-      Mesh::MeshdataPtr mMeshdata;
+    Mesh::MeshdataPtr mMeshdata;
 
     AggregateObject(const UUID& uuid, const UUID& parentUUID) :
       mUUID(uuid), mParentUUID(parentUUID), mLastGenerateTime(Time::null()),
@@ -123,11 +129,11 @@ private:
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
 
-
+  void aggregationThreadMain();
 
 public:
 
-  AggregateManager(SpaceContext* ctx, LocationService* loc) ;
+  AggregateManager( LocationService* loc) ;
 
   ~AggregateManager();
 

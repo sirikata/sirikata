@@ -104,7 +104,7 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
     using std::tr1::placeholders::_3;
     using std::tr1::placeholders::_4;
     using std::tr1::placeholders::_5;
-    mAggregateManager = new AggregateManager(ctx, locservice);
+    mAggregateManager = new AggregateManager(locservice);
 
     // Do some necessary initialization for the prox thread, needed to let main thread
     // objects know about it's strand/service

@@ -34,6 +34,10 @@
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
+#include <sirikata/core/network/IOServiceFactory.hpp>
+
+#include <sirikata/core/network/IOStrandImpl.hpp>
+
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
 #define snprintf _snprintf
@@ -43,8 +47,8 @@ namespace Sirikata {
 
 using namespace Mesh;
 
-AggregateManager::AggregateManager(SpaceContext* ctx, LocationService* loc) :
-  mContext(ctx), mLoc(loc)
+AggregateManager::AggregateManager( LocationService* loc) :
+  mAggregationThread(NULL), mLoc(loc)
 {
     mModelsSystem = NULL;
     if (ModelsSystemFactory::getSingleton().hasConstructor("any"))
@@ -52,13 +56,42 @@ AggregateManager::AggregateManager(SpaceContext* ctx, LocationService* loc) :
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
 
+    mAggregationService = Network::IOServiceFactory::makeIOService();
+    mAggregationStrand = mAggregationService->createStrand();
+    mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
+    
+
     static char x = '1';
     mTransferPool = mTransferMediator->registerClient("SpaceAggregator_"+x);
     x++;
+
+    // Start the processing thread
+    mAggregationThread = new Thread( std::tr1::bind(&AggregateManager::aggregationThreadMain, this) );
 }
 
 AggregateManager::~AggregateManager() {
+    // Shut down the main processing thread
+    if (mAggregationThread != NULL) {
+        if (mAggregationService != NULL)
+            mAggregationService->stop();
+        mAggregationThread->join();
+    }
+
+    delete mAggregationStrand;
+    Network::IOServiceFactory::destroyIOService(mAggregationService);
+    mAggregationService = NULL;
+    
+    delete mAggregationThread;
+
+    delete mIOWork;
+    mIOWork = NULL;
+
     delete mModelsSystem;
+}
+
+// The main loop for the prox processing thread
+void AggregateManager::aggregationThreadMain() {
+  mAggregationService->run();
 }
 
 void AggregateManager::addAggregate(const UUID& uuid) {
@@ -66,7 +99,6 @@ void AggregateManager::addAggregate(const UUID& uuid) {
 
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
   mAggregateObjects[uuid] = std::tr1::shared_ptr<AggregateObject> (new AggregateObject(uuid, UUID::null()));
-
 }
 
 void AggregateManager::removeAggregate(const UUID& uuid) {
@@ -104,7 +136,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
               << "\n";
     fflush(stdout);
 
-    mContext->mainStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+    mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 
 }
@@ -123,7 +155,7 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     mAggregateObjects[uuid]->generatedLastRound = false;
     mAggregateGenerationStartTime =  Timer::now();
 
-    mContext->mainStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
+    mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 }
 
@@ -146,7 +178,7 @@ void AggregateManager::generateAggregateMesh(const UUID& uuid, const Duration& d
   lock.unlock();
   aggObject->mLastGenerateTime = Timer::now();
 
-  mContext->mainStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
+  mAggregationStrand->post( delayFor, std::tr1::bind(&AggregateManager::generateAggregateMeshAsyncIgnoreErrors, this, uuid, aggObject->mLastGenerateTime, true)  );
 }
 void AggregateManager::generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings) {
 	bool retval=generateAggregateMeshAsync(uuid, postTime, generateSiblings);
@@ -480,7 +512,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   agg_mesh->uri = cdnMeshName;
   
   //Simplify the mesh...
-  mMeshSimplifier.simplify(agg_mesh, 500);
+  mMeshSimplifier.simplify(agg_mesh, 600);
 
   //... and now create the collada file, upload to the CDN and update LOC. 
   mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
@@ -496,14 +528,14 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   // Code to generate scene files for each level of the tree.
   /*char scenefilename[MESHNAME_LEN];
   snprintf(scenefilename, MESHNAME_LEN, "%d_scene.db", aggObject->mTreeLevel);
-  std::fstream scenefile(scenefilename, fstream::out | fstream::app);
+  std::fstream scenefile(scenefilename, std::fstream::out | std::fstream::app);
   char sceneline[MESHNAME_LEN];
   snprintf(sceneline, MESHNAME_LEN,
            "\"mesh\",\"graphiconly\",\"tetrahedron\",,,,%f,%f,%f,%f,%f,%f,%f,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,\"%s\",,,,,,,,,,,,,,,,,,%f,,,,\n",
            bndsX, bndsY, bndsZ, 0.0, 0.0, 0.0, 1.0, cdnMeshName.c_str(), bnds.radius());
   scenefile.write(sceneline,strlen(sceneline));
-  scenefile.close();
-  */
+  scenefile.close();*/
+  
   //Keep the meshstore's memory usage under control.
   boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
   if (mMeshStore.size() > 20)
@@ -614,7 +646,7 @@ void AggregateManager::getLeaves(const std::vector<UUID>& mIndividualObjects) {
 }
 
 void AggregateManager::generateMeshesFromQueue(Time postTime) {
-    if (postTime < mAggregateGenerationStartTime) {
+    if (postTime < mAggregateGenerationStartTime) {      
       return;
     }
 
@@ -643,9 +675,6 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
           if (radius == INT_MAX) radius = 0;
 
           aggObject->mDistance = 0.01 + radius/sqrt( 1 - pow( 1-0.011/6.28 , 2) );
-
-          //std::cout << aggObject->mTreeLevel << " : radius : " << radius << "\n";
-          std::cout << aggObject->mTreeLevel << " : distance : " << aggObject->mDistance << "\n";
 
           if (aggObject->mChildren.size() == 0) {
             mIndividualObjects.push_back(aggObject->mUUID);
@@ -681,7 +710,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
         std::cout << it->second->mTreeLevel << " :  " << it->second->mNumObservers  << " observers\n";
       }
       
-        mObjectsByPriority[ it->second->mNumObservers ].push_back(it->second);
+      mObjectsByPriority[ it->second->mNumObservers ].push_back(it->second);
     }
 
     bool returner = false;
@@ -705,7 +734,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 
     if (mObjectsByPriority.size() > 0) {
       Duration dur = (returner) ? Duration::milliseconds(1.0) : Duration::milliseconds(200.0);
-      mContext->mainStrand->post(dur, std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime));
+      mAggregationStrand->post(dur, std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, curTime));
     }
 }
 
