@@ -58,6 +58,9 @@ v8::Handle<v8::Value>distance(const v8::Arguments& args);
 
 v8::Handle<v8::Value> toVisible(const v8::Arguments& args);
 
+v8::Handle<v8::Value> pres_suspend(const v8::Arguments& args);
+v8::Handle<v8::Value> pres_resume(const v8::Arguments& args);
+v8::Handle<v8::Value> pres_clear(const v8::Arguments& args);
 
 
 } //end namespace JSPresence

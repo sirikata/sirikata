@@ -46,6 +46,42 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 
 }
 
+//Takes presence and sets its current velocity and orientation velocity to zero.
+//Maybe make it so that it doesn't receive any messages either?  No.  Then
+//wouldn't be able to resume it.
+//Requires no args.
+v8::Handle<v8::Value> pres_suspend(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: calling presence's suspend function should not take any args.")) );
+
+    String errorMessage = "Error in suspend while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    return jspres->suspend();
+}
+
+//Reset's the presence's velocity and orientational velocity to what it was
+//before suspend was called.  If suspend had not been already called, do
+//nothing.  Requires no args.
+v8::Handle<v8::Value> pres_resume(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: calling presence's resume function should not take any args.")) );
+
+    String errorMessage = "Error in resume while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    return jspres->resume();
+}
+
+
 
 //this function allows the presence to return a visible object version of
 //itself.  Requires no args

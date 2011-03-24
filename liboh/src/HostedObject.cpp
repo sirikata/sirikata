@@ -483,10 +483,18 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     where=mPresenceData->find(SpaceObjectReference(spaceID, oref));
     if (where!=mPresenceData->end()) {
         mPresenceData->erase(where);
+        //need to actually send a disconnection request to the space;
+        mObjectHost->disconnectObject(spaceID,oref);        
     } else {
-        SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
+        SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
 }
+
+
+
+
+
+
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
     notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
@@ -780,6 +788,11 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
+
+            if (!proxy_manager)
+                continue;
+
+            
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;

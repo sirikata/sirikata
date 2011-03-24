@@ -20,7 +20,8 @@ function toExecute(meshName)
 {
     var onConnectedFunc = function()
     {
-      system.print("\n\nI am connected\n\n");  
+        system.print("\n\nI am connected\n\n");
+        
     };
     
     system.print("\n\nInside of toExecute\n");

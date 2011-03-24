@@ -615,6 +615,15 @@ void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, Hoste
 }
 
 
+//called by JSPresenceStruct.  requests the parent HostedObject disconnect
+//the presence associated with jspres
+void JSObjectScript::requestDisconnect(JSPresenceStruct* jspres)
+{
+
+    SpaceObjectReference sporef = (*(jspres->getToListenTo()));
+    mParent->disconnectFromSpace(sporef.space(), sporef.object());
+}
+
 void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
     JSPresenceStruct* jspres = findPresence(name);

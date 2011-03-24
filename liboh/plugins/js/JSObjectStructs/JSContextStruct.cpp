@@ -410,6 +410,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 
 v8::Persistent<v8::Object> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
 {
+
     return jsObjScript->create_presence(newMesh,initFunc,this);
 }
 

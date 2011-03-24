@@ -129,6 +129,16 @@ void ObjectHost::handleObjectMigrated(const SpaceObjectReference& sporef_objid, 
     // ignored
 }
 
+//use this function to request the object host to send a disconnect message
+//to space for object
+void ObjectHost::disconnectObject(const SpaceID& space, const ObjectReference& oref)
+{
+    SpaceSessionManagerMap::iterator iter = mSessionManagers.find(space);
+    if (iter == mSessionManagers.end())
+        return;
+
+    iter->second->disconnect(SpaceObjectReference(space,oref));
+}
 
 
 void ObjectHost::handleObjectMessage(const SpaceObjectReference& sporef_internalID, const SpaceID& space, Sirikata::Protocol::Object::ObjectMessage* msg) {

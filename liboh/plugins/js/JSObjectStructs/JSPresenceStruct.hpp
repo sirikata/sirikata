@@ -5,6 +5,7 @@
 #include <v8.h>
 #include "JSPositionListener.hpp"
 #include "JSContextStruct.hpp"
+#include "JSSuspendable.hpp"
 
 
 namespace Sirikata {
@@ -15,7 +16,9 @@ class JSObjectScript;
 
 
 //note: only position and isConnected will actually set the flag of the watchable
-struct JSPresenceStruct : public JSPositionListener
+struct JSPresenceStruct : public JSPositionListener,
+                          public JSSuspendable
+
 {
     //isConnected is false using this: have no sporef.
     JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken); 
@@ -26,10 +29,16 @@ struct JSPresenceStruct : public JSPositionListener
     void connect(const SpaceObjectReference& _sporef);
     void disconnect();
 
+
+    virtual v8::Handle<v8::Value> suspend();
+    virtual v8::Handle<v8::Value> resume();
+    virtual v8::Handle<v8::Value> clear();
+
+    
     v8::Handle<v8::Value> registerOnProxRemovedEventHandler(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb);
 
-    static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,std::string& errorMessage);
+    static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
 
     
@@ -62,7 +71,10 @@ struct JSPresenceStruct : public JSPositionListener
     //returns this presence as a visible object.
     v8::Persistent<v8::Object>  toVisible();
 
-
+    //gets the associated jsobjectscript to request hosted object to disconnect
+    //this presence.
+    v8::Handle<v8::Value>requestDisconnect();
+    
     v8::Handle<v8::Value>  runSimulation(String simname);
 
     v8::Handle<v8::Value>  toString()
@@ -86,8 +98,6 @@ private:
     //Then it asks jsobjectscript to call the callback
     void callConnectedCallback();
     
-
-    
     //data
     bool isConnected;
     bool hasConnectedCallback;
@@ -96,10 +106,27 @@ private:
     TimedMotionVector3f mLocation;
     TimedMotionQuaternion mOrientation;
 
+    //These two pieces of state hold the values for a presence's
+    //velocity and orientation velocity when suspend was called.
+    //on resume, use these velocities to resume from.
+    Vector3f   mSuspendedVelocity;
+    Quaternion mSuspendedOrientationVelocity;
+    
     JSContextStruct* mContext;
-
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();
+
+#define checkCleared(funcName)  \
+    String fname (funcName);    \
+    if (getIsCleared())         \
+    {                           \
+        String errorMessage = "Error when calling " + fname + " on presence.  The presence has already been cleared."; \
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
+    }
+    
+
+    
+    
 };
 
 

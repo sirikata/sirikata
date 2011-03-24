@@ -75,7 +75,10 @@ public:
     // SessionEventListener Interface
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,HostedObject::PresenceToken token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
-
+    //called by JSPresenceStruct.  requests the parent HostedObject disconnect
+    //the presence associated with jspres
+    void requestDisconnect(JSPresenceStruct* jspres);
+    
     Time getHostedTime();
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 

@@ -223,7 +223,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
-
+    
     //check what permissions fake root is loaded with
     mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
     mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
@@ -249,13 +249,6 @@ void JSObjectScriptManager::createSystemTemplate()
 }
 
 
-
-//no reboot.
-//no create_entity
-//no import
-//no create_presence
-//no update_addressable
-//no motion (for now).  May special-case motion stuff
 void JSObjectScriptManager::createContextTemplate()
 {
     v8::HandleScope handle_scope;
@@ -390,7 +383,11 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   //convert this presence object into a visible object
   proto_t->Set(v8::String::New("toVisible"),v8::FunctionTemplate::New(JSPresence::toVisible));
-  
+
+  proto_t->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSPresence::pres_suspend));
+  proto_t->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSPresence::pres_resume));
+
+
   
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();

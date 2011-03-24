@@ -52,11 +52,18 @@ function toExecute(myMesh)
         presConnection.setQueryAngle(.4);
         system.print("\n\nNew presence is connected.  Now, I'm doing the prox added and removed stuff.\n\n");
         presConnection.setVelocity(new util.Vec3(1,0,0));
+
+
     };
     
     //first create a new presence
     system.create_presence(myMesh,onConnected);
-
+    //hack because something weird is happening with rendering position when object first moves.
+    system.timeout(3, function()
+                  {
+                      onConnected(system.presences[0]);
+                  });
+    
 }
 
 testContext();
