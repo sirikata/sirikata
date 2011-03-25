@@ -34,7 +34,7 @@ TransferMediator::TransferMediator() {
 void TransferMediator::mediatorThread() {
     while(!mCleanup) {
         checkQueue();
-        boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+        boost::this_thread::sleep(boost::posix_time::milliseconds(20));
     }
     for(PoolType::iterator pool = mPools.begin(); pool != mPools.end(); pool++) {
         pool->second->cleanup();
