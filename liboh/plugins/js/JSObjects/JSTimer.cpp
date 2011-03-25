@@ -17,8 +17,13 @@ namespace Sirikata{
 namespace JS{
 namespace JSTimer{
 
-//this function takes in a single argument: when the callback should actually
-//fire from now.
+/**
+   @param numeric, specifying how long from now to go before re-firing the timer.
+   @return boolean.
+
+   This function takes in a single argument: when the callback should actually
+   fire from now.
+*/
 v8::Handle<v8::Value> resetTimer(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -58,6 +63,7 @@ v8::Handle<v8::Value> clear(const v8::Arguments& args)
     
     return jstimer->clear();
 }
+
 
 v8::Handle<v8::Value> suspend(const v8::Arguments& args)
 {

@@ -192,6 +192,10 @@ void JSObjectScriptManager::createTemplates()
 }
 
 
+
+/*
+  EMERSON!: timer
+ */
 void JSObjectScriptManager::createTimerTemplate()
 {
     v8::HandleScope handle_scope;
@@ -207,6 +211,9 @@ void JSObjectScriptManager::createTimerTemplate()
 }
 
 
+/*
+  EMERSON!: system
+ */
 void JSObjectScriptManager::createSystemTemplate()
 {
     v8::HandleScope handle_scope;
@@ -248,7 +255,9 @@ void JSObjectScriptManager::createSystemTemplate()
     
 }
 
-
+/*
+  EMERSON!: context
+ */
 void JSObjectScriptManager::createContextTemplate()
 {
     v8::HandleScope handle_scope;
@@ -266,6 +275,7 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->Set(v8::String::New("clear"), v8::FunctionTemplate::New(JSContext::ScriptClear));
     
 }
+
 
 void JSObjectScriptManager::createContextGlobalTemplate()
 {
@@ -290,7 +300,9 @@ void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> temp
 
 
 
-
+/*
+  EMERSON!: invokable
+ */
 void JSObjectScriptManager::createJSInvokableObjectTemplate()
 {
   v8::HandleScope handle_scope;
@@ -301,7 +313,9 @@ void JSObjectScriptManager::createJSInvokableObjectTemplate()
 }
 
 
-
+/*
+  EMERSON!: visible
+ */
 void JSObjectScriptManager::createVisibleTemplate()
 {
     v8::HandleScope handle_scope;
@@ -327,6 +341,9 @@ void JSObjectScriptManager::createVisibleTemplate()
 }
 
 
+/*
+  EMERSON!: presence
+ */
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
@@ -402,6 +419,9 @@ void JSObjectScriptManager::createPresenceTemplate()
 //should be able to cancel handler    -----> canceling handler kills this
 //object.  remove this pattern from being checked for.
 //should be able to renew handler     -----> Re-register handler.
+/*
+  EMERSON!: handler
+ */
 void JSObjectScriptManager::createHandlerTemplate()
 {
     v8::HandleScope handle_scope;
