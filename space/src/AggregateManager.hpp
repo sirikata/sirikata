@@ -56,18 +56,14 @@ class AggregateManager {
 private:
 
   Thread* mAggregationThread;    
-  Sirikata::AtomicValue<bool> mShutdownAggregationThread;
+  
   Network::IOService* mAggregationService;
   Network::IOStrand* mAggregationStrand;
   Network::IOWork* mIOWork;
-
  
   LocationService* mLoc;
-
   ModelsSystem* mModelsSystem;
-
   Sirikata::Mesh::MeshSimplifier mMeshSimplifier;
-
 
   typedef struct AggregateObject{
     UUID mUUID;
@@ -87,6 +83,7 @@ private:
     {
       mMeshdata = Mesh::MeshdataPtr();
       generatedLastRound = false;
+      mDistance = 0.01;
     }
 
     uint16 mTreeLevel;
@@ -100,8 +97,6 @@ private:
 
   void getLeaves(const std::vector<UUID>& mIndividualObjects);
 
-  UUID mRootUUID;
-  
 
   boost::mutex mAggregateObjectsMutex;
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher > mAggregateObjects;
@@ -112,23 +107,18 @@ private:
   std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
   Transfer::TransferMediator *mTransferMediator;
 
-
   Time mAggregateGenerationStartTime;
 
   std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher> mDirtyAggregateObjects;
-
   std::map<float, std::deque<std::tr1::shared_ptr<AggregateObject> > > mObjectsByPriority;
 
   std::vector<UUID>& getChildren(const UUID& uuid);
-
-
   void updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel);
+  void addDirtyAggregates(UUID uuid);
 
-  void generateMeshesFromQueue(Time postTime);
- 
+  void generateMeshesFromQueue(Time postTime); 
   void generateAggregateMeshAsyncIgnoreErrors(const UUID uuid, Time postTime, bool generateSiblings = true);
   bool generateAggregateMeshAsync(const UUID uuid, Time postTime, bool generateSiblings = true);
-
   void aggregationThreadMain();
 
 public:
@@ -146,9 +136,6 @@ public:
   void removeChild(const UUID& uuid, const UUID& child_uuid);
 
   void aggregateObserved(const UUID& objid, uint32 nobservers);
-
-  
-
 
   void generateAggregateMesh(const UUID& uuid, const Duration& delayFor = Duration::milliseconds(1.0f) );
 
