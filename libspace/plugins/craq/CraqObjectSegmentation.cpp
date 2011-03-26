@@ -50,8 +50,6 @@
 #include <algorithm>
 #include <boost/thread/mutex.hpp>
 
-#include <sirikata/core/network/IOStrandImpl.hpp>
-
 namespace Sirikata
 {
 
@@ -68,10 +66,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
      postingStrand(con->mainStrand),
      mStrand(o_strand),
      mCraqCache(cache),
-     mMigAckMessages( con->mainStrand->wrap(std::tr1::bind(&CraqObjectSegmentation::handleNewMigAckMessages, this)) ),
-     mFrontMigAck(NULL),
      ctx(con),
-     mReceivedStopRequest(false),
      mOSegQueueLen(0)
   {
 
@@ -88,13 +83,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
       cInitArgs2.port  =     "10499";
       setInitArgs.push_back(cInitArgs2);
 
-    //registering with the dispatcher.  can now receive messages addressed to it.
-    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
-    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
-    mContext->serverDispatcher()->registerMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
 
-    // Register a ServerMessage service for oseg
-    mOSegServerMessageService = mContext->serverRouter()->createServerMessageService("craq-oseg");
 
     craqDhtGet1.initialize(getInitArgs);
     craqDhtGet2.initialize(getInitArgs);
@@ -122,11 +111,10 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
 
   void CraqObjectSegmentation::stop()
   {
+      ObjectSegmentation::stop();
     craqDhtSet.stop();
     craqDhtGet1.stop();
     craqDhtGet2.stop();
-
-    mReceivedStopRequest = true;
   }
 
   /*
@@ -134,12 +122,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
   */
   CraqObjectSegmentation::~CraqObjectSegmentation()
   {
-    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_MOVE,this);
-    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,this);
-    mContext->serverDispatcher()->unregisterMessageRecipient(SERVER_PORT_OSEG_UPDATE, this);
-
-    delete mOSegServerMessageService;
-
     //    should delete not found queue;
     while (mNfData.size() != 0)
     {
@@ -153,15 +135,6 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
       delete tmessmapit->second.msgAdded;
 
     trackedAddMessages.clear();
-
-
-    //delete retries
-    while( !mMigAckMessages.empty() ) {
-        Message* msg = NULL;
-        mMigAckMessages.pop(msg);
-        delete msg;
-    }
-
 
 
 
@@ -201,7 +174,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
   */
   bool CraqObjectSegmentation::clearToMigrate(const UUID& obj_id)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return false;
 
     //set a mutex lock.
@@ -234,7 +207,7 @@ CraqObjectSegmentation::CraqObjectSegmentation (SpaceContext* con, Network::IOSt
   //this call returns true if the object is migrating from this server to another server, but hasn't yet received an ack message (which will disconnect the object connection.)
 bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id, float*radius)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return false;
 
     inTransOrLookup_m.lock();
@@ -286,7 +259,7 @@ bool CraqObjectSegmentation::checkMigratingFromNotCompleteYet(const UUID& obj_id
 
   void CraqObjectSegmentation::addNewObject(const UUID& obj_id, float radius)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return ;
 
     CraqDataKey cdk;
@@ -349,7 +322,7 @@ int CraqObjectSegmentation::getPushback()
   OSegEntry CraqObjectSegmentation::lookup(const UUID& obj_id)
   {
 
-    if (mReceivedStopRequest)
+    if (mStopping)
       return CraqEntry::null();
 
 
@@ -414,7 +387,7 @@ int CraqObjectSegmentation::getPushback()
   void CraqObjectSegmentation::beginCraqLookup(const UUID& obj_id, OSegLookupTraceToken* traceToken)
   {
       --mOSegQueueLen;
-      if (mReceivedStopRequest)
+      if (mStopping)
       {
           delete traceToken;
           return;
@@ -501,7 +474,7 @@ int CraqObjectSegmentation::getPushback()
   */
 void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius, ServerID idServerAckTo, bool generateAck)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
 
@@ -551,7 +524,7 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
   */
   void CraqObjectSegmentation::migrateObject(const UUID& obj_id, const OSegEntry& new_server_id)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
     //log the message.
@@ -592,7 +565,7 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
   //should be called from inside of o_strand and posts to postingStrand mainStrand->post.
   void CraqObjectSegmentation::callOsegLookupCompleted(const UUID& obj_id, const CraqEntry& sID, OSegLookupTraceToken* traceToken)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
     {
       if (traceToken != NULL)
         delete traceToken;
@@ -615,61 +588,36 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
   }
 
 
-  //This receives messages oseg migrate and acknowledge messages
-  void CraqObjectSegmentation::receiveMessage(Message* msg)
-  {
-    if (mReceivedStopRequest)
-    {
-      delete msg;
+void CraqObjectSegmentation::handleUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg) {
+    if (mStopping)
       return;
-    }
 
-      if (msg->dest_port() == SERVER_PORT_OSEG_MIGRATE_MOVE) {
-          Sirikata::Protocol::OSeg::MigrateMessageMove oseg_move_msg;
-          bool parsed = parsePBJMessage(&oseg_move_msg, msg->payload());
-          if (parsed)
-          {
-            printf("\n\nMigrate message move in oseg is a deprecated message.  Killing\n\n");
-            assert(false);
-          }
-      }
-      else if (msg->dest_port() == SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE) {
-          Sirikata::Protocol::OSeg::MigrateMessageAcknowledge oseg_ack_msg;
-          bool parsed = parsePBJMessage(&oseg_ack_msg, msg->payload());
-          if (parsed)
-            mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processMigrateMessageAcknowledge, this,oseg_ack_msg));
-      }
-      else if (msg->dest_port() == SERVER_PORT_OSEG_UPDATE) {
-          Sirikata::Protocol::OSeg::UpdateOSegMessage update_oseg_msg;
-          bool parsed = parsePBJMessage(&update_oseg_msg, msg->payload());
-          if (parsed)
-            mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processUpdateOSegMessage,this,update_oseg_msg));
-      }
-      else {
-          printf("\n\nReceived the wrong type of message in receiveMessage of craqobjectsegmentation.cpp.\n\n ");
-      }
-
-      delete msg;
-  }
-
-
+    mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processUpdateOSegMessage, this, update_oseg_msg));
+}
 
   //called from within o_strand
   void CraqObjectSegmentation::processUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
     mCraqCache->insert(update_oseg_msg.m_objid(), CraqEntry(update_oseg_msg.servid_obj_on(),update_oseg_msg.m_objradius()));
   }
 
+void CraqObjectSegmentation::handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg) {
+    if (mStopping)
+      return;
+
+    mStrand->post(std::tr1::bind(&CraqObjectSegmentation::processMigrateMessageAcknowledge, this, msg));
+}
+
   //called from within o_strand
   void CraqObjectSegmentation::processMigrateMessageAcknowledge(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
-    CraqEntry serv_from(msg.m_servid_from(),msg.m_objradius()), serv_to(msg.m_servid_to(),msg.m_objradius());
+    CraqEntry serv_from(msg.m_servid_from(),msg.m_objradius());
     UUID obj_id;
 
     obj_id    = msg.m_objid();
@@ -703,41 +651,11 @@ void CraqObjectSegmentation::addMigratedObject(const UUID& obj_id, float radius,
     mWriteListener->osegMigrationAcknowledged(obj_id);
   }
 
-void CraqObjectSegmentation::handleNewMigAckMessages() {
-    trySendMigAcks();
-}
-
-void CraqObjectSegmentation::trySendMigAcks() {
-    if (mReceivedStopRequest)
-      return;
-
-    while(true) {
-        if (mFrontMigAck == NULL) {
-            if (mMigAckMessages.empty())
-                return;
-            mMigAckMessages.pop(mFrontMigAck);
-        }
-
-        bool sent = mOSegServerMessageService->route( mFrontMigAck );
-        if (!sent)
-            break;
-
-        mFrontMigAck = NULL;
-    }
-
-    if (mFrontMigAck != NULL || !mMigAckMessages.empty()) {
-        // We've still got work to do, setup a retry
-        mContext->mainStrand->post(
-            Duration::microseconds(100),
-            std::tr1::bind(&CraqObjectSegmentation::trySendMigAcks, this)
-                                   );
-    }
-}
 
   //this function tells us what to do with all the ids that just weren't found in craq.
   void CraqObjectSegmentation::notFoundFunction(CraqOperationResult* nf)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
     //turn the id into a uuid and then push it onto the end of  mNfData queue.
@@ -757,7 +675,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
   //this function tells us if there are any ids that have waited long enough for it to be safe to query for the again.
   void CraqObjectSegmentation::checkNotFoundData()
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
     //look at the first element of the queue.  if the time hasn't been sufficiently long, return.  if the time has been sufficiently long, then go ahead and directly request asyncCraq to perform another lookup.
@@ -807,7 +725,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
         cor->traceToken->stamp(OSegLookupTraceToken::OSEG_TRACE_LOOKUP_RETURN_BEGIN);
         //cor->traceToken->lookupReturnBegin = tmpDur.toMicroseconds();
 
-    if (mReceivedStopRequest)
+    if (mStopping)
     {
       if (cor->traceToken != NULL)
         delete cor->traceToken;
@@ -862,7 +780,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
   //which we already know has an entry in trackingMessages
   void CraqObjectSegmentation::removeFromInTransOrLookup(const UUID& obj_id)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
     inTransOrLookup_m.lock();
@@ -884,7 +802,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
   //Assumes that the result as an entry in trackingMessages
   void CraqObjectSegmentation::removeFromReceivingObjects(const UUID& obj_id)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
       return;
 
     //remove this object from mReceivingObjects,
@@ -899,7 +817,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
   //gets posted to from asyncCraqSet.  Should get inside of o_strand from the post.
   void CraqObjectSegmentation::craqSetResult(CraqOperationResult* trackedSetResult)
   {
-    if (mReceivedStopRequest)
+    if (mStopping)
     {
       delete trackedSetResult;
       return;
@@ -931,15 +849,7 @@ void CraqObjectSegmentation::trySendMigAcks() {
       removeFromReceivingObjects(obj_id);
 
       //send an acknowledge message to space server that formerly hosted object.
-      Message* to_send = new Message(
-                                     mContext->id(),
-                                     SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,
-                                     trackingMessages[trackedSetResult->trackedMessage].migAckMsg->m_message_destination(),
-                                     SERVER_PORT_OSEG_MIGRATE_ACKNOWLEDGE,
-                                     serializePBJMessage( *(trackingMessages[trackedSetResult->trackedMessage].migAckMsg) )
-                                     );
-      mMigAckMessages.push(to_send); // sending handled in main strand
-
+      queueMigAck(*(trackingMessages[trackedSetResult->trackedMessage].migAckMsg));
       trackingMessages.erase(trackedSetResult->trackedMessage);//stop tracking this message.
     }
     else if ((awhere=trackedAddMessages.find(trackedSetResult->trackedMessage)) != trackedAddMessages.end())

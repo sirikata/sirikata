@@ -38,8 +38,8 @@
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
 #include "JSObjects/JSVisible.hpp"
-#include "JSObjects/JSFakeroot.hpp"
 #include "JSObjects/JSSystem.hpp"
+
 #include "JSObjects/JSUtilObj.hpp"
 #include "JSObjects/JSHandler.hpp"
 #include "JSObjects/JSTimer.hpp"
@@ -178,22 +178,24 @@ void JSObjectScriptManager::createTemplates()
 
     createWhenWatchedItemTemplate();
     createWhenWatchedListTemplate();
-    createFakerootTemplate();
-    createContextTemplate();
-    createContextGlobalTemplate();
+
+
     createHandlerTemplate();
     createVisibleTemplate();
 
     createTimerTemplate();
-
     createJSInvokableObjectTemplate();
     createPresenceTemplate();
     createSystemTemplate();
-
-    //createTriggerableTemplate();
+    createContextTemplate();
+    createContextGlobalTemplate();
 }
 
 
+
+/*
+  EMERSON!: timer
+ */
 void JSObjectScriptManager::createTimerTemplate()
 {
     v8::HandleScope handle_scope;
@@ -209,40 +211,53 @@ void JSObjectScriptManager::createTimerTemplate()
 }
 
 
-void JSObjectScriptManager::createFakerootTemplate()
+/*
+  EMERSON!: system
+ */
+void JSObjectScriptManager::createSystemTemplate()
 {
     v8::HandleScope handle_scope;
-    mFakerootTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mSystemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
-    mFakerootTemplate->SetInternalFieldCount(FAKEROOT_TEMPLATE_FIELD_COUNT);
-
-
-    mFakerootTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSFakeroot::root_sendHome));
-    mFakerootTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSFakeroot::root_registerHandler));
-    mFakerootTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSFakeroot::root_timeout));
-    mFakerootTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSFakeroot::root_print));
+    mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
 
+    mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
+    mSystemTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSSystem::root_registerHandler));
+    mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
+    mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
+
+    mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
+
+
+    
     //check what permissions fake root is loaded with
-    mFakerootTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canSendMessage));
-    mFakerootTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSFakeroot::root_canRecvMessage));
-    mFakerootTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSFakeroot::root_canProx));
+    mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
+    mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
+    mSystemTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSSystem::root_canProx));
+    mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
+    
+    mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
+    mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
-    mFakerootTemplate->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSFakeroot::root_toString));
-    mFakerootTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSFakeroot::root_getPosition));
+    //this doesn't work now.
+    mSystemTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::root_scriptEval));
+    mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
+    mSystemTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::root_createPresence));
+    mSystemTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::root_createEntity));
 
-    //add basic templates: vec3, quat, math
+    mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
+    mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
+    
 
+    mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
+    mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
+    
 }
 
-
-
-//no reboot.
-//no create_entity
-//no import
-//no create_presence
-//no update_addressable
-//no motion (for now).  May special-case motion stuff
+/*
+  EMERSON!: context
+ */
 void JSObjectScriptManager::createContextTemplate()
 {
     v8::HandleScope handle_scope;
@@ -257,15 +272,17 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->Set(v8::String::New("execute"), v8::FunctionTemplate::New(JSContext::ScriptExecute));
     mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
     mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
-
+    mContextTemplate->Set(v8::String::New("clear"), v8::FunctionTemplate::New(JSContext::ScriptClear));
+    
 }
+
 
 void JSObjectScriptManager::createContextGlobalTemplate()
 {
     v8::HandleScope handle_scope;
     // And we expose some functionality directly
     mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::FAKEROOT_OBJECT_NAME),mFakerootTemplate);
+    mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME),mSystemTemplate);
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
 }
 
@@ -282,49 +299,10 @@ void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> temp
 
 
 
-//it looks like I can't figure out how to inherit system template functionality
-//from object template.
-void JSObjectScriptManager::createSystemTemplate()
-{
-    v8::HandleScope handle_scope;
-    mGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    // An internal field holds the JSObjectScript*
-    mGlobalTemplate->SetInternalFieldCount(1);
 
-    // And we expose some functionality directly
-    v8::Handle<v8::ObjectTemplate> system_templ = v8::ObjectTemplate::New();
-    // An internal field holds the JSObjectScript*
-    system_templ->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
-
-    // Functions / types
-    system_templ->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::ScriptTimeout));
-    system_templ->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::Print));
-    system_templ->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::ScriptImport));
-    system_templ->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::ScriptRequire));
-    system_templ->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::ScriptEval));
-    system_templ->Set(v8::String::New("reboot"),v8::FunctionTemplate::New(JSSystem::ScriptReboot));
-    system_templ->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::ScriptCreateEntity));
-    system_templ->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::ScriptCreatePresence));
-
-
-    //when creating a context, should also optionally take in a callback for what should happen if presence associated gets disconnected from space;
-    system_templ->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::ScriptCreateContext));
-
-    system_templ->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceConnected));
-    system_templ->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::ScriptOnPresenceDisconnected));
-    system_templ->Set(JS_STRING(registerHandler),v8::FunctionTemplate::New(JSSystem::ScriptRegisterHandler));
-    system_templ->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
-    //system_templ->Set(v8::String::New("registerUniqueMessageCode"),New(JSSystem::registerUniqueMessageCode));
-
-    //math, vec, quaternion, etc.
-    //add the system template to the global template
-    mGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME), system_templ);
-    mGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
-}
-
-
-
-
+/*
+  EMERSON!: invokable
+ */
 void JSObjectScriptManager::createJSInvokableObjectTemplate()
 {
   v8::HandleScope handle_scope;
@@ -335,7 +313,9 @@ void JSObjectScriptManager::createJSInvokableObjectTemplate()
 }
 
 
-
+/*
+  EMERSON!: visible
+ */
 void JSObjectScriptManager::createVisibleTemplate()
 {
     v8::HandleScope handle_scope;
@@ -361,6 +341,9 @@ void JSObjectScriptManager::createVisibleTemplate()
 }
 
 
+/*
+  EMERSON!: presence
+ */
 void JSObjectScriptManager::createPresenceTemplate()
 {
   v8::HandleScope handle_scope;
@@ -406,11 +389,20 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
 
 
+  //using JSVisible sendmessage so that don't have to re-write a bunch of code.
+  proto_t->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
+  
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
+
+  //convert this presence object into a visible object
+  proto_t->Set(v8::String::New("toVisible"),v8::FunctionTemplate::New(JSPresence::toVisible));
+
+  proto_t->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSPresence::pres_suspend));
+  proto_t->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSPresence::pres_resume));
 
 
   
@@ -427,6 +419,9 @@ void JSObjectScriptManager::createPresenceTemplate()
 //should be able to cancel handler    -----> canceling handler kills this
 //object.  remove this pattern from being checked for.
 //should be able to renew handler     -----> Re-register handler.
+/*
+  EMERSON!: handler
+ */
 void JSObjectScriptManager::createHandlerTemplate()
 {
     v8::HandleScope handle_scope;

@@ -1,40 +1,52 @@
-#ifndef __SIRIKATA_JS_JSSYSTEM_HPP__
-#define __SIRIKATA_JS_JSSYSTEM_HPP__
 
-#include "../JSUtil.hpp"
+#ifndef __SIRIKATA_JS_SYSTEM_HPP__
+#define __SIRIKATA_JS_SYSTEM_HPP__
+
+#include <sirikata/oh/Platform.hpp>
+
+#include "../JSObjectScriptManager.hpp"
 #include "../JSObjectScript.hpp"
-#include <v8.h>
+
+#include "../JSSerializer.hpp"
+
+
 
 namespace Sirikata {
 namespace JS {
-namespace JSSystem{
+namespace JSSystem {
+
+
+v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args);
+v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args);
+v8::Handle<v8::Value> root_canProx(const v8::Arguments& args);
+v8::Handle<v8::Value> root_canImport(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_import(const v8::Arguments& args);
+v8::Handle<v8::Value> root_require(const v8::Arguments& args);
+v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args);
+v8::Handle<v8::Value> root_timeout(const v8::Arguments& args);
+v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args);
+v8::Handle<v8::Value> root_print(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args);
+v8::Handle<v8::Value> root_createContext(const v8::Arguments& args);
+v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args);
+
+
+v8::Handle<v8::Value> root_onPresenceConnected(const v8::Arguments& args);
+v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args);
 
 
 
-v8::Handle<v8::Value> ScriptTimeout(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptTimeoutContext(const v8::Arguments& args,JSContextStruct* jscont);
 
-
-v8::Handle<v8::Value> registerMessageCode(const v8::Arguments& args);
-
-v8::Handle<v8::Value> ScriptCreateEntity(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptCreatePresence(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptReboot(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptImport(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptRequire(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptEval(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptGetVisual(v8::Local<v8::String> property, const v8::AccessorInfo &info);
-void ScriptSetVisual(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
-v8::Handle<v8::Value> Print(const v8::Arguments& args);
-
-v8::Handle<v8::Value> ScriptCreateContext(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptRegisterHandler(const v8::Arguments& args);
-
-v8::Handle<v8::Value> ScriptOnPresenceConnected(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptOnPresenceDisconnected(const v8::Arguments& args);
-
-}//jssystem namespace
-}//js namespace
-}//sirikata namespace
+}//end jssystem namespace
+}//end js namespace
+}//end sirikata
 
 #endif

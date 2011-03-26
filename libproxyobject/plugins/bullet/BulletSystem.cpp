@@ -48,7 +48,7 @@ static int core_plugin_refcount = 0;
 //#define DEBUG_OUTPUT(x) x
 #define DEBUG_OUTPUT(x)
 
-#define BULLET_LOG(lvl,msg) SILOG(bullet, lvl, "[BULLET] " << msg)
+#define BULLET_LOG(lvl,msg) SILOG(bullet, lvl, msg)
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;

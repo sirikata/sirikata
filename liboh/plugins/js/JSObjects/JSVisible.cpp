@@ -4,12 +4,13 @@
 
 #include "../JSObjectScriptManager.hpp"
 #include "../JSObjectScript.hpp"
-
+#include "JSObjectsUtils.hpp"
 #include "../JSSerializer.hpp"
 #include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSFields.hpp"
 #include "JSVec3.hpp"
+#include "JSObjectsUtils.hpp"
 
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 
@@ -158,12 +159,14 @@ v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
 
     //decode the visible struct associated with this object
     std::string errorMessage = "In __visibleSendMessage function of visible.  ";
-    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
-    if (jsvis == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
+    //want to decode to position listener to send message out of.
+    JSPositionListener* jspl = decodeJSPosListener(args.This(),errorMessage);
 
-    return jsvis->visibleSendMessage(serialized_message);
+    if (jspl == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jspl->sendMessage(serialized_message);
 }
 
 bool isVisibleObject(v8::Handle<v8::Value> v8Val)

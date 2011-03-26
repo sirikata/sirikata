@@ -56,7 +56,7 @@ public:
     virtual void attachScript(const String&);
 
     // SessionEventListener Interface
-    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,int token);
+    virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
 
     // Invokable Interface -- Handles input events

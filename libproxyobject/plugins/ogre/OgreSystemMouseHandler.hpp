@@ -61,6 +61,10 @@ public:
 
     // FIXME no reason for this to be in this class.
     SpaceObjectReference pick(Vector2f p, int direction);
+
+    //FIXME should this be public?
+    WebView* mUIWidgetView;
+    void ensureUI();
 private:
     void delegateEvent(Input::InputEventPtr inputev);
 
@@ -143,8 +147,6 @@ private:
     Task::LocalTime mLastCameraTime;
     Task::LocalTime mLastFpsTime;
     Task::LocalTime mLastRenderStatsTime;
-
-    WebView* mUIWidgetView;
 
     // To avoid too many messages, update only after a timeout
     float mNewQueryAngle;

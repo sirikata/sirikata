@@ -89,6 +89,10 @@ public:
         String mesh;
     };
 
+    //use this function to request the object host to send a disconnect message
+    //to space for object
+    void disconnectObject(const SpaceID& space, const ObjectReference& oref);
+    
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ConnectionInfo)> ConnectedCallback;

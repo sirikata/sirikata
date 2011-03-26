@@ -36,40 +36,6 @@
 namespace Sirikata {
 namespace SimpleCamera {
 
-namespace {
-
-bool anyBool(const boost::any& a) {
-    assert(a.type() == typeid(bool));
-    return boost::any_cast<bool>(a);
-}
-
-Invokable::Dict anyInvokableDict(const boost::any& a) {
-    assert(a.type() == typeid(Invokable::Dict));
-    return boost::any_cast<Invokable::Dict>(a);
-}
-
-String anyString(const boost::any& a) {
-    assert(a.type() == typeid(String));
-    return boost::any_cast<String>(a);
-}
-
-int32 anyInt32(const boost::any& a) {
-    assert(a.type() == typeid(int32));
-    return boost::any_cast<int32>(a);
-}
-
-uint32 anyUInt32(const boost::any& a) {
-    assert(a.type() == typeid(uint32));
-    return boost::any_cast<uint32>(a);
-}
-
-float anyFloat(const boost::any& a) {
-    assert(a.type() == typeid(float));
-    return boost::any_cast<float>(a);
-}
-
-}
-
 InputBindingEvent::InputBindingEvent()
 {
 }
@@ -80,7 +46,7 @@ InputBindingEvent::InputBindingEvent(const InputBindingEvent& other)
 }
 
 InputBindingEvent::InputBindingEvent(const boost::any& evt)
- : mEvent(anyInvokableDict(evt))
+ : mEvent(Invokable::anyAsDict(evt))
 {
 }
 
@@ -95,24 +61,24 @@ bool InputBindingEvent::valid() const {
 
 bool InputBindingEvent::isKey() const {
     return (
-        anyString(mEvent.find("msg")->second).find("button") != String::npos ||
-        anyString(mEvent.find("msg")->second).find("key") != String::npos
+        Invokable::anyAsString(mEvent.find("msg")->second).find("button") != String::npos ||
+        Invokable::anyAsString(mEvent.find("msg")->second).find("key") != String::npos
     );
 }
 
 String InputBindingEvent::keyButton() const {
     assert(isKey());
-    return anyString(mEvent.find("button")->second);
+    return Invokable::anyAsString(mEvent.find("button")->second);
 }
 
 bool InputBindingEvent::keyPressed() const {
     assert(isKey());
-    return (anyString(mEvent.find("msg")->second) == "button-pressed");
+    return (Invokable::anyAsString(mEvent.find("msg")->second) == "button-pressed");
 }
 
 bool InputBindingEvent::keyReleased() const {
     assert(isKey());
-    if (anyString(mEvent.find("msg")->second) == "button-up") return true;
+    if (Invokable::anyAsString(mEvent.find("msg")->second) == "button-up") return true;
     return false;
 }
 
@@ -123,14 +89,14 @@ InputBindingEvent::Modifier InputBindingEvent::keyModifiers() const {
     Invokable::Dict::const_iterator mods_it = mEvent.find("modifier");
     if (mods_it == mEvent.end()) return out;
 
-    Invokable::Dict mods = anyInvokableDict(mods_it->second);
-    if ( anyBool(mods.find("shift")->second) )
+    Invokable::Dict mods = Invokable::anyAsDict(mods_it->second);
+    if ( Invokable::anyAsBoolean(mods.find("shift")->second) )
         out = (Modifier)(out | SHIFT);
-    if ( anyBool(mods.find("ctrl")->second) )
+    if ( Invokable::anyAsBoolean(mods.find("ctrl")->second) )
         out = (Modifier)(out | CTRL);
-    if ( anyBool(mods.find("alt")->second) )
+    if ( Invokable::anyAsBoolean(mods.find("alt")->second) )
         out = (Modifier)(out | ALT);
-    if ( anyBool(mods.find("super")->second) )
+    if ( Invokable::anyAsBoolean(mods.find("super")->second) )
         out = (Modifier)(out | SUPER);
 
     return out;
@@ -138,61 +104,61 @@ InputBindingEvent::Modifier InputBindingEvent::keyModifiers() const {
 
 
 bool InputBindingEvent::isMouseClick() const {
-    return anyString(mEvent.find("msg")->second).find("mouse-click") != String::npos;
+    return Invokable::anyAsString(mEvent.find("msg")->second).find("mouse-click") != String::npos;
 }
 
 int32 InputBindingEvent::mouseClickButton() const {
     assert(isMouseClick());
-    return anyInt32(mEvent.find("button")->second);
+    return Invokable::anyAsInt32(mEvent.find("button")->second);
 }
 
 
 bool InputBindingEvent::isMouseDrag() const {
-    return anyString(mEvent.find("msg")->second).find("mouse-drag") != String::npos;
+    return Invokable::anyAsString(mEvent.find("msg")->second).find("mouse-drag") != String::npos;
 }
 
 int32 InputBindingEvent::mouseDragButton() const {
     assert(isMouseDrag());
-    return anyInt32(mEvent.find("button")->second);
+    return Invokable::anyAsInt32(mEvent.find("button")->second);
 }
 
 
 float InputBindingEvent::mouseX() const {
     assert(isMouseClick() || isMouseDrag());
-    return anyFloat(mEvent.find("x")->second);
+    return Invokable::anyAsFloat(mEvent.find("x")->second);
 }
 
 float InputBindingEvent::mouseY() const {
     assert(isMouseClick() || isMouseDrag());
-    return anyFloat(mEvent.find("y")->second);
+    return Invokable::anyAsFloat(mEvent.find("y")->second);
 }
 
 bool InputBindingEvent::isAxis() const {
-    return anyString(mEvent.find("msg")->second).find("axis") != String::npos;
+    return Invokable::anyAsString(mEvent.find("msg")->second).find("axis") != String::npos;
 }
 
 uint32 InputBindingEvent::axisIndex() const {
     assert(isAxis());
-    return anyUInt32(mEvent.find("axis")->second);
+    return Invokable::anyAsUInt32(mEvent.find("axis")->second);
 }
 
 float InputBindingEvent::axisValue() const {
     assert(isAxis());
-    return anyFloat(mEvent.find("value")->second);
+    return Invokable::anyAsFloat(mEvent.find("value")->second);
 }
 
 bool InputBindingEvent::isWeb() const {
-    return anyString(mEvent.find("msg")->second).find("webview") != String::npos;
+    return Invokable::anyAsString(mEvent.find("msg")->second).find("webview") != String::npos;
 }
 
 String InputBindingEvent::webViewName() const {
     assert(isWeb());
-    return anyString(mEvent.find("webview")->second);
+    return Invokable::anyAsString(mEvent.find("webview")->second);
 }
 
 String InputBindingEvent::webName() const {
     assert(isWeb());
-    return anyString(mEvent.find("name")->second);
+    return Invokable::anyAsString(mEvent.find("name")->second);
 }
 
 

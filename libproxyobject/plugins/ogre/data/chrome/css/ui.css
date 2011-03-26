@@ -39,3 +39,7 @@ div.flush-right {
 }
 label, input { display:block; }
 .inline { display: inline; }
+
+div#ui-box { display: none; }
+
+.ui-widget { font-size: 0.5em; }

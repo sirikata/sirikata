@@ -44,7 +44,7 @@
 using namespace Sirikata::Network;
 using namespace Sirikata;
 
-#define TCPNET_LOG(level,msg) SILOG(tcpnetwork,level,"[TCPNET] " << msg)
+#define TCPNET_LOG(level,msg) SILOG(tcpnet,level,msg)
 
 namespace Sirikata {
 
@@ -590,7 +590,7 @@ TCPSpaceNetwork::TCPSendStream* TCPSpaceNetwork::openConnection(const ServerID& 
 
     Address4* addr = mServerIDMap->lookupInternal(dest);
     if (addr == NULL) {
-        TCPNET_LOG(error,"Tried to open connection to non-existent server. Probably running in single-server mode.");
+        TCPNET_LOG(error,"Tried to open connection to non-existent server " << dest << ". Probably running in single-server mode.");
         return NULL;
     }
 

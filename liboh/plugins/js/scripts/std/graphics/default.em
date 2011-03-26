@@ -106,7 +106,7 @@ function() {
             this._scripter.script(this._selected);
 
         if (evt.button == 's' && evt.modifier.ctrl)
-            this._scripter.script(system.Self);
+            this._scripter.script(system.presences[0]);
     };
 
     ns.DefaultGraphics.prototype.onButtonRepeated = function(evt) {

@@ -40,7 +40,7 @@
 #include "Protocol_Session.pbj.hpp"
 #include <sirikata/core/util/Platform.hpp>
 
-#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+#define OH_LOG(level,msg) SILOG(oh,level,msg)
 
 using namespace Sirikata::Network;
 
@@ -304,7 +304,7 @@ void SessionManager::connect(
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
 
-    
+
     // connect_cb gets wrapped so we can start some automatic steps (initial
     // connection of sst stream to space) at the correc time
     mObjectConnections.add(
@@ -313,7 +313,11 @@ void SessionManager::connect(
 		       _1, _2, _3, _4, _5, _6, _7,
             connect_cb
         ),
-        migrate_cb, stream_created_cb, disconn_cb
+        std::tr1::bind(&SessionManager::handleObjectFullyMigrated, this,
+		       _1, _2, _3,
+            migrate_cb
+        ),
+        stream_created_cb, disconn_cb
     );
 
     // Get a connection to request
@@ -754,7 +758,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
     assert(!session_msg.has_connect());
     SpaceObjectReference sporef_obj(mSpace,ObjectReference(msg->dest_object()));
-    
+
     if (session_msg.has_connect_response()) {
         Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
 
@@ -828,7 +832,19 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     real_cb(space, obj, server, loc, orient, bnds, mesh);
 
     SSTStream::connectStream(
-        SSTEndpoint(spaceobj, OBJECT_SPACE_PORT),
+        SSTEndpoint(spaceobj, 0), // Local port is random
+        SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
+        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+    );
+}
+
+void SessionManager::handleObjectFullyMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server, MigratedCallback real_cb) {
+    SpaceObjectReference spaceobj(space, obj);
+
+    real_cb(space, obj, server);
+
+    SSTStream::connectStream(
+        SSTEndpoint(spaceobj, 0), // Local port is random
         SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
         std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
     );
@@ -852,7 +868,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
     if (err != SST_IMPL_SUCCESS) {
         // retry creating an SST stream from the space server to object 'obj'.
         SSTStream::connectStream(
-            SSTEndpoint(spaceobj, OBJECT_SPACE_PORT),
+            SSTEndpoint(spaceobj, 0), // Local port is random
             SSTEndpoint(SpaceObjectReference(spaceobj.space(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
             std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
         );

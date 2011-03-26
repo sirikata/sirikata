@@ -1,6 +1,6 @@
 //this code just receives all messages that are sent to it, and prints their contents.
 
-system.print("This function makes it so that an entity will receive and print all messages that are sent to it.");
+system.print("\nThis function makes it so that an entity will receive and print all messages that are sent to it.\n");
 
 function allMessagesCallback(msg,sender)
 {

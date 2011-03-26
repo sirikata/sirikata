@@ -32,7 +32,7 @@
 
 #include "PintoManagerLocationServiceCache.hpp"
 
-#define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,"[PINTO] " << msg)
+#define PINTO_LOG(lvl, msg) SILOG(pinto,lvl,msg)
 
 namespace Sirikata {
 
@@ -47,16 +47,29 @@ PintoManagerLocationServiceCache::~PintoManagerLocationServiceCache() {
 void PintoManagerLocationServiceCache::addSpaceServer(ServerID sid, const TimedMotionVector3f& loc, const BoundingSphere3f& region, float32 ms) {
     Lock lck(mMutex);
 
-    assert(mServers.find(sid) == mServers.end());
+    bool alreadyHad = (mServers.find(sid) != mServers.end());
+
+    SpaceServerData old_data = mServers[sid];
 
     mServers[sid].location = loc;
     mServers[sid].region = region;
     mServers[sid].maxSize = ms;
-    mServers[sid].tracking = false;
-    mServers[sid].removable = true;
+    if (!alreadyHad) {
+        mServers[sid].tracking = false;
+        mServers[sid].removable = true;
+    }
 
-    for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        (*it)->locationConnected(sid, false, loc, region, ms);
+    if (!alreadyHad) {
+        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++)
+            (*it)->locationConnected(sid, false, loc, region, ms);
+    }
+    else {
+        for(ListenerSet::iterator it = mListeners.begin(); it != mListeners.end(); it++) {
+            (*it)->locationPositionUpdated(sid, old_data.location, loc);
+            (*it)->locationRegionUpdated(sid, old_data.region, region);
+            (*it)->locationMaxSizeUpdated(sid, old_data.maxSize, ms);
+        }
+    }
 }
 
 void PintoManagerLocationServiceCache::updateSpaceServerLocation(ServerID sid, const TimedMotionVector3f& loc) {

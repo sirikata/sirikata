@@ -98,14 +98,14 @@ void SimpleCameraObjectScript::attachScript(const String& script_name)
 {
 }
 
-void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int token) {
+void SimpleCameraObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token) {
     mID = name;
     mSelfProxy = mParent->self(mID);
 
     mGraphics = mParent->runSimulation(name, "ogregraphics");
     Invokable::Array args;
-    args.push_back( (String)"setInputHandler" );
-    args.push_back( (Invokable*)this );
+    args.push_back( Invokable::asAny((String)"setInputHandler") );
+    args.push_back( Invokable::asAny((Invokable*)this) );
     mGraphics->invoke(args);
 }
 
@@ -130,31 +130,31 @@ static String fillZeroPrefix(const String& prefill, int32 nwide) {
 
 void SimpleCameraObjectScript::suspendAction() {
     Invokable::Array args;
-    args.push_back( (String)"suspend" );
+    args.push_back( Invokable::asAny((String)"suspend") );
     mGraphics->invoke(args);
 }
 
 void SimpleCameraObjectScript::resumeAction() {
     Invokable::Array args;
-    args.push_back( (String)"suspend" );
+    args.push_back( Invokable::asAny((String)"resume") );
     mGraphics->invoke(args);
 }
 
 void SimpleCameraObjectScript::toggleSuspendAction() {
     Invokable::Array args;
-    args.push_back( (String)"toggleSuspend" );
+    args.push_back( Invokable::asAny((String)"toggleSuspend") );
     mGraphics->invoke(args);
 }
 
 void SimpleCameraObjectScript::screenshotAction() {
     Invokable::Array args;
-    args.push_back( (String)"screenshot" );
+    args.push_back( Invokable::asAny((String)"screenshot") );
     mGraphics->invoke(args);
 }
 
 void SimpleCameraObjectScript::quitAction() {
     Invokable::Array args;
-    args.push_back( (String)"quit" );
+    args.push_back( Invokable::asAny((String)"quit") );
     mGraphics->invoke(args);
 }
 

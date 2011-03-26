@@ -235,7 +235,10 @@ public:
     void tick();
 
 
-    const static int DEFAULT_PRESENCE_TOKEN = -1;
+    typedef int64 PresenceToken;
+    const static PresenceToken DEFAULT_PRESENCE_TOKEN = -1;
+
+
     /** Initiate connection process to a space, but do not send any messages yet.
         After calling connectToSpace, it is immediately possible to send() a NewObj
         message, however any other message must wait until you receive the RetObj
@@ -256,7 +259,7 @@ public:
         const String& mesh,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        int token = DEFAULT_PRESENCE_TOKEN);
+        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
     void connect(
         const SpaceID&spaceID,
@@ -266,7 +269,7 @@ public:
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        int token = DEFAULT_PRESENCE_TOKEN);
+        PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
 
     Location getLocation(const SpaceID& space, const ObjectReference& oref);
@@ -278,8 +281,8 @@ public:
     // connection callbacks manually.
 
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
@@ -322,6 +325,8 @@ public:
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor, ODP::PortID port);
     virtual ODP::Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual ODP::Port* bindODPPort(const SpaceObjectReference& sor);
+    virtual ODP::PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual ODP::PortID unusedODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const ODP::MessageHandler& cb);
 
 

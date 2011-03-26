@@ -35,7 +35,7 @@
 #include <cassert>
 #include <iostream>
 
-#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, "[COLLADA] " << msg);
+#define COLLADA_LOG(lvl,msg) SILOG(collada, lvl, msg);
 
 namespace Sirikata { namespace Models {
 

@@ -73,8 +73,6 @@ bool JSPositionListener::registerAsPosListener()
     if (hasRegisteredListener)
         return true;
 
-
-
     //initializes mLocation and mOrientation to correct starting values.
     if (sporefToListenTo == NULL)
     {
@@ -82,18 +80,23 @@ bool JSPositionListener::registerAsPosListener()
         return false;
     }
 
-    if ((sporefToListenFrom == NULL) ||
-        (*sporefToListenFrom == SpaceObjectReference::null()))
-    {
-        JSLOG(insane,"This object has an invalid sporefToListenFrom.  Taking no action ");
-        return false;
-    }
-
     hasRegisteredListener = jsObjScript->registerPosListener(sporefToListenTo,sporefToListenFrom,this,&mLocation,&mOrientation);
-
 
     return hasRegisteredListener;
 }
+
+
+v8::Handle<v8::Value> JSPositionListener::sendMessage (std::string& msgToSend)
+{
+    //actually send the message to the entity
+    if ((sporefToListenFrom == NULL) || (*sporefToListenFrom == SpaceObjectReference::null()) ||
+        (sporefToListenTo   == NULL) || (*sporefToListenTo   == SpaceObjectReference::null()))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error trying to send message.  Do not have a presence associated with this object to send message out from, or do not have sporef to send to.")));
+
+    jsObjScript->sendMessageToEntity(sporefToListenTo,sporefToListenFrom,msgToSend);
+    return v8::Undefined();
+}
+
 
 
 void JSPositionListener::deregisterAsPosListener()

@@ -1,14 +1,12 @@
 ///This function tests the execute context code.  From system, create a context, print in the context, and execute from the new context
 
 
-
-var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true);
+system.import('test/testContexts/baseContextTest.em');
 
 
 x = 5;
 
-var  toExecute = function (fakeroot,argPassedIn, argPassedIn2)
+var  toExecute = function (argPassedIn, argPassedIn2)
 {
     x = 7;
     argPassedIn2.print("Inside of toExecute\n");
@@ -33,8 +31,8 @@ function printXMultiple()
 {
     var xAsString = x.toString();
     system.print("This is x: " + xAsString + "\n");
-    system.timeout(5, printXMultiple);
+    system.timeout(5, null, printXMultiple);
 }
 
 
-system.timeout(5, printXMultiple);
+system.timeout(5, null, printXMultiple);

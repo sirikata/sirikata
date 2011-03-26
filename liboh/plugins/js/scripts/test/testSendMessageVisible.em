@@ -14,9 +14,8 @@ function broadcastIt()
     {
         arrayOfVisibles[s].sendMessage(toBroadcast);
     }
-    
-    system.presences[0].broadcastVisible(toBroadcast);
-    system.timeout(7,broadcastIt);
+    system.timeout(7,null,broadcastIt);
+
 }
 
 function proxAddedCallback(objAdded)

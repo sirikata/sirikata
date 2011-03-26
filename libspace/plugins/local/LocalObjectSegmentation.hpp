@@ -50,6 +50,11 @@ public:
 
     virtual bool clearToMigrate(const UUID& obj_id);
     virtual void migrateObject(const UUID& obj_id, const OSegEntry& new_server_id);
+
+    // These shouldn't even be possible, so we leave them empty
+    virtual void handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg) {}
+    virtual void handleUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg) {}
+
 private:
     CoordinateSegmentation* mCSeg;
     OSegCache* mCache;

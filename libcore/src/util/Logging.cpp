@@ -32,6 +32,7 @@
 
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/options/Options.hpp>
+#include <boost/algorithm/string.hpp>
 
 extern "C" {
 void *Sirikata_Logging_OptionValue_defaultLevel;
@@ -39,6 +40,36 @@ void *Sirikata_Logging_OptionValue_atLeastLevel;
 void *Sirikata_Logging_OptionValue_moduleLevel;
 }
 namespace Sirikata { namespace Logging {
+
+typedef std::tr1::unordered_map<const char*, String> CapsNameMap;
+static CapsNameMap LogModuleStrings;
+
+const String& LogModuleString(const char* base) {
+    CapsNameMap::iterator it = LogModuleStrings.find(base);
+
+    if (it == LogModuleStrings.end()) {
+        String base_str(base);
+        boost::to_upper(base_str);
+        std::pair<CapsNameMap::iterator, bool> inserted = LogModuleStrings.insert(std::make_pair(base, base_str));
+        return (inserted.first)->second;
+    }
+
+    return it->second;
+}
+
+const char* LogLevelString(LOGGING_LEVEL lvl, const char* lvl_as_string) {
+    switch(lvl) {
+      case fatal: return "FATAL"; break;
+      case error: return "ERROR"; break;
+      case warning: return "WARNING"; break;
+      case info: return "INFO"; break;
+      case debug: return "DEBUG"; break;
+      case detailed: return "DETAILED"; break;
+      case insane: return "INSANE"; break;
+      default: return lvl_as_string; break;
+    }
+}
+
 class LogLevelParser {public:
     static LOGGING_LEVEL lex_cast(const std::string&value) {
         if (value=="warning")

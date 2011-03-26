@@ -68,6 +68,8 @@ class SIRIKATA_EXPORT IOService {
     friend class DeadlineTimer;
     friend class IOTimer;
 
+public:
+
     /** Get the underlying IOService.  Only made available to allow for
      *  efficient implementation of ASIO provided functionality such as
      *  tcp/udp sockets and deadline timers.
@@ -89,7 +91,6 @@ class SIRIKATA_EXPORT IOService {
      */
     IOService(InternalIOService* bs);
 
-public:
     /* Copies the IOService.  The underlying resources remain owned by the
      * original and will be controlled by its lifetime.
      * \param cpy the original IOService to copy

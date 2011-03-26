@@ -422,7 +422,9 @@ const String PARAM_TYPE_WEIGHT = "WEIGHT";
 
           int offset = 0;
           triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::VERTEX, "#" + geometryName+"-vertex", offset++ ) );
-          triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::NORMAL, "#" + geometryName+"-normal", offset++ ) );
+          if (meshdata.geometry[i].normals.size() > 0) {
+            triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::NORMAL, "#" + geometryName+"-normal", offset++ ) );
+          }
           if (meshdata.geometry[i].texUVs.size() > 0) {
               triangles.getInputList().push_back( COLLADASW::Input( COLLADASW::TEXCOORD, "#" + geometryName+"-uv", offset++ ) );
           }

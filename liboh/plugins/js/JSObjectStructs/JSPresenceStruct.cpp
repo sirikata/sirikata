@@ -6,28 +6,37 @@
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
 #include "JSPositionListener.hpp"
+#include "JSContextStruct.hpp"
+#include "JSSuspendable.hpp"
 
 namespace Sirikata {
 namespace JS {
 
 
 //this constructor is called when the presence associated
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback, int presenceToken)
+JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent),
+   JSSuspendable(),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    isConnected(false),
    hasConnectedCallback(true),
-   mPresenceToken(presenceToken)
+   mPresenceToken(presenceToken),
+   mContext(ctx)
 {
+    mContext->struct_registerSuspendable(this);
 }
 
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, int presenceToken)
+
+JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent),
+   JSSuspendable(),
    isConnected(true),
    hasConnectedCallback(false),
-   mPresenceToken(presenceToken)
+   mPresenceToken(presenceToken),
+   mContext(ctx)
 {
-    JSPositionListener::setListenTo(&_sporef,&_sporef);
+    mContext->struct_registerSuspendable(this);
+    JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosListener();
 }
 
@@ -40,12 +49,60 @@ v8::Handle<v8::Value> JSPresenceStruct::getIsConnectedV8()
 }
 
 
+v8::Handle<v8::Value> JSPresenceStruct::suspend()
+{
+    if (getIsSuspended())
+        return getIsSuspendedV8();
+
+    mSuspendedVelocity = getVelocity();
+    mSuspendedOrientationVelocity = getOrientationVelocity();
+
+    Vector3f newVel (0,0,0);
+    struct_setVelocity(newVel);
+    Quaternion newOrientVel(0,0,0,1);
+    setOrientationVelFunction(newOrientVel);
+
+    
+    return JSSuspendable::suspend();
+}
+v8::Handle<v8::Value> JSPresenceStruct::resume()
+{
+    if (! getIsSuspended())
+        return JSSuspendable::resume();
+
+    struct_setVelocity(mSuspendedVelocity);
+    setOrientationVelFunction(mSuspendedOrientationVelocity);
+    return JSSuspendable::resume();
+}
+
+
+v8::Handle<v8::Value>JSPresenceStruct::requestDisconnect()
+{
+    jsObjScript->requestDisconnect(this);
+    return v8::Undefined();
+}
+
+
+//note will still receive a call to disconnect from JSObjectScript.cpp, so don't
+//do too much clean up here.
+v8::Handle<v8::Value> JSPresenceStruct::clear()
+{
+    requestDisconnect();
+    if (isConnected)
+        deregisterAsPosListener();
+
+    isConnected = false;
+    clearPreviousConnectedCB();
+    return JSSuspendable::clear();
+}
+
+
 bool JSPresenceStruct::getIsConnected()
 {
     return isConnected;
 }
 
-int JSPresenceStruct::getPresenceToken()
+HostedObject::PresenceToken JSPresenceStruct::getPresenceToken()
 {
     return mPresenceToken;
 }
@@ -53,7 +110,7 @@ int JSPresenceStruct::getPresenceToken()
 void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 {
     v8::HandleScope handle_scope;
-
+    
     if (getIsConnected())
     {
         JSLOG(error, "Error when calling connect on presence.  The presence was already connected.");
@@ -64,9 +121,21 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosListener();
 
-    if (hasConnectedCallback)
-        jsObjScript->handleTimeoutContext(mOnConnectedCallback, (JSContextStruct*)NULL);
+
+    callConnectedCallback();
 }
+
+
+void JSPresenceStruct::callConnectedCallback()
+{
+    if (hasConnectedCallback)
+        jsObjScript->handlePresCallback(mOnConnectedCallback,mContext,this);
+
+    if (mContext != NULL)
+        mContext->checkContextConnectCallback(this);
+
+}
+
 
 void JSPresenceStruct::clearPreviousConnectedCB()
 {
@@ -130,10 +199,18 @@ JSPresenceStruct::~JSPresenceStruct()
 
 void JSPresenceStruct::disconnect()
 {
+    if (getIsCleared())
+        return;
+    
     if (! getIsConnected())
         JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
 
     isConnected = false;
+
+
+    if (mContext != NULL)
+        mContext->checkContextDisconnectCallback(this);
+
 }
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
@@ -147,6 +224,11 @@ v8::Handle<v8::Value>JSPresenceStruct::getVisualFunction()
     return jsObjScript->getVisualFunction(sporefToListenTo);
 }
 
+//returns this presence as a visible object.
+v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
+{
+    return jsObjScript->presToVis(this,mContext);
+}
 
 
 /*
@@ -166,9 +248,10 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries)
+v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt, bool canEval)
 {
-    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries);
+    JSContextStruct* dummy;
+    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,dummy);
 }
 
 

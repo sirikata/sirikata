@@ -89,13 +89,32 @@ Port* DelegateService::bindODPPort(const SpaceObjectReference& sor) {
     // FIXME we should probably do some more intelligent tracking here, maybe
     // keeping track of free blocks of ports...
 
+    PortID port_id = unusedODPPort(sor);
+    if (port_id == PortID::null()) return NULL;
+    return bindODPPort(sor, port_id);
+}
+
+PortID DelegateService::unusedODPPort(const SpaceID& space, const ObjectReference& objref) {
+    return unusedODPPort(SpaceObjectReference(space, objref));
+}
+
+PortID DelegateService::unusedODPPort(const SpaceObjectReference& sor) {
     // 10000 is completely arbitrary and probably too high...
     for(uint32 i = 0; i < 10000; i++) {
         PortID port_id = rand() % 32767;
-        Port* result = bindODPPort(sor, port_id);
-        if (result != NULL) return result;
+
+        // If we don't have a PortMap yet, then its definitely not allocated
+        PortMap* pm = getPortMap(sor);
+        if (pm == NULL) return port_id;
+
+        // This port may be allocated already
+        PortMap::iterator it = pm->find(port_id);
+        if (it != pm->end()) continue;
+
+        // Otherwise, we're all good
+        return port_id;
     }
-    return NULL;
+    return PortID::null();
 }
 
 void DelegateService::registerDefaultODPHandler(const MessageHandler& cb) {
@@ -108,7 +127,7 @@ bool DelegateService::deliver(const Endpoint& src, const Endpoint& dst, MemoryRe
     PortMap const* pm = getPortMap(dst.spaceObject());
     if (pm != NULL) {
         PortMap::const_iterator it = pm->find(dst.port());
-        
+
         if (it != pm->end())
         {
             DelegatePort* port = it->second;

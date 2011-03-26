@@ -1,5 +1,64 @@
 $(document).ready(function() {
 	
+	$('<div />').attr({id:'cdn-upload-dialog', title:'CDN Upload Tool'})
+		.append($('<p />').attr({id:'cdn-upload-tips'}).addClass('validateTips').append('All form fields are required'))
+		.append($('<form />').addClass('ui-widget')
+			.append($('<fieldset />').addClass('ui-corner-all ui-widget ui-widget-content')
+				.append($('<label />').attr({'for':'resource-title'}).append('Title:'))
+				.append($('<input />')
+					.attr({type:'text', name:'resource-title', id:'resource-title', value:''})
+					.addClass('text ui-widget-content ui-corner-all'))
+				.append($('<label />').attr({'for':'resource-description'}).append('Description:'))
+				.append($('<textarea />')
+					.attr({name:'resource-description', id:'resource-description', rows:'2', cols:'20'})
+					.addClass('text ui-widget-content ui-corner-all'))
+					.append('')
+			)
+		)
+	.appendTo('body');
+		
+	/*
+	<div id="cdn-upload-dialog" title="CDN Upload Tool">
+		<p id="cdn-upload-tips" class="validateTips">All form fields are required.</p>
+	
+		<form class="ui-widget">
+		<fieldset class="ui-corner-all ui-widget ui-widget-content">
+			<label for="resource-title">Title</label>
+			<input type="text" name="resource-title" id="resource-title" value="" class="text ui-widget-content ui-corner-all" />
+			
+			<label for="resource-description">Description:</label>
+			<textarea id="resource-description" name="resource-description" rows="2" cols="20" class="text ui-widget-content ui-corner-all"></textarea>
+		</fieldset>
+		</form>
+	</div>*/
+	
+	$('<div />').attr({id:'cdn-choose-file', title:'CDN Upload Tool'})
+		.append($('<p />').attr({id:'cdn-choose-file-tips'}).addClass('validateTips').append('Choose a collada file to upload.'))
+		.append($('<form />').addClass('ui-widget')
+			.append($('<fieldset />').addClass('ui-corner-all ui-widget ui-widget-content')
+				.append($('<label />').attr({'for':'resource-file-path'}).append('File Path'))
+				.append($('<input />')
+					.attr({type:'text', name:'resource-file-path', id:'resource-file-path', value:''})
+					.addClass('text ui-widget-content ui-corner-all inline'))
+				.append($('<input />')
+					.attr({type:'button', name:'resource-file-browse', id:'resource-file-browse', value:'Browse...'})
+					.addClass('ui-widget-content ui-corner-all inline'))
+			)
+		)
+	.appendTo('body');
+		
+	/*<div id="cdn-choose-file" title="CDN Upload Tool">
+		<p id="cdn-choose-file-tips" class="validateTips">Choose a collada file to upload.</p>
+	
+		<form class="ui-widget">
+		<fieldset class="ui-corner-all ui-widget ui-widget-content">
+			<label for="resource-file-path">File Path</label>
+			<input type="text" name="resource-file-path" id="resource-file-path" class="text ui-widget-content ui-corner-all inline" />
+			<input type="button" name="resource-file-browse" id="resource-file-browse" class="ui-widget-content ui-corner-all inline" value="Browse..." />
+		</fieldset>
+		</form>
+	</div>*/
+		
 	$(function() {
 	
 		var eTitle = $("#resource-title");

@@ -64,7 +64,7 @@
 #include "Protocol_Prox.pbj.hpp"
 
 
-#define HO_LOG(lvl,msg) SILOG(ho,lvl,"[HO] " << msg);
+#define HO_LOG(lvl,msg) SILOG(ho,lvl,msg);
 
 namespace Sirikata {
 
@@ -202,9 +202,7 @@ void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 
     PresenceDataMap::const_iterator smapIter;
     for (smapIter = mPresenceData->begin(); smapIter != mPresenceData->end(); ++smapIter)
-    {
         ss.push_back(SpaceObjectReference(smapIter->second.space,smapIter->second.object));
-    }
 }
 
 
@@ -320,7 +318,7 @@ void HostedObject::connect(
         const String& mesh,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        int token)
+        PresenceToken token)
 {
     connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd, token);
 }
@@ -336,7 +334,7 @@ void HostedObject::connect(
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
-        int token)
+        PresenceToken token)
 {
     if (spaceID == SpaceID::null())
         return;
@@ -390,7 +388,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, int token)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -408,7 +406,7 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,int token)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,PresenceToken token)
 {
     if (info.server == NullServerID)
     {
@@ -451,7 +449,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
 
-    HO_LOG(warning,"Notifying of connected object" << obj << " to space " << space);
+    HO_LOG(warning,"Notifying of connected object " << obj << " to space " << space);
     notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref, token);
 }
 
@@ -461,6 +459,7 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 }
 
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
+    HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
     //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
@@ -484,10 +483,18 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     where=mPresenceData->find(SpaceObjectReference(spaceID, oref));
     if (where!=mPresenceData->end()) {
         mPresenceData->erase(where);
+        //need to actually send a disconnection request to the space;
+        mObjectHost->disconnectObject(spaceID,oref);        
     } else {
-        SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" when not connected to it...");
+        SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
 }
+
+
+
+
+
+
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
     notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
@@ -781,6 +788,11 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
+
+            if (!proxy_manager)
+                continue;
+
+            
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;
@@ -885,6 +897,14 @@ ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference
 
 ODP::Port* HostedObject::bindODPPort(const SpaceObjectReference& sor) {
     return mDelegateODPService->bindODPPort(sor);
+}
+
+ODP::PortID HostedObject::unusedODPPort(const SpaceID& space, const ObjectReference& objref) {
+    return mDelegateODPService->unusedODPPort(space, objref);
+}
+
+ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
+    return mDelegateODPService->unusedODPPort(sor);
 }
 
 void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {

@@ -46,7 +46,7 @@
 #include "Protocol_Loc.pbj.hpp"
 
 
-#define OBJ_LOG(level,msg) SILOG(object,level,"[OBJ] " << msg)
+#define OBJ_LOG(level,msg) SILOG(obj,level,msg)
 
 namespace Sirikata {
 

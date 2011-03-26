@@ -179,6 +179,10 @@ class SIRIKATA_EXPORT BaseDatagramLayer
         return mContext;
     }
 
+    uint32 getUnusedPort(const EndPointType& ep) {
+        return mODP->unusedODPPort(ep);
+    }
+
   private:
     BaseDatagramLayer(const Context* ctx, ODP::Service* odpservice)
         : mContext(ctx),
@@ -1411,6 +1415,11 @@ public:
 			    EndPoint <EndPointType> remoteEndPoint,
 			    StreamReturnCallbackFunction cb)
   {
+      if (localEndPoint.port == 0) {
+          typename BaseDatagramLayer<EndPointType>::Ptr bdl = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
+          localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);
+      }
+
     if (mStreamReturnCallbackMap.find(localEndPoint) != mStreamReturnCallbackMap.end()) {
       return false;
     }

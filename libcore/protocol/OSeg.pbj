@@ -3,16 +3,6 @@
 
 package Sirikata.Protocol.OSeg;
 
-message MigrateMessageMove
-{
-    required uint64 m_servid_from          = 1;
-    required uint64 m_servid_to            = 2;
-    required uint64 m_message_destination  = 3;
-    required uint64 m_message_from         = 4;
-    required uuid   m_objid                = 5;
-    required float   m_objradius            = 6;
-}
-
 message MigrateMessageAcknowledge
 {
     required uint64 m_servid_from          = 1;

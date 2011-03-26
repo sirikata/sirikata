@@ -3,13 +3,11 @@
 // system.print("\n\nRunning test/testContext.em.  Tests creating a context, printing from the context, executing a function with no args, and executing a function with args \n\n");
 // system.print("\nCreate context\n");
 
-var whichPresence = system.presences[0];
-var newContext = system.create_context(whichPresence,null,true,true,true);
-
+system.import('test/testContexts/baseContext.em');
 
 x = 5;
 
-function toExecute(fakeroot,argPassedIn, argPassedIn2)
+function toExecute(argPassedIn, argPassedIn2)
 {
     x = 7;
     argPassedIn2.print("Inside of toExecute\n");

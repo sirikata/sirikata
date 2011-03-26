@@ -112,7 +112,7 @@ void CSVObjectFactory::generate()
                 next_val = line.substr(last_comma + 1, next_comma - (last_comma+1));
 
             // Remove quotes from beginning and end
-            if (next_val.size() > 2 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
+            if (next_val.size() > 1 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
                 next_val = next_val.substr(1, next_val.size() - 2);
 
             line_parts.push_back(next_val);

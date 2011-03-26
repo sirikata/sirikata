@@ -35,7 +35,7 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 
-#define GRAPHITE_LOG(level, msg) SILOG("graphite", level, "[GRAPHITE] " << msg)
+#define GRAPHITE_LOG(level, msg) SILOG(graphite, level, msg)
 
 namespace Sirikata {
 namespace Trace {

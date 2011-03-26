@@ -537,8 +537,6 @@ void Server::handleConnectAuthResponse(const ObjectHostConnectionManager::Connec
 
 void Server::finishAddObject(const UUID& obj_id)
 {
-  //  std::cout<<"\n\nFinishing adding object with obj_id:  "<<obj_id.toString()<<"   "<< mContext->simTime().raw()<<"\n\n";
-
   StoredConnectionMap::iterator storedConIter = mStoredConnectionData.find(obj_id);
   if (storedConIter != mStoredConnectionData.end())
   {
@@ -606,7 +604,7 @@ void Server::finishAddObject(const UUID& obj_id)
   }
   else
   {
-      std::cout<<"\n\nNO stored connection data for obj:  "<<obj_id.toString()<<"   at time:  "<<mContext->simTime().raw()<<"\n\n";
+      SILOG(space,error,"No stored connection data for object " << obj_id.toString());
   }
 }
 
@@ -628,6 +626,8 @@ void Server::handleMigrate(const ObjectHostConnectionManager::ConnectionID& oh_c
     mObjectsAwaitingMigration[obj_id] = conn;
 
     // Try to handle this migration if all info is available
+
+    SILOG(space,detailed,"Received migration message from " << obj_id.toString());
 
     handleMigration(obj_id);
 
@@ -695,6 +695,9 @@ void Server::receiveMessage(Message* msg)
         }
         else {
             const UUID obj_id = mig_msg->object();
+
+            SILOG(space,detailed,"Received server migration message for " << obj_id.toString() << " from server " << mig_msg->source_server());
+
             mObjectMigrations[obj_id] = mig_msg;
             // Try to handle this migration if all the info is available
             handleMigration(obj_id);
@@ -745,6 +748,7 @@ void Server::handleMigration(const UUID& obj_id)
     }
 
 
+    SILOG(space,detailed,"Finishing migration of " << obj_id.toString());
 
     // Get the data from the two maps
     ObjectConnection* obj_conn = obj_map_it->second;
@@ -844,6 +848,8 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
         //assert(new_server_id != mContext->id());
         // but I'm getting inconsistencies, so we have to just trust CSeg to have the final say
         if (new_server_id != mContext->id()) {
+
+            SILOG(space,detailed,"Starting migration of " << obj_id.toString() << " from " << mContext->id() << " to " << new_server_id);
 
             Sirikata::Protocol::Session::Container session_msg;
             Sirikata::Protocol::Session::IInitiateMigration init_migration_msg = session_msg.mutable_init_migration();

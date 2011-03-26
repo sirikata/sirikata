@@ -68,6 +68,8 @@ public:
     virtual Port* bindODPPort(const SpaceObjectReference& sor, PortID port);
     virtual Port* bindODPPort(const SpaceID& space, const ObjectReference& objref);
     virtual Port* bindODPPort(const SpaceObjectReference& sor);
+    virtual PortID unusedODPPort(const SpaceID& space, const ObjectReference& objref);
+    virtual PortID unusedODPPort(const SpaceObjectReference& sor);
     virtual void registerDefaultODPHandler(const MessageHandler& cb);
 
     /** Deliver a message to this subsystem.

@@ -21,6 +21,17 @@ function directory_list_request(result) {
 
 $(document).ready(function() {
 	
+	$('<div />').attr({id:'open-file-dialog', title:'Open File'})
+		.append($('<p />').attr({id:'open-file-tips'}).addClass('validateTips').append('Select a file or directory.') )
+		.append($('<div />').attr({id:'jstree'}) )
+	.appendTo('body');
+	
+	/*<div id="open-file-dialog" title="Open File">
+		<p id="open-file-tips" class="validateTips">Select a file or directory.</p>
+	
+		<div id="jstree"></div>
+	</div>*/
+	
 	$( "#open-file-dialog" ).dialog({
 		autoOpen: false,
 		height: 300,

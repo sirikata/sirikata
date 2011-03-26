@@ -49,10 +49,11 @@ function() {
         this._parent = parent;
         this._scriptedObjects = {};
 
-        var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html", 400, 600);
+        //var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html", 400, 600);
+        var scripting_gui = this._parent._simulator.addGUIModule("scripting", "../scripting/prompt.js");
         scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this));
         this._scriptingWindow = scripting_gui;
-        this._scriptingWindow.hide();
+        //this._scriptingWindow.hide();
 
         // Listen for replies
         var scriptReplyPattern = new util.Pattern("reply", "script");
@@ -70,7 +71,7 @@ function() {
 
         this._parent.invoke("initScript", target);
         this._scriptingWindow.eval('addObject(' + Escape.escapeString(target.toString(), '"') + ');');
-        this._scriptingWindow.show();
+        //this._scriptingWindow.show();
         this._scriptedObjects[target.toString()] = target;
     };
 

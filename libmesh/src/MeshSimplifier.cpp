@@ -361,8 +361,9 @@ void computeCosts(std::tr1::unordered_set<Vector3f, Vector3f::Hasher>& positionV
 
       Matrix4x4f Q = positionQs[position] + positionQs[neighborPosition];
       Vector4f vbar4f (neighborPosition.x, neighborPosition.y, neighborPosition.z, 1);
-      float cost = abs(vbar4f.dot(  Q * vbar4f )) ;
-      cost = ((cost <= 1e-12 || custom_isnan(cost)) ? 1e15:cost);
+      float cost = (vbar4f.dot(  Q * vbar4f )) ;
+      cost = (cost < 0.0) ? -cost : cost;
+      cost = ((cost <= 1e-12 || custom_isnan(cost) ) ? 1e15:cost);
 
       std::vector<GeomPairContainer>& opp =  overallPositionPairs[origPosition][origNeighborPosition];
 
@@ -647,19 +648,42 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
 
     std::vector<Sirikata::Vector3f> positions;
     std::vector<Sirikata::Vector3f> normals;
-    std::vector<SubMeshGeometry::TextureSet>texUVs;
+    std::vector<SubMeshGeometry::TextureSet>texUVs;    
 
+    for (uint32 j = 0; j < curGeometry.texUVs.size(); j++) {
+      SubMeshGeometry::TextureSet ts;
+      ts.stride = curGeometry.texUVs[j].stride;
+      texUVs.push_back(ts);
+    }
+
+    std::tr1::unordered_map<Vector3f, uint32, Vector3f::Hasher> vector3fSet;
+    
     for (uint32 j = 0 ; j < curGeometry.positions.size() ; j++) {
       if (vertexMapping.find(j) == vertexMapping.end()) {
+        
+        if (vector3fSet.find(curGeometry.positions[j]) != vector3fSet.end()) {
+          oldToNewMap[j] = vector3fSet[ curGeometry.positions[j] ]; 
+          continue;
+        }
+
         oldToNewMap[j] = positions.size();
+
+        vector3fSet[ curGeometry.positions[j] ] = positions.size();
 
         positions.push_back(curGeometry.positions[j]);
 
         if (j < curGeometry.normals.size())
           normals.push_back(curGeometry.normals[j]);
 
-        if (j < curGeometry.texUVs.size())
-          texUVs.push_back(curGeometry.texUVs[j]);
+        
+        for (uint32 k = 0; k < curGeometry.texUVs.size(); k++) {
+          unsigned int stride = curGeometry.texUVs[k].stride;   
+          if (stride*j < curGeometry.texUVs[k].uvs.size()) {
+            uint32 idx = stride * j;
+            while ( idx++ < stride*j+stride)
+              texUVs[k].uvs.push_back(curGeometry.texUVs[k].uvs[idx]);
+          }
+        }
       }
     }
 
@@ -667,6 +691,7 @@ void MeshSimplifier::simplify(Mesh::MeshdataPtr agg_mesh, int32 numVerticesLeft)
     curGeometry.normals = normals;
     curGeometry.texUVs = texUVs;
   }
+  
 
   //Now adjust the primitives to point to the new indexes of the submesh geometry vertices.
   std::tr1::unordered_map<uint32, std::tr1::unordered_map<uint32, std::vector<unsigned short> > > newIndices;

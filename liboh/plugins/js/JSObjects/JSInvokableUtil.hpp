@@ -54,7 +54,7 @@ inline boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
     {
       v8::String::AsciiValue str(val);
       std::string s = std::string(*str);
-      return boost::any(s);
+      return Invokable::asAny(s);
     }
     else if(val->IsFunction())
     {
@@ -63,25 +63,25 @@ inline boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
 
       JSFunctionInvokable* invokable = new JSFunctionInvokable(function_persist, parent);
       Sirikata::Invokable* in = invokable;
-      return boost::any(in);
+      return Invokable::asAny(in);
     }
     else if (val->IsBoolean()) {
-        return boost::any(val->BooleanValue());
+        return Invokable::asAny(val->BooleanValue());
     }
     else if (val->IsNumber()) {
-        return boost::any((float64)val->NumberValue());
+        return Invokable::asAny((float64)val->NumberValue());
     }
     else if (val->IsObject()) {
         // Handle special types
         if ( JSVisible::isVisibleObject(val) ) {
             std::string errmsg;
             JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(val,errmsg);
-            return boost::any((*jsvis->getToListenTo()));
+            return Invokable::asAny((*jsvis->getToListenTo()));
         }
         else if ( JSPresence::isPresence(val) ) {
             std::string errmsg;
             JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(val,errmsg);
-            return boost::any(*jspres->getToListenTo());
+            return Invokable::asAny(*jspres->getToListenTo());
         }
 
         // Otherwise do normal translation
@@ -95,18 +95,16 @@ inline boost::any V8ToAny(JSObjectScript* parent, v8::Handle<v8::Value> val) {
  *  can't be translated.
  */
 inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& val) {
-    if(val.type() == typeid(std::string) )
-    {
-        std::string s = boost::any_cast<std::string>(val);
+    if(Invokable::anyIsString(val)) {        std::string s = Invokable::anyAsString(val);
         return v8::String::New(s.c_str(), s.length());
     }
-    else if (val.type() == typeid(float)) {
-        double d = boost::any_cast<float>(val);
-        return v8::Number::New(d);
+    else if(Invokable::anyIsFloat(val)) {
+        double s = Invokable::anyAsFloat(val);
+        return v8::Number::New(s);
     }
-    else if (val.type() == typeid(double)) {
-        double d = boost::any_cast<double>(val);
-        return v8::Number::New(d);
+    else if(Invokable::anyIsDouble(val)) {
+        double s = Invokable::anyAsDouble(val);
+        return v8::Number::New(s);
     }
     else if (val.type() == typeid(uint8)) {
         uint32 d = boost::any_cast<uint8>(val);
@@ -140,12 +138,12 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
         int32 d = boost::any_cast<int64>(val);
         return v8::Int32::New(d);
     }
-    else if (val.type() == typeid(bool)) {
-        bool b = boost::any_cast<bool>(val);
-        return v8::Boolean::New(b);
+    else if(Invokable::anyIsBoolean(val)) {
+        bool s = Invokable::anyAsBoolean(val);
+        return v8::Boolean::New(s);
     }
-    else if (val.type() == typeid(Sirikata::Invokable::Array)) {
-        Sirikata::Invokable::Array native_arr = boost::any_cast<Sirikata::Invokable::Array>(val);
+    else if(Invokable::anyIsArray(val)) {
+        Sirikata::Invokable::Array native_arr = Invokable::anyAsArray(val);
         v8::Local<v8::Array> arr = v8::Array::New();
         for(uint32 ii = 0; ii < native_arr.size(); ii++) {
             v8::Handle<v8::Value> rhs = AnyToV8(parent, native_arr[ii]);
@@ -154,8 +152,8 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
         }
         return arr;
     }
-    else if (val.type() == typeid(Sirikata::Invokable::Dict)) {
-        Sirikata::Invokable::Dict native_dict = boost::any_cast<Sirikata::Invokable::Dict>(val);
+    else if(Invokable::anyIsDict(val)) {
+        Sirikata::Invokable::Dict native_dict = Invokable::anyAsDict(val);
         v8::Local<v8::Object> dict = v8::Object::New();
         for(Sirikata::Invokable::Dict::const_iterator di = native_dict.begin(); di != native_dict.end(); di++) {
             v8::Handle<v8::Value> rhs = AnyToV8(parent, di->second);
@@ -164,9 +162,9 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
         }
         return dict;
     }
-    else if (val.type() == typeid(Invokable*)) {
+    else if(Invokable::anyIsInvokable(val)) {
         if (!parent) return v8::Handle<v8::Value>();
-        Invokable* newInvokableObj = boost::any_cast<Invokable*>(val);
+        Invokable* newInvokableObj = Invokable::anyAsInvokable(val);
         Local<Object> tmpObj = parent->manager()->mInvokableObjectTemplate->NewInstance();
         Persistent<Object>tmpObjP = Persistent<Object>::New(tmpObj);
         tmpObjP->SetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD,External::New(parent));
@@ -174,8 +172,8 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
         tmpObjP->SetInternalField(TYPEID_FIELD,External::New(  new String (JSINVOKABLE_TYPEID_STRING)));
         return tmpObjP;
     }
-    else if (val.type() == typeid(SpaceObjectReference)) {
-        SpaceObjectReference obj = boost::any_cast<SpaceObjectReference>(val);
+    else if(Invokable::anyIsObject(val)) {
+        SpaceObjectReference obj = Invokable::anyAsObject(val);
         if (obj == SpaceObjectReference::null()) return v8::Handle<v8::Value>();
         return parent->findVisible(obj);
     }

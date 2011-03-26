@@ -17,8 +17,13 @@ namespace Sirikata{
 namespace JS{
 namespace JSTimer{
 
-//this function takes in a single argument: when the callback should actually
-//fire from now.
+/**
+   @param numeric, specifying how long from now to go before re-firing the timer.
+   @return boolean.
+
+   This function takes in a single argument: when the callback should actually
+   fire from now.
+*/
 v8::Handle<v8::Value> resetTimer(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -38,7 +43,7 @@ v8::Handle<v8::Value> resetTimer(const v8::Arguments& args)
     String errorMessage = "Error in resetTimer of JSTimer.cpp trying to decode jstimerstruct.  ";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
     if (jstimer == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     return jstimer->struct_resetTimer(native_dur);
 }
@@ -54,10 +59,11 @@ v8::Handle<v8::Value> clear(const v8::Arguments& args)
     String errorMessage = "Error in clear of JSTimer.cpp trying to decode jstimer.  ";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
     if (jstimer == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
     
     return jstimer->clear();
 }
+
 
 v8::Handle<v8::Value> suspend(const v8::Arguments& args)
 {
@@ -68,7 +74,7 @@ v8::Handle<v8::Value> suspend(const v8::Arguments& args)
     String errorMessage = "Error in suspend of JSTimer.cpp trying to decode jstimer.  ";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
     if (jstimer == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
     
     return jstimer->suspend();
     
@@ -83,7 +89,7 @@ v8::Handle<v8::Value> resume(const v8::Arguments& args)
     String errorMessage = "Error in resume of JSTimer.cpp trying to decode jstimer.  ";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
     if (jstimer == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
     
     return jstimer->resume();
 
@@ -97,7 +103,7 @@ v8::Handle<v8::Value> isSuspended(const v8::Arguments& args)
     String errorMessage = "Error in isSuspended of JSTimer.cpp trying to decode jstimer.  ";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
     if (jstimer == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     
     return jstimer->getIsSuspendedV8();

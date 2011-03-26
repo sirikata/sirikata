@@ -39,6 +39,9 @@
 #include <sirikata/core/service/Service.hpp>
 #include <sirikata/core/util/Factory.hpp>
 
+#include <sirikata/core/queue/ThreadSafeQueueWithNotification.hpp>
+#include "Protocol_OSeg.pbj.hpp"
+
 namespace Sirikata
 {
 
@@ -106,31 +109,43 @@ public:
 
 
 
-class ObjectSegmentation : public Service
+class SIRIKATA_SPACE_EXPORT ObjectSegmentation : public Service, public MessageRecipient
 {
 protected:
     SpaceContext* mContext;
+    bool mStopping;
     OSegLookupListener* mLookupListener;
     OSegWriteListener* mWriteListener;
     Network::IOStrand* oStrand;
 
+    Router<Message*>* mOSegServerMessageService;
+    // This queue handles outgoing migration ack messages, getting them safely
+    // into the outgoing queue. Implementations only need to call queueMigAck()
+    // from any other thread to get messages sent.
+    Sirikata::ThreadSafeQueueWithNotification<Message*> mMigAckMessages;
+    Message* mFrontMigAck;
+    void queueMigAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg);
+    void trySendMigAcks();
+    void handleNewMigAckMessages();
+
+    // MessageRecipient Interface
+    virtual void receiveMessage(Message* msg);
+
+    // These handlers for server-to-server messages need to be provided by
+    // implementations. Note that these are *not* thread safe! You may need to
+    // shift processing into your own thread/strand.
+    virtual void handleMigrateMessageAck(const Sirikata::Protocol::OSeg::MigrateMessageAcknowledge& msg) = 0;
+    virtual void handleUpdateOSegMessage(const Sirikata::Protocol::OSeg::UpdateOSegMessage& update_oseg_msg) = 0;
 
 public:
-    ObjectSegmentation(SpaceContext* ctx, Network::IOStrand* o_strand)
-     : mContext(ctx),
-       mLookupListener(NULL),
-       mWriteListener(NULL),
-       oStrand(o_strand)
-    {
-      fflush(stdout);
-    }
-
-    virtual ~ObjectSegmentation() {}
+    ObjectSegmentation(SpaceContext* ctx, Network::IOStrand* o_strand);
+    virtual ~ObjectSegmentation();
 
       virtual void start() {
       }
 
       virtual void stop() {
+          mStopping = true;
       }
 
       void setLookupListener(OSegLookupListener* listener) {
@@ -153,7 +168,7 @@ public:
     {
         return 0;
     }
-    
+
   };
 
 class SIRIKATA_SPACE_EXPORT OSegFactory

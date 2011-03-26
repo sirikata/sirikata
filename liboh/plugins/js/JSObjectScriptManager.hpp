@@ -57,14 +57,13 @@ public:
 
     v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
-    v8::Persistent<v8::ObjectTemplate> mGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
 
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
     v8::Persistent<v8::ObjectTemplate>   mContextTemplate;
     v8::Persistent<v8::ObjectTemplate>   mUtilTemplate;
     v8::Persistent<v8::ObjectTemplate>   mInvokableObjectTemplate;
-    v8::Persistent<v8::ObjectTemplate>   mFakerootTemplate;
+    v8::Persistent<v8::ObjectTemplate>   mSystemTemplate;
     v8::Persistent<v8::ObjectTemplate>   mTimerTemplate;
     v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
     v8::Persistent<v8::ObjectTemplate>   mWhenTemplate;
@@ -79,13 +78,12 @@ private:
     void createWhenWatchedItemTemplate();
     void createWhenWatchedListTemplate();
     void createVisibleTemplate();
-    void createSystemTemplate();
     void createHandlerTemplate();
     void createPresenceTemplate();
     void createContextTemplate();
     void createUtilTemplate();
     void createJSInvokableObjectTemplate();
-    void createFakerootTemplate();
+    void createSystemTemplate();
     void createTimerTemplate();
     void createContextGlobalTemplate();
     void createWhenTemplate();

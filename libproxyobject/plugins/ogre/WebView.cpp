@@ -1188,9 +1188,9 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
   std::string name="";
   /*Check the first param */
 
-  if(!params[0].empty() && params[0].type() == typeid(std::string) )
+  if(Invokable::anyIsString(params[0]))
   {
-    name = boost::any_cast<std::string>(params[0]);
+      name = Invokable::anyAsString(params[0]);
   }
 
   // This will bind a callback for the graphics to the script
@@ -1200,19 +1200,19 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
     // second argument is the event name
       SILOG(ogre,detailed,"In WebView::invoke");
     std::string event = "";
-    if(!params[1].empty() && params[1].type() == typeid(std::string) )
+    if(Invokable::anyIsString(params[1]))
     {
-      event = boost::any_cast<std::string>(params[1]);
+        event = Invokable::anyAsString(params[1]);
     }
 
     // the third argument has to be a function ptr
     //This function would take any
 
     //just _1, _2 for now
-    Invokable* invokable = boost::any_cast<Invokable*>(params[2]);
+        Invokable* invokable = Invokable::anyAsInvokable(params[2]);
     bind(event, std::tr1::bind(&WebView::translateParamsAndInvoke, this, invokable, _1, _2));
     Invokable* inv_result = this;
-    return boost::any(inv_result);
+    return Invokable::asAny(inv_result);
 
   }
 
@@ -1223,13 +1223,12 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
           SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects 2 arguments." );
           return boost::any();
       }
-      if (params[1].empty()) return boost::any();
-      if (params[1].type() != typeid(std::string)) {
+      if (!Invokable::anyIsString(params[1])){
           SILOG(webview,error,"[WEBVIEW] Invoking 'eval' expects string argument." );
           return boost::any();
       }
 
-      std::string jsscript = boost::any_cast<std::string>(params[1]);
+      std::string jsscript = Invokable::anyAsString(params[1]);
       if (jsscript.empty()) return boost::any();
 
       // whenthe jsscript is not empty

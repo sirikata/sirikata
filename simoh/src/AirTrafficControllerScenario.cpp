@@ -252,7 +252,7 @@ AirTrafficControllerScenario::AirTrafficControllerScenario(const String &options
 
     Duration duration = GetOptionValue<Duration>("duration");
 
-    
+
     mNumGeneratedPings = 0;
     mGeneratePingsStrand = NULL;
     mGeneratePingPoller = NULL;
@@ -357,7 +357,7 @@ void AirTrafficControllerScenario::initialize(ObjectHostContext*ctx) {
     if (mNumHitPointsPerSecond) {
         OptionSet* optionsSet = OptionSet::getOptions("AirTrafficControllerScenario",this);
         mAirplanes = new ObjectFactory(ctx, region, duration, 200, optionsSet->referenceOption("num-receivers")->as<int>());
-        
+
         mControlTower= new ObjectFactory(ctx, BoundingBox3f(Vector3f(0,0,0),Vector3f(0,0,0))/*make sure airport is at the edge of the scene*/, duration,550,2);
         ctx->add(mAirplanes);
         ctx->add(mControlTower);
@@ -427,17 +427,17 @@ void AirTrafficControllerScenario::delayedStart() {
                     d->mDamageReceivers[objB->uuid()]=NULL;
                 }
             }
-            
+
             SILOG(oh,error,"Pinging "<<allReceivers.size()<<" objects ");
-            
+
             for (size_t i=0;i<allReceivers.size();++i) {
                 d->mDamageReceivers[allReceivers[i]->uuid()]=(new DamagableObject::ReceiveDamage(d,
                                                                                                  this,
                                                                                                  allReceivers[i],
                                                                                                  allReceivers[i]->uuid()));
             }
-            
-            
+
+
         }else {
             Duration connect_phase = GetOptionValue<Duration>(OBJECT_CONNECT_PHASE);
             connect_phase=connect_phase/16.0;
@@ -446,7 +446,7 @@ void AirTrafficControllerScenario::delayedStart() {
                 connect_phase,
                 std::tr1::bind(&AirTrafficControllerScenario::delayedStart, this)
                 );
-            
+
         }
     }
     mGeneratePingPoller->start();
@@ -459,7 +459,7 @@ void AirTrafficControllerScenario::stop() {
     mPingPoller->stop();
     mGeneratePingPoller->stop();
 }
-#define OH_LOG(level,msg) SILOG(oh,level,"[OH] " << msg)
+#define OH_LOG(level,msg) SILOG(oh,level,msg)
 void AirTrafficControllerScenario::generatePairs() {
 
     if (mSendCDF.empty()) {
