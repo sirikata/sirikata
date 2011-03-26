@@ -42,6 +42,46 @@
 
 namespace Sirikata {
 
+class SirikataMotionState;
+
+//FIXME Enums for manual treatment of objects and bboxes
+//IGNORE = Bullet shouldn't know about this object
+//STATIC = Bullet thinks this is a static (not moving) object
+//DYNAMIC = Bullet thinks this is a dynamic (moving) object
+enum bulletObjTreatment {
+	IGNORE,
+	STATIC,
+	DYNAMIC
+};
+
+//ENTIRE_OBJECT = Bullet creates an AABB encompassing the entire object
+//PER_TRIANGLE = Bullet creates a series of AABBs for each triangle in the object
+//		This option is useful for polygon soups - terrain, for example
+//SPHERE = Bullet creates a bounding sphere based on the bounds.radius
+enum bulletObjBBox {
+	ENTIRE_OBJECT,
+	PER_TRIANGLE,
+	SPHERE		
+};
+
+//this struct helps us delete objects and their physics data
+struct BulletPhysicsPointerData {
+	BulletPhysicsPointerData() {
+		objShape = NULL;
+		objMotionState = NULL;
+		objRigidBody = NULL;
+		
+		//FIXME: get rid of these when the physics details don't need to be hardcoded
+		objTreatment = IGNORE;
+		objBBox = ENTIRE_OBJECT;
+	}
+	btCollisionShape * objShape;
+	SirikataMotionState* objMotionState;
+	btRigidBody* objRigidBody;	
+	bulletObjTreatment objTreatment;
+	bulletObjBBox objBBox;
+}; // struct BulletPhysicsPointerData
+
 using namespace Mesh;
 /** Standard location service, which functions entirely based on location
  *  updates from objects and other spaces servers.
@@ -135,7 +175,66 @@ private:
 	bool meshLoaded;
 	MeshdataPtr retrievedMesh;
 	
+	//can probably combine with LocationInfo and LocationMap
+	typedef std::tr1::unordered_map<UUID, BulletPhysicsPointerData, UUID::Hasher> PhysicsPointerMap;
+	
+	PhysicsPointerMap BulletPhysicsPointers;
+	
+	bool firstCube;
+	
+	bool printDebugInfo;
+			
 }; // class BulletPhysicsService
+
+class SirikataMotionState : public btMotionState {
+public:
+    SirikataMotionState(const btTransform &initialpos, BulletPhysicsService::LocationInfo * locinfo, UUID uuid, BulletPhysicsService* service) {
+        mObjLocationInfo = locinfo;
+        mPosition = initialpos;
+        mUUID = uuid;
+        ptrToService = service;
+    }
+
+    virtual ~SirikataMotionState() {
+    }
+
+    void setLocationInfo(BulletPhysicsService::LocationInfo * locinfo) {
+        mObjLocationInfo = locinfo;
+    }
+
+    virtual void getWorldTransform(btTransform &worldTrans) const {
+        worldTrans = mPosition;
+    }
+
+    virtual void setWorldTransform(const btTransform &worldTrans) {
+        if(NULL == mObjLocationInfo) return;
+        btQuaternion rot = worldTrans.getRotation();
+        
+        //FIXME this should work, but somewhere in the pipeline to Ogre w becomes NaN and we get an exception
+        //printf("Old Orientation: %f, %f, %f, %f\n", mObjLocationInfo->orientation.position().x, mObjLocationInfo->orientation.position().y, mObjLocationInfo->orientation.position().z, mObjLocationInfo->orientation.position().w);
+        TimedMotionQuaternion newOrientation(mObjLocationInfo->orientation.updateTime(), MotionQuaternion(Quaternion(rot.x(), rot.y(), rot.z(), rot.w()), mObjLocationInfo->orientation.velocity()));
+        //printf("New Orientation: %f, %f, %f, %f\n", newOrientation.position().x, newOrientation.position().y, newOrientation.position().z, newOrientation.position().w);
+        if(!(mObjLocationInfo->isFixed)) {
+			//mObjLocationInfo->orientation = newOrientation;
+		}
+        
+        btVector3 pos = worldTrans.getOrigin();
+        //printf("Old Position: %f, %f, %f\n", mObjLocationInfo->location.position().x, mObjLocationInfo->location.position().y, mObjLocationInfo->location.position().z);
+        TimedMotionVector3f newLocation(mObjLocationInfo->location.updateTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), mObjLocationInfo->location.velocity()));
+        if(!(mObjLocationInfo->isFixed)) {
+			mObjLocationInfo->location = newLocation;
+		}
+        //printf("New Position: %f, %f, %f\n", pos.x(), pos.y(), pos.z());
+        
+        ptrToService->physicsUpdates.push_back(mUUID);
+    }
+
+protected:
+    BulletPhysicsService::LocationInfo * mObjLocationInfo;
+    btTransform mPosition;
+    UUID mUUID;
+    BulletPhysicsService * ptrToService;
+}; // class SirikataMotionState
 
 } // namespace Sirikata
 
