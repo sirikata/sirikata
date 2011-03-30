@@ -49,9 +49,9 @@ class SirikataMotionState;
 //STATIC = Bullet thinks this is a static (not moving) object
 //DYNAMIC = Bullet thinks this is a dynamic (moving) object
 enum bulletObjTreatment {
-	IGNORE,
-	STATIC,
-	DYNAMIC
+	BULLET_OBJECT_TREATMENT_IGNORE,
+	BULLET_OBJECT_TREATMENT_STATIC,
+	BULLET_OBJECT_TREATMENT_DYNAMIC
 };
 
 //ENTIRE_OBJECT = Bullet creates an AABB encompassing the entire object
@@ -59,9 +59,9 @@ enum bulletObjTreatment {
 //		This option is useful for polygon soups - terrain, for example
 //SPHERE = Bullet creates a bounding sphere based on the bounds.radius
 enum bulletObjBBox {
-	ENTIRE_OBJECT,
-	PER_TRIANGLE,
-	SPHERE		
+	BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT,
+	BULLET_OBJECT_BOUNDS_PER_TRIANGLE,
+	BULLET_OBJECT_BOUNDS_SPHERE
 };
 
 //this struct helps us delete objects and their physics data
@@ -70,14 +70,14 @@ struct BulletPhysicsPointerData {
 		objShape = NULL;
 		objMotionState = NULL;
 		objRigidBody = NULL;
-		
+
 		//FIXME: get rid of these when the physics details don't need to be hardcoded
-		objTreatment = IGNORE;
-		objBBox = ENTIRE_OBJECT;
+		objTreatment = BULLET_OBJECT_TREATMENT_IGNORE;
+		objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
 	}
 	btCollisionShape * objShape;
 	SirikataMotionState* objMotionState;
-	btRigidBody* objRigidBody;	
+	btRigidBody* objRigidBody;
 	bulletObjTreatment objTreatment;
 	bulletObjBBox objBBox;
 }; // struct BulletPhysicsPointerData
@@ -91,7 +91,7 @@ class BulletPhysicsService : public LocationService {
 public:
     BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     // FIXME add constructor which can add all the objects being simulated to mLocations
-	
+
 	virtual ~BulletPhysicsService();
 
     virtual bool contains(const UUID& uuid) const;
@@ -122,14 +122,14 @@ public:
     virtual void receiveMessage(Message* msg);
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length);
-    
+
     void getMesh(const std::string, const UUID);
-    
+
 	void getMetadata(const std::string, const UUID);
 
 	void metadataFinished(const UUID, std::string, std::tr1::shared_ptr<Transfer::MetadataRequest>, std::tr1::shared_ptr<Transfer::RemoteFileMetadata>);
 
-	void chunkFinished(const UUID, std::string, std::tr1::shared_ptr<Transfer::ChunkRequest>, std::tr1::shared_ptr<const Transfer::DenseData>);    
+	void chunkFinished(const UUID, std::string, std::tr1::shared_ptr<Transfer::ChunkRequest>, std::tr1::shared_ptr<const Transfer::DenseData>);
 
 protected:
     struct LocationInfo {
@@ -142,48 +142,48 @@ protected:
         bool isFixed;
     };
     typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
-    
+
 	LocationMap mLocations;
-	
+
 	std::vector<UUID> physicsUpdates;
 
-private:   
+private:
 
     //Bullet Dynamics World Vars
     btBroadphaseInterface* broadphase;
-	
+
 	btDefaultCollisionConfiguration* collisionConfiguration;
-	
+
 	btCollisionDispatcher* dispatcher;
-	
+
 	btSequentialImpulseConstraintSolver* solver;
-	
+
 	btDiscreteDynamicsWorld* dynamicsWorld;
-	
+
 	btRigidBody*  fallRigidBody;
-	
+
 	Timer mTimer;
-	
+
 	//load meshes to create appropriate bounding volumes
 	ModelsSystem* mModelsSystem;
-	
+
 	Transfer::TransferMediator *mTransferMediator;
-	
+
 	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-	
+
 	//at some point, replace with something better (semaphores, polling, etc.)
 	bool meshLoaded;
 	MeshdataPtr retrievedMesh;
-	
+
 	//can probably combine with LocationInfo and LocationMap
 	typedef std::tr1::unordered_map<UUID, BulletPhysicsPointerData, UUID::Hasher> PhysicsPointerMap;
-	
+
 	PhysicsPointerMap BulletPhysicsPointers;
-	
+
 	bool firstCube;
-	
+
 	bool printDebugInfo;
-			
+
 }; // class BulletPhysicsService
 
 class SirikataMotionState : public btMotionState {
@@ -209,7 +209,7 @@ public:
     virtual void setWorldTransform(const btTransform &worldTrans) {
         if(NULL == mObjLocationInfo) return;
         btQuaternion rot = worldTrans.getRotation();
-        
+
         //FIXME this should work, but somewhere in the pipeline to Ogre w becomes NaN and we get an exception
         //printf("Old Orientation: %f, %f, %f, %f\n", mObjLocationInfo->orientation.position().x, mObjLocationInfo->orientation.position().y, mObjLocationInfo->orientation.position().z, mObjLocationInfo->orientation.position().w);
         TimedMotionQuaternion newOrientation(mObjLocationInfo->orientation.updateTime(), MotionQuaternion(Quaternion(rot.x(), rot.y(), rot.z(), rot.w()), mObjLocationInfo->orientation.velocity()));
@@ -217,7 +217,7 @@ public:
         if(!(mObjLocationInfo->isFixed)) {
 			//mObjLocationInfo->orientation = newOrientation;
 		}
-        
+
         btVector3 pos = worldTrans.getOrigin();
         //printf("Old Position: %f, %f, %f\n", mObjLocationInfo->location.position().x, mObjLocationInfo->location.position().y, mObjLocationInfo->location.position().z);
         TimedMotionVector3f newLocation(mObjLocationInfo->location.updateTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), mObjLocationInfo->location.velocity()));
@@ -225,7 +225,7 @@ public:
 			mObjLocationInfo->location = newLocation;
 		}
         //printf("New Position: %f, %f, %f\n", pos.x(), pos.y(), pos.z());
-        
+
         ptrToService->physicsUpdates.push_back(mUUID);
     }
 

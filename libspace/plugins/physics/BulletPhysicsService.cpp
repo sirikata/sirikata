@@ -45,42 +45,42 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
  : LocationService(ctx, update_policy)
 {
 	broadphase = new btDbvtBroadphase();
-	
+
 	collisionConfiguration = new btDefaultCollisionConfiguration();
 	dispatcher = new btCollisionDispatcher(collisionConfiguration);
-	
+
 	solver = new btSequentialImpulseConstraintSolver;
-	
+
 	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-	
+
 	dynamicsWorld->setGravity(btVector3(0,-1,0));
-	
+
 	//this stuff is from the beginner program, for a ground plane
 	/*btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),1);
 	//btCollisionShape* fallShape = new btSphereShape(1);
-		
+
 	btDefaultMotionState* groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(0,-50,0)));
-	
+
 	btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0, groundMotionState, groundShape, btVector3(0,0,0));
 	btRigidBody* groundRigidBody = new btRigidBody(groundRigidBodyCI);
-	
+
 	dynamicsWorld->addRigidBody(groundRigidBody);*/
-	
+
 	mTimer.start();
-	
+
 	mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
 
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
-    
+
     static char x = '1';
     mTransferPool = mTransferMediator->registerClient("BulletPhysics_"+x);
     x++;
-	
+
 	firstCube = true;
-	
+
 	//change this if you need more debugging output
 	printDebugInfo = false;
-	
+
 	printf("[BulletPhysicsService] Service Loaded\n");
 }
 
@@ -91,7 +91,7 @@ BulletPhysicsService::~BulletPhysicsService(){
 	delete collisionConfiguration;
 	delete broadphase;
 	delete mModelsSystem;
-	
+
 	printf("[BulletPhysicsService] Service Unloaded\n");
 }
 
@@ -116,18 +116,18 @@ void BulletPhysicsService::service() {
 	//move the simulation forward by that amount
 	Duration delTime = mTimer.elapsed();
 	float simForwardTime = delTime.toMilliseconds() / 1000.0f;
-	
+
     dynamicsWorld->stepSimulation(simForwardTime, 10);
 	mTimer.start();
-	    
+
     for(unsigned int i = 0; i < physicsUpdates.size(); i++) {
 		LocationMap::iterator it = mLocations.find(physicsUpdates[i]);
 		if(it != mLocations.end()) {
-			notifyLocalLocationUpdated( physicsUpdates[i], it->second.aggregate, it->second.location );		
+			notifyLocalLocationUpdated( physicsUpdates[i], it->second.aggregate, it->second.location );
 		}
 	}
 	physicsUpdates.empty();
-	    
+
     mUpdatePolicy->service();
 }
 
@@ -176,13 +176,13 @@ const String& BulletPhysicsService::mesh(const UUID& uuid) {
 }
 
 void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
-	
+
 	meshLoaded = false;
 	getMetadata(meshURI, uuid);
 	//FIXME: Busy waiting is bad.
 	//Waiting for meshes to be retrieved from CDN
 	while(!meshLoaded) {};
-	
+
     std::string t = retrievedMesh->uri;
 	printf("[BulletPhysicsService] This mesh was retrieved from the CDN: %s\n", &t[0]);
 }
@@ -257,112 +257,112 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
     locinfo.mesh = msh;
     locinfo.local = true;
     locinfo.aggregate = false;
-    
+
     // FIXME: we might want to verify that location(uuid) and bounds(uuid) are
     // reasonable compared to the loc and bounds passed in
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
     notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
-    
+
     /*BEGIN: Bullet Physics Code*/
-    
+
     //We need to store the pointers to the bullet objects we create to delete them later
     PhysicsPointerMap::iterator it2 = BulletPhysicsPointers.find(uuid);
 	if(it2 == BulletPhysicsPointers.end()) {
 		BulletPhysicsPointers[uuid] = BulletPhysicsPointerData();
 		it2 = BulletPhysicsPointers.find(uuid);
-	}    
+	}
     BulletPhysicsPointerData& newObjData = it2->second;
-    
+
     //FIXME: Physics details need to be passed to us and/or read from CDN, not set manually!
-    
+
     //setting mass to 1 for no good reason
     btScalar mass = 1;
-    
+
     bulletObjTreatment& objTreatment = newObjData.objTreatment;
-    bulletObjBBox& objBBox = newObjData.objBBox;    
-    
+    bulletObjBBox& objBBox = newObjData.objBBox;
+
     //FIXME
     //BEGIN list of string comparisons to set appropriate flags
     if(strcmp(&msh[0], "meerkat:///ewencp/lights.dae") == 0) {
-		objTreatment = IGNORE;		
+		objTreatment = BULLET_OBJECT_TREATMENT_IGNORE;
 	}
 	if(strcmp(&msh[0], "meerkat:///danielrh/Poisonbird.dae") == 0) {
-		objTreatment = IGNORE;
+		objTreatment = BULLET_OBJECT_TREATMENT_IGNORE;
 	}
 	//FIXME this doesn't seem to work, need to ignore "stringless" meshes
 	if(strcmp(&msh[0], "") == 0) {
-		objTreatment = IGNORE;
+		objTreatment = BULLET_OBJECT_TREATMENT_IGNORE;
 	}
 	if(strcmp(&msh[0], "meerkat:///danielrh/ground.DAE") == 0) {
-		objTreatment = STATIC;
-		objBBox = PER_TRIANGLE;
+		objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
+		objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
 	}
 	if(strcmp(&msh[0], "meerkat:///rbsheth/Plane.dae") == 0) {
-		objTreatment = STATIC;
-		objBBox = PER_TRIANGLE;
+		objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
+		objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
 	}
 	if(strcmp(&msh[0], "meerkat:///rbsheth/UnitCube2.dae") == 0) {
 		//firstCube is for having different behavior for different instances of the same mesh
 		if(firstCube) {
-			objTreatment = STATIC;
-			objBBox = ENTIRE_OBJECT;
+			objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
+			objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
 			firstCube = false;
 		}
 		else {
-			objTreatment = DYNAMIC;
-			objBBox = ENTIRE_OBJECT;
+			objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+			objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
 		}
 	}
 	if(strcmp(&msh[0], "meerkat:///rbsheth/UnitCube.dae") == 0) {
 		//firstCube is for having different behavior for different instances of the same mesh
 		if(firstCube) {
-			objTreatment = STATIC;
-			objBBox = PER_TRIANGLE;
+			objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
+			objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
 			firstCube = false;
 		}
 		else {
-			objTreatment = DYNAMIC;
-			objBBox = ENTIRE_OBJECT;
+			objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+			objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
 		}
-	} 
+	}
     if(strcmp(&msh[0], "meerkat://danielrh/roof_zinc.DAE") == 0) {
-		objTreatment = DYNAMIC;
-		objBBox = PER_TRIANGLE;
+		objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+		objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
 	}
 	if(strcmp(&msh[0], "meerkat:///rbsheth/Sphere.dae") == 0) {
-		objTreatment = DYNAMIC;
-		objBBox = SPHERE;
+		objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+		objBBox = BULLET_OBJECT_BOUNDS_SPHERE;
 	}
 	if(strcmp(&msh[0], "meerkat:///rbsheth/UnitSphere.dae") == 0) {
-		objTreatment = DYNAMIC;
-		objBBox = SPHERE;
+		objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+		objBBox = BULLET_OBJECT_BOUNDS_SPHERE;
 	}
 	if(strcmp(&msh[0], "meerkat:///danielrh/Insect-Bird.dae") == 0) {
-		objTreatment = DYNAMIC;
-		objBBox = SPHERE;
+		objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+		objBBox = BULLET_OBJECT_BOUNDS_SPHERE;
 	}
 	if(strcmp(&msh[0], "meerkat:///danielrh/Seagull.dae") == 0) {
-		objTreatment = DYNAMIC;
-		objBBox = SPHERE;
+		objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+		objBBox = BULLET_OBJECT_BOUNDS_SPHERE;
 	}
     //END list of string comparisons to set appropriate flags
-    
+
     //objTreatment enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
-    if(objTreatment == IGNORE) {
+    if(objTreatment == BULLET_OBJECT_TREATMENT_IGNORE) {
 		printf("[BulletPhysicsService] This mesh will not be added to the bullet world: %s\n", &msh[0]);
 		return;
 	}
-	else if(objTreatment == STATIC) {
+	else if(objTreatment == BULLET_OBJECT_TREATMENT_STATIC) {
 		printf("[BulletPhysicsService] This mesh will not move: %s\n", &msh[0]);
 		//this is a variable in loc structure that sets the item to be static
 		locinfo.isFixed = true;
 		//if the mass is 0, Bullet treats the object as static
 		mass = 0;
 	}
-	else if(objTreatment == DYNAMIC) {
+	else if(objTreatment == BULLET_OBJECT_TREATMENT_DYNAMIC) {
 		printf("[BulletPhysicsService] This mesh will move: %s\n", &msh[0]);
 		locinfo.isFixed = false;
 		mass = 1;
@@ -370,17 +370,17 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 	else {
 		printf("[BulletPhysicsService] Error in objTreatment initialization!\n");
 	}
-	
+
 	//initialize the world transformation
 	Matrix4x4f worldTransformation = Matrix4x4f::identity();
     //get the position and orientation
     Vector3f objPosition = loc.position();
     Quaternion objOrient = orient.position();
-    
+
     /***Let's now find the bounding box for the entire object, which is needed for re-scaling purposes.
 	* Supposedly the system scales every mesh down to a unit sphere and then scales up by the scale factor
-	* from the scene file. We try to emulate this behavior here, but this should really be on the CDN side 
-	* (we retrieve the precomputed bounding box as well as the mesh) ***/ 
+	* from the scene file. We try to emulate this behavior here, but this should really be on the CDN side
+	* (we retrieve the precomputed bounding box as well as the mesh) ***/
     BoundingBox3f3f bbox = BoundingBox3f3f::null();
 	double mesh_rad = 0;
 	//getting the mesh
@@ -397,16 +397,16 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 			bbox = inst_bnds;
 		else
 			bbox.mergeIn(inst_bnds);
-		mesh_rad = std::max(mesh_rad, rad);             
+		mesh_rad = std::max(mesh_rad, rad);
 	}
 	if(printDebugInfo) {
 		std::cout << "bbox: " << bbox << std::endl;
 	}
 	Vector3f diff = bbox.max() - bbox.min();
-    
+
     //objBBox enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
-    if(objBBox == ENTIRE_OBJECT) {
+    if(objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
 		double scalingFactor = bnds.radius()/mesh_rad;
 		if(printDebugInfo) {
 			printf("objposition: %f, %f, %f\n", objPosition.x, objPosition.y, objPosition.z);
@@ -415,18 +415,18 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 		newObjData.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
 	}
 	//do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
-	else if(objBBox == PER_TRIANGLE) {
+	else if(objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
 		//we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
 		worldTransformation = worldTransformation * Matrix4x4f::scale((float) bnds.radius()/mesh_rad);
 		//reset the instance iterator for a second round
-		geoIter = retrievedMesh->getGeometryInstanceIterator();		
+		geoIter = retrievedMesh->getGeometryInstanceIterator();
 		//we need to pass the triangles to Bullet
 		btTriangleMesh * meshToConstruct = new btTriangleMesh(false, false);
 		//loop through the instances again, applying the new transformations to vertices and adding them to the Bullet mesh
 		while(geoIter.next(&indexInstance, &transformInstance)) {
 			transformInstance = transformInstance * worldTransformation;
 			GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);
-					
+
 			unsigned int geoIndx = geoInst->geometryIndex;
 			SubMeshGeometry* subGeom = &(retrievedMesh->geometry[geoIndx]);
 			unsigned int numOfPrimitives = subGeom->primitives.size();
@@ -449,9 +449,9 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 				}
 				for(unsigned int j=0; j < subGeom->positions.size(); j++) {
 					//printf("preTransform Vertex: %f, %f, %f\n", subGeom->positions[j].x, subGeom->positions[j].y, subGeom->positions[j].z);
-					transformedVertex = transformInstance * subGeom->positions[j];		
+					transformedVertex = transformInstance * subGeom->positions[j];
 					//printf("Transformed Vertex: %f, %f, %f\n", transformedVertex.x, transformedVertex.y, transformedVertex.z);
-					btVector3 tmpVec = btVector3(transformedVertex.x, transformedVertex.y, transformedVertex.z); 
+					btVector3 tmpVec = btVector3(transformedVertex.x, transformedVertex.y, transformedVertex.z);
 					gVertices.push_back(tmpVec);
 				}
 				//TODO: check memleak, check divisible by 3
@@ -460,7 +460,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 				printf("argument 3: %d\n", (int) 3*sizeof(int));
 				printf("argument 4: %d\n", gVertices.size());
 				printf("argument 6: %d\n", (int) sizeof(btVector3));
-				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x(), (int) sizeof(btVector3));*/				
+				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x(), (int) sizeof(btVector3));*/
 			}
 			for(unsigned int j=0; j < gIndices.size(); j+=3) {
 				//printf("triangle %d: %d, %d, %d\n", j/3, j, j+1, j+2);
@@ -469,7 +469,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 				//printf("vertex 2: %f, %f, %f\n", gVertices[gIndices[j+1]].x(), gVertices[gIndices[j+1]].y(), gVertices[gIndices[j+1]].z());
 				//printf("vertex 3: %f, %f, %f\n\n", gVertices[gIndices[j+2]].x(), gVertices[gIndices[j+2]].y(), gVertices[gIndices[j+2]].z());
 				meshToConstruct->addTriangle(gVertices[gIndices[j]], gVertices[gIndices[j+1]], gVertices[gIndices[j+2]]);
-					
+
 			}
 			Vector3f bMin = bbox.min();
 			/*objPosition.x = objPosition.x + bMin.x;
@@ -485,7 +485,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 		newObjData.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
 	}
 	//FIXME bug somewhere else? bnds.radius()/mesh_rad should be the correct radius, but it is not...
-	else if(objBBox == SPHERE) {
+	else if(objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
 
 		newObjData.objShape = new btSphereShape(bnds.radius());
 		if(printDebugInfo) {
@@ -498,7 +498,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 	}
     //register the motion state (callbacks) for Bullet
     newObjData.objMotionState = new SirikataMotionState(btTransform(btQuaternion(objOrient.x,objOrient.y,objOrient.z,objOrient.w),btVector3(objPosition.x,objPosition.y,objPosition.z)), &(it->second), uuid, this);
-    
+
     //set a placeholder for the inertial vector
 	btVector3 objInertia(0,0,0);
 	//calculate the inertia
@@ -513,7 +513,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
     //newObjData.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
     //add to the dynamics world
     dynamicsWorld->addRigidBody(newObjData.objRigidBody);
-        
+
     /*END: Bullet Physics Code*/
 }
 
@@ -522,7 +522,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     assert( mLocations.find(uuid) != mLocations.end() );
     assert( mLocations[uuid].local == true );
     assert( mLocations[uuid].aggregate == false );
-  
+
     mLocations.erase(uuid);
 
     // Remove from the list of local objects
@@ -533,23 +533,23 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // instead of immediately removing all traces of the object.
     // However, this needs to be handled carefully, prefer updates from another server, and expire
     // automatically.
-    
+
     /*BEGIN: Bullet Physics Code*/
     if(BulletPhysicsPointers.find(uuid) != BulletPhysicsPointers.end()) {
 		return;
 	}
-    
+
     PhysicsPointerMap::iterator it = BulletPhysicsPointers.find(uuid);
     BulletPhysicsPointerData * objPointers = &(it->second);
-        
+
     dynamicsWorld->removeRigidBody(objPointers->objRigidBody);
-    
+
     delete objPointers->objShape;
 	delete objPointers->objMotionState;
 	delete objPointers->objRigidBody;
-		    
-    BulletPhysicsPointers.erase(uuid);    
-    
+
+    BulletPhysicsPointers.erase(uuid);
+
     /*END: Bullet Physics Code*/
 }
 
