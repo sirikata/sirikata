@@ -431,7 +431,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 			SubMeshGeometry* subGeom = &(retrievedMesh->geometry[geoIndx]);
 			unsigned int numOfPrimitives = subGeom->primitives.size();
 			std::vector<int> gIndices;
-			std::vector<btVector3> gVertices;
+			std::vector<Vector3f> gVertices;
 			for(unsigned int i = 0; i < numOfPrimitives; i++) {
 				//create bullet triangle array from our data structure
 				Vector3f transformedVertex;
@@ -451,8 +451,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 					//printf("preTransform Vertex: %f, %f, %f\n", subGeom->positions[j].x, subGeom->positions[j].y, subGeom->positions[j].z);
 					transformedVertex = transformInstance * subGeom->positions[j];
 					//printf("Transformed Vertex: %f, %f, %f\n", transformedVertex.x, transformedVertex.y, transformedVertex.z);
-					btVector3 tmpVec = btVector3(transformedVertex.x, transformedVertex.y, transformedVertex.z);
-					gVertices.push_back(tmpVec);
+					gVertices.push_back(transformedVertex);
 				}
 				//TODO: check memleak, check divisible by 3
 				/*printf("btTriangleIndexVertexArray:\n");
@@ -460,16 +459,19 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 				printf("argument 3: %d\n", (int) 3*sizeof(int));
 				printf("argument 4: %d\n", gVertices.size());
 				printf("argument 6: %d\n", (int) sizeof(btVector3));
-				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x(), (int) sizeof(btVector3));*/
+				btTriangleIndexVertexArray* indexVertexArrays = new btTriangleIndexVertexArray((int) gIndices.size()/3, &gIndices[0], (int) 3*sizeof(int), gVertices.size(), (btScalar *) &gVertices[0].x, (int) sizeof(btVector3));*/
 			}
 			for(unsigned int j=0; j < gIndices.size(); j+=3) {
 				//printf("triangle %d: %d, %d, %d\n", j/3, j, j+1, j+2);
 				//printf("triangle %d:\n",  j/3);
-				//printf("vertex 1: %f, %f, %f\n", gVertices[gIndices[j]].x(), gVertices[gIndices[j]].y(), gVertices[gIndices[j]].z());
-				//printf("vertex 2: %f, %f, %f\n", gVertices[gIndices[j+1]].x(), gVertices[gIndices[j+1]].y(), gVertices[gIndices[j+1]].z());
-				//printf("vertex 3: %f, %f, %f\n\n", gVertices[gIndices[j+2]].x(), gVertices[gIndices[j+2]].y(), gVertices[gIndices[j+2]].z());
-				meshToConstruct->addTriangle(gVertices[gIndices[j]], gVertices[gIndices[j+1]], gVertices[gIndices[j+2]]);
-
+				//printf("vertex 1: %f, %f, %f\n", gVertices[gIndices[j]].x, gVertices[gIndices[j]].y, gVertices[gIndices[j]].z);
+				//printf("vertex 2: %f, %f, %f\n", gVertices[gIndices[j+1]].x, gVertices[gIndices[j+1]].y, gVertices[gIndices[j+1]].z);
+				//printf("vertex 3: %f, %f, %f\n\n", gVertices[gIndices[j+2]].x, gVertices[gIndices[j+2]].y, gVertices[gIndices[j+2]].z);
+				meshToConstruct->addTriangle(
+                                    btVector3( gVertices[gIndices[j]].x, gVertices[gIndices[j]].y, gVertices[gIndices[j]].z ),
+                                    btVector3( gVertices[gIndices[j+1]].x, gVertices[gIndices[j+1]].y, gVertices[gIndices[j+1]].z ),
+                                    btVector3( gVertices[gIndices[j+2]].x, gVertices[gIndices[j+2]].y, gVertices[gIndices[j+2]].z )
+                                );
 			}
 			Vector3f bMin = bbox.min();
 			/*objPosition.x = objPosition.x + bMin.x;
