@@ -32,7 +32,7 @@
 
 #include "ServerMessageReceiver.hpp"
 #include <sirikata/space/SpaceContext.hpp>
-#include "SpaceNetwork.hpp"
+#include <sirikata/space/SpaceNetwork.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 
 namespace Sirikata {

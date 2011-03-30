@@ -39,7 +39,7 @@
 
 #include <sirikata/space/Authenticator.hpp>
 
-#include "SpaceNetwork.hpp"
+#include <sirikata/space/SpaceNetwork.hpp>
 
 #include "Forwarder.hpp"
 

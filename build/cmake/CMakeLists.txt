@@ -1250,6 +1250,7 @@ SET(LIBSPACE_SOURCES
   ${LIBSPACE_SOURCE_DIR}/OSegLookupTraceToken.cpp
   ${LIBSPACE_SOURCE_DIR}/ServerMessage.cpp
   ${LIBSPACE_SOURCE_DIR}/SpaceContext.cpp
+  ${LIBSPACE_SOURCE_DIR}/SpaceNetwork.cpp
   ${LIBSPACE_SOURCE_DIR}/Trace.cpp
   ${LIBSPACE_SOURCE_DIR}/PintoServerQuerier.cpp
   ${LIBSPACE_SOURCE_DIR}/ProxSimulationTraits.cpp
@@ -1476,7 +1477,6 @@ SET(SPACE_SOURCES
   ${SPACE_SOURCE_DIR}/Options.cpp
   ${SPACE_SOURCE_DIR}/OSegHasher.cpp
   ${SPACE_SOURCE_DIR}/OSegLookupQueue.cpp
-  ${SPACE_SOURCE_DIR}/SpaceNetwork.cpp
   ${SPACE_SOURCE_DIR}/Proximity.cpp
   ${SPACE_SOURCE_DIR}/Server.cpp
   ${SPACE_SOURCE_DIR}/TCPSpaceNetwork.cpp

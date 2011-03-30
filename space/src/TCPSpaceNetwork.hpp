@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_TCP_SPACE_NETWORK_HPP_
 #define _SIRIKATA_TCP_SPACE_NETWORK_HPP_
 
-#include "SpaceNetwork.hpp"
+#include <sirikata/space/SpaceNetwork.hpp>
 #include <sirikata/core/network/Address4.hpp>
 #include <sirikata/core/network/Stream.hpp>
 #include <sirikata/core/network/StreamListener.hpp>

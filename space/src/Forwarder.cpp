@@ -31,7 +31,7 @@
  */
 
 
-#include "SpaceNetwork.hpp"
+#include <sirikata/space/SpaceNetwork.hpp>
 #include "Server.hpp"
 #include <sirikata/space/CoordinateSegmentation.hpp>
 #include <sirikata/space/ServerMessage.hpp>

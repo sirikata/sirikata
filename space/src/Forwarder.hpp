@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/space/SpaceContext.hpp>
 #include <sirikata/space/ServerMessage.hpp>
-#include "SpaceNetwork.hpp"
+#include <sirikata/space/SpaceNetwork.hpp>
 
 #include <sirikata/core/queue/Queue.hpp>
 #include <sirikata/core/queue/FairQueue.hpp>

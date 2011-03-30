@@ -43,7 +43,7 @@ namespace Sirikata {
 
 class ServerIDMap;
 
-class SpaceNetwork : public Service {
+class SIRIKATA_SPACE_EXPORT SpaceNetwork : public Service {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 

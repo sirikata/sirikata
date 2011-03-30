@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "SpaceNetwork.hpp"
+#include <sirikata/space/SpaceNetwork.hpp>
 #include "Server.hpp"
 #include "Proximity.hpp"
 #include <sirikata/space/CoordinateSegmentation.hpp>
