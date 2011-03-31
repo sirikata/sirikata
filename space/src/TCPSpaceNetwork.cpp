@@ -631,6 +631,9 @@ TCPSpaceNetwork::TCPReceiveStream* TCPSpaceNetwork::handleConnectedStream(Remote
         session->remote_stream = remote_stream;
         if (session->pending_out == remote_stream)
             session->pending_out.reset();
+
+        // When the connection really is new, we notify of a new connection
+        notify(&SpaceNetworkConnectionListener::onSpaceNetworkConnected, remote_id);
     } else {
         // If there's already a stream in the map, this incoming stream conflicts
         // with one we started in the outgoing direction.  We need to cancel one and
@@ -700,15 +703,18 @@ void TCPSpaceNetwork::handleDisconnectedStream(const RemoteStreamPtr& closed_str
     // marked as disconnected and shutting down, we just have to do the removal
     // from the main thread.
 
-    RemoteSessionPtr session = getRemoteSession(closed_stream->logical_endpoint);
+    ServerID remote_id = closed_stream->logical_endpoint;
+    RemoteSessionPtr session = getRemoteSession(remote_id);
 
     assert(closed_stream &&
            !closed_stream->connected &&
            closed_stream->shutting_down);
 
     // If this matches either of our streams, remove them immediately
-    if (session->remote_stream == closed_stream)
+    if (session->remote_stream == closed_stream) {
         session->remote_stream.reset();
+        notify(&SpaceNetworkConnectionListener::onSpaceNetworkDisconnected, remote_id);
+    }
     if (session->closing_stream == closed_stream)
         session->closing_stream.reset();
 }

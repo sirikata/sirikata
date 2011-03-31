@@ -33,7 +33,10 @@
 #include <sirikata/space/SpaceNetwork.hpp>
 #include <sirikata/core/options/CommonOptions.hpp>
 
-namespace Sirikata{
+namespace Sirikata {
+
+SpaceNetworkConnectionListener::~SpaceNetworkConnectionListener() {
+}
 
 SpaceNetwork::SpaceNetwork(SpaceContext* ctx)
  : mContext(ctx),

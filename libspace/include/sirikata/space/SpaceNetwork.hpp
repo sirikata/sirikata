@@ -43,7 +43,17 @@ namespace Sirikata {
 
 class ServerIDMap;
 
-class SIRIKATA_SPACE_EXPORT SpaceNetwork : public Service {
+/** The SpaceNetworkConnectionListener interface receives events about
+ *  connections to other space servers. */
+class SIRIKATA_SPACE_EXPORT SpaceNetworkConnectionListener {
+public:
+    virtual ~SpaceNetworkConnectionListener();
+
+    virtual void onSpaceNetworkConnected(ServerID) {}
+    virtual void onSpaceNetworkDisconnected(ServerID) {}
+};
+
+class SIRIKATA_SPACE_EXPORT SpaceNetwork : public Service, public Provider<SpaceNetworkConnectionListener*> {
 public:
     typedef Sirikata::Network::Chunk Chunk;
 
