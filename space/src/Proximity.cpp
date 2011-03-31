@@ -81,7 +81,7 @@ const String& Proximity::ObjectClassToString(ObjectClass c) {
     }
 }
 
-Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
+Proximity::Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net)
  : PollingService(ctx->mainStrand, Duration::milliseconds((int64)100)), // FIXME
    mContext(ctx),
    mServerQuerier(NULL),
@@ -99,6 +99,8 @@ Proximity::Proximity(SpaceContext* ctx, LocationService* locservice)
    mObjectQueries(),
    mObjectDistance(false)
 {
+    net->addListener(this);
+
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
     using std::tr1::placeholders::_3;
@@ -322,10 +324,10 @@ void Proximity::receiveMessage(Message* msg) {
         return;
     }
 
+    ServerID source_server = msg->source_server();
+
     if (prox_container.has_query()) {
         Sirikata::Protocol::Prox::ServerQuery prox_query_msg = prox_container.query();
-
-        ServerID source_server = msg->source_server();
 
         if (prox_query_msg.action() == Sirikata::Protocol::Prox::ServerQuery::AddOrUpdate) {
             assert(
@@ -349,6 +351,9 @@ void Proximity::receiveMessage(Message* msg) {
     }
 
     if (prox_container.has_result()) {
+        if (!mServerQueryResults[source_server])
+            mServerQueryResults[source_server] = ObjectSetPtr(new ObjectSet());
+
         Sirikata::Protocol::Prox::ProximityResults prox_result_msg = prox_container.result();
 
         assert( prox_result_msg.has_t() );
@@ -359,6 +364,7 @@ void Proximity::receiveMessage(Message* msg) {
 
             for(int32 aidx = 0; aidx < update.addition_size(); aidx++) {
                 Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
+                mServerQueryResults[source_server]->insert(addition.object());
                 mLocService->addReplicaObject(
                     t,
                     addition.object(),
@@ -372,6 +378,7 @@ void Proximity::receiveMessage(Message* msg) {
             for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
                 Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
                 mLocService->removeReplicaObject(t, removal.object());
+                mServerQueryResults[source_server]->erase(removal.object());
             }
         }
     }
@@ -533,6 +540,18 @@ void Proximity::aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid)
 
 void Proximity::aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers) {
   mAggregateManager->aggregateObserved(objid, nobservers);
+}
+
+void Proximity::onSpaceNetworkConnected(ServerID sid) {
+    mProxStrand->post(
+        std::tr1::bind(&Proximity::handleConnectedServer, this, sid)
+    );
+}
+
+void Proximity::onSpaceNetworkDisconnected(ServerID sid) {
+    mProxStrand->post(
+        std::tr1::bind(&Proximity::handleDisconnectedServer, this, sid)
+    );
 }
 
 
@@ -1090,6 +1109,38 @@ void Proximity::handleRemoveServerQuery(const ServerID& server) {
     mContext->mainStrand->post(
         std::tr1::bind(&Proximity::handleRemoveAllServerLocSubscription, this, server)
     );
+}
+
+void Proximity::handleConnectedServer(ServerID sid) {
+    // Sometimes we may get forcefully disconnected from a server. To
+    // reestablish our previous setup, if that server appears in our queried
+    // set (we were told it was relevant to us by some higher level pinto
+    // service), we mark it as needing another update. In the case that we
+    // are just getting an initial connection, this shouldn't change anything
+    // since it would already be markedas needing an update if we had been told
+    // by pinto that it needed it.
+    boost::lock_guard<boost::mutex> lck(mServerSetMutex);
+    if (mServersQueried.find(sid) != mServersQueried.end())
+        mNeedServerQueryUpdate.insert(sid);
+}
+
+void Proximity::handleDisconnectedServer(ServerID sid) {
+    // When we lose a connection, we need to clear out everything related to
+    // that server.
+    PROXLOG(debug, "Handling unexpected disconnection from " << sid << " by clearing out proximity state.");
+
+    // Clear out remote server's query to us
+    handleRemoveServerQuery(sid);
+
+    // And our query (and associated state) to them
+    // They clear out our query (as we do for them above), but we need to also
+    // remove the state we maintain locally, i.e. replicated objects.
+    ObjectSetPtr objects = mServerQueryResults[sid];
+    if (!objects) return;
+    mServerQueryResults.erase(sid);
+    Time t = mContext->simTime();
+    for(ObjectSet::const_iterator it = objects->begin(); it != objects->end(); it++)
+        mLocService->removeReplicaObject(t, *it);
 }
 
 void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle) {

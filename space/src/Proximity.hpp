@@ -49,6 +49,7 @@
 
 #include "AggregateManager.hpp"
 
+#include <sirikata/space/SpaceNetwork.hpp>
 
 namespace Sirikata {
 
@@ -65,7 +66,8 @@ class Proximity :
         public PollingService,
         PintoServerQuerierListener,
         Prox::AggregateListener<ObjectProxSimulationTraits>,
-        public ObjectSessionListener
+        public ObjectSessionListener,
+        SpaceNetworkConnectionListener
 {
 private:
     typedef Prox::QueryHandler<ObjectProxSimulationTraits> ProxQueryHandler;
@@ -74,7 +76,7 @@ public:
     typedef Prox::Query<ObjectProxSimulationTraits> Query;
     typedef Prox::QueryEvent<ObjectProxSimulationTraits> QueryEvent;
 
-    Proximity(SpaceContext* ctx, LocationService* locservice);
+    Proximity(SpaceContext* ctx, LocationService* locservice, SpaceNetwork* net);
     ~Proximity();
 
     // Initialize prox.  Must be called after everything else (specifically message router) is set up since it
@@ -131,6 +133,11 @@ public:
     virtual void aggregateBoundsUpdated(ProxQueryHandler* handler, const UUID& objid, const BoundingSphere3f& bnds);
     virtual void aggregateDestroyed(ProxQueryHandler* handler, const UUID& objid);
     virtual void aggregateObserved(ProxQueryHandler* handler, const UUID& objid, uint32 nobservers);
+
+    // SpaceNetworkConnectionListener Interface
+    virtual void onSpaceNetworkConnected(ServerID sid);
+    virtual void onSpaceNetworkDisconnected(ServerID sid);
+
 private:
 
     enum ObjectClass {
@@ -220,6 +227,8 @@ private:
     // Handle various query events from the main thread
     void handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle);
     void handleRemoveServerQuery(const ServerID& server);
+    void handleConnectedServer(ServerID sid);
+    void handleDisconnectedServer(ServerID sid);
     void handleUpdateObjectQuery(const UUID& object, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle);
     void handleRemoveObjectQuery(const UUID& object);
     // Generate query events based on results collected from query handlers
@@ -238,6 +247,9 @@ private:
     typedef std::tr1::unordered_map<Query*, ServerID> InvertedServerQueryMap;
     typedef std::tr1::unordered_map<UUID, Query*, UUID::Hasher> ObjectQueryMap;
     typedef std::tr1::unordered_map<Query*, UUID> InvertedObjectQueryMap;
+
+    typedef std::tr1::shared_ptr<ObjectSet> ObjectSetPtr;
+    typedef std::tr1::unordered_map<ServerID, ObjectSetPtr> ServerQueryResultSet;
 
 
     SpaceContext* mContext;
@@ -316,6 +328,9 @@ private:
     InvertedServerQueryMap mInvertedServerQueries;
     ProxQueryHandler* mServerQueryHandler[NUM_OBJECT_CLASSES];
     bool mServerDistance; // Using distance queries
+    // Results from queries to other servers, so we know what we need to remove
+    // on forceful disconnection
+    ServerQueryResultSet mServerQueryResults;
 
     // These track all objects being reported to this server and
     // answer queries for objects connected to this server.
