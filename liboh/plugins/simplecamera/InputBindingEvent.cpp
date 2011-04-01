@@ -240,15 +240,15 @@ InputBindingEvent InputBindingEvent::fromString(const String& asString) {
         return Key(but, mod);
     }
     else if (major == "click") {
-        int32 but = boost::lexical_cast<int32>(parts[1]);
+        int32 but = boost::lexical_cast<int32>(parts[0]);
         return MouseClick(but);
     }
     else if (major == "drag") {
-        int32 but = boost::lexical_cast<int32>(parts[1]);
+        int32 but = boost::lexical_cast<int32>(parts[0]);
         return MouseDrag(but);
     }
     else if (major == "axis") {
-        uint32 idx = boost::lexical_cast<uint32>(parts[1]);
+        uint32 idx = boost::lexical_cast<uint32>(parts[0]);
         return Axis(idx);
     }
     else if (major == "web") {
