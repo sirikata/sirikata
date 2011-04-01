@@ -1165,7 +1165,7 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     char * buffer;
     long result;
 
-    pFile = fopen (full_filename.string().c_str(), "r" );
+    pFile = fopen (full_filename.string().c_str(), "rb" );
     if (pFile == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Couldn't open file for import.")) );
 
