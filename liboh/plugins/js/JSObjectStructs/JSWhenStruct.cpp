@@ -156,7 +156,9 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
     whenPredAsString = "(function()  {  return ( " + whenPredAsString + " ); });";
 
 
-    mContext->Enter();
+    v8::Context::Scope context_scope(mContext);
+    v8::HandleScope handle_scope;
+
     v8::ScriptOrigin origin(v8::String::New("(whenpredicate)"));
     v8::Handle<v8::Value> compileFuncResult = mObjScript->internalEval(mContext, whenPredAsString, &origin, true);
 
@@ -169,9 +171,7 @@ void JSWhenStruct::whenCreatePredFunc(v8::Handle<v8::Array>predArray)
         return;
     }
 
-    v8::HandleScope handle_scope;
     mPred = v8::Persistent<v8::Function>::New ( v8::Handle<v8::Function>::Cast(compileFuncResult));
-    mContext->Exit();
 }
 
 

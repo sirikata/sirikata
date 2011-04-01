@@ -28,7 +28,7 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    mUtil(NULL)
 {
     createContextObjects();
-    
+
     //no need to register this context with it's parent context because that's
     //taken care of in the createContext function of this class.
 }
@@ -38,14 +38,14 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
 void JSContextStruct::createContextObjects()
 {
     v8::HandleScope handle_scope;
-    mContext->Enter();
-    
+    v8::Context::Scope context_scope(mContext);
+
     v8::Local<v8::Object> global_obj = mContext->Global();
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
     // itself.
     v8::Handle<v8::Object> global_proto = v8::Handle<v8::Object>::Cast(global_obj->GetPrototype());
-    
+
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
@@ -55,7 +55,7 @@ void JSContextStruct::createContextObjects()
 
 
 
-    
+
     v8::Local<v8::Array> arrayObj = v8::Array::New();
     system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 
@@ -66,8 +66,6 @@ void JSContextStruct::createContextObjects()
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
-
-    mContext->Exit();
 }
 
 
@@ -107,8 +105,8 @@ JSContextStruct::~JSContextStruct()
 
     if (hasOnDisconnectedCallback)
         cbOnDisconnected.Dispose();
-    
-    
+
+
     if (! getIsCleared())
         mContext.Dispose();
 }
@@ -117,8 +115,8 @@ JSContextStruct::~JSContextStruct()
 v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct* jspres)
 {
     v8::HandleScope handle_scope;
-    mContext->Enter();
-    
+    v8::Context::Scope context_scope(mContext);
+
     // Get the presences array
     v8::Local<v8::Array> presences_array =
         v8::Local<v8::Array>::Cast(systemObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
@@ -129,8 +127,6 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
 
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
-
-    mContext->Exit();
 
     return v8::Persistent<v8::Object>::New(js_pres);
 }
@@ -153,7 +149,7 @@ void JSContextStruct::checkContextDisconnectCallback(JSPresenceStruct* jspres)
 {
     if (getIsSuspended() || getIsCleared())
         return;
-                
+
     if (hasOnDisconnectedCallback)
         jsObjScript->handlePresCallback(cbOnDisconnected,this,jspres);
 }
@@ -173,7 +169,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
 {
     if (hasOnDisconnectedCallback)
         cbOnDisconnected.Dispose();
-        
+
     cbOnDisconnected = cb_persist;
     hasOnDisconnectedCallback = true;
 
@@ -186,10 +182,10 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
 v8::Handle<v8::Value> JSContextStruct::clear()
 {
     JSLOG(insane,"Clearing a context.  Hopefully it works!");
-    
+
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->clear();
-    
+
 
     systemObj.Dispose();
     if (hasOnConnectedCallback)
@@ -198,7 +194,7 @@ v8::Handle<v8::Value> JSContextStruct::clear()
         cbOnDisconnected.Dispose();
 
     mContext.Dispose();
-        
+
     return JSSuspendable::clear();
 }
 
@@ -211,7 +207,7 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
         JSLOG(error,"Error when registering suspendable.  This context object was already cleared.");
         return;
     }
-    
+
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
     {
@@ -230,7 +226,7 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         JSLOG(error,"Error when deregistering suspendable.  This context object was already cleared.");
         return;
     }
-    
+
     SuspendableIter iter = associatedSuspendables.find(toDeregister);
     if (iter == associatedSuspendables.end())
     {
@@ -250,11 +246,11 @@ v8::Handle<v8::Value> JSContextStruct::suspend()
         JSLOG(error,"Error when suspending.  This context object was already cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot suspend a context that has already been cleared.")) );
     }
-    
+
     JSLOG(insane,"Suspending all suspendable objects associated with context");
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->suspend();
-    
+
     return JSSuspendable::suspend();
 }
 
@@ -266,15 +262,15 @@ v8::Handle<v8::Value> JSContextStruct::resume()
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot resume a context that has already been cleared.")) );
     }
 
-    
+
     JSLOG(insane,"Resuming all suspendable objects associated with context");
 
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->resume();
-    
+
     return JSSuspendable::resume();
 }
-    
+
 
 
 //this function asks the jsObjScript to send a message from the presence associated
@@ -284,14 +280,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
 {
 
     NullPresenceCheck("Context: sendHome");
-    
+
     if (getIsCleared())
     {
         JSLOG(error,"Error when sending home.  This context object was already cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot call sendHome from a context that has already been cleared.")) );
     }
 
-    
+
     jsObjScript->sendMessageToEntity(mHomeObject,associatedPresence->getSporef(),toSend);
     return v8::Undefined();
 }
@@ -300,28 +296,28 @@ v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
 JSContextStruct* JSContextStruct::decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    
+
     if (! toDecode->IsObject())
     {
         errorMessage += "Error in decode of JSContextStruct.  Should have received an object to decode.";
         return NULL;
     }
-        
+
     v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
-        
+
     //now check internal field count
     if (toDecodeObject->InternalFieldCount() != CONTEXT_TEMPLATE_FIELD_COUNT)
     {
         errorMessage += "Error in decode of JSContextStruct.  Object given does not have adequate number of internal fields for decode.";
         return NULL;
     }
-        
+
     //now actually try to decode each.
     //decode the jsVisibleStruct field
     v8::Local<v8::External> wrapJSContextStructObj;
     wrapJSContextStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT));
     void* ptr = wrapJSContextStructObj->Value();
-    
+
     JSContextStruct* returner;
     returner = static_cast<JSContextStruct*>(ptr);
     if (returner == NULL)
@@ -342,14 +338,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
 
     //copying arguments over to arg array for execution.
-    int argc = args.Length() -1; 
+    int argc = args.Length() -1;
     Handle<Value>* argv = new Handle<Value>[argc];
 
     for (int s=1; s < args.Length(); ++s)
         argv[s-1] = args[s];
-    
+
     v8::Handle<v8::Value> returner =  jsObjScript->executeInContext(mContext,funcToCall, argc,argv);
-    
+
     delete argv; //free additional memory.
     return returner;
 }
@@ -402,7 +398,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 
     //register the new context as a child of the previous one
     struct_registerSuspendable(new_jscs);
-    
+
     return returner;
 }
 
@@ -453,7 +449,7 @@ v8::Handle<Object> JSContextStruct::struct_getSystem()
   Local<Object> froot_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
 
   Persistent<Object> ret_obj = Persistent<Object>::New(froot_obj);
-  
+
   return ret_obj;
 }
 
@@ -461,10 +457,10 @@ v8::Handle<Object> JSContextStruct::struct_getSystem()
 v8::Handle<v8::Value> JSContextStruct::struct_getAssociatedPresPosition()
 {
     NullPresenceCheck("Context: getAssociatedPresPosition");
-    
-    mContext->Enter();
+
+    v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Value> returner = associatedPresence->struct_getPosition();
-    mContext->Exit();
+
     return returner;
 }
 

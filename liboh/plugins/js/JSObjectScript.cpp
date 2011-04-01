@@ -443,7 +443,7 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis
 {
     //lkjs;
     v8::HandleScope handle_scope;
-    ctxToCreateIn->Enter();
+    v8::Context::Scope context_scope(ctxToCreateIn);
 
     v8::Local<v8::Object> returner = mManager->mVisibleTemplate->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
@@ -451,7 +451,6 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis
 
 
     //v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
-    ctxToCreateIn->Exit();
 
     return returner;
 }
@@ -467,7 +466,7 @@ v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(const SpaceOb
 v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
 {
     v8::HandleScope handle_scope;
-    ctxToCreateIn->Enter();
+    v8::Context::Scope context_scope(ctxToCreateIn);
 
     v8::Local<v8::Object> returner = mManager->mVisibleTemplate->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
@@ -475,8 +474,6 @@ v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStru
 
 
     v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
-
-    ctxToCreateIn->Exit();
 
     return returnerPers;
 }
@@ -990,35 +987,12 @@ v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context
 {
     JSLOG(insane, "executing script in alternate context");
 
-    std::vector<v8::Handle<v8::Context> >contextVec;
-    while(v8::Context::InContext())
-    {
-        JSLOG(insane, "peeling away previous context I was in.");
-        contextVec.push_back(v8::Context::GetCurrent());
-        v8::Context::GetCurrent()->Exit();
-    }
-
-
     //entering new context associated with
     JSLOG(insane, "entering new context associated with JSContextStruct.");
-    contExecIn->Enter();
-
+    v8::Context::Scope context_scope(contExecIn);
 
     JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");
     ProtectedJSFunctionInContext(contExecIn, NULL,funcToCall, argc, argv);
-
-
-    JSLOG(insane, "Exiting new context associated with JSContextStruct.");
-    contExecIn->Exit();
-
-
-    //restore previous contexts
-    std::vector<v8::Handle<v8::Context> >::reverse_iterator revIt;
-    for (revIt= contextVec.rbegin(); revIt != contextVec.rend(); ++revIt)
-    {
-        JSLOG(insane, "restoring previous context I was in.");
-        (*revIt)->Enter();
-    }
 
     JSLOG(insane, "execution in alternate context complete");
     return v8::Undefined();
@@ -1072,10 +1046,9 @@ v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Fu
 void JSObjectScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres)
 {
     v8::HandleScope handle_scope;
-    jscont->mContext->Enter();
+    v8::Context::Scope(jscont->mContext);
     v8::Handle<v8::Value> js_pres =wrapPresence(jspres,&(jscont->mContext));
     executeInContext(jscont->mContext,funcToCall,1,&js_pres);
-    jscont->mContext->Exit();
 }
 
 
@@ -1113,8 +1086,7 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     if (contextCtx == NULL)
         contextCtx = mContext;
 
-    
-    contextCtx->mContext->Enter();
+    v8::Context::Scope(contextCtx->mContext);
 
     using namespace boost::filesystem;
 
@@ -1148,15 +1120,14 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     *full_file_out = path();
     *base_path_out = path();
 
-
-    contextCtx->mContext->Exit();
-    
     return;
 }
 
 v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscont)
 {
     v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(jscont ? jscont->mContext : mContext->mContext);
+
     JSLOG(detailed, " Performing import on absolute path: " << full_filename.string());
 
     // Now try to read in and run the file.
@@ -1188,6 +1159,7 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     new_ctx.currentScriptBaseDir = full_base_dir;
     ScriptOrigin origin( v8::String::New( (new_ctx.getFullRelativeScriptDir() / full_filename.filename()).string().c_str() ) );
     mImportedFiles.insert( full_filename.string() );
+
     return  protectedEval(contents, &origin, new_ctx,jscont);
 }
 
@@ -1418,12 +1390,9 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 //the js object this function creates to the user.
 v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
 {
-    if (jscs == NULL)
-        mContext->mContext->Enter();
-    else
-        jscs->mContext->Enter();
+    v8::Handle<v8::Context> ctx = (jscs == NULL) ? mContext->mContext : jscs->mContext;
     
-    v8::Context::Scope context_scope(mContext->mContext);
+    v8::Context::Scope context_scope(ctx);
     v8::HandleScope handle_scope;
 
     v8::Handle<v8::Object> returner =mManager->mHandlerTemplate->NewInstance();
@@ -1431,12 +1400,6 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
-
-
-    if (jscs == NULL)
-        mContext->mContext->Exit();
-    else
-        jscs->mContext->Exit();
     
     return returner;
 }
@@ -1456,20 +1419,12 @@ JSPresenceStruct*  JSObjectScript::addConnectedPresence(const SpaceObjectReferen
 //wraps the presence in a v8 object and returns it.
 v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
 {
-    if (ctxToWrapIn == NULL)
-        mContext->mContext->Enter();
-    else
-        (*ctxToWrapIn)->Enter();
+    v8::Handle<v8::Context> ctx = (ctxToWrapIn == NULL) ? mContext->mContext : *ctxToWrapIn;
+    v8::Context::Scope context_scope(ctx);
     
     Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToWrap));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
-
-
-    if (ctxToWrapIn == NULL)
-        mContext->mContext->Exit();
-    else
-        (*ctxToWrapIn)->Exit();
     
     return js_pres;
 }
@@ -1569,7 +1524,7 @@ v8::Persistent<v8::Object> JSObjectScript::create_presence(const String& newMesh
     if (jsctx == NULL)
         jsctx = mContext;
     
-    jsctx->mContext->Enter();
+    v8::Context::Scope context_scope(jsctx->mContext);
     
     //presuming that we are connecting to the same space;
     FIXME_GET_SPACE_OREF();
@@ -1589,8 +1544,6 @@ v8::Persistent<v8::Object> JSObjectScript::create_presence(const String& newMesh
     
     v8::Persistent<v8::Object>js_pres = jsctx->addToPresencesArray(presToAdd);
     mUnconnectedPresences.push_back(presToAdd);
-
-    jsctx->mContext->Exit();
     
     return js_pres;
 }
