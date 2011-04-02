@@ -16,25 +16,15 @@ namespace JS
   {
     /* Invoke the function handle */
 
-    int argc =
-#ifdef _WIN32
-               1
-#else
-               0
-#endif
-               ;
-    int base_offset = argc; // need to work around windows weirdness
-   argc += params.size();
+    int argc = params.size();
 
    v8::HandleScope handle_scope;
    v8::Context::Scope  context_scope(script_->context());
 
    std::vector<v8::Handle<v8::Value> >argv(argc);
 
-   if (base_offset) argv[0] = v8::Handle<v8::Value>();
-
    for(uint32 i = 0; i < params.size(); i++)
-       argv[base_offset+i] = InvokableUtil::AnyToV8(script_, params[i]);
+       argv[i] = InvokableUtil::AnyToV8(script_, params[i]);
 
   //TryCatch try_catch;
 
