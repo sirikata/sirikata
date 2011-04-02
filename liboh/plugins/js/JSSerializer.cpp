@@ -314,117 +314,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
 }
 
-/*
-bool JSSerializer::deserializeObject( std::string strDecode,v8::Handle<v8::Object>& deserializeTo)
-{
-    Sirikata::JS::Protocol::JSMessage jsmessage;
-    bool parseWorked = jsmessage.ParseFromString(strDecode);
-
-
-    if (! parseWorked)
-        return false; //means that we couldn't parse out the message
-
-
-    for(int i = 0; i < jsmessage.fields_size(); i++)
-    {
-
-        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-
-        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-
-        const char* str = jsf.name().c_str();
-
-        v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
-        if(jsvalue.has_s_value())
-        {
-            const char* str1 = jsvalue.s_value().c_str();
-            v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
-            deserializeTo->Set(key, val);
-        }
-        else if(jsvalue.has_i_value())
-        {
-            v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
-            deserializeTo->Set(key, intval);
-        }
-    }
-
-    return true;
-}
-*/
-
-/*
-bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
-{
-    for(int i = 0; i < jsmessage.fields_size(); i++)
-    {
-        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-        if(jsf.name() == TYPEID_FIELD_NAME)
-        {
-          if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
-              return deserializeVisible(jsObjScript,jsmessage,deserializeTo);
-
-        }
-    }
-    return deserializeRegularObject(jsObjScript,jsmessage,deserializeTo);
-}
-
-bool JSSerializer::deserializeVisible(JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
-{
-    deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
-    deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new String(VISIBLE_TYPEID_STRING)));
-    //deserializeTo->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD, External::New(jsObjScript));
-
-    SpaceObjectReference visibleObj,visibleTo;
-
-    for(int i = 0; i < jsmessage.fields_size(); i++)
-    {
-        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-
-        if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
-            visibleObj = SpaceObjectReference(jsvalue.s_value());
-        else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
-            visibleTo = SpaceObjectReference(jsvalue.s_value());
-
-    }
-
-    lkjs;
-    JSVisibleStruct* visStruct = new JSVisibleStruct(jsObjScript,visibleObj,visibleTo,false,Vector3d());
-    deserializeTo->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD, External::New(visStruct));
-
-    return deserializeRegularObject(jsObjScript,jsmessage,deserializeTo);
-}
-
-
-bool JSSerializer::deserializeRegularObject(JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
-{
-    for(int i = 0; i < jsmessage.fields_size(); i++)
-    {
-        Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-        Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-        const char* str = jsf.name().c_str();
-        v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
-
-        if(jsvalue.has_s_value())
-        {
-            const char* str1 = jsvalue.s_value().c_str();
-            v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
-            deserializeTo->Set(key, val);
-        }
-        else if(jsvalue.has_i_value())
-        {
-            v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
-            deserializeTo->Set(key, intval);
-        }
-    }
-    return true;
-}
-
-*/
-
-
-
 bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
     //check if there is a typeid field and what is the value for it
@@ -495,15 +384,15 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
 
 
-        const char* str = jsf.name().c_str();
+        String str = jsf.name();
 
-        v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
+        v8::Local<v8::String> key = v8::String::New(str.c_str(), str.size());
 
         if(jsvalue.has_s_value())
         {
 
-          const char* str1 = jsvalue.s_value().c_str();
-          v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
+          String str1 = jsvalue.s_value();
+          v8::Local<v8::String> val = v8::String::New(str1.c_str(), str1.size());
           deserializeTo->Set(key, val);
         }
         else if(jsvalue.has_i_value())
@@ -546,89 +435,6 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
 
     return true;
 }
-
-// bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Local<v8::Object>& deserializeTo)
-// {
-//     //check if there is a typeid field and what is the value for it
-//     bool isAddressable = false;
-//     bool isVisible = false;
-//     for(int i = 0; i < jsmessage.fields_size(); i++)
-//     {
-//         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-//         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-//         if(jsf.name() == TYPEID_FIELD_NAME)
-//         {
-
-//           if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
-//           {
-//             isVisible = true;
-//             break;
-//           }
-
-//         }
-//     }
-
-
-//     if(isVisible)
-//     {
-//       deserializeTo = jsObjScript->manager()->mVisibleTemplate->NewInstance();
-//       deserializeTo->SetInternalField(TYPEID_FIELD, External::New(new std::string(VISIBLE_TYPEID_STRING)));
-//       deserializeTo->SetInternalField(VISIBLE_JSOBJSCRIPT_FIELD, External::New(jsObjScript));
-//     }
-
-//     for(int i = 0; i < jsmessage.fields_size(); i++)
-//     {
-//         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
-
-//         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-
-//         if(jsf.name() == TYPEID_FIELD_NAME) { continue; }
-
-//         const char* str = jsf.name().c_str();
-
-//         v8::Local<v8::String> key = v8::String::New(str, jsf.name().size());
-
-//         SpaceObjectReference visibleSpace,visibleTo;
-
-//         if(jsvalue.has_s_value())
-//         {
-//           if(isVisible)
-//           {
-//             if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
-//             {
-
-//                 visibleSpace = jsvalue.s_value();
-//                 SpaceObjectReference* sporef = new SpaceObjectReference(jsvalue.s_value());
-//                 deserializeTo->SetInternalField(VISIBLE_SPACEOBJREF_FIELD, External::New(sporef));
-//                 lkjs;
-//             }
-//             else if(jsf.name() == VISIBLE_TO_SPACEOBJREF_STRING)
-//             {
-//                 visibleTo = jsvalue.s_value();
-//                 SpaceObjectReference* sporefVisTo = new SpaceObjectReference(jsvalue.s_value());
-//                 deserializeTo->SetInternalField(VISIBLE_TO_SPACEOBJREF_FIELD, External::New(sporefVisTo));
-//             }
-//           }
-//           else
-//           {
-//             const char* str1 = jsvalue.s_value().c_str();
-//             v8::Local<v8::String> val = v8::String::New(str1, jsvalue.s_value().size());
-//             deserializeTo->Set(key, val);
-//           }
-
-//         }
-//         else if(jsvalue.has_i_value())
-//         {
-//             v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
-//             deserializeTo->Set(key, intval);
-//         }
-//     }
-
-//     return true;
-// }
-
-
-
 
 
 } //end namespace js
