@@ -47,9 +47,12 @@ class SIRIKATA_MESH_EXPORT ModelsSystemFactory
       public Factory1<  ModelsSystem*,
                         String const& >                         // option string
 {
-    public:
-        static ModelsSystemFactory& getSingleton ();
-        static void destroy ();
+  public:
+    ModelsSystemFactory();
+    ~ModelsSystemFactory();
+
+    static ModelsSystemFactory& getSingleton ();
+    static void destroy ();
 };
 
 } // namespace Sirikata

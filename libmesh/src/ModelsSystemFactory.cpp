@@ -31,10 +31,27 @@
  */
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/AnyModelsSystem.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::ModelsSystemFactory);
 
 namespace Sirikata {
+
+ModelsSystemFactory::ModelsSystemFactory()
+ : Factory1<ModelsSystem*, String const&>()
+{
+    this->registerConstructor(
+        AnyModelsSystem::name(),
+        AnyModelsSystem::create
+    );
+}
+
+ModelsSystemFactory::~ModelsSystemFactory()
+{
+    this->unregisterConstructor(
+        AnyModelsSystem::name()
+    );
+}
 
 ModelsSystemFactory& ModelsSystemFactory::getSingleton ()
 {

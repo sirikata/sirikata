@@ -35,28 +35,7 @@
 
 namespace Sirikata {
 
-namespace {
-String sAnyName("any");
-
-// This just manages adding and removing from ModelsSystemFactory
-struct AnyModelsSystemRegistration {
-    AnyModelsSystemRegistration() {
-        ModelsSystemFactory::getSingleton().registerConstructor(
-            sAnyName,
-            AnyModelsSystem::create
-        );
-    }
-    ~AnyModelsSystemRegistration() {
-        ModelsSystemFactory::getSingleton().unregisterConstructor(
-            sAnyName
-        );
-    }
-};
-
-// This object triggers (un)registration.
-AnyModelsSystemRegistration sRegistration;
-}
-
+String AnyModelsSystem::sAnyName("any");
 
 AnyModelsSystem::AnyModelsSystem() {
     ModelsSystemFactory::ConstructorNameList cons = ModelsSystemFactory::getSingleton().getNames();

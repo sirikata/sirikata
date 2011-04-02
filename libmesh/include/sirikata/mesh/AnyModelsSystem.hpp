@@ -44,6 +44,8 @@ namespace Sirikata {
 class SIRIKATA_MESH_EXPORT AnyModelsSystem : public ModelsSystem
 {
   public:
+    static const String& name() { return sAnyName; }
+
     virtual ~AnyModelsSystem();
 
     /** Check if this ModelsSystem will be able to parse the
@@ -62,6 +64,8 @@ class SIRIKATA_MESH_EXPORT AnyModelsSystem : public ModelsSystem
 
     static ModelsSystem* create(const String& args);
   private:
+    static String sAnyName;
+
     AnyModelsSystem();
     AnyModelsSystem(const AnyModelsSystem& rhs); // Not implemented
     AnyModelsSystem& operator=(const AnyModelsSystem& rhs); // Not implemented
