@@ -252,6 +252,8 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
     mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
+    mSystemTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSSystem::root_reset));
+    mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
     
 }
 

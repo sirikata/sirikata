@@ -49,6 +49,53 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
     return jsfake->struct_require(native_filename);
 }
 
+/*
+  Takes no parameters.  Destroys all created objects, except presences in the
+  root context.  Then executes script associated with root context.  (Use
+  system.setScript to set this script.)
+ */
+v8::Handle<v8::Value> root_reset(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. reset takes no arguments.")));
+
+
+    String errorMessage = "Error in reset of system object.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
+
+    return jsfake->struct_reset();
+}
+
+/*
+  @param String containing a full script.
+  Takes a string, which is a script.  When scripter calls system.setScript in
+  root context, will re-execute this script.
+ */
+v8::Handle<v8::Value> root_setScript(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. setScript requires a string as first arg.")));
+
+    //check that first arg is actually a string
+    String decodedScript;
+    String strDecodeErrorMsg = "Error decoding string in setScript.";
+    bool strDecodeSuccess = decodeString(args[0], decodedScript, strDecodeErrorMsg);
+    if (! strDecodeSuccess)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMsg.c_str())));
+
+    
+    String errorMessage = "Error in reset of system object.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
+
+    
+    return jsfake->struct_setScript(decodedScript);   
+}
 
 
 v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)

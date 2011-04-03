@@ -107,6 +107,18 @@ v8::Handle<v8::Value> JSSystemStruct::struct_eval(const String& native_contents,
     return associatedContext->struct_eval(native_contents,sOrigin);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::struct_setScript(const String& script)
+{
+    return associatedContext->struct_setScript(script);
+}
+v8::Handle<v8::Value> JSSystemStruct::struct_reset()
+{
+    return associatedContext->struct_setReset();
+}
+
+
+
+
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
 v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb)

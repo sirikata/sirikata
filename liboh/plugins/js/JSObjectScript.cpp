@@ -329,6 +329,31 @@ bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef_toListenTo
 
 }
 
+v8::Handle<v8::Value> JSObjectScript::resetScript(JSContextStruct* jscont)
+{
+    if (jscont != mContext)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  Cannot call reset unless within root context.")));
+    mPresences.clear();
+    mEventHandlers.clear();
+    mImportedFiles.clear();
+    mContext->struct_rootReset();
+    return v8::Undefined();
+}
+
+/**
+   This function adds jspresStruct to mPresences map.  Then, calls the
+   onPresence added function.
+ */
+void JSObjectScript::resetPresence(JSPresenceStruct* jspresStruct)
+{
+    mPresences[*(jspresStruct->getToListenTo())] = jspresStruct;
+}
+
+bool JSObjectScript::isRootContext(JSContextStruct* jscont)
+{
+    return (jscont == mContext);
+}
+
 
 
 //deregisters position listening for an arbitrary proxy object visible to
@@ -661,9 +686,6 @@ JSObjectScript::~JSObjectScript()
         delete *handler_it;
 
     mEventHandlers.clear();
-
-    //lkjs;
-    //mContext.Dispose();
 }
 
 
@@ -1180,7 +1202,6 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
 }
 
 
-
 v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextStruct* jscont)
 {
     JSLOG(detailed, "Requiring: " << filename);
@@ -1194,7 +1215,8 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
     if (mImportedFiles.find(full_filename.string()) != mImportedFiles.end()) {
-        JSLOG(detailed, " Skipping already imported file: " << filename);
+        //JSLOG(detailed, " Skipping already imported file: " << filename);
+        JSLOG(debug, " Skipping already imported file: " << filename);
         return v8::Undefined();
     }
 

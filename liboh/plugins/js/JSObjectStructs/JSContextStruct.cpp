@@ -25,7 +25,9 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
    mSystem(new JSSystemStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
-   mUtil(NULL)
+   mUtil(NULL),
+   inClear(false),
+   mContGlobTempl(contGlobTempl)
 {
     createContextObjects();
 
@@ -93,6 +95,87 @@ v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents
     return jsObjScript->eval(native_contents, sOrigin,this);
 }
 
+/*
+  This function should be called from system object.  It initiates the reset
+  process for all objects and contexts.
+  
+ */
+v8::Handle<v8::Value> JSContextStruct::struct_setReset()
+{
+    //jsobjscript will chcek if this is teh root context.  If it is, it will
+    //eventually call struct_rootReset
+    return jsObjScript->resetScript(this);
+}
+
+String JSContextStruct::getScript()
+{
+    return mScript;
+}
+
+v8::Handle<v8::Value> JSContextStruct::struct_setScript(const String& script)
+{
+    if (jsObjScript->isRootContext(this))
+    {
+        mScript = script;
+        return v8::Undefined();
+    }
+
+    return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot set script for non-root context.")) );
+}
+
+
+/**
+   This function is called only by JSObjectScript directly.
+   It disposes of mContext and system objects.  It then runs through all
+   suspendables associated with this context, calling clear on each (minus the
+   presences).  
+   
+ */
+v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
+{
+    inClear = true;
+    JSPresVec jspresVec;
+    for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
+    {
+
+        JSPresenceStruct* jspres  = dynamic_cast<JSPresenceStruct*> (iter->first);
+        if (jspres == NULL)
+        {
+            iter->first->clear();
+            delete iter->first;
+        }
+        else
+            jspresVec.push_back(jspres);
+    }
+    associatedSuspendables.clear();
+
+    //get rid of previous stuff in root
+    systemObj.Dispose();
+    mContext.Dispose();
+
+    inClear = false;
+    //recreate system and mcontext objects
+    mContext = v8::Context::New(NULL, mContGlobTempl);
+    createContextObjects();
+
+    //re-exec mScript
+    v8::ScriptOrigin origin(v8::String::New("(reset_script)"));
+
+    jsObjScript->internalEval(mContext,mScript,&origin , true);
+
+
+    //re-load presences
+    for (JSPresVecIter iter = jspresVec.begin(); iter != jspresVec.end(); ++iter)
+    {
+        jsObjScript->resetPresence(*iter);
+        checkContextConnectCallback(*iter);
+    }
+
+    return v8::Undefined();
+}
+
+
+
 
 
 JSContextStruct::~JSContextStruct()
@@ -130,6 +213,27 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
 
     return v8::Persistent<v8::Object>::New(js_pres);
 }
+
+
+// void JSContextStruct::getPresArrayCPP(JSPresVec& presVec)
+// {
+//     v8::HandleScope handle_scope;
+//     v8::Context::Scope context_scope(mContext);
+
+//     // Get the presences array
+//     v8::Local<v8::Array> presences_array =
+//         v8::Local<v8::Array>::Cast(systemObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
+//     uint32 new_pos = presences_array->Length();
+
+//     for (uint32 s = 0; s < new_pos; ++s)
+//     {
+//         String dummyErrMsg;
+//         v8::Local<v8::Value> curPres = presences_array->Get(s);
+//         JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(curPres,dummyErrMsg);
+//         if (jspres != NULL)
+//             presVec.push_back(jspres);
+//     }
+// }
 
 
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
@@ -181,6 +285,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
 //subcontexts.
 v8::Handle<v8::Value> JSContextStruct::clear()
 {
+    inClear = true;
     JSLOG(insane,"Clearing a context.  Hopefully it works!");
 
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
@@ -194,7 +299,7 @@ v8::Handle<v8::Value> JSContextStruct::clear()
         cbOnDisconnected.Dispose();
 
     mContext.Dispose();
-
+    inClear = false;
     return JSSuspendable::clear();
 }
 
@@ -208,19 +313,24 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
         return;
     }
 
+    
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
     {
         JSLOG(info,"Strangeness in registerSuspendable of JSContextStruct.  Trying to re-register a suspendable with the context that was already registered.  Unlikely to be an error, but thought I should mention it.");
         return;
     }
-
     associatedSuspendables[toRegister] = 1;
 }
 
 
 void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
 {
+    //don't want to de-register suspendables while I'm calling clear.
+    //clear is already running through each and removing them from suspendables.
+    if (inClear)
+        return;
+    
     if (getIsCleared())
     {
         JSLOG(error,"Error when deregistering suspendable.  This context object was already cleared.");

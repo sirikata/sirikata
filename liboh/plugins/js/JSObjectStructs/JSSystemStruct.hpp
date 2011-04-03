@@ -69,7 +69,9 @@ struct JSSystemStruct
     //this parameter to target and that will fire the callback cb.
     v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
 
-    
+    v8::Handle<v8::Value> struct_setScript(const String& script);
+    v8::Handle<v8::Value> struct_reset();
+
     
 private:
     //associated data 

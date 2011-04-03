@@ -109,6 +109,12 @@ public:
      */
     bool valid() const;
 
+    /**
+       This function runs through the entire list of presences associated with
+       this JSObjectScript, and then frees those that are not part of that vector.
+     */
+    void killOtherPresences(JSPresVec& jspresVec);
+    
     String createNewValueInContext(v8::Handle<v8::Value> val, v8::Handle<v8::Context> ctx);
 
     /** Dummy callback for testing exposing new functionality to scripts. */
@@ -187,7 +193,7 @@ public:
 
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
-
+    v8::Handle<v8::Value> resetScript(JSContextStruct* jscont);
 
     //registering position listeners to receive updates from loc
     bool registerPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient);
@@ -200,7 +206,9 @@ public:
 
     void deleteHandler(JSEventHandlerStruct* toDelete);
 
-
+    void resetPresence(JSPresenceStruct* jspresStruct);
+    bool isRootContext(JSContextStruct* jscont);
+    
     JSObjectScriptManager* manager() const { return mManager; }
 
     // is_emerson controls whether this is compiled as emerson or javascript code.

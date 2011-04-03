@@ -123,12 +123,10 @@ private:
         String errorMessage = "Error when calling " + fname + " on presence.  The presence has already been cleared."; \
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
     }
-    
-
-    
-    
 };
 
+typedef std::vector<JSPresenceStruct*> JSPresVec;
+typedef JSPresVec::iterator JSPresVecIter;
 
 }//end namespace js
 }//end namespace sirikata

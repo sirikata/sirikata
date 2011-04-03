@@ -60,6 +60,10 @@ struct JSContextStruct : public JSSuspendable
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 
+    v8::Handle<v8::Value> struct_setReset();
+    v8::Handle<v8::Value> struct_setScript(const String& script);
+
+    v8::Handle<v8::Value> struct_rootReset();
     
     //when add a handler, timer, when inside of context, want to register them.
     //That way, when call suspend on context and resume on context, can
@@ -117,6 +121,7 @@ struct JSContextStruct : public JSSuspendable
     //system object that is associated with this context.
     v8::Persistent<v8::Object> addToPresencesArray(JSPresenceStruct* jspres);
 
+    v8::Handle<v8::Value> clearConservePres(std::vector<JSPresenceStruct*>& jspresVec);
     
     //********data
     JSObjectScript* jsObjScript;
@@ -124,8 +129,10 @@ struct JSContextStruct : public JSSuspendable
     //this is the context that any and all objects will be run in.
     v8::Persistent<v8::Context> mContext;
 
-private:
+    String getScript();
 
+private:
+    
     //performs the initialization and population of util object, system object,
     //and system object's presences array.
     void createContextObjects();
@@ -136,7 +143,9 @@ private:
     v8::Persistent<v8::Function> cbOnConnected;
     bool hasOnDisconnectedCallback;
     v8::Persistent<v8::Function> cbOnDisconnected;
-    
+
+    //script associated with this context.  
+    String mScript;
     
     //a pointer to the local presence that is associated with this context.  for
     //instance, when you call getPosition on the system object, you actually
@@ -154,12 +163,15 @@ private:
     //mSystem in a v8 wrapper.  also, its persistent!
     v8::Persistent<v8::Object> systemObj;
     
-
+    v8::Handle<v8::ObjectTemplate> mContGlobTempl;
     
     //struct associated with the Emerson util object that is associated with this
     //context.  
     JSUtilObjStruct* mUtil;
-    
+
+    //flag that is true if in the midst of a clear command.  False otherwise
+    //(prevents messing up iterators in suspendable map).
+    bool inClear;
     
     //all associated objects that will need to be suspended/resumed if context
     //is suspended/resumed
