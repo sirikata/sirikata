@@ -207,11 +207,6 @@ SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 
 SET(SirikataProtocolDirectory ${GENERATED_FILES_DIR})
 
-SET(CSHARP_SCRIPTS_ROOT ${ScriptsRoot}/csharp)
-SET(CSHARP_SCRIPTS_PROTOCOL ${ScriptsRoot}/csharp/protocol)
-SET(IRONPYTHON_SCRIPTS_ROOT ${ScriptsRoot}/ironpython)
-SET(IRONPYTHON_SCRIPTS_PROTOCOL ${ScriptsRoot}/ironpython/protocol)
-
 #add-ins
 
 IF(NOT CMAKE_MODULE_PATH)
@@ -326,37 +321,6 @@ IF(ISLINUX)
 ENDIF()
 
 #libraries
-SET(MONO_MINIMUM_VERSION 2.0)
-#dependency: mono
-IF(NOT MONO_ROOT)
-  IF(WIN32)
-    SET(MONO_ROOT ${PLATFORM_LIBS}/mono-2.4)
-  ELSEIF(APPLE)
-    # TODO: Add path to some prebuilt version of Mono for Macs
-  ELSE()
-    SET(MONO_ROOT ${PLATFORM_LIBS}/installed-mono)
-  ENDIF()
-ENDIF()
-FIND_PACKAGE(Mono)
-SET(IRON_PYTHON_FOUND FALSE)
-IF(MONO_FOUND)
-  ADD_DEFINITIONS(-DHAVE_MONO)
-  ADD_DEFINITIONS(-DMONO_VERSION_MAJOR=${MONO_MAJOR_VERSION})
-  ADD_DEFINITIONS(-DMONO_VERSION_MINOR=${MONO_MINOR_VERSION})
-  ADD_DEFINITIONS(-DMONO_VERSION_MICRO=${MONO_SUBMINOR_VERSION})
-  IF(EXISTS ${PLATFORM_LIBS}/IronPython)
-    SET(IRON_PYTHON_FOUND TRUE)
-    SET(IRON_PYTHON_ROOT ${PLATFORM_LIBS}/IronPython)
-    SET(IRON_PYTHON_LIBRARIES
-      -r:${IRON_PYTHON_ROOT}/IronPython.dll
-      -r:${IRON_PYTHON_ROOT}/IronPython.Modules.dll
-      -r:${IRON_PYTHON_ROOT}/Microsoft.Scripting.dll
-      -r:${IRON_PYTHON_ROOT}/Microsoft.Scripting.Core.dll
-#      -r:${IRON_PYTHON_ROOT}/Microsoft.Scripting.ExtensionAttribute.dll
-       )
-  ENDIF(EXISTS ${PLATFORM_LIBS}/IronPython)
-  FIND_PACKAGE(Cecil)
-ENDIF(MONO_FOUND)
 
 # V8 for JS plugin
 IF(NOT V8_ROOT)
@@ -796,9 +760,6 @@ SET(INCLUDE_DIRECTORIES
 IF(OGRE_FOUND AND sdl_FOUND)
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${OGRE_INCLUDE_DIRS} ${sdl_INCLUDE_DIRS})
 ENDIF()
-IF(MONO_FOUND)
-SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${MONO_INCLUDE_DIRS})
-ENDIF()
 IF(BERKELIUM_FOUND)
 SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${BERKELIUM_INCLUDE_DIRS})
 ENDIF()
@@ -888,12 +849,7 @@ SET(ProtocolBuffersSourcesInternal
 # Based on dependencies, generate arguments for protocol buffers generation
 SET(PROTOCOLBUFFERS_GENS GENERATE_CPP)
 SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${PROTOCOLBUFFERS_GENS})
-IF(MONO_FOUND AND PROTOCOLBUFFERS_SUPPORTS_CSHARP)
-  SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_CSHARP CSHARP_OUTPUTDIR ${CSHARP_SCRIPTS_PROTOCOL})
-ENDIF()
 
-#needed for scene converter irrespective of IronPython
-SET(SCRIPTING_PROTOCOLBUFFERS_GENS ${SCRIPTING_PROTOCOLBUFFERS_GENS} GENERATE_PYTHON PYTHON_OUTPUTDIR ${IRONPYTHON_SCRIPTS_PROTOCOL})
 
 SET(PROTOCOLBUFFERS_CPP_HEADER "#include \"sirikata/core/util/Standard.hh\"\n")
 
@@ -1038,70 +994,6 @@ IF(OGRE_ZIP_PATH)
 ENDIF()
 #source files
 
-SET(AdditionalProtoDepends)
-FOREACH(FILE ${ScriptingProtocolBuffersSources})
-   SET(AdditionalProtoDepends ${AdditionalProtoDepends} ${IRONPYTHON_SCRIPTS_PROTOCOL}/${FILE}_pb2.py)
-ENDFOREACH()
-ADD_CUSTOM_TARGET(SirikataPythonProtocol ALL
-           DEPENDS ${AdditionalProtoDepends}
-           COMMENT "Checking ${AdditionalProtoDepends}")
-
-IF(MONO_FOUND)
-  SET(SirikataProtoScriptSources ${SirikataProtoScriptSources})
-  FOREACH(FILE ${ScriptingProtocolBuffersSources})
-     SET(SirikataProtoScriptSources ${SirikataProtoScriptSources}
-  ${CSHARP_SCRIPTS_PROTOCOL}/${FILE}.pbj.cs ${CSHARP_SCRIPTS_PROTOCOL}/${FILE}.cs )
-  ENDFOREACH()
-
-  SET(SirikataProtoScriptSources ${SirikataProtoScriptSources} ${TOP_LEVEL}/externals/pbj/PBJ.cs)
-  SET(SirikataProtoScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  SET(SirikataProtoScriptRuntime_LIBRARY ${SirikataProtoScriptRuntime_LIBRARY_DIR}/Sirikata.Protocol.dll)
-  IF(PROTOCOLBUFFERS_SUPPORTS_CSHARP)
-    ADD_CUSTOM_TARGET(SirikataScriptProtocol ALL
-                  DEPENDS ${SirikataProtoScriptSources} ${SirikataProtoScriptRuntime_LIBRARY}
-                  COMMENT "Checking Sirikata.Protocol.dll")
-    ADD_CUSTOM_COMMAND(OUTPUT ${SirikataProtoScriptRuntime_LIBRARY}
-                   COMMAND ${GMCS_EXECUTABLE} -debug
-                                     -target:library
-                                     -out:${SirikataProtoScriptRuntime_LIBRARY}
-                                     -warn:2 -nowarn:3021
-                                     -r:${PROTOCOLBUFFERS_BIN_DIRS}/Google.ProtocolBuffers.dll
-                                     ${SirikataProtoScriptSources}
-                   DEPENDS ${SirikataProtoScriptSources}
-                   COMMENT "Building Sirikata.Protocol.dll")
-  ENDIF()
-  SET(SirikataProtoScriptRuntimeBuildOutputs ${SirikataProtoScriptRuntime_LIBRARY} ${SirikataProtoScriptRuntime_LIBRARY}.mdb)
-  SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${SirikataProtoScriptRuntimeBuildOutputs}")
-
-
-  # Note: Can't use GLOB here because of Python objects
-  SET(SirikataScriptSources
-       ${CSHARP_SCRIPTS_ROOT}/HostedObject.cs
-       ${CSHARP_SCRIPTS_ROOT}/Time.cs
-     )
-  IF(IRON_PYTHON_FOUND)
-    SET(SirikataScriptSources ${SirikataScriptSources} ${CSHARP_SCRIPTS_ROOT}/PythonObject.cs)
-  ENDIF()
-
-  SET(SirikataScriptRuntime_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  SET(SirikataScriptRuntime_LIBRARY ${SirikataScriptRuntime_LIBRARY_DIR}/Sirikata.Runtime.dll)
-  ADD_CUSTOM_TARGET(SirikataScriptRuntime ALL
-                  DEPENDS ${SirikataScriptSources} ${SirikataScriptRuntime_LIBRARY}
-                  COMMENT "Checking Sirikata.Runtime.dll")
-  ADD_CUSTOM_COMMAND(OUTPUT ${SirikataScriptRuntime_LIBRARY}
-                   COMMAND ${GMCS_EXECUTABLE} -debug
-                                     -target:library
-                                     -out:${SirikataScriptRuntime_LIBRARY}
-                                     -warn:2
-                                     ${CECIL_LIBRARIES}
-                                     ${IRON_PYTHON_LIBRARIES}
-                                     ${SirikataScriptSources}
-                   DEPENDS ${SirikataScriptSources}
-                   COMMENT "Building Sirikata.Runtime.dll")
-  SET(SirikataScriptRuntimeBuildOutputs ${SirikataScriptRuntime_LIBRARY} ${SirikataScriptRuntime_LIBRARY}.mdb)
-  SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${SirikataScriptRuntimeBuildOutputs}")
-
-ENDIF()
 
 #IF(WIN32)
 #ADD_DEFINITIONS(/FI\"${LIBCORE_INCLUDE_DIR}/sirikata/core/util/Platform.hpp\")
@@ -1673,9 +1565,6 @@ ENDIF()
 IF(OpenCOLLADA_FOUND)
 SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${OpenCOLLADA_LIBRARY_DIRS})
 ENDIF()
-IF(MONO_FOUND)
-SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${MONO_LIBRARY_DIRS})
-ENDIF()
 IF(bullet_FOUND)
 SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${bullet_LIBRARY_DIRS})
 ENDIF()
@@ -1954,38 +1843,6 @@ ENDIF()
 
 
 
-SET(LIBOH_PLUGIN_MONO_DIR ${LIBOH_PLUGIN_DIR}/monoscript)
-SET(LIBOH_PLUGIN_MONO_SOURCES
- ${LIBOH_PLUGIN_MONO_DIR}/MonoArray.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoPlugin.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoSystem.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoClass.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoAssembly.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoContext.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoConvert.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoDelegate.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoDomain.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoException.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoHostedObjectExports.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoIDictionary.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoIList.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoMethodLookupCache.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoObject.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoVWObjectScriptManager.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoVWObjectScript.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoPropertyLookupCache.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoThread.cpp
- ${LIBOH_PLUGIN_MONO_DIR}/MonoUtil.cpp
-    )
-IF(MONO_FOUND)
-ADD_PLUGIN_TARGET(monoscript
-                    SOURCES ${LIBOH_PLUGIN_MONO_SOURCES}
-                    TARGET_CXXFLAGS ${MONO_CFLAGS}
-                    TARGET_LDFLAGS ${MONO_LDFLAGS} ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
-                    LIBRARIES ${MONO_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB})
-SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} monoscript)
-ENDIF()
 
 
 SET(LIBOH_PLUGIN_JS_DIR ${LIBOH_PLUGIN_DIR}/js)
@@ -2590,62 +2447,6 @@ ENDIF()
 
 ENDIF()
 
-IF(MONO_FOUND)
-  INSTALL(PROGRAMS
-          ${SirikataScriptRuntime}
-        DESTINATION lib/)
-  INSTALL(PROGRAMS
-        ${SirikataScriptRuntime_LIBRARY}
-        DESTINATION lib/)
-
-  IF(PROTOCOLBUFFERS_SUPPORTS_CSHARP)
-    INSTALL(PROGRAMS
-              ${SirikataScriptProtocol}
-            DESTINATION lib/)
-    INSTALL(PROGRAMS
-              ${SirikataProtoScriptRuntime_LIBRARY}
-            DESTINATION lib/)
-  ENDIF()
-
-  INSTALL(DIRECTORY
-          ${IRON_PYTHON_ROOT}/
-          FILE_PERMISSIONS ${EXEC_PERMS}
-          DESTINATION lib/)
-  IF(MONO_ROOT AND EXISTS ${MONO_ROOT})
-    INSTALL(PROGRAMS
-        ${MONO_ROOT}/lib/mono/2.0/System.Xml.dll
-        DESTINATION lib/)
-    INSTALL(DIRECTORY
-          ${MONO_ROOT}/lib/
-          FILE_PERMISSIONS ${EXEC_PERMS}
-          DESTINATION lib/
-          #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-	  PATTERN "*zlib1.dll" EXCLUDE
-          PATTERN "*.xsd" EXCLUDE
-          PATTERN "*.config" EXCLUDE
-          PATTERN "*.rsp" EXCLUDE
-          PATTERN "*.targets" EXCLUDE
-          PATTERN "*.zip" EXCLUDE
-          PATTERN "*.cs" EXCLUDE
-          PATTERN "*.tree" EXCLUDE
-          PATTERN "*.mdb" EXCLUDE
-          PATTERN "*.exe" EXCLUDE
-          PATTERN "*.la" EXCLUDE
-          PATTERN "*.a" EXCLUDE
-          PATTERN "*.xml*" EXCLUDE
-#         PATTERN "*.pc" EXCLUDE
-#          PATTERN "*.so*" EXCLUDE
-          PERMISSIONS ${EXEC_PERMS})
-  ENDIF()
-  IF(WIN32)
-    INSTALL(DIRECTORY ${MONO_ROOT}/bin/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
-  	    PATTERN "*zlib1.dll" EXCLUDE
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ENDIF()
-ENDIF()
 
 #install curl #MUST BE DONE AFTER MONO to get correct libz
 IF(CURL_ROOT)
