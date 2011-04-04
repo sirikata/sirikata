@@ -2241,6 +2241,7 @@ SET(EXEC_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_EXECUTE GROUP_READ WOR
 INSTALL(TARGETS
           ${PBJ_BINARY}
           ${SIRIKATA_CORE_LIB}
+          ${SIRIKATA_SQLITE_LIB}
           ${SIRIKATA_SPACE_LIB}
           ${SIRIKATA_MESH_LIB}
           ${SIRIKATA_PROXYOBJECT_LIB}
@@ -2363,7 +2364,12 @@ ENDIF()
 
 IF(OGRE_FOUND)
   IF(WIN32)
-    INSTALL(DIRECTORY ${OGRE_ROOT}/bin/
+    IF(ISDEBUG)
+      SET(OGRE_BIN_SUBFOLDER "debug/")
+    ELSE()
+      SET(OGRE_BIN_SUBFOLDER "release/")
+    ENDIF()
+    INSTALL(DIRECTORY ${OGRE_ROOT}/bin/${OGRE_BIN_SUBFOLDER}
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION bin/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
@@ -2392,7 +2398,7 @@ ENDIF()
 #install boost
 IF(BOOST_ROOT)
   IF(WIN32)
-    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}/boost_1_37_0/bin ${PLATFORM_LIBS}/installed-boost/lib)
+    FOREACH(Boost_LIBRARY_DIR ${PLATFORM_LIBS}/boost_1_35_0/lib ${PLATFORM_LIBS}/boost_1_37_0/lib ${PLATFORM_LIBS}/boost_1_37_0/bin ${PLATFORM_LIBS}/boost_1_44_0/lib ${PLATFORM_LIBS}/installed-boost/lib)
       IF(EXISTS ${Boost_LIBRARY_DIR})
       INSTALL(DIRECTORY ${Boost_LIBRARY_DIR}/
             FILE_PERMISSIONS ${EXEC_PERMS}
@@ -2416,6 +2422,19 @@ IF(BOOST_ROOT)
             DESTINATION lib/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
+  ENDIF()
+ENDIF()
+
+#install gsl
+IF(GSL_FOUND)
+  IF(WIN32)
+    INSTALL(DIRECTORY ${GSL_ROOT}/bin/
+      FILE_PERMISSIONS ${EXEC_PERMS}
+      DESTINATION bin/
+      PATTERN "*.exe" EXCLUDE
+      )
+  ELSE()
+    # System provided dependency, nothing to install.
   ENDIF()
 ENDIF()
 
