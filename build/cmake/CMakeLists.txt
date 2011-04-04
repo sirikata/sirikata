@@ -1886,6 +1886,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${EMERSON_WHEN_PRED_SRCS}
   )
 IF(V8_FOUND)
+SET(BUILDING_JS_PLUGIN TRUE)
 ADD_DEFINITIONS(-DHAVE_JS_SCRIPTING)
 ADD_PLUGIN_TARGET(scripting-js
                     SOURCES ${LIBOH_PLUGIN_JS_SOURCES}
@@ -2491,6 +2492,14 @@ IF(CURL_ROOT)
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
             PATTERN "*.exe" EXCLUDE)
   ENDIF()
+ENDIF()
+
+# If V8 was found, we're buildin
+IF(BUILDING_JS_PLUGIN)
+  # data for ogre, including web views
+  INSTALL(DIRECTORY ${TOP_LEVEL}/liboh/plugins/js/scripts/
+    DESTINATION share/js/scripts/
+    )
 ENDIF()
 
 INSTALL(DIRECTORY

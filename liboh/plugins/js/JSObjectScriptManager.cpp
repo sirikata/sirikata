@@ -74,7 +74,7 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
         "jsobjectscriptmanager",this,
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
-        import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts,../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
         mDefaultScript = new OptionValue("default-script", "std/default.em", OptionValueType<String>(), "Default script to execute when an initial script is not specified."),
         NULL
     );
@@ -230,13 +230,13 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
-    
+
     //check what permissions fake root is loaded with
     mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
     mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
     mSystemTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSSystem::root_canProx));
     mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
-    
+
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
@@ -248,13 +248,13 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
     mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
-    
+
 
     mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
     mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
     mSystemTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSSystem::root_reset));
     mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
-    
+
 }
 
 /*
@@ -275,7 +275,7 @@ void JSObjectScriptManager::createContextTemplate()
     mContextTemplate->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSContext::ScriptSuspend));
     mContextTemplate->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSContext::ScriptResume));
     mContextTemplate->Set(v8::String::New("clear"), v8::FunctionTemplate::New(JSContext::ScriptClear));
-    
+
 }
 
 
@@ -393,7 +393,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   //using JSVisible sendmessage so that don't have to re-write a bunch of code.
   proto_t->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));
-  
+
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 
@@ -407,7 +407,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSPresence::pres_resume));
 
 
-  
+
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
   instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
