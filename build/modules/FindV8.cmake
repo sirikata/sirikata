@@ -51,13 +51,13 @@ ENDIF()
 
 # Without system dirs
 FIND_LIBRARY(V8_LIBRARIES
-  NAMES v8
+  NAMES v8 v8_g
   PATHS ${V8_LIBRARY_DIRS}
   NO_DEFAULT_PATH
   )
 IF(NOT V8_LIBRARIES)  # now look in system locations
   FIND_LIBRARY(V8_LIBRARIES
-    NAMES v8
+    NAMES v8 v8_g
     )
 ENDIF(NOT V8_LIBRARIES)
 
