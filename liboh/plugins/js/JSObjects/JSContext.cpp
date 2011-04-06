@@ -16,7 +16,9 @@ namespace JS{
 namespace JSContext{
 
 
-
+/**
+Calling suspends sandbox. (Until resume is called, no code within sandbox will execute.)
+ */
 v8::Handle<v8::Value> ScriptSuspend(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -30,7 +32,9 @@ v8::Handle<v8::Value> ScriptSuspend(const v8::Arguments& args)
     return jscont->suspend();
 }
 
-
+/**
+   Resumes suspended sandbox.
+ */
 v8::Handle<v8::Value> ScriptResume(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -45,7 +49,10 @@ v8::Handle<v8::Value> ScriptResume(const v8::Arguments& args)
 }
     
 
-//Destroys all objects that were created in this context + all of this context's subcontexts.
+/**
+   Destroys all objects that were created in this context + all of this
+   context's subcontexts.
+*/
 v8::Handle<v8::Value> ScriptClear(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -60,6 +67,9 @@ v8::Handle<v8::Value> ScriptClear(const v8::Arguments& args)
 }
 
 
+/*
+  @param function object to execute within sandbox
+ */
 v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 {
     if (args.Length() == 0)

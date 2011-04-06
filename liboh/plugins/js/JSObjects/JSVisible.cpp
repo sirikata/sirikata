@@ -19,7 +19,13 @@ namespace Sirikata {
 namespace JS {
 namespace JSVisible {
 
+/**
+   @param Vec3.  
+   @return Number.
 
+   Returns the distance from this visible object to the position
+   specified by first argument vector.
+ */
 v8::Handle<v8::Value> dist(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -46,7 +52,11 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
 }
 
 
+/**
+   @return Vec3 associated with the position of this visible object.
 
+   Note: the returned value may be stale if the visible object is far away from you.
+ */
 v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -61,6 +71,11 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
 }
 
 
+/**
+   @return Number associated with the velocity at which this visible object is travelling.
+
+   Note: the returned value may be stale if the visible object is far away from you.
+ */
 Handle<v8::Value> getVelocity(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -74,6 +89,12 @@ Handle<v8::Value> getVelocity(const v8::Arguments& args)
     return jsvis->struct_getVelocity();
 }
 
+
+/**
+   @return Quaternion associated with visible object's orientation.
+
+   Note: the returned value may be stale if the visible object is far away from you.
+ */
 Handle<v8::Value> getOrientation(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -87,6 +108,11 @@ Handle<v8::Value> getOrientation(const v8::Arguments& args)
     return jsvis->struct_getOrientation();
 }
 
+/**
+   @return Angular velocity of visible object (rad/s).
+
+   Note: the returned value may be stale if the visible object is far away from you.
+ */
 Handle<v8::Value> getOrientationVel(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -101,6 +127,10 @@ Handle<v8::Value> getOrientationVel(const v8::Arguments& args)
 }
 
 
+/*
+  @return Number associated with how large the visible object is compared to the
+  mesh it came from.  
+ */
 Handle<v8::Value> getScale(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -142,7 +172,12 @@ v8::Handle<v8::Value> __debugRef(const v8::Arguments& args)
 }
 
 
+/**
+   @param Message object to send.
 
+   Sends a message to the presence associated with this visible object from the
+   presence that can see this visible object.
+ */
 v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -201,6 +236,12 @@ bool isVisibleObject(v8::Handle<v8::Value> v8Val)
 
 }
 
+
+/**
+   @return Boolean.  If true, positions and velocities for this visible object
+   are automatically being updated by the system.
+
+ */
 v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -215,6 +256,12 @@ v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
 
 }
 
+
+/**
+   @param Visible object.
+   @return Returns true if the visible objects correspond to the same presence
+   in the virtual world.
+ */
 v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
 {
     if (args.Length() != 1)

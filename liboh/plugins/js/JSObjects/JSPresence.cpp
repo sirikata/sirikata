@@ -46,10 +46,10 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 
 }
 
-//Takes presence and sets its current velocity and orientation velocity to zero.
-//Maybe make it so that it doesn't receive any messages either?  No.  Then
-//wouldn't be able to resume it.
-//Requires no args.
+/**
+Takes presence and sets its current velocity and orientation velocity to zero.
+Requires no args.
+*/
 v8::Handle<v8::Value> pres_suspend(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -64,9 +64,11 @@ v8::Handle<v8::Value> pres_suspend(const v8::Arguments& args)
     return jspres->suspend();
 }
 
-//Reset's the presence's velocity and orientational velocity to what it was
-//before suspend was called.  If suspend had not been already called, do
-//nothing.  Requires no args.
+/**
+Reset's the presence's velocity and orientational velocity to what it was
+before suspend was called.  If suspend had not been already called, do
+nothing.  Requires no args.
+*/
 v8::Handle<v8::Value> pres_resume(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -82,9 +84,10 @@ v8::Handle<v8::Value> pres_resume(const v8::Arguments& args)
 }
 
 
-
-//this function allows the presence to return a visible object version of
-//itself.  Requires no args
+/**
+this function allows the presence to return a visible object version of
+itself.  Requires no args
+*/
 v8::Handle<v8::Value> toVisible(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -101,9 +104,10 @@ v8::Handle<v8::Value> toVisible(const v8::Arguments& args)
 
 
 
-//changine this function to actually do something
-//args should contain a string that can be converted to a uri
-//FIXME: Should maybe also have a callback function inside
+/**
+   @param Requires a string argument corresponding to the mesh to set to's uri.
+   Changes the mesh of the associated presence.
+ */
 Handle<v8::Value> setMesh(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -124,6 +128,12 @@ Handle<v8::Value> setMesh(const v8::Arguments& args)
     return mStruct->setVisualFunction(uriLocation);
 }
 
+
+/**
+   Loads a graphical window associated with this presence.
+   @param Single argument corresponds to what type of window to open.  (Should
+   probably be 'ogregraphics'.)
+ */
 v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -145,7 +155,14 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
     return mStruct->runSimulation(simname);
 }
 
+/**
+   @param Function to execute when an presence satisfies your solid angle query.
+   Function takes in a single argument corresponding to the visible object
+   associated with the presence that satisfies your solid angle query.
 
+   Setting an onProxAdded ensures that the system calls the function passed in
+   when other presences become close enough to your presence.
+ */
 v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
 {
     String errorMessage = "Error in ScriptOnProxAddedEvent while decoding presence.  ";
@@ -211,6 +228,16 @@ void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSe
 }
 
 
+/**
+   @param Function to execute when a presence changes from satisfying your solid
+   angle query to not satisfying your solid angle query.  Function takes in a
+   single argument corresponding to the visible object associated with the
+   presence that no longer satisfies your solid angle query.
+
+   Setting an onProxRemoved ensures that the system calls the function passed in
+   when other presences that were close enough to be within your solid angle
+   result set no longer are.
+ */
 v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 {
 
@@ -238,6 +265,10 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         //changine this function to actually do something
         //args should contain a string that can be converted to a uri
         //FIXME: Should maybe also have a callback function inside
+/**
+   @return A string corresponding to the URI for your current mesh.  Can pass
+   this uri to setMesh functions.
+ */
         Handle<v8::Value> getMesh(const v8::Arguments& args)
         {
 
@@ -251,6 +282,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
+/**
+   @param Vec3.  (To create a Vec3, use new util.Vec3(0,0,0).)
+
+   Teleports this presence to the position specified by argument.
+ */
         v8::Handle<v8::Value>  setPosition(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -275,6 +311,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
+/**
+   @return Returns a vec3 corresponding to the current position of this presence.
+ */
         Handle<v8::Value>      getPosition(const v8::Arguments& args)
         {
 
@@ -289,7 +328,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
+/**
+   @param Vec3.  (To create a Vec3, use new util.Vec3(0,0,0).)
 
+   Changes the velocity of this presence to be Vec3.
+ */
         v8::Handle<v8::Value>  setVelocity(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -314,7 +357,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             return mStruct->struct_setVelocity(newVel);
         }
 
-
+/**
+   @return Returns a vec3 corresponding to the current velocity of this presence.
+ */
         Handle<v8::Value> getVelocity(const v8::Arguments& args)
         {
 
@@ -329,7 +374,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
-
+/**
+   @return Returns a quaternion corresponding to the current orientation of this presence.
+ */
         Handle<v8::Value>      getOrientation(const v8::Arguments& args)
         {
             String errorMessage = "Error in getOrientation while decoding presence.  ";
@@ -341,6 +388,12 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             return mStruct->struct_getOrientation();
         }
 
+/**
+   @param Requires a quaternion (new util.Quaternion(0,0,0,1);).
+
+   Changes the orientation of the presence to that associated with quaternion
+   passed in.
+ */
         v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -367,6 +420,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
+/**
+   @return a number corresponding to angular velocity of presence (rads/s).
+ */
         Handle<v8::Value> getOrientationVel(const v8::Arguments& args)
         {
             String errorMessage = "Error in getOrientationVel while decoding presence.  ";
@@ -378,7 +434,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             return mStruct->struct_getOrientationVel();
         }
 
+/**
+   @param a number in rads/s
 
+   Sets the angular velocity of the presence.
+ */
         v8::Handle<v8::Value>  setOrientationVel(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -403,6 +463,14 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
+/**
+   @param Number in sterradians.
+
+   Sets the solid angle query associated with the presence.  Ie. asks the system
+   to return all presences that appear larger than parameter passed in.  
+   Roughly, the higher this number is, the fewer presences will cause the function associated with
+   onProxAdded to be called.  (Reasonable ranges from my experience: .1-4.
+ */
         v8::Handle<v8::Value> setQueryAngle(const v8::Arguments& args)
         {
             if (args.Length() != 1)
@@ -425,6 +493,11 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
         }
 
 
+/**
+   @return A number indicating the scale of the presence.
+
+   Returns the scale of the object.  1 is unit scale.
+ */
 Handle<v8::Value> getScale(const v8::Arguments& args)
 {
     String errorMessage = "Error in getScale while decoding presence.  ";
@@ -437,6 +510,13 @@ Handle<v8::Value> getScale(const v8::Arguments& args)
 }
 
 
+/**
+   @param A number indicating the scale of the presence.
+
+   Change the scale of this presence.  Ie make it larger by putting in a number
+   greater than its current scale, or smaller by putting in a number less than
+   its current scale.
+ */
 v8::Handle<v8::Value> setScale(const v8::Arguments& args)
 {
     if (args.Length() != 1)

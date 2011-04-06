@@ -21,6 +21,10 @@ namespace Sirikata {
 namespace JS {
 namespace JSSystem {
 
+/**
+   @return Boolean indicating whether this sandbox has permission to send out of
+   its default presence.
+ */
 v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args)
 {
     String errorMessage = "Error decoding the system object from root_canSendMessage.  ";
@@ -32,6 +36,13 @@ v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args)
     return jsfake->struct_canSendMessage();
 }
 
+/**
+   @param String corresponding to the filename to look for file to include.
+
+   Library include mechanism.  Calling require makes it so that system searches
+   for file named by argument passed in.  If system hasn't already executed this
+   file, it reads file, and executes it.  (See import as well.)
+ */
 v8::Handle<v8::Value> root_require(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -49,7 +60,7 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
     return jsfake->struct_require(native_filename);
 }
 
-/*
+/**
   Takes no parameters.  Destroys all created objects, except presences in the
   root context.  Then executes script associated with root context.  (Use
   system.setScript to set this script.)
@@ -98,6 +109,10 @@ v8::Handle<v8::Value> root_setScript(const v8::Arguments& args)
 }
 
 
+/**
+   @return Boolean indicating whether this sandbox has permission to receive
+   general messages.
+ */
 v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
 {
     String errorMessage = "Error decoding the system object from root_canRecvMessage.  ";
@@ -109,6 +124,10 @@ v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
     return jsfake->struct_canRecvMessage();    
 }
 
+/**
+   @return Boolean indicating whether this sandbox has permission to receive
+   import files.
+ */
 v8::Handle<v8::Value> root_canImport(const v8::Arguments& args)
 {
     String errorMessage = "Error decoding the system object from root_canImport.  ";
@@ -120,7 +139,10 @@ v8::Handle<v8::Value> root_canImport(const v8::Arguments& args)
     return jsfake->struct_canImport();
 }
 
-
+/**
+   @return Boolean indicating whether this sandbox has capability to set
+   proximity queries associated with its default presence.
+ */
 v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
 {
     String errorMessage = "Error decoding the system object from root_canProx.  ";
@@ -134,8 +156,14 @@ v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
 
 
 
+/**
+   @param String corresponding to the filename to look for file to include.
 
-
+   Library include mechanism.  Calling import makes it so that system searches
+   for file named by argument passed in.  Regardless of whether system has
+   already executed this file, it reads file, and executes it.  (See require as
+   well.)
+ */
 v8::Handle<v8::Value> root_import(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -164,11 +192,19 @@ v8::Handle<v8::Value> root_import(const v8::Arguments& args)
     return jsfake->struct_import(native_filename);
 }
 
+/**
+   @return String corresponding to version number of Emerson.
+ */
 v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args)
 {
     return v8::String::New( JSSystemNames::EMERSON_VERSION);
 }
 
+/**
+   @return Vec3 corresponding to position of default presence sandbox is
+   associated with.  Calling from root sandbox, or calling on a sandbox for
+   which you do not have capabilities to query for position throws an exception.
+ */
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
 {
     String errorMessage = "Error decoding the system object from root_getPosition.  ";
@@ -180,6 +216,12 @@ v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
     return jsfake->struct_getPosition();
 }
 
+
+/**
+   @param Object or value to print
+
+   Prints the object or value to scripting window.
+ */
 v8::Handle<v8::Value> root_print(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -198,7 +240,14 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args)
     return jsfake->struct_print(toPrint);    
 }
 
+/**
+   @param A message object.
 
+   Tries to send argument to writer of code in this sandbox (external presence)
+   from the internal presence that this sandbox is associated with.  Calling
+   from root sandbox, or calling on a sandbox for which you do not have
+   capabilities to query for position throws an exception.
+*/
 v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -228,8 +277,20 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 
 
 
-//first arg is a mesh to be associated with the presence
-//second arg is an initialization function for the presence.
+/**
+   @param String that contains a uri for a mesh for the new presence.
+   @param Function to be called when presence gets connected to the world.
+   (Function has form func (pres), where pres contains the presence just
+   connected.)
+   @return Presence object.  Presence is not connected to world until receive
+   notification.  (Ie, don't call setVelocity, setPosition, etc. until the
+   second paramater has been called.)
+
+   Note: throws an exception if sandbox does not have capability to create
+   presences.
+   Note 2: Presence's initial position is the same as the presence that created
+   it.  Scale is set to 1.
+*/
 v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 {
     if (args.Length() != 2)
@@ -259,9 +320,18 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 }
 
 
-//first argument is the position of the new entity
-//second argument is the name of the file to execute scripts from
-//third argument is the mesh file to use.
+
+/**
+   @param Vec3 (eg. new util.Vec3(0,0,0);).  Corresponds to position to place
+   new entity in world.
+
+   @param String.  Name of file to import code for new entity from.
+   @param String.  Mesh uri corresponding to mesh you want to use for this
+   entity.
+
+   Note: calling create_entity in a sandbox without the capabilities to create
+   entities throws an exception.
+ */
 v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 {
     if (args.Length() != 6)
@@ -335,24 +405,38 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 }
 
 
+   Tries to send argument to writer of code in this sandbox (external presence)
+   from the internal presence that this sandbox is associated with.  Calling
+   from root sandbox, or calling on a sandbox for which you do not have
+   capabilities to query for position throws an exception.
 
 
 //fake root in context can already send messages to who instantiated it and
 //receive messages from who instantiated it.
 //messages sent out of it get stamped with a port number automatically
 
-//argument 0: the presence that the context is associated with.  (will use
-//this as sender of messages).  If this arg is null, then just passes through
-//the parent context's presence
-//argument 1: a visible object that can always send messages to.  if null, will
-//use same spaceobjectreference as one passed in for arg0.
-//argument 2: true/false.  can I send messages to everyone?
-//argument 3: true/false.  can I receive messages from everyone?
-//argument 4: true/false.  can I make my own prox queries
-//argument 5: true/false.  can I import
-//argument 6: true/false.  can I create presences.
-//argument 7: true/false.  can I create presences.
-//argument 8: true/false.  can I call eval directly through system object.
+/**    
+  @param the presence that the context is associated with.  (will use this as
+  sender of messages).  If this arg is null, then just passes through the parent
+  context's presence
+
+  @param a visible object that can always send messages to.  if
+  null, will use same spaceobjectreference as one passed in for arg0.
+
+  @param Boolean.  can I send messages to everyone?
+
+  @param Boolean.  can I receive messages from everyone?
+
+  @param Boolean.  can I make my own prox queries argument
+
+  @param Boolean.  can I import argument
+
+  @param Boolean.  can I create presences.  
+
+  @param Boolean.  can I create presences.
+
+  @param Boolean.  can I call eval directly through system object.
+*/
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 {
     if (args.Length() != 9)
@@ -452,6 +536,11 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 
 
 
+/**
+   @param String corresponding to valid Emerson code to execute.
+
+   Executes string within current sandbox.
+ */
 v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -473,8 +562,14 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 }
 
 
+/**
+   @param Number.  How long to wait before executing callback function (2nd
+   arg).  (Units of seconds.)
+   @param Funciton.
 
-
+   timeout sets a timer.  When the number of seconds specified by arg 1 have
+   elapsed, executes function specified by arg2.
+ */
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 {
 
@@ -608,7 +703,11 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 }
 
 
-
+/**
+   @param Function to execute when a presence created within this sandbox gets
+   connected to the world.  Function takes a single argument that corresponds to
+   the presence that just connected to the world.
+ */
 v8::Handle<v8::Value> root_onPresenceConnected(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -633,6 +732,12 @@ v8::Handle<v8::Value> root_onPresenceConnected(const v8::Arguments& args)
 }
 
 
+
+/**
+   @param Function to execute when a presence created within this sandbox gets
+   disconnected to the world.  Function takes a single argument that corresponds to
+   the presence that just disconnected from the world.
+ */
 v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
 {
     if (args.Length() != 1)

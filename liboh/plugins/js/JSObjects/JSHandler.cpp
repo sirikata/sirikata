@@ -10,6 +10,9 @@ namespace Sirikata {
 namespace JS {
 namespace JSHandler{
 
+/**
+   For debugging mostly.  Prints the pattern that this message handler matches
+ */
 v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
 {
     //get the target object whose context owns it.
@@ -28,6 +31,10 @@ v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
     return v8::Undefined();
 }
 
+
+/**
+   Calling suspend prevents this handler from being triggered until it's resumed.
+ */
 v8::Handle<v8::Value> _suspend(const v8::Arguments& args)
 {
     JSObjectScript* caller;
@@ -37,13 +44,14 @@ v8::Handle<v8::Value> _suspend(const v8::Arguments& args)
     if (handler == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot suspend: handler has already been cleared.")));
 
-
-    
     handler->suspend();
     
     return v8::Undefined();
 }
 
+/**
+   Resuming a suspended handler allows it to be triggered in response to message events.
+ */
 v8::Handle<v8::Value> _resume(const v8::Arguments& args)
 {
     JSObjectScript* caller;
@@ -58,6 +66,9 @@ v8::Handle<v8::Value> _resume(const v8::Arguments& args)
     return v8::Undefined();
 }
 
+/**
+   @return Returns a boolean for whether the handler is currently suspended or not.
+ */
 v8::Handle<v8::Value> _isSuspended(const v8::Arguments& args)
 {
     JSObjectScript* caller;
@@ -70,6 +81,10 @@ v8::Handle<v8::Value> _isSuspended(const v8::Arguments& args)
     return v8::Boolean::New(handler->getIsSuspended());
 }
 
+/**
+   When clear a handler, handler will never be triggered again (even if call
+   resume on it).
+ */
 v8::Handle<v8::Value> _clear(const v8::Arguments& args)
 {
     JSObjectScript* caller;

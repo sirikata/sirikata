@@ -49,7 +49,9 @@ v8::Handle<v8::Value> resetTimer(const v8::Arguments& args)
 }
 
 
-//actually turns the timer off until call reset on it.
+/**
+   Calling clear prevents the timer from ever re-firing again.
+ */
 v8::Handle<v8::Value> clear(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -64,7 +66,9 @@ v8::Handle<v8::Value> clear(const v8::Arguments& args)
     return jstimer->clear();
 }
 
-
+/**
+   Calling suspend prevents the timer from firing again until it is resumed.
+ */
 v8::Handle<v8::Value> suspend(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -80,6 +84,11 @@ v8::Handle<v8::Value> suspend(const v8::Arguments& args)
     
 }
 
+
+/**
+   Calling this function on a timer makes it so that the timer's associated
+   callback will fire however many seconds from now the timer was initialized with.
+ */
 v8::Handle<v8::Value> resume(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -95,6 +104,9 @@ v8::Handle<v8::Value> resume(const v8::Arguments& args)
 
 }
 
+/**
+   @return Boolean corresponding to whether the timer is currently suspended.
+ */
 v8::Handle<v8::Value> isSuspended(const v8::Arguments& args)
 {
     if (args.Length() != 0)
