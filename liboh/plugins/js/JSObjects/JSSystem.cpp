@@ -405,11 +405,6 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 }
 
 
-   Tries to send argument to writer of code in this sandbox (external presence)
-   from the internal presence that this sandbox is associated with.  Calling
-   from root sandbox, or calling on a sandbox for which you do not have
-   capabilities to query for position throws an exception.
-
 
 //fake root in context can already send messages to who instantiated it and
 //receive messages from who instantiated it.
