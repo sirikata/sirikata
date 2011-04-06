@@ -228,6 +228,7 @@ protected:
 
     struct ButtonState {
         Modifier mod;
+        Time initialTime;
         Time lastTime;
     };
     typedef std::tr1::unordered_map<unsigned int, ButtonState> ButtonSet;

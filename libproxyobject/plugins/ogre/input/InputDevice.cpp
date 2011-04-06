@@ -60,7 +60,9 @@ bool InputDevice::changeButton(unsigned int button, bool newState, Modifier &mod
             // may have different set of modifiers.
             ButtonState newstate;
             newstate.mod = modifiers;
-            newstate.lastTime = Time::null();
+            Time tnow = Timer::now();
+            newstate.initialTime = tnow;
+            newstate.lastTime = tnow;
             buttonState.insert(ButtonSet::value_type(button,newstate));
         }
     } else {
@@ -88,7 +90,9 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
             }
             em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
-            buttonState.find(button)->second.lastTime = Timer::now();
+            Time tnow = Timer::now();
+            buttonState.find(button)->second.initialTime = tnow;
+            buttonState.find(button)->second.lastTime = tnow;
         } else {
             em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
         }
@@ -99,12 +103,18 @@ bool InputDevice::fireButton(const InputDevicePtr &thisptr,
                 em->fire(EventPtr(new ButtonReleased(thisptr, button, oldmodifiers)));
                 em->fire(EventPtr(new ButtonPressed(thisptr, button, modifiers)));
                 assert(buttonState.find(button) != buttonState.end());
+                Time tnow = Timer::now();
+                buttonState.find(button)->second.initialTime == Timer::now();
                 buttonState.find(button)->second.lastTime == Timer::now();
             }
             else {
                 // Otherwise, we're really in repeat mode
                 Time tnow = Timer::now();
-                if (tnow - buttonState.find(button)->second.lastTime > Duration::seconds(1.f/15) ) {
+                static Duration repeat_delay( Duration::seconds(1.f/4) );
+                static Duration repeat_rate( Duration::seconds(1.f/15) );
+                Duration since_initial = tnow - buttonState.find(button)->second.initialTime;
+                Duration since_last = tnow - buttonState.find(button)->second.lastTime;
+                if (since_initial > repeat_delay && since_last > repeat_rate) {
                     em->fire(EventPtr(new ButtonRepeated(thisptr, button, modifiers)));
                     assert(buttonState.find(button) != buttonState.end());
                     buttonState.find(button)->second.lastTime = tnow;
