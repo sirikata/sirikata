@@ -44,18 +44,18 @@ LocalServerIDMap::LocalServerIDMap(const String& server_host, uint16 server_port
 }
 
 ServerID *LocalServerIDMap::lookupInternal(const Address4& address) {
-    SILOG(local_serverid_map,fatal,"[LocalServerIDMap] Tried to look up internal address in LocalServerIDMap.");
+    SILOG(local_serverid_map,detailed,"[LocalServerIDMap] Tried to look up internal address in LocalServerIDMap.");
     return NULL;
 }
 
 Address4 *LocalServerIDMap::lookupInternal(const ServerID& server_id) {
-    SILOG(local_serverid_map,fatal,"[LocalServerIDMap] Tried to look up internal address in LocalServerIDMap.");
+    SILOG(local_serverid_map,detailed,"[LocalServerIDMap] Tried to look up internal address in LocalServerIDMap.");
     return NULL;
 }
 
 ServerID *LocalServerIDMap::lookupExternal(const Address4& address) {
     if (address != mAddress) {
-        SILOG(local_serverid_map,fatal,"[LocalServerIDMap] External address lookup does not match known address.");
+        SILOG(local_serverid_map,detailed,"[LocalServerIDMap] External address lookup does not match known address.");
         return NULL;
     }
     return &mID;
@@ -63,7 +63,7 @@ ServerID *LocalServerIDMap::lookupExternal(const Address4& address) {
 
 Address4 *LocalServerIDMap::lookupExternal(const ServerID& server_id) {
     if (server_id != mID) {
-        SILOG(local_serverid_map,fatal,"[LocalServerIDMap] External server lookup does not match known ServerID.");
+        SILOG(local_serverid_map,detailed,"[LocalServerIDMap] External server lookup does not match known ServerID.");
         return NULL;
     }
     return &mAddress;
