@@ -36,7 +36,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
    mContext(ctx)
 {
     mContext->struct_registerSuspendable(this);
-    JSPositionListener::setListenTo(&_sporef,NULL);
+    JSPositionListener::setListenTo(&_sporef, &_sporef);
     JSPositionListener::registerAsPosListener();
 }
 
@@ -62,7 +62,7 @@ v8::Handle<v8::Value> JSPresenceStruct::suspend()
     Quaternion newOrientVel(0,0,0,1);
     setOrientationVelFunction(newOrientVel);
 
-    
+
     return JSSuspendable::suspend();
 }
 v8::Handle<v8::Value> JSPresenceStruct::resume()
@@ -110,7 +110,7 @@ HostedObject::PresenceToken JSPresenceStruct::getPresenceToken()
 void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 {
     v8::HandleScope handle_scope;
-    
+
     if (getIsConnected())
     {
         JSLOG(error, "Error when calling connect on presence.  The presence was already connected.");
@@ -201,7 +201,7 @@ void JSPresenceStruct::disconnect()
 {
     if (getIsCleared())
         return;
-    
+
     if (! getIsConnected())
         JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
 
