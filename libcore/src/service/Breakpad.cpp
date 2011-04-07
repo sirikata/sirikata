@@ -38,52 +38,91 @@
 #ifdef HAVE_BREAKPAD
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
 #include <client/windows/handler/exception_handler.h>
+#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+#include <client/linux/handler/exception_handler.h>
 #endif
-#endif
+#endif // HAVE_BREAKPAD
 
 namespace Sirikata {
 namespace Breakpad {
 
-namespace {
 #ifdef HAVE_BREAKPAD
+
+// Each implementation of ExceptionHandler and the setup are different enough
+// that these are worth just completely separating. Each just needs to setup the
+// exception handler. Currently, all should set it up to save minidumps to the
+// current directory.
+
+#if SIRIKATA_PLATFORM  == PLATFORM_WINDOWS
+namespace {
+
 static google_breakpad::ExceptionHandler* breakpad_handler = NULL;
 
-  bool finishedDump(const wchar_t* dump_path,
-		    const wchar_t* minidump_id,
-		    void* context,
-		    EXCEPTION_POINTERS* exinfo,
-		    MDRawAssertionInfo* assertion,
-		    bool succeeded) {
+bool finishedDump(const wchar_t* dump_path,
+    const wchar_t* minidump_id,
+    void* context,
+    EXCEPTION_POINTERS* exinfo,
+    MDRawAssertionInfo* assertion,
+    bool succeeded) {
     printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
 
     return succeeded;
-  }
-#endif
+}
 }
 
 void init() {
-#ifdef HAVE_BREAKPAD
+    if (breakpad_handler != NULL) return;
 
-  if (breakpad_handler != NULL) return;
+    // This is needed for CRT to not show dialog for invalid param
+    // failures and instead let the code handle it.
+    _CrtSetReportMode(_CRT_ASSERT, 0);
 
-#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
-  // This is needed for CRT to not show dialog for invalid param
-  // failures and instead let the code handle it.
-  _CrtSetReportMode(_CRT_ASSERT, 0);
-#endif
-
-  using namespace google_breakpad;
-  breakpad_handler = new ExceptionHandler(L".\\",
-					  NULL,
-					  finishedDump,
-					  NULL,
-					  ExceptionHandler::HANDLER_ALL,
-					  MiniDumpNormal,
-					  NULL,
-					  NULL);
-
-#endif
+    using namespace google_breakpad;
+    breakpad_handler = new ExceptionHandler(L".\\",
+        NULL,
+        finishedDump,
+        NULL,
+        ExceptionHandler::HANDLER_ALL,
+        MiniDumpNormal,
+        NULL,
+        NULL);
 }
+
+#elif SIRIKATA_PLATFORM == PLATFORM_LINUX
+
+namespace {
+
+static google_breakpad::ExceptionHandler* breakpad_handler = NULL;
+
+bool finishedDump(const char* dump_path,
+    const char* minidump_id,
+    void* context,
+    bool succeeded) {
+    printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
+
+    return succeeded;
+}
+}
+
+void init() {
+    if (breakpad_handler != NULL) return;
+
+    using namespace google_breakpad;
+    breakpad_handler = new ExceptionHandler("./", NULL, finishedDump, NULL, true);
+}
+
+#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+// No mac support currently
+void init() {
+}
+
+#endif
+
+#else //def HAVE_BREAKPAD
+// Dummy implementation
+void init() {
+}
+#endif
 
 } // namespace Breakpad
 } // namespace Sirikata
