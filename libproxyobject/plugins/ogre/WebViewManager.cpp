@@ -49,6 +49,8 @@
 #include "berkelium/Context.hpp"
 #endif
 
+#include "input/SDLInputDevice.hpp"
+
 template<> Sirikata::Graphics::WebViewManager* Ogre::Singleton<Sirikata::Graphics::WebViewManager>::ms_Singleton = 0;
 
 namespace Sirikata {
@@ -919,7 +921,16 @@ Sirikata::Task::EventResponse WebViewManager::onKeyTextInput(Sirikata::Task::Eve
 		return Sirikata::Task::EventResponse::nop();
 	}
 
-	if (injectTextEvent(e->mText)) {
+        // We need to filter some characters that are getting in but cause
+        // problems.
+        String filtered_text;
+        for(int i = 0; i < e->mText.size(); i++) {
+            int x = (int)e->mText[i];
+            if ((int)e->mText[i] != 127) // delete
+                filtered_text.push_back(e->mText[i]);
+        }
+
+	if (filtered_text.size() > 0 && injectTextEvent(filtered_text)) {
 		return Sirikata::Task::EventResponse::cancel();
 	} else {
 		return Sirikata::Task::EventResponse::nop();
