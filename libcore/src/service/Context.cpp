@@ -35,6 +35,7 @@
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <boost/asio.hpp>
+#include <sirikata/core/service/Breakpad.hpp>
 
 namespace Sirikata {
 
@@ -55,6 +56,7 @@ Context::Context(const String& name, Network::IOService* ios, Network::IOStrand*
    mKillTimer(),
    mStopRequested(false)
 {
+  Breakpad::init();
 }
 
 Context::~Context() {

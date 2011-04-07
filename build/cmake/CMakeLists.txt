@@ -666,6 +666,15 @@ FIND_PACKAGE(NVTT)
 #dependency: cxxtest
 SET(CXXTESTRoot ${TOP_LEVEL}/externals/cxxtest)
 
+#dependency: Breakpad
+IF(NOT BREAKPAD_ROOT)
+  SET(BREAKPAD_ROOT ${PLATFORM_LIBS}/installed-breakpad)
+ENDIF()
+FIND_PACKAGE(Breakpad)
+IF(BREAKPAD_FOUND)
+  ADD_DEFINITIONS(-DHAVE_BREAKPAD)
+ENDIF()
+
 # -- User defined variables that control behavior at compile time
 SET(CBR_TIMESTAMP_PACKETS TRUE
   CACHE BOOL "If enabled, detailed timestamps are recorded for each packet, enabling high granularity latency breakdowns."
@@ -780,6 +789,9 @@ IF(NVTT_FOUND)
 ENDIF()
 IF(HIREDIS_FOUND)
   SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${HIREDIS_INCLUDE_DIRS})
+ENDIF()
+IF(BREAKPAD_FOUND)
+  SET(INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES} ${BREAKPAD_INCLUDE_DIRS})
 ENDIF()
 
 
@@ -1041,6 +1053,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/network/PBJDebug.cpp
         ${LIBCORE_SOURCE_DIR}/network/Frame.cpp
         ${LIBCORE_SOURCE_DIR}/service/Signal.cpp
+        ${LIBCORE_SOURCE_DIR}/service/Breakpad.cpp
         ${LIBCORE_SOURCE_DIR}/service/Context.cpp
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
@@ -1545,6 +1558,7 @@ SET(SIRIKATA_CORE_LIBRARIES
 
     ${CURL_LIBRARIES}
     ${Boost_LIBRARIES}
+    ${BREAKPAD_LIBRARIES}
     http-parser )
 
 IF(BERKELIUM_FOUND)
@@ -1573,6 +1587,9 @@ SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${SQLite3_LIBRARY_DIRS})
 ENDIF()
 IF(HIREDIS_FOUND)
 SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${HIREDIS_LIBRARY_DIRS})
+ENDIF()
+IF(BREAKPAD_FOUND)
+  SET(FINAL_LINK_DIRS ${FINAL_LINK_DIRS} ${BREAKPAD_LIBRARY_DIRS})
 ENDIF()
 
 LINK_DIRECTORIES(${FINAL_LINK_DIRS})
