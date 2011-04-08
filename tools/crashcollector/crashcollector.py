@@ -64,6 +64,9 @@ def id_lookup(id):
 
     return res
 
+def id_link(id, text=None):
+    return '<a href="' + '/status/' + str(id) + '">' + (text or str(id)) + '</a>'
+
 def decode_post(environ):
     if environ['REQUEST_METHOD'].upper() != 'POST':
         return None
@@ -118,7 +121,7 @@ def status_page(environ, start_response, id):
         return wrap_html('Report' + str(id) + ' not found.')
 
     result = []
-    result += ['<h3>Report ', str(id), '</h3>']
+    result += ['<h3>Report ', id_link(id), '</h3>']
     if dump['desc']:
         result += ['Description:<br><pre>', dump['desc'], '</pre>']
     for d in dump['dumps']:
@@ -158,7 +161,7 @@ def edit_page(environ, start_response, id):
     argset = urlparse.parse_qs(query_string, keep_blank_values=True, strict_parsing=False)
     if ('edit' in argset and argset['edit'][0] == dump['key']) or posted:
         result = []
-        result += ['<h3>Edit Report ', str(id), '</h3>']
+        result += ['<h3>Edit Report ', id_link(id), '</h3>']
         if posted:
             result += ['<h4>Successfully updated!</h4>']
         result += ['<form action="/edit/', str(id), '" method="POST">']
