@@ -36,7 +36,7 @@
 #define OPT_CONFIG_FILE          "cfg"
 
 #define OPT_OH_PLUGINS           "oh.plugins"
-
+#define OPT_OH_PLUGIN_SEARCH_PATHS     "oh.plugin-search"
 #define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
 #define STATS_SAMPLE_RATE    "stats.sample-rate"
 

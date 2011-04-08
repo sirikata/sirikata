@@ -110,11 +110,10 @@ void DynamicLibrary::AddLoadPath(const String& path) {
             ldLibraryPath = ldLibraryPath + ":" + oldLdLibraryPath;
         setenv(LD_LIBRARY_PATH_STR,ldLibraryPath.c_str(),1);
     }
-#elif SIRIKATA_PLATFORM == PLATFORM_MAC
-    // Mac doesn't seem to like setting DYLD_LIBRARY_PATH dynamically. Instead,
+#endif
+    // OSX and Ubuntu 10.04 don't seem to like setting DYLD_LIBRARY_PATH dynamically. Instead,
     // we add to the search paths and handle the search ourselves.
     DL_search_paths.push_back(path);
-#endif
 }
 
 DynamicLibrary::DynamicLibrary(const String& path)
@@ -159,18 +158,28 @@ bool DynamicLibrary::load() {
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
     mHandle = LoadLibrary(mPath.c_str());
     if (mHandle == NULL) {
+        // Try any registered search paths
+        for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++) {
+            std::string str =(boost::filesystem::path(DL_search_paths[i]) / mPath).string();
+            mHandle = LoadLibrary(str.c_str());
+        }
+    }
+    if (mHandle == NULL) {
         DWORD errnum = GetLastError();
         SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
     }
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
+    SILOG(plugin,error,"LOADING "<<getenv(LD_LIBRARY_PATH_STR));
     mHandle = dlopen(mPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (mHandle == NULL) {
         // Try any registered search paths
-        for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++)
+        for(uint32 i = 0; mHandle == NULL && i < DL_search_paths.size(); i++) {
+            std::string str = (boost::filesystem::path(DL_search_paths[i]) / mPath).string();
             mHandle = dlopen(
-                (boost::filesystem::path(DL_search_paths[i]) / mPath).string().c_str(),
+                str.c_str(),
                 RTLD_LAZY | RTLD_GLOBAL
             );
+        }
     }
     if (mHandle == NULL) {
         const char *errorstr = dlerror();

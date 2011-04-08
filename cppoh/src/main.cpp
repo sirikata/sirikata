@@ -79,7 +79,19 @@ int main (int argc, char** argv) {
     ParseOptions(argc, argv, OPT_CONFIG_FILE);
 
     PluginManager plugins;
-
+    String search_path=GetOptionValue<String>(OPT_OH_PLUGIN_SEARCH_PATHS);
+    if (search_path.length()) {
+        while (true) {
+            String::size_type where=search_path.find(":");
+            if (where==String::npos) {
+                DynamicLibrary::AddLoadPath(search_path);
+                break;
+            }else {
+                DynamicLibrary::AddLoadPath(search_path.substr(0,where));
+                search_path=search_path.substr(where+1);
+            }
+        }
+    }
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     plugins.loadList( GetOptionValue<String>(OPT_OH_PLUGINS) );
 
