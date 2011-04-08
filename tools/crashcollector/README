@@ -30,9 +30,17 @@ Setup
    crashcollector.py.  See
    http://code.google.com/p/google-breakpad/wiki/LinuxStarterGuide
    for details on how that directory should be generated from binaries
-   and what structure it should have.
+   and what structure it should have.  Alternatively, use
+   symbolstore.py, which is provided with this code.
 
 5. Create a data/ directory in the same directory as
    crashcollector.py. This is where user uploaded data will be stored.
 
 6. Run apache and start crashing!
+
+
+Symbols
+-------
+The symbolstore.py script helps you generate collections of symbols.
+Run it from within your build directory and it will generate the files
+in the expected directory layout.
