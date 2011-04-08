@@ -169,7 +169,6 @@ bool DynamicLibrary::load() {
         SILOG(plugin,error,"Failed to open library "<<mPath<<": "<<errnum);
     }
 #elif SIRIKATA_PLATFORM == PLATFORM_MAC || SIRIKATA_PLATFORM == PLATFORM_LINUX
-    SILOG(plugin,error,"LOADING "<<getenv(LD_LIBRARY_PATH_STR));
     mHandle = dlopen(mPath.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (mHandle == NULL) {
         // Try any registered search paths
