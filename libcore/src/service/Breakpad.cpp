@@ -58,6 +58,18 @@ namespace Breakpad {
 namespace {
 
 static google_breakpad::ExceptionHandler* breakpad_handler = NULL;
+static std::string breakpad_url;
+
+std::string wchar_to_string(const wchar_t* orig) {
+  size_t origsize = wcslen(orig) + 1;
+  const size_t newsize = origsize;
+  size_t convertedChars = 0;
+  char* nstring = new char[newsize];
+  wcstombs_s(&convertedChars, nstring, origsize, orig, _TRUNCATE);
+  std::string res(nstring);
+  delete nstring;
+  return res;
+}
 
 bool finishedDump(const wchar_t* dump_path,
     const wchar_t* minidump_id,
@@ -66,6 +78,21 @@ bool finishedDump(const wchar_t* dump_path,
     MDRawAssertionInfo* assertion,
     bool succeeded) {
     printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
+
+    if (breakpad_url.empty()) return succeeded;
+
+    const char* reporter_name =
+#if SIRIKATA_DEBUG
+      "crashreporter_d.exe"
+#else
+      "crashreporter.exe"
+#endif
+      ;
+
+    STARTUPINFO info={sizeof(info)};
+    PROCESS_INFORMATION processInfo;
+    std::string cmd = reporter_name + std::string(" ") + breakpad_url + std::string(" ") + wchar_to_string(dump_path) + std::string(" ") + wchar_to_string(minidump_id);
+    CreateProcess(reporter_name, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
 
     return succeeded;
 }
@@ -77,6 +104,8 @@ void init() {
     // This is needed for CRT to not show dialog for invalid param
     // failures and instead let the code handle it.
     _CrtSetReportMode(_CRT_ASSERT, 0);
+
+    breakpad_url = GetOptionValue<String>(OPT_CRASHREPORT_URL);
 
     using namespace google_breakpad;
     breakpad_handler = new ExceptionHandler(L".\\",

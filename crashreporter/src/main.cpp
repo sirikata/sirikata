@@ -30,6 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// NOTE: This is only to determine platform. Don't use libcore types.
+#include <sirikata/core/util/Platform.hpp>
+
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -40,8 +43,9 @@
 
 #include <string>
 
-// NOTE: This is only to determine platform. Don't use libcore types.
-#include <sirikata/core/util/Platform.hpp>
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#include<shellapi.h>
+#endif
 
 size_t writehandler(void*ptr, size_t size, size_t nmemb, std::string* userdata) {
     *userdata += std::string((const char*)ptr, size*nmemb);
@@ -95,8 +99,9 @@ int main(int argc, char** argv) {
 
         if (!resultStr.empty()) {
 #if SIRIKATA_PLATFORM == PLATFORM_LINUX
-            printf("execing browser");
             execlp("xdg-open", "xdg-open", resultStr.c_str(), (char*)NULL);
+#elif SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+	    ShellExecute(NULL, "open", resultStr.c_str(), NULL, NULL, SW_SHOWNORMAL);
 #endif
         }
     }
