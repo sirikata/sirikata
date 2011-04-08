@@ -79,6 +79,12 @@ bool finishedDump(const wchar_t* dump_path,
     bool succeeded) {
     printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
 
+
+// Only run the reporter in release mode. This is a decent heuristic --
+// generally you'll only run the debug mode when you have a dev environment.
+#if SIRIKATA_DEBUG
+    return succeeded;
+#else
     if (breakpad_url.empty()) return succeeded;
 
     const char* reporter_name =
@@ -95,6 +101,7 @@ bool finishedDump(const wchar_t* dump_path,
     CreateProcess(reporter_name, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
 
     return succeeded;
+#endif // SIRIKATA_DEBUG
 }
 }
 
@@ -131,6 +138,11 @@ bool finishedDump(const char* dump_path,
     bool succeeded) {
     printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
 
+// Only run the reporter in release mode. This is a decent heuristic --
+// generally you'll only run the debug mode when you have a dev environment.
+#if SIRIKATA_DEBUG
+    return succeeded;
+#else
     // If no URL, just finish crashing after the dump.
     if (breakpad_url.empty()) return succeeded;
 
@@ -155,6 +167,7 @@ bool finishedDump(const char* dump_path,
     }
 
     return succeeded;
+#endif //SIRIKATA_DEBUG
 }
 }
 
