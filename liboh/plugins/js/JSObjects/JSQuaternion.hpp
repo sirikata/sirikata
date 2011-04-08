@@ -45,8 +45,10 @@ void DestroyQuaternionTemplate();
 
 void QuaternionFill(Handle<Object>& dest, const Quaternion& src);
 Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Quaternion& src);
+bool QuaternionValValidate(v8::Handle<v8::Value> src);
 bool QuaternionValidate(Handle<Object>& src);
 Quaternion QuaternionExtract(Handle<Object>& src);
+Quaternion QuaternionValExtract(v8::Handle<v8::Value> src);
 
 #define QuaternionCheckAndExtract(native, value)                              \
     if (!QuaternionValidate(value))                                           \

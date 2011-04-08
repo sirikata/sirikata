@@ -70,6 +70,21 @@ Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Quaternion& src
     return result;
 }
 
+bool QuaternionValValidate(v8::Handle<v8::Value> src)
+{
+    if (!src->IsObject())
+        return false;
+
+    v8::Handle<v8::Object> toValidate= src->ToObject();
+    return QuaternionValidate(toValidate);
+}
+
+Quaternion QuaternionValExtract(v8::Handle<v8::Value> src)
+{
+    v8::Handle<v8::Object>toExtract = src->ToObject();
+    return QuaternionExtract(toExtract);
+}
+
 bool QuaternionValidate(Handle<Object>& src) {
     return (
         src->Has(JS_STRING(x)) && NumericValidate(src->Get(JS_STRING(x))) &&

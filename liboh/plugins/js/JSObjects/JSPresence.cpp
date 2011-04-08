@@ -23,7 +23,7 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 
   // This is an object
 
-  v8::Handle<v8::Object>v8Obj = v8::Handle<v8::Object>::Cast(v8Val);
+  v8::Handle<v8::Object>v8Obj = v8Val->ToObject();
   v8::Local<v8::Value> typeidVal = v8Obj->GetInternalField(TYPEID_FIELD);
   if(typeidVal->IsNull() || typeidVal->IsUndefined())
   {
@@ -298,15 +298,10 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-
-            //get first args
-            Handle<Object> posArg = ObjectCast(args[0]);
-
-            if ( ! Vec3Validate(posArg))
+            if ( ! Vec3ValValidate(args[0]))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPosition function.  Wrong argument: require a vector for new positions.")) );
 
-
-            Vector3f newPos (Vec3Extract(posArg));
+            Vector3f newPos (Vec3ValExtract(args[0]));
             return mStruct->struct_setPosition(newPos);
         }
 
@@ -346,13 +341,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
 
             //get first args
-            Handle<Object> velArg = ObjectCast(args[0]);
-
-            if ( ! Vec3Validate(velArg))
+            if ( ! Vec3ValValidate(args[0]))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setVelocity function.  Wrong argument: require a vector for new positions.")) );
-
-
-            Vector3f newVel (Vec3Extract(velArg));
+            Vector3f newVel (Vec3ValExtract(args[0]));
 
             return mStruct->struct_setVelocity(newVel);
         }
@@ -407,13 +398,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
 
 
             //get first args
-            Handle<Object> orientationArg = ObjectCast(args[0]);
-
-            if ( ! QuaternionValidate(orientationArg))
+            if ( ! QuaternionValValidate(args[0]))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
-
-
-            Quaternion newOrientation (QuaternionExtract(orientationArg));
+            Quaternion newOrientation (QuaternionValExtract(args[0]));
 
             return mStruct->setOrientationFunction(newOrientation);
 
@@ -452,13 +439,10 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-            //get first args
-            Handle<Object> orientationVelArg = ObjectCast(args[0]);
-
-            if ( ! QuaternionValidate(orientationVelArg))
+            if ( ! QuaternionValValidate(args[0]))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
+            Quaternion newOrientationVel (QuaternionValExtract(args[0]));
 
-            Quaternion newOrientationVel (QuaternionExtract(orientationVelArg));
             return mStruct->setOrientationVelFunction(newOrientationVel);
         }
 
@@ -467,7 +451,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
    @param Number in sterradians.
 
    Sets the solid angle query associated with the presence.  Ie. asks the system
-   to return all presences that appear larger than parameter passed in.  
+   to return all presences that appear larger than parameter passed in.
    Roughly, the higher this number is, the fewer presences will cause the function associated with
    onProxAdded to be called.  (Reasonable ranges from my experience: .1-4.
  */
@@ -483,11 +467,9 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-            Handle<Object> qa_arg = ObjectCast(args[0]);
-            if (!NumericValidate(qa_arg))
+            if (!NumericValidate(args[0]))
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setQueryAngle function. Wrong argument: require a number for query angle.")) );
-
-            SolidAngle new_qa(NumericExtract(qa_arg));
+            SolidAngle new_qa(NumericExtract(args[0]));
 
             return mStruct->setQueryAngleFunction(new_qa);
         }
@@ -529,11 +511,9 @@ v8::Handle<v8::Value> setScale(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
 
-    Handle<Object> scale_arg = ObjectCast(args[0]);
-    if (!NumericValidate(scale_arg))
+    if (!NumericValidate(args[0]))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setScale function. Wrong argument: require a number for query angle.")) );
-
-    float new_scale = NumericExtract(scale_arg);
+    float new_scale = NumericExtract(args[0]);
 
     return mStruct->setVisualScaleFunction(new_scale);
 }
@@ -545,7 +525,7 @@ v8::Handle<v8::Value> setScale(const v8::Arguments& args)
 bool getURI(const v8::Arguments& args,std::string& returner)
 {
     //assumes that the URI object is in the first 0th arg field
-    Handle<Object> newVis = Handle<Object>::Cast(args[0]);
+    Handle<Value> newVis = args[0];
 
     //means that the argument passed was not a string identifying where
     //we could get the uri
