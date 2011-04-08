@@ -4,12 +4,13 @@ from wsgiref.simple_server import make_server
 import os, os.path, sys
 import cgi, urlparse
 import random, string
+import subprocess
 
 site_name = 'http://crashes.sirikata.com'
 id_file = 'data/__id'
 
-def server_file(path):
-    return os.path.join( os.path.dirname(__file__), path )
+def server_file(*args):
+    return os.path.join( os.path.dirname(__file__), *args )
 
 def load_file(path):
     f = open(server_file(path), 'rb')
@@ -118,10 +119,14 @@ def status_page(environ, start_response, id):
 
     result = []
     result += ['<h3>Report ', str(id), '</h3>']
-    for d in dump['dumps']:
-        result += ['Dump: ', d, '<br>']
     if dump['desc']:
         result += ['Description:<br><pre>', dump['desc'], '</pre>']
+    for d in dump['dumps']:
+        result += ['Dump: ', d, '<br>']
+        bt = subprocess.Popen([server_file('minidump_stackwalk'), server_file('data', str(id), d), server_file('symbols')], stdout=subprocess.PIPE).communicate()[0]
+        bt = bt or "Couldn't generate backtrace."
+        result += ['<pre>', bt, '</pre>', '<br>']
+
     return wrap_html(result)
 
 def edit_page(environ, start_response, id):
