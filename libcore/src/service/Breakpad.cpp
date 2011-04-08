@@ -34,6 +34,7 @@
 #include <sirikata/core/service/Breakpad.hpp>
 
 #include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/options/CommonOptions.hpp>
 
 #ifdef HAVE_BREAKPAD
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
@@ -93,6 +94,7 @@ void init() {
 namespace {
 
 static google_breakpad::ExceptionHandler* breakpad_handler = NULL;
+static std::string breakpad_url;
 
 bool finishedDump(const char* dump_path,
     const char* minidump_id,
@@ -100,12 +102,37 @@ bool finishedDump(const char* dump_path,
     bool succeeded) {
     printf("Finished breakpad dump at %s/%s.dmp: success %d\n", dump_path, minidump_id, succeeded ? 1 : -1);
 
+    // If no URL, just finish crashing after the dump.
+    if (breakpad_url.empty()) return succeeded;
+
+    // Fork and exec the crashreporter
+    pid_t pID = fork();
+
+    if (pID == 0) {
+        const char* reporter_name =
+#if SIRIKATA_DEBUG
+            "crashreporter_d"
+#else
+            "crashreporter"
+#endif
+            ;
+
+        execlp(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, (char*)NULL);
+        // If crashreporter not in path, try current directory
+        execl(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, (char*)NULL);
+    }
+    else if (pID < 0) {
+        printf("Failed to fork crashreporter\n");
+    }
+
     return succeeded;
 }
 }
 
 void init() {
     if (breakpad_handler != NULL) return;
+
+    breakpad_url = GetOptionValue<String>(OPT_CRASHREPORT_URL);
 
     using namespace google_breakpad;
     breakpad_handler = new ExceptionHandler("./", NULL, finishedDump, NULL, true);
