@@ -116,6 +116,12 @@ tokens
     MESSAGE_SEND;
     MESSAGE_RECV;
     PAREN;
+    PATTERN_LITERAL;
+    NAME_VALUE_PROTO;
+    NAME;
+    VALUE;
+    PROTO;
+
 }
 
 @header
@@ -603,6 +609,7 @@ primaryExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
+        | patternLiteral
 	| '(' LTERM* expression LTERM* ')' -> ^( PAREN expression )
 	;
 
@@ -621,10 +628,29 @@ objectLiteral
   : '{' LTERM* propertyNameAndValue? LTERM* '}' -> ^(OBJ_LITERAL propertyNameAndValue?)
 	| '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
 	;
-	
+
+// patternLiteral definition
+patternLiteral
+  : '{' LTERM* nameValueProto? LTERM* '}' -> ^(PATTERN_LITERAL nameValueProto?)
+  | '{' LTERM*  p1=nameValueProto (',' LTERM* p2=nameValueProto)* LTERM* '}' -> ^(PATTERN_LITERAL nameValueProto nameValueProto*)
+
+  ;
+
 propertyNameAndValue
 	: propertyName LTERM* ':' LTERM* assignmentExpression -> ^(NAME_VALUE propertyName assignmentExpression)
 	;
+
+/*
+nameValueProto
+    : (propertyName LTERM* -> ^(NAME_VALUE_PROTO ^(NAME propertyName))) ':'  LTERM* (assignmentExpression LTERM*-> ^($nameValueProto ^(VALUE assignmentExpression)))? ':' LTERM* ( assignmentExpression -> ^($nameValueProto ^(PROTO assignmentExpression)))?
+    ;
+*/
+
+nameValueProto
+    : (propertyName LTERM*) ':'  LTERM* (a1=assignmentExpression LTERM*)? ':' LTERM* ( a2=assignmentExpression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
+    ;
+
+
 
 propertyName
 	: Identifier

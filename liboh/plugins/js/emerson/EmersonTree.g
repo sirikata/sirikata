@@ -1198,6 +1198,7 @@ primaryExpression
 	| literal
 	| arrayLiteral
 	| objectLiteral
+        | patternLiteral
 	| ^(PAREN { APP("( "); } expression { APP(" )");}) 
 	;
 
@@ -1281,6 +1282,69 @@ objectLiteral
 				
 	;
 	
+// patternLiteral definition.
+patternLiteral
+
+  :^(PATTERN_LITERAL {APP("new util.Pattern()");} )
+  |^(PATTERN_LITERAL 
+      nameValueProto
+    )
+  |^(PATTERN_LITERAL 
+	   
+				{ APP("[ ");}
+				  nameValueProto
+				( 
+				  { 
+					  APP(", "); 
+					} 
+				
+				  nameValueProto
+				)*
+
+      	                      { 
+				  APP(" ] "); 
+				
+				}
+
+			)
+				
+	;
+	
+
+nameValueProto
+  : ^(NAME_VALUE_PROTO
+          {
+            APP("new util.Pattern( ");
+          }
+        ^(NAME
+          propertyName
+                   )
+        
+         (
+         ^(VALUE
+            {
+              APP(", ");
+            }
+
+            assignmentExpression
+         ))?
+
+         (
+           
+         ^(PROTO
+            {
+              APP(", ");
+            }
+            assignmentExpression
+         ) )?
+
+         {
+            APP(" )");
+         }
+
+      )
+  ;
+
 propertyNameAndValue
 	: ^(NAME_VALUE 
 	   propertyName 

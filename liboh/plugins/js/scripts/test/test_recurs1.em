@@ -13,13 +13,11 @@ function reply_handler(reply, sender)
 function proxAddedCallback(new_addr_obj)
 {
   system.print("\n\nIn proxAddedCallback\n\n");
-  if(system.Self.toString() == new_addr_obj.toString())
+  if(system.presences[0].toVisible().toString() == new_addr_obj.toString())
   {
     return;
   }
   
-
-
   var test_msg = new Object();
   test_msg.name = "test";
   /*
@@ -34,6 +32,7 @@ function proxAddedCallback(new_addr_obj)
   test_msg.g = function(x) { system.print("\n\n Hello Hello" + x +"\n\n") ;};
   reply_handler <- new util.Pattern("name", "reply") <- new_addr_obj;
   test_msg -> new_addr_obj;
+  system.print("MESSAGE SENT");
 }
 
 
@@ -46,6 +45,3 @@ system.onPresenceConnected( function(pres) {
 
     }
   );
-
-
-

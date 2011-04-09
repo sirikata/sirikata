@@ -33,10 +33,10 @@ function proxAddedCallback(new_addr_obj)
 system.onPresenceConnected( function(pres) {
   system.print("\n\nconnected\n\n"); 
     system.presences[0].onProxAdded(proxAddedCallback);
-  
-    test_msg_handler <- new util.Pattern("name", "test");
+    test_msg_handler <- {"name":"test":};
+    //test_msg_handler <- new util.Pattern("name", "test");
    // system.registerHandler(test_msg_handler, null, new util.Pattern("name", "test"), null);
-   }
+   //system.registerHandler( test_msg_handler, null, new util.Pattern( "name", "test" ) , null) ;}
 );
 
 
