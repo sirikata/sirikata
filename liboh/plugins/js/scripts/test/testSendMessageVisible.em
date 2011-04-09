@@ -14,7 +14,7 @@ function broadcastIt()
     {
         arrayOfVisibles[s].sendMessage(toBroadcast);
     }
-    system.timeout(7,null,broadcastIt);
+    system.timeout(7,broadcastIt);
 
 }
 
