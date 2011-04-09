@@ -39,7 +39,7 @@ namespace Sirikata {
 void InitSpaceOptions() {
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
 
-        .addOption(new OptionValue(OPT_CONFIG_FILE,"",Sirikata::OptionValueType<String>(),"Configuration file to load."))
+        .addOption(new OptionValue(OPT_CONFIG_FILE,"space.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
         .addOption(new OptionValue(OPT_SPACE_PLUGINS,"weight-exp,weight-sqr,weight-const,space-null,space-local,space-standard,colladamodels",Sirikata::OptionValueType<String>(),"Plugin list to load."))
 

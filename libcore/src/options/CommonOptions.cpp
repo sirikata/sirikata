@@ -110,7 +110,7 @@ void ParseOptions(int argc, char** argv, const String& config_file_option) {
     // avoid overwriting.
     String fname = GetOptionValue<String>(config_file_option.c_str());
     if (!fname.empty())
-        options->parseFile(fname, true, false);
+        options->parseFile(fname, false, false);
 
     // And parse the command line args a second time to overwrite any settings
     // the config file may have overwritten. Don't use defaults to
