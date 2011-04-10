@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^$ /crashcollector.py [L,E=TEMPLATEPAGE:/]
+RewriteRule ^([-a-z0-9_]*)$ /crashcollector.py [L,E=TEMPLATEPAGE:/$1]
+RewriteRule ^(status/.*)$ /crashcollector.py [L,E=TEMPLATEPAGE:/$1]
+RewriteRule ^(edit/.*)$ /crashcollector.py [L,E=TEMPLATEPAGE:/$1]
+</IfModule>
+
+<FilesMatch ".*\.py">
+Options ExecCGI FollowSymLinks
+Order allow,deny
+Allow from all
+</FilesMatch>
+
+AddHandler wsgi-script .py

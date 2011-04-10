@@ -35,6 +35,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 
+#define OPT_CRASHREPORT_URL       "crashreport"
+
 #define OPT_PLUGINS               "plugins"
 
 #define STATS_TRACE_FILE     "stats.trace-filename"
