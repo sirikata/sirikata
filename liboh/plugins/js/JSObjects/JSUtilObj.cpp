@@ -184,7 +184,9 @@ v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args)
 
 
 
-//returns a random float from 0 to 1
+/**
+  @return a random float from 0 to 1
+ */
 v8::Handle<v8::Value> ScriptRandFunction(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -195,8 +197,10 @@ v8::Handle<v8::Value> ScriptRandFunction(const v8::Arguments& args)
 }
 
 
-//takes in a single argument
-//returns a float
+/**
+   @param takes in a single argument
+   @return returns a float
+*/
 v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -213,6 +217,10 @@ v8::Handle<v8::Value> ScriptSqrtFunction(const v8::Arguments& args)
     return v8::Number::New(sqrt(d_toSqrt));
 }
 
+/**
+   @param float to take arccosine of
+   @return angle in radians
+ */
 v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -226,6 +234,10 @@ v8::Handle<v8::Value> ScriptAcosFunction(const v8::Arguments& args)
     return v8::Number::New(acos(d_toSqrt));
 }
 
+/**
+   @param angle in radians to take cosine of
+   @return cosine of that angle
+ */
 v8::Handle<v8::Value> ScriptCosFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -240,6 +252,10 @@ v8::Handle<v8::Value> ScriptCosFunction(const v8::Arguments& args)
     return v8::Number::New(cos(d_toSqrt));
 }
 
+/**
+   @param angle in radians to take sine of
+   @return sine of that angle
+ */
 v8::Handle<v8::Value> ScriptSinFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -253,6 +269,10 @@ v8::Handle<v8::Value> ScriptSinFunction(const v8::Arguments& args)
     return v8::Number::New(sin(d_toSqrt));
 }
 
+/**
+   @param float to take arcsine of
+   @return angle in radians
+ */
 v8::Handle<v8::Value> ScriptAsinFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -267,6 +287,11 @@ v8::Handle<v8::Value> ScriptAsinFunction(const v8::Arguments& args)
     return v8::Number::New(asin(d_toSqrt));
 }
 
+/**
+   @param base
+   @param exponent
+   @return returns base to the exponent
+ */
 v8::Handle<v8::Value> ScriptPowFunction(const v8::Arguments& args)
 {
     if (args.Length() != 2)
@@ -281,6 +306,10 @@ v8::Handle<v8::Value> ScriptPowFunction(const v8::Arguments& args)
     return v8::Number::New( returner );
 }
 
+/**
+   @param exponent
+   @return returns e to the exponent
+ */
 v8::Handle<v8::Value> ScriptExpFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -295,7 +324,10 @@ v8::Handle<v8::Value> ScriptExpFunction(const v8::Arguments& args)
 }
 
 
-
+/**
+   @param number to take abs of
+   @return returns absolute value of argument.
+ */
 v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args)
 {
     if (args.Length() != 1)

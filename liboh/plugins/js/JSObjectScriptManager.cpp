@@ -91,7 +91,9 @@ String JSObjectScriptManager::defaultScript() const {
 
 
 
-
+/**
+   EMERSON!: util
+ */
 void JSObjectScriptManager::createUtilTemplate()
 {
     v8::HandleScope handle_scope;
@@ -117,8 +119,10 @@ void JSObjectScriptManager::createUtilTemplate()
 
     mUtilTemplate->Set(v8::String::New("create_when_timeout_lt"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenTimeoutLT));
 
-
-    addTypeTemplates(mUtilTemplate);
+    mUtilTemplate->Set(v8::String::New("When"),mWhenTemplate);
+    mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
+    mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
+    mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
 }
 
 
@@ -290,14 +294,6 @@ void JSObjectScriptManager::createContextGlobalTemplate()
 
 
 
-//takes in a template (likely either the context template or the system template)
-void JSObjectScriptManager::addTypeTemplates(v8::Handle<v8::ObjectTemplate> tempToAddTo)
-{
-    tempToAddTo->Set(v8::String::New("When"),mWhenTemplate);
-    tempToAddTo->Set(v8::String::New("Pattern"), mPatternTemplate);
-    tempToAddTo->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
-    tempToAddTo->Set(v8::String::New("Vec3"), mVec3Template);
-}
 
 
 

@@ -89,7 +89,7 @@ private:
     void createWhenTemplate();
     void createQuotedTemplate();
 
-    void addTypeTemplates(v8::Handle<v8::ObjectTemplate>  tempToAddTo);
+
     void createTemplates();
 
 
