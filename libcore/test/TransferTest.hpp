@@ -84,7 +84,7 @@ public:
         mCdnDnsUriPrefix = GetOptionValue<String>(OPT_CDN_DNS_URI_PREFIX);
         mCdnDownloadUriPrefix = GetOptionValue<String>(OPT_CDN_DOWNLOAD_URI_PREFIX);
 
-        mDnsTest1 = "/test/duck.dae"; // /original/0";
+        mDnsTest1 = "/test/duck.dae/original/0/duck.dae";
         mHashTest1 = "332d81633b62944fa87d3fa66e0eeda6288f67499a73e2ad1b8f1388a939045a";
         mHashTest1Size = 284312;
         mHashTest2 = "25f5ff38a5db9465c871947c5e805d707d734bf50fb4e52793f03483afa5c22a";
@@ -189,8 +189,10 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
+            if (mHttpResponse->getData()) {
+                TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
+                TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
+            }
         }
 
 
@@ -219,10 +221,12 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == 11);
-            SILOG(transfer, debug, "content length is " << mHttpResponse->getContentLength());
-            SILOG(transfer, debug, "data length is " << mHttpResponse->getData()->length());
+            if (mHttpResponse->getData()) {
+                TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
+                TS_ASSERT(mHttpResponse->getContentLength() == 11);
+                SILOG(transfer, debug, "content length is " << mHttpResponse->getContentLength());
+                SILOG(transfer, debug, "data length is " << mHttpResponse->getData()->length());
+            }
         }
 
 
@@ -252,8 +256,10 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             TS_ASSERT(mHttpResponse->getStatusCode() == 200);
             TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
+            if (mHttpResponse->getData()) {
+                TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
+                TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
+            }
         }
 
         /*
@@ -279,11 +285,15 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             it = mHttpResponse->getHeaders().find("Content-Encoding");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
-            TS_ASSERT(it->second == "gzip");
-            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
-            TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
+            if (it != mHttpResponse->getHeaders().end()) {
+                TS_ASSERT(it->second == "gzip");
+                TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+                TS_ASSERT(mHttpResponse->getData());
+                if (mHttpResponse->getData()) {
+                    TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
+                    TS_ASSERT(mHttpResponse->getContentLength() == mHashTest1Size);
+                }
+            }
         }
 
 
@@ -312,11 +322,15 @@ public:
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
             it = mHttpResponse->getHeaders().find("Content-Encoding");
             TS_ASSERT(it != mHttpResponse->getHeaders().end());
-            TS_ASSERT(it->second == "gzip");
-            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
-            TS_ASSERT(mHttpResponse->getData());
-            TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
-            TS_ASSERT(mHttpResponse->getContentLength() == 211);
+            if (it != mHttpResponse->getHeaders().end()) {
+                TS_ASSERT(it->second == "gzip");
+                TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+                TS_ASSERT(mHttpResponse->getData());
+                if (mHttpResponse->getData()) {
+                    TS_ASSERT(mHttpResponse->getData()->length() == (uint64)mHttpResponse->getContentLength());
+                    TS_ASSERT(mHttpResponse->getContentLength() == 211);
+                }
+            }
         }
 
 
@@ -462,8 +476,10 @@ public:
                 TS_ASSERT(it != response->getHeaders().end());
                 TS_ASSERT(response->getStatusCode() == 200);
                 TS_ASSERT(response->getData());
-                TS_ASSERT(response->getData()->length() == (uint64)response->getContentLength());
-                TS_ASSERT(response->getContentLength() == mHashTest1Size);
+                if (response->getData()) {
+                    TS_ASSERT(response->getData()->length() == (uint64)response->getContentLength());
+                    TS_ASSERT(response->getContentLength() == mHashTest1Size);
+                }
             }
         } else if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
             TS_FAIL("HTTP Request parsing failed");
@@ -809,63 +825,63 @@ public:
 		//5 urls
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list1;
 		list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-		        Transfer::URI("meerkat:///test/polySurface01.mesh"),
-		        156125,
-		        "85dbb7af4eed5c4e01eb64c70fc299946a2c19080173ea648948cca2039e30b4")));
+		        Transfer::URI("meerkat:///test/duck.dae/original/0/duck.dae"),
+		        284312,
+		        "332d81633b62944fa87d3fa66e0eeda6288f67499a73e2ad1b8f1388a939045a")));
         list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/blackclear.png"),
-                167,
-                "b18db4fb7971117be7124c7a05e2afb265fb26d0181f15f038a4628e2ae9b571")));
+                Transfer::URI("meerkat:///test/cube.dae/original/0/cube.dae"),
+                9606,
+                "cd69387992971e3045cbe6504288a61fdcd5daa10fec8288def1b9f6cdadf690")));
         list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/ArchD_Triumph_mesh.mesh"),
-                215464,
-                "e61a8cac4c938ea80182f8e23499c9c83248d01e1b506716bcca79b04cdaded5")));
+                Transfer::URI("meerkat:///test/duck.dae/original/0/duckCM.tga"),
+                786476,
+                "25f5ff38a5db9465c871947c5e805d707d734bf50fb4e52793f03483afa5c22a")));
         list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/whitecube_bk.png"),
-                160,
-                "2b4d4a27c51611238140e9980d4954ba56e8d90e7b73545fe46ce3f701cff034")));
+                Transfer::URI("meerkat:///test/sphere.dae/original/0/sphere.dae"),
+                42338,
+                "f50e51f38e6bd5d8b60d712fec0ecf184a792f17b4bd391174df049ccb46b0d4")));
         list1.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/arch.os"),
-                3657,
-                "719c397d1019e56e41b5f98b1074abf32fb6e1fb832984f6d47a5761cfa3bcf6")));
+                Transfer::URI("meerkat:///test/sevenListo2.dae/original/0/sevenListo2.dae"),
+                21654,
+                "19331dbb33517656de75c8b7929ad8e88646bbedb982580f5dec3dc46027f88c")));
 
-		//4 new urls, 1 overlap from list1
+		//2 new urls, 1 overlap from list1
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list2;
         list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/blackclear.png"),
-                167,
-                "b18db4fb7971117be7124c7a05e2afb265fb26d0181f15f038a4628e2ae9b571")));
+                Transfer::URI("meerkat:///test/dice.dae/original/0/dice.dae"),
+                5142,
+                "522d5d03fa158b80ca92d63c89873b6dad768ab95f0587a73245d75afccc8cef")));
         list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new ChunkVerifier(
-                        Transfer::URI("meerkat:///test/arcade.os"),
-                        6246,
-                        "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea",
-                        6246,
-                        "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
+                        Transfer::URI("meerkat:///test/dice.dae/original/0/dice.tga"),
+                        393234,
+                        "1cc9af599adef10326a913e98826f00500a792b131fbbfdd8f32714a5fbee6a4",
+                        393234,
+                        "1cc9af599adef10326a913e98826f00500a792b131fbbfdd8f32714a5fbee6a4")));
         list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/whitecube_up.png"),
-                160,
-                "2b4d4a27c51611238140e9980d4954ba56e8d90e7b73545fe46ce3f701cff034")));
+                Transfer::URI("meerkat:///test/collada.dae/original/0/collada.dae"),
+                154363,
+                "f3018099026bb9f97cf0aa9c1b5e2f7a48ae769a7ddef981b4452cf3865d2d44")));
         list2.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/whitecube_rt.png"),
-                160,
-                "2b4d4a27c51611238140e9980d4954ba56e8d90e7b73545fe46ce3f701cff034")));
+                Transfer::URI("meerkat:///test/sphere.dae/original/0/sphere.dae"),
+                42338,
+                "f50e51f38e6bd5d8b60d712fec0ecf184a792f17b4bd391174df049ccb46b0d4")));
 
-		//3 new urls, 1 overlap from list1, 1 overlap from list2
+		//1 new url, 1 overlap from list1, 1 overlap from list2
 		std::vector<std::tr1::shared_ptr<RequestVerifier> > list3;
         list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/polySurface01.mesh"),
-                156125,
-                "85dbb7af4eed5c4e01eb64c70fc299946a2c19080173ea648948cca2039e30b4")));
+                Transfer::URI("meerkat:///test/multimtl.dae/original/0/multimtl.dae"),
+                11517,
+                "6cf8a48175ef3fb8e4a3cd4cb066164d3f9606a9f60a4db6249ddbec53ecb24d")));
 		list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new ChunkVerifier(
-		                Transfer::URI("meerkat:///test/arcade.os"),
-		                6246,
-		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea",
-		                6246,
-		                "58c9d20206a4ee3cf422b7595decf6edb2c2705a96ab09e0495a622b6bf5caea")));
+		                Transfer::URI("meerkat:///test/duck.dae/original/0/duckCM.tga"),
+		                786476,
+		                "25f5ff38a5db9465c871947c5e805d707d734bf50fb4e52793f03483afa5c22a",
+		                786476,
+		                "25f5ff38a5db9465c871947c5e805d707d734bf50fb4e52793f03483afa5c22a")));
         list3.push_back(std::tr1::shared_ptr<RequestVerifier>(new MetadataVerifier(
-                Transfer::URI("meerkat:///test/blackcube_rt.png"),
-                158,
-                "784a5b0809ed274036733777f9a158678ffa852247deefd4b1140409dffdac14")));
+                Transfer::URI("meerkat:///test/dice.dae/original/0/dice.tga"),
+                393234,
+                "1cc9af599adef10326a913e98826f00500a792b131fbbfdd8f32714a5fbee6a4")));
 
 		mSampleClient1 = new SampleClient(*mTransferMediator, "sample1", list1);
 		mSampleClient2 = new SampleClient(*mTransferMediator, "sample2", list2);
