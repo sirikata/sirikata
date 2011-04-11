@@ -20,7 +20,7 @@ namespace JS {
 namespace JSVisible {
 
 /**
-   @param Vec3.  
+   @param Vec3.
    @return Number.
 
    Returns the distance from this visible object to the position
@@ -129,7 +129,7 @@ Handle<v8::Value> getOrientationVel(const v8::Arguments& args)
 
 /*
   @return Number associated with how large the visible object is compared to the
-  mesh it came from.  
+  mesh it came from.
  */
 Handle<v8::Value> getScale(const v8::Arguments& args)
 {
@@ -214,6 +214,9 @@ bool isVisibleObject(v8::Handle<v8::Value> v8Val)
   // This is an object
 
   v8::Handle<v8::Object>v8Obj = v8::Handle<v8::Object>::Cast(v8Val);
+
+  if (TYPEID_FIELD >= v8Obj->InternalFieldCount()) return false;
+
   v8::Local<v8::Value> typeidVal = v8Obj->GetInternalField(TYPEID_FIELD);
   if(typeidVal->IsNull() || typeidVal->IsUndefined())
   {
