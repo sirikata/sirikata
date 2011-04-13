@@ -145,3 +145,8 @@ util.Quaternion.prototype.zAxis = function() {
     var fTyz = fTz*this.y;
     return new util.Vec3(fTxz+fTwy, fTyz-fTwx, 1.0-(fTxx+fTyy));
 };
+
+util.Quaternion.prototype.__prettyPrintFieldsData__ = ["x", "y", "z", "w"];
+util.Quaternion.prototype.__prettyPrintFields__ = function() {
+    return this.__prettyPrintFieldsData__;
+};
