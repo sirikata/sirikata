@@ -41,7 +41,7 @@ function(name)
   if(!system.shim.graphics)
   {
 	  system.print("\n\n Got the new graphics object\n\n");
-    system.shim.graphics = new Object();  
+    system.shim.graphics = new Object();
   }
   if(!system.shim.graphics[pres])
   {
@@ -49,16 +49,77 @@ function(name)
     system.print("\n\nBefore _runSimulation\n\n");
     system.shim.graphics[pres][name] = pres._runSimulation(name);
   }
-    
+
   var return_val = system.shim.graphics[pres][name];
 
-	return return_val; 
-}
+	return return_val;
+};
 
-system.__presence_constructor__.prototype.getSimulation = 
+system.__presence_constructor__.prototype.getSimulation =
 function(name)
 {
- 
+
   if(!system.shim.graphics || !system.shim.graphics[this]) return undefined;
-  return system.shim.graphics[this][name];        
-}
+  return system.shim.graphics[this][name];
+};
+
+
+Object.defineProperty(system.__presence_constructor__.prototype, "position",
+                      {
+                          get: function() { return this.getPosition(); },
+                          set: function() { return this.setPosition.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+Object.defineProperty(system.__presence_constructor__.prototype, "velocity",
+                      {
+                          get: function() { return this.getVelocity(); },
+                          set: function() { return this.setVelocity.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+Object.defineProperty(system.__presence_constructor__.prototype, "orientation",
+                      {
+                          get: function() { return this.getOrientation(); },
+                          set: function() { return this.setOrientation.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+
+Object.defineProperty(system.__presence_constructor__.prototype, "orientationVel",
+                      {
+                          get: function() { return this.getOrientationVel(); },
+                          set: function() { return this.setOrientationVel.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+
+Object.defineProperty(system.__presence_constructor__.prototype, "scale",
+                      {
+                          get: function() { return this.getScale(); },
+                          set: function() { return this.setScale.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+
+Object.defineProperty(system.__presence_constructor__.prototype, "mesh",
+                      {
+                          get: function() { return this.getMesh(); },
+                          set: function() { return this.setMesh.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+system.__presence_constructor__.prototype.__prettyPrintFieldsData__ = [
+    "position", "velocity",
+    "orientation", "orientationVel",
+    "scale", "mesh"
+];
+system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
+    return this.__prettyPrintFieldsData__;
+};
