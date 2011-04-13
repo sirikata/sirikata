@@ -94,14 +94,14 @@ util.Quaternion.prototype.lengthSquared = function() {
 util.Quaternion.prototype.normal = function() {
     var len = this.length();
     if (len>1e-08)
-        return this.div(len);
+        return this.scale(1.0/len);
     return this;
 };
 
 util.Quaternion.prototype.inverse = function() {
     var len = this.lengthSquared();
     if (len>1e-8)
-        return Quaternion(-this.x/len,-this.y/len,-this.z/len,this.w/len);
+        return new util.Quaternion(-this.x/len,-this.y/len,-this.z/len,this.w/len);
     return new util.Quaternion(0.0, 0.0, 0.0, 0.0);
 };
 util.Quaternion.prototype.inv = util.Quaternion.prototype.inverse;
