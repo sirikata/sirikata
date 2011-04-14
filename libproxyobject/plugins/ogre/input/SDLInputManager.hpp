@@ -52,8 +52,12 @@ struct SDLKeyRepeatInfo {
     SDLKeyRepeatInfo();
     ~SDLKeyRepeatInfo();
 
-    SDL_Event* evt;
-    bool repeat;
+    bool isRepeating(uint32 key);
+    void repeat(uint32 key, SDL_Event* evt);
+    void unrepeat(uint32 key);
+
+    typedef std::tr1::unordered_map<uint32, SDL_Event*> RepeatMap;
+    RepeatMap mRepeat;
 };
 typedef std::tr1::shared_ptr<SDLKeyRepeatInfo> SDLKeyRepeatInfoPtr;
 
