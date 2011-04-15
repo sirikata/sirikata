@@ -109,3 +109,9 @@ util.Vec3.prototype.normal = function() {
 util.Vec3.prototype.reflect = function(normal) {
     return new util.Vec3(this.sub( normal.dot( this.dot(normal).scale(2.0) ) ));
 };
+
+
+util.Vec3.prototype.__prettyPrintFieldsData__ = ["x", "y", "z"];
+util.Vec3.prototype.__prettyPrintFields__ = function() {
+    return this.__prettyPrintFieldsData__;
+};

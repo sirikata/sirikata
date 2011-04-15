@@ -31,7 +31,7 @@
  */
 
 system.require('graphics.em');
-system.require('std/movement/movement.em');
+system.require('std/movement/moveAndRotate.em');
 system.require('std/script/scripter.em');
 system.require('drag/move.em');
 system.require('drag/rotate.em');
@@ -63,6 +63,8 @@ function() {
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
 
+        this._moverot = new std.movement.MoveAndRotate(this._pres);
+
         this._draggers = {
             move: new std.graphics.MoveDragHandler(this._simulator),
             rotate: new std.graphics.RotateDragHandler(this._simulator),
@@ -87,20 +89,7 @@ function() {
         if (evt.button == 'i') this._simulator.screenshot();
         if (evt.button == 'm') this._simulator.toggleSuspend();
 
-        if (evt.button == 'up' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, -1), this.defaultVelocityScaling);
-        if (evt.button == 'down' && !evt.modifier.shift) std.movement.move(this._pres, new util.Vec3(0, 0, 1), this.defaultVelocityScaling);
-
-        if (evt.button == 'up' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(1, 0, 0), this.defaultVelocityScaling);
-        if (evt.button == 'down' && evt.modifier.shift) std.movement.rotate(this._pres, new util.Vec3(-1, 0, 0), this.defaultVelocityScaling);
-        if (evt.button == 'left') std.movement.rotate(this._pres, new util.Vec3(0, 1, 0), this.defaultRotationVelocityScaling);
-        if (evt.button == 'right') std.movement.rotate(this._pres, new util.Vec3(0, -1, 0), this.defaultRotationVelocityScaling);
-
-        if (evt.button == 'w') std.movement.move(this._pres, new util.Vec3(0, 0, -1), 1);
-        if (evt.button == 's' && !evt.modifier.alt && !evt.modifier.ctrl) std.movement.move(this._pres, new util.Vec3(0, 0, 1), 1);
-        if (evt.button == 'a') std.movement.move(this._pres, new util.Vec3(-1, 0, 0), 1);
-        if (evt.button == 'd') std.movement.move(this._pres, new util.Vec3(1, 0, 0), 1);
-        if (evt.button == 'q') std.movement.move(this._pres, new util.Vec3(0, 1, 0), 1);
-        if (evt.button == 'z') std.movement.move(this._pres, new util.Vec3(0, -1, 0), 1);
+        this._handleToggles(evt, 1);
 
         if (evt.button == 's' && evt.modifier.alt)
             this._scripter.script(this._selected);
@@ -113,8 +102,24 @@ function() {
     };
 
     ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
-        std.movement.stopMove(this._pres);
-        std.movement.stopRotate(this._pres);
+        this._handleToggles(evt, -1);
+    };
+
+    ns.DefaultGraphics.prototype._handleToggles = function(evt, scale) {
+        if (evt.button == 'up' && !evt.modifier.shift) this._moverot.move(new util.Vec3(0, 0, -1), scale * this.defaultVelocityScaling);
+        if (evt.button == 'down' && !evt.modifier.shift) this._moverot.move(new util.Vec3(0, 0, 1), scale * this.defaultVelocityScaling);
+
+        if (evt.button == 'up' && evt.modifier.shift) this._moverot.rotate(new util.Vec3(1, 0, 0), scale * this.defaultVelocityScaling);
+        if (evt.button == 'down' && evt.modifier.shift) this._moverot.rotate(new util.Vec3(-1, 0, 0), scale * this.defaultVelocityScaling);
+        if (evt.button == 'left') this._moverot.rotate(new util.Vec3(0, 1, 0), scale * this.defaultRotationVelocityScaling);
+        if (evt.button == 'right') this._moverot.rotate(new util.Vec3(0, -1, 0), scale * this.defaultRotationVelocityScaling);
+
+        if (evt.button == 'w') this._moverot.move(new util.Vec3(0, 0, -1), scale);
+        if (evt.button == 's' && !evt.modifier.alt && !evt.modifier.ctrl) this._moverot.move(new util.Vec3(0, 0, 1), scale);
+        if (evt.button == 'a') this._moverot.move(new util.Vec3(-1, 0, 0), scale);
+        if (evt.button == 'd') this._moverot.move(new util.Vec3(1, 0, 0), scale);
+        if (evt.button == 'q') this._moverot.move(new util.Vec3(0, 1, 0), scale);
+        if (evt.button == 'z') this._moverot.move(new util.Vec3(0, -1, 0), scale);
     };
 
     ns.DefaultGraphics.prototype.onMousePress = function(evt) {

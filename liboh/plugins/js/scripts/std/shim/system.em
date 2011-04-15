@@ -49,6 +49,9 @@ system.require('std/core/pretty.em');
  }
 )();
 
-system.prettyprint = function(x) {
-    system.print( std.core.pretty(x) );
+system.prettyprint = function() {
+    res = '';
+    for(var i = 0; i < arguments.length; i++)
+        res += std.core.pretty(arguments[i]);
+    system.print(res);
 };

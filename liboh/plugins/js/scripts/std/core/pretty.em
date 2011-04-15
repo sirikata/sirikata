@@ -46,8 +46,14 @@ std.core.pretty = function(obj) {
     if (typeof(obj) !== "object" || obj === null)
         return '' + obj;
 
+    var objectFields = function(obj) {
+        if (typeof(obj.__prettyPrintFields__) == "function")
+            return obj.__prettyPrintFields__();
+        else
+            return Object.getOwnPropertyNames(obj);
+    };
     var longObject = function(obj) {
-        return (Object.getOwnPropertyNames(obj).length > 1);
+        return (objectFields.length > 1);
     };
 
     var output = '';
@@ -62,7 +68,7 @@ std.core.pretty = function(obj) {
             indent += ' ';
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
         }
-        else if (cur.idx < Object.getOwnPropertyNames(cur.obj).length) {
+        else if (cur.idx < objectFields(cur.obj).length) {
             // Setup processing of next child
 
             // Add a comma and either space or newline as appropriate
@@ -75,7 +81,7 @@ std.core.pretty = function(obj) {
 
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
             // And process this one, possibly triggering recursion
-            var key = Object.getOwnPropertyNames(cur.obj)[cur.idx];
+            var key = objectFields(cur.obj)[cur.idx];
             var child = cur.obj[key];
             output += key + ': ';
             if (typeof(child) === "object" && child !== null)

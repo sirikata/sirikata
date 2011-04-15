@@ -24,6 +24,9 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
   // This is an object
 
   v8::Handle<v8::Object>v8Obj = v8Val->ToObject();
+
+  if (TYPEID_FIELD >= v8Obj->InternalFieldCount()) return false;
+
   v8::Local<v8::Value> typeidVal = v8Obj->GetInternalField(TYPEID_FIELD);
   if(typeidVal->IsNull() || typeidVal->IsUndefined())
   {
