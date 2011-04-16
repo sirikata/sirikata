@@ -353,9 +353,9 @@ void HostedObject::connect(
         meshBounds,
         mesh,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd, token),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1),
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, token),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
     );
 
@@ -388,7 +388,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -401,12 +401,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd, token)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd,PresenceToken token)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
 {
     if (info.server == NullServerID)
     {
@@ -448,9 +448,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //receive the scripting signal for the first time, that means that we create
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
+    HO_LOG(warning,"Connected object " << obj << " to space " << space << " waiting on notice");
 
-    HO_LOG(warning,"Notifying of connected object " << obj << " to space " << space);
-    notify(&SessionEventListener::onConnected, getSharedPtr(), self_objref, token);
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -458,7 +457,7 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
     NOT_IMPLEMENTED(ho);
 }
 
-void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
+void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token) {
     HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
     //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
@@ -471,6 +470,8 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj) {
             std::tr1::bind(&HostedObject::handleProximitySubstream, this, spaceobj, _1, _2)
         );
     }
+    HO_LOG(warning,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
+    notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
 }
 
 void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
@@ -532,7 +533,9 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
 
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
         initializeScript(scriptType,"");
-
+    else if (scriptType.length()) {
+        initializeScript(scriptType,"");
+    }
 
     return true;
 }

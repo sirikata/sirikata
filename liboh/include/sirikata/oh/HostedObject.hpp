@@ -281,13 +281,13 @@ public:
     // connection callbacks manually.
 
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd, PresenceToken token);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
-    void handleStreamCreated(const SpaceObjectReference& spaceobj);
+    void handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token);
     void handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc);
 
   public:
