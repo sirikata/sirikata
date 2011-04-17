@@ -90,8 +90,12 @@ void SDLKeyRepeatInfo::repeat(uint32 key, SDL_Event* evt) {
 
 void SDLKeyRepeatInfo::unrepeat(uint32 key) {
     RepeatMap::iterator it = mRepeat.find(key);
-    delete it->second;
-    mRepeat.erase(it);
+    if (it!=mRepeat.end()) {
+        delete it->second;
+        mRepeat.erase(it);
+    }else {
+        SILOG(ogre,error,"Key unrepeated even though it was never in repeat list");
+    }
 }
 
 
@@ -282,7 +286,9 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
                     (unsigned int)event->key.keysym.scancode,
                     (event->key.state == SDL_PRESSED),
                     modifiersFromSDL(event->key.keysym.mod));
-                mLastKeys[event->key.which]->unrepeat((uint32)event->key.keysym.scancode);
+                if (mLastKeys[event->key.which]->isRepeating((uint32)event->key.keysym.scancode)) {
+                    mLastKeys[event->key.which]->unrepeat((uint32)event->key.keysym.scancode);
+                }
             }
             break;
           case SDL_KEYDOWN:
