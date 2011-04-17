@@ -16,6 +16,7 @@ build/cmake/cmake_install.cmake
 
 # generated files
 build/cmake/generated/*
+libcore/include/sirikata/core/util/Version.hpp
 
 # build products
 build/cmake/libcbr-core.a

@@ -281,6 +281,7 @@ class ThreadIdCheck { public:
 #endif
 class OptionSet;
 } // namespace Sirikata
+#include "Version.hpp"
 #include "MemoryReference.hpp"
 #include "TotallyOrdered.hpp"
 #include "Singleton.hpp"
