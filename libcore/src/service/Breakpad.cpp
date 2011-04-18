@@ -97,7 +97,13 @@ bool finishedDump(const wchar_t* dump_path,
 
     STARTUPINFO info={sizeof(info)};
     PROCESS_INFORMATION processInfo;
-    std::string cmd = reporter_name + std::string(" ") + breakpad_url + std::string(" ") + wchar_to_string(dump_path) + std::string(" ") + wchar_to_string(minidump_id);
+    std::string cmd =
+        reporter_name + std::string(" ") +
+        breakpad_url + std::string(" ") +
+        wchar_to_string(dump_path) + std::string(" ") +
+        wchar_to_string(minidump_id) + std::string(" ") +
+        std::string(SIRIKATA_VERSION) + std::string(" ") +
+        std::string(SIRIKATA_GIT_REVISION);
     CreateProcess(reporter_name, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
 
     return succeeded;
@@ -158,9 +164,9 @@ bool finishedDump(const char* dump_path,
 #endif
             ;
 
-        execlp(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, (char*)NULL);
+        execlp(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
         // If crashreporter not in path, try current directory
-        execl(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, (char*)NULL);
+        execl(reporter_name, reporter_name, breakpad_url.c_str(), dump_path, minidump_id, SIRIKATA_VERSION, SIRIKATA_GIT_REVISION, (char*)NULL);
     }
     else if (pID < 0) {
         printf("Failed to fork crashreporter\n");

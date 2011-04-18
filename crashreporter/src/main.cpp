@@ -53,14 +53,16 @@ size_t writehandler(void*ptr, size_t size, size_t nmemb, std::string* userdata) 
 }
 
 int main(int argc, char** argv) {
-    // crashreporter report_url minidumppath minidumpfile
-    assert(argc == 4);
+    // crashreporter report_url minidumppath minidumpfile version git_hash
+    assert(argc == 6);
     // The file is called minidumppath/minidumpfile.dmp
 
     const char* report_url = argv[1];
     std::string dumppath = std::string(argv[2]) + std::string("/");
     std::string dumpfilename = std::string(argv[3]) + std::string(".dmp");
     std::string fulldumpfile = dumppath + dumpfilename;
+    std::string sirikata_version = std::string(argv[4]);
+    std::string sirikata_git_hash = std::string(argv[5]);
 
     CURL* curl;
     CURLcode res;
@@ -77,6 +79,14 @@ int main(int argc, char** argv) {
     curl_formadd(&formpost, &lastptr,
         CURLFORM_COPYNAME, "dumpname",
         CURLFORM_COPYCONTENTS, dumpfilename.c_str(),
+        CURLFORM_END);
+    curl_formadd(&formpost, &lastptr,
+        CURLFORM_COPYNAME, "version",
+        CURLFORM_COPYCONTENTS, sirikata_version.c_str(),
+        CURLFORM_END);
+    curl_formadd(&formpost, &lastptr,
+        CURLFORM_COPYNAME, "githash",
+        CURLFORM_COPYCONTENTS, sirikata_git_hash.c_str(),
         CURLFORM_END);
 
     curl_formadd(&formpost, &lastptr,
