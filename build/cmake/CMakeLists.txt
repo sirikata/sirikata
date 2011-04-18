@@ -383,7 +383,9 @@ make depends
 ENDIF()
 
 #dependency: ANTLR
-IF(EXISTS ${PLATFORM_LIBS}/libantlr3c-3.1.3)
+IF(EXISTS ${PLATFORM_LIBS}/installed-antlr)
+  SET(ANTLR_ROOT ${PLATFORM_LIBS}/installed-antlr)
+ELSEIF(EXISTS ${PLATFORM_LIBS}/libantlr3c-3.1.3)
   SET(ANTLR_ROOT ${PLATFORM_LIBS}/libantlr3c-3.1.3)
 ELSEIF(EXISTS ${PLATFORM_LIBS}/antlr3c-3.1.3)
   SET(ANTLR_ROOT ${PLATFORM_LIBS}/antlr3c-3.1.3)
