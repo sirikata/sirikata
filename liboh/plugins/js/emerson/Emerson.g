@@ -46,6 +46,7 @@ tokens
     WHEN_CHECKED_LIST_FIRST;
     WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
+    VECTOR;
     NOOP;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
@@ -379,9 +380,9 @@ expressionNoIn
 	: assignmentExpressionNoIn (LTERM* ',' LTERM* assignmentExpressionNoIn)* -> ^(EXPR_LIST assignmentExpressionNoIn+)
 
 	;
-	
+
 assignmentExpression
-	: conditionalExpression -> ^(COND_EXPR conditionalExpression)
+        : conditionalExpression -> ^(COND_EXPR conditionalExpression)
 	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpression ->  ^(assignmentOperator  leftHandSideExpression assignmentExpression)
 	;
 	
@@ -389,7 +390,8 @@ assignmentExpressionNoIn
 	: conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
 	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression assignmentExpressionNoIn ) 
 	;
-	
+
+
 leftHandSideExpression
 	: callExpression -> callExpression
 	| newExpression -> newExpression
@@ -506,6 +508,7 @@ equalityExpression
 	: (relationalExpression -> relationalExpression)(LTERM* equalityOps LTERM* relationalExpression -> ^(equalityOps $equalityExpression relationalExpression) )*
 	;
 
+
 equalityOps
 :  '==' -> ^(EQUALS)
 | '!=' -> ^(NOT_EQUALS)
@@ -604,6 +607,7 @@ unaryExpression
 
 primaryExpression
 	: 'this'
+        | vectorLiteral 
 	| Identifier
         | dollarExpression
 	| literal
@@ -613,6 +617,18 @@ primaryExpression
 	| '(' LTERM* expression LTERM* ')' -> ^( PAREN expression )
 	;
 
+vectorLiteral
+        : '<' LTERM* e1=assignmentExpression LTERM* ',' LTERM* e2=assignmentExpression LTERM* ',' LTERM* e3=assignmentExpression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+        ;
+
+/*
+: '<' LTERM* e1=Identifier LTERM* ',' LTERM* e2=Identifier LTERM* ',' LTERM* e3=Identifier LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+        ;
+*/
+        
+/*        : '<' LTERM* x=expression LTERM* ',' LTERM* y=expression LTERM* ',' LTERM* z=expression LTERM* '>' -> ^(VECTOR $x $y $z)
+*/
+        
 dollarExpression
         : '`' LTERM* Identifier LTERM* '`' -> ^(DOLLAR_EXPRESSION Identifier)
         ;

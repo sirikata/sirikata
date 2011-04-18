@@ -835,7 +835,7 @@ memberExpression
 | ^(DOT memberExpression { APP("."); } propertyReferenceSuffix1 )
 | ^(ARRAY_INDEX memberExpression { APP("[ "); } indexSuffix1 { APP(" ] "); })
 | ^(NEW { APP("new "); } memberExpression arguments)
-| ^(DOT { APP(".");} memberExpression) 
+| ^(DOT { APP(".");} memberExpression)
 ;
 
 memberExpressionSuffix
@@ -1199,9 +1199,68 @@ primaryExpression
 	| arrayLiteral
 	| objectLiteral
         | patternLiteral
-	| ^(PAREN { APP("( "); } expression { APP(" )");}) 
+	| ^(PAREN { APP("( "); } expression { APP(" )");})
+        | vectorLiteral
 	;
 
+/*
+vectorLiteral
+        : ^(VECTOR
+            {
+                APP(" new util.Vec3(");
+            }
+            (exp1=expression
+              {
+                  APP((const char*)$exp1.text->chars);
+                  APP(",");
+              }
+            )
+            (exp2=expression
+              {
+                  APP((const char*)$exp2.text->chars);
+                  APP(",");
+              }
+            )
+            (exp3=expression
+              {
+                  APP((const char*)$exp3.text->chars);
+                  APP(")");
+              }
+            )
+           )
+        ;       
+*/
+
+
+
+vectorLiteral
+        : ^(VECTOR
+            {
+                APP(" new util.Vec3(");
+            }
+            (exp1=assignmentExpression
+              {
+                  //APP((const char*)$exp1.text->chars);
+                  APP(",");
+              }
+            )
+            (exp2=assignmentExpression
+              {
+                  //APP((const char*)$exp2.text->chars);
+                  APP(",");
+              }
+            )
+            (exp3=assignmentExpression
+              {
+                  //APP((const char*)$exp3.text->chars);
+                  APP(")");
+              }
+            )
+           )
+        ;       
+
+
+        
 dollarExpression
         : ^(DOLLAR_EXPRESSION
             {
