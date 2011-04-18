@@ -12,6 +12,10 @@
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
+#include "../JSUtil.hpp"
+#include <sirikata/core/util/Vector3.hpp>
+#include "../JSObjects/JSVec3.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -68,6 +72,13 @@ void JSContextStruct::createContextObjects()
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
+}
+
+
+//creates a vec3 emerson object out of the vec3d cpp object passed in.
+v8::Handle<v8::Value> JSContextStruct::struct_createVec3(Vector3d& toCreate)
+{
+    return CreateJSResult_Vec3Impl(mContext, toCreate);
 }
 
 

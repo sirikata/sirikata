@@ -11,6 +11,8 @@
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
+#include "../JSUtil.hpp"
+#include <sirikata/core/util/Vector3.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -71,6 +73,10 @@ struct JSContextStruct : public JSSuspendable
     void struct_registerSuspendable   (JSSuspendable* toRegister);
     void struct_deregisterSuspendable (JSSuspendable* toDeregister);
     
+    //creates a vec3 emerson object out of the vec3d cpp object passed in.
+    v8::Handle<v8::Value> struct_createVec3(Vector3d& toCreate);
+
+
     
     void jsscript_print(const String& msg);
     void presenceDied();

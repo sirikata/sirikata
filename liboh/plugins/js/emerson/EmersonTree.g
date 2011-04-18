@@ -1102,23 +1102,27 @@ scope
 
 
 additiveExpression
-	: multiplicativeExpression
-	| ^(
-	     ADD_OP 
-						e1=additiveExpression
-						{
-						  APP(" + ");
-						}
-						multiplicativeExpression
-					) 
-	| ^(
-	     SUB 
-						e1=additiveExpression 
-						 {
-							  APP(" - ");
-							}
-						multiplicativeExpression
-					) 
+        : multiplicativeExpression
+        | ^(ADD_OP 
+             {
+                APP("  util.plus( " );
+             }
+             e1=additiveExpression
+             {
+                APP(" , ");
+             }
+             multiplicativeExpression
+             {
+                APP( " ) ");
+             }
+            ) 
+        | ^(SUB 
+             e1=additiveExpression 
+             {
+                APP(" - ");
+             }
+             multiplicativeExpression
+            ) 
 	;
 
 

@@ -183,6 +183,87 @@ v8::Handle<v8::Value> ScriptCreateWhen(const v8::Arguments& args)
 }
 
 
+/**
+   Overloads the '+' operator for many types.  a and b must be of the same type
+   (either vectors, numbers, or strings).  If a and b are vectors (a =
+   <ax,ay,az>; b = <bx,by,bz>, returns <ax+bx, ay+by, az+bz>).  If a and b are
+   numbers, returns a + b.  If a and b are strings, returns concatenated string.
+   
+   @param a Of type vector, number, or string.
+   @param b Of type vector, number, or string.
+ */
+v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments.")) );
+
+    String dummyErr;
+    //check if numbers
+    bool isNum1, isNum2;
+    float num1,num2;
+    isNum1 = NumericValidate(args[0]);
+    if (isNum1)
+    {
+        isNum2 = NumericValidate(args[1]);
+        if (! isNum2)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments of same type.  First argument is number.  Second argument is not.")) );
+
+
+        num1 = NumericExtract(args[0]);
+        num2 = NumericExtract(args[1]);
+
+        return v8::Number::New(num1+num2);
+    }
+    
+    //check if vecs
+    Vector3d vec1,vec2;
+    if (Vec3ValValidate(args[0]))
+    {
+        if (! Vec3ValValidate(args[1]))
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments of same type.  First argument is vec3.  Second argument is not.")) );
+
+        v8::HandleScope handle_scope;
+        v8::Handle<v8::Object> o1,o2;
+        o1 = args[0]->ToObject();
+        o2 = args[1]->ToObject();
+        vec1 = Vec3Extract(o1);
+        vec2 = Vec3Extract(o2);
+
+        Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
+
+        String errMsg = "Error in JSUtilObj.cpp when trying to add.  Could not decode util struct.  ";
+        JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This() ,errMsg);
+
+        if (jsutil == NULL)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
+
+        
+        vec1 = vec1+vec2;
+        
+        return jsutil->struct_createVec3(vec1);
+    }
+
+
+    
+    //check if strings
+    String str1,str2;
+    bool isStr1, isStr2;
+    isStr1 = decodeString(args[0], str1, dummyErr);
+    if (isStr1)
+    {
+        isStr2 = decodeString(args[1], str2, dummyErr);
+        if (!isStr2)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments of same type.  First argument is string.  Second argument is not.")) );
+
+        return v8::String::New((str1+str2).c_str());
+    }
+
+    
+
+    return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments.  Both must either be vectors, strings, or numbers.")) );
+}
+
+
 
 /**
   @return a random float from 0 to 1

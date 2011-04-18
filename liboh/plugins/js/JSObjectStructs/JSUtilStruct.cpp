@@ -23,6 +23,13 @@ JSUtilStruct::~JSUtilStruct()
 }
 
 
+v8::Handle<v8::Value> JSUtilStruct::struct_createVec3(Vector3d& toCreate )
+{
+    return associatedContext->struct_createVec3(toCreate);
+}
+
+
+
 //first three arguments correspond to
 // want to say dist(a,b) < x
 //x corresponds to ltRHS
