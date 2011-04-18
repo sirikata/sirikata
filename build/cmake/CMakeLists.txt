@@ -215,11 +215,12 @@ SET(SIRIKATA_VERSION_REVISION "0" CACHE STRING "Sirikata's revision version" FOR
 # detailed explanation.
 SET(SIRIKATA_VERSION "${SIRIKATA_VERSION_MAJOR}.${SIRIKATA_VERSION_MINOR}.${SIRIKATA_VERSION_REVISION}"  CACHE STRING "Sirikata's complete version"  FORCE)
 SET(SIRIKATA_SOVERSION "${SIRIKATA_VERSION_MAJOR}" CACHE STRING "Sirikata's library (ABI) version" FORCE)
-SET(SIRIKATA_VERSION_SETTINGS VERSION ${SIRIKATA_VERSION} SOVERSION ${SIRIKATA_SOVERSION})
+SET(SIRIKATA_VERSION_SETTINGS "VERSION;${SIRIKATA_VERSION};SOVERSION;${SIRIKATA_SOVERSION}" CACHE INTERNAL "Settings to pass to targets to get version info set." FORCE)
 
 # Get the git revision, if we can
 GetGitHeadRef(SIRIKATA_GIT_HEAD_REF ${TOP_LEVEL})
-GetGitRevision(SIRIKATA_GIT_REVISION ${TOP_LEVEL} ${SIRIKATA_GIT_HEAD_REF})
+GetGitRevision(SIRIKATA_GIT_REVISION_VAL ${TOP_LEVEL} ${SIRIKATA_GIT_HEAD_REF})
+SET(SIRIKATA_GIT_REVISION ${SIRIKATA_GIT_REVISION_VAL} CACHE STRING "Sirikata's git hash" FORCE)
 
 # Finally, we generate a configuration file with these settings
 CONFIGURE_FILE(${TOP_LEVEL}/libcore/include/sirikata/core/util/Version.hpp.in ${TOP_LEVEL}/libcore/include/sirikata/core/util/Version.hpp)
