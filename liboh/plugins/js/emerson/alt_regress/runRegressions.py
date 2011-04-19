@@ -13,7 +13,7 @@ EMERSON_COMPILED_OUTPUT              =        "__EMERSON_compiledRhinoed.txt";
 EMERSON_TMP_DIFF_RESULT_FILENAME     =            "__EMERSON_diffResults.txt";
 EMERSON_BINARY_NAME                  =   "../../../../../build/cmake/emerson";
 REGRESSION_RESULTS_FILENAME          =                "regressionResults.txt";
-
+REGRESSION_EMERSON_LIBRARY_FILENAME  =                    "emersonLibrary.em";
 
 class RegressionResults:
     COMPILE_ERROR        = 1;
@@ -100,7 +100,8 @@ toOutputTo is the filename for the file that we pass stderr and stdout from the 
 '''
 def runRhino (toRunOn, toOutputTo):
     filer = open(toOutputTo,'w');
-    subprocess.call('rhino -f ' + toRunOn, stdout=filer,stderr=filer,shell=True);
+    #subprocess.call('rhino -f ' + toRunOn, stdout=filer,stderr=filer,shell=True);
+    subprocess.call('rhino -f ' + REGRESSION_EMERSON_LIBRARY_FILENAME + " " + toRunOn, stdout=filer,stderr=filer,shell=True);
     filer.flush();
     filer.close();
 

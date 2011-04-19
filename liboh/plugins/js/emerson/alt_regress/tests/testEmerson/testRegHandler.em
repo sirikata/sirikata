@@ -1,10 +1,22 @@
+var a = "a vector";
+var i = 3;
+function m(num)
+{
+    return a;
+}
+
+var b = "ooooo";
+var c = new Object();
+
+j = 32;
+
 function test()
 {
   a <- b;
   
   print("\nPassed 1\n");
   
-  a(i) <- b;
+  m(i) <- b;
   
   print("\nPassed 2\n");
 
@@ -12,15 +24,15 @@ function test()
 
   print("\nPassed 3\n");
 
-  a(i) <- b <- c;
+  m(i) <- b <- c;
 
   print("\nPassed 4\n");
 
-  a <- b <- c(i);
+  a <- b <- m(i);
   
   print("\nPassed 5\n");
 
-  a(i) <- b <- c(j);
+  m(i) <- b <- m(j);
 
   print("\nPassed 6\n");
 
