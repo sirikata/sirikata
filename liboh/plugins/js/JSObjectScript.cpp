@@ -993,11 +993,11 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
 
 
 /*
-  executeInContext takes in a context, that you want to execute the function
+  executeInSandbox takes in a context, that you want to execute the function
   funcToCall in.  argv are the arguments to funcToCall from the current context,
   and are counted by argc.
  */
-v8::Handle<v8::Value>JSObjectScript::executeInContext(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+v8::Handle<v8::Value>JSObjectScript::executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
     JSLOG(insane, "executing script in alternate context");
 
@@ -1062,7 +1062,7 @@ void JSObjectScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSC
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscont->mContext);
     v8::Handle<v8::Value> js_pres =wrapPresence(jspres,&(jscont->mContext));
-    executeInContext(jscont->mContext,funcToCall,1,&js_pres);
+    ProtectedJSCallback(jscont->mContext, NULL, funcToCall, 1,&js_pres);
 }
 
 
