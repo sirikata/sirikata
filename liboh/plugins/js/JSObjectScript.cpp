@@ -164,15 +164,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
 
 
 v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb) {
-    const int argc =
-#ifdef _WIN32
-		1
-#else
-		0
-#endif
-		;
-    Handle<Value> argv[argc] = { };
-    return ProtectedJSCallback(ctx, target, cb, argc, argv);
+    return ProtectedJSCallback(ctx, target, cb, 0, NULL);
 }
 
 }
@@ -249,7 +241,7 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     SpaceObjectReference sporef = SpaceObjectReference::null();
     mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate);
-    
+
     mHandlingEvent = false;
 
 
@@ -976,7 +968,7 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
     {
         if (((*target)->IsNull() || (*target)->IsUndefined()))
         {
-            JSLOG(insane,"ProtectedJSCallback with target given.");
+            JSLOG(insane,"executeJSFunctionInContext with target given.");
             result = funcInCtx->Call(*target, argc, argv);
             targetGiven = true;
         }
@@ -984,7 +976,7 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
 
     if (!targetGiven)
     {
-        JSLOG(insane,"ProtectedJSCallback without target given.");
+        JSLOG(insane,"executeJSFunctionInContext without target given.");
         result = funcInCtx->Call(ctx->Global(), argc, argv);
     }
 
@@ -1104,7 +1096,7 @@ v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOri
 void JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out,JSContextStruct* contextCtx)
 {
     v8::HandleScope handle_scope;
-    
+
     if (contextCtx == NULL)
         contextCtx = mContext;
 
@@ -1413,7 +1405,7 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
 {
     v8::Handle<v8::Context> ctx = (jscs == NULL) ? mContext->mContext : jscs->mContext;
-    
+
     v8::Context::Scope context_scope(ctx);
     v8::HandleScope handle_scope;
 
@@ -1422,7 +1414,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
     returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
-    
+
     return returner;
 }
 
@@ -1443,11 +1435,11 @@ v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap,
 {
     v8::Handle<v8::Context> ctx = (ctxToWrapIn == NULL) ? mContext->mContext : *ctxToWrapIn;
     v8::Context::Scope context_scope(ctx);
-    
+
     Local<Object> js_pres = mManager->mPresenceTemplate->GetFunction()->NewInstance();
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToWrap));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
-    
+
     return js_pres;
 }
 
@@ -1545,9 +1537,9 @@ v8::Persistent<v8::Object> JSObjectScript::create_presence(const String& newMesh
 {
     if (jsctx == NULL)
         jsctx = mContext;
-    
+
     v8::Context::Scope context_scope(jsctx->mContext);
-    
+
     //presuming that we are connecting to the same space;
     FIXME_GET_SPACE_OREF();
     //"space" now contains the SpaceID we want to connect to.
@@ -1563,10 +1555,10 @@ v8::Persistent<v8::Object> JSObjectScript::create_presence(const String& newMesh
 
     //create a presence object associated with this presence and return it;
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);
-    
+
     v8::Persistent<v8::Object>js_pres = jsctx->addToPresencesArray(presToAdd);
     mUnconnectedPresences.push_back(presToAdd);
-    
+
     return js_pres;
 }
 
