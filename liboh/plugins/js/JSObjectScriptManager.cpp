@@ -120,6 +120,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("create_when_timeout_lt"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenTimeoutLT));
 
     mUtilTemplate->Set(v8::String::New("plus"), v8::FunctionTemplate::New(JSUtilObj::ScriptPlus));
+    mUtilTemplate->Set(v8::String::New("minus"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
     
     mUtilTemplate->Set(v8::String::New("When"),mWhenTemplate);
     mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);

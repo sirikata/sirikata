@@ -1116,12 +1116,18 @@ additiveExpression
                 APP( " ) ");
              }
             ) 
-        | ^(SUB 
+        | ^(SUB
+            {
+                APP("  util.minus( " );
+            }
              e1=additiveExpression 
              {
-                APP(" - ");
+                APP(" , ");
              }
              multiplicativeExpression
+             {
+                APP(" ) ");
+             }
             ) 
 	;
 

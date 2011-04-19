@@ -28,6 +28,7 @@ v8::Handle<v8::Value> ScriptCreateQuotedObject(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptCreateWhenWatchedItem(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptCreateWhenWatchedList(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args);
 
 
 } //jsutilobj
