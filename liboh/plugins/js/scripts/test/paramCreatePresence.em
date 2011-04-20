@@ -1,5 +1,5 @@
 function constructCallback(num, pos) {
-  return function(presConnected) {
+  return function() {
     system.print("Callback on presence " + num);
     //system.presences[num].setPosition(pos);
   };
