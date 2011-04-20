@@ -53,7 +53,7 @@ std.core.pretty = function(obj) {
             return Object.getOwnPropertyNames(obj);
     };
     var longObject = function(obj) {
-        return (objectFields.length > 1);
+        return (objectFields(obj).length > 3);
     };
 
     var output = '';
