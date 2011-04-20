@@ -46,6 +46,21 @@ std.core.pretty = function(obj) {
     if (typeof(obj) !== "object" || obj === null)
         return '' + obj;
 
+    var objectPrettyOverride = function(obj) {
+        // If the object overrides pretty printing, just hand back whatever it wants.
+        if (typeof(obj.__prettyPrintString__) === "string")
+            return obj.__prettyPrintString__;
+        else if (typeof(obj.__prettyPrintString__) === "function")
+            return obj.__prettyPrintString__();
+        else
+            return undefined;
+    };
+
+    {
+        var override = objectPrettyOverride(obj);
+        if (override) return override;
+    }
+
     var objectFields = function(obj) {
         if (typeof(obj.__prettyPrintFields__) == "function")
             return obj.__prettyPrintFields__();
@@ -84,8 +99,13 @@ std.core.pretty = function(obj) {
             var key = objectFields(cur.obj)[cur.idx];
             var child = cur.obj[key];
             output += key + ': ';
-            if (typeof(child) === "object" && child !== null)
-                obj_stack.push( {obj: child, idx: -1} );
+            if (typeof(child) === "object" && child !== null) {
+                var override = objectPrettyOverride(child);
+                if (override)
+                    output += override;
+                else
+                    obj_stack.push( {obj: child, idx: -1} );
+            }
             else
                 output += child;
         }

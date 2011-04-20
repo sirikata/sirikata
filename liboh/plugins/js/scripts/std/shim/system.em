@@ -55,3 +55,10 @@ system.prettyprint = function() {
         res += std.core.pretty(arguments[i]);
     system.print(res);
 };
+
+if (typeof(system.prototype) == "undefined") system.prototype = {};
+
+system.toString = function() {
+    return "[object system]";
+};
+system.__prettyPrintString__ = "[object system]";
