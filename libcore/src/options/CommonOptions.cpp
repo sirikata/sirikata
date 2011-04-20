@@ -42,6 +42,8 @@ void InitOptions() {
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )
 
+        .addOption(new OptionValue("version","false",Sirikata::OptionValueType<bool>(),"Report version number."))
+
         .addOption(new OptionValue(OPT_CRASHREPORT_URL,"http://crashes.sirikata.com/report",Sirikata::OptionValueType<String>(),"URL to report crashes to."))
 
         .addOption(new OptionValue(OPT_PLUGINS,"tcpsst,servermap-tabular,core-local,graphite",Sirikata::OptionValueType<String>(),"Plugin list to load."))
@@ -85,6 +87,15 @@ void InitOptions() {
       ;
 }
 
+namespace {
+void reportVersion() {
+    bool do_version = GetOptionValue<bool>("version");
+    if (!do_version) return;
+    SILOG(core,info,"Sirikata version " << SIRIKATA_VERSION << " (git #" << SIRIKATA_GIT_REVISION << ")");
+}
+
+}
+
 void FakeParseOptions() {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     int argc = 1; const char* argv[2] = { "bogus", NULL };
@@ -94,11 +105,13 @@ void FakeParseOptions() {
 void ParseOptions(int argc, char** argv) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parse(argc, argv);
+    reportVersion();
 }
 
 void ParseOptionsFile(const String& fname, bool required) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parseFile(fname, required);
+    reportVersion();
 }
 
 void ParseOptions(int argc, char** argv, const String& config_file_option) {
@@ -118,6 +131,8 @@ void ParseOptions(int argc, char** argv, const String& config_file_option) {
     // the config file may have overwritten. Don't use defaults to
     // avoid overwriting.
     options->parse(argc, argv, false);
+
+    reportVersion();
 }
 
 OptionValue* GetOption(const char* name) {
