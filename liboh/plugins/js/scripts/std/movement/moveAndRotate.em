@@ -45,6 +45,8 @@ std.movement.MoveAndRotate = system.Class.extend(
         init: function(pres) {
             this._pres = pres;
             this._localVel = pres.velocity;
+
+            this._localOrientVel = pres.orientationVel;
         },
         moving: function() {
             return this._pres.velocity.lengthSquared() > 1e-08;
@@ -61,9 +63,11 @@ std.movement.MoveAndRotate = system.Class.extend(
             this._startReeval();
         },
         rotate: function(axis, angle) {
-            this._pres.orientationVel = this._pres.orientationVel.mul(
+            var newVel = this._localOrientVel.mul(
                 new util.Quaternion(axis, angle)
             );
+            this._pres.orientationVel = newVel;
+            this._localOrientVel = newVel;
             this._startReeval();
         },
         _startReeval: function() {

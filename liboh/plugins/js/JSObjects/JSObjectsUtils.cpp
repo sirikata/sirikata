@@ -88,7 +88,7 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
         v8::Local<v8::Object>toPrint= v8::Local<v8::Object>::Cast(allProps->Get(s));
         String errorMessage = "Error: error decoding first string in debug_checkCurrentContextX.  ";
         String strVal, strVal2;
-        bool stringDecoded = decodeString(toPrint, errorMessage, strVal);
+        bool stringDecoded = decodeString(toPrint, strVal,errorMessage);
         if (!stringDecoded)
         {
             SILOG(js,error,errorMessage);
@@ -97,7 +97,7 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
         
         v8::Local<v8::Value> valueToPrint = objToPrint->Get(v8::String::New(strVal.c_str(), strVal.length()));
         errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
-        stringDecoded =  decodeString(valueToPrint, errorMessage, strVal2);
+        stringDecoded =  decodeString(valueToPrint,strVal2,errorMessage);
         if (!stringDecoded)
         {
             SILOG(js,error,errorMessage);

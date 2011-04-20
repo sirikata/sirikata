@@ -85,6 +85,7 @@ function() {
     ns.DefaultGraphics.prototype.defaultRotationVelocityScaling = 1;
 
     ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
+        
         if (evt.button == 'escape') this._simulator.quit();
         if (evt.button == 'i') this._simulator.screenshot();
         if (evt.button == 'm') this._simulator.toggleSuspend();

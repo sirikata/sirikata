@@ -135,6 +135,7 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
     mOrientation = newOrient;
     mBounds      = newBounds;
 
+    
     //if I received an updated location and I am associated with an object that
     //I am listeningFrom, then I should propagate this update to visible structs
     //that may not know about updates to this presence.

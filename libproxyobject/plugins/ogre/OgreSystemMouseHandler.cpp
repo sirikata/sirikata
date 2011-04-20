@@ -657,6 +657,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     {
         ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
         if (button_pressed_ev) {
+            
             event_data["msg"] = Invokable::asAny(String("button-pressed"));
             event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
             event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
@@ -667,6 +668,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     {
         ButtonRepeatedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonRepeated>(inputev));
         if (button_pressed_ev) {
+
             event_data["msg"] = Invokable::asAny(String("button-repeat"));
             event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
             event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
@@ -677,6 +679,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     {
         ButtonReleasedEventPtr button_released_ev (std::tr1::dynamic_pointer_cast<ButtonReleased>(inputev));
         if (button_released_ev) {
+
             event_data["msg"] = Invokable::asAny(String("button-up"));
             event_data["button"] = Invokable::asAny(keyButtonString(button_released_ev->mButton));
             event_data["keycode"] = Invokable::asAny((int32)button_released_ev->mButton);
