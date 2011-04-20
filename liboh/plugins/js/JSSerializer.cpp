@@ -185,6 +185,7 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
             results.push_back(all_props[i]);
     }
 
+    results.push_back("prototype");
     return results;
 }
 
@@ -220,12 +221,15 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
     }
 
     std::vector<String> properties = getOwnPropertyNames(v8Obj);
-    properties.push_back("prototype");
 
     for( unsigned int i = 0; i < properties.size(); i++)
     {
         String prop_name = properties[i];
-        v8::Local<v8::Value> prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
+        v8::Local<v8::Value> prop_val;
+        if (properties[i] == "prototype")
+            prop_val = v8Obj->GetPrototype();
+        else
+            prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
 
 
         /* This is a little gross, but currently necessary. If something is
@@ -274,12 +278,17 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
           jsf_value.set_f_value(cStrMsgBody2);
         }
+        else if(prop_val->IsArray())
+        {
+            /* If this value is an object , then recursively call the serlialize on this */
+            Sirikata::JS::Protocol::IJSMessage ijs_m = jsf_value.mutable_a_value();
+            serializeObjectInternal(prop_val, ijs_m);
+        }
         else if(prop_val->IsObject())
         {
-          /* If this value is an object , then recursively call the serlialize on this */
-          Sirikata::JS::Protocol::IJSMessage ijs_m = jsf_value.mutable_o_value();
-          //Sirikata::JS::Protocol::JSMessage js_m = Sirikata::JS::Protocol::JSMessage(ijs_m);
-          serializeObjectInternal(prop_val, ijs_m);
+            /* If this value is an object , then recursively call the serlialize on this */
+            Sirikata::JS::Protocol::IJSMessage ijs_m = jsf_value.mutable_o_value();
+            serializeObjectInternal(prop_val, ijs_m);
         }
 
         else if(prop_val->IsInt32())
@@ -309,7 +318,12 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             bool b_value = prop_val->BooleanValue();
             jsf_value.set_b_value(b_value);
         }
-
+        else if(prop_val->IsDate())
+        {
+        }
+        else if(prop_val->IsRegExp())
+        {
+        }
     }
 
 }
@@ -384,53 +398,61 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
 
 
-        String str = jsf.name();
+        String fieldname = jsf.name();
 
-        v8::Local<v8::String> key = v8::String::New(str.c_str(), str.size());
+        v8::Local<v8::String> fieldkey = v8::String::New(fieldname.c_str(), fieldname.size());
+        v8::Handle<v8::Value> val;
 
         if(jsvalue.has_s_value())
         {
-
-          String str1 = jsvalue.s_value();
-          v8::Local<v8::String> val = v8::String::New(str1.c_str(), str1.size());
-          deserializeTo->Set(key, val);
+            String str1 = jsvalue.s_value();
+            val = v8::String::New(str1.c_str(), str1.size());
         }
         else if(jsvalue.has_i_value())
         {
-          v8::Local<v8::Integer> intval = v8::Integer::New(jsvalue.i_value());
-          deserializeTo->Set(key, intval);
+            val = v8::Integer::New(jsvalue.i_value());
         }
         else if(jsvalue.has_ui_value())
         {
-          v8::Local<v8::Integer> uintval = v8::Integer::NewFromUnsigned(jsvalue.ui_value());
-          deserializeTo->Set(key, uintval);
+            val = v8::Integer::NewFromUnsigned(jsvalue.ui_value());
         }
         else if(jsvalue.has_o_value())
         {
-          v8::Local<v8::Object> intDesObj = v8::Object::New();
-          Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
-          JSSerializer::deserializeObject(jsObjScript, internal_js_message, intDesObj);
-          deserializeTo->Set(key, v8::Persistent<v8::Object>(intDesObj));
+            v8::Handle<v8::Object> intDesObj = v8::Object::New();
+            Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
+            JSSerializer::deserializeObject(jsObjScript, internal_js_message, intDesObj);
+            val = intDesObj;
+        }
+        else if(jsvalue.has_a_value())
+        {
+            v8::Handle<v8::Array> intDesArr = v8::Array::New();
+            v8::Handle<v8::Object> intDesObj(intDesArr);
+            Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.a_value();
+            JSSerializer::deserializeObject(jsObjScript, internal_js_message, intDesObj);
+            val = intDesObj;
         }
         else if(jsvalue.has_f_value())
         {
-          v8::HandleScope handle_scope;
-          //const char* str1 = jsvalue.f_value().c_str();
-          v8::Handle<v8::Function> func = jsObjScript->functionValue(jsvalue.f_value());
-          //v8::Local<v8::String> val = v8::String::New(str1, jsvalue.f_value().size());
-          deserializeTo->Set(key, func);
+            v8::HandleScope handle_scope;
+            val = jsObjScript->functionValue(jsvalue.f_value());
         }
         else if(jsvalue.has_d_value())
         {
-          v8::Local<v8::Number> dval = v8::Number::New(jsvalue.d_value());
-          deserializeTo->Set(key, dval);
+            val = v8::Number::New(jsvalue.d_value());
         }
         else if(jsvalue.has_b_value())
         {
-          v8::Handle<v8::Boolean> bval = v8::Boolean::New(jsvalue.b_value());
-          deserializeTo->Set(key, bval);
+            val = v8::Boolean::New(jsvalue.b_value());
         }
 
+        if (fieldname == "prototype") {
+            if (!val.IsEmpty() && !val->IsUndefined() && !val->IsNull())
+                deserializeTo->SetPrototype(val);
+        }
+        else {
+            if (!val.IsEmpty())
+                deserializeTo->Set(fieldkey, val);
+        }
     }
 
     return true;
