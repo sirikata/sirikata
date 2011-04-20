@@ -89,11 +89,10 @@ String JSObjectScriptManager::defaultScript() const {
     return mDefaultScript->as<String>();
 }
 
-
-
-/**
-   EMERSON!: util
+/*
+  EMERSON!: util
  */
+
 void JSObjectScriptManager::createUtilTemplate()
 {
     v8::HandleScope handle_scope;
@@ -166,6 +165,10 @@ void JSObjectScriptManager::createWhenTemplate()
     mWhenTemplate->Set(v8::String::New("getWhenLastPredState"),v8::FunctionTemplate::New(JSWhen::WhenGetLastPredState));
 }
 
+
+/*
+  EMERSON: additional types
+*/
 
 
 //these templates involve vec, quat, pattern, etc.
