@@ -6,6 +6,7 @@
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSVisible.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
+#include "JSObjectStructs/JSSystemStruct.hpp"
 #include "JSObjectScript.hpp"
 #include "JSLogging.hpp"
 
@@ -54,6 +55,24 @@ void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::J
 
 }
 
+namespace {
+void serializeSystem(v8::Local<v8::Object> jsSystem, Sirikata::JS::Protocol::IJSMessage& jsmessage)
+{
+    std::string err_msg;
+
+    JSSystemStruct* sys_struct = JSSystemStruct::decodeSystemStruct(jsSystem, err_msg);
+    if(err_msg.size() > 0) {
+        SILOG(js, error, "\n\nCould not decode system: "+ err_msg + "\n\n");
+        return;
+    }
+
+    Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
+    jsf.set_name(TYPEID_FIELD_NAME);
+    Sirikata::JS::Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
+    jsf_value.set_s_value(SYSTEM_TYPEID_STRING);
+}
+
+}
 
 void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::JS::Protocol::IJSMessage& jsmessage)
 {
@@ -93,45 +112,6 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
   jsf_value.set_s_value(sporefVisTo->toString());
 
 }
-
-
-
-/*
-void JSSerializer::serializeInternalFields(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage& jsmessage)
-{
-
-    v8::Local<v8::Value> typeidVal = v8Obj->GetInternalField(TYPEID_FIELD);
-    if(typeidVal->IsNull() || typeidVal->IsUndefined())
-    {
-      // throw exection here
-      return;
-    }
-
-    v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);
-    void* ptr = wrapped->Value();
-    std::string* typeId = static_cast<std::string*>(ptr);
-    if(typeId == NULL) return;
-
-    std::string typeIdString = *typeId;
-
-
-   // v8::String::Utf8Value u(typeidVal);
-   // const char* c = ToCString(u);
-   // std::string typeIdString(c);
-
-    //Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
-    //jsf.set_name(TYPEID_FIELD_NAME);
-    //Sirikata::JS::Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
-    //jsf_value.set_s_value(typeIdString);
-
-    // Add additinal fields based on the typeId
-    if(typeIdString == VISIBLE_TYPEID_STRING)
-    {
-      serializeVisible(v8Obj, jsmessage);
-    }
-
-}
-*/
 
 
 std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
@@ -212,8 +192,11 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
          std::string typeIdString = *typeId;
          if(typeIdString == VISIBLE_TYPEID_STRING)
          {
-           std::cout << "\n\n Serializing a visible \n\n";
            serializeVisible(v8Obj, jsmessage);
+         }
+         else if(typeIdString == SYSTEM_TYPEID_STRING)
+         {
+           serializeSystem(v8Obj, jsmessage);
          }
 
          return;
@@ -331,23 +314,32 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
     //check if there is a typeid field and what is the value for it
-    bool isAddressable = false;
     bool isVisible = false;
+    bool isSystem = false;
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
-        if(jsf.name() == TYPEID_FIELD_NAME)
-        {
-
-          if(jsvalue.s_value() == VISIBLE_TYPEID_STRING)
-          {
-            std::cout << "\n\nGot JSVisible\n\n";
-            isVisible = true;
-            break;
-          }
+        if(jsf.name() == TYPEID_FIELD_NAME) {
+            if(jsvalue.s_value() == SYSTEM_TYPEID_STRING) {
+                isSystem = true;
+                break;
+            }
+            else if(jsvalue.s_value() == VISIBLE_TYPEID_STRING) {
+                isVisible = true;
+                break;
+            }
 
         }
+    }
+
+    if (isSystem) {
+        static String fieldname = "builtin";
+        static String fieldval = "[object system]";
+        v8::Local<v8::String> v8_name = v8::String::New(fieldname.c_str(), fieldname.size());
+        v8::Local<v8::String> v8_val = v8::String::New(fieldval.c_str(), fieldval.size());
+        deserializeTo->Set(v8_name, v8_val);
+        return true;
     }
 
     if(isVisible)
