@@ -324,10 +324,13 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 /**
    @param Vec3 (eg. new util.Vec3(0,0,0);).  Corresponds to position to place
    new entity in world.
-
+   @param String.  Script option to pass in.  Almost always pass "js"
    @param String.  Name of file to import code for new entity from.
    @param String.  Mesh uri corresponding to mesh you want to use for this
    entity.
+   @param Number.  Scale of new mesh.  (Higher number means increase mesh's size.)
+   @param Number.  Solid angle that entity's new presence queries with.
+   
 
    Note: calling create_entity in a sandbox without the capabilities to create
    entities throws an exception.
