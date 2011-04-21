@@ -684,6 +684,8 @@ bool ogreLoadPlugin(const String& _filename, const String& root = "") {
         path("dependencies/ogre-1.6.x/lib/OGRE") / filename,
         path("dependencies/lib/OGRE") / filename,
         path("dependencies/installed-ogre/OgrePlugins") / filename, // Mac
+        path("dependencies/installed-ogre/lib") / filename, // Mac
+        path("lib") / filename, // Mac installed
         path("lib/OGRE") / filename,
         path("OGRE") / filename,
         path("Debug") / filename,
