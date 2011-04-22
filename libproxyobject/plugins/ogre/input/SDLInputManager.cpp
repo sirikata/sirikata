@@ -269,7 +269,7 @@ void SDLInputManager::filesDropped(const std::vector<std::string> &files) {
 
 bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
 #ifndef _WIN32
-    SDL_GL_SwapBuffers();
+    SDL_GL_SwapWindow(mWindowID);
 #endif
     SDL_Event event[16];
     bool continueRendering=true;
