@@ -23,10 +23,25 @@ namespace Sirikata{
 namespace JS{
 
 
+void annotateMessage(Sirikata::JS::Protocol::JSMessage& toAnnotate,int32 &toStampWith)
+{
+    toAnnotate.set_msg_id(toStampWith);
+    ++toStampWith;
+}
+void annotateMessage(Sirikata::JS::Protocol::IJSMessage& toAnnotate, int32&toStampWith)
+{
+    toAnnotate.set_msg_id(toStampWith);
+    ++toStampWith;
+}
+
+
+
 
 void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::JS::Protocol::JSMessage& jsmessage)
 {
-//Sirikata::JS::Protocol::JSMessage jsmessage ;
+
+    annotateMessage(jsmessage);
+    
   Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
 
   v8::HandleScope handle_scope;
@@ -60,6 +75,8 @@ void serializeSystem(v8::Local<v8::Object> jsSystem, Sirikata::JS::Protocol::IJS
 {
     std::string err_msg;
 
+    annotateMessage(jsmessage);
+    
     JSSystemStruct* sys_struct = JSSystemStruct::decodeSystemStruct(jsSystem, err_msg);
     if(err_msg.size() > 0) {
         SILOG(js, error, "\n\nCould not decode system: "+ err_msg + "\n\n");
@@ -77,7 +94,8 @@ void serializeSystem(v8::Local<v8::Object> jsSystem, Sirikata::JS::Protocol::IJS
 void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::JS::Protocol::IJSMessage& jsmessage)
 {
   std::string err_msg;
-
+  annotateMessage(jsmessage);
+  
   JSVisibleStruct* vstruct = JSVisibleStruct::decodeVisible(jsVisible, err_msg);
   if(err_msg.size() > 0)
   {
@@ -114,18 +132,20 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
 }
 
 
-std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val)
+std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toStampWith)
 {
 
   Sirikata::JS::Protocol::JSMessage jsmessage;
 
+  annotateMessage(jsmessage);
+  
   if( v8Val->IsFunction())
   {
-    serializeFunction( v8::Local<v8::Function>::Cast(v8Val), jsmessage);
+      serializeFunction( v8::Local<v8::Function>::Cast(v8Val), jsmessage,toStampWith);
   }
   else if(v8Val->IsObject())
   {
-    serializeObjectInternal(v8Val, jsmessage);
+      serializeObjectInternal(v8Val, jsmessage,toStampWith);
   }
 
   std::string serialized_message;
@@ -172,9 +192,23 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
 }
 
 
-void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage& jsmessage)
+void JSSerializer::serializeFunctionInternal(v8::Local<v8::Function> funcToSerialize, Sirikata::JS::Protocol::IJSFieldValue& field_to_put_in, int32& toStampWith)
 {
+    v8::Local<v8::Value> value = v8Func->ToString();
+    v8::String::Utf8Value msgBodyArgs2(value);
+    const char* cMsgBody2 = ToCString(msgBodyArgs2);
+    std::string cStrMsgBody2(cMsgBody2);
 
+    Sirikata::JS::Protocol::IJSFunctionObject jsfuncObj = field_to_put_in.add_f_value();
+    jsfuncObj.set_f_value(cStrMsgBody2);
+    jsfuncObj.set_func_id(toStampWith);
+    ++toStampWith;
+}
+
+
+void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage& jsmessage,int32 & toStampWith)
+{
+    annotateMessage(jsmessage,toStampWith);
     v8::HandleScope handle_scope;
     //otherwise assuming it is a v8 object for now
     v8::Local<v8::Object> v8Obj = v8Val->ToObject();
@@ -192,13 +226,12 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
          std::string typeIdString = *typeId;
          if(typeIdString == VISIBLE_TYPEID_STRING)
          {
-           serializeVisible(v8Obj, jsmessage);
+             serializeVisible(v8Obj, jsmessage,toStampWith);
          }
          else if(typeIdString == SYSTEM_TYPEID_STRING)
          {
-           serializeSystem(v8Obj, jsmessage);
+             serializeSystem(v8Obj, jsmessage,toStampWith);
          }
-
          return;
       }
     }
@@ -253,25 +286,42 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
         if(prop_val->IsFunction())
         {
+            
           v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
-          v8::Local<v8::Value> value = v8Func->ToString();
-          v8::String::Utf8Value msgBodyArgs2(value);
-          const char* cMsgBody2 = ToCString(msgBodyArgs2);
-          std::string cStrMsgBody2(cMsgBody2);
 
-          jsf_value.set_f_value(cStrMsgBody2);
+          v8::Local<v8::Value> hiddenValue = v8Func->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
+
+          if (hiddenValue->IsUndefined())
+          {
+              //means that we have not already stamped this function object
+              //as having been serialized.  need to serialize it now.
+              serializeFunctionInternal(v8Func, jsf_value,toStampWith);
+          }
+          else
+          {
+              //we have already stamped this function object as having been
+              //serialized.  Instead of serializing it again, point to
+              //the old version.
+              if (hiddenValue->IsInt32())
+                  functionPointOtherFunction(hiddenValue->ToInt32(),jsf_value);
+              else
+                  JSLOG(error,"Error in serialization.  Hidden value was not an int32");
+          }
+
+
+              
         }
         else if(prop_val->IsArray())
         {
             /* If this value is an object , then recursively call the serlialize on this */
             Sirikata::JS::Protocol::IJSMessage ijs_m = jsf_value.mutable_a_value();
-            serializeObjectInternal(prop_val, ijs_m);
+            serializeObjectInternal(prop_val, ijs_m, toStampWith);
         }
         else if(prop_val->IsObject())
         {
             /* If this value is an object , then recursively call the serlialize on this */
             Sirikata::JS::Protocol::IJSMessage ijs_m = jsf_value.mutable_o_value();
-            serializeObjectInternal(prop_val, ijs_m);
+            serializeObjectInternal(prop_val, ijs_m,toStampWith);
         }
 
         else if(prop_val->IsInt32())
@@ -313,6 +363,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
 bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
+    annotateMessage(jsmessage);
+    
     //check if there is a typeid field and what is the value for it
     bool isVisible = false;
     bool isSystem = false;
