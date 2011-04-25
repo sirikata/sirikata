@@ -49,12 +49,14 @@ function() {
         this._parent = parent;
         this._scriptedObjects = {};
 
-        //var scripting_gui = this._parent._simulator.createGUI("scripting", "scripting/prompt.html", 400, 600);
-        var scripting_gui = this._parent._simulator.addGUIModule("scripting", "../scripting/prompt.js");
-        scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this));
-        this._scriptingWindow = scripting_gui;
-        //this._scriptingWindow.hide();
-
+	try {
+            var scripting_gui = this._parent._simulator.addGUIModule("scripting", "../scripting/prompt.js");
+            scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this));
+            this._scriptingWindow = scripting_gui;
+            //this._scriptingWindow.hide();
+        } catch (ex) {
+	    system.print(ex);
+        }
         // Listen for replies
         var scriptReplyPattern = new util.Pattern("reply", "script");
         var scriptReplyHandler = std.core.bind(this._handleScriptReply, this);
