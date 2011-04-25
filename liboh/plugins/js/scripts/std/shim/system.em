@@ -42,10 +42,22 @@ system.require('std/core/pretty.em');
      };
      system.print = function() {
          if (printhandler !== undefined && printhandler !== null)
-             printhandler.apply(this, arguments);
+         {
+             printhandler.apply(this, arguments);                                  
+         }
          else
-             realprint.apply(this, arguments);
+         {
+             realprint.apply(this, arguments);                                  
+         }
+         
      };
+     
+     system.__debugPrint = function()
+     {
+         realprint.apply(this,arguments);
+     };
+
+     
  }
 )();
 

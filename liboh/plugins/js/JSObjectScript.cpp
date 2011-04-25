@@ -131,7 +131,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-
+    
     Handle<Value> result;
     bool targetGiven = false;
     if (target!=NULL)
@@ -157,6 +157,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
         printException(try_catch);
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
     }
+    
     return result;
 
 }

@@ -66,7 +66,6 @@ bool Pattern::matches(v8::Handle<v8::Object> obj) const
 
         if (!field->Equals(mValue))
             return false;
-
     }
 
     if (hasPrototype()) {

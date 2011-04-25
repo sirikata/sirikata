@@ -224,6 +224,10 @@ v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> root_print(const v8::Arguments& args)
 {
+    std::cout<<"\n\nDebug: Got into root_print\n\n";
+    std::cout.flush();
+    
+    
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in root_print.  Requires exactly one argument: a string to print.")));
     

@@ -40,6 +40,7 @@ if (typeof(std.core) === "undefined") std.core = {};
  *  should only be used on small, tree-like objects.
  */
 std.core.pretty = function(obj) {
+    
     var visited = [];
 
     // Fast path -- if its not an object or array, we can just do the normal conversion
@@ -71,15 +72,32 @@ std.core.pretty = function(obj) {
         return (objectFields(obj).length > 3);
     };
 
+    var checkVisited = function  (obj)
+    {
+        for (var s in visited)
+        {
+            if (visited[s][0] === obj)
+            {
+                return visited[s][1];
+            }
+        }
+        return null;
+    };
+    
     var output = '';
     var obj_stack = [ {obj: obj, idx: -1} ];
     var indent = '';
+    var numPrint = 1;
     while(obj_stack.length != 0) {
         var cur = obj_stack.pop();
+
+        visited.push([cur.obj,numPrint]);
+        ++numPrint;
+        
         // Check if we need to start this object
         if (cur.idx == -1) {
             // Start the object
-            output += '{';
+            output += '#'+(numPrint-1) +':{';
             indent += ' ';
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
         }
@@ -98,8 +116,22 @@ std.core.pretty = function(obj) {
             // And process this one, possibly triggering recursion
             var key = objectFields(cur.obj)[cur.idx];
             var child = cur.obj[key];
-            output += key + ': ';
+            output += '#' + (numPrint-1) + ':' + key + ': ';
             if (typeof(child) === "object" && child !== null) {
+
+
+//lkjs
+                //check if we've arleady visited this object.
+                var visitedIndex = checkVisited(child);
+                if (visitedIndex != null)
+                {
+                    output += indent + '<circ ref. see #'+ visitedIndex.toString() + ' >';
+                    continue;
+                }
+
+//lkjs                
+                
+                
                 var override = objectPrettyOverride(child);
                 if (override)
                     output += override;
