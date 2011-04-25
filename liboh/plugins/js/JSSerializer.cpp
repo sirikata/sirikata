@@ -160,7 +160,7 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
     std::vector<String> results;
     std::vector<String> prototype_props = getPropertyNames(v8::Local<v8::Object>::Cast(obj->GetPrototype()));
 
-    for(int i = 0; i < all_props.size(); i++) {
+    for(std::vector<String>::size_type i = 0; i < all_props.size(); i++) {
         if (std::find(prototype_props.begin(), prototype_props.end(), all_props[i]) == prototype_props.end())
             results.push_back(all_props[i]);
     }
@@ -302,9 +302,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             jsf_value.set_b_value(b_value);
         }
         else if(prop_val->IsDate())
-        {
-        }
-        else if(prop_val->IsRegExp())
         {
         }
     }
