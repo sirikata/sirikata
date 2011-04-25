@@ -304,6 +304,9 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         else if(prop_val->IsDate())
         {
         }
+        else if(prop_val->IsRegExp())
+        {
+        }
     }
 
 }
