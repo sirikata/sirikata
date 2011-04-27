@@ -1534,7 +1534,7 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.
-v8::Persistent<v8::Object> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx)
+v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx)
 {
     if (jsctx == NULL)
         jsctx = mContext;
@@ -1557,10 +1557,10 @@ v8::Persistent<v8::Object> JSObjectScript::create_presence(const String& newMesh
     //create a presence object associated with this presence and return it;
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);
 
-    v8::Persistent<v8::Object>js_pres = jsctx->addToPresencesArray(presToAdd);
+    //v8::Persistent<v8::Object>js_pres = jsctx->addToPresencesArray(presToAdd);
     mUnconnectedPresences.push_back(presToAdd);
 
-    return js_pres;
+    return v8::Undefined();
 }
 
 //This function returns to you the current value of present token and incrmenets

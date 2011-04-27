@@ -226,27 +226,6 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
 }
 
 
-// void JSContextStruct::getPresArrayCPP(JSPresVec& presVec)
-// {
-//     v8::HandleScope handle_scope;
-//     v8::Context::Scope context_scope(mContext);
-
-//     // Get the presences array
-//     v8::Local<v8::Array> presences_array =
-//         v8::Local<v8::Array>::Cast(systemObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
-//     uint32 new_pos = presences_array->Length();
-
-//     for (uint32 s = 0; s < new_pos; ++s)
-//     {
-//         String dummyErrMsg;
-//         v8::Local<v8::Value> curPres = presences_array->Get(s);
-//         JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(curPres,dummyErrMsg);
-//         if (jspres != NULL)
-//             presVec.push_back(jspres);
-//     }
-// }
-
-
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
 {
     addToPresencesArray(jspres);
@@ -525,9 +504,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 
 
 
-v8::Persistent<v8::Object> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
+v8::Handle<v8::Value> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
 {
-
     return jsObjScript->create_presence(newMesh,initFunc,this);
 }
 

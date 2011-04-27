@@ -286,9 +286,7 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
    @param Function to be called when presence gets connected to the world.
    (Function has form func (pres), where pres contains the presence just
    connected.)
-   @return Presence object.  Presence is not connected to world until receive
-   notification.  (Ie, don't call setVelocity, setPosition, etc. until the
-   second paramater has been called.)
+   @return Returns nothing.
 
    Note: throws an exception if sandbox does not have capability to create
    presences.
