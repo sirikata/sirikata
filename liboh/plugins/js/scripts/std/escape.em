@@ -2,7 +2,7 @@
  *  literals in strings which will eventually be passed to eval.
  */
 
-if (typeof(Escape) === "undefined") Escape = {};
+if (typeof(Escape) === "undefined") /** @namespace */ Escape = {};
 
 /** Escape a string.
  *  \param {string} orig the original string

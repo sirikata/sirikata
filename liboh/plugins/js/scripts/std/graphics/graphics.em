@@ -40,78 +40,79 @@ function() {
 
     var ns = std.graphics;
 
-    /** The Graphics class wraps the underlying graphics simulation,
+    /** @namespace
+     * The Graphics class wraps the underlying graphics simulation,
      *  allowing you to get access to input, control display options,
      *  and perform operations like picking in response to mouse
      *  clicks.
      */
-    ns.Graphics = function(pres, name) {
+    std.graphics.Graphics = function(pres, name) {
         this.presence = pres;
         this._simulator = pres.runSimulation(name);
         this.inputHandler = new std.graphics.InputHandler(this);
     };
 
-    ns.Graphics.prototype.invoke = function() {
+    std.graphics.Graphics.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
     /** Request that the renderer suspend rendering. It continues to exist, but doesn't use any CPU on rendering. */
-    ns.Graphics.prototype.suspend = function() {
+    std.graphics.Graphics.prototype.suspend = function() {
         this.invoke('suspend');
     };
 
     /** Request that the renderer resume rendering. If rendering wasn't suspended, has no effect. */
-    ns.Graphics.prototype.resume = function() {
+    std.graphics.Graphics.prototype.resume = function() {
         this.invoke('resume');
     };
 
     /** Request that the renderer toggle suspended rendering. See suspend and resume for details. */
-    ns.Graphics.prototype.toggleSuspend = function() {
+    std.graphics.Graphics.prototype.toggleSuspend = function() {
         this.invoke('toggleSuspend');
     };
 
     /** Request that the OH shut itself down, i.e. that the entire application exit. */
-    ns.Graphics.prototype.quit = function() {
+    std.graphics.Graphics.prototype.quit = function() {
         this.invoke('quit');
     };
 
     /** Request a screenshot be taken and stored on disk. */
-    ns.Graphics.prototype.screenshot = function() {
+    std.graphics.Graphics.prototype.screenshot = function() {
         this.invoke('screenshot');
     };
 
     /** Request a screenshot be taken and stored on disk. */
-    ns.Graphics.prototype.pick = function(x, y) {
+    std.graphics.Graphics.prototype.pick = function(x, y) {
         return this.invoke('pick', x, y);
     };
 
     /** Request the bounding box for the object be enabled or disabled. */
-    ns.Graphics.prototype.bbox = function(obj, on) {
+    std.graphics.Graphics.prototype.bbox = function(obj, on) {
         return this.invoke('bbox', obj, on);
     };
 
     /** Request that the given URL be presented as a widget. */
-    ns.Graphics.prototype.createGUI = function(name, url, width, height) {
+    std.graphics.Graphics.prototype.createGUI = function(name, url, width, height) {
         if (width && height)
-            return new ns.GUI(this._simulator.invoke("createWindowFile", name, url, width, height));
+            return new std.graphics.GUI(this._simulator.invoke("createWindowFile", name, url, width, height));
         else
-            return new ns.GUI(this._simulator.invoke("createWindowFile", name, url));
+            return new std.graphics.GUI(this._simulator.invoke("createWindowFile", name, url));
     };
 
     /** Request that the given URL be added as a module in the UI. */
-    ns.Graphics.prototype.addGUIModule = function(name, url) {
+    std.graphics.Graphics.prototype.addGUIModule = function(name, url) {
     	system.print("adding GUI module");
-    	return new ns.GUI(this._simulator.invoke("addModuleToUI", name, url));
+    	return new std.graphics.GUI(this._simulator.invoke("addModuleToUI", name, url));
     };
     
     /** Request that the given URL be presented as a widget. */
-    ns.Graphics.prototype.createBrowser = function(name, url) {
-        return new ns.GUI(this._simulator.invoke("createWindow", name, url));
+    std.graphics.Graphics.prototype.createBrowser = function(name, url) {
+        return new std.graphics.GUI(this._simulator.invoke("createWindow", name, url));
     };
 
     /** Get basic camera description. This is read-only data. */
-    ns.Graphics.prototype.camera = function() {
+    std.graphics.Graphics.prototype.camera = function() {
         return this.invoke("camera");
     };
 
@@ -121,7 +122,7 @@ function() {
      *  arguments are passed, this returns the central direction, i.e. the same
      *  as cameraDirection(0,0).
      */
-    ns.Graphics.prototype.cameraDirection = function(x, y) {
+    std.graphics.Graphics.prototype.cameraDirection = function(x, y) {
         var orient = this.presence.getOrientation();
 
         if (!x && !y)

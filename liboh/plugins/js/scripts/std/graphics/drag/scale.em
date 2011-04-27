@@ -33,7 +33,8 @@
 system.require('std/movement/movableremote.em');
 system.require('std/graphics/drag/handler.em');
 
-/** ScaleDragHandler responds to drag events by scaling the selected object.
+/** @namespace 
+  ScaleDragHandler responds to drag events by scaling the selected object.
  */
 std.graphics.ScaleDragHandler = std.graphics.DragHandler.extend(
     {

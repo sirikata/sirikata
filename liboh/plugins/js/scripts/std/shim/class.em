@@ -10,6 +10,7 @@
      var fnTest = testrgx.test(function(){xyz;}) ? new RegExp('\\b_super\\b') : new RegExp('.*');
 
   // The base Class implementation (does nothing)
+  /** @namespace */
   system.Class = function(){};
 
   // Create a new Class that inherits from this class

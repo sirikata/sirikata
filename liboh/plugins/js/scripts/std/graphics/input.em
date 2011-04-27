@@ -33,14 +33,15 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
-system.require('std/core/bind.js');
+system.require('std/core/bind.em');
 
 (
 function() {
 
     var ns = std.graphics;
 
-    /** InputHandler makes setting up callbacks for input events, or a
+    /** @namepsace 
+     *  InputHandler makes setting up callbacks for input events, or a
      *  subset of them, easier. It looks a lot like browser events do.
      *  Allocate one with a simulation and it will register itself as
      *  a listener. Then, add your own listeners which will be
@@ -48,11 +49,11 @@ function() {
      *
      *   handler.onButtonPressed = function() { .... }
      */
-    ns.InputHandler = function(sim) {
+    std.graphics.InputHandler = function(sim) {
         sim.invoke("setInputHandler", std.core.bind(this._handle, this) );
     };
 
-    ns.InputHandler.prototype._handle = function(evt) {
+    std.graphics.InputHandler.prototype._handle = function(evt) {
         if (evt.msg == 'button-pressed' && 'onButtonPressed' in this)
             this.onButtonPressed(evt);
         if (evt.msg == 'button-repeat' && 'onButtonRepeated' in this)

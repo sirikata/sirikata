@@ -33,7 +33,8 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.core) === "undefined") std.core = {};
 
-/** Returns a function that binds the passed function to an object.
+/** @function 
+ *  Returns a function that binds the passed function to an object.
  *  Useful for all cases where you need to pass a function argument, but
  *  you expect 'this' to be correctly set.
  *

@@ -2,11 +2,11 @@ system.import('std/core/bind.js');
 
 //if do not already have std and std.core objects
 //defined, define them.
-if (typeof(std) === "undefined") std = {};
-if (typeof(std.core) === "undefined") std.core = {};
+if (typeof(std) === "undefined") /** @namespace */ std = {};
+if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
 
 
-/**
+/** @function
   * Constructor for an object that executes callback function
   * periodically every period seconds.  Can suspend the object (stops
   * firing the periodically), or reset the object (restarts the

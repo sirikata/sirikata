@@ -33,46 +33,60 @@
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.movement) === "undefined") std.movement = {};
 
-system.require('std/core/bind.js');
+system.require('std/core/bind.em');
 
 (
 function() {
 
     var ns = std.movement;
 
-    /** A MovableRemote wraps a remote object (visible) and allows you
+    /** @namespace 
+     *  A MovableRemote wraps a remote object (visible) and allows you
      *  to control its movement with simple commands, assuming it is
      *  both capable and allows you to.
      */
-    ns.MovableRemote = function(remote) {
+    std.movement.MovableRemote = function(remote) {
         this._remote = remote;
     };
-
-    ns.MovableRemote.prototype.getPosition = function() {
+    /** @function 
+      * Get the position of the visible
+      @return Vec3 object
+    */
+      
+    std.movement.MovableRemote.prototype.getPosition = function() {
         return this._remote.getPosition();
     };
-    ns.MovableRemote.prototype.getVelocity = function() {
+    /** @function 
+      * Get the velocity of the visible
+      @return Vec3 object
+    */
+    std.movement.MovableRemote.prototype.getVelocity = function() {
         return this._remote.getVelocity();
     };
-    ns.MovableRemote.prototype.getOrientation = function() {
+    /** @function 
+      * Get orientation of the visible
+    */
+    std.movement.MovableRemote.prototype.getOrientation = function() {
         return this._remote.getOrientation();
     };
-    ns.MovableRemote.prototype.getOrientationVel = function() {
+    /** @function */
+    std.movement.MovableRemote.prototype.getOrientationVel = function() {
         return this._remote.getOrientationVel();
     };
-    ns.MovableRemote.prototype.getScale = function() {
+    /** @function */
+    std.movement.MovableRemote.prototype.getScale = function() {
         return this._remote.getScale();
     };
-
-    ns.MovableRemote.prototype.setPosition = function(pos) {
+    /** @function */
+    std.movement.MovableRemote.prototype.setPosition = function(pos) {
         {
             request : 'movable',
             action : 'setPosition',
             position : pos
         } -> this._remote;
     };
-
-    ns.MovableRemote.prototype.move = function(dir) {
+    /** @function */
+    std.movement.MovableRemote.prototype.move = function(dir) {
         {
             request : 'movable',
             action : 'setVelocity',
@@ -80,7 +94,8 @@ function() {
         } -> this._remote;
     };
 
-    ns.MovableRemote.prototype.setOrientation = function(orient) {
+    /** @function */
+    std.movement.MovableRemote.prototype.setOrientation = function(orient) {
         {
             request : 'movable',
             action : 'setOrientation',
@@ -88,23 +103,25 @@ function() {
         } -> this._remote;
     };
 
-    ns.MovableRemote.prototype.setRotationalVelocity = function(orientvel) {
+    /** @function */
+    std.movement.MovableRemote.prototype.setRotationalVelocity = function(orientvel) {
         {
             request : 'movable',
             action : 'setRotationalVelocity',
             orientvel : orientvel
         } -> this._remote;
     };
-
-    ns.MovableRemote.prototype.setScale = function(scale) {
+    /** @function */
+    std.movement.MovableRemote.prototype.setScale = function(scale) {
         {
             request : 'movable',
             action : 'setScale',
             scale : scale
         } -> this._remote;
     };
-
-    ns.MovableRemote.prototype.stop = function() {
+    
+    /** @function */
+    std.movement.MovableRemote.prototype.stop = function() {
         {
             request : 'movable',
             action : 'stop'
