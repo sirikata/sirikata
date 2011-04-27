@@ -244,11 +244,11 @@ variableDeclarationNoIn
 	;
 	
 initialiser
-	: assignmentExpression 
+	: expression 
 	;
 	
 initialiserNoIn
-	: assignmentExpressionNoIn
+	: expressionNoIn
 	;
 	
 	/*
@@ -731,12 +731,13 @@ finallyClause
 
 // expressions
 expression
-	: ^(EXPR_LIST assignmentExpression+)
+	: ^(EXPR_LIST assignmentExpression)
+        | ^(COND_EXPR conditionalExpression)
 	;
 	
 expressionNoIn
-	: ^(EXPR_LIST assignmentExpressionNoIn+)
-
+	: ^(EXPR_LIST assignmentExpressionNoIn)
+        | ^(COND_EXPR_NOIN conditionalExpressionNoIn)
 	;
 	
 
@@ -746,35 +747,32 @@ scope
   const char* op;
 }
 
-	: ^(COND_EXPR conditionalExpression)
-	| ^(
-	    (
-					ASSIGN               { $assignmentExpression::op = " = ";    }
-					|MULT_ASSIGN         { $assignmentExpression::op = " *= ";  }
-					|DIV_ASSIGN          { $assignmentExpression::op = " /= ";  }
-					| MOD_ASSIGN         { $assignmentExpression::op = " \%= ";  }
-					| ADD_ASSIGN         { $assignmentExpression::op = " += ";  } 
-					| SUB_ASSIGN         { $assignmentExpression::op = " -= ";  } 
-					|LEFT_SHIFT_ASSIG    { $assignmentExpression::op = " <<= "; }
-					|RIGHT_SHIFT_ASSIGN  { $assignmentExpression::op = " >>= "; }
-					|TRIPLE_SHIFT_ASSIGN { $assignmentExpression::op = "  >>>= "; }
-					|AND_ASSIGN          { $assignmentExpression::op = " &= "; }
-					|EXP_ASSIGN          { $assignmentExpression::op  = " ^= "; }
-					|OR_ASSIGN           { $assignmentExpression::op = " |= "; } 
-					)
+        : ^(
+            (
+                ASSIGN                { $assignmentExpression::op = " = ";    }
+                | MULT_ASSIGN         { $assignmentExpression::op = " *= ";  }
+                | DIV_ASSIGN          { $assignmentExpression::op = " /= ";  }
+                | MOD_ASSIGN          { $assignmentExpression::op = " \%= ";  }
+                | ADD_ASSIGN          { $assignmentExpression::op = " += ";  } 
+                | SUB_ASSIGN          { $assignmentExpression::op = " -= ";  } 
+                | LEFT_SHIFT_ASSIG    { $assignmentExpression::op = " <<= "; }
+                | RIGHT_SHIFT_ASSIGN  { $assignmentExpression::op = " >>= "; }
+                | TRIPLE_SHIFT_ASSIGN { $assignmentExpression::op = "  >>>= "; }
+                | AND_ASSIGN          { $assignmentExpression::op = " &= "; }
+                | EXP_ASSIGN          { $assignmentExpression::op  = " ^= "; }
+                | OR_ASSIGN           { $assignmentExpression::op = " |= "; } 
+            )
 
-					leftHandSideExpression 
-					  {
-							  APP(" ");
-							  APP($assignmentExpression::op);
-							  APP(" ");
-							}
-							
-							assignmentExpression
+            leftHandSideExpression 
+            {
+                APP(" ");
+                APP($assignmentExpression::op);
+                APP(" ");
+            }
+            conditionalExpression
 						 	
-						)
-	
-	;
+           )
+          ;
 	
 assignmentExpressionNoIn
 
@@ -806,7 +804,7 @@ scope
 					  APP(" ");
 					}
 
-					assignmentExpressionNoIn
+					conditionalExpressionNoIn
    )
 	;
 	
@@ -861,30 +859,27 @@ callExpressionSuffix
 arguments
   : ^(ARGLIST {APP("( )"); })
   | ^(ARGLIST 
-
-	     { APP("( "); }
-       (assignmentExpression)
-			 { APP(" )"); }
-      )
+       { APP("( "); }
+       (expression)
+       { APP(" )"); }
+     )
 
   | ^(ARGLIST
-	       {
-                 APP("( ");
-		}
-                assignmentExpression
-      	
-	       (
-                 {
-                   APP(", ");
-                 }
-                 assignmentExpression
-		)*
-                {
-                  APP(" ) ");
-                }
-      )
-
-       	;
+      {
+          APP("( ");
+      }
+      expression
+      (
+        {
+            APP(", ");
+        }
+        expression
+      )*
+      {
+        APP(" ) ");
+      }
+    )
+    ;
  
 
 indexSuffix
@@ -911,12 +906,12 @@ conditionalExpression
 					  APP(" )  ? ( ");
 					}
 	    
-				 assignmentExpression 
+				 expression 
 					{
 						  APP(" ) : ( ");
 					}
 						
-						assignmentExpression
+						expression
 						{
 						  APP(" ) ");
 						}
@@ -937,11 +932,11 @@ conditionalExpressionNoIn
 				  APP(" ) ? ( ");
 				}
     
-				 assignmentExpressionNoIn 
+				 expressionNoIn 
 			  {
 					  APP(" ) : ( ");
 					}		
-					assignmentExpressionNoIn
+					expressionNoIn
 					{
 					  APP(" ) ");
 					}
@@ -1213,7 +1208,8 @@ primaryExpression
         | vectorLiteral
 	;
 
-/*
+
+
 vectorLiteral
         : ^(VECTOR
             {
@@ -1221,48 +1217,16 @@ vectorLiteral
             }
             (exp1=expression
               {
-                  APP((const char*)$exp1.text->chars);
                   APP(",");
               }
             )
             (exp2=expression
               {
-                  APP((const char*)$exp2.text->chars);
                   APP(",");
               }
             )
             (exp3=expression
               {
-                  APP((const char*)$exp3.text->chars);
-                  APP(")");
-              }
-            )
-           )
-        ;       
-*/
-
-
-
-vectorLiteral
-        : ^(VECTOR
-            {
-                APP(" new util.Vec3(");
-            }
-            (exp1=assignmentExpression
-              {
-                  //APP((const char*)$exp1.text->chars);
-                  APP(",");
-              }
-            )
-            (exp2=assignmentExpression
-              {
-                  //APP((const char*)$exp2.text->chars);
-                  APP(",");
-              }
-            )
-            (exp3=assignmentExpression
-              {
-                  //APP((const char*)$exp3.text->chars);
                   APP(")");
               }
             )
@@ -1295,31 +1259,28 @@ dollarExpression
 arrayLiteral
   : ^(ARRAY_LITERAL {APP("[ ]"); })
   | ^(ARRAY_LITERAL 
-
-	     { APP("[ "); }
-       (assignmentExpression)
-			 { APP(" ]"); }
-      )
-
+      { APP("[ "); }
+       (expression)
+      { APP(" ]"); }
+     )
   | ^(ARRAY_LITERAL
-	       {
-                 APP("[ ");
-		}
-                assignmentExpression
-      	
-	       (
-                 {
-                   APP(", ");
-                 }
-                 assignmentExpression
-		)*
-                {
-                  APP(" ] ");
-                }
-      )
+     {
+        APP("[ ");
+     }
+     expression
+    	
+     (
+      {
+         APP(", ");
+      }
+      expression
+     )*
+     {
+         APP(" ] ");
+     }
+    )
+    ;
 
-       	;
-       
 // objectLiteral definition.
 objectLiteral
   :^(OBJ_LITERAL {APP("{ }");} )
@@ -1395,7 +1356,7 @@ nameValueProto
               APP(", ");
             }
 
-            assignmentExpression
+            expression
          ))?
 
          (
@@ -1404,7 +1365,7 @@ nameValueProto
             {
               APP(", ");
             }
-            assignmentExpression
+            expression
          ) )?
 
          {
@@ -1416,9 +1377,9 @@ nameValueProto
 
 propertyNameAndValue
 	: ^(NAME_VALUE 
-	   propertyName 
-			{	APP(" : ");}
-				assignmentExpression)
+          propertyName 
+           {	APP(" : ");}
+	  expression)
 	;
 
 propertyName

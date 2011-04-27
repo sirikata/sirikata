@@ -197,7 +197,8 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
     std::vector<String> results;
     std::vector<String> prototype_props = getPropertyNames(v8::Local<v8::Object>::Cast(obj->GetPrototype()));
 
-    for(size_t i = 0; i < all_props.size(); i++) {
+
+    for(std::vector<String>::size_type i = 0; i < all_props.size(); i++) {
         if (std::find(prototype_props.begin(), prototype_props.end(), all_props[i]) == prototype_props.end())
             results.push_back(all_props[i]);
     }

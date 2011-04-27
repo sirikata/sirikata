@@ -42,13 +42,14 @@ function() {
 
     var ns = std.graphics;
 
-    /** The DefaultGraphics class just contains some sane defaults for
+    /** @namespace 
+     *  The DefaultGraphics class just contains some sane defaults for
      *  interaction, allowing you to get a decent, baseline client
      *  that only requires built-in functionality. You still define
      *  the presence and which underlying graphics system to use, but
      *  this class takes care of defining all other UI and interaction.
      */
-    ns.DefaultGraphics = function(pres, name) {
+    std.graphics.DefaultGraphics = function(pres, name) {
         this._pres = pres;
         this._simulator = new std.graphics.Graphics(pres, name);
         this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
@@ -72,7 +73,8 @@ function() {
         };
     };
 
-    ns.DefaultGraphics.prototype.invoke = function() {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
@@ -80,12 +82,14 @@ function() {
 
     //by default how to scale translational velocity from keypresses.  (movement
     //is agonizingly slow if just set this to 1.  I really recommend 5.)
-    ns.DefaultGraphics.prototype.defaultVelocityScaling = 5;
+    /** @public */
+    std.graphics.DefaultGraphics.prototype.defaultVelocityScaling = 5;
     //by default how to scale rotational velocity from keypresses
-    ns.DefaultGraphics.prototype.defaultRotationVelocityScaling = 1;
-
-    ns.DefaultGraphics.prototype.onButtonPressed = function(evt) {
-        
+    /** @public */
+    std.graphics.DefaultGraphics.prototype.defaultRotationVelocityScaling = 1;
+    
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onButtonPressed = function(evt) {
         if (evt.button == 'escape') this._simulator.quit();
         if (evt.button == 'i') this._simulator.screenshot();
         if (evt.button == 'm') this._simulator.toggleSuspend();
@@ -98,15 +102,17 @@ function() {
         if (evt.button == 's' && evt.modifier.ctrl)
             this._scripter.script(system.presences[0]);
     };
-
-    ns.DefaultGraphics.prototype.onButtonRepeated = function(evt) {
+    
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onButtonRepeated = function(evt) {
     };
 
-    ns.DefaultGraphics.prototype.onButtonReleased = function(evt) {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onButtonReleased = function(evt) {
         this._handleToggles(evt, -1);
     };
-
-    ns.DefaultGraphics.prototype._handleToggles = function(evt, scale) {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype._handleToggles = function(evt, scale) {
         if (evt.button == 'up' && !evt.modifier.shift) this._moverot.move(new util.Vec3(0, 0, -1), scale * this.defaultVelocityScaling);
         if (evt.button == 'down' && !evt.modifier.shift) this._moverot.move(new util.Vec3(0, 0, 1), scale * this.defaultVelocityScaling);
 
@@ -123,7 +129,8 @@ function() {
         if (evt.button == 'z') this._moverot.move(new util.Vec3(0, -1, 0), scale);
     };
 
-    ns.DefaultGraphics.prototype.onMousePress = function(evt) {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onMousePress = function(evt) {
         if (this._selected) {
             this._simulator.bbox(this._selected, false);
             this._selected = null;
@@ -149,16 +156,19 @@ function() {
         }
     };
 
-    ns.DefaultGraphics.prototype.onMouseDrag = function(evt) {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onMouseDrag = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
     };
 
-    ns.DefaultGraphics.prototype.onMouseRelease = function(evt) {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onMouseRelease = function(evt) {
         if (this._dragger) this._dragger.onMouseRelease(evt);
         delete this._dragger;
     };
 
-    ns.DefaultGraphics.prototype.onMouseClick = function(evt) {
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.onMouseClick = function(evt) {
     };
 
 })();

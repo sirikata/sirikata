@@ -12,7 +12,7 @@ options
 	output=AST;
 	backtrack=true;
 	memoize=true;
- ASTLabelType = pANTLR3_BASE_TREE; 
+        ASTLabelType = pANTLR3_BASE_TREE; 
 // ASTLabelType = pANTLR3_COMMON_TREE; 
 	language = C;
 }
@@ -169,6 +169,7 @@ functionBody
 // statements
 statement
 	: noOpStatement
+        | (msgRecvStatement) => msgRecvStatement
         | statementBlock
 	| variableStatement
 	| emptyStatement
@@ -184,8 +185,7 @@ statement
 	| throwStatement
         | whenStatement
 	| tryStatement
-	| msgSendStatement
-	| msgRecvStatement
+	| (msgSendStatement) => msgSendStatement
 	;
 	
 statementBlock
@@ -223,11 +223,11 @@ variableDeclarationNoIn
 	;
 	
 initialiser
-	: '=' LTERM* assignmentExpression -> assignmentExpression 
+	: '=' LTERM* expression -> expression 
 	;
 	
 initialiserNoIn
-	: '=' LTERM* assignmentExpressionNoIn -> assignmentExpressionNoIn
+	: '=' LTERM* expressionNoIn -> expressionNoIn
 	;
 	
 emptyStatement
@@ -355,41 +355,41 @@ finallyBlock
 
 
 msgSendStatement
- : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
-;
+        : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
+        ;
 
-// There is an ambiguity here
-//msgRecvStatement
-// : (e1=memberExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' )? -> ^(MESSAGE_RECV $e1 $e2))( '<-' e3=memberExpression (LTERM | ';')-> ^($msgRecvStatement $e3) )? 
 
- memAndCallExpression
- : callExpression -> callExpression
- | memberExpression -> memberExpression
- ;
+memAndCallExpression
+        : callExpression -> callExpression
+        | memberExpression -> memberExpression
+        ;
 
- msgRecvStatement
- : e1=memAndCallExpression LTERM*'<-' e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
- | e1=memAndCallExpression LTERM*'<-' e2=leftHandSideExpression LTERM* '<-' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
-;
+        
+//lkjs;
+msgRecvStatement
+        : e1=memAndCallExpression LTERM* '<''-' LTERM* e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
+        | e1=memAndCallExpression LTERM* '<''-' LTERM* e2=leftHandSideExpression LTERM* '<''-' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
+        ;
+
 // expressions
 expression
-	: assignmentExpression (LTERM* ',' LTERM* assignmentExpression)* ->  ^(EXPR_LIST assignmentExpression+)
-	;
+        : assignmentExpression ->  ^(EXPR_LIST assignmentExpression)
+        | conditionalExpression -> ^(COND_EXPR conditionalExpression)
+        ;
 	
 expressionNoIn
-	: assignmentExpressionNoIn (LTERM* ',' LTERM* assignmentExpressionNoIn)* -> ^(EXPR_LIST assignmentExpressionNoIn+)
+        : assignmentExpressionNoIn  -> ^(EXPR_LIST assignmentExpressionNoIn)
+        | conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)    
+        ;
 
-	;
 
 assignmentExpression
-        : conditionalExpression -> ^(COND_EXPR conditionalExpression)
-	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpression ->  ^(assignmentOperator  leftHandSideExpression assignmentExpression)
-	;
+        : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpression ->  ^(assignmentOperator  leftHandSideExpression conditionalExpression)
+        ;
 	
 assignmentExpressionNoIn
-	: conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
-	| leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression assignmentExpressionNoIn ) 
-	;
+        : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression conditionalExpressionNoIn ) 
+        ;
 
 
 leftHandSideExpression
@@ -435,8 +435,8 @@ callExpressionSuffix
 	;
 
 arguments
-        : '(' LTERM* (assignmentExpression)? LTERM* ')' -> ^(ARGLIST assignmentExpression?)
-	| '(' LTERM* e1=assignmentExpression (',' LTERM* e2=assignmentExpression)* LTERM* ')' -> ^(ARGLIST assignmentExpression assignmentExpression*)
+        : '(' LTERM* (expression)? LTERM* ')' -> ^(ARGLIST expression?)
+	| '(' LTERM* expression (',' LTERM* expression)* LTERM* ')' -> ^(ARGLIST expression expression*)
 	;
         
 	
@@ -455,11 +455,11 @@ assignmentOperator
 	;
 
 conditionalExpression
-	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=assignmentExpression LTERM* ':' LTERM* expr2=assignmentExpression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
+	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=expression LTERM* ':' LTERM* expr2=expression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
 	;
 
 conditionalExpressionNoIn
-	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=assignmentExpressionNoIn LTERM* ':' LTERM* expr2=assignmentExpressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
+	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
 	;
 
 
@@ -530,9 +530,10 @@ relationalOps
 | 'in'         -> ^(IN)
 ;
 
+
 relationalExpression
-	: (shiftExpression -> shiftExpression )(LTERM* relationalOps LTERM* shiftExpression -> ^(relationalOps $relationalExpression shiftExpression))* 
-	;
+        : (shiftExpression -> shiftExpression )(LTERM* relationalOps LTERM* shiftExpression -> ^(relationalOps $relationalExpression shiftExpression))* 
+        ;
 
 relationalOpsNoIn
 : '<'  -> ^(LESS_THAN)
@@ -553,8 +554,8 @@ shiftOps
 ;
 
 shiftExpression
-	: (additiveExpression -> additiveExpression)(LTERM* shiftOps LTERM* additiveExpression -> ^(shiftOps $shiftExpression additiveExpression) )*
- ;	
+    : (additiveExpression -> additiveExpression)(LTERM* shiftOps LTERM* additiveExpression -> ^(shiftOps $shiftExpression additiveExpression) )*
+    ;	
 
 
 addOps
@@ -574,15 +575,14 @@ multOps
 ;
 
 multiplicativeExpression
-	: (unaryExpression  -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
-	;
+   : (unaryExpression  -> unaryExpression )(LTERM* multOps LTERM* unaryExpression -> ^(multOps $multiplicativeExpression unaryExpression))*
+   ;
 
 
 postfixExpression
  : leftHandSideExpression '--' -> ^( MINUSMINUS leftHandSideExpression)
  | leftHandSideExpression '++' -> ^(PLUSPLUS leftHandSideExpression)
- |leftHandSideExpression  -> leftHandSideExpression
-  
+ | leftHandSideExpression  -> leftHandSideExpression
 ;
 
 
@@ -618,16 +618,10 @@ primaryExpression
 	;
 
 vectorLiteral
-        : '<' LTERM* e1=assignmentExpression LTERM* ',' LTERM* e2=assignmentExpression LTERM* ',' LTERM* e3=assignmentExpression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+//        : '<' LTERM* e1=assignmentExpression LTERM* ',' LTERM* e2=assignmentExpression LTERM* ',' LTERM* e3=assignmentExpression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+        : '<' LTERM* e1=expression LTERM* ',' LTERM* e2=expression LTERM* ',' LTERM* e3=expression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
         ;
 
-/*
-: '<' LTERM* e1=Identifier LTERM* ',' LTERM* e2=Identifier LTERM* ',' LTERM* e3=Identifier LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
-        ;
-*/
-        
-/*        : '<' LTERM* x=expression LTERM* ',' LTERM* y=expression LTERM* ',' LTERM* z=expression LTERM* '>' -> ^(VECTOR $x $y $z)
-*/
         
 dollarExpression
         : '`' LTERM* Identifier LTERM* '`' -> ^(DOLLAR_EXPRESSION Identifier)
@@ -635,8 +629,8 @@ dollarExpression
         
 // arrayLiteral definition.
 arrayLiteral
-  : '[' LTERM* (assignmentExpression)? LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression?)
-	| '[' LTERM* e1=assignmentExpression (',' LTERM* e2=assignmentExpression)* LTERM* ']' -> ^(ARRAY_LITERAL assignmentExpression assignmentExpression*)
+  : '[' LTERM* (expression)? LTERM* ']' -> ^(ARRAY_LITERAL expression?)
+  | '[' LTERM* e1=expression (',' LTERM* e2=expression)* LTERM* ']' -> ^(ARRAY_LITERAL expression expression*)
 	;
        
 // objectLiteral definition.
@@ -653,17 +647,13 @@ patternLiteral
   ;
 
 propertyNameAndValue
-	: propertyName LTERM* ':' LTERM* assignmentExpression -> ^(NAME_VALUE propertyName assignmentExpression)
+	: propertyName LTERM* ':' LTERM* expression -> ^(NAME_VALUE propertyName expression)
 	;
 
-/*
-nameValueProto
-    : (propertyName LTERM* -> ^(NAME_VALUE_PROTO ^(NAME propertyName))) ':'  LTERM* (assignmentExpression LTERM*-> ^($nameValueProto ^(VALUE assignmentExpression)))? ':' LTERM* ( assignmentExpression -> ^($nameValueProto ^(PROTO assignmentExpression)))?
-    ;
-*/
+
 
 nameValueProto
-    : (propertyName LTERM*) ':'  LTERM* (a1=assignmentExpression LTERM*)? ':' LTERM* ( a2=assignmentExpression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
+    : (propertyName LTERM*) ':'  LTERM* (a1=expression LTERM*)? ':' LTERM* ( a2=expression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
     ;
 
 

@@ -31,9 +31,9 @@
  */
 
 if (typeof(std) === "undefined") std = {};
-if (typeof(std.movement) === "undefined") std.movement = {};
+if (typeof(std.movement) === "undefined") /** @namespace*/ std.movement = {};
 
-system.require('std/core/bind.js');
+system.require('std/core/bind.em');
 system.require('std/movement/movement.em');
 
 (
@@ -41,11 +41,12 @@ function() {
 
     var ns = std.movement;
 
-    /** A Movable listens for requests from other objects to move and
+    /** @namespace
+     *  A Movable listens for requests from other objects to move and
      *  applies them to itself. This allows objects to control each
      *  other, e.g. for a client to move objects in the world.
      */
-    ns.Movable = function(pres) {
+    std.movement.Movable = function(pres) {
         this._pres = pres;
 
         var moveRequestHandler = std.core.bind(this._handleRequest, this);
@@ -65,42 +66,42 @@ function() {
         };
     };
 
-    ns.Movable.prototype._handleRequest = function(msg, sender) {
+    std.movement.Movable.prototype._handleRequest = function(msg, sender) {
         var handler = this._handlers[msg.action];
         if (handler)
             handler(msg, sender);
     };
 
-    ns.Movable.prototype._handleStopMove = function(msg, sender) {
+    std.movement.Movable.prototype._handleStopMove = function(msg, sender) {
         std.movement.stopMove(this._pres);
     };
 
-    ns.Movable.prototype._handleStopRotate = function(msg, sender) {
+    std.movement.Movable.prototype._handleStopRotate = function(msg, sender) {
         std.movement.stopRotate(this._pres);
     };
 
-    ns.Movable.prototype._handleStop = function(msg, sender) {
+    std.movement.Movable.prototype._handleStop = function(msg, sender) {
         std.movement.stopMove(this._pres);
         std.movement.stopRotate(this._pres);
     };
 
-    ns.Movable.prototype._handleSetPos = function(msg, sender) {
+    std.movement.Movable.prototype._handleSetPos = function(msg, sender) {
         std.movement.position(this._pres, msg.position);
     };
 
-    ns.Movable.prototype._handleSetVel = function(msg, sender) {
+    std.movement.Movable.prototype._handleSetVel = function(msg, sender) {
         std.movement.move(this._pres, msg.velocity);
     };
 
-    ns.Movable.prototype._handleSetRot = function(msg, sender) {
+    std.movement.Movable.prototype._handleSetRot = function(msg, sender) {
         std.movement.orientation(this._pres, msg.orient);
     };
 
-    ns.Movable.prototype._handleSetRotVel = function(msg, sender) {
+    std.movement.Movable.prototype._handleSetRotVel = function(msg, sender) {
         std.movement.rotate(this._pres, msg.orientvel);
     };
 
-    ns.Movable.prototype._handleSetScale = function(msg, sender) {
+    std.movement.Movable.prototype._handleSetScale = function(msg, sender) {
         std.movement.scaleTo(this._pres, msg.scale);
     };
 

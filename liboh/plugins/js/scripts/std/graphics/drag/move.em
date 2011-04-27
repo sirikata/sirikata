@@ -33,10 +33,12 @@
 system.require('std/movement/movableremote.em');
 system.require('std/graphics/drag/handler.em');
 
-/** MoveDragHandler responds to drag events by moving a selected object.
+/** @namespace 
+    MoveDragHandler responds to drag events by moving a selected object.
  */
 std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
     {
+        /** @function */
         init: function(gfx) {
             this._super(gfx);
         },

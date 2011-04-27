@@ -32,6 +32,15 @@
 
 system.require('std/core/pretty.em');
 
+// This is just a document hack.
+// System should not be in the if as there is something wrong if it
+// does.
+if(system == undefined)
+{
+  /** @namespace */
+  system = new Object(); 
+}
+
 (function() {
      // Scope of this function hides the real print function and the callback from direct manipulation.
      var realprint = system.print;
@@ -60,7 +69,7 @@ system.require('std/core/pretty.em');
      
  }
 )();
-
+/** @function */
 system.prettyprint = function() {
     res = '';
     for(var i = 0; i < arguments.length; i++)

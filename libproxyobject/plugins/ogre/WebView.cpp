@@ -1257,7 +1257,7 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
   {
     const char* s = args[i].begin();
 
-    params.push_back(String(s));
+    params.push_back(Invokable::asAny(String(s)));
   }
 
   //After translation

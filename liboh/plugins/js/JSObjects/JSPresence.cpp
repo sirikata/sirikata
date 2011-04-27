@@ -108,7 +108,7 @@ v8::Handle<v8::Value> toVisible(const v8::Arguments& args)
 
 
 /**
-   @param Requires a string argument corresponding to the mesh to set to's uri.
+   @param String uri of the mesh to set
    Changes the mesh of the associated presence.
  */
 Handle<v8::Value> setMesh(const v8::Arguments& args)
@@ -186,6 +186,12 @@ v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
     return mStruct->registerOnProxAddedEventHandler(cb);
 }
 
+/**
+  Calculates the distance between this presence and a specified position vector
+  @param Vec3 The position vector of the point to which to calculated distance
+  @return distance to the argument
+*/
+
 
 v8::Handle<v8::Value>distance(const v8::Arguments& args)
 {
@@ -212,6 +218,13 @@ v8::Handle<v8::Value>distance(const v8::Arguments& args)
 
     return jspres->struct_getDistance(vec3);
 }
+
+/**
+  Tells whether a presence is connected to the world
+  @param No params
+  @return returns true if presence is connected else returns false
+*/
+
 
 v8::Handle<v8::Value>isConnectedGetter(v8::Local<v8::String> property, const AccessorInfo& info)
 {
@@ -543,6 +556,9 @@ bool getURI(const v8::Arguments& args,std::string& returner)
     return true;
 }
 
+/**
+  @return String the string representation of the presence
+*/
 
 Handle<v8::Value> toString(const v8::Arguments& args)
 {

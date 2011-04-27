@@ -31,9 +31,10 @@
  */
 
 if (typeof(std) === "undefined") std = {};
-if (typeof(std.graphics) === "undefined") std.graphics = {};
+if (typeof(std.graphics) === "undefined") /** @namespace*/ std.graphics = {};
 
-/** DragHandler is the base class for objects which respond to drag
+/** @namespace 
+ *  DragHandler is the base class for objects which respond to drag
  *  events. It just tracks the graphics object for subclasses and
  *  provides default, empty handlers for all drag mouse handler
  *  events.

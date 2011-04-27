@@ -494,7 +494,12 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                            ogreSceneManager=new OptionValue("scenemanager","OctreeSceneManager",OptionValueType<String>(),"Which scene manager to use to arrange objects"),
                            mWindowWidth=new OptionValue("windowwidth","1024",OptionValueType<uint32>(),"Window width"),
                            mFullScreen=new OptionValue("fullscreen","false",OptionValueType<bool>(),"Fullscreen"),
-                           mWindowHeight=new OptionValue("windowheight","768",OptionValueType<uint32>(),"Window height"),
+#if SIRIKATA_PLATFORM == PLATFORM_MAC
+#define SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT "600"
+#else
+#define SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT "768"
+#endif
+                           mWindowHeight=new OptionValue("windowheight",SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT,OptionValueType<uint32>(),"Window height"),
                            mWindowDepth=new OptionValue("colordepth","8",OgrePixelFormatParser(),"Pixel color depth"),
                            renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
                            mFrameDuration=new OptionValue("fps","30",FrequencyType(),"Target framerate"),
@@ -1220,9 +1225,7 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
     if (!mMouseHandler) return NULL;
 
     //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url + "')");
-    Invokable* inn = mMouseHandler->mUIWidgetView;
-    boost::any result(inn);
-    return result;
+    return Invokable::asAny(mMouseHandler->mUIWidgetView);
 }
 
 boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {

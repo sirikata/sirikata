@@ -38,31 +38,32 @@ function() {
 
     var ns = std.graphics;
 
-    /** The GUI class wraps the underlying GUI Invokable
+    /** @namespace 
+     *  The GUI class wraps the underlying GUI Invokable
      *  objects. These present 2D user interface widgets to the user,
      *  which are coded as HTML + Javascript pages.
      */
-    ns.GUI = function(me) {
+    std.graphics.GUI = function(me) {
         this._gui = me;
     };
 
     /** Bind a listener for events from this GUI. */
-    ns.GUI.prototype.bind = function(type, cb) {
+    std.graphics.GUI.prototype.bind = function(type, cb) {
         this._gui.invoke("bind", type, cb);
     };
 
     /** Evaluate the Javascript string inside the GUI context. */
-    ns.GUI.prototype.eval = function(js) {
+    std.graphics.GUI.prototype.eval = function(js) {
         this._gui.invoke("eval", js);
     };
 
     /** Hides the GUI window. */
-    ns.GUI.prototype.hide = function() {
+    std.graphics.GUI.prototype.hide = function() {
         this._gui.invoke("hide");
     };
 
     /** Shows the GUI window. */
-    ns.GUI.prototype.show = function() {
+    std.graphics.GUI.prototype.show = function() {
         this._gui.invoke("show");
     };
 

@@ -30,10 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-if (typeof(std) === "undefined") std = {};
-if (typeof(std.core) === "undefined") std.core = {};
+if (typeof(std) === "undefined") /**@namespace */ std = {};
+if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
 
-/** Converts an object to a string in a 'pretty' format, i.e. so it is
+/**  
+ * Converts an object to a string in a 'pretty' format, i.e. so it is
  *  human-readable, multiple lines, and handles indentation. If the
  *  object is not a tree (i.e. it has circular references in it), then
  *  the normal toString version will be returned.  Generally this
@@ -120,7 +121,6 @@ std.core.pretty = function(obj) {
             if (typeof(child) === "object" && child !== null) {
 
 
-//lkjs
                 //check if we've arleady visited this object.
                 var visitedIndex = checkVisited(child);
                 if (visitedIndex != null)
@@ -128,9 +128,6 @@ std.core.pretty = function(obj) {
                     output += indent + '<circ ref. see #'+ visitedIndex.toString() + ' >';
                     continue;
                 }
-
-//lkjs                
-                
                 
                 var override = objectPrettyOverride(child);
                 if (override)

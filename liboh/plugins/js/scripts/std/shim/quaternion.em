@@ -33,22 +33,53 @@
 
 /* Quaternion should be assumed to only have .x, .y, .z, and .w. */
 
+if(util.Quaternion == undefined)
+{
+  
+  /** @namespace 
+   * Quaternion should be assumed to only have .x, .y, .z, and .w. 
+  */
+  // this is just fake. Should never be executed here, else something is
+  // actually wrong with the system. I added this just for the
+  // documentation hack ;-)
+  util.Quaternion = new Object();
+}
+
+
+/** @function 
+@return quaternion sum of the two quaternions*/
 util.Quaternion.prototype.add = function(rhs) {
     return new util.Quaternion(this.x + rhs.x, this.y + rhs.y, this.z + rhs.z, this.w + rhs.w);
 };
 
+/** @function 
+@return quaternion difference of the two quaternions
+*/
 util.Quaternion.prototype.sub = function(rhs) {
     return new util.Quaternion(this.x - rhs.x, this.y - rhs.y, this.z - rhs.z, this.w - rhs.w);
 };
 
+/** 
+  @function
+  @return Returns the negation of the quaternion
+*/
 util.Quaternion.prototype.neg = function() {
     return new util.Quaternion(-this.x, -this.y, -this.z, -this.w);
 };
+
+/**
+  @function
+  @return Dot product of the two quaternions
+*/
 
 util.Quaternion.prototype.dot = function(rhs) {
     return this.x * rhs.x + this.y * rhs.y + this.z * rhs.z + this.w * rhs.w;
 };
 
+/**
+  @function
+  @return The quaternion product of two quaternions
+*/
 util.Quaternion.prototype.mul = function(rhs) {
     if (typeof(rhs) === "number") // scalar
         return this.scale(rhs);
@@ -79,24 +110,44 @@ util.Quaternion.prototype.mul = function(rhs) {
         throw new TypeError('Quaternion.mul parameter must be numeric, Vec3, or Quaternion.');
 };
 
+/** @function 
+  @param scalar by which to scale
+  @return A quaternion scaled by the scalar parameter
+*/
 util.Quaternion.prototype.scale = function(rhs) {
     return new util.Quaternion(this.x*rhs, this.y*rhs, this.z*rhs, this.w*rhs);
 };
 
+/**
+  @function
+  @return The length of the quaternion  
+*/
 util.Quaternion.prototype.length = function() {
     return util.sqrt( this.dot(this) );
 };
 
+/**
+  @function
+  @return the length-squared of the quaternion
+*/
 util.Quaternion.prototype.lengthSquared = function() {
     return this.dot(this);
 };
 
+/**
+  @function
+  @return The quaternion normal to this quaternion
+*/
 util.Quaternion.prototype.normal = function() {
     var len = this.length();
     if (len>1e-08)
         return this.scale(1.0/len);
     return this;
 };
+/**
+  @function
+  @return The inverse of this quaternion
+*/
 
 util.Quaternion.prototype.inverse = function() {
     var len = this.lengthSquared();
@@ -106,6 +157,10 @@ util.Quaternion.prototype.inverse = function() {
 };
 util.Quaternion.prototype.inv = util.Quaternion.prototype.inverse;
 
+/**
+@function
+@return The x-axis of the quaternion as a Vec3
+*/
 util.Quaternion.prototype.xAxis = function() {
     var fTy  = 2.0*this.y;
     var fTz  = 2.0*this.z;
@@ -119,6 +174,10 @@ util.Quaternion.prototype.xAxis = function() {
     return new util.Vec3(1.0-(fTyy+fTzz), fTxy+fTwz, fTxz-fTwy);
 };
 
+/**
+  @function
+  @return The y-axis of the quaternion as a Vec3
+*/
 util.Quaternion.prototype.yAxis = function() {
     var fTx  = 2.0*this.x;
     var fTy  = 2.0*this.y;
@@ -133,6 +192,10 @@ util.Quaternion.prototype.yAxis = function() {
     return new util.Vec3(fTxy-fTwz, 1.0-(fTxx+fTzz), fTyz+fTwx);
 };
 
+/**
+  @function
+  @return The z-axis of the quaternion as a Vec3
+*/
 util.Quaternion.prototype.zAxis = function() {
     var fTx  = 2.0*this.x;
     var fTy  = 2.0*this.y;

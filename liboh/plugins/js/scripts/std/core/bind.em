@@ -1,5 +1,5 @@
 /*  Sirikata
- *  scale.em
+ *  bind.js
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,40 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.require('std/movement/movableremote.em');
-system.require('std/graphics/drag/handler.em');
+if (typeof(std) === "undefined") /** @namespace */ std = {};
+if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
 
-/** @namespace 
-  ScaleDragHandler responds to drag events by scaling the selected object.
+/** @function 
+ *  Returns a function that binds the passed function to an object.
+ *  Useful for all cases where you need to pass a function argument, but
+ *  you expect 'this' to be correctly set.
+ *
+ *  @param {function(this:Object,...[*])} func  A function object to bind.
+ *  @param {Object} object  Instance of some class to become 'this'.
+ *  @return {function(...[*])}  A new function that wraps func.apply()
  */
-std.graphics.ScaleDragHandler = std.graphics.DragHandler.extend(
-    {
-        init: function(gfx) {
-            this._super(gfx);
-        },
-
-        selected: function(obj) {
-            this._dragging = obj ?
-                new std.movement.MovableRemote(obj) : null;
-        },
-
-        onMouseDrag: function(evt) {
-            if (!this._dragging) return;
-
-            if (!this._dragging.dragScale)
-                this._dragging.dragScale = this._dragging.getScale();
-
-            var cameraAxis = this._graphics.cameraDirection();
-
-            var sensitivity = 5.0;
-            var scale_amt = util.exp( sensitivity * evt.dy);
-            this._dragging.setScale( scale_amt * this._dragging.dragScale );
-        },
-
-        onMouseRelease: function(evt) {
-            if (this._dragging)
-                this._dragging.dragScale = null;
-            this._lastClickAxis = null;
+std.core.bind = function(func, object) {
+    if (typeof(func) === "undefined")
+        throw new TypeError("Tried to bind undefined function.");
+    if (arguments.length==2) {
+        delete arguments;
+        return function() {
+            return func.apply(object, arguments);
+        };
+    } else {
+        var args = new Array(arguments.length-2);
+        for (var i = 2; i < arguments.length; ++i) {
+            args[i-2]=arguments[i];
         }
+        delete arguments;
+        return function () {
+            var argLen = arguments.length;
+            var newarglist = new Array(argLen);
+            for (var i = 0; i < argLen; ++i) {
+                newarglist[i]=arguments[i];
+            }
+            return func.apply(object,args.concat(newarglist));
+        };
     }
-);
+};
