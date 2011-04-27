@@ -341,7 +341,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
           v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
           v8::Local<v8::Value> hiddenValue = v8Func->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
 
-          if (hiddenValue->IsUndefined())
+          //if (hiddenValue->IsUndefined())
+          if (hiddenValue.IsEmpty())
           {
               //means that we have not already stamped this function object
               //as having been serialized.  need to serialize it now.
@@ -366,7 +367,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             v8::Local<v8::Object> v8Array = v8::Local<v8::Object>::Cast(prop_val);
             v8::Local<v8::Value> hiddenValue = v8Array->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
 
-            if (hiddenValue->IsUndefined())
+            if (hiddenValue.IsEmpty())
             {
                 //means that we have not already stamped this object, and should now
                 annotateObject(objVec,v8Array,toStampWith);
