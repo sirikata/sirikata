@@ -39,5 +39,6 @@ scriptable = new std.script.Scriptable();
 system.onPresenceConnected(
     function(pres) {
         simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+        system.onPresenceConnected(function(){});
     }
 );
