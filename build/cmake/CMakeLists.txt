@@ -2538,15 +2538,6 @@ IF(OGRE_FOUND)
       DESTINATION lib/
       PATTERN "*.framework" EXCLUDE
     )
-    IF(ISDEBUG)
-      SET(CPPOH_BINARY_FILENAME "${CPPOH_BINARY}_d")
-    ELSE()
-      SET(CPPOH_BINARY_FILENAME "${CPPOH_BINARY}")
-    ENDIF()
-    INSTALL(DIRECTORY ${CPPOH_BINARY_FILENAME}.app
-      FILE_PERMISSIONS ${EXEC_PERMS}
-      DESTINATION bin/
-    )
   ELSE()
     FOREACH(OGRE_LIBRARY_DIR ${OGRE_LIBRARY_DIRS})
       INSTALL(DIRECTORY ${OGRE_LIBRARY_DIR}/
@@ -2565,6 +2556,11 @@ IF(OGRE_FOUND)
   # data for ogre, including web views
   INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
     DESTINATION share/ogre/data/
+    PATTERN "*/jquery" EXCLUDE
+    )
+  #and jquery is a link, so we need to handle it carefully
+  INSTALL(DIRECTORY ${TOP_LEVEL}/dependencies/jquery/
+    DESTINATION share/ogre/data/jquery
     )
 ENDIF()
 
@@ -2606,6 +2602,12 @@ IF(GSL_FOUND)
       DESTINATION bin/
       PATTERN "*.exe" EXCLUDE
       )
+  ELSEIF(APPLE)
+    INSTALL(DIRECTORY ${GSL_ROOT}/lib/
+      FILE_PERMISSIONS ${EXEC_PERMS}
+      DESTINATION lib/
+      PATTERN "*.exe" EXCLUDE
+      )
   ELSE()
     # System provided dependency, nothing to install.
   ENDIF()
@@ -2630,6 +2632,14 @@ IF(APPLE)
       ${CHROME_SYMLINKS_COMMAND} && ln -sf ${TOP_LEVEL}/libproxyobject
       ${CMAKE_CURRENT_BINARY_DIR}/${CHROME_SYMLINKS_COMMAND_TARGET}/ ${APPLE_PLUGIN_COMMANDS})
     ENDIF()
+
+
+    # The install process just runs a script that copies all the files into the right place.
+    SET(CPPOH_DISTRIBUTABLE_DEBUG_OPTS)
+    IF(ISDEBUG)
+      SET(CPPOH_DISTRIBUTABLE_DEBUG_OPTS "debug")
+    ENDIF()
+    INSTALL(CODE "EXECUTE_PROCESS(COMMAND ./mac-app-install.sh cppoh ${CMAKE_INSTALL_PREFIX} ${CPPOH_DISTRIBUTABLE_DEBUG_OPTS})")
 ELSE()
 IF(NOT WIN32)
 ADD_CUSTOM_TARGET(berkelium.bin ALL COMMAND ln -sf chrome/berkelium && ln -sf chrome/berkelium berkelium.bin)
