@@ -69,6 +69,23 @@ JSContextStruct* JSSystemStruct::getContext()
     return associatedContext;
 }
 
+
+v8::Handle<v8::Value> JSSystemStruct::struct_canCreatePres()
+{
+    return v8::Boolean::New(canCreatePres);
+}
+v8::Handle<v8::Value> JSSystemStruct::struct_canCreateEnt()
+{
+    return v8::Boolean::New(canCreateEnt);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::struct_canEval()
+{
+    return v8::Boolean::New(canEval);
+}
+
+
+
 //creates and returns a new context object.  arguments should be described in
 //JSObjects/JSSystem.cpp
 //new context will have at most as many permissions as parent context.

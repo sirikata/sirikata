@@ -154,6 +154,49 @@ v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
     return jsfake->struct_canProx();
 }
 
+/**
+   @return Boolean indicating whether this sandbox has capability to create presences
+ */
+v8::Handle<v8::Value> root_canCreatePres(const v8::Arguments& args)
+{
+    String errorMessage = "Error decoding the system object from root_canCreatePres.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jsfake->struct_canCreatePres();    
+}
+
+/**
+   @return Boolean indicating whether this sandbox has capability to create entities
+ */
+v8::Handle<v8::Value> root_canCreateEnt(const v8::Arguments& args)
+{
+    String errorMessage = "Error decoding the system object from root_canCreateEnt.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jsfake->struct_canCreateEnt();        
+}
+
+/**
+   @return Boolean indicating whether this sandbox has capability to call system.eval
+ */
+v8::Handle<v8::Value> root_canEval(const v8::Arguments& args)
+{
+    String errorMessage = "Error decoding the system object from root_canEval.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jsfake->struct_canEval();        
+}
+
+
 
 
 /**
@@ -411,9 +454,8 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
 
 
-//fake root in context can already send messages to who instantiated it and
-//receive messages from who instantiated it.
-//messages sent out of it get stamped with a port number automatically
+
+
 
 /**    
   @param the presence that the context is associated with.  (will use this as
@@ -433,7 +475,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
   @param Boolean.  can I create presences.  
 
-  @param Boolean.  can I create presences.
+  @param Boolean.  can I create entities.
 
   @param Boolean.  can I call eval directly through system object.
 */

@@ -33,6 +33,12 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canRecvMessage();
     v8::Handle<v8::Value> struct_canProx();
     v8::Handle<v8::Value> struct_canImport();
+
+    v8::Handle<v8::Value> struct_canCreatePres();
+    v8::Handle<v8::Value> struct_canCreateEnt();
+    v8::Handle<v8::Value> struct_canEval();
+
+    
     
     v8::Handle<v8::Value> struct_getPosition();
 
