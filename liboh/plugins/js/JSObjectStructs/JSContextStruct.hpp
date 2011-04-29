@@ -76,7 +76,11 @@ struct JSContextStruct : public JSSuspendable
     //creates a vec3 emerson object out of the vec3d cpp object passed in.
     v8::Handle<v8::Value> struct_createVec3(Vector3d& toCreate);
 
-
+    //if receiver is one of my presences, or it is the system presence that I
+    //was created from return true.  Otherwise, return false.
+    bool canReceiveMessagesFor(const SpaceObjectReference& receiver);
+        
+    
     
     void jsscript_print(const String& msg);
     void presenceDied();
@@ -138,6 +142,10 @@ struct JSContextStruct : public JSSuspendable
     String getScript();
 
 private:
+
+    //runs through suspendable map to check if have a presence in this sandbox
+    //matching sporef
+    bool hasPresence(const SpaceObjectReference& sporef);
     
     //performs the initialization and population of util object, system object,
     //and system object's presences array.

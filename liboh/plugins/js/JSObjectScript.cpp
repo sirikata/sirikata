@@ -1300,18 +1300,18 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
 
+    SpaceObjectReference to  (dst.space(), dst.object());
 
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
-        if (mEventHandlers[s]->matches(obj,msgSender))
+        if (mEventHandlers[s]->matches(obj,msgSender,to))
         {
             // Adding support for the knowing the message properties too
-            int argc = 2;
-
-            Handle<Value> argv[2] = { obj, msgSender };
+            int argc = 3;
+            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str()) };
             ProtectedJSCallback(mContext->mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;

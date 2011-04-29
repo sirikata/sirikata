@@ -395,9 +395,12 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
   //callback on prox addition and removal
-  proto_t->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
-  proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  proto_t->Set(v8::String::New("__hidden_onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  proto_t->Set(v8::String::New("__hidden_onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  // proto_t->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  // proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
 
+  
 
   //using JSVisible sendmessage so that don't have to re-write a bunch of code.
   proto_t->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));

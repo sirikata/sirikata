@@ -656,9 +656,11 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
  *  specified pattern, where the pattern is a list of individual
  *  rules.
  *  
- *   @param pattern[] pattterns: Array of Pattern rules to match
- *   @param  object target: target of callback (this pointer when invoked), or null for the global (root) object
  *   @param cb: callback to invoke, with event as parameter
+ *   @param  object target: target of callback (this pointer when invoked), or null for the global (root) object
+ *   @param pattern[] pattterns: Array of Pattern rules to match
+ *   @param sender: a visible object if want to match only messages from a
+ *   particular sender, or null if want to match messages from any sender.
  */
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 {

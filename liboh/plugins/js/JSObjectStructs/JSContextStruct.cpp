@@ -97,6 +97,42 @@ v8::Handle<v8::Value>  JSContextStruct::struct_require(const String& toRequireFr
     return jsObjScript->require(toRequireFrom,this);
 }
 
+//if receiver is one of my presences, or it is the system presence that I
+//was created from return true.  Otherwise, return false.
+bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver)
+{
+    if (associatedPresence != NULL)
+    {
+        //ie, we're not in the root sandbox
+        if (*(associatedPresence->getSporef()) == receiver)
+            return true;
+    }
+
+    //check all of my presences
+    if (hasPresence(receiver))
+        return true;
+    
+
+    //cannot receive messages for this.
+    return false;
+}
+
+
+//runs through suspendable map to check if have a presence in this sandbox
+//matching sporef
+bool JSContextStruct::hasPresence(const SpaceObjectReference& sporef)
+{
+    for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
+    {
+        JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (iter->first);
+        if (jspres != NULL)
+        {
+            if (*(jspres->getSporef()) == sporef)
+                return true;
+        }
+    }
+    return false;
+}
 
 
 //Tries to eval the emerson code in native_contents that came from origin
@@ -224,6 +260,7 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
 
     return v8::Persistent<v8::Object>::New(js_pres);
 }
+
 
 
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)

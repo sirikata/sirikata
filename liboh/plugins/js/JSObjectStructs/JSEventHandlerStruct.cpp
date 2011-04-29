@@ -47,7 +47,7 @@ JSEventHandlerStruct::~JSEventHandlerStruct()
 }
 
 //sender should be of type VISIBLE (see template defined in JSObjectScriptManager
-bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> incoming_sender)
+bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> incoming_sender, const SpaceObjectReference& receiver)
 {
     if (getIsSuspended() || getIsCleared())
         return false; //cannot match a suspended handler
@@ -92,7 +92,11 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
             return false;
     }
 
-    return true;
+    //check if the message is *to* one of my presences
+    if (jscont->canReceiveMessagesFor(receiver))
+        return true;
+
+    return false;
 }
 
 

@@ -40,8 +40,8 @@ function(name)
   var pres = this;
   if(!system.shim.graphics)
   {
-	  system.print("\n\n Got the new graphics object\n\n");
-    system.shim.graphics = new Object();
+      system.print("\n\n Got the new graphics object\n\n");
+      system.shim.graphics = new Object();
   }
   if(!system.shim.graphics[pres])
   {
@@ -62,6 +62,19 @@ function(name)
   if(!system.shim.graphics || !system.shim.graphics[this]) return undefined;
   return system.shim.graphics[this][name];
 };
+
+system.__presence_constructor__.prototype.onProxAdded =
+function (funcToCallback)
+{
+    system.__sys_onProxAdded(this,funcToCallback);
+};
+
+system.__presence_constructor__.prototype.onProxRemoved =
+function (funcToCallback)
+{
+    system.__sys_onProxRemoved(this,funcToCallback);
+};
+
 
 
 Object.defineProperty(system.__presence_constructor__.prototype, "position",

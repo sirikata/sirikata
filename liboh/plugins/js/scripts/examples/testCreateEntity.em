@@ -22,6 +22,7 @@ var scriptToImport = "examples/testPrint.em";
 
 
 
+//system.create_entity(newPos,
 system.create_entity(newPos,
                      "js",    //this arg will almost always be 'js'
                      scriptToImport,

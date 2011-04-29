@@ -51,19 +51,7 @@ function() {
         scriptRequestHandler <- scriptRequestPattern;
     };
 
-    // var deepCopy = function(val) {
-    //     if (typeof(val) === "object") {
-    //         var ret = {};
-    //         var props = Object.getOwnPropertyNames(val);
-    //         for(var f in props)
-    //         {
-    //             ret[props[f]] = deepCopy(val[props[f]]);                    
-    //         }
-    //         return ret;
-    //     }
-    //     else
-    //         return val;
-    // };
+
     ns.Scriptable.prototype._handleScriptRequest = function(msg, sender) {
         if (!this._printer || sender != this._printer) {
             this._printer = sender;
