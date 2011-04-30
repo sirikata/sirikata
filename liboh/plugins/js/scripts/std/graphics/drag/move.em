@@ -38,16 +38,18 @@ system.require('std/graphics/drag/handler.em');
  */
 std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
     {
-        /** @function */
+        /** @memberOf std.graphics.MoveDragHandler */
         init: function(gfx) {
             this._super(gfx);
         },
 
+        /** @memberOf std.graphics.MoveDragHandler */
         selected: function(obj) {
             this._dragging = obj ?
                 new std.movement.MovableRemote(obj) : null;
         },
 
+        /** @memberOf std.graphics.MoveDragHandler */
         onMouseDrag: function(evt) {
             if (!this._dragging) return;
 
@@ -71,6 +73,7 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
             this._dragging.setPosition(this._dragging.dragPosition);
         },
 
+        /** @memberOf std.graphics.MoveDragHandler */
         onMouseRelease: function(evt) {
             if (this._dragging)
                 this._dragging.dragPosition = null;

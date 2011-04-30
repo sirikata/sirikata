@@ -41,15 +41,24 @@ if (typeof(std.graphics) === "undefined") /** @namespace*/ std.graphics = {};
  */
 std.graphics.DragHandler = system.Class.extend(
     {
+        /** @memberOf std.graphics.DragHandler */
         init: function(gfx) {
             this._graphics = gfx;
         },
+
+        /** @memberOf std.graphics.DragHandler */
         selected: function(obj) {
         },
+
+        /** @memberOf std.graphics.DragHandler */
         onMousePress: function(evt) {
         },
+
+        /** @memberOf std.graphics.DragHandler */
         onMouseDrag: function(evt) {
         },
+
+        /** @memberOf std.graphics.DragHandler */
         onMouseRelease: function(evt) {
         }
     }
