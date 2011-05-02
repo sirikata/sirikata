@@ -36,7 +36,13 @@ extern "C" typedef union SDL_Event SDL_Event;
 
 #include "../task/EventManager.hpp"
 #include "InputManager.hpp"
-namespace Sirikata { namespace Input {
+namespace Sirikata {
+
+namespace Graphics {
+class OgreSystem;
+}
+
+namespace Input {
 
 class InputDevice;
 class SDLKeyboard;
@@ -63,6 +69,7 @@ typedef std::tr1::shared_ptr<SDLKeyRepeatInfo> SDLKeyRepeatInfoPtr;
 
 
 class SDLInputManager : public InputManager {
+    Graphics::OgreSystem* mParent;
     SDL_WindowID mWindowID;
     SDL_GLContext mWindowContext;
     std::vector<SDLKeyboardPtr> mKeys;
@@ -86,12 +93,13 @@ public:
         width = this->mWidth;
         height = this->mHeight;
     }
-    SDLInputManager(unsigned int width,
-                    unsigned int height,
-                    bool fullscreen,
-                    int ogrePixelFmt, // fixme: which one do we use?
-                    bool grabCursor,
-                    void *&currentWindowData);
+    SDLInputManager(Graphics::OgreSystem* parent,
+        unsigned int width,
+        unsigned int height,
+        bool fullscreen,
+        int ogrePixelFmt, // fixme: which one do we use?
+        bool grabCursor,
+        void *&currentWindowData);
     bool tick(Task::LocalTime currentTime, Duration frameTime);
 
 	void filesDropped(const std::vector<std::string> &files);

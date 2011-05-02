@@ -61,6 +61,8 @@
 #include "InputEvents.hpp"
 #include "SDLInputDevice.hpp"
 
+#include "../OgreSystem.hpp"
+
 #define TO_AXIS (1./128.)
 #define DEFAULT_DRAG_DEADBAND 20.0
 
@@ -137,8 +139,10 @@ static const IdPair::Primary &getWindowEventId(SDL_WindowEventID sdlId) {
 }
 
 
-SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fullscreen, int ogrePixelFormat,bool grabCursor, void *&currentWindow)
-: InputManager(new Task::ThreadSafeWorkQueue) {
+SDLInputManager::SDLInputManager(Graphics::OgreSystem* parent, unsigned int width,unsigned int height, bool fullscreen, int ogrePixelFormat,bool grabCursor, void *&currentWindow)
+ : InputManager(new Task::ThreadSafeWorkQueue),
+   mParent(parent)
+{
     Ogre::PixelFormat fmt = (Ogre::PixelFormat)ogrePixelFormat;
     mWindowContext=0;
     mWidth = width;
@@ -188,7 +192,7 @@ SDLInputManager::SDLInputManager(unsigned int width,unsigned int height, bool fu
 
         SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-        mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL|(fullscreen?SDL_WINDOW_FULLSCREEN:0));
+        mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (fullscreen?SDL_WINDOW_FULLSCREEN:0));
         SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
         SDL_GL_MakeCurrent(mWindowID,ctx);
         SDL_ShowWindow(mWindowID);
@@ -441,7 +445,10 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
                     getWindowEventId((SDL_WindowEventID)event->window.event),
                     event->window.data1,
                     event->window.data2)));
-			if (event->window.event==SDL_WINDOWEVENT_CLOSE) {
+            if (event->window.event==SDL_WINDOWEVENT_RESIZED) {
+                mParent->windowResized(event->window.data1, event->window.data2);
+            }
+            if (event->window.event==SDL_WINDOWEVENT_CLOSE) {
                 // FIXME: Provide a better means to abort quit events. See below.
 
                 // FIXME: Quit only when the event has been successfully processed

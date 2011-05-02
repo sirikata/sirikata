@@ -189,8 +189,8 @@ OgreSystem::OgreSystem(Context* ctx)
     mCubeMap=NULL;
     mInputManager=NULL;
     mRenderTarget=NULL;
+    mRenderWindow = NULL;
     mSceneManager=NULL;
-    mRenderTarget=NULL;
     mMouseHandler=NULL;
     mRayQuery=NULL;
 }
@@ -538,7 +538,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                 ;
 
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
-            Ogre::RenderWindow *rw=(doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
+            mRenderWindow = (doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
             mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
@@ -562,18 +562,18 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 #endif
             void* hWnd=NULL;
             if (ogreCreatedWindow) {
-                if (!rw) {
+                if (!mRenderWindow) {
                     Ogre::NameValuePairList misc;
 #ifdef __APPLE__
                     if (mFullScreen->as<bool>()==false) {//does not work in fullscreen
                         misc["macAPI"] = String("cocoa");
                     }
 #endif
-                    sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
-                    rw->setVisible(true);
+                    sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(mRenderWindow=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
+                    mRenderWindow->setVisible(true);
                 }
-                printf("RW: %s\n", typeid(*rw).name());
-                rw->getCustomAttribute("WINDOW",&hWnd);
+                printf("RW: %s\n", typeid(*mRenderWindow).name());
+                mRenderWindow->getCustomAttribute("WINDOW",&hWnd);
 #ifdef _WIN32
                 {
                     char tmp[64];
@@ -581,22 +581,24 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                     _putenv(tmp);
                 }
 #endif
-                SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<rw->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<rw->getHeight()<<'\n');
-                *mWindowWidth->get()=Any(rw->getWidth());
-                *mWindowHeight->get()=Any(rw->getHeight());
-                mInputManager=new SDLInputManager(rw->getWidth(),
-                                                  rw->getHeight(),
-                                                  mFullScreen->as<bool>(),
-                                                  mWindowDepth->as<Ogre::PixelFormat>(),
-                                                  grabCursor->as<bool>(),
-                          						  hWnd);
+                SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<mRenderWindow->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<mRenderWindow->getHeight()<<'\n');
+                *mWindowWidth->get()=Any(mRenderWindow->getWidth());
+                *mWindowHeight->get()=Any(mRenderWindow->getHeight());
+                mInputManager=new SDLInputManager(this,
+                    mRenderWindow->getWidth(),
+                    mRenderWindow->getHeight(),
+                    mFullScreen->as<bool>(),
+                    mWindowDepth->as<Ogre::PixelFormat>(),
+                    grabCursor->as<bool>(),
+                    hWnd);
             }else {
-                mInputManager=new SDLInputManager(mWindowWidth->as<uint32>(),
-                                                  mWindowHeight->as<uint32>(),
-                                                  mFullScreen->as<bool>(),
-                                                  mWindowDepth->as<Ogre::PixelFormat>(),
-                                                  grabCursor->as<bool>(),
-                                                  hWnd);
+                mInputManager=new SDLInputManager(this,
+                    mWindowWidth->as<uint32>(),
+                    mWindowHeight->as<uint32>(),
+                    mFullScreen->as<bool>(),
+                    mWindowDepth->as<Ogre::PixelFormat>(),
+                    grabCursor->as<bool>(),
+                    hWnd);
                 Ogre::NameValuePairList misc;
 #ifdef __APPLE__
                 {
@@ -610,20 +612,17 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 #else
                 misc["currentGLContext"] = String("True");
 #endif
-                sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(rw=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
-                SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<rw->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<rw->getHeight()<<'\n');
-                *mWindowWidth->get()=Any(rw->getWidth());
-                *mWindowHeight->get()=Any(rw->getHeight());
-                rw->setVisible(true);
-
+                sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(mRenderWindow=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
+                SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<mRenderWindow->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<mRenderWindow->getHeight()<<'\n');
+                *mWindowWidth->get()=Any(mRenderWindow->getWidth());
+                *mWindowHeight->get()=Any(mRenderWindow->getHeight());
+                mRenderWindow->setVisible(true);
             }
-            sRenderTarget=mRenderTarget=rw;
+            sRenderTarget = mRenderTarget = mRenderWindow;
 
         } else if (createWindow->as<bool>()) {
-                Ogre::RenderWindow *rw;
-                //mRenderTarget=rw=sRoot->createRenderWindow(UUID::random().rawHexData(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
-                mRenderTarget=rw=sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
-                rw->setVisible(true);
+                mRenderTarget = mRenderWindow = sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
+                mRenderWindow->setVisible(true);
                 if (sRenderTarget==NULL)
                     sRenderTarget=mRenderTarget;
         }else {
@@ -636,6 +635,9 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     }
     if (!getRoot()->isInitialised()) {
         return false;
+    }
+    if (mRenderWindow != NULL) {
+        Ogre::WindowEventUtilities::addWindowEventListener(mRenderWindow, this);
     }
     try {
         mSceneManager=getRoot()->createSceneManager(ogreSceneManager->as<String>());
@@ -669,6 +671,15 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
     return true;
 }
+
+void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
+    windowResized(rw->getWidth(), rw->getHeight());
+}
+
+void OgreSystem::windowResized(uint32 w, uint32 h) {
+    SILOG(ogre,insane,"Ogre resized window: " << w << "x" << h);
+}
+
 namespace {
 bool ogreLoadPlugin(const String& _filename, const String& root = "") {
     using namespace boost::filesystem;
