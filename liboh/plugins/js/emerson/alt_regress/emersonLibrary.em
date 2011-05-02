@@ -43,6 +43,19 @@ util.plus = function(a,b)
     return a+b;
 };
 
+util.patInc = 0;
+
+util.Pattern = function(name,value,proto)
+{
+    ++util.patInc;
+    print('\nIn util.pattern\n');
+    print(util.patInc);
+    print(name);
+    print(value);
+    print(proto);
+    print('\ndone\n');
+};
+
 
 system = {    };
 
@@ -60,3 +73,5 @@ system.registerHandler = function (a, b, c, d)
     print(d);
     print("\n\nDone registering handlers\n\n");
 };
+
+

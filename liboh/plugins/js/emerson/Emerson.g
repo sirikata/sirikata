@@ -119,6 +119,7 @@ tokens
     PAREN;
     PATTERN_LITERAL;
     NAME_VALUE_PROTO;
+    BLANK_NAME_VAL_PROT;
     NAME;
     VALUE;
     PROTO;
@@ -647,14 +648,19 @@ patternLiteral
   ;
 
 propertyNameAndValue
-	: propertyName LTERM* ':' LTERM* expression -> ^(NAME_VALUE propertyName expression)
-	;
-
+        : propertyName LTERM* ':' LTERM* expression -> ^(NAME_VALUE propertyName expression)
+        ;
 
 
 nameValueProto
     : (propertyName LTERM*) ':'  LTERM* (a1=expression LTERM*)? ':' LTERM* ( a2=expression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
+    | LTERM* ':' LTERM* ':' -> ^(BLANK_NAME_VAL_PROT)
     ;
+
+// nameValueProto
+//     : (propertyName LTERM*) ':'  LTERM* (a1=expression LTERM*)? ':' LTERM* ( a2=expression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
+//     ;
+
 
 
 

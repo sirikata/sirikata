@@ -1348,7 +1348,7 @@ nameValueProto
           }
         ^(NAME
           propertyName
-                   )
+         )
         
          (
          ^(VALUE
@@ -1371,8 +1371,12 @@ nameValueProto
          {
             APP(" )");
          }
-
       )
+  | ^(BLANK_NAME_VAL_PROT
+        {
+            APP("new util.Pattern()");
+        }
+     )
   ;
 
 propertyNameAndValue

@@ -1,0 +1,118 @@
+
+In util.pattern
+
+1
+a
+undefined
+undefined
+
+done
+
+
+Registered handler
+
+1
+
+function handler(msg, sender) {
+    print("\n\nGot into handler\n\n");
+}
+
+null
+[object Object]
+null
+
+
+Done registering handlers
+
+
+
+In util.pattern
+
+2
+undefined
+undefined
+undefined
+
+done
+
+
+Registered handler
+
+2
+
+function handler(msg, sender) {
+    print("\n\nGot into handler\n\n");
+}
+
+null
+[object Object]
+null
+
+
+Done registering handlers
+
+
+
+In util.pattern
+
+3
+undefined
+undefined
+undefined
+
+done
+
+
+In util.pattern
+
+4
+a
+b
+c
+
+done
+
+
+Registered handler
+
+3
+
+function handler(msg, sender) {
+    print("\n\nGot into handler\n\n");
+}
+
+null
+[object Object],[object Object]
+null
+
+
+Done registering handlers
+
+
+
+In util.pattern
+
+5
+m
+wo
+undefined
+
+done
+
+
+Registered handler
+
+4
+
+function handler(msg, sender) {
+    print("\n\nGot into handler\n\n");
+}
+
+null
+[object Object]
+null
+
+
+Done registering handlers
+
+
