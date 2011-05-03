@@ -1,0 +1,130 @@
+<html>
+  <head>
+    <style type="text/css">
+      .command {
+        border-width: 1px 1px 1px 1px;
+        border-color: black;
+        border-style: solid;
+        padding: 0px;
+      }
+    </style>
+
+    <script src="../jquery/js/jquery-1.4.2.min.js" type="text/javascript"></script>
+    <script language="javascript" type="text/javascript">
+      var username = "";
+      function pageScroll() {
+        window.scrollBy(0,1000); // horizontal and vertical scroll increments
+      }
+
+      function filterMessage(msg, node) {
+        // Filter a message for special characters and convert them to
+        // display nicely using html
+
+        // Convert tabs to 4 spaces
+        msg = msg.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;');
+
+        var sub_msgs = msg.split('\n');
+
+        for(var i = 0; i < sub_msgs.length; i++) {
+          var p = document.createElement('p');
+          node.appendChild( p );
+          p.appendChild( document.createTextNode(sub_msgs[i]) );
+        }
+      }
+
+      function addMessage(msg) {
+        var new_p = document.createElement('div');
+        filterMessage(msg, new_p);
+        new_p.className = 'command';
+        var results_div = document.getElementById('Results');
+        results_div.appendChild( new_p );
+
+        setTimeout('pageScroll()',100);
+      }
+
+      function clearCommand() {
+        var command_area = document.getElementById('Command');
+        command_area.value = '';
+      }
+
+      function runCommand() {
+        var command_area = document.getElementById('Command');
+        var command = command_area.value;
+        command_area.value = '';
+
+        //var username = $.query.get('username');
+        //var username = "bhupc";
+        addMessage(username + ": " + command);
+
+        var arg_map = [
+          'Chat', username, command
+        ];
+        chrome.send("event", arg_map);
+      }
+
+      // We track key up and key down to make shift + enter trigger a send
+      function registerHotkeys(evt) {
+        var command_area = document.getElementById('Command');
+        command_area.onkeydown = handleCodeKeyDown;
+        command_area.onkeyup = handleCodeKeyUp;
+        //document.getElementById('chat').style.visibility = 'visible';
+        //document.getElementById('login').style.visibility = 'hidden';
+
+        $('#login').hide(); 
+        $('#chat').show();
+
+        username = document.getElementById('username').value;
+        //var arg_map = ['Name', username];
+       // chrome.send("event", arg_map);
+
+
+      }
+      var shift_down = false;
+      function handleCodeKeyDown(evt) {
+        if (evt.shiftKey)
+          shift_down = true;
+        if (evt.keyCode == 13 && shift_down) {
+          runCommand();
+          // We set a timeout because the addition of the new line occurs *after* this handler
+          setTimeout('clearCommand()',1);
+        }
+      }
+      function handleCodeKeyUp(evt) {
+        if (evt.shiftKey)
+          shift_down = false;
+      }
+      function closePrompt() {
+        var arg_map = [
+          'Close'
+        ];
+        chrome.send("event", arg_map);
+      }
+      
+      function onReady()
+      {
+        //document.getElementById('chat').style.visibility = 'hidden';
+        $('#chat').hide();
+      }
+      $(document).ready (onReady);
+    </script>
+  </head>
+  <body>
+    <div id="login">
+      
+        Username: <input type="text" id="username" name="username"/>
+        <button onclick="registerHotkeys()">Submit</button>
+      
+    </div>
+    <div id="chat">
+      <div id="Results">
+      </div>
+      <div>
+        <form>
+          <textarea id="Command" name="Command" rows="5" cols="30" ></textarea><br>
+          <button type="button" onclick="runCommand()">Send</button>
+          <button type="button" onclick="closePrompt()">Close</button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
