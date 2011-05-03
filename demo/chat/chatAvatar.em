@@ -6,6 +6,7 @@ system.import('std/graphics/default.em');
 simulator = undefined;
 chat = undefined;
 chat_group = new Array();
+username = undefined;
 function sendAll(msg)
 {
   for(var i = 0; i < chat_group.length; i++)
@@ -14,12 +15,13 @@ function sendAll(msg)
   }
 }
 
-function ChatMsgObject(msg)
+function ChatMsgObject(username, msg)
 {
   this.chat = msg;
+  this.username = username;
 }
 
-function onChatMsgReceived(cmd, msg)
+function onChatMsgReceived(cmd, username, msg)
 {
     if (cmd == 'Chat' && msg) {
         system.print("\n\n");
@@ -27,15 +29,15 @@ function onChatMsgReceived(cmd, msg)
         system.print(msg);
         system.print("\n\n");
         system.print("Sending out to others....\n\n");
-        sendAll(new ChatMsgObject(msg));
+        sendAll(new ChatMsgObject(username, msg));
     }
 }
 
 function onChatFromNeighbor(msg, sender)
 {
-    print("Got chat: " + msg.chat + ": from neigbor " + sender);
+    //print("Got chat: " + msg.chat + ": from neigbor " + sender);
     // FIXME escape string
-    chat.invoke('eval', 'addMessage(' +  Escape.escapeString(msg.chat, '"') + ')' );
+    chat.invoke('eval', 'addMessage(' +  Escape.escapeString(msg.username + ': ' + msg.chat, '"') + ')' );
 }
 
 function handleNewChatNeighbor(msg, sender)
@@ -60,7 +62,7 @@ function handleNewChatNeighbor(msg, sender)
 // arg here is an addressable object
 function proxAddedCallback(new_addr_obj)
 {
-  if(system.Self.toString() == new_addr_obj.toString())
+  if(system.self.toString() == new_addr_obj.toString())
   {
     print("\n\nGOT SELF in the proximity update\n\n");
     return;
@@ -90,13 +92,13 @@ system.onPresenceConnected( function(pres) {
     system.print(system.presences.length);
     if (system.presences.length == 1)
     {
-        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
-      chat = simulator.invoke("createWindowFile", "chat_terminal", "chat/prompt.html");
-      chat.invoke("bind", "event", onChatMsgReceived);
+      simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+      
+      chat = new std.graphics.GUI(simulator.invoke("createWindowFile", "chat_dialog", "chat/chat.html"));
+      chat.bind("event", onChatMsgReceived);
       var p  = new util.Pattern("name", "get_protocol");
       onTestMessage <- p ;
       system.presences[0].onProxAdded(proxAddedCallback);
-
     }
     else
     {
