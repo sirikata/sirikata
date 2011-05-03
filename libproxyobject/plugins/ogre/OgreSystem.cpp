@@ -676,6 +676,7 @@ void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
     SILOG(ogre,insane,"Ogre resized window: " << rw->getWidth() << "x" << rw->getHeight());
     if (mPrimaryCamera)
         mPrimaryCamera->windowResized();
+    mMouseHandler->windowResized(rw->getWidth(), rw->getHeight());
 }
 
 void OgreSystem::injectWindowResized(uint32 w, uint32 h) {
