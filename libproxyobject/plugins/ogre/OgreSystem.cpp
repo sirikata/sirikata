@@ -188,6 +188,7 @@ OgreSystem::OgreSystem(Context* ctx)
     increfcount();
     mCubeMap=NULL;
     mInputManager=NULL;
+    mOgreOwnedRenderWindow = false;
     mRenderTarget=NULL;
     mRenderWindow = NULL;
     mSceneManager=NULL;
@@ -539,6 +540,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 
             sRoot->initialise(doAutoWindow,windowTitle->as<String>());
             mRenderWindow = (doAutoWindow?sRoot->getAutoCreatedWindow():NULL);
+	    mOgreOwnedRenderWindow = (mRenderWindow != NULL);
             mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("OgreGraphics");
 
             mCDNArchivePlugin = new CDNArchivePlugin;
@@ -571,6 +573,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 #endif
                     sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(mRenderWindow=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
                     mRenderWindow->setVisible(true);
+		    mOgreOwnedRenderWindow = (mRenderWindow != NULL);
                 }
                 printf("RW: %s\n", typeid(*mRenderWindow).name());
                 mRenderWindow->getCustomAttribute("WINDOW",&hWnd);
@@ -613,6 +616,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                 misc["currentGLContext"] = String("True");
 #endif
                 sRenderTarget=mRenderTarget=static_cast<Ogre::RenderTarget*>(mRenderWindow=getRoot()->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>(),&misc));
+		mOgreOwnedRenderWindow = false;
                 SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<mRenderWindow->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<mRenderWindow->getHeight()<<'\n');
                 *mWindowWidth->get()=Any(mRenderWindow->getWidth());
                 *mWindowHeight->get()=Any(mRenderWindow->getHeight());
@@ -623,6 +627,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
         } else if (createWindow->as<bool>()) {
                 mRenderTarget = mRenderWindow = sRoot->createRenderWindow(windowTitle->as<String>(),mWindowWidth->as<uint32>(),mWindowHeight->as<uint32>(),mFullScreen->as<bool>());
                 mRenderWindow->setVisible(true);
+		mOgreOwnedRenderWindow = (mRenderWindow != NULL);
                 if (sRenderTarget==NULL)
                     sRenderTarget=mRenderTarget;
         }else {
@@ -684,7 +689,8 @@ void OgreSystem::injectWindowResized(uint32 w, uint32 h) {
     //   mRenderWindow->windowMovedOrResized();
     // but it turns out that Ogre isn't handling externally created windows
     // properly. Instead, we force a resize directly.
-    mRenderWindow->resize(w, h);
+    if (!mOgreOwnedRenderWindow)
+        mRenderWindow->resize(w, h);
     // Then, we force the resize event because apparently calling resize()
     // doesn't trigger it.
     windowResized(mRenderWindow);

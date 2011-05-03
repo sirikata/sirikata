@@ -98,6 +98,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
+    bool mOgreOwnedRenderWindow;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
     Ogre::RenderWindow *mRenderWindow; // Should be the same as mRenderTarget,
