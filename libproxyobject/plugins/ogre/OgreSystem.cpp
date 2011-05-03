@@ -673,11 +673,20 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
 }
 
 void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
-    windowResized(rw->getWidth(), rw->getHeight());
+    SILOG(ogre,insane,"Ogre resized window: " << rw->getWidth() << "x" << rw->getHeight());
+    if (mPrimaryCamera)
+        mPrimaryCamera->windowResized();
 }
 
-void OgreSystem::windowResized(uint32 w, uint32 h) {
-    SILOG(ogre,insane,"Ogre resized window: " << w << "x" << h);
+void OgreSystem::injectWindowResized(uint32 w, uint32 h) {
+    // You might think we would do this:
+    //   mRenderWindow->windowMovedOrResized();
+    // but it turns out that Ogre isn't handling externally created windows
+    // properly. Instead, we force a resize directly.
+    mRenderWindow->resize(w, h);
+    // Then, we force the resize event because apparently calling resize()
+    // doesn't trigger it.
+    windowResized(mRenderWindow);
 }
 
 namespace {

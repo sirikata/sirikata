@@ -446,7 +446,7 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
                     event->window.data1,
                     event->window.data2)));
             if (event->window.event==SDL_WINDOWEVENT_RESIZED) {
-                mParent->windowResized(event->window.data1, event->window.data2);
+                mParent->injectWindowResized(event->window.data1, event->window.data2);
             }
             if (event->window.event==SDL_WINDOWEVENT_CLOSE) {
                 // FIXME: Provide a better means to abort quit events. See below.

@@ -106,6 +106,18 @@ void Camera::detach() {
     mScene->detachCamera(this);
 }
 
+void Camera::windowResized() {
+    // This just forces a resize so that the "actual dimensions" get updated to
+    // reflect the new shape. Ogre just has an odd API where you set the size
+    // based on float [0,1] coordinates but then it immediately computes and
+    // continues to use the size based on the total size, e.g. [0,width] and
+    // [0,height].
+    mViewport->setDimensions(0.f, 0.f, 1.f, 1.f);
+    // In any case, our camera's aspect ratio would be screwed up, so now fix
+    // that up.
+    mOgreCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
+}
+
 void Camera::tick() {
     mSceneNode->setPosition(toOgre( mFollowing->getOgrePosition(), mFollowing->getScene()->getOffset() ));
     mSceneNode->setOrientation(toOgre( mFollowing->getOgreOrientation() ));
