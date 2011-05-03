@@ -64,6 +64,8 @@ public:
 
     void detach();
 
+    void windowResized();
+
     void tick();
 
     Ogre::Viewport* getViewport() {

@@ -65,6 +65,7 @@ public:
     //FIXME should this be public?
     WebView* mUIWidgetView;
     void ensureUI();
+    void windowResized(uint32 w, uint32 h);
 private:
     void delegateEvent(Input::InputEventPtr inputev);
 

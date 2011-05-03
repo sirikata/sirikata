@@ -657,7 +657,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
     {
         ButtonPressedEventPtr button_pressed_ev (std::tr1::dynamic_pointer_cast<ButtonPressed>(inputev));
         if (button_pressed_ev) {
-            
+
             event_data["msg"] = Invokable::asAny(String("button-pressed"));
             event_data["button"] = Invokable::asAny(keyButtonString(button_pressed_ev->mButton));
             event_data["keycode"] = Invokable::asAny((int32)button_pressed_ev->mButton);
@@ -862,6 +862,13 @@ void OgreSystemMouseHandler::ensureUI() {
         mUIWidgetView->bind("ui-action", std::tr1::bind(&OgreSystemMouseHandler::onUIAction, this, _1, _2));
         mUIWidgetView->loadFile("chrome/ui.html");
         mUIWidgetView->setTransparent(true);
+    }
+}
+
+void OgreSystemMouseHandler::windowResized(uint32 w, uint32 h) {
+    // Make sure our widget overlay gets scaled appropriately.
+    if (mUIWidgetView) {
+        mUIWidgetView->resize(w, h);
     }
 }
 

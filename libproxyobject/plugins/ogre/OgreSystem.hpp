@@ -39,6 +39,7 @@
 #include "OgreHeaders.hpp"
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
+#include <OgreWindowEventUtilities.h>
 #include "resourceManager/ResourceDownloadPlanner.hpp"
 #include "resourceManager/DistanceDownloadPlanner.hpp"
 #include "resourceManager/SAngleDownloadPlanner.hpp"
@@ -75,8 +76,7 @@ class CDNArchivePlugin;
 class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener
-
+class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener, public Ogre::WindowEventListener
 {
     Context* mContext;
     VWObjectPtr mViewer;
@@ -98,8 +98,12 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
+    bool mOgreOwnedRenderWindow;
     static Ogre::RenderTarget *sRenderTarget;
     Ogre::RenderTarget *mRenderTarget;
+    Ogre::RenderWindow *mRenderWindow; // Should be the same as mRenderTarget,
+                                       // but we need the RenderWindow form to
+                                       // deal with window events.
 
     typedef std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> SceneEntitiesMap;
     SceneEntitiesMap mSceneEntities;
@@ -287,6 +291,14 @@ public:
     virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
     virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from
                                                    // ProxyCreationListener
+
+
+    // Event injection for SDL created windows.
+    void injectWindowResized(uint32 w, uint32 h);
+
+    // Ogre::WindowEventListener Interface overloads
+    virtual void windowResized(Ogre::RenderWindow *rw);
+
     // ConnectionEventListener Interface
     virtual void onConnected(const Network::Address& addr);
     virtual void onDisconnected(const Network::Address& addr, bool requested, const String& reason);
