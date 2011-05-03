@@ -51,6 +51,8 @@ Editor = function(objid) {
     this.last_msg_index = undefined;
 
     this.submitting = false;
+
+    this.editor.focus();
 };
 
 Editor.prototype.appendMessage = function(msg) {

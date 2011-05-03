@@ -1224,7 +1224,8 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
 
     if (!mMouseHandler) return NULL;
 
-    //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url + "')");
+    //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url +
+    //"')");
     return Invokable::asAny(mMouseHandler->mUIWidgetView);
 }
 

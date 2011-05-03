@@ -74,6 +74,7 @@ function() {
         this._parent.invoke("initScript", target);
         this._scriptingWindow.eval('addObject(' + Escape.escapeString(target.toString(), '"') + ');');
         //this._scriptingWindow.show();
+        system.timeout(.1, std.core.bind(this._scriptingWindow.focus, this._scriptingWindow));
         this._scriptedObjects[target.toString()] = target;
     };
 

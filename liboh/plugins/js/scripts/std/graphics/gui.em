@@ -38,7 +38,7 @@ function() {
 
     var ns = std.graphics;
 
-    /** @namespace 
+    /** @namespace
      *  The GUI class wraps the underlying GUI Invokable
      *  objects. These present 2D user interface widgets to the user,
      *  which are coded as HTML + Javascript pages.
@@ -65,6 +65,11 @@ function() {
     /** Shows the GUI window. */
     std.graphics.GUI.prototype.show = function() {
         this._gui.invoke("show");
+    };
+
+    /** Shows the GUI window. */
+    std.graphics.GUI.prototype.focus = function() {
+        this._gui.invoke("focus");
     };
 
 })();

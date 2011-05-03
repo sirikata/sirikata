@@ -1246,6 +1246,9 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
       this->hide();
   }
 
+  if (name == "focus")
+      WebViewManager::getSingleton().focusWebView(this);
+
   return boost::any();
 }
 
