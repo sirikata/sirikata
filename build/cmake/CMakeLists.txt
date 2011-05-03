@@ -2554,14 +2554,20 @@ IF(OGRE_FOUND)
   ENDIF()
 
   # data for ogre, including web views
-  INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
-    DESTINATION share/ogre/data/
-    PATTERN "*/jquery" EXCLUDE
-    )
-  #and jquery is a link, so we need to handle it carefully
-  INSTALL(DIRECTORY ${TOP_LEVEL}/dependencies/jquery/
-    DESTINATION share/ogre/data/jquery
-    )
+  IF(APPLE)
+    INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
+      DESTINATION share/ogre/data/
+      PATTERN "*/jquery" EXCLUDE
+      )
+    #and jquery is a link, so we need to handle it carefully
+    INSTALL(DIRECTORY ${TOP_LEVEL}/dependencies/jquery/
+      DESTINATION share/ogre/data/jquery
+      )
+  ELSE()
+    INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
+      DESTINATION share/ogre/data/
+      )
+  ENDIF()
 ENDIF()
 
 #install boost
