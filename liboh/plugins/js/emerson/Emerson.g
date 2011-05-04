@@ -366,7 +366,7 @@ memAndCallExpression
         ;
 
         
-//lkjs;
+
 msgRecvStatement
         : e1=memAndCallExpression LTERM* '<''-' LTERM* e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
         | e1=memAndCallExpression LTERM* '<''-' LTERM* e2=leftHandSideExpression LTERM* '<''-' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
@@ -383,9 +383,10 @@ expressionNoIn
         | conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)    
         ;
 
-
+//lkjs;
 assignmentExpression
         : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpression ->  ^(assignmentOperator  leftHandSideExpression conditionalExpression)
+//        : leftHandSideExpression LTERM* assignmentOperator LTERM* expression ->  ^(assignmentOperator  leftHandSideExpression expression)
         ;
 	
 assignmentExpressionNoIn
@@ -419,6 +420,8 @@ memberExpression
 	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
 	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
         ;
+
+
 	
 memberExpressionSuffix
 	: indexSuffix -> indexSuffix 
@@ -518,8 +521,8 @@ equalityOps
 ;
 
 equalityExpressionNoIn
-	: (relationalExpressionNoIn -> relationalExpressionNoIn)(LTERM* equalityOps LTERM* relationalExpressionNoIn -> ^(equalityOps $equalityExpressionNoIn relationalExpressionNoIn))*
-	;
+        : (relationalExpressionNoIn -> relationalExpressionNoIn)(LTERM* equalityOps LTERM* relationalExpressionNoIn -> ^(equalityOps $equalityExpressionNoIn relationalExpressionNoIn))*
+        ;
 	
 
 relationalOps
@@ -601,9 +604,9 @@ unaryOps
 
 
 unaryExpression
-	: postfixExpression -> postfixExpression
-	| unaryOps e=unaryExpression -> ^(unaryOps $e)
-	;
+        : postfixExpression -> postfixExpression
+        | unaryOps e=unaryExpression -> ^(unaryOps $e)
+        ;
 	
 
 primaryExpression
@@ -619,8 +622,17 @@ primaryExpression
 	;
 
 vectorLiteral
-//        : '<' LTERM* e1=assignmentExpression LTERM* ',' LTERM* e2=assignmentExpression LTERM* ',' LTERM* e3=assignmentExpression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
-        : '<' LTERM* e1=expression LTERM* ',' LTERM* e2=expression LTERM* ',' LTERM* e3=expression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+//        : '<' LTERM* e1=expression LTERM* ',' LTERM* e2=expression LTERM* ',' LTERM* e3=expression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+        : '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
+        ;
+
+
+vectorLiteralField
+        : shiftExpression -> shiftExpression
+        | NumericLiteral
+        | callExpression -> callExpression
+//        | memberExpression -> memberExpression
+//must still add ternary and member expressions
         ;
 
         
@@ -632,19 +644,18 @@ dollarExpression
 arrayLiteral
   : '[' LTERM* (expression)? LTERM* ']' -> ^(ARRAY_LITERAL expression?)
   | '[' LTERM* e1=expression (',' LTERM* e2=expression)* LTERM* ']' -> ^(ARRAY_LITERAL expression expression*)
-	;
+  ;
        
 // objectLiteral definition.
 objectLiteral
   : '{' LTERM* propertyNameAndValue? LTERM* '}' -> ^(OBJ_LITERAL propertyNameAndValue?)
-	| '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
-	;
+  | '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
+  ;
 
 // patternLiteral definition
 patternLiteral
   : '{' LTERM* nameValueProto? LTERM* '}' -> ^(PATTERN_LITERAL nameValueProto?)
   | '{' LTERM*  p1=nameValueProto (',' LTERM* p2=nameValueProto)* LTERM* '}' -> ^(PATTERN_LITERAL nameValueProto nameValueProto*)
-
   ;
 
 propertyNameAndValue

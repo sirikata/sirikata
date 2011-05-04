@@ -770,6 +770,7 @@ scope
                 APP(" ");
             }
             conditionalExpression
+            //expression
 						 	
            )
           ;
@@ -1215,17 +1216,17 @@ vectorLiteral
             {
                 APP(" new util.Vec3(");
             }
-            (exp1=expression
+            (exp1=vectorLiteralField
               {
                   APP(",");
               }
             )
-            (exp2=expression
+            (exp2=vectorLiteralField
               {
                   APP(",");
               }
             )
-            (exp3=expression
+            (exp3=vectorLiteralField
               {
                   APP(")");
               }
@@ -1233,6 +1234,13 @@ vectorLiteral
            )
         ;       
 
+
+        
+vectorLiteralField
+        : shiftExpression
+        | NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
+        | callExpression
+        ;
 
         
 dollarExpression
@@ -1248,7 +1256,6 @@ dollarExpression
 
                 if (insideWhenPred)
                    APP(",util.create_quoted('");
-
             }
          )
          ;
