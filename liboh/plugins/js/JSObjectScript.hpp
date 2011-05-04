@@ -83,8 +83,8 @@ public:
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
-    v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
-    v8::Handle<v8::Value> handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
+    void handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
+    void handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
 
     v8::Handle<v8::Value> executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 

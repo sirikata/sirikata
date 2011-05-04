@@ -121,8 +121,13 @@ void printException(v8::TryCatch& try_catch) {
     JSLOG(error, "Uncaught exception:\n" << os.str());
 }
 
-
-v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[]) {
+/** Note that this return value isn't guaranteed to return anything. If an
+ *  exception occurs, it will be left empty. This is due to a quirk in the way
+ *  v8 manages exceptions: TryCatch objects only work if there is active
+ *  Javascript code on the stack. Therefore, we return the exception object in
+ *  exc if the caller has provided a pointer for it.
+ */
+v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[], v8::Handle<v8::Value>* exc = NULL) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
 
@@ -149,9 +154,10 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
 
     if (try_catch.HasCaught())
     {
-        // FIXME what should we do with this exception?
         printException(try_catch);
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
+        if (exc != NULL)
+            *exc = try_catch.Exception();
+        return v8::Handle<v8::Value>();
     }
 
     return result;
@@ -411,6 +417,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext->mContext);
+        TryCatch try_catch;
 
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { outOfRangeObject };
@@ -529,6 +536,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
 
         v8::HandleScope handle_scope;
         v8::Context::Scope context_scope(mContext->mContext);
+        TryCatch try_catch;
 
         int argc = 1;
         v8::Handle<v8::Value> argv[1] = { newVisibleObj };
@@ -971,13 +979,16 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 
 
 //third arg may be null to evaluate in global context
-v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
+void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
-    if (jscontext == NULL)
-        return ProtectedJSCallback(mContext->mContext, NULL, cb);
+    TryCatch try_catch;
+    ProtectedJSCallback( (jscontext == NULL ? mContext : jscontext)->mContext, NULL, cb);
+}
 
-
-    return ProtectedJSCallback(jscontext->mContext, NULL, cb);
+void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext)
+{
+    TryCatch try_catch;
+    ProtectedJSCallback((jscontext == NULL ? mContext->mContext : *jscontext), NULL,cb);
 }
 
 
@@ -988,21 +999,12 @@ void JSObjectScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSC
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscont->mContext);
+    TryCatch try_catch;
     v8::Handle<v8::Value> js_pres =wrapPresence(jspres,&(jscont->mContext));
     ProtectedJSCallback(jscont->mContext, NULL, funcToCall, 1,&js_pres);
 }
 
 
-//v8::Handle<v8::Value>
-//JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function>
-//cb,JSContextStruct* jscontext)
-v8::Handle<v8::Value> JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext)
-{
-    if (jscontext == NULL)
-        return ProtectedJSCallback(mContext->mContext, NULL,cb);
-
-    return ProtectedJSCallback(*jscontext,NULL, cb);
-}
 
 
 v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOrigin* origin,JSContextStruct* jscs)
@@ -1238,6 +1240,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
             // Adding support for the knowing the message properties too
             int argc = 3;
             Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str()) };
+            TryCatch try_catch;
             ProtectedJSCallback(mContext->mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;
