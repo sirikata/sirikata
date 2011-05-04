@@ -755,7 +755,7 @@ scope
                 | MOD_ASSIGN          { $assignmentExpression::op = " \%= ";  }
                 | ADD_ASSIGN          { $assignmentExpression::op = " += ";  } 
                 | SUB_ASSIGN          { $assignmentExpression::op = " -= ";  } 
-                | LEFT_SHIFT_ASSIG    { $assignmentExpression::op = " <<= "; }
+                | LEFT_SHIFT_ASSIGN   { $assignmentExpression::op = " <<= "; }
                 | RIGHT_SHIFT_ASSIGN  { $assignmentExpression::op = " >>= "; }
                 | TRIPLE_SHIFT_ASSIGN { $assignmentExpression::op = "  >>>= "; }
                 | AND_ASSIGN          { $assignmentExpression::op = " &= "; }
@@ -790,7 +790,7 @@ scope
 					| MOD_ASSIGN         { $assignmentExpressionNoIn::op = " \%= ";  }
 					| ADD_ASSIGN         { $assignmentExpressionNoIn::op = " += ";  } 
 					| SUB_ASSIGN         { $assignmentExpressionNoIn::op = " -= ";  } 
-					|LEFT_SHIFT_ASSIG    { $assignmentExpressionNoIn::op = " <<= "; }
+					|LEFT_SHIFT_ASSIGN   { $assignmentExpressionNoIn::op = " <<= "; }
 					|RIGHT_SHIFT_ASSIGN  { $assignmentExpressionNoIn::op = " >>= "; }
 					|TRIPLE_SHIFT_ASSIGN { $assignmentExpressionNoIn::op = "  >>>= "; }
 					|AND_ASSIGN          { $assignmentExpressionNoIn::op = " &= "; }
@@ -946,54 +946,6 @@ conditionalExpressionNoIn
 	: ternaryExpressionNoIn
         | logicalORExpressionNoIn
 	;        
-        
-// conditionalExpression
-//         : logicalORExpression 
-//         |^(
-//             TERNARYOP
-//             {
-//                 APP( " ( ");
-//             }
-//             logicalORExpression
-//             {
-//                 APP(" )  ? ( ");
-//             }
-	    
-//             expression 
-//             {
-//                 APP(" ) : ( ");
-//             }
-						
-//             expression
-//             {
-//                 APP(" ) ");
-//             }
-
-//             )
-//             ;
-
-// conditionalExpressionNoIn
-//         : logicalORExpressionNoIn
-//         |^(
-//             TERNARYOP
-//             {
-//                 APP(" ( ");
-//             }
-//             logicalORExpressionNoIn 
-//             {
-//                 APP(" ) ? ( ");
-//             }
-    
-//             expressionNoIn 
-//             {
-//                 APP(" ) : ( ");
-//             }		
-//             expressionNoIn
-//             {
-//                 APP(" ) ");
-//             }
-//            )
-//            ;
 
 
 logicalANDExpression
@@ -1265,7 +1217,7 @@ primaryExpression
 vectorLiteral
         : ^(VECTOR
             {
-                APP(" new util.Vec3(");
+                APP("( new util.Vec3(");
             }
             (exp1=vectorLiteralField
               {
@@ -1279,7 +1231,7 @@ vectorLiteral
             )
             (exp3=vectorLiteralField
               {
-                  APP(")");
+                  APP(") )");
               }
             )
            )
@@ -1288,9 +1240,11 @@ vectorLiteral
 
         
 vectorLiteralField
-        : shiftExpression
+        : ternaryExpression
+        | shiftExpression
         | NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
         | callExpression
+        | memberExpression
         ;
 
         

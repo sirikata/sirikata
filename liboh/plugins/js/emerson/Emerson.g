@@ -187,6 +187,7 @@ statement
         | whenStatement
 	| tryStatement
 	| (msgSendStatement) => msgSendStatement
+	| msgSendStatement
 	;
 	
 statementBlock
@@ -386,7 +387,6 @@ expressionNoIn
 //lkjs;
 assignmentExpression
         : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpression ->  ^(assignmentOperator  leftHandSideExpression conditionalExpression)
-//        : leftHandSideExpression LTERM* assignmentOperator LTERM* expression ->  ^(assignmentOperator  leftHandSideExpression expression)
         ;
 	
 assignmentExpressionNoIn
@@ -465,15 +465,6 @@ ternaryExpression
 ternaryExpressionNoIn
         : logicalORExpressionNoIn LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP logicalORExpressionNoIn $expr1 $expr2)
         ;
-
-        
-// conditionalExpression
-// 	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=expression LTERM* ':' LTERM* expr2=expression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
-// 	;
-
-// conditionalExpressionNoIn
-// 	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
-// 	;
 
 
 conditionalExpression
@@ -648,11 +639,11 @@ vectorLiteral
 
 
 vectorLiteralField
-        : shiftExpression -> shiftExpression
+        : (ternaryExpression ) => ternaryExpression
+        | shiftExpression 
         | NumericLiteral
-        | callExpression -> callExpression
-//        | memberExpression -> memberExpression
-//must still add ternary and member expressions
+        | callExpression 
+        | memberExpression
         ;
 
         
@@ -687,11 +678,6 @@ nameValueProto
     : (propertyName LTERM*) ':'  LTERM* (a1=expression LTERM*)? ':' LTERM* ( a2=expression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
     | LTERM* ':' LTERM* ':' -> ^(BLANK_NAME_VAL_PROT)
     ;
-
-// nameValueProto
-//     : (propertyName LTERM*) ':'  LTERM* (a1=expression LTERM*)? ':' LTERM* ( a2=expression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
-//     ;
-
 
 
 
@@ -807,7 +793,7 @@ fragment IdentifierStart
         
 fragment IdentifierPart
 	: (IdentifierStart) => IdentifierStart // Avoids ambiguity, as some IdentifierStart chars also match following alternatives.
-	| UnicodeDigit
+        | UnicodeDigit
 	| UnicodeConnectorPunctuation
 	;
 	
