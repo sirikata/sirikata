@@ -458,12 +458,33 @@ assignmentOperator
 	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)| '<<=' -> ^(LEFT_SHIFT_ASSIGN)| '>>=' -> ^(RIGHT_SHIFT_ASSIGN)| '>>>=' -> ^(TRIPLE_SHIFT_ASSIGN)| '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
 	;
 
+ternaryExpression
+        : logicalORExpression LTERM* '?' LTERM* expr1=expression LTERM* ':' LTERM* expr2=expression -> ^(TERNARYOP logicalORExpression $expr1 $expr2)
+        ;
+
+ternaryExpressionNoIn
+        : logicalORExpressionNoIn LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP logicalORExpressionNoIn $expr1 $expr2)
+        ;
+
+        
+// conditionalExpression
+// 	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=expression LTERM* ':' LTERM* expr2=expression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
+// 	;
+
+// conditionalExpressionNoIn
+// 	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
+// 	;
+
+
 conditionalExpression
-	: (logicalORExpression -> logicalORExpression )(LTERM* '?' LTERM* expr1=expression LTERM* ':' LTERM* expr2=expression -> ^(TERNARYOP $conditionalExpression $expr1 $expr2))?  
+	: ternaryExpression
+        | logicalORExpression -> logicalORExpression 
 	;
 
+
 conditionalExpressionNoIn
-	: (logicalORExpressionNoIn -> logicalORExpressionNoIn)(LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP $conditionalExpressionNoIn $expr1 $expr2))?
+	: ternaryExpressionNoIn
+        | logicalORExpressionNoIn -> logicalORExpressionNoIn
 	;
 
 
@@ -622,7 +643,6 @@ primaryExpression
 	;
 
 vectorLiteral
-//        : '<' LTERM* e1=expression LTERM* ',' LTERM* e2=expression LTERM* ',' LTERM* e3=expression LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
         : '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
         ;
 
