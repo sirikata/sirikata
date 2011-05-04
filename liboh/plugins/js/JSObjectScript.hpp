@@ -51,8 +51,6 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
-#include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
-#include "JSObjectStructs/JSWhenStruct.hpp"
 #include "JSVisibleStructMonitor.hpp"
 #include "JSEntityCreateInfo.hpp"
 
@@ -78,7 +76,7 @@ public:
     //called by JSPresenceStruct.  requests the parent HostedObject disconnect
     //the presence associated with jspres
     void requestDisconnect(JSPresenceStruct* jspres);
-    
+
     Time getHostedTime();
     void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
@@ -92,10 +90,6 @@ public:
 
     //this function returns a context with
     v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,bool canEval, JSContextStruct*& internalContextField);
-    
-    String tokenizeWhenPred(const String& whenPredAsString);
-    void addWhen(JSWhenStruct* whenToAdd);
-    void removeWhen(JSWhenStruct* whenToRemove);
 
     //function gets called when presences are connected.  functToCall is the
     //function that gets called back.  Does so in context associated with
@@ -114,7 +108,7 @@ public:
        this JSObjectScript, and then frees those that are not part of that vector.
      */
     void killOtherPresences(JSPresVec& jspresVec);
-    
+
     String createNewValueInContext(v8::Handle<v8::Value> val, v8::Handle<v8::Context> ctx);
 
     /** Dummy callback for testing exposing new functionality to scripts. */
@@ -126,17 +120,13 @@ public:
     void print(const String& str);
 
 
-    v8::Handle<v8::Value> createWhenWatchedItem(v8::Handle<v8::Array> itemArray);
-    v8::Handle<v8::Value> createWhenWatchedItem(JSWhenWatchedItemStruct* wwis);
-    v8::Handle<v8::Value> createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec);
-
     //takes the c++ object jspres, creates a new visible object out of it, if we
     //don't already have a c++ visible object associated with it (if we do, use
     //that one), wraps that c++ object in v8, and returns it as a v8 object to
     //user
     v8::Persistent<v8::Object> presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont);
 
-    
+
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb, JSContextStruct* jscont);
 
@@ -184,11 +174,9 @@ public:
 
     //wraps the c++ presence structure in a v8 object.
     v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
-    
+
     /** create a new presence of this entity */
     v8::Handle<v8::Value> create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx);
-    v8::Handle<v8::Value> createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext);
-    v8::Handle<v8::Value> createQuoted(const String& toQuote);
 
 
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
@@ -208,7 +196,7 @@ public:
 
     void resetPresence(JSPresenceStruct* jspresStruct);
     bool isRootContext(JSContextStruct* jscont);
-    
+
     JSObjectScriptManager* manager() const { return mManager; }
 
     // is_emerson controls whether this is compiled as emerson or javascript code.
@@ -277,8 +265,6 @@ private:
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
-    void checkWhens();
-
 
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
@@ -334,14 +320,12 @@ private:
 
     //debugging code to output the sporefs of all the presences that I have in mPresences
     void printMPresences();
-    
+
 
     ODP::Port* mMessagingPort;
     ODP::Port* mCreateEntityPort;
 
     JSObjectScriptManager* mManager;
-
-    WhenMap mWhens;
 
     void callbackUnconnected(const SpaceObjectReference& name, HostedObject::PresenceToken token);
     HostedObject::PresenceToken presenceToken;

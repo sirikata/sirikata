@@ -67,11 +67,7 @@
 #include "JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSObjectStructs/JSTimerStruct.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"
-#include "JSObjectStructs/JSWhenStruct.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
-#include "JSObjectStructs/JSQuotedStruct.hpp"
-#include "JSObjectStructs/JSWhenWatchedItemStruct.hpp"
-#include "JSObjectStructs/JSWhenWatchedListStruct.hpp"
 #include <boost/lexical_cast.hpp>
 #include "JSVisibleStructMonitor.hpp"
 
@@ -131,7 +127,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-    
+
     Handle<Value> result;
     bool targetGiven = false;
     if (target!=NULL)
@@ -157,7 +153,7 @@ v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handl
         printException(try_catch);
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Uncaught exception in ProtectedJSCallback.  Result is empty.")) );
     }
-    
+
     return result;
 
 }
@@ -377,35 +373,6 @@ bool JSObjectScript::deRegisterPosListener(SpaceObjectReference* sporef, SpaceOb
     return succeeded;
 
 }
-
-
-
-
-v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(v8::Handle<v8::Array> itemArray)
-{
-    v8::HandleScope handle_scope;
-
-    if (itemArray->Length() == 0)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in ScriptCreateWhenWatchedItem: requires a single argument (an array of strings) that lists a variable's name.  For instance, var x.y.z would give array ['x','y','z']")));
-
-
-    JSWhenWatchedItemStruct * wwis = new JSWhenWatchedItemStruct(itemArray,this);
-    return createWhenWatchedItem(wwis);
-}
-
-v8::Handle<v8::Value> JSObjectScript::createWhenWatchedItem(JSWhenWatchedItemStruct* wwis)
-{
-    v8::HandleScope handle_scope;
-
-    v8::Local<v8::Object> whenWatchedItemObj_local = mManager->mWhenWatchedItemTemplate->NewInstance();
-    v8::Persistent<v8::Object> whenWatchedItemObj  = v8::Persistent<v8::Object>::New(whenWatchedItemObj_local);
-
-    whenWatchedItemObj->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_ITEM_TYPEID_STRING)));
-    whenWatchedItemObj->SetInternalField(WHEN_WATCHED_ITEM_TEMPLATE_FIELD,v8::External::New(wwis));
-
-    return whenWatchedItemObj;
-}
-
 
 
 //lkjs;
@@ -698,29 +665,6 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
     mMessagingPort->send(dest,toSend);
 }
 
-//take in whenPredAsString that should look something like: " x<3 && y > 2"
-//and then translates to [ util.create_when_watched_item(['x']), util.create_when_watched_item(['y'])  ]
-String JSObjectScript::tokenizeWhenPred(const String& whenPredAsString)
-{
-    //even though using lexWhenPred grammar, still must make call to emerson init
-    emerson_init();
-    return string(lexWhenPred_compile(whenPredAsString.c_str()));
-}
-
-
-v8::Handle<v8::Value> JSObjectScript::createWhenWatchedList(std::vector<JSWhenWatchedItemStruct*> wwisVec)
-{
-    JSWhenWatchedListStruct* jswwl = new JSWhenWatchedListStruct(wwisVec,this);
-
-    v8::HandleScope handle_scope;
-
-
-    v8::Handle<v8::Object> whenWatchedList = mManager->mWhenWatchedListTemplate->NewInstance();
-    whenWatchedList->SetInternalField(TYPEID_FIELD,v8::External::New(new String(WHEN_WATCHED_LIST_TYPEID_STRING)));
-    whenWatchedList->SetInternalField(WHEN_WATCHED_LIST_TEMPLATE_FIELD,v8::External::New(jswwl));
-
-    return whenWatchedList;
-}
 
 
 Time JSObjectScript::getHostedTime()
@@ -835,28 +779,10 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         JSLOG(detailed, "Script result: " << *ascii);
     }
 
-
-    checkWhens();
     return result;
 }
 
 
-//there's sort of an open question as to whether one when condition should be
-//able to trigger another.  As structured, the answer is yes.  May do something
-//to prevent this.
-//this function runs through all the when statements associated with script, it
-//checks their predicates and runs them if the predicates evaluate to true.
-void JSObjectScript::checkWhens()
-{
-    for (WhenMapIter iter = mWhens.begin(); iter!= mWhens.end(); ++iter)
-    {
-        std::cout<<"\n\n";
-        std::cout<<mWhens.size();
-        std::cout<<"\n\n";
-        std::cout.flush();
-        iter->first->checkPredAndRun();
-    }
-}
 
 
 v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs)
@@ -1446,28 +1372,6 @@ v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap,
 
 
 
-void JSObjectScript::addWhen(JSWhenStruct* whenToAdd)
-{
-    JSLOG(insane, "registering when to object script");
-    mWhens[whenToAdd] = true;
-}
-
-void JSObjectScript::removeWhen(JSWhenStruct* whenToRemove)
-{
-    WhenMapIter iter = mWhens.find(whenToRemove);
-    if (iter == mWhens.end())
-    {
-        JSLOG(error,"could not remove when from object script because when was not already registered here");
-        return;
-    }
-
-    JSLOG(insane, "removing previously registered when from object script");
-    mWhens.erase(iter);
-}
-
-
-
-
 //presAssociatedWith: who the messages that this context's system sends will
 //be from
 //canMessage: who you can always send messages to.
@@ -1676,34 +1580,6 @@ String JSObjectScript::createNewValueInContext(v8::Handle<v8::Value> val, v8::Ha
 
     ++hiddenObjectCount;
     return newName;
-}
-
-
-
-v8::Handle<v8::Value> JSObjectScript::createWhen(v8::Handle<v8::Array>predArray, v8::Handle<v8::Function> callback, JSContextStruct* associatedContext)
-{
-    JSWhenStruct* internalwhen = new JSWhenStruct(predArray,callback,this, associatedContext);
-
-    v8::HandleScope handle_scope;
-
-    v8::Handle<v8::Object> returner =mManager->mWhenTemplate->NewInstance();
-    returner->SetInternalField(WHEN_TEMPLATE_FIELD, External::New(internalwhen));
-    returner->SetInternalField(TYPEID_FIELD,External::New(new String(WHEN_TYPEID_STRING)));
-
-    return returner;
-}
-
-v8::Handle<v8::Value> JSObjectScript::createQuoted(const String& toQuote)
-{
-    JSQuotedStruct* internal_jsquote  = new JSQuotedStruct(toQuote);
-    v8::HandleScope handle_scope;
-
-
-    v8::Handle<v8::Object> returner =mManager->mQuotedTemplate->NewInstance();
-    returner->SetInternalField(QUOTED_QUOTESTRUCT_FIELD, External::New(internal_jsquote));
-    returner->SetInternalField(TYPEID_FIELD,External::New(new String(QUOTED_TYPEID_STRING)));
-
-    return returner;
 }
 
 

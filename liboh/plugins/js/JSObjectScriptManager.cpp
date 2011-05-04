@@ -47,7 +47,6 @@
 #include "JSPattern.hpp"
 
 #include "JS_JSMessage.pbj.hpp"
-#include "JSObjects/JSWhen.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSInvokableObject.hpp"
@@ -101,8 +100,6 @@ void JSObjectScriptManager::createUtilTemplate()
     // An internal field holds the JSObjectScript*
     mUtilTemplate->SetInternalFieldCount(UTIL_TEMPLATE_FIELD_COUNT);
 
-
-    mUtilTemplate->Set(v8::String::New("create_when"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhen));
     mUtilTemplate->Set(JS_STRING(sqrt),v8::FunctionTemplate::New(JSUtilObj::ScriptSqrtFunction));
     mUtilTemplate->Set(JS_STRING(acos),v8::FunctionTemplate::New(JSUtilObj::ScriptAcosFunction));
     mUtilTemplate->Set(JS_STRING(asin),v8::FunctionTemplate::New(JSUtilObj::ScriptAsinFunction));
@@ -112,59 +109,14 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(JS_STRING(pow),v8::FunctionTemplate::New(JSUtilObj::ScriptPowFunction));
     mUtilTemplate->Set(JS_STRING(exp),v8::FunctionTemplate::New(JSUtilObj::ScriptExpFunction));
     mUtilTemplate->Set(JS_STRING(abs),v8::FunctionTemplate::New(JSUtilObj::ScriptAbsFunction));
-    mUtilTemplate->Set(v8::String::New("create_quoted"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateQuotedObject));
-    mUtilTemplate->Set(v8::String::New("create_when_watched_item"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedItem));
-    mUtilTemplate->Set(v8::String::New("create_when_watched_list"), v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenWatchedList));
-
-    mUtilTemplate->Set(v8::String::New("create_when_timeout_lt"),v8::FunctionTemplate::New(JSUtilObj::ScriptCreateWhenTimeoutLT));
 
     mUtilTemplate->Set(v8::String::New("plus"), v8::FunctionTemplate::New(JSUtilObj::ScriptPlus));
     mUtilTemplate->Set(v8::String::New("minus"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
-    
-    mUtilTemplate->Set(v8::String::New("When"),mWhenTemplate);
+
     mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
 }
-
-
-void JSObjectScriptManager::createQuotedTemplate()
-{
-    v8::HandleScope handle_scope;
-    mQuotedTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mQuotedTemplate->SetInternalFieldCount(QUOTED_TEMPLATE_FIELD_COUNT);
-}
-
-void JSObjectScriptManager::createWhenWatchedItemTemplate()
-{
-    v8::HandleScope handle_scope;
-    mWhenWatchedItemTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mWhenWatchedItemTemplate->SetInternalFieldCount(WHEN_WATCHED_ITEM_TEMPLATE_FIELD_COUNT);
-}
-
-
-void JSObjectScriptManager::createWhenWatchedListTemplate()
-{
-    v8::HandleScope handle_scope;
-    mWhenWatchedListTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    mWhenWatchedListTemplate->SetInternalFieldCount(WHEN_WATCHED_LIST_TEMPLATE_FIELD_COUNT);
-}
-
-
-
-void JSObjectScriptManager::createWhenTemplate()
-{
-    v8::HandleScope handle_scope;
-    mWhenTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-
-    // An internal field holds the JSObjectScript*
-    mWhenTemplate->SetInternalFieldCount(WHEN_TEMPLATE_FIELD_COUNT);
-
-    mWhenTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSWhen::WhenSuspend));
-    mWhenTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSWhen::WhenResume));
-    mWhenTemplate->Set(v8::String::New("getWhenLastPredState"),v8::FunctionTemplate::New(JSWhen::WhenGetLastPredState));
-}
-
 
 /*
   EMERSON: additional types
@@ -179,15 +131,7 @@ void JSObjectScriptManager::createTemplates()
     mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
     mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
-
-    createWhenTemplate();
-    createQuotedTemplate();
-
     createUtilTemplate();
-
-
-    createWhenWatchedItemTemplate();
-    createWhenWatchedListTemplate();
 
 
     createHandlerTemplate();
@@ -252,7 +196,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("canEval"), v8::FunctionTemplate::New(JSSystem::root_canEval));
 
 
-    
+
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
@@ -400,7 +344,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   // proto_t->Set(v8::String::New("onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
   // proto_t->Set(v8::String::New("onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
 
-  
+
 
   //using JSVisible sendmessage so that don't have to re-write a bunch of code.
   proto_t->Set(v8::String::New("sendMessage"),v8::FunctionTemplate::New(JSVisible::__visibleSendMessage));

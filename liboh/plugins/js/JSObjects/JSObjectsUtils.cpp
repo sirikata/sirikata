@@ -5,7 +5,6 @@
 #include <sirikata/core/util/Platform.hpp>
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
 #include "../JSObjectStructs/JSPresenceStruct.hpp"
-#include "../JSObjectStructs/JSWhenStruct.hpp"
 #include "../JSObjectStructs/JSPositionListener.hpp"
 
 namespace Sirikata{
@@ -38,7 +37,7 @@ JSPositionListener* decodeJSPosListener(v8::Handle<v8::Value> toDecode,String& e
     JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(toDecode,errorMessage);
     if (jspres != NULL)
         return jspres;
-        
+
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(toDecode,errorMessage);
     if (jsvis != NULL)
         return jsvis;
@@ -94,7 +93,7 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
             SILOG(js,error,errorMessage);
             return;
         }
-        
+
         v8::Local<v8::Value> valueToPrint = objToPrint->Get(v8::String::New(strVal.c_str(), strVal.length()));
         errorMessage = "Error: error decoding second string in debug_checkCurrentContextX.  ";
         stringDecoded =  decodeString(valueToPrint,strVal2,errorMessage);
@@ -111,4 +110,3 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint)
 
 }//namespace js
 }//namespace sirikata
-
