@@ -33,6 +33,7 @@
 
 /* Add functions to the prototype for presence */
 
+system.shim = new Object();
 system.__presence_constructor__.prototype.runSimulation =
 function(name)
 {
