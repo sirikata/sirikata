@@ -116,6 +116,9 @@ function() {
             { key: ['button-pressed', 's', 'alt' ], action: 'scriptSelectedObject' },
             { key: ['button-pressed', 's', 'ctrl' ], action: 'scriptSelf' },
 
+            { key: ['mouse-click', 3], action: 'pickObject' },
+            { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
+
             { key: ['button', 'w' ], action: 'moveForward' },
             { key: ['button', 'up' ], action: 'moveForward' },
             { key: ['button', 's' ], action: 'moveBackward' },
