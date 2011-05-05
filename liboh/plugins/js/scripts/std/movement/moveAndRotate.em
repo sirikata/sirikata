@@ -52,7 +52,7 @@ std.movement.MoveAndRotate = system.Class.extend(
             return this._pres.velocity.lengthSquared() > 1e-08;
         },
         rotating: function() {
-            return this._pres.orientationVel.lengthSquared() > 1e-08;
+            return !this._pres.orientationVel.isZero();
         },
         move: function(vel, scaling) {
             var scaled_vel = vel.mul(scaling);

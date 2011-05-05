@@ -111,7 +111,7 @@ Handle<Value> QuaternionConstructor(const Arguments& args) {
     Handle<Object> self = args.This();
 
     if (args.Length() == 0) {
-        QuaternionFill(self, Quaternion());
+        QuaternionFill(self, Quaternion::identity());
     }
     else if (args.Length() == 2) {
         // Axis angle

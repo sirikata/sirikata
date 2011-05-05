@@ -46,6 +46,11 @@ if(util.Quaternion == undefined)
 }
 
 
+/** @constant.
+ *  Identity quaternion representing no rotation.
+ */
+util.Quaternion.prototype.identity = new util.Quaternion(0, 0, 0, 1);
+
 /** @function 
 @return quaternion sum of the two quaternions*/
 util.Quaternion.prototype.add = function(rhs) {
@@ -144,11 +149,11 @@ util.Quaternion.prototype.normal = function() {
         return this.scale(1.0/len);
     return this;
 };
+
 /**
   @function
   @return The inverse of this quaternion
 */
-
 util.Quaternion.prototype.inverse = function() {
     var len = this.lengthSquared();
     if (len>1e-8)
@@ -156,6 +161,14 @@ util.Quaternion.prototype.inverse = function() {
     return new util.Quaternion(0.0, 0.0, 0.0, 0.0);
 };
 util.Quaternion.prototype.inv = util.Quaternion.prototype.inverse;
+
+/**
+  @function
+  @return true if the quaternion is (near) zero/identity, i.e. that it represents no rotation, false otherwise
+*/
+util.Quaternion.prototype.isZero = function() {
+    return (this.x*this.x+this.y*this.y+this.z*this.z < 1e-08);
+};
 
 /**
 @function
