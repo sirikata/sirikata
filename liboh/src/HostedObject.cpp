@@ -754,6 +754,10 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             BoundingSphere3f bnds = addition.bounds();
             String mesh = (addition.has_mesh() ? addition.mesh() : "");
 
+
+            std::cout<<"\n\nDEBUG: proxMessage: "<<addition.orientation().velocity()<<"\n\n";
+            
+
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
                 return true;
@@ -996,13 +1000,19 @@ Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const O
 Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
-    return proxy_obj->getOrientationSpeed();
+    Quaternion returner  = proxy_obj->getOrientationSpeed();
+
+    std::cout<<"\n\nDEBUG: requestCurrentOrientationVel: "<<returner<<"\n\n";
+    
+    return returner;
 }
 
 void HostedObject::requestOrientationVelocityUpdate(const SpaceID& space, const ObjectReference& oref, const Quaternion& quat)
 {
     Quaternion curOrientQuat = requestCurrentOrientation(space,oref);
     TimedMotionQuaternion tmq (currentLocalTime(),MotionQuaternion(curOrientQuat,quat));
+    std::cout<<"\n\nDEBUG: requestOrientationVelocityUpdate: "<<quat<<"\n\n";
+    
     requestOrientationUpdate(space, oref,tmq);
 }
 
@@ -1121,6 +1131,11 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         requested_orient.set_t( spaceTime(space, orient->updateTime()) );
         requested_orient.set_position(orient->position());
         requested_orient.set_velocity(orient->velocity());
+
+
+        std::cout<<"\n\nDEBUG: requested orient velocity before:  "<<  orient->velocity()<<" after: "<< requested_orient.velocity()<<"\n\n";
+
+        
     }
     if (bounds != NULL) {
         self_proxy->setBounds(*bounds, 0, true);

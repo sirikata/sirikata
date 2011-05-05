@@ -46,7 +46,8 @@ public:
     typedef Quaternion VelocityType;
 
     MotionQuaternion()
-     : mStart(Quaternion::identity()), mDirection(Quaternion::identity())
+     : mStart(Quaternion::identity()),
+       mDirection(Quaternion::identity())
     {
     }
 
@@ -60,16 +61,17 @@ public:
     }
 
     const Quaternion& velocity() const {
-        return mDirection;
+        return mDirection.getDirection();
     }
 
     Quaternion extrapolatePosition(const Duration& dt) const {
-        //return (mStart * (mDirection.exp(rand() % 20)));
-        return (mStart * (mDirection.exp(dt.toSeconds())));
+        //return (mStart * (mDirection.exp(dt.toSeconds())));
+        return (mStart * (mDirection.getDirection().exp(mDirection.getMag()*dt.toSeconds())));
     }
 
+
     Quaternion extrapolateVelocity(const Duration& dt) const {
-        return mDirection;
+        return mDirection.getDirection();
     }
 
     MotionQuaternion extrapolate(const Duration& dt) const {
@@ -78,7 +80,36 @@ public:
 
 private:
     Quaternion mStart;
-    Quaternion mDirection;
+
+    struct DirectionQuat
+    {
+        DirectionQuat(Quaternion newDir)
+         : mDir(newDir),
+           mDirMag(newDir.length())
+        {
+        }
+        void setDirectction(const Quaternion& newDir)
+        {
+            mDir = newDir;
+            mDirMag = newDir.length();
+        }
+
+        const Quaternion& getDirection() const
+        {
+            return mDir;
+        }
+        const float& getMag() const
+        {
+            return mDirMag;
+        }
+        
+    private:
+        Quaternion mDir;
+        float mDirMag;
+    };
+
+    DirectionQuat mDirection;
+    
 }; // class MotionQuaternion
 
 class TimedMotionQuaternion : public TemporalValue<MotionQuaternion> {
