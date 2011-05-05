@@ -86,7 +86,7 @@ namespace JS {
 
 namespace {
 
-void printException(v8::TryCatch& try_catch) {
+String exceptionAsString(v8::TryCatch& try_catch) {
     stringstream os;
 
     v8::HandleScope handle_scope;
@@ -118,7 +118,12 @@ void printException(v8::TryCatch& try_catch) {
       const char* stack_trace_string = ToCString(stack_trace);
       os << stack_trace_string << "\n";
     }
-    JSLOG(error, "Uncaught exception:\n" << os.str());
+    return os.str();
+}
+
+void printException(v8::TryCatch& try_catch) {
+    String eas = exceptionAsString(try_catch);
+    JSLOG(error, "Uncaught exception:\n" << eas);
 }
 
 /** Note that this return value isn't guaranteed to return anything. If an
@@ -127,47 +132,34 @@ void printException(v8::TryCatch& try_catch) {
  *  Javascript code on the stack. Therefore, we return the exception object in
  *  exc if the caller has provided a pointer for it.
  */
-v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[], v8::Handle<v8::Value>* exc = NULL) {
+v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[], String* exc = NULL) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
 
     Handle<Value> result;
-    bool targetGiven = false;
-    if (target!=NULL)
-    {
-        if (((*target)->IsNull() || (*target)->IsUndefined()))
-        {
-            JSLOG(insane,"ProtectedJSCallback with target given.");
-            result = cb->Call(*target, argc, argv);
-            targetGiven = true;
-        }
-    }
-
-    if (!targetGiven)
-    {
+    if (target != NULL && !(*target)->IsNull() && !(*target)->IsUndefined()) {
+        JSLOG(insane,"ProtectedJSCallback with target given.");
+        result = cb->Call(*target, argc, argv);
+    } else {
         JSLOG(insane,"ProtectedJSCallback without target given.");
         result = cb->Call(ctx->Global(), argc, argv);
     }
-
 
     if (try_catch.HasCaught())
     {
         printException(try_catch);
         if (exc != NULL)
-            *exc = try_catch.Exception();
+            *exc = exceptionAsString(try_catch);
         return v8::Handle<v8::Value>();
     }
 
     return result;
-
 }
 
-
-
-v8::Handle<v8::Value> ProtectedJSCallback(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb) {
-    return ProtectedJSCallback(ctx, target, cb, 0, NULL);
+v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, String* exc = NULL) {
+    return ProtectedJSCallbackFull(ctx, target, cb, 0, NULL, exc);
 }
 
 }
@@ -281,12 +273,32 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
 }
 
-v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
-    return ProtectedJSCallback(mContext->mContext, NULL, cb, argc, argv);
+void JSObjectScript::printExceptionToScript(JSContextStruct* ctx, const String& exc) {
+    v8::Handle<v8::Object> sysobj = ctx->struct_getSystem();
+    v8::Handle<v8::Value> printval = sysobj->Get(v8::String::New("print"));
+    if (printval.IsEmpty() || !printval->IsFunction()) return;
+    v8::Handle<v8::Function> printfunc = v8::Handle<v8::Function>::Cast(printval);
+
+    int argc = 1;
+    v8::Handle<v8::Value> argv[1] = { v8::String::New(exc.c_str()) };
+
+    ProtectedJSCallbackFull(ctx->mContext, &sysobj, printfunc, argc, argv, NULL);
 }
 
-v8::Handle<v8::Value> JSObjectScript::invokeCallback(v8::Handle<v8::Function>& cb) {
-    return ProtectedJSCallback(mContext->mContext, NULL, cb);
+v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
+    String exc;
+    v8::Handle<v8::Value> retval = ProtectedJSCallbackFull(ctx->mContext, target, cb, argc, argv, &exc);
+    if (retval.IsEmpty())
+        printExceptionToScript(ctx, exc);
+    return retval;
+}
+
+v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
+    return invokeCallback(ctx, NULL, cb, argc, argv);
+}
+
+v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb) {
+    return invokeCallback(ctx, NULL, cb, 0, NULL);
 }
 
 //checks to see if the associated space object reference exists in the script.
@@ -424,7 +436,7 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
         //FIXME: Potential memory leak: when will removedProxObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
-        ProtectedJSCallback(mContext->mContext, NULL, iter->second->mOnProxRemovedEventHandler, argc, argv);
+        invokeCallback(mContext, iter->second->mOnProxRemovedEventHandler, argc, argv);
     }
 }
 
@@ -543,7 +555,7 @@ void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const Spac
         //FIXME: Potential memory leak: when will newAddrObj's
         //SpaceObjectReference field be garbage collected and deleted?
         JSLOG(info,"Issuing user callback for proximate object.");
-        ProtectedJSCallback(mContext->mContext, NULL, iter->second->mOnProxAddedEventHandler, argc, argv);
+        invokeCallback(mContext, iter->second->mOnProxAddedEventHandler, argc, argv);
     }
 }
 
@@ -982,15 +994,8 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
     TryCatch try_catch;
-    ProtectedJSCallback( (jscontext == NULL ? mContext : jscontext)->mContext, NULL, cb);
+    invokeCallback( (jscontext == NULL ? mContext : jscontext), cb);
 }
-
-void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext)
-{
-    TryCatch try_catch;
-    ProtectedJSCallback((jscontext == NULL ? mContext->mContext : *jscontext), NULL,cb);
-}
-
 
 //calls funcToCall in jscont, binding jspres bound as first arg.
 //mostly used for contexts and presences to execute their callbacks on
@@ -1001,7 +1006,7 @@ void JSObjectScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSC
     v8::Context::Scope(jscont->mContext);
     TryCatch try_catch;
     v8::Handle<v8::Value> js_pres =wrapPresence(jspres,&(jscont->mContext));
-    ProtectedJSCallback(jscont->mContext, NULL, funcToCall, 1,&js_pres);
+    invokeCallback(jscont, funcToCall, 1,&js_pres);
 }
 
 
@@ -1241,7 +1246,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
             int argc = 3;
             Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str()) };
             TryCatch try_catch;
-            ProtectedJSCallback(mContext->mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
+            invokeCallback(mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;
         }

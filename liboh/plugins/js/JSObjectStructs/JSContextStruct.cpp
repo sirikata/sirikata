@@ -111,7 +111,7 @@ bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver
     //check all of my presences
     if (hasPresence(receiver))
         return true;
-    
+
 
     //cannot receive messages for this.
     return false;
@@ -145,7 +145,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents
 /*
   This function should be called from system object.  It initiates the reset
   process for all objects and contexts.
-  
+
  */
 v8::Handle<v8::Value> JSContextStruct::struct_setReset()
 {
@@ -175,8 +175,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_setScript(const String& script)
    This function is called only by JSObjectScript directly.
    It disposes of mContext and system objects.  It then runs through all
    suspendables associated with this context, calling clear on each (minus the
-   presences).  
-   
+   presences).
+
  */
 v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 {
@@ -340,7 +340,7 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
         return;
     }
 
-    
+
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
     {
@@ -357,7 +357,7 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
     //clear is already running through each and removing them from suspendables.
     if (inClear)
         return;
-    
+
     if (getIsCleared())
     {
         JSLOG(error,"Error when deregistering suspendable.  This context object was already cleared.");
@@ -578,11 +578,13 @@ v8::Handle<Object> JSContextStruct::struct_getSystem()
   // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
   // The template actually generates the root objects prototype, not the root
   // itself.
+  //Otherwise, find it in the prototype.
   Handle<Object> global_proto = Handle<Object>::Cast(global_obj->GetPrototype());
   // And we add an internal field to the system object as well to make it
   // easier to find the pointer in different calls. Note that in this case we
   // don't use the prototype -- non-global objects work as we would expect.
-  Local<Object> froot_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME)));
+  v8::Handle<v8::Value> syskey = v8::String::New(JSSystemNames::SYSTEM_OBJECT_PUBLIC_NAME);
+  Local<Object> froot_obj = Local<Object>::Cast(global_proto->Get(syskey));
 
   Persistent<Object> ret_obj = Persistent<Object>::New(froot_obj);
 

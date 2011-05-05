@@ -84,7 +84,6 @@ public:
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
     void handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
-    void handleTimeoutContext(v8::Persistent<v8::Function> cb,v8::Handle<v8::Context>* jscontext);
 
     v8::Handle<v8::Value> executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
@@ -203,12 +202,19 @@ public:
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
 
+    // Print an exception "to" the script, i.e. using its system.print
+    // method. This is useful for callbacks which are executed directly from C++
+    // code but which should report errors to the user.
+    void printExceptionToScript(JSContextStruct* ctx, const String& exc);
+
     // A generic interface for invoking callback methods, used by other classes
     // that have JSObjectScript* (e.g. Invokable). Probably needs a version for
     // contexts if the function was bound within a context
-    v8::Handle<v8::Value> invokeCallback(v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
-    v8::Handle<v8::Value> invokeCallback(v8::Handle<v8::Function>& cb);
+    v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
+    v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
+    v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb);
 
+    JSContextStruct* rootContext() const { return mContext; }
 private:
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the

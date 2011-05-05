@@ -18,7 +18,7 @@ namespace JS
     /* Invoke the function handle */
 
     int argc = params.size();
-    
+
     v8::HandleScope handle_scope;
     v8::Context::Scope  context_scope(script_->context());
 
@@ -32,7 +32,7 @@ namespace JS
 
    // We are currently executing in the global context of the entity
    // FIXME: need to take care fo the "this" pointer
-   v8::Handle<v8::Value> result = script_->invokeCallback(function_, argc, &argv[0]);
+   v8::Handle<v8::Value> result = script_->invokeCallback(script_->rootContext(), function_, argc, &argv[0]);
 
    if(result.IsEmpty())
    {
