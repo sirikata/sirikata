@@ -33,6 +33,7 @@
 system.require('graphics.em');
 system.require('std/movement/moveAndRotate.em');
 system.require('std/script/scripter.em');
+system.require('inputbinding.em');
 system.require('drag/move.em');
 system.require('drag/rotate.em');
 system.require('drag/scale.em');
@@ -42,7 +43,7 @@ function() {
 
     var ns = std.graphics;
 
-    /** @namespace 
+    /** @namespace
      *  The DefaultGraphics class just contains some sane defaults for
      *  interaction, allowing you to get a decent, baseline client
      *  that only requires built-in functionality. You still define
@@ -52,14 +53,7 @@ function() {
     std.graphics.DefaultGraphics = function(pres, name) {
         this._pres = pres;
         this._simulator = new std.graphics.Graphics(pres, name);
-        this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
-        this._simulator.inputHandler.onButtonPressed = std.core.bind(this.onButtonPressed, this);
-        this._simulator.inputHandler.onButtonReleased = std.core.bind(this.onButtonReleased, this);
-        this._simulator.inputHandler.onButtonRepeated = std.core.bind(this.onButtonRepeated, this);
-        this._simulator.inputHandler.onMouseDrag = std.core.bind(this.onMouseDrag, this);
-        this._simulator.inputHandler.onMouseClick = std.core.bind(this.onMouseClick, this);
-        this._simulator.inputHandler.onMousePress = std.core.bind(this.onMousePress, this);
-        this._simulator.inputHandler.onMouseRelease = std.core.bind(this.onMouseRelease, this);
+
 
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
@@ -71,6 +65,84 @@ function() {
             rotate: new std.graphics.RotateDragHandler(this._simulator),
             scale: new std.graphics.ScaleDragHandler(this._simulator)
         };
+
+
+        this._binding = new std.graphics.InputBinding();
+        this._simulator.inputHandler.onAnything = std.core.bind(this._binding.dispatch, this._binding);
+
+
+        this._binding.addAction('quit', std.core.bind(this._simulator.quit, this._simulator));
+        this._binding.addAction('screenshot', std.core.bind(this._simulator.screenshot, this._simulator));
+        this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
+        this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
+        this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
+
+        this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
+        this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
+        this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
+        this._binding.addToggleAction('moveRight', std.core.bind(this.moveSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
+        this._binding.addToggleAction('moveUp', std.core.bind(this.moveSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
+        this._binding.addToggleAction('moveDown', std.core.bind(this.moveSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+
+        this._binding.addToggleAction('rotateUp', std.core.bind(this.rotateSelf, this, new util.Vec3(1, 0, 0)), 1, -1);
+        this._binding.addToggleAction('rotateDown', std.core.bind(this.rotateSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
+        this._binding.addToggleAction('rotateLeft', std.core.bind(this.rotateSelf, this, new util.Vec3(0, 1, 0)), 1, -1);
+        this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
+
+        this._binding.addFloat2Action('pickObject', std.core.bind(this.pickObject, this));
+
+        this._binding.addAction('startMoveDrag', std.core.bind(this.startDrag, this, this._draggers.move));
+        this._binding.addAction('startRotateDrag', std.core.bind(this.startDrag, this, this._draggers.rotate));
+        this._binding.addAction('startScaleDrag', std.core.bind(this.startDrag, this, this._draggers.scale));
+        this._binding.addAction('forwardMousePressToDragger', std.core.bind(this.forwardMousePressToDragger, this));
+        this._binding.addAction('forwardMouseDragToDragger', std.core.bind(this.forwardMouseDragToDragger, this));
+        this._binding.addAction('forwardMouseReleaseToDragger', std.core.bind(this.forwardMouseReleaseToDragger, this));
+        this._binding.addAction('stopDrag', std.core.bind(this.stopDrag, this));
+
+        /** Bindings are an *ordered* list of keys and actions. Keys
+         *  are a combination of the type of event, the primary key
+         *  for the event (key or mouse button), and modifiers.
+         *  Modifiers are tricky to handle. You can specify a string
+         *  indicating which to filter on. If you omit the string, it
+         *  is equivalent to 'none'. The special values '*' and 'any'
+         *  are equivalent and will match any modifier, i.e. the event
+         *  will always be triggered. There isn't support
+         *  for matching combinations of modifiers.
+         */
+        var bindings = [
+            { key: ['button-pressed', 'escape'], action: 'quit' },
+            { key: ['button-pressed', 'i'], action: 'screenshot' },
+            { key: ['button-pressed', 'm'], action: 'toggleSuspend' },
+            { key: ['button-pressed', 's', 'alt' ], action: 'scriptSelectedObject' },
+            { key: ['button-pressed', 's', 'ctrl' ], action: 'scriptSelf' },
+
+            { key: ['button', 'w' ], action: 'moveForward' },
+            { key: ['button', 'up' ], action: 'moveForward' },
+            { key: ['button', 's' ], action: 'moveBackward' },
+            { key: ['button', 'down' ], action: 'moveBackward' },
+            { key: ['button', 'a' ], action: 'moveLeft' },
+            { key: ['button', 'd' ], action: 'moveRight' },
+            { key: ['button', 'q' ], action: 'moveUp' },
+            { key: ['button', 'z' ], action: 'moveDown' },
+
+            { key: ['button', 'up', 'shift' ], action: 'rotateUp' },
+            { key: ['button', 'down', 'shift' ], action: 'rotateDown' },
+            { key: ['button', 'left' ], action: 'rotateLeft' },
+            { key: ['button', 'right' ], action: 'rotateRight' },
+
+            { key: ['mouse-press', 1 ], action: 'pickObject' },
+
+            // Note that the ordering of registration here is critical.
+            { key: ['mouse-press', 1, 'none' ], action: 'startMoveDrag' },
+            { key: ['mouse-press', 1, 'ctrl' ], action: 'startRotateDrag' },
+            { key: ['mouse-press', 1, 'alt' ], action: 'startScaleDrag' },
+            { key: ['mouse-press', 1, '*'], action: 'forwardMousePressToDragger' },
+            { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
+            { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
+            { key: ['mouse-release', 1, '*'], action: 'stopDrag' }
+        ];
+
+        this._binding.addBindings(bindings);
     };
 
     /** @function */
@@ -86,89 +158,69 @@ function() {
     std.graphics.DefaultGraphics.prototype.defaultVelocityScaling = 5;
     //by default how to scale rotational velocity from keypresses
     /** @public */
-    std.graphics.DefaultGraphics.prototype.defaultRotationVelocityScaling = 1;
-    
+    std.graphics.DefaultGraphics.prototype.defaultRotationalVelocityScaling = .5;
+
+
     /** @function */
-    std.graphics.DefaultGraphics.prototype.onButtonPressed = function(evt) {
-        if (evt.button == 'escape') this._simulator.quit();
-        if (evt.button == 'i') this._simulator.screenshot();
-        if (evt.button == 'm') this._simulator.toggleSuspend();
-
-        this._handleToggles(evt, 1);
-
-        if (evt.button == 's' && evt.modifier.alt)
-            this._scripter.script(this._selected);
-
-        if (evt.button == 's' && evt.modifier.ctrl)
-            this._scripter.script(system.presences[0]);
-    };
-    
-    /** @function */
-    std.graphics.DefaultGraphics.prototype.onButtonRepeated = function(evt) {
+    std.graphics.DefaultGraphics.prototype.scriptSelf = function() {
+        this._scripter.script(system.self);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.onButtonReleased = function(evt) {
-        this._handleToggles(evt, -1);
-    };
-    /** @function */
-    std.graphics.DefaultGraphics.prototype._handleToggles = function(evt, scale) {
-        if (evt.button == 'up' && !evt.modifier.shift) this._moverot.move(new util.Vec3(0, 0, -1), scale * this.defaultVelocityScaling);
-        if (evt.button == 'down' && !evt.modifier.shift) this._moverot.move(new util.Vec3(0, 0, 1), scale * this.defaultVelocityScaling);
-
-        if (evt.button == 'up' && evt.modifier.shift) this._moverot.rotate(new util.Vec3(1, 0, 0), scale * this.defaultVelocityScaling);
-        if (evt.button == 'down' && evt.modifier.shift) this._moverot.rotate(new util.Vec3(-1, 0, 0), scale * this.defaultVelocityScaling);
-        if (evt.button == 'left') this._moverot.rotate(new util.Vec3(0, 1, 0), scale * this.defaultRotationVelocityScaling);
-        if (evt.button == 'right') this._moverot.rotate(new util.Vec3(0, -1, 0), scale * this.defaultRotationVelocityScaling);
-
-        if (evt.button == 'w') this._moverot.move(new util.Vec3(0, 0, -1), scale);
-        if (evt.button == 's' && !evt.modifier.alt && !evt.modifier.ctrl) this._moverot.move(new util.Vec3(0, 0, 1), scale);
-        if (evt.button == 'a') this._moverot.move(new util.Vec3(-1, 0, 0), scale);
-        if (evt.button == 'd') this._moverot.move(new util.Vec3(1, 0, 0), scale);
-        if (evt.button == 'q') this._moverot.move(new util.Vec3(0, 1, 0), scale);
-        if (evt.button == 'z') this._moverot.move(new util.Vec3(0, -1, 0), scale);
+    std.graphics.DefaultGraphics.prototype.scriptSelectedObject = function() {
+        this._scripter.script(this._selected);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.onMousePress = function(evt) {
+    std.graphics.DefaultGraphics.prototype.moveSelf = function(dir, val) {
+        this._moverot.move(dir, this.defaultVelocityScaling * val);
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.rotateSelf = function(about, val) {
+        this._moverot.rotate(about, this.defaultRotationalVelocityScaling * val);
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.pickObject = function(x, y) {
         if (this._selected) {
             this._simulator.bbox(this._selected, false);
             this._selected = null;
         }
 
-        var clicked = this._simulator.pick(evt.x, evt.y);
+        var clicked = this._simulator.pick(x, y);
         if (clicked) {
             this._selected = clicked;
             this._simulator.bbox(this._selected, true);
         }
-
-        if (evt.button == 1) {
-            if (evt.modifier.ctrl)
-                this._dragger = this._draggers.rotate;
-            else if (evt.modifier.alt)
-                this._dragger = this._draggers.scale;
-            else
-                this._dragger = this._draggers.move;
-        }
-        if (this._dragger) {
-            this._dragger.selected(this._selected);
-            this._dragger.onMousePress(evt);
-        }
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.onMouseDrag = function(evt) {
+    std.graphics.DefaultGraphics.prototype.startDrag = function(dragger, evt) {
+        if (this._selected)
+            this._dragger = dragger;
+        if (this._dragger)
+            this._dragger.selected(this._selected);
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.forwardMousePressToDragger = function(evt) {
+        if (this._dragger) this._dragger.onMousePress(evt);
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.forwardMouseDragToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.onMouseRelease = function(evt) {
+    std.graphics.DefaultGraphics.prototype.forwardMouseReleaseToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseRelease(evt);
-        delete this._dragger;
     };
 
     /** @function */
-    std.graphics.DefaultGraphics.prototype.onMouseClick = function(evt) {
+    std.graphics.DefaultGraphics.prototype.stopDrag = function() {
+        delete this._dragger;
     };
 
 })();

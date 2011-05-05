@@ -40,7 +40,7 @@ function() {
 
     var ns = std.graphics;
 
-    /** @namepsace 
+    /** @namepsace
      *  InputHandler makes setting up callbacks for input events, or a
      *  subset of them, easier. It looks a lot like browser events do.
      *  Allocate one with a simulation and it will register itself as
@@ -51,35 +51,29 @@ function() {
      */
     std.graphics.InputHandler = function(sim) {
         sim.invoke("setInputHandler", std.core.bind(this._handle, this) );
+        this._mapping = {
+            'button-pressed': 'onButtonPressed',
+            'button-repeat': 'onButtonRepeated',
+            'button-up': 'onButtonReleased',
+            'button-down': 'onButtonDown',
+            'axis': 'onAxis',
+            'text': 'onText',
+            'mouse-hover': 'onMouseHover',
+            'mouse-press': 'onMousePress',
+            'mouse-release': 'onMouseRelease',
+            'mouse-click': 'onMouseClick',
+            'mouse-drag': 'onMouseDrag',
+            'dragdrop': 'onDragAndDrop',
+            'webview': 'onWebView'
+        };
     };
 
     std.graphics.InputHandler.prototype._handle = function(evt) {
-        if (evt.msg == 'button-pressed' && 'onButtonPressed' in this)
-            this.onButtonPressed(evt);
-        if (evt.msg == 'button-repeat' && 'onButtonRepeated' in this)
-            this.onButtonRepeated(evt);
-        if (evt.msg == 'button-up' && 'onButtonReleased' in this)
-            this.onButtonReleased(evt);
-        if (evt.msg == 'button-down' && 'onButtonDown' in this)
-            this.onButtonDown(evt);
-        if (evt.msg == 'axis' && 'onAxis' in this)
-            this.onAxis(evt);
-        if (evt.msg == 'text' && 'onText' in this)
-            this.onText(evt);
-        if (evt.msg == 'mouse-hover' && 'onMouseHover' in this)
-            this.onMouseHover(evt);
-        if (evt.msg == 'mouse-press' && 'onMousePress' in this)
-            this.onMousePress(evt);
-        if (evt.msg == 'mouse-release' && 'onMouseRelease' in this)
-            this.onMouseRelease(evt);
-        if (evt.msg == 'mouse-click' && 'onMouseClick' in this)
-            this.onMouseClick(evt);
-        if (evt.msg == 'mouse-drag' && 'onMouseDrag' in this)
-            this.onMouseDrag(evt);
-        if (evt.msg == 'dragdrop' && 'onDragAndDrop' in this)
-            this.onDragAndDrop(evt);
-        if (evt.msg == 'webview' && 'onWebView' in this)
-            this.onWebView(evt);
+        if (evt.msg in this._mapping) {
+            var cb = this[ this._mapping[evt.msg] ];
+            if (cb) cb(evt);
+        }
+        if (this.onAnything) this.onAnything(evt);
     };
 
 })();

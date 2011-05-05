@@ -701,7 +701,7 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         AxisEventPtr axis_ev (std::tr1::dynamic_pointer_cast<AxisEvent>(inputev));
         if (axis_ev) {
             event_data["msg"] = Invokable::asAny(String("axis"));
-            event_data["index"] = Invokable::asAny((int32)axis_ev->mAxis);
+            event_data["axis"] = Invokable::asAny((int32)axis_ev->mAxis);
             event_data["value"] = Invokable::asAny(axis_ev->mValue.value);
         }
     }
