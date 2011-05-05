@@ -144,24 +144,31 @@ Editor.prototype.editHistoryForward = function() {
     this.updateEditorHistory();
 };
 
+function findEditorIndex(objid) {
+    for (var i=0; i<editors.length; i++) {
+	if (editors[i].object == objid) {
+            return i;
+	}
+    }
+    return null;
+}
+
 function addObject(objid) {
-	var gotIt = false;
-	for (var i=0; i<editors.length; i++) {
-		if (editors[i].object == objid) {
-			gotIt = true;
-			$('#edittabs').tabs('select', i);
-			break;
-		}
-	}
-	if (gotIt == false) {
-	    $( "#emerson-prompt-dialog" ).dialog( "open" );
-	    curEditor = new Editor(objid);
-	}
+    var edidx = findEditorIndex(objid);
+    if (edidx === null) {
+        // Didn't find it, create it
+        $( "#emerson-prompt-dialog" ).dialog( "open" );
+        curEditor = new Editor(objid);
+    }
+    else {
+        $('#edittabs').tabs('select', i);
+    }
 }
 
 function addMessage(objid, msg) {
-    if (curEditor)
-        curEditor.addMessage(msg);
+    var edidx = findEditorIndex(objid);
+    if (edidx === null) return;
+    editors[edidx].addMessage(msg);
 }
 
 function dialogClosed() {
@@ -205,19 +212,19 @@ $(document).ready(function() {
     .script("../ace/build/src/ace-uncompressed.js")
     .script("../ace/build/src/theme-dawn.js")
     .script("../ace/build/src/mode-javascript.js").wait();
-	
+
 	$('<div />').attr({id:'emerson-prompt-dialog', title:'Emerson Scripting'})
 		.append($("<div />").attr({id:'edittabs'})
 				.append($("<ul />").attr({id:'edittab_titles'}).append(''))
 		)
 	.appendTo('body');
-	
+
 	/*<div id="edittabs">
 		<ul id="edittab_titles"></ul>
 	</div>*/
 
 	$('#edittabs').tabs({ select: function(event, ui) { updateCurEditor(ui.index); } });
-	
+
 	$( "#emerson-prompt-dialog" ).dialog({
 		autoOpen: false,
 		height: 'auto',
@@ -229,7 +236,7 @@ $(document).ready(function() {
 		},
 		close: dialogClosed
 	});
-	
+
 	/*<button type="button" onclick="runCommand()">Run</button>
 	<button type="button" onclick="closePrompt()">Close</button>*/
 
