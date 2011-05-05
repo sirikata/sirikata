@@ -5,7 +5,7 @@ cb = function()
 
 mPat = new util.Pattern("m");
 
-handler = system.registerHandler(cb, null,mPat,null);
+handler = system.registerHandler(cb,mPat,null);
 
 
 system.print("\n\nBefore suspended\n");

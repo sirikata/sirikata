@@ -37,7 +37,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom
     //require uses the same capability as import
     if (! canImport)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to require.")));
-    
+
     return associatedContext->struct_require(toRequireFrom);
 }
 
@@ -45,7 +45,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_import(const String& toImportFrom)
 {
     if (! canImport)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to import.")));
-    
+
     return associatedContext->struct_import(toImportFrom);
 }
 
@@ -55,13 +55,13 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canImport()
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
+v8::Handle<v8::Value> JSSystemStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
 {
     if (!canRecv)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to receive messages.")));
 
-    
-    return associatedContext->struct_makeEventHandlerObject(native_patterns, target_persist, cb_persist, sender_persist);
+
+    return associatedContext->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist);
 }
 
 JSContextStruct* JSSystemStruct::getContext()
@@ -100,7 +100,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createContext(SpaceObjectReference*
     createPres   &= canCreatePres;
     createEnt    &= canCreateEnt;
     evalable     &= canEval;
-    
+
     return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,import,createPres,createEnt,evalable,presStruct);
 }
 
@@ -120,7 +120,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_eval(const String& native_contents,
     if (!canEval)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to call eval directly.")));
 
-    
+
     return associatedContext->struct_eval(native_contents,sOrigin);
 }
 
@@ -209,28 +209,28 @@ v8::Handle<v8::Value> JSSystemStruct::struct_sendHome(const String& toSend)
 JSSystemStruct* JSSystemStruct::decodeSystemStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.
-    
+
     if (! toDecode->IsObject())
     {
         errorMessage += "Error in decode of JSSystemStruct.  Should have received an object to decode.";
         return NULL;
     }
-        
+
     v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
-        
+
     //now check internal field count
     if (toDecodeObject->InternalFieldCount() != SYSTEM_TEMPLATE_FIELD_COUNT)
     {
         errorMessage += "Error in decode of JSSystemStruct.  Object given does not have adequate number of internal fields for decode.";
         return NULL;
     }
-        
+
     //now actually try to decode each.
     //decode the jsVisibleStruct field
     v8::Local<v8::External> wrapJSRootStructObj;
     wrapJSRootStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(SYSTEM_TEMPLATE_SYSTEM_FIELD));
     void* ptr = wrapJSRootStructObj->Value();
-    
+
     JSSystemStruct* returner;
     returner = static_cast<JSSystemStruct*>(ptr);
     if (returner == NULL)

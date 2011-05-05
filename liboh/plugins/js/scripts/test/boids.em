@@ -24,10 +24,10 @@ var velocityPattern = new util.Pattern("command","getVelocity");
 var orientationPattern = new util.Pattern("command","getOrientation");
 var locationPattern = new util.Pattern("command","getLocation");
     
-var posHandler = system.registerHandler(getPositionCallback,null,positionPattern,null);
-var velHandler = system.registerHandler(getVelocityCallback,null,velocityPattern,null);
-var orientHandler = system.registerHandler(getOrientationCallBack,null,orientationPattern,null);
-var locHandler = system.registerHandler(getLocationCallback,null,locationPattern,null);
+var posHandler = system.registerHandler(getPositionCallback,positionPattern,null);
+var velHandler = system.registerHandler(getVelocityCallback,velocityPattern,null);
+var orientHandler = system.registerHandler(getOrientationCallBack,orientationPattern,null);
+var locHandler = system.registerHandler(getLocationCallback,locationPattern,null);
 
 
 var remoteLocations={};
@@ -67,7 +67,7 @@ function boidPoller()
 
 
 var locationResponsePattern = new util.Pattern("command","getLocationResponse");
-var locResponseHandler = system.registerHandler(locationResponseCallback,null,locationResponsePattern,null);
+var locResponseHandler = system.registerHandler(locationResponseCallback,locationResponsePattern,null);
 system.setTimeout(1,null,positionPoller);
 system.setTimeout(1,boidPoller);
 
@@ -81,7 +81,7 @@ function testSetHandler()
     //requires message to have field m with value o.
     var mPattern = new util.Pattern("m","o");
     
-    var handler = system.registerHandler(returnerCallBack,null,mPattern,null);
+    var handler = system.registerHandler(returnerCallBack,mPattern,null);
 }
 
 //this function sends a message to every single message-able entity with a message that will trigger the handler set in the previous function

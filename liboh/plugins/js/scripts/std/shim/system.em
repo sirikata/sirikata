@@ -129,12 +129,12 @@ if(system == undefined)
 
         // Not exposing this
         /** @ignore */
-        this.registerHandler = function (callback,arg2,arg3,arg4)
+        this.registerHandler = function (callback,pattern,sender)
         {
             var wrappedCallback = this.__wrapRegHandler(callback);
-            //baseSystem.registerHandler.apply(baseSystem,wrappedCallback,arg2,arg3,arg4);
+            //baseSystem.registerHandler.apply(baseSystem,wrappedCallback,arg2,arg3);
             //lkjs;
-            baseSystem.registerHandler(wrappedCallback,arg2,arg3,arg4);
+            baseSystem.registerHandler(wrappedCallback,pattern,sender);
         };
 
         // Not exposing this

@@ -51,7 +51,7 @@ function testSetHandler()
     //requires message to have field m with value o.
     var mPattern = new util.Pattern("m","o");
     
-    var handler = system.registerHandler(returnerCallBack,null,mPattern,null);
+    var handler = system.registerHandler(returnerCallBack,mPattern,null);
 }
 
 //this function sends a message to every single message-able entity with a message that will trigger the handler set in the previous function

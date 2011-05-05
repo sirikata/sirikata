@@ -97,15 +97,15 @@ v8::Handle<v8::Value> root_setScript(const v8::Arguments& args)
     if (! strDecodeSuccess)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMsg.c_str())));
 
-    
+
     String errorMessage = "Error in reset of system object.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
 
-    
-    return jsfake->struct_setScript(decodedScript);   
+
+    return jsfake->struct_setScript(decodedScript);
 }
 
 
@@ -121,7 +121,7 @@ v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->struct_canRecvMessage();    
+    return jsfake->struct_canRecvMessage();
 }
 
 /**
@@ -165,7 +165,7 @@ v8::Handle<v8::Value> root_canCreatePres(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->struct_canCreatePres();    
+    return jsfake->struct_canCreatePres();
 }
 
 /**
@@ -179,7 +179,7 @@ v8::Handle<v8::Value> root_canCreateEnt(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->struct_canCreateEnt();        
+    return jsfake->struct_canCreateEnt();
 }
 
 /**
@@ -193,7 +193,7 @@ v8::Handle<v8::Value> root_canEval(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->struct_canEval();        
+    return jsfake->struct_canEval();
 }
 
 
@@ -269,11 +269,11 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args)
 {
     std::cout<<"\n\nDebug: Got into root_print\n\n";
     std::cout.flush();
-    
-    
+
+
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in root_print.  Requires exactly one argument: a string to print.")));
-    
+
     String errorMessage = "Error decoding the system object from root_print.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
@@ -283,8 +283,8 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args)
 
     v8::String::Utf8Value str(args[0]);
     String toPrint( ToCString(str));
-    
-    return jsfake->struct_print(toPrint);    
+
+    return jsfake->struct_print(toPrint);
 }
 
 /**
@@ -311,8 +311,8 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
     //serialize the object to send
     Local<v8::Object> v8Object = messageBody->ToObject();
     String serialized_message = JSSerializer::serializeObject(v8Object);
-    
-    
+
+
     String errorMessage = "Error decoding the system object from root_print.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
@@ -353,14 +353,14 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
     if (! args[1]->IsFunction())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that the second argument passed in be a function")));
 
-    
+
     //decode root
     String errorMessageFRoot = "Error decoding the system object from root_createPresence.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
-    
+
     return jsfake->struct_createPresence(newMesh, v8::Handle<v8::Function>::Cast(args[1]));
 }
 
@@ -375,7 +375,7 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
    entity.
    @param Number.  Scale of new mesh.  (Higher number means increase mesh's size.)
    @param Number.  Solid angle that entity's new presence queries with.
-   
+
 
    Note: calling create_entity in a sandbox without the capabilities to create
    entities throws an exception.
@@ -392,8 +392,8 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
-    
-    
+
+
     // get the location from the args
 
     //get position
@@ -457,7 +457,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
 
 
-/**    
+/**
   @param the presence that the context is associated with.  (will use this as
   sender of messages).  If this arg is null, then just passes through the parent
   context's presence
@@ -473,7 +473,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
   @param Boolean.  can I import argument
 
-  @param Boolean.  can I create presences.  
+  @param Boolean.  can I create presences.
 
   @param Boolean.  can I create entities.
 
@@ -495,7 +495,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMsgSystem.c_str())));
 
-    
+
     //jspresstruct decode
     JSPresenceStruct* jsPresStruct = NULL;
     if (! args[0]->IsNull())
@@ -558,7 +558,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[6],canCreatePres, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-    
+
     //can create entities
     errorMessageWhichArg= " 8.  ";
     errorMessage= errorMessageBase + errorMessageWhichArg;
@@ -570,9 +570,9 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[8],canEval, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
- 
-    
-    
+
+
+
     return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,jsPresStruct);
 }
 
@@ -592,7 +592,7 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 
     StringCheckAndExtract(native_contents, contents);
 
-    
+
     String errorMessage       = "Error calling eval in context.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct( args.This(), errorMessage);
     if (jsfake == NULL)
@@ -655,7 +655,7 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 /** Registers a handler to be invoked for events that match the
  *  specified pattern, where the pattern is a list of individual
  *  rules.
- *  
+ *
  *   @param cb: callback to invoke, with event as parameter
  *   @param  object target: target of callback (this pointer when invoked), or null for the global (root) object
  *   @param pattern[] pattterns: Array of Pattern rules to match
@@ -664,16 +664,15 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 {
-    if (args.Length() != 4)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 4 args.  <function, callback to execute when event associated with handler fires>, <target_val (this pointer when invoked)>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to>")) );
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to>")) );
 
     // Changing the sequence of the arguments so as to get the same
     // as is generated in emerson
 
     v8::Handle<v8::Value> cb_val     = args[0];
-    v8::Handle<v8::Value> target_val = args[1];
-    v8::Handle<v8::Value> pattern    = args[2];
-    v8::Handle<v8::Value> sender_val = args[3];
+    v8::Handle<v8::Value> pattern    = args[1];
+    v8::Handle<v8::Value> sender_val = args[2];
 
 
     // Pattern
@@ -704,19 +703,12 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern argument must be pattern or array of patterns.")) );
 
 
-    // Target
-    if (!target_val->IsObject() && !target_val->IsNull() && !target_val->IsUndefined())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Target is not object or null.")) );
-
-    v8::Handle<v8::Object> target = v8::Handle<v8::Object>::Cast(target_val);
-    v8::Persistent<v8::Object> target_persist = v8::Persistent<v8::Object>::New(target);
-
     // Sender
     if (! sender_val->IsNull())  //means that it's a valid sender
     {
         String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding sender.  ";
         JSPositionListener* jsposlist = decodeJSPosListener(sender_val,errorMessage);
-        
+
         if (jsposlist == NULL)
             return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
     }
@@ -734,7 +726,7 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    
+
     //now decode system
     String errorMessageDecodeRoot = "Error decoding the system object from root_registerHandler.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageDecodeRoot);
@@ -742,7 +734,7 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
 
-    return jsfake->struct_makeEventHandlerObject(native_patterns, target_persist, cb_persist, sender_persist);
+    return jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist);
 }
 
 
@@ -811,5 +803,3 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args)
 }//end jssystem namespace
 }//end js namespace
 }//end sirikata
-
-

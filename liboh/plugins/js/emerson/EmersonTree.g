@@ -651,7 +651,6 @@ msgRecvStatement
       }
       memAndCallExpression
       {
-        APP(", null");
         APP(", ");
       } 
       leftHandSideExpression
@@ -669,7 +668,6 @@ msgRecvStatement
     }
     memAndCallExpression
     {
-            APP(", null");
             APP(", ");
     } 
     leftHandSideExpression
@@ -689,7 +687,6 @@ msgRecvStatement
       }
       callExpression
       {
-        APP(", null");
         APP(", ");
       } 
       leftHandSideExpression

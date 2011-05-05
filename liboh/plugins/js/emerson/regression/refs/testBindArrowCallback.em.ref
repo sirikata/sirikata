@@ -1,1 +1,1 @@
-system.registerHandler( bind(this._handleScriptRequest, this), null, scriptRequestPattern, null) ;
+system.registerHandler( bind(this._handleScriptRequest, this), scriptRequestPattern, null) ;

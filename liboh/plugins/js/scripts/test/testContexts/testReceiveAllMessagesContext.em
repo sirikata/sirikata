@@ -23,7 +23,7 @@ function toExecute()
     
     var allMessagesPattern = new util.Pattern();
 
-    var allMessagesHandler = system.registerHandler(allMessagesCallback,null,allMessagesPattern,null);
+    var allMessagesHandler = system.registerHandler(allMessagesCallback,allMessagesPattern,null);
 }
     
 

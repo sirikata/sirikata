@@ -558,11 +558,11 @@ v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci
 //creates a new jseventhandlerstruct and wraps it in a js object
 //registers the jseventhandlerstruct both with this context and
 //jsobjectscript
-v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
+v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
 {
     //constructor of new_handler should take care of registering with context as
     //a suspendable.
-    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, target_persist, cb_persist,sender_persist,this);
+    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this);
 
     jsObjScript->registerHandler(new_handler);
     return jsObjScript->makeEventHandlerObject(new_handler,this);

@@ -1246,7 +1246,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
             int argc = 3;
             Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str()) };
             TryCatch try_catch;
-            invokeCallback(mContext, &mEventHandlers[s]->target, mEventHandlers[s]->cb, argc, argv);
+            invokeCallback(mContext, NULL, mEventHandlers[s]->cb, argc, argv);
 
             matchesSomeHandler = true;
         }

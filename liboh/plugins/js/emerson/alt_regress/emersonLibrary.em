@@ -61,7 +61,7 @@ system = {    };
 
 system.incrementer = 0;
 
-system.registerHandler = function (a, b, c, d)
+system.registerHandler = function (a, b, c)
 {
     ++this.incrementer;
 
@@ -70,8 +70,5 @@ system.registerHandler = function (a, b, c, d)
     print(a);
     print(b);
     print(c);
-    print(d);
     print("\n\nDone registering handlers\n\n");
 };
-
-

@@ -5,7 +5,7 @@ mPat = new util.Pattern("m","o","oops");
 
 system.print("\n\ncreated pattern\n");
 
-mHand = system.registerHandler(mPat,null,cb,null);
+mHand = system.registerHandler(mPat,cb,null);
 
 system.print("\n\nregistered pattern\n");
 
@@ -18,4 +18,3 @@ tmp.m = "o";
 system.__broadcast(tmp);
 
 system.print("\n\nbroadcast pattern\n");
-

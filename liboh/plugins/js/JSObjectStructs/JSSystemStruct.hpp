@@ -38,16 +38,16 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
-    
-    
+
+
     v8::Handle<v8::Value> struct_getPosition();
 
 
-    v8::Handle<v8::Value> struct_print(const String& msg);    
+    v8::Handle<v8::Value> struct_print(const String& msg);
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);
     v8::Handle<v8::Value> struct_import(const String& toImportFrom);
     v8::Handle<v8::Value> struct_require(const String& toRequireFrom);
-    
+
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
     //if do not have the capability, throws an error.
@@ -57,11 +57,11 @@ struct JSSystemStruct
     //mesh newMesh and executes initFunc, which gets executed onConnected.
     //if do not have the capability, throws an error.
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
-    
-    v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Object> target_persist, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
+
+    v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
 
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct);
-    
+
     JSContextStruct* getContext();
 
     v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
@@ -78,9 +78,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_reset();
 
-    
+
 private:
-    //associated data 
+    //associated data
     JSContextStruct* associatedContext;
     bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt,canEval;
 };

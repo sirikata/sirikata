@@ -66,7 +66,7 @@ function subtractVecs(vecA,vecB)
 
 var matchTremblePattern = new util.Pattern("tremble");
 
-var trembleHandler      = system.registerHandler(trembleCallbackFunction,null,matchTremblePattern,null);
+var trembleHandler      = system.registerHandler(trembleCallbackFunction,matchTremblePattern,null);
 
 var objer = new Object();
 objer.tremble = true;
@@ -76,6 +76,3 @@ objer.tremble = true;
 // {
 //     system.__broadcast(objer);
 // }
-
-
-

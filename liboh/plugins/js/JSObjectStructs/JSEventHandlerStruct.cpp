@@ -17,10 +17,9 @@
 namespace Sirikata {
 namespace JS {
 
-JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Object> _target, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender, JSContextStruct* jscs)
+JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender, JSContextStruct* jscs)
  : JSSuspendable(),
    pattern(_pattern),
-   target(_target),
    cb(_cb),
    sender(_sender),
    jscont(jscs)
@@ -40,7 +39,6 @@ JSEventHandlerStruct::~JSEventHandlerStruct()
         if (jscont != NULL)
             jscont->struct_deregisterSuspendable(this);
 
-        target.Dispose();
         cb.Dispose();
         sender.Dispose();
     }
@@ -61,7 +59,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
         JSLOG(error,errorMessage);
         return false;
     }
-    
+
     SpaceObjectReference* spref1 =  jsposlist->getToListenTo();
 
 
@@ -84,7 +82,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
             return false;
     }
 
-    
+
     //check if the pattern matches the obj
     for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
     {
@@ -119,12 +117,11 @@ v8::Handle<v8::Value> JSEventHandlerStruct::resume()
         JSLOG(info, "Error in resume of JSEventHandlerStruct.cpp.  Called resume even though the handler had previously been cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called resume on a handler that had already been cleared.")));
     }
-    
+
     return JSSuspendable::resume();
 }
 v8::Handle<v8::Value> JSEventHandlerStruct::clear()
 {
-    target.Dispose();
     cb.Dispose();
     sender.Dispose();
     return JSSuspendable::clear();
@@ -141,7 +138,7 @@ void JSEventHandlerStruct::printHandler()
         return;
     }
 
-    
+
     //print patterns
     for (PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
     {
@@ -149,7 +146,7 @@ void JSEventHandlerStruct::printHandler()
             std::cout<<"**Suspended  ";
         else
             std::cout<<"**Active     ";
-   
+
         pat_it->printPattern();
     }
 
@@ -157,7 +154,7 @@ void JSEventHandlerStruct::printHandler()
     /*
       FIXME: sender should really be a part of the pattern.
      */
-    
+
     //print sender
     if (this->sender->IsNull())
         std::cout<<"Sender: any";
@@ -169,15 +166,12 @@ void JSEventHandlerStruct::printHandler()
         wrap= v8::Local<v8::External>::Cast(this->sender->GetInternalField(0));
         ptr = wrap->Value();
         ObjectReference* objRef = static_cast<ObjectReference*>(ptr);
-        
+
         std::cout<<"Sender: "<<(objRef->getAsUUID()).toString();
     }
     std::cout<<"\n\n";
-    
+
 }
 
 
 }}//end namespaces
-
-
-
