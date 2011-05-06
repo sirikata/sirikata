@@ -89,8 +89,8 @@ ObjectHost::~ObjectHost()
     {
         HostedObjectMap objs;
         mHostedObjects.swap(objs);
-        for (HostedObjectMap::iterator iter = mHostedObjects.begin();
-                 iter != mHostedObjects.end();
+        for (HostedObjectMap::iterator iter = objs.begin();
+                 iter != objs.end();
                  ++iter) {
             iter->second->destroy();
         }

@@ -181,7 +181,6 @@ int main (int argc, char** argv) {
 
 
 
-    plugins.gc();
     SimulationFactory::destroy();
 
     delete sstConnMgr;
@@ -196,6 +195,7 @@ int main (int argc, char** argv) {
     delete mainStrand;
     Network::IOServiceFactory::destroyIOService(ios);
 
+    plugins.gc();
     sync.stop();
 
     return 0;
