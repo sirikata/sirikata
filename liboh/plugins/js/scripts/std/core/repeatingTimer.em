@@ -1,4 +1,4 @@
-system.import('std/core/bind.js');
+system.import('std/core/bind.em');
 
 //if do not already have std and std.core objects
 //defined, define them.

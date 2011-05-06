@@ -257,6 +257,9 @@ private:
     std::stack<EvalContext> mEvalContextStack;
 
     std::set<String> mImportedFiles;
+    
+    // add an extenstion to the filename that you get for import/require
+    std::string* extensionize(std::string);
 
     // Resolve a relative path for import to an absolute
     // path. "Returns" the full path of the file as well as the import

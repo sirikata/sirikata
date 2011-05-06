@@ -1,5 +1,5 @@
 /*  Sirikata
- *  bind.js
+ *  bind.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.

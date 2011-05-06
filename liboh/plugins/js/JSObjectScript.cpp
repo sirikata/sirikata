@@ -1111,12 +1111,43 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     return  protectedEval(contents, &origin, new_ctx,jscont);
 }
 
+std::string* JSObjectScript::extensionize(const String filename)
+{
+    std::string* fileToFind = new std::string(filename);
+    int index = filename.find(".");
+    if(index == -1)
+    {
+      *fileToFind = *fileToFind + ".em";
+    }
+    else
+    {
+      if(filename.substr(index) != ".em")
+      {
+        // found a file with different extenstion    
+        return NULL;
+        //std::string errorMessage("Cannot operate on  file: ");
+        //errorMessage+=filename;
+        //throw v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
+      }
+    }
+
+    return fileToFind;
+
+}
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont)
 {
+    
     JSLOG(detailed, "Importing: " << filename);
+    std::string* fileToFind = extensionize(filename);
+    if(fileToFind == NULL)
+    {
+      std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
+      return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );;
+    }
     boost::filesystem::path full_filename, full_base;
-    resolveImport(filename, &full_filename, &full_base,jscont);
+    resolveImport(*fileToFind, &full_filename, &full_base,jscont);
+    delete fileToFind;
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {
@@ -1131,8 +1162,16 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
 v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextStruct* jscont)
 {
     JSLOG(detailed, "Requiring: " << filename);
+    std::string* fileToFind = extensionize(filename);
+    if(fileToFind == NULL)
+    {
+      std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
+      return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );;
+    }
+
     boost::filesystem::path full_filename, full_base;
-    resolveImport(filename, &full_filename, &full_base,jscont);
+    resolveImport(*fileToFind, &full_filename, &full_base,jscont);
+    delete fileToFind;
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {

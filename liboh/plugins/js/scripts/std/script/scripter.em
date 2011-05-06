@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-system.require('std/core/bind.js');
+system.require('std/core/bind.em');
 system.require('std/escape.em');
 system.require('std/core/pretty.em');
 
