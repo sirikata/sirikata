@@ -15,6 +15,7 @@ typedef pair<const char*, const char*> keypair;
 int emerson_isAKeyword(const char*);
 char* read_file(const char*);
 std::string emerson_escapeSingleQuotes(const char* stringSequence);
+std::string emerson_escapeMultiline(const char* stringSequence);
 std::string replaceAllInstances(std::string initialString, std::string toReplace, std::string toReplaceWith);
 int emerson_init();
 void insertKeywords();

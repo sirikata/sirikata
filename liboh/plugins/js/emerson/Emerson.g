@@ -123,7 +123,7 @@ tokens
     NAME;
     VALUE;
     PROTO;
-
+    VERBATIM;
 }
 
 @header
@@ -685,6 +685,7 @@ propertyName
 	: Identifier
 	| StringLiteral
 	| NumericLiteral
+        
 	;
 
 // primitive literal definition.
@@ -695,19 +696,26 @@ literal
 	| StringLiteral
 	| NumericLiteral
 	;
-	
 
 // emerson specific syntax
 
 
 // lexer rules.
 
-        
+      
 StringLiteral
-	: '"' DoubleStringCharacter* '"'
+        : '@' VerbatimStringCharacter* '@'
+	| '"' DoubleStringCharacter* '"'
 	| '\'' SingleStringCharacter* '\''
 	;
-	
+
+
+fragment VerbatimStringCharacter
+        : ~('@')
+        | '\\' '@'
+        ;
+
+
 fragment DoubleStringCharacter
 	: ~('"' | '\\' | LTERM)	
 	| '\\' EscapeSequence
@@ -1204,6 +1212,8 @@ Comment
 LineComment
 	: '//' ~(LTERM)* {$channel=HIDDEN;}
 	;
+
+
 
 LTERM
 	: '\n'		// Line feed.

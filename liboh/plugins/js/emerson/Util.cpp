@@ -192,6 +192,19 @@ std::string emerson_escapeSingleQuotes(const char* stringSequence)
 
 
 
+
+std::string emerson_escapeMultiline(const char* stringSequence)
+{
+  std::string s = replaceAllInstances(std::string(stringSequence), "\"","\\\"");
+
+  s = replaceAllInstances(s,"\n","\\n\"+\n\"");
+  //s = replaceAllInstances(std::string(stringSequence),"\r","\\\\r");
+
+  return s;
+}
+
+
+
 int  emerson_isAKeyword(const char* word)
 {
   // Check if the keyword is one of the emerson keywords

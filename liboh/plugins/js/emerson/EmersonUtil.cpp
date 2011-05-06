@@ -71,6 +71,14 @@ char* emerson_compile(const char* em_script_str, int& errorNum, FILE* dbg)
 {
     if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
+
+    /*
+      I tried this..but this doesn't work..didn't go deep into it..
+
+    string em_script_str_new = string(em_script_str);
+    em_script_str_new  = "with ( system ) {\n" + em_script_str_new + "\n}\n";
+    em_script_str = em_script_str_new.c_str();
+    */
     pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
     pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
     char* js_str;
