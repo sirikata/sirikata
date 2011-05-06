@@ -120,11 +120,6 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
 
     if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
 
-    std::cout<<"\n\nDEBUG: setOrientation: "<<reqorient.velocity()<<"\n\n";
-    
-//    mOrientation = TimedMotionQuaternion(reqorient.time(),
-//    MotionQuaternion(reqorient.position().normal(),
-//    reqorient.velocity().normal()));
     
     mOrientation = TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position(), reqorient.velocity()));
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);

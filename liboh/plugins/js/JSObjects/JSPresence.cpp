@@ -418,7 +418,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setOrientation function.  Wrong argument: require a quaternion for new orientation.")) );
             Quaternion newOrientation (QuaternionValExtract(args[0]));
 
-            return mStruct->setOrientationFunction(newOrientation);
+            return mStruct->setOrientationFunction(newOrientation.normal());
 
         }
 
