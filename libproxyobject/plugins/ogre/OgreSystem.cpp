@@ -866,9 +866,6 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
         mPrimaryCamera = new Camera(this, mesh);
         mPrimaryCamera->attach("", 0, 0, mBackgroundColor);
         attachCamera("", mPrimaryCamera);
-        // for now, always hide the original entity. In the future, this should
-        // be controlled based on the type of view we have (1st vs 3rd person).
-        mesh->setVisible(false);
     }
 }
 
@@ -1102,7 +1099,7 @@ void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     }
     for(std::tr1::unordered_set<Camera*>::iterator cam_it = mAttachedCameras.begin(); cam_it != mAttachedCameras.end(); cam_it++) {
         Camera* cam = *cam_it;
-        cam->tick();
+        cam->tick(Time::microseconds(currentTime.raw()), frameTime);
     }
 }
 
@@ -1193,6 +1190,10 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return initScript(params);
     else if (name == "camera")
         return getCamera(params);
+    else if (name == "setCameraMode")
+        return setCameraMode(params);
+    else if (name == "setCameraOffset")
+        return setCameraOffset(params);
     else {
         SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
     }
@@ -1358,6 +1359,28 @@ boost::any OgreSystem::getCamera(vector<boost::any>& params) {
     camera_info["fov"] = Invokable::asAny(camera_fov);
 
     return Invokable::asAny(camera_info);
+}
+
+boost::any OgreSystem::setCameraMode(vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+    if (params.size() < 2 || !Invokable::anyIsString(params[1])) return boost::any();
+
+    String mode = Invokable::anyAsString(params[1]);
+    if (mode == "first")
+        mPrimaryCamera->setMode(Camera::FirstPerson);
+    else if (mode == "third")
+        mPrimaryCamera->setMode(Camera::ThirdPerson);
+
+    return boost::any();
+}
+
+boost::any OgreSystem::setCameraOffset(vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+    if (params.size() < 4) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1]) || !Invokable::anyIsNumeric(params[2]) || !Invokable::anyIsNumeric(params[3])) return boost::any();
+    Vector3d offset( Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]) );
+    mPrimaryCamera->setOffset(offset);
+    return boost::any();
 }
 
 }

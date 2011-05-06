@@ -54,6 +54,7 @@ function() {
         this._pres = pres;
         this._simulator = new std.graphics.Graphics(pres, name);
 
+        this._cameraMode = 'first';
 
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
@@ -76,6 +77,8 @@ function() {
         this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
         this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
         this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
+
+        this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
         this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
         this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
@@ -118,6 +121,8 @@ function() {
 
             { key: ['mouse-click', 3], action: 'pickObject' },
             { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
+
+            { key: ['button-pressed', 'c' ], action: 'toggleCameraMode' },
 
             { key: ['button', 'w' ], action: 'moveForward' },
             { key: ['button', 'up' ], action: 'moveForward' },
@@ -175,13 +180,30 @@ function() {
     };
 
     /** @function */
+    std.graphics.DefaultGraphics.prototype.toggleCameraMode = function(evt) {
+        this._cameraMode = this._cameraMode == 'first' ? 'third' : 'first';
+        this._simulator.setCameraMode(this._cameraMode);
+        this.updateCameraOffset();
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.updateCameraOffset = function(evt) {
+        if (this._cameraMode == 'third') {
+            var orient = this._pres.getOrientation();
+            this._simulator.setCameraOffset(orient.mul(<0, 1.5, 4>));
+        }
+    };
+
+    /** @function */
     std.graphics.DefaultGraphics.prototype.moveSelf = function(dir, val) {
         this._moverot.move(dir, this.defaultVelocityScaling * val);
+        this.updateCameraOffset();
     };
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.rotateSelf = function(about, val) {
         this._moverot.rotate(about, this.defaultRotationalVelocityScaling * val);
+        this.updateCameraOffset();
     };
 
     /** @function */

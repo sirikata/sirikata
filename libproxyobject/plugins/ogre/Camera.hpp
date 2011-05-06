@@ -43,6 +43,13 @@ namespace Sirikata {
 namespace Graphics {
 
 class Camera {
+public:
+    enum Mode {
+        FirstPerson,
+        ThirdPerson
+    };
+
+private:
     OgreSystem *const mScene;
     Ogre::Camera* mOgreCamera;
     Ogre::SceneNode *mSceneNode;
@@ -51,7 +58,11 @@ class Camera {
     Ogre::Viewport *mViewport;
 
     Entity* mFollowing;
+
+    Mode mMode;
+    Vector3d mOffset;
 public:
+
     Camera(OgreSystem *scene, Entity* follow);
     ~Camera();
 
@@ -66,7 +77,7 @@ public:
 
     void windowResized();
 
-    void tick();
+    void tick(const Time& t, const Duration& dt);
 
     Ogre::Viewport* getViewport() {
         return mViewport;
@@ -75,6 +86,11 @@ public:
         return mOgreCamera;
     }
 
+    void setMode(Mode m);
+
+    void setOffset(Vector3d offset) {
+        mOffset = offset;
+    }
 private:
 
     static String ogreCameraName(const SpaceObjectReference&ref);

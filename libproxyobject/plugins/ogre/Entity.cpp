@@ -194,6 +194,7 @@ void Entity::init(Ogre::Entity *obj) {
         mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
         updateScale( getProxy().getBounds().radius() );
+        updateVisibility();
     }
 }
 
@@ -222,7 +223,12 @@ void Entity::setStatic(bool isStatic) {
 }
 
 void Entity::setVisible(bool vis) {
-    mSceneNode->setVisible(vis, true);
+    mVisible = vis;
+    updateVisibility();
+}
+
+void Entity::updateVisibility() {
+    mSceneNode->setVisible(mVisible, true);
 }
 
 void Entity::removeFromScene() {
@@ -438,7 +444,7 @@ void Entity::downloadMeshFile(Transfer::URI const& uri)
 {
     assert( !uri.empty() );
 
-    std::tr1::shared_ptr<ResourceDownloadTask> dl = 
+    std::tr1::shared_ptr<ResourceDownloadTask> dl =
       std::tr1::shared_ptr<ResourceDownloadTask> (new ResourceDownloadTask(
         uri, getScene()->transferPool(),
         mProxy->priority,
@@ -503,7 +509,7 @@ void fixupTextureUnitState(Ogre::TextureUnitState*tus, const MaterialEffectInfo:
 
 }
 class MaterialManualLoader : public Ogre::ManualResourceLoader {
-    MeshdataPtr mMeshdataPtr; 
+    MeshdataPtr mMeshdataPtr;
     const MaterialEffectInfo* mMat;
     String mName;
     String mURI;
@@ -513,8 +519,8 @@ public:
                          const String name,
                          const MaterialEffectInfo&mat,
                          const std::string uri,
-                         std::tr1::shared_ptr<Entity::TextureBindingsMap> textureFingerprints): 
-                                                     mTextureFingerprints(textureFingerprints) 
+                         std::tr1::shared_ptr<Entity::TextureBindingsMap> textureFingerprints):
+                                                     mTextureFingerprints(textureFingerprints)
     {
         mMeshdataPtr = mdptr;
         mName = name;
@@ -717,7 +723,7 @@ public:
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
     MeshdataPtr mdptr;
     Ogre::VertexData * createVertexData(const SubMeshGeometry &submesh, int vertexCount, Ogre::HardwareVertexBufferSharedPtr&vbuf) {
-        
+
         using namespace Ogre;
         Ogre::VertexData *vertexData = OGRE_NEW Ogre::VertexData();
         VertexDeclaration* vertexDecl = vertexData->vertexDeclaration;
@@ -1080,7 +1086,7 @@ void Entity::tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request
 
     // Otherwise, follow the rest of the normal process.
     mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, std::tr1::placeholders::_1));
-    
+
 }
 
 void Entity::createMesh(MeshdataPtr mdptr) {
@@ -1100,10 +1106,10 @@ void Entity::createMesh(MeshdataPtr mdptr) {
                 matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (mdptr, matname,*mat, mURIString, mTextureFingerprints)));
 
                 reload->prepareResource(&*matPtr);
-                reload->loadResource(&*matPtr);                
+                reload->loadResource(&*matPtr);
             }
         }
-        
+
         Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
 
         /// FIXME: set bounds, bounding radius here
@@ -1116,16 +1122,16 @@ void Entity::createMesh(MeshdataPtr mdptr) {
 			new
 #endif
 #else
-			OGRE_NEW 
+			OGRE_NEW
 #endif
 			MeshdataManualLoader(mdptr))));
         reload->prepareResource(&*mo);
-        reload->loadResource(&*mo);        
+        reload->loadResource(&*mo);
 
         bool check = mm.resourceExists(hash);
 
-        loadMesh(hash);        
-        
+        loadMesh(hash);
+
     }
     // Lights
     int light_idx = 0;
@@ -1171,7 +1177,7 @@ void Entity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
       String id = request->getURI().toString() + request->getMetadata().getFingerprint().toString();
 
       (*mTextureFingerprints)[request->getURI().toString()] = id;
-      
+
       fixOgreURI(id);
       CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(response));
   }

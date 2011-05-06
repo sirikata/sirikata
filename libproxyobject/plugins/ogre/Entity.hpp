@@ -83,6 +83,11 @@ protected:
 
     Network::IOTimerPtr mDestroyTimer;
 
+    // We need to track this because Ogre doesn't seem to do the right
+    // thing if you toggle visibility with cascading, then later add
+    // more nodes.
+    bool mVisible;
+
     void fixTextures();
 
     // Wrapper for createMesh which allows us to use a WorkQueue
@@ -95,6 +100,7 @@ protected:
     void setStatic(bool isStatic);
 
     void updateScale(float scale);
+    void updateVisibility();
 
     void handleDestroyTimeout();
 protected:

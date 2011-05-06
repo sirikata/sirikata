@@ -139,6 +139,20 @@ function() {
         return dir;
     };
 
+    /** Set the camera mode: 'first' or 'third'. */
+    std.graphics.Graphics.prototype.setCameraMode = function(mode) {
+        return this.invoke("setCameraMode", mode);
+    };
+
+    /** Set the camera offset for 3rd person mode. This is an offset
+     *  vector in *world coordinates* which is scaled by the object
+     *  radius. For example, to place the camera 2 meters above the
+     *  avatar, use <0, 2, 0>.
+     */
+    std.graphics.Graphics.prototype.setCameraOffset = function(offset) {
+        return this.invoke("setCameraOffset", offset.x, offset.y, offset.z);
+    };
+
 })();
 
 // Import additional utilities that anybody using this class will need.

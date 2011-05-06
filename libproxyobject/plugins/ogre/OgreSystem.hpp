@@ -330,6 +330,8 @@ public:
     boost::any initScript(std::vector<boost::any>& params);
 
     boost::any getCamera(std::vector<boost::any>& params);
+    boost::any setCameraMode(std::vector<boost::any>& params);
+    boost::any setCameraOffset(std::vector<boost::any>& params);
 
 
     ~OgreSystem();

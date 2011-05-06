@@ -44,7 +44,9 @@ Camera::Camera(OgreSystem *scene, Entity* follow)
    mSceneNode(NULL),
    mRenderTarget(NULL),
    mViewport(NULL),
-   mFollowing(follow)
+   mFollowing(follow),
+   mMode(FirstPerson),
+   mOffset(Vector3d(0, 0, 0))
 {
     String cameraName = ogreCameraName(following()->id());
 
@@ -62,6 +64,13 @@ Camera::Camera(OgreSystem *scene, Entity* follow)
 
     mOgreCamera->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
     mOgreCamera->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
+
+    Vector3d goalPos = mFollowing->getProxyPtr()->getPosition();
+    Quaternion goalOrient = mFollowing->getProxyPtr()->getOrientation();
+    mSceneNode->setPosition(toOgre(goalPos, mFollowing->getScene()->getOffset()));
+    mSceneNode->setOrientation(toOgre(goalOrient));
+
+    setMode(FirstPerson);
 }
 
 Camera::~Camera() {
@@ -78,6 +87,11 @@ Camera::~Camera() {
 
 Entity* Camera::following() const {
     return mFollowing;
+}
+
+void Camera::setMode(Mode m) {
+    mMode = m;
+    mFollowing->setVisible( mMode == FirstPerson ? false : true );
 }
 
 void Camera::attach (const String&renderTargetName,uint32 width,uint32 height,Vector4f back_color)
@@ -118,9 +132,45 @@ void Camera::windowResized() {
     mOgreCamera->setAspectRatio((float32)mViewport->getActualWidth()/(float32)mViewport->getActualHeight());
 }
 
-void Camera::tick() {
-    mSceneNode->setPosition(toOgre( mFollowing->getOgrePosition(), mFollowing->getScene()->getOffset() ));
-    mSceneNode->setOrientation(toOgre( mFollowing->getOgreOrientation() ));
+void Camera::tick(const Time& t, const Duration& dt) {
+    Vector3d goalPos = mFollowing->getOgrePosition();
+    Quaternion goalOrient = mFollowing->getOgreOrientation();
+
+    Vector3d pos;
+    Quaternion orient;
+
+    if (mMode == FirstPerson) {
+        // In first person mode we are tied tightly to the position of
+        // the object.
+        pos = goalPos;
+        orient = goalOrient;
+    }
+    else {
+        // In third person mode, the target is offset so we'll be behind and
+        // above ourselves and we need to interpolate to the target.
+        // Offset the goal.
+        BoundingSphere3f following_bounds = mFollowing->getProxyPtr()->getBounds();
+        goalPos += Vector3d(following_bounds.center());
+        // > 1 factor gets us beyond the top of the object
+        goalPos += mOffset * (following_bounds.radius());
+        // Restore the current values from the scene node.
+        pos = fromOgre(mSceneNode->getPosition(), mFollowing->getScene()->getOffset());
+        orient = fromOgre(mSceneNode->getOrientation());
+        // And interpolate.
+        Vector3d toGoal = goalPos-pos;
+        double toGoalLen = toGoal.length();
+        if (toGoalLen < 1e-06) {
+            pos = goalPos;
+            orient = goalOrient;
+        } else {
+            double step = exp(-dt.seconds()*5.f);
+            pos = goalPos - (toGoal/toGoalLen)*(toGoalLen*step);
+            orient = (goalOrient*(1.f-step) + orient*step).normal();
+        }
+    }
+
+    mSceneNode->setPosition(toOgre(pos, mFollowing->getScene()->getOffset()));
+    mSceneNode->setOrientation(toOgre(orient));
 }
 
 
