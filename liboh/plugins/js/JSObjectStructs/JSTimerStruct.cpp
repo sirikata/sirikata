@@ -22,7 +22,7 @@ JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur, v8::Per
    mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
    timeUntil(dur.toSeconds())
 {
-    mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
+    mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
     if (jscont != NULL)
@@ -110,7 +110,7 @@ v8::Handle<v8::Value> JSTimerStruct::resume()
     mDeadlineTimer->cancel();
 
 
-    mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeUntil));
+    mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
     return JSSuspendable::resume();
@@ -145,7 +145,7 @@ v8::Handle<v8::Value> JSTimerStruct::struct_resetTimer(double timeInSecondsToRef
     }
 
     mDeadlineTimer->cancel();
-    mDeadlineTimer->expires_from_now(boost::posix_time::seconds(timeInSecondsToRefire));
+    mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeInSecondsToRefire*1000000));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
     return JSSuspendable::resume();
