@@ -163,7 +163,7 @@ void Camera::tick(const Time& t, const Duration& dt) {
             pos = goalPos;
             orient = goalOrient;
         } else {
-            double step = exp(-dt.seconds()*5.f);
+            double step = exp(-dt.seconds()*2.f);
             pos = goalPos - (toGoal/toGoalLen)*(toGoalLen*step);
             orient = (goalOrient*(1.f-step) + orient*step).normal();
         }

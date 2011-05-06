@@ -42,11 +42,32 @@ system.require('movement.em');
  */
 std.movement.MoveAndRotate = system.Class.extend(
     {
-        init: function(pres) {
-            this._pres = pres;
-            this._localVel = pres.velocity;
+        UPDATE_TYPE_MOVEMENT: 1,
+        UPDATE_TYPE_ROTATION: 2,
+        UPDATE_TYPE_ALL: 3,
 
+        /** Initialize the controller with a presence. The optional parameter
+         *  update_cb is a function which is invoked periodically when the
+         *  position or orientation are updated. This is useful if you derive
+         *  some other information (e.g. camera position) from this state. The
+         *  final parameter controls what kind of updates you get callbacks for:
+         *  'all', 'rotation', or 'movement'. It defaults to 'all'.
+         */
+        init: function(pres, update_cb, update_type) {
+            this._pres = pres;
+            this._updatecb = update_cb; // May be undefined
+            if (update_type == 'movement')
+                this._update_type = this.UPDATE_TYPE_MOVEMENT;
+            else if (update_type == 'rotation')
+                this._update_type = this.UPDATE_TYPE_ROTATION;
+            else
+                this._update_type = this.UPDATE_TYPE_ALL;
+
+            this._localVel = pres.velocity;
             this._localOrientVel = pres.orientationVel;
+
+            this._moving = this.moving();
+            this._rotating = this.rotating();
         },
         moving: function() {
             return this._pres.velocity.lengthSquared() > 1e-08;
@@ -71,14 +92,39 @@ std.movement.MoveAndRotate = system.Class.extend(
             this._startReeval();
         },
         _startReeval: function() {
+            this._moving = this.moving();
+            this._rotating = this.rotating();
+
             // Usually people expect that holding down forward and left/right
             // will result in moving in a curve, i.e. that the velocity is in
             // local coordinates and gets updated automatically with rotation.
-            if (this.moving() && this.rotating())
-                system.timeout(.1, std.core.bind(this._reeval, this));
+            // Further, we also provide callbacks if requested, so we may need
+            // to setup timeouts for those, even if we don't need to update the
+            // info.
+
+            // These various conditions mean we can trigger reevaluation due to
+            // a number of conditions.
+            if ((this._update_type == this.UPDATE_TYPE_ALL && (this._moving || this._rotating)) ||
+                (this._update_type == this.UPDATE_TYPE_MOVEMENT && this._moving) ||
+                (this._update_type == this.UPDATE_TYPE_ROTATION && this._rotating) ||
+                (this._moving && this._rotating) // Real reeval
+               )
+                system.timeout(.05, std.core.bind(this._reeval, this));
         },
         _reeval: function() {
-            this._pres.velocity = this._pres.orientation.mul(this._localVel);
+            // Only perform reeval if we really need it
+            if (this._moving && this._rotating)
+                this._pres.velocity = this._pres.orientation.mul(this._localVel);
+
+            // Then do callbacks
+            if (this._updatecb &&
+                (this._update_type == this.UPDATE_TYPE_ALL ||
+                 (this._update_type == this.UPDATE_TYPE_MOVEMENT && this._moving) ||
+                 (this._update_type == this.UPDATE_TYPE_ROTATION && this._rotating))) {
+                this._updatecb();
+            }
+
+            // Loop, if necessary.
             this._startReeval();
         }
     }

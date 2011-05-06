@@ -59,7 +59,7 @@ function() {
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
 
-        this._moverot = new std.movement.MoveAndRotate(this._pres);
+        this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
             move: new std.graphics.MoveDragHandler(this._simulator),
@@ -197,13 +197,11 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.moveSelf = function(dir, val) {
         this._moverot.move(dir, this.defaultVelocityScaling * val);
-        this.updateCameraOffset();
     };
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.rotateSelf = function(about, val) {
         this._moverot.rotate(about, this.defaultRotationalVelocityScaling * val);
-        this.updateCameraOffset();
     };
 
     /** @function */
