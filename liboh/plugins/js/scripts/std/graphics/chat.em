@@ -51,6 +51,10 @@ std.graphics.Chat = system.Class.extend(
             this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this));
         },
 
+        toggle: function() {
+            this._ui.eval('Chat.toggleVisible()');
+        },
+
         // Send a message to all current members of the chat group
         sendAll: function(msg) {
             for(var i = 0; i < this._chat_group.length; i++) {
@@ -66,7 +70,7 @@ std.graphics.Chat = system.Class.extend(
 
         // Handle a chat message from someone else.
         onChatFromNeighbor: function(msg, sender) {
-            this._ui.eval('addMessage(' +  Escape.escapeString(msg.username + ': ' + msg.chat, '"') + ')' );
+            this._ui.eval('Chat.addMessage(' +  Escape.escapeString(msg.username + ': ' + msg.chat, '"') + ')' );
         },
 
         // Handle an initial message from a new neighbor, adding them and listening for messages from them.

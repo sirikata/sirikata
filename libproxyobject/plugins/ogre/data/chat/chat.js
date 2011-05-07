@@ -1,6 +1,8 @@
 
 (function() {
 
+Chat = {};
+
 var username = "";
 var pageScroll = function() {
     window.scrollBy(0,1000); // horizontal and vertical scroll increments
@@ -31,6 +33,7 @@ var addMessage = function(msg) {
 
     setTimeout('pageScroll()',100);
 };
+Chat.addMessage = addMessage;
 
 var clearCommand = function() {
     var command_area = document.getElementById('Command');
@@ -78,12 +81,15 @@ var handleCodeKeyUp = function(evt) {
     if (evt.shiftKey)
         shift_down = false;
 };
-var closePrompt = function() {
-    var arg_map = [
-        'Close'
-    ];
-    chrome.send("event", arg_map);
+
+var toggleVisible = function() {
+    var dialog = $( "#chat-dialog" );
+    if (dialog.dialog('isOpen'))
+        dialog.dialog('close');
+    else
+        dialog.dialog('open');
 };
+Chat.toggleVisible = toggleVisible;
 
 $(document).ready(
     function() {
@@ -99,7 +105,6 @@ $(document).ready(
           '   <form>' +
           '    <textarea id="Command" name="Command" rows="5" cols="30" ></textarea><br>' +
           '    <button id="chat-run-command" type="button">Send</button>' +
-          '    <button id="chat-close" type="button">Close</button>' +
           '   </form>' +
           '  </div>' +
           ' </div>' +
@@ -114,7 +119,6 @@ $(document).ready(
 	});
         $('#chat-log').hide();
         $('#chat-submit-name').click(registerHotkeys);
-        $('#chat-close').click(closePrompt);
         $('#chat-run-command').click(runCommand);
 });
 

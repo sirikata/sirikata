@@ -34,13 +34,12 @@
 // A sane, simple, default. Only includes functionality from libraries.
 system.require('std/script/scriptable.em');
 system.require('std/graphics/default.em');
-system.require('std/graphics/chat.em');
+
 
 scriptable = new std.script.Scriptable();
 system.onPresenceConnected(
     function(pres) {
         simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
-        chat = new std.graphics.Chat(pres, simulator.simulator());
         system.onPresenceConnected(function(){});
     }
 );

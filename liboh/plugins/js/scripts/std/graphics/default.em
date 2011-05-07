@@ -37,6 +37,7 @@ system.require('inputbinding.em');
 system.require('drag/move.em');
 system.require('drag/rotate.em');
 system.require('drag/scale.em');
+system.require('std/graphics/chat.em');
 
 (
 function() {
@@ -58,7 +59,7 @@ function() {
 
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
-
+        this._chat = new std.graphics.Chat(pres, this._simulator);
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
@@ -77,6 +78,8 @@ function() {
         this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
         this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
         this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
+
+        this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
 
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
@@ -118,6 +121,8 @@ function() {
             { key: ['button-pressed', 'm'], action: 'toggleSuspend' },
             { key: ['button-pressed', 's', 'alt' ], action: 'scriptSelectedObject' },
             { key: ['button-pressed', 's', 'ctrl' ], action: 'scriptSelf' },
+
+            { key: ['button-pressed', 'c', 'ctrl' ], action: 'toggleChat' },
 
             { key: ['mouse-click', 3], action: 'pickObject' },
             { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
@@ -173,6 +178,11 @@ function() {
     /** @public */
     std.graphics.DefaultGraphics.prototype.defaultRotationalVelocityScaling = .5;
 
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.toggleChat = function() {
+        this._chat.toggle();
+    };
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.scriptSelf = function() {
