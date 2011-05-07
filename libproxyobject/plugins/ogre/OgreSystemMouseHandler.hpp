@@ -83,7 +83,6 @@ private:
 
     void handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
-    void zoomAction(float value, Vector2f axes);
     Task::EventResponse keyHandler(Task::EventPtr ev);
     Task::EventResponse axisHandler(Task::EventPtr ev);
     Task::EventResponse textInputHandler(Task::EventPtr ev);

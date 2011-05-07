@@ -77,21 +77,22 @@ bool compareEntity (const Entity* one, const Entity* two)
     return one<two;
 }
 
-Vector3f pixelToDirection(Camera *cam, Quaternion orient, float xPixel, float yPixel) {
+Vector3f pixelToDirection(Camera *cam, float xPixel, float yPixel) {
     float xRadian, yRadian;
     //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);
     xRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * cam->getOgreCamera()->getAspectRatio() * xPixel;
     yRadian = sin(cam->getOgreCamera()->getFOVy().valueRadians()*.5) * yPixel;
 
+    Quaternion orient = cam->getOrientation();
     return Vector3f(-orient.zAxis()*cos(cam->getOgreCamera()->getFOVy().valueRadians()*.5) +
                     orient.xAxis() * xRadian +
                     orient.yAxis() * yRadian);
 }
 
 void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup) {
-    Location location(cam->following()->getProxy().globalLocation(time));
-    Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
-    Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
+    Vector3d pos = cam->getPosition();
+    Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
+    Ogre::Ray traceFrom(toOgre(pos, mParent->getOffset()), toOgre(dir));
     ProxyObjectPtr obj(mMouseDownObject.lock());
     Entity *ent = obj ? mParent->getEntity(obj->getObjectReference()) : NULL;
     if (mMouseDownTri.intersected && ent) {
@@ -113,15 +114,15 @@ void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPix
 }
 
 Entity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which) {
-    Location location(cam->following()->getProxy().globalLocation(time));
-    Vector3f dir (pixelToDirection(cam, location.getOrientation(), xPixel, yPixel));
-    SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<location.getPosition()<<"; dir = "<<dir);
+    Vector3d pos = cam->getPosition();
+    Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
+    SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<pos<<"; dir = "<<dir);
 
     double dist;
     Vector3f normal;
     IntersectResult res;
     int subent=-1;
-    Ogre::Ray traceFrom(toOgre(location.getPosition(), mParent->getOffset()), toOgre(dir));
+    Ogre::Ray traceFrom(toOgre(pos, mParent->getOffset()), toOgre(dir));
     Entity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
     if (mousedown && mouseOverEntity) {
         Entity *me = mouseOverEntity;
@@ -222,41 +223,6 @@ inline Vector3f direction(Quaternion cameraAngle) {
     return -cameraAngle.zAxis();
 }
 
-void zoomInOut(float value, const Vector2f& axes, Camera *camera, OgreSystem *parent) {
-    SILOG(input,debug,"zoom "<<value);
-
-    Time now = parent->simTime();
-
-    Location cameraLoc = camera->following()->getProxy().extrapolateLocation(now);
-    Location cameraGlobalLoc = camera->following()->getProxy().globalLocation(now);
-    Vector3d toMove;
-    int subent;
-
-    toMove = Vector3d(pixelToDirection(camera, cameraLoc.getOrientation(), axes.x, axes.y));
-
-    double distance;
-    Vector3f normal;
-    float WORLD_SCALE = parent->getInputManager()->mWorldScale->as<float>();
-    int hitCount=0;
-    if (!parent->getInputManager()->isModifierDown(Input::MOD_CTRL) &&
-        !parent->getInputManager()->isModifierDown(Input::MOD_SHIFT)) {
-        toMove *= WORLD_SCALE;
-    } else if (parent->rayTrace(cameraGlobalLoc.getPosition(), direction(cameraGlobalLoc.getOrientation()), hitCount, distance, normal, subent) &&
-               (distance*.75 < WORLD_SCALE || parent->getInputManager()->isModifierDown(Input::MOD_SHIFT))) {
-        toMove *= distance*.75;
-    } else {
-        toMove *= WORLD_SCALE;
-    }
-    toMove *= value; // up == zoom in
-    cameraLoc.setPosition(cameraLoc.getPosition() + toMove);
-    //camera->following()->getProxy().resetLocation(now, cameraLoc);
-}
-
-void OgreSystemMouseHandler::zoomAction(float value, Vector2f axes)
-{
-    if (!mParent||!mParent->mPrimaryCamera) return;
-    zoomInOut(value, axes, mParent->mPrimaryCamera, mParent);
-}
 
 ///// Top Level Input Event Handlers //////
 

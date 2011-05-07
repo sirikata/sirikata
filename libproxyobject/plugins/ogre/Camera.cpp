@@ -94,6 +94,13 @@ void Camera::setMode(Mode m) {
     mFollowing->setVisible( mMode == FirstPerson ? false : true );
 }
 
+Vector3d Camera::getPosition() const {
+    return fromOgre(mSceneNode->getPosition(), mFollowing->getScene()->getOffset());
+}
+Quaternion Camera::getOrientation() const {
+    return fromOgre(mSceneNode->getOrientation());
+}
+
 void Camera::attach (const String&renderTargetName,uint32 width,uint32 height,Vector4f back_color)
 {
     this->detach();

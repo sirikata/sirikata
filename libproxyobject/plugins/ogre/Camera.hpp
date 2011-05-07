@@ -91,6 +91,9 @@ public:
     void setOffset(Vector3d offset) {
         mOffset = offset;
     }
+
+    Vector3d getPosition() const;
+    Quaternion getOrientation() const;
 private:
 
     static String ogreCameraName(const SpaceObjectReference&ref);
