@@ -1252,8 +1252,12 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
 
     if (!mMouseHandler) return NULL;
 
-    //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url +
-    //"')");
+    //This is disabled and we put these directly in the ui.html
+    //script currently because evaluateJS may execute before the page
+    //finishes loading, resulting in loadModule not being defined
+    //yet. This could be considered either our problem or a problem
+    //with Berkelium.
+    //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url + "')");
     return Invokable::asAny(mMouseHandler->mUIWidgetView);
 }
 

@@ -154,6 +154,11 @@ function() {
     };
 
     /** @function */
+    std.graphics.DefaultGraphics.prototype.simulator = function() {
+        return this._simulator;
+    };
+
+    /** @function */
     std.graphics.DefaultGraphics.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);

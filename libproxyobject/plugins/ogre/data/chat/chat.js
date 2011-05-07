@@ -1,0 +1,121 @@
+
+(function() {
+
+var username = "";
+var pageScroll = function() {
+    window.scrollBy(0,1000); // horizontal and vertical scroll increments
+};
+
+var filterMessage = function(msg, node) {
+    // Filter a message for special characters and convert them to
+    // display nicely using html
+
+    // Convert tabs to 4 spaces
+    msg = msg.replace('\t', '&nbsp;&nbsp;&nbsp;&nbsp;');
+
+    var sub_msgs = msg.split('\n');
+
+    for(var i = 0; i < sub_msgs.length; i++) {
+        var p = document.createElement('p');
+        node.appendChild( p );
+        p.appendChild( document.createTextNode(sub_msgs[i]) );
+    }
+};
+
+var addMessage = function(msg) {
+    var new_p = document.createElement('div');
+    filterMessage(msg, new_p);
+    new_p.className = 'command';
+    var results_div = document.getElementById('Results');
+    results_div.appendChild( new_p );
+
+    setTimeout('pageScroll()',100);
+};
+
+var clearCommand = function() {
+    var command_area = document.getElementById('Command');
+    command_area.value = '';
+};
+
+var runCommand = function() {
+    var command_area = document.getElementById('Command');
+    var command = command_area.value;
+    command_area.value = '';
+
+    addMessage(username + ": " + command);
+
+    var arg_map = [
+        'Chat', username, command
+    ];
+    chrome.send("event", arg_map);
+};
+
+// We track key up and key down to make shift + enter trigger a send
+var registerHotkeys = function(evt) {
+    console.log('registerHotkeys');
+    var command_area = document.getElementById('Command');
+    command_area.onkeydown = handleCodeKeyDown;
+    command_area.onkeyup = handleCodeKeyUp;
+
+    $('#chat-login').hide();
+    $('#chat-log').show();
+
+    username = document.getElementById('username').value;
+};
+
+var shift_down = false;
+var handleCodeKeyDown = function(evt) {
+    if (evt.shiftKey)
+        shift_down = true;
+    if (evt.keyCode == 13 && shift_down) {
+        runCommand();
+        // We set a timeout because the addition of the new line occurs *after* this handler
+        setTimeout('clearCommand()',1);
+    }
+};
+
+var handleCodeKeyUp = function(evt) {
+    if (evt.shiftKey)
+        shift_down = false;
+};
+var closePrompt = function() {
+    var arg_map = [
+        'Close'
+    ];
+    chrome.send("event", arg_map);
+};
+
+$(document).ready(
+    function() {
+        $('<div>' +
+          ' <div id="chat-login">' +
+          '  Username: <input type="text" id="username" name="username"/>' +
+          '  <button id="chat-submit-name">Register</button>' +
+          ' </div>' +
+          ' <div id="chat-log">' +
+          '  <div id="Results">' +
+          '  </div>' +
+          '  <div>' +
+          '   <form>' +
+          '    <textarea id="Command" name="Command" rows="5" cols="30" ></textarea><br>' +
+          '    <button id="chat-run-command" type="button">Send</button>' +
+          '    <button id="chat-close" type="button">Close</button>' +
+          '   </form>' +
+          '  </div>' +
+          ' </div>' +
+          '</div>').attr({id:'chat-dialog', title:'Chat'}).appendTo('body');
+
+	$( "#chat-dialog" ).dialog({
+		autoOpen: false,
+		height: 'auto',
+		width: 300,
+                height: 400,
+		modal: false
+	});
+        $('#chat-log').hide();
+        $('#chat-submit-name').click(registerHotkeys);
+        $('#chat-close').click(closePrompt);
+        $('#chat-run-command').click(runCommand);
+});
+
+})();
