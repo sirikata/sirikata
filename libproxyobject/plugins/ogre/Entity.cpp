@@ -110,7 +110,8 @@ Entity::Entity(OgreSystem *scene,
     mOgreObject(NULL),
     mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(ppo->getObjectReference()) )),
     mMovingIter(scene->mMovingEntities.end()),
-    mHaveURIHash(false)
+    mHaveURIHash(false),
+    mVisible(true)
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
 
