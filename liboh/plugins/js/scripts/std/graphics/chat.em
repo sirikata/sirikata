@@ -45,7 +45,7 @@ std.graphics.Chat = system.Class.extend(
             this._chat_group = [];
 
             this._ui = this._sim.addGUIModule("chat_dialog", "chat/chat.js");
-            this._ui.bind("event", std.core.bind(this.onSendChat, this));
+            this._ui.bind("chat", std.core.bind(this.onSendChat, this));
             var p  = new util.Pattern("name", "get_protocol");
             std.core.bind(this.onTestMessage, this) <- p;
             this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this));
