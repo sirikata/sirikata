@@ -44,7 +44,6 @@ struct JSPositionListener : public PositionListener
     SpaceObjectReference* getToListenTo();
     SpaceObjectReference* getToListenFrom();
 
-    v8::Handle<v8::Value> sendMessage (String& msgToSend);
 
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
     virtual void destroyed();

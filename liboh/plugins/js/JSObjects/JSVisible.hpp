@@ -18,7 +18,6 @@ namespace JSVisible {
 
 v8::Handle<v8::Value> toString(const v8::Arguments& args);
 v8::Handle<v8::Value> __debugRef(const v8::Arguments& args);
-v8::Handle<v8::Value> __visibleSendMessage (const v8::Arguments& args);
 v8::Handle<v8::Value> getPosition(const v8::Arguments& args);
 v8::Handle<v8::Value> getVelocity(const v8::Arguments& args);
 v8::Handle<v8::Value> getOrientation(const v8::Arguments& args);
