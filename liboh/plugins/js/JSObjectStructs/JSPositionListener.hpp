@@ -5,6 +5,8 @@
 #include <v8.h>
 
 #include "JSContextStruct.hpp"
+
+
 namespace Sirikata {
 namespace JS {
 

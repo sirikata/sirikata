@@ -5,6 +5,8 @@
 #include <v8.h>
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
+#include "JSPositionListener.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -14,7 +16,7 @@ class JSObjectScript;
 class JSContextStruct;
 class JSEventHandlerStruct;
 class JSPresenceStruct;
-
+class JSPositionListener;
 
 
 //Most calls in this class just go straight through into associated context to
@@ -70,6 +72,10 @@ struct JSSystemStruct
     //calls eval on the system's context associated with this system.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
+    
+    v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl);
+        
+    
 
     //create a timer that will fire in dur seconds from now, that will bind the
     //this parameter to target and that will fire the callback cb.

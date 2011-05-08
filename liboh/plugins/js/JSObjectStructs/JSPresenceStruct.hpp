@@ -3,7 +3,7 @@
 
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
-#include "JSPositionListener.hpp"
+
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
 
@@ -13,7 +13,7 @@ namespace JS {
 
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
-
+class JSPositionListener;
 
 //note: only position and isConnected will actually set the flag of the watchable
 struct JSPresenceStruct : public JSPositionListener,

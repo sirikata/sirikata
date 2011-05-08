@@ -183,7 +183,9 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
-
+    mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessage));
+    
+    mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     //check what permissions fake root is loaded with
     mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));

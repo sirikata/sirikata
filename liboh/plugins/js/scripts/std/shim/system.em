@@ -177,6 +177,18 @@ if(system == undefined)
         };
 
 
+          /** @function
+
+           @param Which presence to send from.
+           @param Message object to send.
+           @param Visible to send to.
+           @param (Optional) Error handler function.
+           */
+          this.sendMessage = function()
+          {
+              baseSystem.sendMessage.apply(baseSystem, arguments);
+          };
+          
         /** @function
          @param scriptFile The Emerson file to import and execute in the current script
          */

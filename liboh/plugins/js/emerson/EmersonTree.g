@@ -140,6 +140,8 @@ functionBody
 // statements
 statement
     : noOpStatement
+    | msgRecvStatement    
+    | msgSendStatement
     | statementBlock
     | variableStatement
     | expressionStatement
@@ -154,8 +156,6 @@ statement
     | throwStatement
     | whenStatement
     | tryStatement
-    | msgSendStatement
-    | msgRecvStatement
     ;   
 
 noOpStatement
@@ -251,11 +251,6 @@ initialiserNoIn
 	: expressionNoIn
 	;
 	
-	/*
-emptyStatement
-	: 
-	;
-	*/
 	
 expressionStatement
 	: expression
@@ -585,66 +580,122 @@ finallyBlock
         ;
 
 msgSendStatement
-scope{
-        pANTLR3_STRING prev_program_string;
-	unsigned int  prev_program_len;
-	char* firstExprString;
-	char* secondExprString;
-        pANTLR3_STRING init_program_string;
+        : ^(MESSAGE_SEND_WITHOUT_SENDER
+            {
+                APP("system.sendMessage(system.self," );
+            }
+            leftHandSideExpression
+            {
+                //message to send
+                APP(",");
+            }
+            leftHandSideExpression
+            {
+                //recipient
+            }
+            (
+               {
+                    //optional what to do in case of failure
+                    APP(",");
+               }
+               memberExpression
+            )*
+            {
+                APP(" )");
+            }
+          )
+       |  ^(MESSAGE_SEND_WITH_SENDER
+            {
+                APP("system.sendMessage(");
+            }
+            leftHandSideExpression
+            {
+                //sender
+                APP(",");
+            }
+                        leftHandSideExpression
+            {
+                //message to send
+                APP(",");
+            }
+            leftHandSideExpression
+            {
+                //recipient
+            }
+            (
+               {
+                    //optional what to do in case of failure
+                    APP(",");
+               }
+               memberExpression
+            )*
+            {
+                APP(" )");
+            }
+          )
+      ;
 
-}
- : ^(
-     MESSAGE_SEND 
-     /* A little hack for the things to work */
-     {
-          /* Save the program string here */
-          $msgSendStatement::prev_program_string = program_string;
-          /* length of the program string */
-          $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
-          pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
-          $msgSendStatement::init_program_string = factory->newRaw(factory);
-          $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
-      }
-      leftHandSideExpression 
-      {
-          unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-          unsigned int  new_program_len = program_string->len;
-          $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-          memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
-          memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
+// msgSendStatement
+// scope{
+//         pANTLR3_STRING prev_program_string;
+// 	unsigned int  prev_program_len;
+// 	char* firstExprString;
+// 	char* secondExprString;
+//         pANTLR3_STRING init_program_string;
+
+// }
+//  : ^(
+//      MESSAGE_SEND 
+//      /* A little hack for the things to work */
+//      {
+//           /* Save the program string here */
+//           $msgSendStatement::prev_program_string = program_string;
+//           /* length of the program string */
+//           $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
+//           pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
+//           $msgSendStatement::init_program_string = factory->newRaw(factory);
+//           $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
+//       }
+//       leftHandSideExpression 
+//       {
+//           unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+//           unsigned int  new_program_len = program_string->len;
+//           $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+//           memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
+//           memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
 						 
-          $msgSendStatement::prev_program_len = new_program_len; 
-          //APP(".sendMessage( ");
-      }
-      leftHandSideExpression 
-      {
-          unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-          unsigned int new_program_len = program_string->len;
-          $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-          memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
-          memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
+//           $msgSendStatement::prev_program_len = new_program_len; 
+//           //APP(".sendMessage( ");
+//       }
+//       leftHandSideExpression 
+//       {
+//           unsigned int prev_program_len = $msgSendStatement::prev_program_len;
+//           unsigned int new_program_len = program_string->len;
+//           $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
+//           memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
+//           memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
 
-          pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
-          init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
-          init_program_string->append(init_program_string, ".sendMessage( ");
-          init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
+//           pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
+//           init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
+//           init_program_string->append(init_program_string, ".sendMessage( ");
+//           init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
 
-          program_string->setS(program_string, init_program_string); 
+//           program_string->setS(program_string, init_program_string); 
 
-       }      				
-       (
-          {
-            APP(", ");
-          }
-          memberExpression
-          {
-          }	
-       )?
-       {
-          APP(" ) ");
-       }
-       )
-       ;
+//        }      				
+//        (
+//           {
+//             APP(", ");
+//           }
+//           memberExpression
+//           {
+//           }	
+//        )?
+//        {
+//           APP(" ) ");
+//        }
+//        )
+//        ;
 
 memAndCallExpression
 : memberExpression

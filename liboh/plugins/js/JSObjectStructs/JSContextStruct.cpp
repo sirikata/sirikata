@@ -81,6 +81,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_createVec3(Vector3d& toCreate)
     return CreateJSResult_Vec3Impl(mContext, toCreate);
 }
 
+v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl)
+{
+    jsObjScript->sendMessageToEntity( jspl->getToListenTo(), jspres->getSporef(), serialized_message);
+    
+    return v8::Undefined();    
+}
+
 
 
 //string argument is the filename that we're trying to open and execute

@@ -21,6 +21,64 @@ namespace Sirikata {
 namespace JS {
 namespace JSSystem {
 
+
+
+/**
+   @param Which presence to send from.
+   @param Message object to send.
+   @param Visible to send to.
+   @param (Optional) Error handler function.
+
+   Sends a message to the presence associated with this visible object from the
+   presence that can see this visible object.
+ */
+v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
+{
+    if ((args.Length() != 4) && (args.Length() != 3))
+    {
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Requires 3 or four arguments.  <which presence to send from><msg object to send><visible to send to><(optional)error handler function>")));
+    }
+
+    //which pres to send from
+    v8::Handle<v8::Value> presToSendFrom = args[0];
+    String errMsg = "Error decoding presence argument to send message.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(presToSendFrom,errMsg);
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
+
+    //decode string argument
+    v8::Handle<v8::Value> messageBody = args[1];
+    if(!messageBody->IsObject())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object.")) );
+
+    //serialize the object to send
+    Local<v8::Object> v8Object = messageBody->ToObject();
+    std::string serialized_message = JSSerializer::serializeObject(v8Object);
+
+
+    //visible to send to
+    v8::Handle<v8::Value> visToSendTo = args[2];
+    //decode the visible struct associated with this object
+    std::string errorMessage = "In __visibleSendMessage function of visible.  ";
+
+    //want to decode to position listener to send message out of.
+    JSPositionListener* jspl = decodeJSPosListener(visToSendTo,errorMessage);
+
+    if (jspl == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    //decode system object
+    errorMessage = "Error decoding error message when sending message";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
+}
+
+
+
 /**
    @return Boolean indicating whether this sandbox has permission to send out of
    its default presence.

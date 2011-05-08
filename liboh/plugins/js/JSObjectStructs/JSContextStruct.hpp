@@ -14,6 +14,8 @@
 #include "../JSUtil.hpp"
 #include <sirikata/core/util/Vector3.hpp>
 
+
+
 namespace Sirikata {
 namespace JS {
 
@@ -22,6 +24,9 @@ class JSObjectScript;
 class JSPresenceStruct;
 class JSTimerStruct;
 class JSUtilObjStruct;
+class JSPositionListener;
+class JSSystemStruct;
+
 
 struct JSContextStruct : public JSSuspendable
 {
@@ -120,6 +125,8 @@ struct JSContextStruct : public JSSuspendable
     //sOrigin inside of this context.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
+    v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl);
+    
 
     //register cb_persist as the default handler that gets thrown
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
@@ -141,6 +148,12 @@ struct JSContextStruct : public JSSuspendable
 
     String getScript();
 
+    
+    JSPresenceStruct* getAssociatedPresenceStruct()
+    {
+        return associatedPresence;
+    }
+    
 private:
 
     //runs through suspendable map to check if have a presence in this sandbox

@@ -9,6 +9,7 @@
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
+#include "JSPositionListener.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -52,6 +53,23 @@ v8::Handle<v8::Value> JSSystemStruct::struct_import(const String& toImportFrom)
 v8::Handle<v8::Value> JSSystemStruct::struct_canImport()
 {
     return v8::Boolean::New(canImport);
+}
+
+
+v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl)
+{
+
+    //checking capability for this presence
+    if(getContext()->getAssociatedPresenceStruct() != NULL)
+    {
+        if (*(getContext()->getAssociatedPresenceStruct()->getToListenTo()) == *(jspres->getToListenTo()))
+        {
+            if (!canSend)
+                return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to send messages.")));
+        }
+    }
+
+    return associatedContext->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
 

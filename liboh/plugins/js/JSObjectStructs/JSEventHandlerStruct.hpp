@@ -5,11 +5,12 @@
 #include <vector>
 #include "../JSPattern.hpp"
 #include "JSSuspendable.hpp"
-#include "JSContextStruct.hpp"
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 
 namespace Sirikata{
 namespace JS{
 
+class JSContextStruct;
 
 struct JSEventHandlerStruct : public JSSuspendable
 {

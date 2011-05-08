@@ -115,6 +115,8 @@ tokens
     TERNARYOP;
     EMPTY_FUNC_BODY;
     MESSAGE_SEND;
+    MESSAGE_SEND_WITHOUT_SENDER;
+    MESSAGE_SEND_WITH_SENDER;
     MESSAGE_RECV;
     PAREN;
     PATTERN_LITERAL;
@@ -171,6 +173,7 @@ functionBody
 statement
 	: noOpStatement
         | (msgRecvStatement) => msgRecvStatement
+      	| (msgSendStatement) => msgSendStatement    
         | statementBlock
 	| variableStatement
 	| emptyStatement
@@ -186,8 +189,6 @@ statement
 	| throwStatement
         | whenStatement
 	| tryStatement
-	| (msgSendStatement) => msgSendStatement
-	| msgSendStatement
 	;
 	
 statementBlock
@@ -357,9 +358,16 @@ finallyBlock
 
 
 msgSendStatement
-        : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
+        : sender=leftHandSideExpression LTERM* ':' LTERM*  e1=leftHandSideExpression LTERM* '->' e2=leftHandSideExpression LTERM* ( '->' LTERM* memberExpression LTERM*)* ';'    -> ^(MESSAGE_SEND_WITH_SENDER $sender $e1 $e2 memberExpression*)
+        | e1=leftHandSideExpression LTERM* '->' e2=leftHandSideExpression LTERM* ( '->' LTERM* memberExpression LTERM*)* ';'    -> ^(MESSAGE_SEND_WITHOUT_SENDER $e1 $e2 memberExpression*) 
         ;
 
+//lkjs;        
+// msgSendStatement
+//         : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
+//         ;
+
+        
 
 memAndCallExpression
         : callExpression -> callExpression
