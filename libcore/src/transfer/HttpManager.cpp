@@ -107,10 +107,10 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
 }
 
 void HttpManager::processQueue() {
-    /*SILOG(transfer, debug, "processQueue called, mNumTotalConnections = "
+    SILOG(transfer, insane, "processQueue called, mNumTotalConnections = "
             << mNumTotalConnections << " and recycle bin size = " << mRecycleBin.size()
             << " and size of hosts = " << mNumConnsPerAddr.size()
-            << " and request queue size = " << mRequestQueue.size());*/
+            << " and request queue size = " << mRequestQueue.size());
 
     boost::unique_lock<boost::mutex> lockQueue(mRequestQueueLock);
     boost::unique_lock<boost::mutex> lockNumConns(mNumConnsLock, boost::defer_lock);
@@ -298,8 +298,8 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         std::tr1::shared_ptr<std::vector<unsigned char> > vecbuf, std::tr1::shared_ptr<HttpResponse> respPtr,
         const boost::system::error_code& err, std::size_t bytes_transferred) {
 
-    /*SILOG(transfer, debug, "handle_read triggered with bytes_transferred = " << bytes_transferred << " EOF? "
-            << (err == boost::asio::error::eof ? "Y" : "N"));*/
+    SILOG(transfer, insane, "handle_read triggered with bytes_transferred = " << bytes_transferred << " EOF? "
+            << (err == boost::asio::error::eof ? "Y" : "N"));
 
     if ((err || bytes_transferred == 0) && err != boost::asio::error::eof) {
         SILOG(transfer, error, "Failed to write. Error = " << err.message());
