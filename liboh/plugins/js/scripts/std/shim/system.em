@@ -117,6 +117,19 @@ if(system == undefined)
             baseSystem.sendHome.apply(baseSystem, arguments);
         };
 
+
+          /** @function
+           @param string space and object id of a visible object.  
+
+           @return a visible object with the space and object id contained argument.
+           
+           Throws an exception if string is incorrectly formatted, otherwise returns vis object.
+           */
+          this.createVisible = function(/**String**/strToCreateFrom){
+              //baseSystem.createVisible(strToCreateFrom);
+              return baseSystem.createVisible.apply(baseSystem,arguments);
+          };
+          
           /** @function
            @description This function evaluates the emerson string that is passed in as its single argument.
 

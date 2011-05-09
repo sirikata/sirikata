@@ -54,6 +54,8 @@ struct JSContextStruct : public JSSuspendable
     //this context
     v8::Handle<v8::Object> struct_getSystem();
 
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporef);
+    
 
     //creates a new jseventhandlerstruct and wraps it in a js object
     //registers the jseventhandlerstruct both with this context and

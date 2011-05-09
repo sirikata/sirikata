@@ -26,6 +26,8 @@ v8::Handle<v8::Value> root_canCreatePres(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canCreateEnt(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canEval(const v8::Arguments& args);
 
+v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args);
+
 
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);
 v8::Handle<v8::Value> root_require(const v8::Arguments& args);

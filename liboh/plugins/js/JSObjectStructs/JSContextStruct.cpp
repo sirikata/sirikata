@@ -59,9 +59,6 @@ void JSContextStruct::createContextObjects()
     system_obj->SetInternalField(SYSTEM_TEMPLATE_SYSTEM_FIELD, v8::External::New(mSystem));
     system_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(SYSTEM_TYPEID_STRING)));
 
-
-
-
     v8::Local<v8::Array> arrayObj = v8::Array::New();
     system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 
@@ -73,6 +70,14 @@ void JSContextStruct::createContextObjects()
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 }
+
+
+v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporef)
+{
+    v8::HandleScope handle_scope;
+    return jsObjScript->createVisiblePersistent(sporef,SpaceObjectReference::null(),false,mContext);
+}
+
 
 
 //creates a vec3 emerson object out of the vec3d cpp object passed in.

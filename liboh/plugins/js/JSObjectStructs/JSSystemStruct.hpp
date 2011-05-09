@@ -40,7 +40,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
-
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporef);
+    
 
     v8::Handle<v8::Value> struct_getPosition();
 

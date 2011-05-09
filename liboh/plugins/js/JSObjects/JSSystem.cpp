@@ -78,6 +78,38 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require a single string argument to create visible object.")));
+
+    String decodedStr;
+    String errMsg = "Error in system when trying to createVisible.  ";
+    bool strDecode = decodeString(args[0],decodedStr,errMsg);
+    if (! strDecode )
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+        
+    try
+    {
+        SpaceObjectReference sporef(decodedStr);
+        return jssys->struct_create_vis(sporef);
+    }
+    catch (std::invalid_argument& ia)
+    {
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error.  Cannot decode address passed in.")));
+    }
+
+    return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error creating visible object.")));
+}
+
 
 /**
    @return Boolean indicating whether this sandbox has permission to send out of

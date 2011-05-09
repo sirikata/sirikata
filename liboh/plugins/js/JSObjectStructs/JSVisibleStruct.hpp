@@ -26,6 +26,8 @@ public:
     static JSVisibleStruct* decodeVisible(v8::Handle<v8::Value> senderVal,std::string& errorMessage);
 
 
+    
+
     //methods mapped to javascript's visible object
     bool getStillVisibleCPP();
     v8::Handle<v8::Value> toString();

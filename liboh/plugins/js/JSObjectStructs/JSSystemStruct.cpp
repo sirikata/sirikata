@@ -32,6 +32,11 @@ JSSystemStruct::~JSSystemStruct()
 {
 }
 
+v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporef)
+{
+    return associatedContext->struct_create_vis(sporef);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom)
 {
