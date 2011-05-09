@@ -152,6 +152,8 @@ protected:
 
 private:
 
+    void updatePhysicsWorld(const UUID& uuid);
+
     //Bullet Dynamics World Vars
     btBroadphaseInterface* broadphase;
 
