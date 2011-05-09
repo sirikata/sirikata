@@ -801,6 +801,10 @@ void Proximity::poll() {
 }
 
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
     mLocService->subscribe(subscriber, observed);
 }
 void Proximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
@@ -811,6 +815,10 @@ void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
 }
 
 void Proximity::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
     mLocService->subscribe(subscriber, observed);
 }
 void Proximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
