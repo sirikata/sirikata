@@ -161,6 +161,8 @@ public:
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
     void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
 
+    v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference* sporef);
+    void setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhysicsString);
 
     /****Methods that return V8 wrappers for c++ objects **/
     //attempts to make a new jsvisiblestruct if don't already have one in
@@ -257,7 +259,7 @@ private:
     std::stack<EvalContext> mEvalContextStack;
 
     std::set<String> mImportedFiles;
-    
+
     // add an extenstion to the filename that you get for import/require
     std::string* extensionize(std::string);
 

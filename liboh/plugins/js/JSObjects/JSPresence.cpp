@@ -574,6 +574,43 @@ Handle<v8::Value> toString(const v8::Arguments& args)
 }
 
 
+/**
+   @return A string corresponding to the URI for your current mesh.  Can pass
+   this uri to setMesh functions.
+*/
+Handle<v8::Value> getPhysics(const v8::Arguments& args)
+{
+    String errorMessage = "Error in getPhysics while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return mStruct->getPhysicsFunction();
+}
+
+/**
+   @param String containing physics settings
+   Changes the physical properties of the associated presence.
+*/
+Handle<v8::Value> setPhysics(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the setPhysics function.")) );
+
+    String errorMessage = "Error in setPhysics while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    if (!StringValidate(args[0]))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in setPhysics function. Wrong argument: require a string for physical parameters.")) );
+    String phy(StringExtract(args[0]));
+
+    return mStruct->setPhysicsFunction(phy);
+}
+
 
 } //end jspresence namespace
 } //end js namespace

@@ -129,10 +129,18 @@ Object.defineProperty(system.__presence_constructor__.prototype, "mesh",
                       }
 );
 
+Object.defineProperty(system.__presence_constructor__.prototype, "physics",
+                      {
+                          get: function() { return this.getPhysics(); },
+                          set: function() { return this.setPhysics.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
 system.__presence_constructor__.prototype.__prettyPrintFieldsData__ = [
     "position", "velocity",
     "orientation", "orientationVel",
-    "scale", "mesh"
+    "scale", "mesh", "physics"
 ];
 system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     return this.__prettyPrintFieldsData__;

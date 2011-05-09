@@ -1597,6 +1597,20 @@ void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, cons
     mParent->requestMeshUpdate(sporef->space(),sporef->object(),newMeshString);
 }
 
+//physics
+v8::Handle<v8::Value> JSObjectScript::getPhysicsFunction(const SpaceObjectReference* sporef)
+{
+    String curphy = mParent->requestCurrentPhysics(sporef->space(),sporef->object());
+    return v8::String::New(curphy.c_str(), curphy.size());
+}
+
+//FIXME: May want to have an error handler for this function.
+void JSObjectScript::setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhyString)
+{
+    //FIXME: need to also pass in the object reference
+    mParent->requestPhysicsUpdate(sporef->space(), sporef->object(), newPhyString);
+}
+
 
 //just sets the solid angle query for the object.
 void JSObjectScript::setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa)

@@ -366,6 +366,7 @@ public:
 
     virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
 
+    virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle);

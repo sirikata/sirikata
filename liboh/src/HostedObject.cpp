@@ -1093,6 +1093,11 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
     sendLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
 }
 
+const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref) {
+    ProxyObjectPtr proxy_obj = getProxy(space, oref);
+    return proxy_obj->getPhysics();
+}
+
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
 {
     sendLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);

@@ -21,7 +21,7 @@ struct JSPresenceStruct : public JSPositionListener,
 
 {
     //isConnected is false using this: have no sporef.
-    JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken); 
+    JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken);
     JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
     ~JSPresenceStruct();
 
@@ -34,14 +34,14 @@ struct JSPresenceStruct : public JSPositionListener,
     virtual v8::Handle<v8::Value> resume();
     virtual v8::Handle<v8::Value> clear();
 
-    
+
     v8::Handle<v8::Value> registerOnProxRemovedEventHandler(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb);
 
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
 
-    
+
     bool getIsConnected();
     v8::Handle<v8::Value> getIsConnectedV8();
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
@@ -68,13 +68,16 @@ struct JSPresenceStruct : public JSPositionListener,
 
     v8::Handle<v8::Value>  getVisualFunction();
 
+    v8::Handle<v8::Value>  getPhysicsFunction();
+    v8::Handle<v8::Value>  setPhysicsFunction(const String& loc);
+
     //returns this presence as a visible object.
     v8::Persistent<v8::Object>  toVisible();
 
     //gets the associated jsobjectscript to request hosted object to disconnect
     //this presence.
     v8::Handle<v8::Value>requestDisconnect();
-    
+
     v8::Handle<v8::Value>  runSimulation(String simname);
 
     v8::Handle<v8::Value>  toString()
@@ -97,7 +100,7 @@ private:
     //this function checks if we have a callback associated with this presence.
     //Then it asks jsobjectscript to call the callback
     void callConnectedCallback();
-    
+
     //data
     bool isConnected;
     bool hasConnectedCallback;
@@ -111,7 +114,7 @@ private:
     //on resume, use these velocities to resume from.
     Vector3f   mSuspendedVelocity;
     Quaternion mSuspendedOrientationVelocity;
-    
+
     JSContextStruct* mContext;
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();

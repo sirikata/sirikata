@@ -40,6 +40,9 @@ v8::Handle<v8::Value>  getScale(const v8::Arguments& args);
 
 v8::Handle<v8::Value>  setQueryAngle(const v8::Arguments& args);
 
+v8::Handle<v8::Value>  setPhysics(const v8::Arguments& args);
+v8::Handle<v8::Value>  getPhysics(const v8::Arguments& args);
+
 v8::Handle<v8::Value> toString(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);
 void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
