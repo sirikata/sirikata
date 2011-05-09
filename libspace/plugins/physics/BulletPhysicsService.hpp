@@ -148,7 +148,8 @@ protected:
 
 	LocationMap mLocations;
 
-	std::vector<UUID> physicsUpdates;
+    typedef std::tr1::unordered_set<UUID, UUID::Hasher> UUIDSet;
+    UUIDSet physicsUpdates;
 
 private:
 
@@ -231,7 +232,7 @@ public:
 		}
         //printf("New Position: %f, %f, %f\n", pos.x(), pos.y(), pos.z());
 
-        ptrToService->physicsUpdates.push_back(mUUID);
+        ptrToService->physicsUpdates.insert(mUUID);
     }
 
 protected:

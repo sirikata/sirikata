@@ -126,13 +126,12 @@ void BulletPhysicsService::service() {
 
     dynamicsWorld->stepSimulation(simForwardTime, 10);
 
-    for(unsigned int i = 0; i < physicsUpdates.size(); i++) {
-		LocationMap::iterator it = mLocations.find(physicsUpdates[i]);
-		if(it != mLocations.end()) {
-			notifyLocalLocationUpdated( physicsUpdates[i], it->second.aggregate, it->second.location );
-		}
-	}
-	physicsUpdates.empty();
+    for(UUIDSet::iterator i = physicsUpdates.begin(); i != physicsUpdates.end(); i++) {
+        LocationMap::iterator it = mLocations.find(*i);
+        if(it != mLocations.end())
+            notifyLocalLocationUpdated(*i, it->second.aggregate, it->second.location );
+    }
+    physicsUpdates.clear();
 
     mUpdatePolicy->service();
 }
