@@ -295,6 +295,7 @@ void SessionManager::connect(
     using std::tr1::placeholders::_5;
     using std::tr1::placeholders::_6;
     using std::tr1::placeholders::_7;
+    using std::tr1::placeholders::_8;
 
     ConnectingInfo ci;
     ci.loc = init_loc;
