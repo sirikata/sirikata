@@ -162,6 +162,15 @@ if(system == undefined)
             return std.core.bind(returner,this);
         };
 
+          /** @function
+
+           @return returns the script that was set by setScript, and that is associated with this sandbox.
+
+           */
+          this.getScript = function()
+          {
+              return baseSystem.getScript.apply(baseSystem,arguments);
+          };
 
 
         /** @function
@@ -490,7 +499,7 @@ if(system == undefined)
          */
         this.setScript = function(/** String */ script)
         {
-            baseSystem.setScript.apply(baseSystem, arguments);
+            baseSystem.set_script.apply(baseSystem, arguments);
         };
 
         var presences = baseSystem.presences;

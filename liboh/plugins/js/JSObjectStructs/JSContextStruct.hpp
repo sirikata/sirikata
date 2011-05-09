@@ -71,7 +71,9 @@ struct JSContextStruct : public JSSuspendable
 
     v8::Handle<v8::Value> struct_setReset();
     v8::Handle<v8::Value> struct_setScript(const String& script);
+    v8::Handle<v8::Value> struct_getScript();
 
+    
     v8::Handle<v8::Value> struct_rootReset();
 
     //when add a handler, timer, when inside of context, want to register them.

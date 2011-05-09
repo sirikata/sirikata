@@ -344,6 +344,7 @@ v8::Handle<v8::Value> JSObjectScript::resetScript(JSContextStruct* jscont)
     mEventHandlers.clear();
     mImportedFiles.clear();
     mContext->struct_rootReset();
+
     return v8::Undefined();
 }
 

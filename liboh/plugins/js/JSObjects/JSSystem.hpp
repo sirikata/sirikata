@@ -53,6 +53,7 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_reset(const v8::Arguments& args);
 v8::Handle<v8::Value> root_setScript(const v8::Arguments& args);
+v8::Handle<v8::Value> root_getScript(const v8::Arguments& args);
 
 
 

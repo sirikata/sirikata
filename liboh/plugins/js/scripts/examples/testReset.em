@@ -32,8 +32,10 @@ var repTimer = new std.core.RepeatingTimer(1,timerCallback);
 //them because you're clearing away all code associated
 //with the entity.
 //Last line just prints "Reset!" when done.
-system.set_script("system.import('std/default.em'); system.import('std/shim.em'); system.print('\\nReset!\\n'); ");
+system.set_script("system.import('std/default.em'); system.print('Reset!'); ");
 
+
+system.print("\nPrinting set script:  " + system.getScript() + "\n");
 
 
 system.print("\n\nOkay.  Wait a while, and then call system.reset(); The repeating message should stop, and you should still be able to script.");

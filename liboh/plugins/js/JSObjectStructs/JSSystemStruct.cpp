@@ -151,6 +151,12 @@ v8::Handle<v8::Value> JSSystemStruct::struct_setScript(const String& script)
 {
     return associatedContext->struct_setScript(script);
 }
+
+v8::Handle<v8::Value> JSSystemStruct::struct_getScript()
+{
+    return associatedContext->struct_getScript();
+}
+
 v8::Handle<v8::Value> JSSystemStruct::struct_reset()
 {
     return associatedContext->struct_setReset();

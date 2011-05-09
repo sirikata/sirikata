@@ -150,6 +150,8 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
     return jsfake->struct_require(native_filename);
 }
 
+
+
 /**
   Takes no parameters.  Destroys all created objects, except presences in the
   root context.  Then executes script associated with root context.  (Use
@@ -168,6 +170,21 @@ v8::Handle<v8::Value> root_reset(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
 
     return jsfake->struct_reset();
+}
+
+v8::Handle<v8::Value> root_getScript(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. getScript requires 0 arguments passed in.")));
+
+    String errorMessage = "Error in getScript of system object.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
+
+
+    return jsfake->struct_getScript();
 }
 
 /*

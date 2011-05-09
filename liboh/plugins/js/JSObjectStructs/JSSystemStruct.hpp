@@ -83,6 +83,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
 
     v8::Handle<v8::Value> struct_setScript(const String& script);
+    v8::Handle<v8::Value> struct_getScript();
     v8::Handle<v8::Value> struct_reset();
 
 

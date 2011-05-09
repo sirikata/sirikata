@@ -166,6 +166,11 @@ v8::Handle<v8::Value> JSContextStruct::struct_setReset()
     return jsObjScript->resetScript(this);
 }
 
+v8::Handle<v8::Value> JSContextStruct::struct_getScript()
+{
+    return v8::String::New(getScript().c_str());
+}
+
 String JSContextStruct::getScript()
 {
     return mScript;
@@ -219,6 +224,9 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 
     //re-exec mScript
     v8::ScriptOrigin origin(v8::String::New("(reset_script)"));
+
+    //re-import shim.
+    jsObjScript->import("std/shim.em",this);
 
     jsObjScript->internalEval(mContext,mScript,&origin , true);
 
