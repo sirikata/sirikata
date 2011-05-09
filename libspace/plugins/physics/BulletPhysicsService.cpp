@@ -122,9 +122,9 @@ void BulletPhysicsService::service() {
 	//move the simulation forward by that amount
 	Duration delTime = mTimer.elapsed();
 	float simForwardTime = delTime.toMilliseconds() / 1000.0f;
+	mTimer.start();
 
     dynamicsWorld->stepSimulation(simForwardTime, 10);
-	mTimer.start();
 
     for(unsigned int i = 0; i < physicsUpdates.size(); i++) {
 		LocationMap::iterator it = mLocations.find(physicsUpdates[i]);
@@ -518,7 +518,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // automatically.
 
     /*BEGIN: Bullet Physics Code*/
-    if(BulletPhysicsPointers.find(uuid) != BulletPhysicsPointers.end()) {
+    if(BulletPhysicsPointers.find(uuid) == BulletPhysicsPointers.end()) {
 		return;
 	}
 
