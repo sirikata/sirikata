@@ -9,6 +9,9 @@ from StringIO import StringIO
 import BaseHTTPServer
 import SocketServer
 
+class MultiThreadedHTTPServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
+    pass
+
 def get_gzip(str):
     gzbuff = StringIO()
     gzfile = gzip.GzipFile(fileobj=gzbuff, mode='wb')
@@ -22,6 +25,14 @@ def makeHandler(docroot, cachedir):
 
     class SirikataHTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
+        
+        def done_headers(self):
+            if self.close_connection:
+                self.send_header("Connection", "close")
+            self.end_headers()
+        
+        def return_error(self, code, message):
+            self.send_error(code, message)
         
         def do_HEAD(self):
             #normalize the path to get rid of // or ..
@@ -51,13 +62,10 @@ def makeHandler(docroot, cachedir):
 
             #if request goes above docroot, do not serve
             if request_root != docroot:
-                self.send_error(403, "Forbidden")
-                return
+                return self.return_error(403, "Forbidden")
                 
-            print native_path
             if not os.path.isfile(native_path):
-                self.send_error(404, "Not Found")
-                return
+                return self.return_error(404, "Not Found")
             
             f = open(native_path, "rb")
             buffer = f.read()
@@ -75,7 +83,7 @@ def makeHandler(docroot, cachedir):
             self.send_header("File-Size", str(len(buffer)))
             self.send_header("Accept-Ranges", "bytes")
             self.send_header("Hash", hash)
-            self.end_headers()
+            self.done_headers()
         
         def handle_file(self, just_head=False):
             #normalize the path to get rid of // or ..
@@ -86,19 +94,16 @@ def makeHandler(docroot, cachedir):
                 request_path = request_path[1:]
             
             if len(request_path) != 64 or sha256re.match(request_path) is None:
-                self.send_error(404, "Not Found")
-                return
+                return self.return_error(404, "Not Found")
             
             cachefile = os.path.join(cachedir, request_path)
             if not os.path.isfile(cachefile):
-                self.send_error(404, "Not Found")
-                return
+                return self.return_error(404, "Not Found")
             f = open(cachefile, "r")
             actual_file = f.read()
             
             if not os.path.isfile(actual_file):
-                self.send_error(500, "Internal Server Error")
-                return
+                return self.return_error(500, "Internal Server Error")
             
             f = open(actual_file, "rb")
             buffer = f.read()
@@ -113,24 +118,20 @@ def makeHandler(docroot, cachedir):
                 
                 parts = rangestr.split("=")
                 if len(parts) != 2 or parts[0] != "bytes":
-                    self.send_error(400, "Bad Request")
-                    return
+                    return self.return_error(400, "Bad Request")
                 
                 locs = parts[1].split("-")
                 if len(locs) != 2:
-                    self.send_error(400, "Bad Request")
-                    return
+                    return self.return_error(400, "Bad Request")
                 
                 try:
                     start = int(locs[0])
                     end = int(locs[1])
                 except ValueError:
-                    self.send_error(400, "Bad Request")
-                    return
+                    return self.return_error(400, "Bad Request")
                 
                 if start < 0 or end > len(buffer) or end <= start:
-                    self.send_error(400, "Bad Request")
-                    return
+                    return self.return_error(400, "Bad Request")
                 
                 sliced = buffer[start:end+1]
                 if gzipped:
@@ -142,7 +143,7 @@ def makeHandler(docroot, cachedir):
                 if gzipped:
                     self.send_header("Content-Encoding", "gzip")
                 self.send_header("Content-Length", str(len(sliced)))
-                self.end_headers()
+                self.done_headers()
                 if not just_head: self.wfile.write(sliced)
                 
             else:
@@ -154,7 +155,7 @@ def makeHandler(docroot, cachedir):
                 if gzipped:
                     self.send_header("Content-Encoding", "gzip")
                 self.send_header("Content-Length", str(len(buffer)))
-                self.end_headers()
+                self.done_headers()
                 if not just_head: self.wfile.write(buffer)
         
         def do_GET(self):
@@ -181,7 +182,7 @@ def main():
     if not os.path.isdir(cachedir):
         os.mkdir(cachedir)
     
-    httpd = BaseHTTPServer.HTTPServer(("localhost", args.port), makeHandler(docroot, cachedir))
+    httpd = MultiThreadedHTTPServer(("localhost", args.port), makeHandler(docroot, cachedir))
     print "Starting web server on localhost:%d with document root '%s'" % (args.port, docroot)
     
     try:
