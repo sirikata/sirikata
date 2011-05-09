@@ -178,6 +178,7 @@ void ObjectHost::connect(
     const TimedMotionQuaternion& orient,
     const BoundingSphere3f& bnds,
     const String& mesh,
+    const String& phy,
     const SolidAngle& init_sa,
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb,
@@ -190,21 +191,22 @@ void ObjectHost::connect(
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
 
     mSessionManagers[space]->connect(
-        sporef, loc, orient, bnds, with_query, init_sa, mesh,
-        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, connected_cb),
+        sporef, loc, orient, bnds, with_query, init_sa, mesh, phy,
+        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, _8, connected_cb),
         migrated_cb,
         stream_created_cb,
         disconnected_cb
     );
 }
 
-void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb) {
+void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, ConnectedCallback cb) {
     ConnectionInfo info;
     info.server = server;
     info.loc = loc;
     info.orient = orient;
     info.bnds = bnds;
     info.mesh = mesh;
+    info.physics = phy;
     cb(space, obj, info);
 }
 

@@ -184,7 +184,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessage));
-    
+
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     //check what permissions fake root is loaded with
@@ -318,6 +318,10 @@ void JSObjectScriptManager::createPresenceTemplate()
   //meshes
   proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
   proto_t->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
+
+  //physics
+  proto_t->Set(v8::String::New("getPhysics"),v8::FunctionTemplate::New(JSPresence::getPhysics));
+  proto_t->Set(v8::String::New("setPhysics"),v8::FunctionTemplate::New(JSPresence::setPhysics));
 
   //positions
   proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));

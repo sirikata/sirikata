@@ -163,10 +163,10 @@ void LocationService::unsubscribe(const UUID& remote) {
     mUpdatePolicy->unsubscribe(remote);
 }
 
-void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
+void LocationService::notifyLocalObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         if (!agg || it->wantAggregates)
-            it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh);
+            it->listener->localObjectAdded(uuid, agg, loc, orient, bounds, mesh, physics);
 }
 
 void LocationService::notifyLocalObjectRemoved(const UUID& uuid, bool agg) const {
@@ -201,10 +201,16 @@ void LocationService::notifyLocalMeshUpdated(const UUID& uuid, bool agg, const S
             it->listener->localMeshUpdated(uuid, agg, newval);
 }
 
-
-void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) const {
+void LocationService::notifyLocalPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
-        it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh);
+        if (!agg || it->wantAggregates)
+            it->listener->localPhysicsUpdated(uuid, agg, newval);
+}
+
+
+void LocationService::notifyReplicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        it->listener->replicaObjectAdded(uuid, loc, orient, bounds, mesh, physics);
 }
 
 void LocationService::notifyReplicaObjectRemoved(const UUID& uuid) const {
@@ -230,6 +236,11 @@ void LocationService::notifyReplicaBoundsUpdated(const UUID& uuid, const Boundin
 void LocationService::notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const {
     for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
         it->listener->replicaMeshUpdated(uuid, newval);
+}
+
+void LocationService::notifyReplicaPhysicsUpdated(const UUID& uuid, const String& newval) const {
+    for(ListenerList::const_iterator it = mListeners.begin(); it != mListeners.end(); it++)
+        it->listener->replicaPhysicsUpdated(uuid, newval);
 }
 
 } // namespace Sirikata

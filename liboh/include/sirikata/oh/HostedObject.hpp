@@ -67,7 +67,6 @@ class LocationUpdate;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
-class PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 // ObjectHost_Sirikata.pbj.hpp
 
@@ -100,6 +99,7 @@ protected:
          Vector3f rot;
          float angular_speed;
          String mesh;
+         String physics;
          float scale;
          String objectID;
          String script_type;
@@ -245,7 +245,11 @@ public:
         for that space.
         @param spaceID  The UUID of the space you connect to.
         @param startingLocation  The initial location of this object. Must be known at connection time?
-        @param meshBounds  The size of this mesh. If set incorrectly, mesh will be scaled to these bounds.
+        @param meshBounds  The size of this mesh. If set incorrectly, mesh will
+        be scaled to these bounds.
+        @param mesh the URL of the mesh for this object
+        @param physics Physical parameters, serialized to a string. The exact
+        format depends on the physics implementation the server is using.
         @param evidence  Usually use getUUID(); can be set differently if needed
         for authentication.
         @param token  When connection completes, notifies all session
@@ -257,6 +261,7 @@ public:
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
+        const String& physics,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
@@ -266,6 +271,7 @@ public:
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
+        const String& physics,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
@@ -358,8 +364,10 @@ public:
     virtual void requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds);
     virtual void requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh);
 
-
     virtual bool requestMeshUri(const SpaceID& space, const ObjectReference& oref, Transfer::URI& tUri);
+
+    virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
+    virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle);
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
@@ -377,18 +385,18 @@ public:
 
     // Handlers for core space-managed updates
     void processLocationUpdate(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update);
-    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh);
+    void processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh, String* phy);
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics);
     ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update
-    void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh);
+    void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
 
     public:
     HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);

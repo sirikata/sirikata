@@ -58,25 +58,6 @@ using namespace Input;
 using namespace Task;
 using namespace std;
 
-// FIXME this needs to be documented. this used to rely on whether entities were
-// cameras or not (using position instead of names). it is not clear at all how
-// or why this method is supposed to be the right way to compare entities.
-bool compareEntity (const Entity* one, const Entity* two)
-{
-    ProxyObject *pp = one->getProxyPtr().get();
-
-    Time now = one->getScene()->simTime();
-    Location loc1 = pp->globalLocation(now);
-
-    ProxyObject* pp2;
-    pp2 = two->getProxyPtr().get();
-    Location loc2 = pp->globalLocation(now);
-
-    return pp->getPhysical().name < pp2->getPhysical().name;
-
-    return one<two;
-}
-
 Vector3f pixelToDirection(Camera *cam, float xPixel, float yPixel) {
     float xRadian, yRadian;
     //pixelToRadians(cam, xPixel/2, yPixel/2, xRadian, yRadian);

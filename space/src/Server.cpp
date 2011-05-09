@@ -566,7 +566,8 @@ void Server::finishAddObject(const UUID& obj_id)
 
     // Add object as local object to LocationService
     String obj_mesh = sc.conn_msg.has_mesh() ? sc.conn_msg.mesh() : "";
-    mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh);
+    String obj_phy = sc.conn_msg.has_physics() ? sc.conn_msg.physics() : "";
+    mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
 
     // Register proximity query
     if (sc.conn_msg.has_query_angle())
@@ -766,6 +767,7 @@ void Server::handleMigration(const UUID& obj_id)
     );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
     String obj_mesh ( migrate_msg->has_mesh() ? migrate_msg->mesh() : "");
+    String obj_phy ( migrate_msg->has_physics() ? migrate_msg->physics() : "");
 
     // Move from list waiting for migration message to active objects
     mObjects[obj_id] = obj_conn;
@@ -774,7 +776,7 @@ void Server::handleMigration(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy);
 
     //update our oseg to show that we know that we have this object now.
     ServerID idOSegAckTo = (ServerID)migrate_msg->source_server();
@@ -1012,6 +1014,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     );
     BoundingSphere3f obj_bounds( migrate_msg->bounds() );
     String obj_mesh ( migrate_msg->has_mesh() ? migrate_msg->mesh() : "");
+    String obj_phy ( migrate_msg->has_physics() ? migrate_msg->physics() : "");
 
     // Remove the previous connection from the local forwarder
     mLocalForwarder->removeActiveConnection( obj_id );
@@ -1022,7 +1025,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
 
 
     // Update LOC to indicate we have this object locally
-    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh);
+    mLocationService->addLocalObject(obj_id, obj_loc, obj_orient, obj_bounds, obj_mesh, obj_phy);
 
     //update our oseg to show that we know that we have this object now.
     OSegEntry idOSegAckTo ((ServerID)migrate_msg->source_server(),migrate_msg->bounds().radius());

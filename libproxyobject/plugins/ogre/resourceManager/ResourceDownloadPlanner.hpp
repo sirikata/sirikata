@@ -62,7 +62,6 @@ public:
     //MeshListener interface
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
-    virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp );
 
     //PollingService interface
     virtual void poll();

@@ -79,7 +79,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
 
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
 
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> SessionConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&, const String&)> SessionConnectedCallback;
 public:
     struct ConnectionInfo {
         ServerID server;
@@ -87,12 +87,13 @@ public:
         TimedMotionQuaternion orient;
         BoundingSphere3f bnds;
         String mesh;
+        String physics;
     };
 
     //use this function to request the object host to send a disconnect message
     //to space for object
     void disconnectObject(const SpaceID& space, const ObjectReference& oref);
-    
+
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> SessionCallback;
     // Callback indicating that a connection to the server was made and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ConnectionInfo)> ConnectedCallback;
@@ -134,6 +135,7 @@ public:
         const TimedMotionQuaternion& orient,
         const BoundingSphere3f& bnds,
         const String& mesh,
+        const String& physics,
         const SolidAngle& init_sa,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
@@ -200,7 +202,7 @@ public:
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
 
     // Wrapper to convert callback to use ConnectionInfo
-    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback cb);
+    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& physics, ConnectedCallback cb);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;

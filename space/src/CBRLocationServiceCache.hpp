@@ -80,42 +80,47 @@ public:
     const BoundingSphere3f& bounds(const ObjectID& id) const;
     float32 radius(const ObjectID& id) const;
     const String& mesh(const ObjectID& id) const;
+    const String& physics(const ObjectID& id) const;
 
     /* LocationServiceListener members. */
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
+    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
 private:
 
     // These generate and queue up updates from the main thread
-    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    void objectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     void objectRemoved(const UUID& uuid, bool agg);
     void locationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void orientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     void boundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     void meshUpdated(const UUID& uuid, bool agg, const String& newval);
+    void physicsUpdated(const UUID& uuid, bool agg, const String& newval);
 
     // These do the actual work for the LocationServiceListener methods.  Local versions always
     // call these, replica versions only call them if replica tracking is
     // on. Although we now have to lock in these, we put them on the strand
     // instead of processing directly in the methods above so that they don't
     // block any other work.
-    void processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    void processObjectAdded(const UUID& uuid, bool islocal, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     void processObjectRemoved(const UUID& uuid, bool agg);
     void processLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     void processOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     void processBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     void processMeshUpdated(const UUID& uuid, bool agg, const String& newval);
+    void processPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
 
 
     CBRLocationServiceCache();
@@ -146,6 +151,7 @@ private:
         // Whether the object is local or a replica
         bool isLocal;
         String mesh;
+        String physics;
         bool exists; // Exists, i.e. xObjectRemoved hasn't been called
         int16 tracking; // Ref count to support multiple users
     };

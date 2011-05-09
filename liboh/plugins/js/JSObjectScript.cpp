@@ -647,6 +647,7 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
         eci.loc,
         BoundingSphere3f(Vector3f::nil(), eci.scale),
         eci.mesh,
+        eci.physics,
         eci.solid_angle,
         UUID::null(),
         NULL
@@ -1123,7 +1124,7 @@ std::string* JSObjectScript::extensionize(const String filename)
     {
       if(filename.substr(index) != ".em")
       {
-        // found a file with different extenstion    
+        // found a file with different extenstion
         return NULL;
         //std::string errorMessage("Cannot operate on  file: ");
         //errorMessage+=filename;
@@ -1137,7 +1138,7 @@ std::string* JSObjectScript::extensionize(const String filename)
 
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont)
 {
-    
+
     JSLOG(detailed, "Importing: " << filename);
     std::string* fileToFind = extensionize(filename);
     if(fileToFind == NULL)
@@ -1502,7 +1503,7 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
-    mParent->connect(space,startingLoc,bs, newMesh,UUID::null(),NULL,presToke);
+    mParent->connect(space,startingLoc,bs, newMesh, "", UUID::null(),NULL,presToke);
 
 
     //create a presence object associated with this presence and return it;
@@ -1594,6 +1595,20 @@ void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, cons
 {
     //FIXME: need to also pass in the object reference
     mParent->requestMeshUpdate(sporef->space(),sporef->object(),newMeshString);
+}
+
+//physics
+v8::Handle<v8::Value> JSObjectScript::getPhysicsFunction(const SpaceObjectReference* sporef)
+{
+    String curphy = mParent->requestCurrentPhysics(sporef->space(),sporef->object());
+    return v8::String::New(curphy.c_str(), curphy.size());
+}
+
+//FIXME: May want to have an error handler for this function.
+void JSObjectScript::setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhyString)
+{
+    //FIXME: need to also pass in the object reference
+    mParent->requestPhysicsUpdate(sporef->space(), sporef->object(), newPhyString);
 }
 
 

@@ -14,6 +14,7 @@ struct EntityCreateInfo
     Location loc;
     float  scale;
     String mesh;
+    String physics;
     SolidAngle solid_angle;
 };
 

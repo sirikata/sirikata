@@ -178,6 +178,14 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 }
 
 
+v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
+    return jsObjScript->getPhysicsFunction(sporefToListenTo);
+}
+v8::Handle<v8::Value> JSPresenceStruct::setPhysicsFunction(const String& phy) {
+    jsObjScript->setPhysicsFunction(sporefToListenTo, phy);
+    return v8::Undefined();
+}
+
 
 v8::Handle<v8::Value> JSPresenceStruct::setConnectedCB(v8::Handle<v8::Function> newCB)
 {

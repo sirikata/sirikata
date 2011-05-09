@@ -371,7 +371,8 @@ void Proximity::receiveMessage(Message* msg) {
                     TimedMotionVector3f( addition.location().t(), MotionVector3f(addition.location().position(), addition.location().velocity()) ),
                     TimedMotionQuaternion( addition.orientation().t(), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()) ),
                     addition.bounds(),
-                    (addition.has_mesh() ? addition.mesh() : "")
+                    (addition.has_mesh() ? addition.mesh() : ""),
+                    (addition.has_physics() ? addition.physics() : "")
                 );
             }
 
@@ -457,6 +458,7 @@ void Proximity::aggregateCreated(ProxQueryHandler* handler, const UUID& objid) {
             TimedMotionVector3f(mContext->simTime(), MotionVector3f()),
             TimedMotionQuaternion(mContext->simTime(), MotionQuaternion()),
             BoundingSphere3f(),
+            "",
             ""
         )
     );
@@ -799,6 +801,10 @@ void Proximity::poll() {
 }
 
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
     mLocService->subscribe(subscriber, observed);
 }
 void Proximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
@@ -809,6 +815,10 @@ void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
 }
 
 void Proximity::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
+    // We check the cache when we get the request, but also check it here since
+    // the observed object may have been removed between the request to add this
+    // subscription and its actual execution.
+    if (!mLocService->contains(observed)) return;
     mLocService->subscribe(subscriber, observed);
 }
 void Proximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
@@ -832,7 +842,7 @@ void Proximity::queryHasEvents(Query* query) {
 // Note: LocationServiceListener interface is only used in order to get updates on objects which have
 // registered queries, allowing us to update those queries as appropriate.  All updating of objects
 // in the prox data structure happens via the LocationServiceCache
-void Proximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void Proximity::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
     updateObjectSize(uuid, bounds.radius());
 }
 void Proximity::localObjectRemoved(const UUID& uuid, bool agg) {
@@ -851,7 +861,9 @@ void Proximity::localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSph
 }
 void Proximity::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
 }
-void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void Proximity::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
+}
+void Proximity::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
 }
 void Proximity::replicaObjectRemoved(const UUID& uuid) {
 }
@@ -864,6 +876,8 @@ void Proximity::replicaOrientationUpdated(const UUID& uuid, const TimedMotionQua
 void Proximity::replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) {
 }
 void Proximity::replicaMeshUpdated(const UUID& uuid, const String& newval) {
+}
+void Proximity::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
 }
 
 void Proximity::updatedSegmentation(CoordinateSegmentation* cseg, const std::vector<SegmentationInfo>& new_seg) {
@@ -957,6 +971,9 @@ void Proximity::generateServerQueryEvents(Query* query) {
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
+                    const String& phy = mLocCache->physics(objid);
+                    if (phy.size() > 0)
+                        addition.set_physics(phy);
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
@@ -1032,6 +1049,9 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                     const String& mesh = mLocCache->mesh(objid);
                     if (mesh.size() > 0)
                         addition.set_mesh(mesh);
+                    const String& phy = mLocCache->physics(objid);
+                    if (phy.size() > 0)
+                        addition.set_physics(phy);
                 }
             }
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {

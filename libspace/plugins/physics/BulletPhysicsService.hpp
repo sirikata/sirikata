@@ -105,18 +105,20 @@ public:
     virtual Quaternion currentOrientation(const UUID& uuid);
     virtual BoundingSphere3f bounds(const UUID& uuid);
     virtual const String& mesh(const UUID& uuid);
+    virtual const String& physics(const UUID& uuid);
 
-    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void removeLocalObject(const UUID& uuid);
 
-    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void removeLocalAggregateObject(const UUID& uuid);
     virtual void updateLocalAggregateLocation(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void updateLocalAggregateOrientation(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void updateLocalAggregateBounds(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void updateLocalAggregateMesh(const UUID& uuid, const String& newval);
+    virtual void updateLocalAggregatePhysics(const UUID& uuid, const String& newval);
 
-    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void removeReplicaObject(const Time& t, const UUID& uuid);
 
     virtual void receiveMessage(Message* msg);
@@ -137,6 +139,7 @@ protected:
         TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;
         String mesh;
+        String physics;
         bool local;
         bool aggregate;
         bool isFixed;

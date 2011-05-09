@@ -63,7 +63,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
 
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&)> ConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&, const String&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
@@ -101,7 +101,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
-        bool regquery, const SolidAngle& init_sa, const String& init_mesh,
+        bool regquery, const SolidAngle& init_sa, const String& init_mesh, const String& init_phy,
         ConnectedCallback connect_cb, MigratedCallback migrate_cb,
         StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
@@ -164,7 +164,7 @@ private:
     // This gets invoked when the connection really is ready -- after
     // successful response and we have time sync info. It does some
     // additional setup work (sst stream) and then invokes the real callback
-    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb);
+    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, ConnectedCallback real_cb);
     // This gets invoked after full migration occurs. It does additional setup
     // work (new sst stream to new space server) and invokes the real callback.
     void handleObjectFullyMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server, MigratedCallback real_cb);
@@ -254,6 +254,7 @@ private:
         bool regQuery;
         SolidAngle queryAngle;
         String mesh;
+        String physics;
     };
 
 
@@ -280,7 +281,7 @@ private:
 
         // Marks as connected and returns the server connected to. do_cb
         // specifies whether the callback should be invoked or deferred
-      ServerID handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, bool do_cb);
+        ServerID handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, bool do_cb);
 
         void handleConnectError(const SpaceObjectReference& sporef_objid);
 
