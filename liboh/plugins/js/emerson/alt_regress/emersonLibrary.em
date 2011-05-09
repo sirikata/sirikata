@@ -72,3 +72,13 @@ system.registerHandler = function (a, b, c)
     print(c);
     print("\n\nDone registering handlers\n\n");
 };
+
+system.self = 'I am Self!';
+
+system.sendMessage = function(sender, msgObj, receiver)
+{
+    print('\nIn system.sendMessage\n');
+    print('sender:    ' + sender.toString());
+    print('msgObj:    ' + msgObj.toString());
+    print('receiver:  ' + receiver.toString());
+};

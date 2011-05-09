@@ -1,0 +1,30 @@
+
+In system.sendMessage
+
+sender:    a
+msgObj:    oooooo  message object
+receiver:  receiver
+
+In system.sendMessage
+
+sender:    I am Self!
+msgObj:    oooooo  message object
+receiver:  receiver
+
+In system.sendMessage
+
+sender:    a
+msgObj:    oooooo  message object
+receiver:  receiver
+
+In system.sendMessage
+
+sender:    I am Self!
+msgObj:    oooooo  message object
+receiver:  receiver
+
+In system.sendMessage
+
+sender:    a
+msgObj:    [object Object]
+receiver:  receiver
