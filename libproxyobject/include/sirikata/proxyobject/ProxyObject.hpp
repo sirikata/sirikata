@@ -50,7 +50,6 @@
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include "MeshListener.hpp"
-#include "PhysicalParameters.hpp"
 
 
 namespace Sirikata {
@@ -58,7 +57,6 @@ namespace Sirikata {
 
 //forward declares
 class MeshListener;
-class PhysicalParameters;
 class ProxyObjectListener;
 
 
@@ -139,7 +137,6 @@ private:
     //added private members to proxy object from mesh object
     Transfer::URI mMeshURI;
     String mPhysics;
-    PhysicalParameters mPhysical;
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
         should be wrapped in a shared_ptr and sent to ProxyManager::createObject().
@@ -282,10 +279,6 @@ public:
 
     virtual void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
     virtual const String& getPhysics() const;
-
-    virtual void setPhysical ( PhysicalParameters const& rhs );
-    virtual PhysicalParameters const& getPhysical () const;
-
 };
 }
 #endif

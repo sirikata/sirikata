@@ -79,11 +79,6 @@ void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
 
 }
 
-void ResourceDownloadPlanner::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp)
-{
-
-}
-
 void ResourceDownloadPlanner::poll()
 {
 

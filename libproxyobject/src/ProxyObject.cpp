@@ -169,18 +169,4 @@ const String& ProxyObject::getPhysics () const {
     return mPhysics;
 }
 
-void ProxyObject::setPhysical ( PhysicalParameters const& pp )
-{
-    mPhysical = pp;
-    ProxyObjectPtr ptr = getSharedPtr();
-
-    if (ptr)
-        MeshProvider::notify (&MeshListener::onSetPhysical, ptr, pp );
-}
-
-PhysicalParameters const& ProxyObject::getPhysical () const
-{
-    return mPhysical;
-}
-
 }

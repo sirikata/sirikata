@@ -1220,10 +1220,6 @@ void Entity::onSetScale (ProxyObjectPtr proxy, float32 scale )
     updateScale(scale);
 }
 
-void Entity::onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp )
-{
-
-}
 
 }
 }

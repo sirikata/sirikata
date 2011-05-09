@@ -35,7 +35,6 @@
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "PhysicalParameters.hpp"
 
 namespace Sirikata {
 
@@ -48,7 +47,6 @@ class SIRIKATA_PROXYOBJECT_EXPORT MeshListener
         virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh) = 0;
         virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ) = 0;
         virtual void onSetPhysics (ProxyObjectPtr proxy, const String& phy ) {};
-        virtual void onSetPhysical (ProxyObjectPtr proxy, PhysicalParameters const& pp ) = 0;
 };
 
 } // namespace Sirikata

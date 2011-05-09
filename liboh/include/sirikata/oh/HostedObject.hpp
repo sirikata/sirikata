@@ -67,7 +67,6 @@ class LocationUpdate;
 class ProxyObject;
 class ProxyObject;
 struct LightInfo;
-class PhysicalParameters;
 typedef std::tr1::shared_ptr<ProxyObject> ProxyObjectPtr;
 // ObjectHost_Sirikata.pbj.hpp
 
