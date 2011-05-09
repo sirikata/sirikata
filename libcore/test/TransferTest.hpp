@@ -73,7 +73,9 @@ public:
     std::string mDnsTest1;
     std::string mHashTest1;
     int mHashTest1Size;
+    std::string mDnsTest2;
     std::string mHashTest2;
+    std::string mHashTest2Size;
 
     void setUp() {
         InitOptions();
@@ -87,7 +89,9 @@ public:
         mDnsTest1 = "/test/duck.dae/original/0/duck.dae";
         mHashTest1 = "332d81633b62944fa87d3fa66e0eeda6288f67499a73e2ad1b8f1388a939045a";
         mHashTest1Size = 284312;
+        mDnsTest2 = "/test/duck.dae/original/0/duckCM.tga";
         mHashTest2 = "25f5ff38a5db9465c871947c5e805d707d734bf50fb4e52793f03483afa5c22a";
+        mHashTest2Size = "786476";
     }
 
     void tearDown() {
@@ -334,6 +338,41 @@ public:
         }
 
 
+
+        /*
+         * First do a HEAD request for file 2
+         */
+        request_stream.str("");
+        request_stream << "HEAD " << mCdnDnsUriPrefix << mDnsTest2 << " HTTP/1.1\r\n";
+        request_stream << "Host: " << mCdnHost << "\r\n";
+        request_stream << "Accept: */*\r\n";
+        request_stream << "Connection: close\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing head metadata request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::HEAD, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            it = mHttpResponse->getHeaders().find("Content-Length");
+            Transfer::TransferMediator * mTransferMediator;
+            std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
+            TS_ASSERT(it == mHttpResponse->getHeaders().end());
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            it = mHttpResponse->getHeaders().find("File-Size");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            if(it != mHttpResponse->getHeaders().end()) {
+                TS_ASSERT(it->second == mHashTest2Size);
+            }
+            it = mHttpResponse->getHeaders().find("Hash");
+            TS_ASSERT(it != mHttpResponse->getHeaders().end());
+            if(it != mHttpResponse->getHeaders().end()) {
+                TS_ASSERT(it->second == mHashTest2);
+            }
+            TS_ASSERT( !(mHttpResponse->getData()) );
+        }
 
 
         /*
