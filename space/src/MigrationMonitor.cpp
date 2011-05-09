@@ -218,7 +218,7 @@ void MigrationMonitor::changeNextEventTime(ObjectInfo& objinfo, const Time& newt
 
 /** LocationServiceListener Interface. */
 
-void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void MigrationMonitor::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& phy) {
     mStrand->post(
         std::tr1::bind(&MigrationMonitor::handleLocalObjectAdded, this, uuid, loc, bounds)
     );
@@ -271,8 +271,11 @@ void MigrationMonitor::localBoundsUpdated(const UUID& uuid, bool agg, const Boun
 void MigrationMonitor::localMeshUpdated(const UUID& uuid, bool agg, const String& newval) {
     // We only care about location, not mesh
 }
+void MigrationMonitor::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
+    // We only care about location, not phy
+}
 
-void MigrationMonitor::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void MigrationMonitor::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
     // We don't care about replicas
 }
 void MigrationMonitor::replicaObjectRemoved(const UUID& uuid) {
@@ -288,6 +291,9 @@ void MigrationMonitor::replicaBoundsUpdated(const UUID& uuid, const BoundingSphe
     // We don't care about replicas
 }
 void MigrationMonitor::replicaMeshUpdated(const UUID& uuid, const String& newval) {
+    // We don't care about replicas
+}
+void MigrationMonitor::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
     // We don't care about replicas
 }
 

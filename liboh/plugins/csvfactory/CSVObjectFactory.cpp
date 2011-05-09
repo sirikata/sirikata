@@ -282,7 +282,7 @@ void CSVObjectFactory::connectObjects()
 
         oci.object->connect(
             mSpace,
-            oci.loc, oci.bounds, oci.mesh,
+            oci.loc, oci.bounds, oci.mesh, "",
             const_cast<SolidAngle&>(oci.query_angle),
             UUID::null(), NULL
         );

@@ -51,4 +51,5 @@ message MigrationMessage {
     repeated MigrationClientData client_data = 5;
     optional string mesh = 6;
     required uint32 source_server = 7; // FIXME should come from server to server header
+    optional string physics = 8;
 }

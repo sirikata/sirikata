@@ -175,6 +175,14 @@ const String& BulletPhysicsService::mesh(const UUID& uuid) {
     return locinfo.mesh;
 }
 
+const String& BulletPhysicsService::physics(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    const LocationInfo& locinfo = it->second;
+    return locinfo.physics;
+}
+
 void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
 
 	meshLoaded = false;
@@ -236,7 +244,7 @@ void BulletPhysicsService::chunkFinished(const UUID uuid, std::string meshName,
      mTransferPool->addRequest(req);
 	}
 }
-void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
+void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
     LocationMap::iterator it = mLocations.find(uuid);
 
     // Add or update the information to the cache
@@ -255,6 +263,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
     locinfo.orientation = orient;
     locinfo.bounds = bnds;
     locinfo.mesh = msh;
+    locinfo.physics = phy;
     locinfo.local = true;
     locinfo.aggregate = false;
 
@@ -263,7 +272,7 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
 
     // Add to the list of local objects
     CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, true, loc);
-    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
+    notifyLocalObjectAdded(uuid, false, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
 
     /*BEGIN: Bullet Physics Code*/
 
@@ -555,7 +564,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     /*END: Bullet Physics Code*/
 }
 
-void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
+void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
     // Aggregates get randomly assigned IDs -- if there's a conflict either we
     // got a true conflict (incredibly unlikely) or somebody (prox/query
     // handler) screwed up.
@@ -569,11 +578,12 @@ void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const Timed
     locinfo.orientation = orient;
     locinfo.bounds = bnds;
     locinfo.mesh = msh;
+    locinfo.physics = phy;
     locinfo.local = true;
     locinfo.aggregate = true;
 
     // Add to the list of local objects
-    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
+    notifyLocalObjectAdded(uuid, true, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
 }
 
 void BulletPhysicsService::removeLocalAggregateObject(const UUID& uuid) {
@@ -614,8 +624,15 @@ void BulletPhysicsService::updateLocalAggregateMesh(const UUID& uuid, const Stri
     loc_it->second.mesh = newval;
     notifyLocalMeshUpdated( uuid, true, newval );
 }
+void BulletPhysicsService::updateLocalAggregatePhysics(const UUID& uuid, const String& newval) {
+    LocationMap::iterator loc_it = mLocations.find(uuid);
+    assert(loc_it != mLocations.end());
+    assert(loc_it->second.aggregate == true);
+    loc_it->second.physics = newval;
+    notifyLocalPhysicsUpdated( uuid, true, newval );
+}
 
-void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh) {
+void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
     // FIXME we should do checks on timestamps to decide which setting is "more" sane
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -627,6 +644,7 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, con
             locinfo.orientation = orient;
             locinfo.bounds = bnds;
             locinfo.mesh = msh;
+            locinfo.physics = phy;
             //local = false
             // FIXME should we notify location and bounds updated info?
         }
@@ -639,13 +657,14 @@ void BulletPhysicsService::addReplicaObject(const Time& t, const UUID& uuid, con
         locinfo.orientation = orient;
         locinfo.bounds = bnds;
         locinfo.mesh = msh;
+        locinfo.physics = phy;
         locinfo.local = false;
         locinfo.aggregate = false;
         mLocations[uuid] = locinfo;
 
         // We only run this notification when the object actually is new
         CONTEXT_SPACETRACE(serverObjectEvent, 0, mContext->id(), uuid, true, loc); // FIXME add remote server ID
-        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid));
+        notifyReplicaObjectAdded(uuid, location(uuid), orientation(uuid), bounds(uuid), mesh(uuid), physics(uuid));
     }
 }
 
@@ -723,6 +742,12 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
                 loc_it->second.mesh = newmesh;
                 notifyReplicaMeshUpdated( update.object(), newmesh );
             }
+
+            if (update.has_physics()) {
+                String newphy = update.physics();
+                loc_it->second.physics = newphy;
+                notifyReplicaPhysicsUpdated( update.object(), newphy );
+            }
         }
     }
 
@@ -775,6 +800,12 @@ void BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
                 );
                 loc_it->second.orientation = neworient;
                 notifyLocalOrientationUpdated( source, loc_it->second.aggregate, neworient );
+            }
+
+            if (request.has_physics()) {
+                String newphy = request.physics();
+                loc_it->second.physics = newphy;
+                notifyLocalPhysicsUpdated( source, loc_it->second.aggregate, newphy );
             }
 
         }

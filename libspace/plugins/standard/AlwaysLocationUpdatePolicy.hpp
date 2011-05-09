@@ -61,19 +61,21 @@ public:
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
-    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void localObjectRemoved(const UUID& uuid, bool agg);
     virtual void localLocationUpdated(const UUID& uuid, bool agg, const TimedMotionVector3f& newval);
     virtual void localOrientationUpdated(const UUID& uuid, bool agg, const TimedMotionQuaternion& newval);
     virtual void localBoundsUpdated(const UUID& uuid, bool agg, const BoundingSphere3f& newval);
     virtual void localMeshUpdated(const UUID& uuid, bool agg, const String& newval);
+    virtual void localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval);
 
-    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh);
+    virtual void replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void replicaObjectRemoved(const UUID& uuid);
     virtual void replicaLocationUpdated(const UUID& uuid, const TimedMotionVector3f& newval);
     virtual void replicaOrientationUpdated(const UUID& uuid, const TimedMotionQuaternion& newval);
     virtual void replicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval);
     virtual void replicaMeshUpdated(const UUID& uuid, const String& newval);
+    virtual void replicaPhysicsUpdated(const UUID& uuid, const String& newval);
 
     virtual void service();
 
@@ -91,6 +93,7 @@ private:
         TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;
         String mesh;
+        String physics;
     };
 
     template<typename SubscriberType>
@@ -225,6 +228,7 @@ private:
                 new_ui.bounds = locservice->bounds(uuid);
                 new_ui.mesh = locservice->mesh(uuid);
                 new_ui.orientation = locservice->orientation(uuid);
+                new_ui.physics = locservice->physics(uuid);
                 sub_info->outstandingUpdates[uuid] = new_ui;
             }
 
@@ -237,6 +241,7 @@ private:
         static void setUIOrientation(UpdateInfo& ui, const TimedMotionQuaternion& newval) { ui.orientation = newval; }
         static void setUIBounds(UpdateInfo& ui, const BoundingSphere3f& newval) { ui.bounds = newval; }
         static void setUIMesh(UpdateInfo& ui, const String& newval) {ui.mesh = newval;}
+        static void setUIPhysics(UpdateInfo& ui, const String& newval) {ui.physics = newval;}
 
         void locationUpdated(const UUID& uuid, const TimedMotionVector3f& newval, LocationService* locservice) {
             propertyUpdated(
@@ -266,6 +271,13 @@ private:
             );
         }
 
+        void physicsUpdated(const UUID& uuid, const String& newval, LocationService* locservice) {
+            propertyUpdated(
+                uuid, locservice,
+                std::tr1::bind(&setUIPhysics, std::tr1::placeholders::_1, newval)
+            );
+        }
+
 
         void service() {
             uint32 max_updates = GetOptionValue<uint32>(ALWAYS_POLICY_OPTIONS, LOC_MAX_PER_RESULT);
@@ -290,7 +302,7 @@ private:
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
 
-                    
+
                     location.set_velocity(up_it->second.location.velocity());
 
                     Sirikata::Protocol::ITimedMotionQuaternion orientation = update.mutable_orientation();
@@ -299,8 +311,8 @@ private:
                     orientation.set_velocity(up_it->second.orientation.velocity());
 
                     update.set_bounds(up_it->second.bounds);
-
                     update.set_mesh(up_it->second.mesh);
+                    update.set_physics(up_it->second.physics);
 
                     // If we hit the limit for this update, try to send it out
                     if (bulk_update.update_size() > (int32)max_updates) {

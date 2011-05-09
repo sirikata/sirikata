@@ -96,7 +96,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, true, init_sa, "",
+        sporef, init_loc, init_orient, init_bounds, true, init_sa, "", "",
         connect_cb, migrate_cb, stream_created_cb, disconnected_cb
     );
 }
@@ -119,7 +119,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, "",
+        sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, "", "",
         connect_cb, migrate_cb, stream_created_cb, disconnected_cb
     );
 }

@@ -120,7 +120,7 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
 
     if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
 
-    
+
     mOrientation = TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position(), reqorient.velocity()));
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
 }
@@ -154,6 +154,19 @@ void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predict
 Transfer::URI const& ProxyObject::getMesh () const
 {
     return mMeshURI;
+}
+
+
+void ProxyObject::setPhysics (const String& rhs, uint64 seqno, bool predictive) {
+    if (seqno < mUpdateSeqno[LOC_PHYSICS_PART] && !predictive) return;
+    if (!predictive) mUpdateSeqno[LOC_PHYSICS_PART] = seqno;
+    mPhysics = rhs;
+    ProxyObjectPtr ptr = getSharedPtr();
+    if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs);
+}
+
+const String& ProxyObject::getPhysics () const {
+    return mPhysics;
 }
 
 void ProxyObject::setPhysical ( PhysicalParameters const& pp )

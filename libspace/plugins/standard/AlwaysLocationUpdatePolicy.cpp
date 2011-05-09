@@ -81,7 +81,7 @@ void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote) {
 }
 
 
-void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+void AlwaysLocationUpdatePolicy::localObjectAdded(const UUID& uuid, bool agg, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
     // Ignore, initial additions will be handled by a prox update
 }
 
@@ -109,8 +109,13 @@ void AlwaysLocationUpdatePolicy::localMeshUpdated(const UUID& uuid, bool agg, co
     mObjectSubscriptions.meshUpdated(uuid, newval, mLocService);
 }
 
+void AlwaysLocationUpdatePolicy::localPhysicsUpdated(const UUID& uuid, bool agg, const String& newval) {
+    mServerSubscriptions.physicsUpdated(uuid, newval, mLocService);
+    mObjectSubscriptions.physicsUpdated(uuid, newval, mLocService);
+}
 
-void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh) {
+
+void AlwaysLocationUpdatePolicy::replicaObjectAdded(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics) {
     // Ignore, initial additions will be handled by a prox update
 }
 
@@ -132,6 +137,10 @@ void AlwaysLocationUpdatePolicy::replicaBoundsUpdated(const UUID& uuid, const Bo
 
 void AlwaysLocationUpdatePolicy::replicaMeshUpdated(const UUID& uuid, const String& newval) {
     mObjectSubscriptions.meshUpdated(uuid, newval, mLocService);
+}
+
+void AlwaysLocationUpdatePolicy::replicaPhysicsUpdated(const UUID& uuid, const String& newval) {
+    mObjectSubscriptions.physicsUpdated(uuid, newval, mLocService);
 }
 
 void AlwaysLocationUpdatePolicy::service() {

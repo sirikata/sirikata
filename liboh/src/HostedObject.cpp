@@ -311,11 +311,12 @@ void HostedObject::connect(
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
+        const String& phy,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
         PresenceToken token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, SolidAngle::Max, object_uuid_evidence,ppd, token);
+    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,ppd, token);
 }
 
 
@@ -326,6 +327,7 @@ void HostedObject::connect(
         const Location&startingLocation,
         const BoundingSphere3f &meshBounds,
         const String& mesh,
+        const String& phy,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
         PerPresenceData* ppd,
@@ -347,6 +349,7 @@ void HostedObject::connect(
         TimedMotionQuaternion(approx_server_time,MotionQuaternion(startingLocation.getOrientation().normal(),Quaternion(startingLocation.getAxisOfRotation(),startingLocation.getAngularSpeed()))),  //normalize orientations
         meshBounds,
         mesh,
+        phy,
         queryAngle,
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
@@ -431,7 +434,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds);
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics);
 
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
@@ -480,7 +483,7 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     if (where!=mPresenceData->end()) {
         mPresenceData->erase(where);
         //need to actually send a disconnection request to the space;
-        mObjectHost->disconnectObject(spaceID,oref);        
+        mObjectHost->disconnectObject(spaceID,oref);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
@@ -631,11 +634,13 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
     TimedMotionQuaternion orient;
     BoundingSphere3f bounds;
     String mesh;
+    String phy;
 
     TimedMotionVector3f* locptr = NULL;
     TimedMotionQuaternion* orientptr = NULL;
     BoundingSphere3f* boundsptr = NULL;
     String* meshptr = NULL;
+    String* phyptr = NULL;
 
 
     if (update.has_location()) {
@@ -669,10 +674,15 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         meshptr = &mesh;
     }
 
-    processLocationUpdate(sporef.space(), proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr);
+    if (update.has_physics()) {
+        phy = update.physics();
+        phyptr = &phy;
+    }
+
+    processLocationUpdate(sporef.space(), proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr, phyptr);
 }
 
-void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh) {
+void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh, String* phy) {
 
     if (loc)
         proxy_obj->setLocation(*loc, seqno);
@@ -685,6 +695,9 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 
     if (mesh && *mesh != "")
         proxy_obj->setMesh(Transfer::URI(*mesh), seqno);
+
+    if (phy && *phy != "")
+        proxy_obj->setPhysics(*mesh, seqno);
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
@@ -748,6 +761,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             TimedMotionQuaternion orient(localTime(space, addition.orientation().t()), MotionQuaternion(addition.orientation().position(), addition.orientation().velocity()));
             BoundingSphere3f bnds = addition.bounds();
             String mesh = (addition.has_mesh() ? addition.mesh() : "");
+            String phy = (addition.has_physics() ? addition.physics() : "");
 
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
@@ -759,13 +773,13 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
-                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds);
+                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy);
             }
             else {
                 // Reset so that updates from this new "session" for this proxy
                 // get applied
                 proxy_obj->reset();
-                processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh);
+                processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh, &phy);
                 // Mark as valid again
                 proxy_obj->validate();
             }
@@ -790,7 +804,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (!proxy_manager)
                 continue;
 
-            
+
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
                                                                      ObjectReference(removal.object())));
             if (!proxy_obj) continue;
@@ -817,7 +831,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy)
 {
     ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri);
     returner->setLocation(tmv, 0);
@@ -826,6 +840,9 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
     if(meshuri)
         returner->setMesh(meshuri, 0);
+
+    if(phy.size() > 0)
+        returner->setPhysics(phy, 0);
 
     return returner;
 }
@@ -942,7 +959,7 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 
 void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc)
 {
-    sendLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL);
+    sendLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL);
 }
 
 //only update the position of the object, leave the velocity and orientation unaffected
@@ -1059,7 +1076,7 @@ Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const Object
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
-    sendLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL);
+    sendLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
 }
 
 BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const ObjectReference& oref) {
@@ -1068,12 +1085,17 @@ BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const O
 }
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
-    sendLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL);
+    sendLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL);
 }
 
 void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh)
 {
-    sendLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh);
+    sendLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
+}
+
+void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
+{
+    sendLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
 }
 
 void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {
@@ -1099,7 +1121,7 @@ void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReferen
     requestQueryUpdate(space, oref, SolidAngle::Max);
 }
 
-void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh) {
+void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {
     ProxyObjectPtr self_proxy = getProxy(space, oref);
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
@@ -1128,6 +1150,11 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     {
         self_proxy->setMesh(Transfer::URI(*mesh), 0, true);
         loc_request.set_mesh(*mesh);
+    }
+    if (phy != NULL)
+    {
+        self_proxy->setPhysics(*phy, 0, true);
+        loc_request.set_physics(*phy);
     }
 
     std::string payload = serializePBJMessage(container);

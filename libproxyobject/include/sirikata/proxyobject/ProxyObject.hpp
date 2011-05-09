@@ -122,7 +122,8 @@ private:
         LOC_ORIENT_PART = 1,
         LOC_BOUNDS_PART = 2,
         LOC_MESH_PART = 3,
-        LOC_NUM_PART = 4
+        LOC_PHYSICS_PART = 4,
+        LOC_NUM_PART = 5
     };
 
     uint64 mUpdateSeqno[LOC_NUM_PART];
@@ -137,6 +138,7 @@ private:
 
     //added private members to proxy object from mesh object
     Transfer::URI mMeshURI;
+    String mPhysics;
     PhysicalParameters mPhysical;
 public:
     /** Constructs a new ProxyObject. After constructing this object, it
@@ -188,7 +190,7 @@ public:
     inline const TimedMotionQuaternion getTimedMotionQuaternion() const{
         return mOrientation;
     }
-    
+
     /// returns the last updated velocity for this object
     inline Vector3d getVelocity() const
     {
@@ -277,6 +279,10 @@ public:
     // interface from MeshObject
     virtual void setMesh (Transfer::URI const& rhs, uint64 seqno, bool predictive = false);
     virtual Transfer::URI const& getMesh () const;
+
+    virtual void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
+    virtual const String& getPhysics() const;
+
     virtual void setPhysical ( PhysicalParameters const& rhs );
     virtual PhysicalParameters const& getPhysical () const;
 

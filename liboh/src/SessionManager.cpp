@@ -108,7 +108,7 @@ SessionManager::ConnectedCallback& SessionManager::ObjectConnections::getConnect
     return mObjectInfo[sporef_objid].connectedCB;
 }
 
-ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, bool do_cb) {
+ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, bool do_cb) {
     if (mObjectInfo[sporef_obj].connectingTo != NullServerID) { // We were connecting to a server
         ServerID connectedTo = mObjectInfo[sporef_obj].connectingTo;
         OH_LOG(debug,"Successfully connected " << sporef_obj << " to space node " << connectedTo);
@@ -119,13 +119,13 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
         mObjectInfo[sporef_obj].connectedAs = sporef_obj;
 
         if (do_cb) {
-            mObjectInfo[sporef_obj].connectedCB(parent->mSpace, sporef_obj.object(), connectedTo, loc, orient, bnds, mesh);
+            mObjectInfo[sporef_obj].connectedCB(parent->mSpace, sporef_obj.object(), connectedTo, loc, orient, bnds, mesh, phy);
         }
         else {
             mDeferredCallbacks.push_back(
                 std::tr1::bind(
                     mObjectInfo[sporef_obj].connectedCB,
-                    parent->mSpace, sporef_obj.object(), connectedTo, loc, orient, bnds,mesh
+                    parent->mSpace, sporef_obj.object(), connectedTo, loc, orient, bnds, mesh, phy
                 )
             );
         }
@@ -158,7 +158,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 
 void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectReference& sporef_objid) {
     mObjectInfo[sporef_objid].connectingTo = NullServerID;
-    mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f(), String());
+    mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f(), String(), String());
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const SpaceObjectReference& sporef_objid, bool do_cb) {
@@ -281,7 +281,7 @@ void SessionManager::stop() {
 void SessionManager::connect(
     const SpaceObjectReference& sporef_objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
-    bool regQuery, const SolidAngle& init_sa, const String& init_mesh,
+    bool regQuery, const SolidAngle& init_sa, const String& init_mesh, const String& init_phy,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb,
     StreamCreatedCallback stream_created_cb, DisconnectedCallback disconn_cb
 )
@@ -303,6 +303,7 @@ void SessionManager::connect(
     ci.regQuery = regQuery;
     ci.queryAngle = init_sa;
     ci.mesh = init_mesh;
+    ci.physics = init_phy;
 
 
     // connect_cb gets wrapped so we can start some automatic steps (initial
@@ -310,7 +311,7 @@ void SessionManager::connect(
     mObjectConnections.add(
         sporef_objid, ci,
         std::tr1::bind(&SessionManager::handleObjectFullyConnected, this,
-		       _1, _2, _3, _4, _5, _6, _7,
+            _1, _2, _3, _4, _5, _6, _7, _8,
             connect_cb
         ),
         std::tr1::bind(&SessionManager::handleObjectFullyMigrated, this,
@@ -369,7 +370,7 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << sporef_uuid);
         // FIXME disconnect? retry?
-        mObjectConnections.getConnectCallback(sporef_uuid)(mSpace, ObjectReference::null(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f(), String());
+        mObjectConnections.getConnectCallback(sporef_uuid)(mSpace, ObjectReference::null(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f(), String(), String());
         return;
     }
 
@@ -399,6 +400,9 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
 
     if (ci.mesh.size() > 0)
         connect_msg.set_mesh( ci.mesh );
+
+    if (ci.physics.size() > 0)
+        connect_msg.set_physics( ci.physics );
 
     if (!send(sporef_uuid, OBJECT_PORT_SESSION,
               UUID::null(), OBJECT_PORT_SESSION,
@@ -777,15 +781,16 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
             BoundingSphere3f bnds = conn_resp.bounds();
             String mesh = "";
             if(conn_resp.has_mesh())
-	    {
                mesh = conn_resp.mesh();
-            }
+            String phy = "";
+            if(conn_resp.has_physics())
+               phy = conn_resp.physics();
             // If we've got proper time syncing setup, we can dispatch the callback
             // immediately.  Otherwise, we need to delay the callback
             assert(mTimeSyncClient != NULL);
             bool time_synced = mTimeSyncClient->valid();
 
-	    ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, time_synced);
+	    ServerID connected_to = mObjectConnections.handleConnectSuccess(sporef_obj, loc, orient, bnds, mesh, phy, time_synced);
 
 	    // Send an ack so the server (our first conn or after migrating) can start sending data to us
 	    Sirikata::Protocol::Session::Container ack_msg;
@@ -826,10 +831,10 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
     delete msg;
 }
 
-void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, ConnectedCallback real_cb) {
+void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, ConnectedCallback real_cb) {
     SpaceObjectReference spaceobj(space, obj);
 
-    real_cb(space, obj, server, loc, orient, bnds, mesh);
+    real_cb(space, obj, server, loc, orient, bnds, mesh, phy);
 
     SSTStream::connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random
