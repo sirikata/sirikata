@@ -234,7 +234,16 @@ void HttpManager::handle_connect(std::tr1::shared_ptr<TCPSocket> socket, std::tr
     } else {
         SILOG(transfer, error, "Failed to connect. Error = " << err.message());
         decrement_connection(req->addr);
-        add_req(req);
+
+        req->mNumTries++;
+        if (req->mNumTries > 10) {
+            //This means this connection has gotten an error over 10 times. Let's stop trying
+            //TODO: this should probably be configurable
+            req->cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, boost::asio::error::host_unreachable);
+        } else {
+            add_req(req);
+        }
+
         processQueue();
     }
 }
@@ -360,7 +369,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
 
         req->mNumTries++;
         if (req->mNumTries > 10) {
-            //This means this connection has gotten an error over 100 times. Let's stop trying
+            //This means this connection has gotten an error over 10 times. Let's stop trying
             //TODO: this should probably be configurable
             req->cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, boost::asio::error::eof);
         } else {
