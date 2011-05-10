@@ -293,7 +293,7 @@ void JSObjectScriptManager::createVisibleTemplate()
     mVisibleTemplate->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSVisible::getOrientation));
     mVisibleTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSVisible::getOrientationVel));
     mVisibleTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSVisible::getScale));
-
+    mVisibleTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSVisible::getMesh));
     mVisibleTemplate->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));
     mVisibleTemplate->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
     mVisibleTemplate->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));

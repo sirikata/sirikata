@@ -32,13 +32,15 @@ struct JSPositionListener : public PositionListener,
     virtual Quaternion   getOrientation();
     virtual Quaternion   getOrientationVelocity();
     virtual BoundingSphere3f   getBounds();
-
+    virtual String getMesh();
+    
     virtual v8::Handle<v8::Value> struct_getPosition();
     virtual v8::Handle<v8::Value> struct_getVelocity();
     virtual v8::Handle<v8::Value> struct_getOrientation();
     virtual v8::Handle<v8::Value> struct_getOrientationVel();
     virtual v8::Handle<v8::Value> struct_getScale();
-
+    virtual v8::Handle<v8::Value> struct_getMesh();
+    
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
 
     //simple accessors for sporef fields
@@ -67,7 +69,7 @@ protected:
     TimedMotionVector3f              mLocation;
     TimedMotionQuaternion         mOrientation;
     BoundingSphere3f                   mBounds;
-
+    String                               mMesh;
 
 
     //registers/deregisters position listener with associated jsobjectscript

@@ -66,7 +66,7 @@ struct JSPresenceStruct : public JSPositionListener,
     v8::Handle<v8::Value>  setVisualFunction(String urilocation);
     v8::Handle<v8::Value>  setOrientationFunction(Quaternion newOrientation);
 
-    v8::Handle<v8::Value>  getVisualFunction();
+
 
     v8::Handle<v8::Value>  getPhysicsFunction();
     v8::Handle<v8::Value>  setPhysicsFunction(const String& loc);

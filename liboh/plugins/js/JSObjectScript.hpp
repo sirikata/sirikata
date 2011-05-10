@@ -151,8 +151,6 @@ public:
 
 
     //handling basic datatypes for JSPresences
-    v8::Handle<v8::Value> getVisualFunction(const SpaceObjectReference* sporef);
-    v8::Handle<v8::Value> getVisualScaleFunction(const SpaceObjectReference* sporef);
     void setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
     void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
     void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
@@ -185,7 +183,7 @@ public:
     v8::Handle<v8::Value> resetScript(JSContextStruct* jscont);
 
     //registering position listeners to receive updates from loc
-    bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs);
+    bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String* mesh);
     bool deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener* ml);
 
 

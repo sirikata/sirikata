@@ -81,7 +81,7 @@ bool JSPositionListener::registerAsPosAndMeshListener()
         return false;
     }
 
-    hasRegisteredListener = jsObjScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds);
+    hasRegisteredListener = jsObjScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds,&mMesh);
 
     return hasRegisteredListener;
 }
@@ -112,13 +112,12 @@ SpaceObjectReference* JSPositionListener::getToListenFrom()
 }
 
 
-
-
 //calls updateLocation on jspos, filling in mLocation, mOrientation, and mBounds
 //for the newLocation,newOrientation, and newBounds of updateLocation field.
 void JSPositionListener::updateOtherJSPosListener(JSPositionListener* jspos)
 {
     jspos->updateLocation(mLocation,mOrientation,mBounds);
+    jspos->onSetMesh(ProxyObjectPtr(),Transfer::URI(mMesh));
 }
 
 //from being a position listener, must define what to do when receive an updated location.
@@ -140,9 +139,26 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
 
 }
 
+String JSPositionListener::getMesh()
+{
+    return mMesh;
+}
+
+v8::Handle<v8::Value> JSPositionListener::struct_getMesh()
+{
+    return v8::String::New(mMesh.c_str());
+}
+
+
 void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh)
 {
-    //not doing anything in this function yet.    
+    mMesh = newMesh.toString();
+
+    if (sporefToListenFrom != NULL)
+    {
+        if (*sporefToListenFrom != SpaceObjectReference::null())
+            jsObjScript->checkForwardUpdateMesh(*sporefToListenFrom,proxy,newMesh);
+    }
 }
 
 void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale )

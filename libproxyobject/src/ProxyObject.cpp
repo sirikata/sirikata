@@ -142,10 +142,14 @@ ProxyObjectPtr ProxyObject::getParentProxy() const {
 
 //you can set a camera's mesh as of now.
 void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predictive) {
+
+    
     if (seqno < mUpdateSeqno[LOC_MESH_PART] && !predictive) return;
 
     if (!predictive) mUpdateSeqno[LOC_MESH_PART] = seqno;
+
     mMeshURI = mesh;
+    
     ProxyObjectPtr ptr = getSharedPtr();
     if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
 }

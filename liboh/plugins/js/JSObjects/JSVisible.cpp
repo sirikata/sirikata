@@ -51,6 +51,25 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
     return jsvis->struct_getDistance(vec3);
 }
 
+/**
+   @return A string corresponding to the URI for your current mesh.  Can pass
+   this uri to setMesh functions on your own presences, but cannot set mesh
+   directly on a visible.
+ */
+Handle<v8::Value> getMesh(const v8::Arguments& args)
+{
+    
+    String errorMessage = "Error in getMesh while decoding visible.  ";
+    JSVisibleStruct* mStruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
+    
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return mStruct->struct_getMesh();
+}
+
+
+
 
 /**
    @return Vec3 associated with the position of this visible object.

@@ -304,7 +304,7 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
 
 //checks to see if the associated space object reference exists in the script.
 //if it does, then make the position listener a subscriber to its pos updates.
-bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs)
+bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String*mesh)
 {
     ProxyObjectPtr p;
     bool succeeded = false;
@@ -333,6 +333,8 @@ bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toL
         p->MeshProvider::addListener(ml);
         if (bs != NULL)
             *bs = p->getBounds();
+        if (mesh != NULL)
+            *mesh = p->getMesh().toString();
     }
     else
         JSLOG(insane,"problem registering to be a position listener. could not find associated object in hosted object.");
@@ -1571,12 +1573,6 @@ void  JSObjectScript::setOrientationFunction(const SpaceObjectReference* sporef,
 
 
 //scale
-v8::Handle<v8::Value> JSObjectScript::getVisualScaleFunction(const SpaceObjectReference* sporef)
-{
-    float curscale = mParent->requestCurrentBounds(sporef->space(),sporef->object()).radius();
-    return CreateJSResult(mContext->mContext, curscale);
-}
-
 void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, float newscale)
 {
     BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef->space(),sporef->object());
@@ -1585,21 +1581,8 @@ void JSObjectScript::setVisualScaleFunction(const SpaceObjectReference* sporef, 
 }
 
 
+
 //mesh
-v8::Handle<v8::Value> JSObjectScript::getVisualFunction(const SpaceObjectReference* sporef)
-{
-    Transfer::URI uri_returner;
-    bool hasMesh = mParent->requestMeshUri(sporef->space(),sporef->object(),uri_returner);
-
-    if (! hasMesh)
-        return v8::Undefined();
-
-    std::string string_returner = uri_returner.toString();
-    return v8::String::New(string_returner.c_str(), string_returner.size());
-}
-
-
-
 //FIXME: May want to have an error handler for this function.
 void  JSObjectScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
 {

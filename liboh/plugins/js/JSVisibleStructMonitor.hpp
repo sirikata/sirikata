@@ -57,7 +57,8 @@ public:
 
     
     void checkForwardUpdate(const SpaceObjectReference& sporefVisible, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq,const BoundingSphere3f& newBounds);    
-
+    void checkForwardUpdateMesh(const SpaceObjectReference& sporefVisible,ProxyObjectPtr proxptr,Transfer::URI const& newMesh);
+    
     
 private:
 

@@ -227,10 +227,6 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
     return v8::Undefined();
 }
 
-v8::Handle<v8::Value>JSPresenceStruct::getVisualFunction()
-{
-    return jsObjScript->getVisualFunction(sporefToListenTo);
-}
 
 //returns this presence as a visible object.
 v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()

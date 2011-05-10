@@ -70,8 +70,16 @@ void JSVisibleStructMonitor::checkForwardUpdate(const SpaceObjectReference& spor
     SpaceToVisMapIter iter = listenFromNoneMap.find(sporefVisible);
     if (iter != listenFromNoneMap.end())
         iter->second->updateLocation(tmv,tmq,newBounds);
-
 }
+
+void JSVisibleStructMonitor::checkForwardUpdateMesh(const SpaceObjectReference& sporefVisible,ProxyObjectPtr proxptr,Transfer::URI const& newMesh)
+{
+    SpaceToVisMapIter iter = listenFromNoneMap.find(sporefVisible);
+
+    if (iter != listenFromNoneMap.end())
+        iter->second->onSetMesh(proxptr,newMesh);
+}
+
 
 
 

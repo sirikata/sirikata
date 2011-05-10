@@ -132,9 +132,6 @@ v8::Handle<v8::Value> JSVisibleStruct::checkEqual(JSVisibleStruct* jsvis)
 
 
 
-v8::Handle<v8::Value> JSVisibleStruct::struct_getVisual() {
-    return jsObjScript->getVisualFunction(sporefToListenTo);
-}
 
 
 

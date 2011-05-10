@@ -294,7 +294,7 @@ v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
             if (mStruct == NULL)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-            return mStruct->getVisualFunction();
+            return mStruct->struct_getMesh();
         }
 
 
