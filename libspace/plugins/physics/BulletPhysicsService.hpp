@@ -188,8 +188,6 @@ private:
 
 	bool firstCube;
 
-	bool printDebugInfo;
-
 }; // class BulletPhysicsService
 
 class SirikataMotionState : public btMotionState {

@@ -62,15 +62,13 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
 	dynamicsWorld->setGravity(btVector3(0,-1,0));
 
 	//this stuff is from the beginner program, for a ground plane
-	/*btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),1);
-	//btCollisionShape* fallShape = new btSphereShape(1);
-
+        /*
+	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
 	btDefaultMotionState* groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(0,-50,0)));
-
 	btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0, groundMotionState, groundShape, btVector3(0,0,0));
 	btRigidBody* groundRigidBody = new btRigidBody(groundRigidBodyCI);
-
-	dynamicsWorld->addRigidBody(groundRigidBody);*/
+	dynamicsWorld->addRigidBody(groundRigidBody);
+        */
 
 	mTimer.start();
 
@@ -83,10 +81,6 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     x++;
 
 	firstCube = true;
-
-	//change this if you need more debugging output
-	printDebugInfo = false;
-
 	BULLETLOG(detailed, "Service Loaded");
 }
 
@@ -379,19 +373,15 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 			bbox.mergeIn(inst_bnds);
 		mesh_rad = std::max(mesh_rad, rad);
 	}
-	if(printDebugInfo) {
-		std::cout << "bbox: " << bbox << std::endl;
-	}
+        BULLETLOG(detailed, "bbox: " << bbox);
 	Vector3f diff = bbox.max() - bbox.min();
 
     //objBBox enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
     if(objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
 		double scalingFactor = locinfo.bounds.radius()/mesh_rad;
-		if(printDebugInfo) {
-                    BULLETLOG(detailed, "objposition: " << objPosition.x << ", " << objPosition.y << ", " << objPosition.z);
-                    BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
-		}
+                BULLETLOG(detailed, "objposition: " << objPosition.x << ", " << objPosition.y << ", " << objPosition.z);
+                BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
 		newObjData.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
 	}
 	//do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
@@ -415,18 +405,12 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 			for(unsigned int i = 0; i < numOfPrimitives; i++) {
 				//create bullet triangle array from our data structure
 				Vector3f transformedVertex;
-				if(printDebugInfo) {
-                                    BULLETLOG(detailed, "subgeom indices: ");
-				}
+                                BULLETLOG(detailed, "subgeom indices: ");
 				for(unsigned int j=0; j < subGeom->primitives[i].indices.size(); j++) {
 					gIndices.push_back((int)(subGeom->primitives[i].indices[j]));
-					if(printDebugInfo) {
-                                            BULLETLOG(detailed, (int)(subGeom->primitives[i].indices[j]) << ", ");
-					}
+                                        BULLETLOG(detailed, (int)(subGeom->primitives[i].indices[j]) << ", ");
 				}
-				if(printDebugInfo) {
-                                    BULLETLOG(detailed, "gIndices size: " << (int) gIndices.size());
-				}
+                                BULLETLOG(detailed, "gIndices size: " << (int) gIndices.size());
 				for(unsigned int j=0; j < subGeom->positions.size(); j++) {
 					//printf("preTransform Vertex: %f, %f, %f\n", subGeom->positions[j].x, subGeom->positions[j].y, subGeom->positions[j].z);
 					transformedVertex = transformInstance * subGeom->positions[j];
@@ -458,11 +442,9 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 			objPosition.y = objPosition.y + bMin.y;
 			objPosition.z = objPosition.z - bMin.z;*/
 		}
-		if(printDebugInfo) {
-			std::cout << "total bounds: " << bbox << std::endl;
-			BULLETLOG(detailed, "bounds radius: " << mesh_rad);
-			BULLETLOG(detailed, "Num of triangles in mesh: " << meshToConstruct->getNumTriangles());
-		}
+                BULLETLOG(detailed, "total bounds: " << bbox);
+                BULLETLOG(detailed, "bounds radius: " << mesh_rad);
+                BULLETLOG(detailed, "Num of triangles in mesh: " << meshToConstruct->getNumTriangles());
 		//btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
 		newObjData.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
 	}
@@ -470,10 +452,8 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 	else if(objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
 
 		newObjData.objShape = new btSphereShape(locinfo.bounds.radius());
-		if(printDebugInfo) {
-                    BULLETLOG(detailed, "objposition: " << objPosition.x << ", " << objPosition.y << ", " << objPosition.z);
-                    BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
-		}
+                BULLETLOG(detailed, "objposition: " << objPosition.x << ", " << objPosition.y << ", " << objPosition.z);
+                BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
 	}
 	else {
             BULLETLOG(detailed, "Error in objBBox initialization!");
