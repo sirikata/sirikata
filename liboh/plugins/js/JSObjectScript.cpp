@@ -301,9 +301,10 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
     return invokeCallback(ctx, NULL, cb, 0, NULL);
 }
 
+
 //checks to see if the associated space object reference exists in the script.
 //if it does, then make the position listener a subscriber to its pos updates.
-bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,TimedMotionVector3f* loc, TimedMotionQuaternion* orient)
+bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs)
 {
     ProxyObjectPtr p;
     bool succeeded = false;
@@ -328,6 +329,10 @@ bool JSObjectScript::registerPosListener(SpaceObjectReference* sporef_toListenTo
             *loc = p->getTimedMotionVector();
         if (orient != NULL)
             *orient = p->getTimedMotionQuaternion();
+
+        p->MeshProvider::addListener(ml);
+        if (bs != NULL)
+            *bs = p->getBounds();
     }
     else
         JSLOG(insane,"problem registering to be a position listener. could not find associated object in hosted object.");
@@ -363,10 +368,9 @@ bool JSObjectScript::isRootContext(JSContextStruct* jscont)
 }
 
 
-
 //deregisters position listening for an arbitrary proxy object visible to
 //ownPres and with spaceobject reference sporef.
-bool JSObjectScript::deRegisterPosListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl)
+bool JSObjectScript::deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl, MeshListener* ml)
 {
     ProxyObjectPtr p;
     bool succeeded = false;
@@ -385,7 +389,10 @@ bool JSObjectScript::deRegisterPosListener(SpaceObjectReference* sporef, SpaceOb
     }
 
     if (succeeded)
+    {
         p->PositionProvider::removeListener(pl);
+        p->MeshProvider::removeListener(ml);
+    }
     else
         JSLOG(error,"error de-registering to be a position listener.  could not find associated object in hosted object.");
 

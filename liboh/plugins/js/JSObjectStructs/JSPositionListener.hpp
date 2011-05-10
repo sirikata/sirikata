@@ -15,7 +15,8 @@ class JSObjectScript;
 
 
 //note: only position and isConnected will actually set the flag of the watchable
-struct JSPositionListener : public PositionListener
+struct JSPositionListener : public PositionListener,
+                            public MeshListener
 {
     friend class JSSerializer;
 
@@ -46,6 +47,11 @@ struct JSPositionListener : public PositionListener
 
 
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
+
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
+    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
+
+    
     virtual void destroyed();
 
     //calls updateLocation on jspos, filling in mLocation, mOrientation, and mBounds
@@ -65,8 +71,8 @@ protected:
 
 
     //registers/deregisters position listener with associated jsobjectscript
-    bool registerAsPosListener();
-    void deregisterAsPosListener();
+    bool registerAsPosAndMeshListener();
+    void deregisterAsPosAndMeshListener();
 
 private:
     //returns true if inContext and sporefToListenTo is not null

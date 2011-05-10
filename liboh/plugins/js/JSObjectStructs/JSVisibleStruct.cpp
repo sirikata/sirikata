@@ -17,7 +17,7 @@ JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectRefere
     JSPositionListener::setListenTo(&whatsVisible,&toWhom);
 
     //only register as pos listener if still visible is true
-    *stillVisible = JSPositionListener::registerAsPosListener();
+    *stillVisible = JSPositionListener::registerAsPosAndMeshListener();
 }
 
 
@@ -74,7 +74,7 @@ void JSVisibleStruct::notifyNotVisible()
     JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is no longer visible to "<<*sporefToListenFrom);
 
     *stillVisible = false;
-    JSPositionListener::deregisterAsPosListener();
+    JSPositionListener::deregisterAsPosAndMeshListener();
 }
 
 void JSVisibleStruct::notifyVisible()
@@ -84,7 +84,7 @@ void JSVisibleStruct::notifyVisible()
     {
         JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is now visible to "<<*sporefToListenFrom);
         *stillVisible = true;
-        JSPositionListener::registerAsPosListener();
+        JSPositionListener::registerAsPosAndMeshListener();
     }
 }
 

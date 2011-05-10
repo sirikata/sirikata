@@ -25,7 +25,8 @@ JSPositionListener::JSPositionListener(JSObjectScript* script)
 JSPositionListener::~JSPositionListener()
 {
     if (hasRegisteredListener)
-        deregisterAsPosListener();
+        deregisterAsPosAndMeshListener();
+
 
     if (sporefToListenTo != NULL)
         delete sporefToListenTo;
@@ -40,7 +41,7 @@ void JSPositionListener::destroyed()
     if (hasRegisteredListener)
     {
         hasRegisteredListener = false;
-        deregisterAsPosListener();
+        deregisterAsPosAndMeshListener();
     }
 }
 
@@ -68,7 +69,7 @@ void JSPositionListener::setListenTo(const SpaceObjectReference* objToListenTo,c
 }
 
 
-bool JSPositionListener::registerAsPosListener()
+bool JSPositionListener::registerAsPosAndMeshListener()
 {
     if (hasRegisteredListener)
         return true;
@@ -80,14 +81,14 @@ bool JSPositionListener::registerAsPosListener()
         return false;
     }
 
-    hasRegisteredListener = jsObjScript->registerPosListener(sporefToListenTo,sporefToListenFrom,this,&mLocation,&mOrientation);
+    hasRegisteredListener = jsObjScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds);
 
     return hasRegisteredListener;
 }
 
 
 
-void JSPositionListener::deregisterAsPosListener()
+void JSPositionListener::deregisterAsPosAndMeshListener()
 {
     if (!hasRegisteredListener)
         return;
@@ -95,7 +96,8 @@ void JSPositionListener::deregisterAsPosListener()
     hasRegisteredListener =false;
 
     if (sporefToListenTo != NULL)
-        jsObjScript->deRegisterPosListener(sporefToListenTo,sporefToListenFrom,this);
+        jsObjScript->deRegisterPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this);
+
 }
 
 
@@ -108,6 +110,9 @@ SpaceObjectReference* JSPositionListener::getToListenFrom()
 {
     return sporefToListenFrom;
 }
+
+
+
 
 //calls updateLocation on jspos, filling in mLocation, mOrientation, and mBounds
 //for the newLocation,newOrientation, and newBounds of updateLocation field.
@@ -134,6 +139,22 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
     }
 
 }
+
+void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh)
+{
+    //not doing anything in this function yet.    
+}
+
+void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale )
+{
+    mBounds = BoundingSphere3f(mBounds.center(),newScale);
+    if (sporefToListenFrom != NULL)
+    {
+        if (*sporefToListenFrom != SpaceObjectReference::null())
+            jsObjScript->checkForwardUpdate(*sporefToListenFrom,mLocation,mOrientation,mBounds);
+    }
+}
+
 
 Vector3f JSPositionListener::getPosition()
 {

@@ -37,7 +37,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
 {
     mContext->struct_registerSuspendable(this);
     JSPositionListener::setListenTo(&_sporef, &_sporef);
-    JSPositionListener::registerAsPosListener();
+    JSPositionListener::registerAsPosAndMeshListener();
 }
 
 
@@ -89,7 +89,7 @@ v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
     requestDisconnect();
     if (isConnected)
-        deregisterAsPosListener();
+        deregisterAsPosAndMeshListener();
 
     isConnected = false;
     clearPreviousConnectedCB();
@@ -114,12 +114,12 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     if (getIsConnected())
     {
         JSLOG(error, "Error when calling connect on presence.  The presence was already connected.");
-        deregisterAsPosListener();
+        deregisterAsPosAndMeshListener();
     }
 
     isConnected = true;
     JSPositionListener::setListenTo(&_sporef,NULL);
-    JSPositionListener::registerAsPosListener();
+    JSPositionListener::registerAsPosAndMeshListener();
 
 
     callConnectedCallback();
