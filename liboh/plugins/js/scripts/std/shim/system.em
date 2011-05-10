@@ -292,6 +292,21 @@ if(system == undefined)
         };
 
 
+        //not exposing
+        /** @ignore */
+        this.__wrapPresConnCB = function(callback)
+        {
+            var returner = function(presConn)
+            {
+                this.addToSelfMap(presConn);
+                this.__setBehindSelf(presConn);
+                if (typeof(callback) === 'function')
+                    callback(presConn);
+            };
+
+            return std.core.bind(returner,this);
+        };
+
         /** @deprecated Use createPresence */
         this.create_presence = function()
         {
@@ -386,7 +401,7 @@ if(system == undefined)
             //baseSystem.onPresenceConnected.apply(baseSystem,[this.__wrapPresConnCB(callback)]);
             baseSystem.onPresenceConnected(this.__wrapPresConnCB(callback));
         };
-
+        this.onPresenceConnected(undefined);
 
         /** @function
          @description Registers a callback to be invoked when a presence created within this sandbox gets disconnected from the world.
@@ -398,21 +413,7 @@ if(system == undefined)
             //baseSystem.onPresenceDisconnected.apply(baseSystem,[this.__wrapPresConnCB(callback)]);
             baseSystem.onPresenceDisconnected(this.__wrapPresConnCB(callback));
         };
-
-        //not exposing
-        /** @ignore */
-        this.__wrapPresConnCB = function(callback)
-        {
-            var returner = function(presConn)
-            {
-                this.addToSelfMap(presConn);
-                this.__setBehindSelf(presConn);
-                callback(presConn);
-            };
-
-            return std.core.bind(returner,this);
-        };
-
+        this.onPresenceDisconnected(undefined);
 
           this.__sys_onProxAdded= function (presCalling, funcToCall)
           {
