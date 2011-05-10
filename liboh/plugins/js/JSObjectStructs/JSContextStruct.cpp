@@ -84,8 +84,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_createVec3(Vector3d& toCreate)
 v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl)
 {
     jsObjScript->sendMessageToEntity( jspl->getToListenTo(), jspres->getSporef(), serialized_message);
-    
-    return v8::Undefined();    
+
+    return v8::Undefined();
 }
 
 
@@ -108,7 +108,7 @@ v8::Handle<v8::Value>  JSContextStruct::struct_require(const String& toRequireFr
 //was created from return true.  Otherwise, return false.
 bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver)
 {
-    if (associatedPresence != NULL)
+    if (associatedPresence != NULL && associatedPresence->getSporef() != NULL)
     {
         //ie, we're not in the root sandbox
         if (*(associatedPresence->getSporef()) == receiver)
@@ -132,7 +132,7 @@ bool JSContextStruct::hasPresence(const SpaceObjectReference& sporef)
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
     {
         JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (iter->first);
-        if (jspres != NULL)
+        if (jspres != NULL && jspres->getSporef() != NULL)
         {
             if (*(jspres->getSporef()) == sporef)
                 return true;
