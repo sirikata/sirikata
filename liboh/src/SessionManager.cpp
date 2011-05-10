@@ -63,7 +63,7 @@ SessionManager::ObjectConnections::ObjectConnections(SessionManager* _parent)
 }
 
 void SessionManager::ObjectConnections::add(
-    const SpaceObjectReference& sporef_objid, ConnectingInfo ci, ConnectedCallback connect_cb,
+    const SpaceObjectReference& sporef_objid, ConnectingInfo ci, InternalConnectedCallback connect_cb,
     MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb,
     DisconnectedCallback disconnected_cb
 )
@@ -104,7 +104,7 @@ void SessionManager::ObjectConnections::startMigration(const SpaceObjectReferenc
     mObjectInfo[sporef_objid].migratedCB(parent->mSpace, sporef_objid.object(), migrating_to);
 }
 
-SessionManager::ConnectedCallback& SessionManager::ObjectConnections::getConnectCallback(const SpaceObjectReference& sporef_objid) {
+SessionManager::InternalConnectedCallback& SessionManager::ObjectConnections::getConnectCallback(const SpaceObjectReference& sporef_objid) {
     return mObjectInfo[sporef_objid].connectedCB;
 }
 
@@ -118,14 +118,21 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 
         mObjectInfo[sporef_obj].connectedAs = sporef_obj;
 
+	ConnectingInfo ci;
+	ci.loc = loc;
+	ci.orient = orient;
+	ci.bounds = bnds;
+	ci.mesh = mesh;
+	ci.physics = phy;
+	
         if (do_cb) {
-            mObjectInfo[sporef_obj].connectedCB(parent->mSpace, sporef_obj.object(), connectedTo, loc, orient, bnds, mesh, phy);
+            mObjectInfo[sporef_obj].connectedCB(parent->mSpace, sporef_obj.object(), connectedTo, ci);
         }
         else {
             mDeferredCallbacks.push_back(
                 std::tr1::bind(
                     mObjectInfo[sporef_obj].connectedCB,
-                    parent->mSpace, sporef_obj.object(), connectedTo, loc, orient, bnds, mesh, phy
+                    parent->mSpace, sporef_obj.object(), connectedTo, ci
                 )
             );
         }
@@ -158,7 +165,8 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 
 void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectReference& sporef_objid) {
     mObjectInfo[sporef_objid].connectingTo = NullServerID;
-    mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f(), String(), String());
+    ConnectingInfo ci;
+    mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, ci);
 }
 
 void SessionManager::ObjectConnections::handleConnectStream(const SpaceObjectReference& sporef_objid, bool do_cb) {
@@ -312,7 +320,7 @@ void SessionManager::connect(
     mObjectConnections.add(
         sporef_objid, ci,
         std::tr1::bind(&SessionManager::handleObjectFullyConnected, this,
-            _1, _2, _3, _4, _5, _6, _7, _8,
+		       _1, _2, _3, ci,
             connect_cb
         ),
         std::tr1::bind(&SessionManager::handleObjectFullyMigrated, this,
@@ -371,7 +379,8 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     if (conn == NULL) {
         OH_LOG(warn,"Couldn't initiate connection for " << sporef_uuid);
         // FIXME disconnect? retry?
-        mObjectConnections.getConnectCallback(sporef_uuid)(mSpace, ObjectReference::null(), NullServerID, TimedMotionVector3f(), TimedMotionQuaternion(), BoundingSphere3f(), String(), String());
+	ConnectingInfo ci;
+        mObjectConnections.getConnectCallback(sporef_uuid)(mSpace, ObjectReference::null(), NullServerID, ci);
         return;
     }
 
@@ -832,10 +841,17 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
     delete msg;
 }
 
-void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, ConnectedCallback real_cb) {
+void SessionManager::handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci, ConnectedCallback real_cb) {
     SpaceObjectReference spaceobj(space, obj);
 
-    real_cb(space, obj, server, loc, orient, bnds, mesh, phy);
+    ConnectionInfo conn_info;
+    conn_info.server = server;
+    conn_info.loc = ci.loc;
+    conn_info.orient = ci.orient;
+    conn_info.bounds = ci.bounds;
+    conn_info.mesh = ci.mesh;
+    conn_info.physics = ci.physics;
+    real_cb(space, obj, conn_info);
 
     SSTStream::connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random

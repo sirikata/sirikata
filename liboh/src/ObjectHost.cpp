@@ -192,21 +192,21 @@ void ObjectHost::connect(
 
     mSessionManagers[space]->connect(
         sporef, loc, orient, bnds, with_query, init_sa, mesh, phy,
-        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, _4, _5, _6, _7, _8, connected_cb),
+        std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, connected_cb),
         migrated_cb,
         stream_created_cb,
         disconnected_cb
     );
 }
 
-void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, ConnectedCallback cb) {
+  void ObjectHost::wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb) {
     ConnectionInfo info;
-    info.server = server;
-    info.loc = loc;
-    info.orient = orient;
-    info.bnds = bnds;
-    info.mesh = mesh;
-    info.physics = phy;
+    info.server = ci.server;
+    info.loc = ci.loc;
+    info.orient = ci.orient;
+    info.bnds = ci.bounds;
+    info.mesh = ci.mesh;
+    info.physics = ci.physics;
     cb(space, obj, info);
 }
 

@@ -202,7 +202,7 @@ public:
     void handleObjectDisconnected(const SpaceObjectReference& sporef_internalID, Disconnect::Code);
 
     // Wrapper to convert callback to use ConnectionInfo
-    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& physics, ConnectedCallback cb);
+    void wrappedConnectedCallback(const SpaceID& space, const ObjectReference& obj, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb);
 
     // Checks serialization of access to SessionManagers
     Sirikata::SerializationCheck mSessionSerialization;

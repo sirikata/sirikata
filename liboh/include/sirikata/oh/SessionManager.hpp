@@ -61,9 +61,18 @@ class ServerIDMap;
 class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateService {
   public:
 
+    struct ConnectionInfo {
+        ServerID server;
+        TimedMotionVector3f loc;
+        TimedMotionQuaternion orient;
+        BoundingSphere3f bounds;
+        String mesh;
+        String physics;
+    };
+
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
-    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&, const String&)> ConnectedCallback;
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, const ConnectionInfo&)> ConnectedCallback;
     // Callback indicating that a connection is being migrated to a new server.  This occurs as soon
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
@@ -164,7 +173,7 @@ private:
     // This gets invoked when the connection really is ready -- after
     // successful response and we have time sync info. It does some
     // additional setup work (sst stream) and then invokes the real callback
-    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, ConnectedCallback real_cb);
+    void handleObjectFullyConnected(const SpaceID& space, const ObjectReference& obj, ServerID server, const ConnectingInfo& ci, ConnectedCallback real_cb);
     // This gets invoked after full migration occurs. It does additional setup
     // work (new sst stream to new space server) and invokes the real callback.
     void handleObjectFullyMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server, MigratedCallback real_cb);
@@ -256,7 +265,7 @@ private:
         String mesh;
         String physics;
     };
-
+    typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const ConnectingInfo& ci)> InternalConnectedCallback;
 
     // Objects connections, maintains object connections and mapping
     class ObjectConnections {
@@ -266,7 +275,7 @@ private:
         // Add the object, completely disconnected, to the index
         void add(
             const SpaceObjectReference& sporef_objid, ConnectingInfo ci,
-            ConnectedCallback connect_cb, MigratedCallback migrate_cb,
+            InternalConnectedCallback connect_cb, MigratedCallback migrate_cb,
             StreamCreatedCallback stream_created_cb, DisconnectedCallback disconnected_cb
         );
 
@@ -277,7 +286,7 @@ private:
         void startMigration(const SpaceObjectReference& objid, ServerID migrating_to);
 
         WARN_UNUSED
-        ConnectedCallback& getConnectCallback(const SpaceObjectReference& sporef_objid);
+        InternalConnectedCallback& getConnectCallback(const SpaceObjectReference& sporef_objid);
 
         // Marks as connected and returns the server connected to. do_cb
         // specifies whether the callback should be invoked or deferred
@@ -323,7 +332,7 @@ private:
 
             SpaceObjectReference connectedAs;
 
-            ConnectedCallback connectedCB;
+            InternalConnectedCallback connectedCB;
             MigratedCallback migratedCB;
   	    StreamCreatedCallback streamCreatedCB;
   	    DisconnectedCallback disconnectedCB;

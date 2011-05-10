@@ -110,6 +110,8 @@ public:
     bool unregisterService(uint64 port);
 
 private:
+    void dispatchConnectedCallback(const SpaceID& space, const ObjectReference& objid, const SessionManager::ConnectionInfo& ci, ConnectedCallback cb);
+
     struct ConnectingInfo;
 
     void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);
