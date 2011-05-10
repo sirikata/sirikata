@@ -994,6 +994,8 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
 //third arg may be null to evaluate in global context
 void JSObjectScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope(jscontext->mContext);
     TryCatch try_catch;
     invokeCallback( (jscontext == NULL ? mContext : jscontext), cb);
 }
