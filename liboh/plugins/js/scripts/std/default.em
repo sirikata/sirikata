@@ -35,11 +35,5 @@
 system.require('std/script/scriptable.em');
 system.require('std/movement/movable.em');
 
-
-
 scriptable = new std.script.Scriptable();
-system.onPresenceConnected(
-    function(pres) {
-        movable = new std.movement.Movable(pres);
-    }
-);
+movable = new std.movement.Movable();

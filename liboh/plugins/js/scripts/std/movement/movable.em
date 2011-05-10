@@ -46,9 +46,7 @@ function() {
      *  applies them to itself. This allows objects to control each
      *  other, e.g. for a client to move objects in the world.
      */
-    std.movement.Movable = function(pres) {
-        this._pres = pres;
-
+    std.movement.Movable = function() {
         var moveRequestHandler = std.core.bind(this._handleRequest, this);
         moveRequestHandler <- new util.Pattern("request", "movable");
 
@@ -73,36 +71,36 @@ function() {
     };
 
     std.movement.Movable.prototype._handleStopMove = function(msg, sender) {
-        std.movement.stopMove(this._pres);
+        std.movement.stopMove(system.self);
     };
 
     std.movement.Movable.prototype._handleStopRotate = function(msg, sender) {
-        std.movement.stopRotate(this._pres);
+        std.movement.stopRotate(system.self);
     };
 
     std.movement.Movable.prototype._handleStop = function(msg, sender) {
-        std.movement.stopMove(this._pres);
-        std.movement.stopRotate(this._pres);
+        std.movement.stopMove(system.self);
+        std.movement.stopRotate(system.self);
     };
 
     std.movement.Movable.prototype._handleSetPos = function(msg, sender) {
-        std.movement.position(this._pres, msg.position);
+        std.movement.position(system.self, msg.position);
     };
 
     std.movement.Movable.prototype._handleSetVel = function(msg, sender) {
-        std.movement.move(this._pres, msg.velocity);
+        std.movement.move(system.self, msg.velocity);
     };
 
     std.movement.Movable.prototype._handleSetRot = function(msg, sender) {
-        std.movement.orientation(this._pres, msg.orient);
+        std.movement.orientation(system.self, msg.orient);
     };
 
     std.movement.Movable.prototype._handleSetRotVel = function(msg, sender) {
-        std.movement.rotate(this._pres, msg.orientvel);
+        std.movement.rotate(system.self, msg.orientvel);
     };
 
     std.movement.Movable.prototype._handleSetScale = function(msg, sender) {
-        std.movement.scaleTo(this._pres, msg.scale);
+        std.movement.scaleTo(system.self, msg.scale);
     };
 
 })();
