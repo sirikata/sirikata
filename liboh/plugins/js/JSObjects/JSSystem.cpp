@@ -77,6 +77,45 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
+v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling serialize.  Must pass in at least one argument to be serialized.")));
+
+    if (!args[0]->IsObject())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must pass in an *object* to serialize.")));
+    
+    v8::HandleScope handle_scope;
+    Local<v8::Object> v8Object = args[0]->ToObject();
+    String serializedObject = JSSerializer::serializeObject(v8Object);
+
+    return v8::String::New(serializedObject.c_str());
+}
+
+v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling deserialize.  Must pass in a string to be deserialized.")));
+    
+    String errMsg = "Error.  Must pass in a *string* to deserialize.";
+    String decodedVal;
+    bool strDecoded = decodeString(args[0], decodedVal, errMsg);
+
+    if (! strDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    errMsg = "Error decoding system struct when deserializing. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    return jssys->deserializeObject(decodedVal);
+}
+
+
 
 v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 {
@@ -445,8 +484,8 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 */
 v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 {
-    if (args.Length() != 2)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence>")));
+    if (args.Length() != 4)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence><position><space>")));
 
     //check args.
     //mesh arg
@@ -460,6 +499,21 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
     if (! args[1]->IsFunction())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that the second argument passed in be a function")));
 
+    //position argument
+    if (! Vec3ValValidate(args[2]))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that third argument passed in be a vec3.")));
+
+    Vector3d poser = Vec3ValExtract(args[2]);
+
+    //space argument
+    String spaceStr;
+    String errSpaceMsg = "Error in create presence decoding string corresponding to space.  ";
+    bool strDecode = decodeString(args[3],spaceStr,errSpaceMsg);
+    if (!strDecode )
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errSpaceMsg.c_str())));
+
+    SpaceID toCreateIn(spaceStr);
+    
 
     //decode root
     String errorMessageFRoot = "Error decoding the system object from root_createPresence.  ";
@@ -468,7 +522,7 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
 
-    return jsfake->struct_createPresence(newMesh, v8::Handle<v8::Function>::Cast(args[1]));
+    return jsfake->struct_createPresence(newMesh, v8::Handle<v8::Function>::Cast(args[1]),poser,toCreateIn);
 }
 
 
@@ -477,21 +531,21 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
    @param Vec3 (eg. new util.Vec3(0,0,0);).  Corresponds to position to place
    new entity in world.
    @param String.  Script option to pass in.  Almost always pass "js"
-   @param String.  Name of file to import code for new entity from.
+   @param String.  New script to execute.
    @param String.  Mesh uri corresponding to mesh you want to use for this
    entity.
    @param Number.  Scale of new mesh.  (Higher number means increase mesh's size.)
    @param Number.  Solid angle that entity's new presence queries with.
-
+   @param String.  Space should create the new entity in.
 
    Note: calling create_entity in a sandbox without the capabilities to create
    entities throws an exception.
  */
 v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 {
-    if (args.Length() != 6)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script filename>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
-
+    if (args.Length() != 7)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script to execute>, <mesh uri>,<float scale>,<float solid_angle>,<space id> arguments")) );
+    
 
     //decode root
     String errorMessageFRoot = "Error decoding the system object from root_createEntity.  ";
@@ -499,7 +553,6 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
-
 
     // get the location from the args
 
@@ -521,7 +574,101 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
     const char* cstrOpts = ToCString(scriptOpters);
     String scriptOpts (cstrOpts);
     scriptOpts = "--init-script="+scriptOpts;
+    
+    //get the mesh to represent as
+    v8::String::Utf8Value mesh_str(args[3]);
+    const char* mesh_cstr = ToCString(mesh_str);
+    String mesh(mesh_cstr);
 
+    //get the scale
+    Handle<Object> scale_arg = ObjectCast(args[4]);
+    if (!NumericValidate(scale_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for scale.")) );
+
+    float scale  =  NumericExtract(scale_arg);
+
+    //get the solid angle
+    Handle<Object> qa_arg = ObjectCast(args[5]);
+    if (!NumericValidate(qa_arg))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in ScriptCreateEntity function. Wrong argument: require a number for query angle.")) );
+
+    SolidAngle new_qa(NumericExtract(qa_arg));
+
+    //get the space argument
+    String spaceStr;
+    String errSpaceMsg = "Error in create entity decoding string corresponding to space.  ";
+    bool strDecode = decodeString(args[6],spaceStr,errSpaceMsg);
+    if (!strDecode )
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errSpaceMsg.c_str())));
+
+    SpaceID toCreateIn(spaceStr);
+    
+    //parse a bunch of arguments here
+    EntityCreateInfo eci;
+    eci.scriptType = scriptType;
+    eci.mesh = mesh;
+    eci.scriptOpts = scriptOpts;
+
+
+    eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
+
+    eci.solid_angle = new_qa;
+    eci.scale = scale;
+    eci.space = toCreateIn;
+
+    return jsfake->struct_createEntity(eci);
+}
+
+
+
+/**
+   @param Vec3 (eg. new util.Vec3(0,0,0);).  Corresponds to position to place
+   new entity in world.
+   @param String.  Script option to pass in.  Almost always pass "js"
+   @param String.  New script to execute.
+   @param String.  Mesh uri corresponding to mesh you want to use for this
+   entity.
+   @param Number.  Scale of new mesh.  (Higher number means increase mesh's size.)
+   @param Number.  Solid angle that entity's new presence queries with.
+
+
+   Note: calling create_entity in a sandbox without the capabilities to create
+   entities throws an exception.
+ */
+v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
+{
+    if (args.Length() != 6)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script to execute>, <mesh uri>,<float scale>,<float solid_angle> arguments")) );
+
+
+    //decode root
+    String errorMessageFRoot = "Error decoding the system object from root_createEntity.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
+
+    // get the location from the args
+
+    //get position
+    Handle<Object> val_obj = ObjectCast(args[0]);
+    if( !Vec3Validate(val_obj))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have a position vector as first argument")) );
+
+    Vector3d pos(Vec3Extract(val_obj));
+
+    //getting script type
+    v8::String::Utf8Value strScriptType(args[1]);
+    const char* cstrType = ToCString(strScriptType);
+    String scriptType(cstrType);
+
+    // get the script to attach from the args
+    //script is a string args
+    v8::String::Utf8Value scriptOpters(args[2]);
+    const char* cstrOpts = ToCString(scriptOpters);
+    String scriptOpts (cstrOpts);
+    scriptOpts = "--init-script="+scriptOpts;
+    
     //get the mesh to represent as
     v8::String::Utf8Value mesh_str(args[3]);
     const char* mesh_cstr = ToCString(mesh_str);

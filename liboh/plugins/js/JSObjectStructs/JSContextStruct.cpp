@@ -15,6 +15,8 @@
 #include "../JSUtil.hpp"
 #include <sirikata/core/util/Vector3.hpp>
 #include "../JSObjects/JSVec3.hpp"
+#include "JS_JSMessage.pbj.hpp"
+#include "../JSSerializer.hpp"
 
 
 namespace Sirikata {
@@ -38,6 +40,8 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //no need to register this context with it's parent context because that's
     //taken care of in the createContext function of this class.
 }
+
+
 
 //performs the initialization and population of util object, system object,
 //and system object's presences array.
@@ -127,6 +131,24 @@ bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver
 
     //cannot receive messages for this.
     return false;
+}
+
+v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeserialize)
+{
+    MemoryReference membod(toDeserialize);
+    Sirikata::JS::Protocol::JSMessage js_msg;
+    bool parsed = js_msg.ParseFromArray(membod.data(), membod.size());
+
+    if (!parsed)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error deserializing string.")));
+
+    
+    v8::Local<v8::Object> obj = v8::Object::New();
+    bool deserializedSuccess = JSSerializer::deserializeObject(jsObjScript, js_msg,obj);
+    if (!deserializedSuccess)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
+
+    return obj;
 }
 
 
@@ -561,9 +583,9 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
+v8::Handle<v8::Value> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn)
 {
-    return jsObjScript->create_presence(newMesh,initFunc,this);
+    return jsObjScript->create_presence(newMesh,initFunc,this, poser, spaceToCreateIn);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci)

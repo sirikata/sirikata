@@ -44,6 +44,7 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args);
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args);
+v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args);
 v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args);
 
 
@@ -54,6 +55,9 @@ v8::Handle<v8::Value> root_onPresenceDisconnected(const v8::Arguments& args);
 v8::Handle<v8::Value> root_reset(const v8::Arguments& args);
 v8::Handle<v8::Value> root_setScript(const v8::Arguments& args);
 v8::Handle<v8::Value> root_getScript(const v8::Arguments& args);
+
+v8::Handle<v8::Value> root_serialize(const v8::Arguments& args);
+v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args);
 
 
 

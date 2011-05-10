@@ -22,6 +22,8 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args);
 v8::Handle<v8::Value> getVelocity(const v8::Arguments& args);
 v8::Handle<v8::Value> getOrientation(const v8::Arguments& args);
 v8::Handle<v8::Value> getOrientationVel(const v8::Arguments& args);
+v8::Handle<v8::Value> getSpace(const v8::Arguments& args);
+v8::Handle<v8::Value> getOref(const v8::Arguments& args);
 v8::Handle<v8::Value> getScale(const v8::Arguments& args);
 v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args);
 v8::Handle<v8::Value> checkEqual(const v8::Arguments& args);

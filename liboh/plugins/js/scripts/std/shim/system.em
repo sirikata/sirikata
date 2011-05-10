@@ -60,10 +60,7 @@ if(system == undefined)
       //data
       system._selfMap = { };
 
-      //lkjs;
-      //FIXME: should not default to presences[0], because may not exist yet.
       system.__behindSelf = baseSystem;
-
 
       system.__setBehindSelf = function(toSetTo)
       {
@@ -107,6 +104,20 @@ if(system == undefined)
           baseSystem.print.apply(baseSystem,arguments);
       };
 
+
+          /** @function
+           @param string space and object id of a visible object.  
+
+           @return a visible object with the space and object id contained argument.
+           
+           Throws an exception if string is incorrectly formatted, otherwise returns vis object.
+           */
+      system.createVisible = function(/**String**/strToCreateFrom)
+      {
+          return baseSystem.createVisible.apply(baseSystem,arguments);
+      };
+
+      
       /** I an not defining any callback handlers. They can be, if required */
       /** Since these functions are not getting added to the prototype of the system object, it will generate static functions */
       /** If added to prototype, it generates the member functions in the documentation */
@@ -128,9 +139,9 @@ if(system == undefined)
        Throws an exception if string is incorrectly formatted, otherwise returns vis object.
        */
       system.createVisible = function(/**String**/strToCreateFrom){
-          //baseSystem.createVisible(strToCreateFrom);
           return baseSystem.createVisible.apply(baseSystem,arguments);
       };
+
 
       /** @function
        @description This function evaluates the emerson string that is passed in as its single argument.
@@ -147,8 +158,6 @@ if(system == undefined)
       system.registerHandler = function (callback,pattern,sender)
       {
           var wrappedCallback = this.__wrapRegHandler(callback);
-          //baseSystem.registerHandler.apply(baseSystem,wrappedCallback,arg2,arg3);
-          //lkjs;
           baseSystem.registerHandler(wrappedCallback,pattern,sender);
       };
 
@@ -165,7 +174,6 @@ if(system == undefined)
       };
 
       /** @function
-
        @return returns the script that was set by setScript, and that is associated with this sandbox.
 
        */
@@ -331,32 +339,189 @@ if(system == undefined)
           return std.core.bind(returner,this);
       };
 
+
+          /** @function
+           @description Creates a new entity based on the position and space of presence passed in.
+           
+           @param presence or visible.
+           @param vec3.  Position of new entity's first presence relative to first argument's position
+           @param script. Can either be a string, which will be eval-ed on new entity as soon as it's created or can be a non-closure capturing function that will be executed with next parameter as its argument.
+           @param Object.  Passed as argument to script argument if script argument is a function.
+           @param solidAngle Solid angle that entity's new presence queries with.
+           @param {optional} Mesh uri corresponding to mesh you want to use for this entity.  If undefined, defaults to self's mesh.
+           @param {optional} scale Scale of new mesh. (Higher number means increase mesh's size.)  If undefined, default to self's scale.
+           */
+          system.createEntityFromPres = function(pres, pos, script,arg, solidAngle,mesh,scale)
+          {
+              var newSpace = pres.getSpaceID();
+              var newPos = pres.getPosition() + pos;
+              this.createEntityScript(newPos,script,arg,mesh,scale,solidAngle,newSpace);
+          };
+
+          /** @function
+           @deprecated Use createEntityScript instead.
+           
+           @description Creates a new entity on the current entity host.
+       
+           @throws {Exception} Calling create_entity in a sandbox without the capabilities to create entities throws an exception.
+
+           @see system.canCreateEntity
+           @param position (eg. new util.Vec3(0,0,0);). Corresponds to position to place new entity in world.
+           @param scriptOption Script option to pass in. Almost always pass "js"
+           @param initFile Name of file to import code for new entity from.
+           @param mesh Mesh uri corresponding to mesh you want to use for this entity.
+           @param scale Scale of new mesh. (Higher number means increase mesh's size.)
+           @param solidAngle Solid angle that entity's new presence queries with.
+           */
+          system.createEntity = function(/** util.Vec3 */ position, /** String */ scriptOption, /** String */ initFile, /** String */ mesh, /** Number */ scale, /** Number */ solidAngle)
+          {
+              var wrapImport = "system.import('" + initFile + "');";
+              return this.createEntityScript(position, wrapImport,null, solidAngle,mesh,scale);
+          };
+
+
+      
+
+          /** @function
+           @description Creates a new entity on the current entity host.
+           
+           @throws {Exception} Calling create_entity in a sandbox without the capabilities to create entities throws an exception.
+
+           @see system.canCreateEntity
+           @param position (eg. new util.Vec3(0,0,0);). Corresponds to position to place new entity in world.
+           @param Script.  Can either be a string, which will be eval-ed on new entity as soon as it's created or can be a non-closure capturing function that will be executed with next parameter as its argument.
+           @param Object.  Passed as argument to script argument if script argument is a function.  Null if takes no argument.
+           @param solidAngle Solid angle that entity's new presence queries with.
+           @param {optional} Mesh uri corresponding to mesh you want to use for this entity.  If undefined, defaults to self's mesh.
+           @param {optional} scale Scale of new mesh. (Higher number means increase mesh's size.)  If undefined, default to self's scale.
+           @param {optional} Space to create the entity in.  If undefined, defaults to self.
+           */
+          system.createEntityScript = function (position, script,arg,solidAngle,mesh,scale,space)
+          {
+              if (typeof(mesh) === 'undefined')
+                  mesh = this.self.getMesh();
+              if (typeof (scale) === 'undefined')
+                  scale = this.self.getScale();
+              if (typeof (space) === 'undefined')
+                  space = this.self.getSpaceID();
+
+                          
+              var emersonSyntaxError = function (str)
+              {
+                  var toThrow = '20';
+                  var tmp = 'throw ' + toThrow + ';' + str;
+                  try
+                  {
+                      eval(tmp);
+                  }
+                  catch (excep)
+                  {
+                      if (excep === toThrow)
+                          return false;  //there is no emerson syntax error
+                      else
+                          return excep;   //there is an emerson syntax error
+                  }
+              };
+
+              var quoteEscaper = function (str)
+              {
+                  for (var s=0; s < str.length; ++s)
+                  {
+                      if (str.charAt(s) == '"')
+                      {
+                          str = str.substring(0,s) + '\\' + str.substring(s);
+                          s+=1;
+                      }
+                  }
+                  return str;    
+              };
+              
+              //handle script is function
+              if (typeof(script) == 'function')
+              {
+                  var funcString = quoteEscaper(script.toString());
+                  if (arg !== null)
+                  {
+                      var serializedArg = quoteEscaper(this.serialize(arg));
+                      funcString = '"' + '(' + funcString + ") ( system.deserialize(@" + serializedArg + "@));" + '"';
+                  }
+                  else
+                      funcString = '"' + '(' + funcString + ") ( );" + '"';
+
+
+                  this.__hidden_createEntity(position, 'js',funcString,mesh,scale,solidAngle,space);
+              }
+              else if (typeof(script) == 'string')
+              {
+                  var emSynError = emersonSyntaxError(script);
+                  if (emSynError !== false)
+                  {
+                      throw "Error calling createEntity.  String passed in must be valid Emerson.  " + emSynError;
+                  }
+
+                  this.__hidden_createEntity(position,'js','"' +  quoteEscaper(script) + '"',mesh,scale,solidAngle,space);
+              }
+              else
+              {
+                  throw "Error.  Second argument to createEntity must contain a string or a function to execute on new entity.";
+              }
+              
+          };
+
+
+      
+      /** @ignore */
+      system.__hidden_createEntity = function(/** util.Vec3 */ position, /** String */ scriptOption, /** String */ scriptString, /** String */ mesh, /** Number */ scale, /** Number */ solidAngle)
+      {
+          return baseSystem.create_entity.apply(baseSystem, arguments);
+      };
+
+      
+      /** @function
+       @param Object to be serialized.
+
+       @return Returns a string representing the serialized object.
+       Takes an object and serializes it to be sent over the network, producing a string.
+       */
+      system.serialize = std.core.bind(baseSystem.serialize,baseSystem);
+
+      /** @function
+       @param String to deserialize into an object.
+       @return Returns an object representing the deserialized string. 
+       */
+      system.deserialize = std.core.bind(baseSystem.deserialize,baseSystem);
+          
+
+      
+        /** @function
+         @description This function call creates a new presence for the entity running this script.
+         Note: Presence's initial position is the same as the presence that created it. Scale is set to 1.
+
+         @throws {Exception}  if sandbox does not have capability to create presences.
+
+         @see system.canCreatePresence
+
+         @param mesh  a uri for a mesh for the new presence.
+         @param callback function to be called when presence gets connected to the world. (Function has form func (pres), where pres contains the presence just connected.)
+         @param {optional} A position for the new presence.  Unspecified defaults to same position as self.
+         @param {optional} A space to create the new presence in.  Unspecified defaults to same space as self.
+         @return Presence object. Presence is not connected to world until receive notification. (Ie, don't call setVelocity, setPosition, etc. until the second paramater has been called.)
+         */
+        system.createPresence = function (/** String */mesh, /** Function */ callback, /**Vec3*/position, space)
+        {
+            if ((typeof(space) == 'undefined') || (space === null))
+                space = this.self.getSpaceID();
+            if ((typeof(position) == 'undefined') || (position === null))
+                position = this.self.getPosition();
+            
+            baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback),position,space);
+        };
+
+      
       /** @deprecated Use createPresence */
       system.create_presence = function()
       {
           return this.createPresence.apply(this,arguments);
-      };
-
-      /** @function
-       @description This function call creates a new presence for the entity running this script.
-       Note: Presence's initial position is the same as the presence that created it. Scale is set to 1.
-
-       @throws {Exception}  if sandbox does not have capability to create presences.
-
-       @see system.canCreatePresence
-
-       @param mesh  a uri for a mesh for the new presence.
-       @param callback function to be called when presence gets connected to the world. (Function has form func (pres), where pres contains the presence just connected.)
-
-       @return Presence object. Presence is not connected to world until receive notification. (Ie, don't call setVelocity, setPosition, etc. until the second paramater has been called.)
-       */
-      system.createPresence = function (/** String */mesh, /** Function */ callback)
-      {
-          //must be this way.
-          //baseSystem.create_presence.apply(baseSystem,arguments);
-          //baseSystem.create_presence(mesh,callback);
-          //baseSystem.create_presence.apply(baseSystem,[mesh,this.__wrapPresConnCB(callback)]);
-          baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback));
       };
 
 
@@ -364,26 +529,9 @@ if(system == undefined)
       /** @deprecated  Use createEntity */
       system.create_entity = function()
       {
-          return this.createEntity.apply(this,arguments);//baseSystem.create_entity.apply(baseSystem, arguments);
+          return this.createEntity.apply(this,arguments);
       };
 
-      /** @function
-       @description Creates a new entity on the current entity host.
-
-       @throws {Exception} Calling create_entity in a sandbox without the capabilities to create entities throws an exception.
-
-       @see system.canCreateEntity
-       @param position (eg. new util.Vec3(0,0,0);). Corresponds to position to place new entity in world.
-       @param scriptOption Script option to pass in. Almost always pass "js"
-       @param initFile Name of file to import code for new entity from.
-       @param mesh Mesh uri corresponding to mesh you want to use for this entity.
-       @param scale Scale of new mesh. (Higher number means increase mesh's size.)
-       @param solidAngle Solid angle that entity's new presence queries with.
-       */
-      system.createEntity = function(/** util.Vec3 */ position, /** String */ scriptOption, /** String */ initFile, /** String */ mesh, /** Number */ scale, /** Number */ solidAngle)
-      {
-          return baseSystem.create_entity.apply(baseSystem, arguments);
-      };
 
       /** @function
        @type Boolean

@@ -16,6 +16,7 @@ struct EntityCreateInfo
     String mesh;
     String physics;
     SolidAngle solid_angle;
+    SpaceID space;
 };
 
 } //close js

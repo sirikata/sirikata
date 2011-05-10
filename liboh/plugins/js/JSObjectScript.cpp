@@ -246,14 +246,20 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     // TODO: hardcoded
     import("std/shim.em",NULL);
 
-    String script_name = init_script->as<String>();
-    if (script_name.empty()) {
+
+    String script_contents = init_script->as<String>();
+    if (script_contents.empty()) {
         JSLOG(info,"Importing default script.");
         import(mManager->defaultScript(),NULL);
     }
     else {
-        JSLOG(info,"Have an initial script to import from " + script_name );
-        import(script_name,NULL);
+        JSLOG(info,"Have an initial script to execute.  Executing.");
+        std::cout<<"\n\nDEBUG: SCRIPT: "<<script_contents<<"\n\n";
+        std::cout.flush();
+        EvalContext& ctx = mEvalContextStack.top();
+        EvalContext new_ctx(ctx);
+        v8::ScriptOrigin origin(v8::String::New("(original_import)"));
+        protectedEval(script_contents, &origin, new_ctx,mContext);
     }
 
     // Subscribe for session events
@@ -645,15 +651,11 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
 }
 
 
-
-
 void JSObjectScript::create_entity(EntityCreateInfo& eci)
 {
-    FIXME_GET_SPACE_OREF();
-
     HostedObjectPtr obj = mParent->getObjectHost()->createObject(UUID::random(), &eci.scriptType, &eci.scriptOpts);
 
-    obj->connect(space,
+    obj->connect(eci.space,
         eci.loc,
         BoundingSphere3f(Vector3f::nil(), eci.scale),
         eci.mesh,
@@ -1498,7 +1500,7 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.
-v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx)
+v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx, const Vector3d& poser, const SpaceID& spaceToCreateIn)
 {
     if (jsctx == NULL)
         jsctx = mContext;
@@ -1506,17 +1508,14 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     v8::Context::Scope context_scope(jsctx->mContext);
 
     //presuming that we are connecting to the same space;
-    FIXME_GET_SPACE_OREF();
-    //"space" now contains the SpaceID we want to connect to.
-
     //arbitrarily saying that we'll just be on top of the root object.
-    Location startingLoc = mParent->getLocation(space,oref);
+    Location startingLoc(poser,Quaternion::identity(),Vector3f(0,0,0),Vector3f(0,1,0),0);
+    
     //Arbitrarily saying that we're just going to use a simple bounding sphere.
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
-    mParent->connect(space,startingLoc,bs, newMesh, "", UUID::null(),NULL,presToke);
-
+    mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", UUID::null(),NULL,presToke);
 
     //create a presence object associated with this presence and return it;
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);

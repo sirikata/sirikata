@@ -188,7 +188,6 @@ Quaternion JSPositionListener::getOrientationVelocity()
 
 Quaternion JSPositionListener::getOrientation()
 {
-    //return mOrientation.position(jsObjScript->getHostedTime()).normal();
     return mOrientation.position(jsObjScript->getHostedTime());
 }
 

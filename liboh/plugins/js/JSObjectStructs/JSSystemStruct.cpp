@@ -37,6 +37,11 @@ v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReferen
     return associatedContext->struct_create_vis(sporef);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserialize)
+{
+    return associatedContext->deserializeObject(toDeserialize);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom)
 {
@@ -177,12 +182,13 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(const Duration& dur, 
 //if have the capability to create presences, create a new presence with
 //mesh newMesh and executes initFunc, which gets executed onConnected.
 //if do not have the capability, throws an error.
-v8::Handle<v8::Value> JSSystemStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc)
+
+v8::Handle<v8::Value> JSSystemStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn)
 {
     if (! canCreatePres)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create presences.")));
 
-    return associatedContext->struct_createPresence(newMesh, initFunc);
+    return associatedContext->struct_createPresence(newMesh, initFunc,poser,spaceToCreateIn);
 }
 
 //if have the capability to create presences, create a new presence with

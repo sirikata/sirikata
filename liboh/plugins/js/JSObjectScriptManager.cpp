@@ -200,8 +200,11 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("canCreateEntity"), v8::FunctionTemplate::New(JSSystem::root_canCreateEnt));
     mSystemTemplate->Set(v8::String::New("canEval"), v8::FunctionTemplate::New(JSSystem::root_canEval));
 
+    mSystemTemplate->Set(v8::String::New("serialize"), v8::FunctionTemplate::New(JSSystem::root_serialize));
+    mSystemTemplate->Set(v8::String::New("deserialize"), v8::FunctionTemplate::New(JSSystem::root_deserialize));
+    
 
-
+    
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
@@ -209,7 +212,12 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::root_scriptEval));
     mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
     mSystemTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::root_createPresence));
+
+
+    mSystemTemplate->Set(v8::String::New("create_entity_no_space"), v8::FunctionTemplate::New(JSSystem::root_createEntityNoSpace));
+
     mSystemTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::root_createEntity));
+    
 
     mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
     mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
@@ -294,6 +302,8 @@ void JSObjectScriptManager::createVisibleTemplate()
     mVisibleTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSVisible::getOrientationVel));
     mVisibleTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSVisible::getScale));
     mVisibleTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSVisible::getMesh));
+    mVisibleTemplate->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSVisible::getSpace));
+    mVisibleTemplate->Set(v8::String::New("getObjectID"),v8::FunctionTemplate::New(JSVisible::getOref));
     mVisibleTemplate->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));
     mVisibleTemplate->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
     mVisibleTemplate->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
@@ -319,6 +329,9 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   proto_t->Set(v8::String::New("toString"), v8::FunctionTemplate::New(JSPresence::toString));
 
+  proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSPresence::getSpace));
+  proto_t->Set(v8::String::New("getObjectID"),v8::FunctionTemplate::New(JSPresence::getOref));
+  
   //meshes
   proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
   proto_t->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));

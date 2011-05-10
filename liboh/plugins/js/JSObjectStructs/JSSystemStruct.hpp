@@ -54,7 +54,7 @@ struct JSSystemStruct
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
     //if do not have the capability, throws an error.
-    v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc);
+    v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn);
 
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
@@ -76,6 +76,7 @@ struct JSSystemStruct
     
     v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl);
         
+    v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
     
 
     //create a timer that will fire in dur seconds from now, that will bind the

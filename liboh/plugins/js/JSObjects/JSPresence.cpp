@@ -49,6 +49,47 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 
 }
 
+  
+v8::Handle<v8::Value>  getSpace(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  Getting spaceID requires no arguments.")));
+
+    String errorMessage = "Error in getSpaceID while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    SpaceObjectReference* sporef = jspres->getSporef();
+
+    if (sporef == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  SpaceID is not defined.")));
+
+    return v8::String::New(sporef->space().toString().c_str());
+}
+
+v8::Handle<v8::Value>  getOref(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  Getting objectID requires no arguments.")));
+
+    String errorMessage = "Error in getObjectID while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    SpaceObjectReference* sporef = jspres->getSporef();
+
+    if (sporef == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  ObjectID is not defined.")));
+
+    return v8::String::New(sporef->object().toString().c_str());
+}
+
+
+
 /**
 Takes presence and sets its current velocity and orientation velocity to zero.
 Requires no args.
