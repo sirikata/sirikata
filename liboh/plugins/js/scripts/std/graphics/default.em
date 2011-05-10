@@ -169,6 +169,11 @@ function() {
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
+    /** Request that the given URL be added as a module in the UI. */
+    std.graphics.DefaultGraphics.prototype.addGUIModule = function(name, url) {
+        return this._simulator.addGUIModule(name, url);
+    };
+
 
     //by default how to scale translational velocity from keypresses.  (movement
     //is agonizingly slow if just set this to 1.  I really recommend 5.)
