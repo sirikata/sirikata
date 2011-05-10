@@ -326,8 +326,8 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
     String objBBoxString = pt.get("bounds", String("sphere"));
     objBBox = BULLET_OBJECT_BOUNDS_SPHERE;
-    if (objTreatmentString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
-    if (objTreatmentString == "triangles") objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
+    if (objBBoxString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
+    if (objBBoxString == "triangles") objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
 
 
     //objTreatment enum defined in header file
