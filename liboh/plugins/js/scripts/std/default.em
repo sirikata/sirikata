@@ -37,3 +37,4 @@ system.require('std/movement/movable.em');
 
 scriptable = new std.script.Scriptable();
 movable = new std.movement.Movable();
+

@@ -251,15 +251,15 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
     if (script_contents.empty()) {
         JSLOG(info,"Importing default script.");
         import(mManager->defaultScript(),NULL);
+        mContext->struct_setScript("system.require('" + mManager->defaultScript() + "');");
     }
     else {
         JSLOG(info,"Have an initial script to execute.  Executing.");
-        std::cout<<"\n\nDEBUG: SCRIPT: "<<script_contents<<"\n\n";
-        std::cout.flush();
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
         protectedEval(script_contents, &origin, new_ctx,mContext);
+        mContext->struct_setScript(script_contents);
     }
 
     // Subscribe for session events
