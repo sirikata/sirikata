@@ -145,3 +145,112 @@ system.__presence_constructor__.prototype.__prettyPrintFieldsData__ = [
 system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     return this.__prettyPrintFieldsData__;
 };
+
+(
+  /** @namespace presence */
+  var presence = function()
+  {
+    /**@function 
+       @description Returns the position of the presence
+       @return the vector corresponding to the position of the presence 
+       @type util.Vec3
+    */
+    presence.prototype.getPosition = function(){} 
+   
+    /**@function
+       @description sets the position of the presence to a new value
+       @param newpos  The new position of the presence to set to
+
+    */
+
+    presence.prototype.setPosition = function(/** util.Vec3 */ newpos){}
+    
+    /**@function
+       @description sets the velocity of the presence to a new value
+       @param newvel  The new velocity of the presence to set to
+
+    */
+
+    presence.prototype.setVelocity = function(/** util.Vec3 */ newvel){}
+    
+    /**@function 
+       @description Returns the velocity of the presence
+       @return the vector corresponding to the velocity of the presence 
+       @type util.Vec3
+    */
+
+    presence.prototype.getVelocity = function(){}
+
+    /**@function
+       @description sets the orientation of the presence to a new value
+       @param newvel  The new orientation of the presence to set to
+    */
+
+    presence.prototype.setOrientation = function(/** util.Quaternion */ newpos){}
+
+
+    /**@function 
+       @description Returns the orientation of the presence
+       @return the quaternion corresponding to the  of the presence 
+       @type util.Quaternion
+    */
+
+    presence.prototype.getOrientation = function(){}
+
+    /**@function
+       @description sets the orientation velocity (both angular velocity and the axis of rotation) 
+          of the presence to a new value
+       @param newvel  The new orientation velocity of the presence to set to
+    */
+
+    presence.prototype.setOrientationVel = function(/** util.Quaternion */ newvel){}
+    
+    /**@function 
+       @description Returns the orientation velocity of the presence
+       @return the quaternion corresponding to the  orientation velocity of the presence 
+       @type util.Quaternion
+    */
+    
+    presence.prototype.getOrientationVel = function(){}
+
+
+    /**@function
+       @description scales of the mesh of the presence to a new value
+       @param scale the factor by which to scale the mesh 
+    */
+
+    presence.prototype.setScale = function(/**Number */ scale){}
+    
+    /**@function 
+       @description Returns the factor by which the mesh has been scaled from the original size
+       @return  the factor by which the mesh has been scaled from the original size
+       @type Number 
+    */
+
+    presence.prototype.getScale = function(){}
+
+    /**@function
+       @description sets the mesh of the presence 
+       @param newmesh The url for the mesh to set to
+    */
+
+    presence.prototype.setMesh = function(/**String */ newmesh){}
+
+     /**@function 
+       @description Returns the mesh of the presence
+       @return  the url for the mesh of the presence 
+       @type String 
+    */
+
+    presence.prototype.getMesh = function(){}
+    
+  };
+
+)
+
+
+
+
+
+
+
