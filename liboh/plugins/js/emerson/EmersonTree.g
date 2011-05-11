@@ -472,7 +472,12 @@ defaultClause
     ;
 	
 throwStatement
-    : ^(THROW expression)
+    : ^(THROW
+        {
+            APP("throw ");
+        }
+        expression
+       )
     ;
 
 whenStatement
