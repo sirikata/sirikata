@@ -43,9 +43,10 @@ if(system == undefined)
 
 
 (function()
-  {
+ {
       var baseSystem = __system;
-
+      var isResetting = false;
+     
       system = {};
 
       //self declarations
@@ -629,9 +630,23 @@ if(system == undefined)
        */
       system.reset = function()
       {
-          baseSystem.reset.apply(baseSystem, arguments);
+          try
+          {
+              baseSystem.reset.apply(baseSystem, arguments);
+              isResetting = true;
+              throw '__resetting__';
+          }
+          catch (exception)
+          {
+              throw exception;
+          }
       };
 
+     system.__isResetting = function()
+     {
+         return isResetting;
+     };
+     
       /**
        @deprecated  You should use setScript
        */

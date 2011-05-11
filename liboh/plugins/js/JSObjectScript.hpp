@@ -180,7 +180,9 @@ public:
 
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
-    v8::Handle<v8::Value> resetScript(JSContextStruct* jscont);
+    v8::Handle<v8::Value> requestReset(JSContextStruct* jscont);
+    
+
 
     //registering position listeners to receive updates from loc
     bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String* mesh);
@@ -278,7 +280,8 @@ private:
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
-    //lkjs;
+    void resetScript();
+    
     JSContextStruct* mContext;
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
@@ -295,6 +298,7 @@ private:
 
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
+    bool mResetting;
     JSEventHandlerList mQueuedHandlerEventsAdd;
     JSEventHandlerList mQueuedHandlerEventsDelete;
     void removeHandler(JSEventHandlerStruct* toRemove);
@@ -310,7 +314,7 @@ private:
     HostedObject::PresenceToken incrementPresenceToken();
 
 
-    void printAllHandlerLocations();
+    void printAllHandlers();
 
 
 

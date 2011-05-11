@@ -361,12 +361,6 @@ msgSendStatement
         : sender=leftHandSideExpression LTERM* ':' LTERM*  e1=leftHandSideExpression LTERM* '->' e2=leftHandSideExpression LTERM* ( '->' LTERM* memberExpression LTERM*)* ';'    -> ^(MESSAGE_SEND_WITH_SENDER $sender $e1 $e2 memberExpression*)
         | e1=leftHandSideExpression LTERM* '->' e2=leftHandSideExpression LTERM* ( '->' LTERM* memberExpression LTERM*)* ';'    -> ^(MESSAGE_SEND_WITHOUT_SENDER $e1 $e2 memberExpression*) 
         ;
-
-//lkjs;        
-// msgSendStatement
-//         : (e1=leftHandSideExpression  LTERM* '->'  e2=leftHandSideExpression (LTERM | ';' )-> ^(MESSAGE_SEND $e1 $e2))  ( '->' memberExpression -> ^($msgSendStatement memberExpression))?
-//         ;
-
         
 
 memAndCallExpression

@@ -47,8 +47,10 @@ JSEventHandlerStruct::~JSEventHandlerStruct()
 //sender should be of type VISIBLE (see template defined in JSObjectScriptManager
 bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> incoming_sender, const SpaceObjectReference& receiver)
 {
+    
     if (getIsSuspended() || getIsCleared())
         return false; //cannot match a suspended handler
+
 
     //decode the sender of the message
     String errorMessage = "[JS] Error encountered in matches of JSEventHandler.  Failed to decode sender of message as a visible object.  ";
@@ -62,7 +64,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
 
     SpaceObjectReference* spref1 =  jsposlist->getToListenTo();
 
-
+    
     //decode the expected sender
     if (! sender->IsNull())
     {
@@ -82,6 +84,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
             return false;
     }
 
+    
 
     //check if the pattern matches the obj
     for(PatternList::const_iterator pat_it = pattern.begin(); pat_it != pattern.end(); pat_it++)
@@ -90,10 +93,12 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
             return false;
     }
 
+    
     //check if the message is *to* one of my presences
     if (jscont->canReceiveMessagesFor(receiver))
         return true;
-
+    
+    
     return false;
 }
 

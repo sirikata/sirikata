@@ -72,13 +72,6 @@
 #include "JSVisibleStructMonitor.hpp"
 
 
-#define FIXME_GET_SPACE_OREF() \
-    HostedObject::SpaceObjRefVec spaceobjrefs;              \
-    mParent->getSpaceObjRefs(spaceobjrefs);                 \
-    SpaceID space = (spaceobjrefs.begin())->space(); \
-    ObjectReference oref = (spaceobjrefs.begin())->object();
-
-
 using namespace v8;
 using namespace std;
 namespace Sirikata {
@@ -135,7 +128,7 @@ void printException(v8::TryCatch& try_catch) {
 v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[], String* exc = NULL) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
-
+    
     TryCatch try_catch;
 
     Handle<Value> result;
@@ -212,7 +205,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
  : mParent(ho),
    mManager(jMan),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
-   hiddenObjectCount(0)
+   hiddenObjectCount(0),
+   mResetting(false)
 {
 
     OptionValue* init_script;
@@ -349,16 +343,30 @@ bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toL
 
 }
 
-v8::Handle<v8::Value> JSObjectScript::resetScript(JSContextStruct* jscont)
+//Here's how resetting works.  system reqeusts a reset.  At this point,
+//JSContextStruct calls the below function (requestReset).  If reset was
+//requested by root context, then set mResetting to true.  In the check handlers
+//function, if mResetting is true, stops comparing event against handlers.
+//Then, call resetScript.  resetScript tears down the rest of the script.  
+v8::Handle<v8::Value> JSObjectScript::requestReset(JSContextStruct* jscont)
 {
     if (jscont != mContext)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  Cannot call reset unless within root context.")));
+    
+    mResetting = true;
+    return v8::Undefined();
+}
+
+void JSObjectScript::resetScript()
+{
+    mResetting = false;
     mPresences.clear();
     mEventHandlers.clear();
+    mQueuedHandlerEventsAdd.clear();
+    mQueuedHandlerEventsDelete.clear();
     mImportedFiles.clear();
     mContext->struct_rootReset();
-
-    return v8::Undefined();
+    flushQueuedHandlerEvents();
 }
 
 /**
@@ -409,7 +417,7 @@ bool JSObjectScript::deRegisterPosAndMeshListener(SpaceObjectReference* sporef, 
 }
 
 
-//lkjs;
+
 //this is the callback that fires when proximateObject no longer receives
 //updates from loc (ie the object in the world associated with proximate object
 //is outside of querier's standing query registered to pinto).
@@ -461,7 +469,6 @@ void  JSObjectScript::notifyProximateGone(ProxyObjectPtr proximateObject, const 
 //will enter and exit the context passed in to make the object before returning
 v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
 {
-    //lkjs;
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctxToCreateIn);
 
@@ -541,7 +548,6 @@ void JSObjectScript::printMPresences()
     std::cout<<"\n\n";
 }
 
-//lkjs;
 //Gets called by notifier when PINTO states that proximateObject originally
 //satisfies the solid angle query registered by querier
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
@@ -739,7 +745,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-
+    
     // Special casing emerson compilation
     v8::Handle<v8::String> source;
 #ifdef EMERSON_COMPILE
@@ -920,7 +926,6 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-
 
     v8::Handle<v8::Value> result;
     bool targetGiven = false;
@@ -1220,15 +1225,16 @@ void JSObjectScript::registerHandler(JSEventHandlerStruct* jsehs)
     }
     else
         mEventHandlers.push_back(jsehs);
+
 }
 
 
 //for debugging
-void JSObjectScript::printAllHandlerLocations()
+void JSObjectScript::printAllHandlers()
 {
-    std::cout<<"\nPrinting event handlers for "<<this<<": \n";
+    std::cout<<"\nDEBUG: printing all handlers\n";
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
-        std::cout<<"\t"<<mEventHandlers[s];
+        mEventHandlers[s]->printHandler();
 
     std::cout<<"\n\n\n";
 }
@@ -1292,8 +1298,13 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 
+
+    
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
+        if (mResetting)
+            break;
+        
         if (mEventHandlers[s]->matches(obj,msgSender,to))
         {
             // Adding support for the knowing the message properties too
@@ -1308,9 +1319,11 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     mHandlingEvent = false;
     flushQueuedHandlerEvents();
 
-    /*
-      FIXME: What should I do if the message that I receive does not match any handler?
-     */
+    //if one of the actions that your handler took was to call reset, then reset
+    //the entire script.
+    if (mResetting)
+        resetScript();
+    
     if (!matchesSomeHandler) {
         JSLOG(info,"Message did not match any files");
     }
@@ -1323,6 +1336,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
 //adds all outstanding changes and then deletes all outstanding in that order.
 void JSObjectScript::flushQueuedHandlerEvents()
 {
+    
     //Adding
     for (int s=0; s < (int)mQueuedHandlerEventsAdd.size(); ++s)
     {
@@ -1338,6 +1352,7 @@ void JSObjectScript::flushQueuedHandlerEvents()
         //remove handlers requested to be deleted during matching of handlers
         removeHandler(mQueuedHandlerEventsDelete[s]);
     }
+
 
     for (int s=0; s < (int) mQueuedHandlerEventsDelete.size(); ++s)
     {

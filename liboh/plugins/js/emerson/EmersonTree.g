@@ -570,8 +570,14 @@ catchBlock
             {
                 APP((const char*)$Identifier.text->chars);
                 APP( ")\n");
+                APP(" {  \n");
+                APP(" if ( system.__isResetting() ) \n { \n");
+                APP("throw '__resetting__';\n}\n");
             }
             statementBlock
+            {
+                APP("  } \n");
+            }
            )
         ;
 
@@ -579,8 +585,14 @@ finallyBlock
         : ^(FINALLY
             {
                 APP("finally \n");
+                APP(" {  \n");  
+                APP(" if ( system.__isResetting() ) \n { \n");
+                APP("throw '__resetting__';\n}\n");
             }
             statementBlock
+            {
+                APP("}\n");
+            }
            )
         ;
 

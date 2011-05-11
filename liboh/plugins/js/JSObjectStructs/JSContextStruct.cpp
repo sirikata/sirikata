@@ -183,9 +183,10 @@ v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents
  */
 v8::Handle<v8::Value> JSContextStruct::struct_setReset()
 {
-    //jsobjscript will chcek if this is teh root context.  If it is, it will
-    //eventually call struct_rootReset
-    return jsObjScript->resetScript(this);
+    //jsobjscript will chcek if this is the root context.  If it is, returns
+    //undefined, and schedules reset (eventually calling rootReset).  If it is
+    //not, throws an error.
+    return jsObjScript->requestReset(this);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_getScript()
@@ -257,6 +258,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
     for (JSPresVecIter iter = jspresVec.begin(); iter != jspresVec.end(); ++iter)
     {
         jsObjScript->resetPresence(*iter);
+        struct_registerSuspendable   (*iter);
         checkContextConnectCallback(*iter);
     }
 
@@ -283,7 +285,7 @@ JSContextStruct::~JSContextStruct()
         mContext.Dispose();
 }
 
-//lkjs/FIXME: check if it already exists first;
+
 v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct* jspres)
 {
     v8::HandleScope handle_scope;

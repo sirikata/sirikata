@@ -46,6 +46,7 @@ function() {
      *  results.
      */
     ns.Scriptable = function() {
+        
         var scriptRequestPattern = new util.Pattern("request", "script");
         var scriptRequestHandler = std.core.bind(this._handleScriptRequest, this);
         scriptRequestHandler <- scriptRequestPattern;
