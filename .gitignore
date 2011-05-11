@@ -92,3 +92,7 @@ libproxyobject/plugins/ogre/data/jquery
 liboh/plugins/js/emerson/regression/*.out
 liboh/plugins/js/emerson/regression/*.diff
 liboh/plugins/js/emerson/alt_regress/regressionResults.txt
+
+# Emerson doc generation tools and output
+tools/doc/emersonapi/
+tools/doc/jsdoc-toolkit/
