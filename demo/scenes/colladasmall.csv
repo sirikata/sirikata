@@ -3,7 +3,7 @@
 "mesh","graphiconly","tetrahedron",,,,0,-100,-100,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/ground.DAE/original/0/ground.DAE",,,,,,,,,,,,,,,,,,1000,,,,
 "mesh","graphiconly","tetrahedron",,,,-100,-36,35,.707,0,0,-.707,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/roof_zinc.DAE/original/0/roof_zinc.DAE",,,,,,,,,,,,,,,,,,35,,,,
 "mesh","graphiconly","tetrahedron",,,,-95,-10,-7,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/Insect-Bird.dae/original/0/Insect-Bird.dae",,,,,,,,,,,,,,,,,,20,,,0.000000001,
-"mesh","graphiconly","tetrahedron",,,,-11,-10,-5,0,.762,0,.6473,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/Poisonbird.dae/original/0/Poisonbird.dae",,,,,,,,,,,,,,,,,,6,"js","--init-script=std/defaultAvatar.em",0.000000001,
+"mesh","graphiconly","tetrahedron",,,,-11,-10,-5,0,.762,0,.6473,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/Poisonbird.dae/original/0/Poisonbird.dae",,,,,,,,,,,,,,,,,,6,"js","--init-script=system.import('std/defaultAvatar.em');",0.000000001,
 "mesh","graphiconly","tetrahedron",,,,-15,-10,-5,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/Insect-Bird.dae/original/0/Insect-Bird.dae",,,,,,,,,,,,,,,,,,1,,,,
 "mesh","graphiconly","tetrahedron",,,,40,-10,-5,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/Insect-Bird.dae/original/0/Insect-Bird.dae",,,,,,,,,,,,,,,,,,5,,,,
 "mesh","graphiconly","tetrahedron",,,,-20,-10,-5,1,3,5,12,0,0,0,0,1,0,0,1,1,1,1,1,1,1,0.3,0.1,0,0,1,"meerkat:///jterrace/Poisonbird.dae/original/0/Poisonbird.dae",,,,,,,,,,,,,,,,,,,,,,
