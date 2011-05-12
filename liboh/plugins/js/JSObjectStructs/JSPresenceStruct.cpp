@@ -15,7 +15,7 @@ namespace JS {
 
 //this constructor is called when the presence associated
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
- : JSPositionListener(parent),
+ : JSPositionListener(parent, NULL),
    JSSuspendable(),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    isConnected(false),
@@ -28,7 +28,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Functi
 
 
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
- : JSPositionListener(parent),
+ : JSPositionListener(parent,NULL),
    JSSuspendable(),
    isConnected(true),
    hasConnectedCallback(false),

@@ -79,6 +79,23 @@ Vector3d Vec3ValExtract(v8::Handle<v8::Value> src)
     return Vec3Extract(toExtract);
 }
 
+Vector3f Vec3ValExtractF(v8::Handle<v8::Value> src)
+{
+    v8::Handle<v8::Object> toExtract = src->ToObject();
+    return Vec3ExtractF(toExtract);
+}
+
+Vector3f Vec3ExtractF(v8::Handle<v8::Object> src)
+{
+    Vector3f result;
+    result.x = NumericExtract( src->Get(JS_STRING(x)) );
+    result.y = NumericExtract( src->Get(JS_STRING(y)) );
+    result.z = NumericExtract( src->Get(JS_STRING(z)) );
+    return result;
+}
+
+
+
 bool Vec3Validate(Handle<Object>& src) {
     return (
         src->Has(JS_STRING(x)) && NumericValidate(src->Get(JS_STRING(x))) &&

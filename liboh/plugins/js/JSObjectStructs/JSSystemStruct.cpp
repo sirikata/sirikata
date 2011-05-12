@@ -32,10 +32,13 @@ JSSystemStruct::~JSSystemStruct()
 {
 }
 
-v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporef)
+
+
+v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
 {
-    return associatedContext->struct_create_vis(sporef);
+    return associatedContext->struct_create_vis(sporefWatching,addParams);
 }
+
 
 v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserialize)
 {

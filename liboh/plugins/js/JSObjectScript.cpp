@@ -477,11 +477,16 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis
 
 //attempts to make a new jsvisible struct...may be returned an existing one.
 //then wraps it as v8 object.
-v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
+v8::Persistent<v8::Object>  JSObjectScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,VisAddParams* addParams, v8::Handle<v8::Context>ctx)
 {
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, isVisible);
+    SpaceObjectReference visTo = SpaceObjectReference::null();
+    if ((addParams != NULL) && (addParams->mSporefWatchingFrom != NULL))
+        visTo = * addParams->mSporefWatchingFrom;
+        
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visTo,addParams);
     return createVisiblePersistent(jsvis,ctx);
 }
+
 
 v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
 {
@@ -499,11 +504,12 @@ v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStru
 }
 
 
+
 //attempts to make a new jsvisible struct...may be returned an existing one.
 //then wraps it as v8 object.
-v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
+v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,VisAddParams* addParams, v8::Handle<v8::Context> ctx)
 {
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, isVisible);
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, addParams);
     return createVisibleObject(jsvis,ctx);
 }
 
@@ -546,7 +552,11 @@ void JSObjectScript::printMPresences()
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, true);
+
+
+    bool isVis = true;
+    VisAddParams vap(&isVis);
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, &vap);
 
     // Invoke user callback
     PresenceMapIter iter = mPresences.find(querier);
@@ -845,7 +855,14 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 //user
 v8::Persistent<v8::Object> JSObjectScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
 {
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),true);
+    bool isVis = true;
+    VisAddParams vap(&isVis);
+
+
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),&vap);
+
+
+    
     return createVisiblePersistent(jsvis, jscont->mContext);
 }
 
@@ -1270,7 +1287,11 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     SpaceObjectReference from(src.space(), src.object());
     SpaceObjectReference to  (dst.space(), dst.object());
 
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,false);
+
+    bool isVis = false;
+    VisAddParams vap(&isVis);
+
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,&vap);
     v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
 
     return returner;

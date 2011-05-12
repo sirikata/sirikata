@@ -81,10 +81,9 @@ void JSContextStruct::createContextObjects()
 }
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporef)
+v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
 {
-    v8::HandleScope handle_scope;
-    return jsObjScript->createVisiblePersistent(sporef,SpaceObjectReference::null(),false,mContext);
+    return jsObjScript->createVisiblePersistent(sporefWatching, addParams, mContext);
 }
 
 

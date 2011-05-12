@@ -65,7 +65,6 @@ public:
     }
 
     Quaternion extrapolatePosition(const Duration& dt) const {
-//        return (mStart * (mDirection.getDirection().exp(dt.toSeconds())));
         return (mStart * (mDirection.getDirection().normal().exp(mDirection.getMag() * dt.toSeconds())));
     }
 

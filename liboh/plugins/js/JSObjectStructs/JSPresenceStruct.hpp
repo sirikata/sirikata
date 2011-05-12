@@ -18,7 +18,6 @@ class JSPositionListener;
 //note: only position and isConnected will actually set the flag of the watchable
 struct JSPresenceStruct : public JSPositionListener,
                           public JSSuspendable
-
 {
     //isConnected is false using this: have no sporef.
     JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken);

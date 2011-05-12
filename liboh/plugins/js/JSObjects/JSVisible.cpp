@@ -69,6 +69,22 @@ Handle<v8::Value> getMesh(const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: getAllData call takes no arguments.")));
+
+    
+    std::string errorMessage = "In getAllData function of visible.  ";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (jsvis == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return handle_scope.Close(jsvis->struct_getAllData());
+}
+
 
 
 /**
@@ -79,12 +95,12 @@ Handle<v8::Value> getMesh(const v8::Arguments& args)
 v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
 {
     if (args.Length() != 0)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to getPosition method of Visible")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: getPosition method of Visible takes no arguments")));
 
     std::string errorMessage = "In getPosition function of visible.  ";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
     if (jsvis == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     return jsvis->struct_getPosition();
 }
@@ -98,7 +114,7 @@ v8::Handle<v8::Value> getPosition(const v8::Arguments& args)
 Handle<v8::Value> getVelocity(const v8::Arguments& args)
 {
     if (args.Length() != 0)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: need exactly one argument to getVelocity method of Visible")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: getVelocity method of Visible takes no arguments")));
 
     std::string errorMessage = "In getVelocity function of visible.  ";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);

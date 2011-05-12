@@ -2,6 +2,8 @@
 #include "JSObjectStructs/JSPositionListener.hpp"
 #include "JSLogging.hpp"
 
+
+
 namespace Sirikata{
 namespace JS{
 
@@ -175,13 +177,58 @@ JSVisibleStruct* JSVisibleStructMonitor::checkWatchingWithFrom(const SpaceObject
 //whatsVisible and toWhom sporefs.  If it does, returns that visible struct.
 //if it does not, creates a new visible struct, registers it with the monitor,
 //and returns it.
-JSVisibleStruct* JSVisibleStructMonitor::createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently)
+JSVisibleStruct* JSVisibleStructMonitor::createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& visibleTo, VisAddParams* addParams)
 {
-    if (toWhom == SpaceObjectReference::null())
+    if (visibleTo == SpaceObjectReference::null())
         return createVisStructFromNone(jsobjscript,whatsVisible);
 
-    return createVisStructFromHaveListeners(jsobjscript,whatsVisible,toWhom, visibleCurrently);
+    return createVisStructFromHaveListeners(jsobjscript,whatsVisible,visibleTo, addParams);
 }
+
+
+
+//checks mObjectsToFollow if we already have a visible struct that is tracking a
+//proximate object in the world that has sporef whatsVisible from an internal
+//presence with sporef toWhom.  If we do, then return it.  If we don't, create it.
+//When creating it, check to see if we should notify any jsvisiblestructs in
+//listenFromNoneMap to update their visibility
+JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(JSObjectScript* jsobjscript,const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, VisAddParams* addParams)
+{
+
+    //check mObjectsToFollow if already have a jsvisiblestruct with that is
+    //tracking a proxy object with sporef whatsVisible that is visible to a
+    //presence with sporef toWhom
+    ListenFromMapIter iter = mObjectsToFollow.find(whatsVisible);
+    if (iter != mObjectsToFollow.end())
+    {
+        SpaceToVisMapIter spVisIter = iter->second.find(toWhom);
+        if (spVisIter != iter->second.end())
+        {
+            if ((addParams != NULL) && (addParams->mIsVisible != NULL) && (*addParams->mIsVisible))
+                spVisIter->second->notifyVisible();
+
+            //means we already have this visible struct.  Return it
+            return spVisIter->second;
+        }
+    }
+
+    //do not already have a visible struct.  create a new one.
+    JSVisibleStruct* returner = new JSVisibleStruct(jsobjscript,whatsVisible,toWhom,addParams);
+
+    
+    //actually insert the visible struct into our maps
+    mObjectsToFollow[whatsVisible].insert(std::pair<SpaceObjectReference,JSVisibleStruct*>(toWhom,returner));
+    
+    //check if need to update any vis structs in listenFromNoneMap to now be
+    //visible and to get new positions.
+    updateFromNoneMap(returner,whatsVisible);
+
+    return returner;
+}
+
+
+
+
 
 //checks listenFromNoneMap to see if there is a JSVisibleStruct that is
 //watching an object with sporef whatsVisible.  If there is, then returns it
@@ -199,7 +246,7 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromNone(JSObjectScript*
         
     //do not already have a jsvisiblestruct that is watching whatsvisible.
     //Creating a new one.
-    JSVisibleStruct* returner = new JSVisibleStruct(jsobjscript,whatsVisible, SpaceObjectReference::null(),false);
+    JSVisibleStruct* returner = new JSVisibleStruct(jsobjscript,whatsVisible, SpaceObjectReference::null(),NULL);
     //add to map.
     listenFromNoneMap[whatsVisible] = returner;
     
@@ -211,43 +258,6 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromNone(JSObjectScript*
 }
 
 
-//checks mObjectsToFollow if we already have a visible struct that is tracking a
-//proximate object in the world that has sporef whatsVisible from an internal
-//presence with sporef toWhom.  If we do, then return it.  If we don't, create it.
-//When creating it, check to see if we should notify any jsvisiblestructs in
-//listenFromNoneMap to update their visibility
-JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(JSObjectScript* jsobjscript,const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently)
-{
-
-    //check mObjectsToFollow if already have a jsvisiblestruct with that is
-    //tracking a proxy object with sporef whatsVisible that is visible to a
-    //presence with sporef toWhom
-    ListenFromMapIter iter = mObjectsToFollow.find(whatsVisible);
-    if (iter != mObjectsToFollow.end())
-    {
-        SpaceToVisMapIter spVisIter = iter->second.find(toWhom);
-        if (spVisIter != iter->second.end())
-        {
-            if (visibleCurrently)
-                spVisIter->second->notifyVisible();
-
-            //means we already have this visible struct.  Return it
-            return spVisIter->second;
-        }
-    }
-
-    //do not already have a visible struct.  create a new one.
-    JSVisibleStruct* returner = new JSVisibleStruct(jsobjscript,whatsVisible,toWhom,visibleCurrently);
-
-    //actually insert the visible struct into our maps
-    mObjectsToFollow[whatsVisible].insert(std::pair<SpaceObjectReference,JSVisibleStruct*>(toWhom,returner));
-    
-    //check if need to update any vis structs in listenFromNoneMap to now be
-    //visible and to get new positions.
-    updateFromNoneMap(returner,whatsVisible);
-
-    return returner;
-}
 
 
 //this function takes in a visible struct that we will use to upd

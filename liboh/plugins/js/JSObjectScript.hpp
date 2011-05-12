@@ -166,8 +166,10 @@ public:
     //attempts to make a new jsvisiblestruct if don't already have one in
     //jsvismonitor matching visibleObj+visibleTo.  Wraps the c++ jsvisiblestruct
     //in v8 object.
-    v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
-    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx);
+    v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,VisAddParams* addParams, v8::Handle<v8::Context> ctx);
+    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,VisAddParams* addParams, v8::Handle<v8::Context> ctx);
+    
+    
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
 
 

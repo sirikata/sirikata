@@ -66,6 +66,8 @@ bool Vec3ValValidate(v8::Handle<v8::Value> src);
 bool Vec3Validate(Handle<Object>& src);
 Vector3d Vec3Extract(Handle<Object>& src);
 Vector3d Vec3ValExtract(v8::Handle<v8::Value> src);
+Vector3f Vec3ValExtractF(v8::Handle<v8::Value> src);
+Vector3f Vec3ExtractF(v8::Handle<v8::Object> src);
 
 #define Vec3CheckAndExtract(native, value)                              \
     if (!Vec3Validate(value))                                           \

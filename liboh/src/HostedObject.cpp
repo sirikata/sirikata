@@ -299,7 +299,7 @@ void HostedObject::initializeScript(const String& script, const String& args)
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script);
     if (mgr) {
-        SILOG(oh,debug,"[HO] Creating script for object with args of "<<args);
+        SILOG(oh,insane,"[HO] Creating script for object with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         mObjectScript->scriptTypeIs(script);
         mObjectScript->scriptOptionsIs(args);

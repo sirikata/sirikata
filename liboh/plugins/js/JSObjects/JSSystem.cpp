@@ -116,38 +116,92 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 }
 
 
-
+//address of visible watching;
+//address of visible watchingFrom;
+//vector3 of position x,y,z;
+//vector3 of velocity x,y,z;
+//string time
+//quaternion orientation
+//quaternion orientation vel
+//string time
+//vector 3 of center position
+//float of radius
+//mesh
 v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 {
-    v8::HandleScope handle_scope;
-    
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require a single string argument to create visible object.")));
+    if ((args.Length() != 11) && (args.Length() != 1))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require either a single string argument to create visible object.  Or requires three arguments: <visible from string> <visible to string> <vec3 position>")));
 
-    String decodedStr;
-    String errMsg = "Error in system when trying to createVisible.  ";
-    bool strDecode = decodeString(args[0],decodedStr,errMsg);
-    if (! strDecode )
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-
-    
-    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+    String errMsg_sys = "Error decoding system struct when creating visible. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg_sys);
 
     if (jssys == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-        
-    try
-    {
-        SpaceObjectReference sporef(decodedStr);
-        return jssys->struct_create_vis(sporef);
-    }
-    catch (std::invalid_argument& ia)
-    {
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error.  Cannot decode address passed in.")));
-    }
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg_sys.c_str())));
 
-    return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error creating visible object.")));
+    
+    //decode first arg: sporef watching
+    SpaceObjectReference sporefVisWatching;
+    String baseErrMsg  = "Error in system when trying to createVisible.  ";
+    String errMsg      = baseErrMsg + "Could not decode first argument.";
+    bool sporefDecoded = decodeSporef(args[0],sporefVisWatching,errMsg);
+
+    if (! sporefDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    if  (args.Length() == 1)
+        return jssys->struct_create_vis(sporefVisWatching,NULL);
+
+    
+    //decode second arg: sporef watching from
+    SpaceObjectReference sporefVisWatchingFrom;
+    errMsg = baseErrMsg + "Could not decode second argument.  ";
+    sporefDecoded = decodeSporef(args[1],sporefVisWatchingFrom,errMsg);
+
+    if (! sporefDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    
+    //decode third-fifth args: timed motion vector
+    TimedMotionVector3f location;
+    errMsg = baseErrMsg + "Could not decode 3-5 arguments corresponding to position.  ";
+    bool decodedTMV = decodeTimedMotionVector(args[2],args[3],args[4], location,errMsg);
+
+    if (! decodedTMV)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    //decode sixth-eighth args: timed motion quaternion
+    TimedMotionQuaternion orientation;
+    errMsg = baseErrMsg + "Could not decode 6-8 arguments corresponding to orientation.  ";
+    bool decodedTMQ = decodeTimedMotionQuat(args[5],args[6],args[7], orientation,errMsg);
+
+    if (! decodedTMQ)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+
+    //decode ninth-tenth args: bounding sphere
+    BoundingSphere3f bsph;
+    errMsg = baseErrMsg + "Could not decode 9-10 arguments corresponding to bounding sphere.  ";
+    bool decodedBSPH = decodeBoundingSphere3f(args[8],args[9], bsph,errMsg);
+
+    if (! decodedBSPH)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+    
+
+    //decode eleventh arg: mesh string
+    String meshString;
+    errMsg = baseErrMsg + "Could not decode 11th argument corresponding to mesh string.  ";
+    bool meshDecoded = decodeString(args[10],meshString,errMsg);
+
+    if (! meshDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    bool isVisible = false;
+    
+    VisAddParams vap(&sporefVisWatchingFrom,&location,&orientation,&bsph,&meshString,&isVisible);
+    
+    return jssys->struct_create_vis(sporefVisWatching,&vap);
 }
+
 
 
 /**

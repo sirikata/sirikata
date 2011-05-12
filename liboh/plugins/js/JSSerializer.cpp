@@ -547,7 +547,8 @@ bool JSSerializer::deserializeObjectInternal( JSObjectScript* jsObjScript, Sirik
           return false;
       }
       v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
-      deserializeTo = jsObjScript->createVisibleObject(visibleObj,visibleTo,false, ctx);  //create
+      
+      deserializeTo = jsObjScript->createVisibleObject(visibleObj,visibleTo,NULL, ctx);  //create
                                                                                           //the
                                                                                           //vis
                                                                                           //obj

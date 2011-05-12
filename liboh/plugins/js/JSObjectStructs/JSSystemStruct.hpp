@@ -17,6 +17,7 @@ class JSContextStruct;
 class JSEventHandlerStruct;
 class JSPresenceStruct;
 class JSPositionListener;
+class VisAddParams;
 
 
 //Most calls in this class just go straight through into associated context to
@@ -40,7 +41,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporef);
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, VisAddParams* addParams);
+
     
 
     v8::Handle<v8::Value> struct_getPosition();

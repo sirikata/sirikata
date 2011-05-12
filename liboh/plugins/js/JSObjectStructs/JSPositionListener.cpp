@@ -6,19 +6,30 @@
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
 #include "../JSObjects/JSQuaternion.hpp"
-
+#include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
 namespace JS {
 
 
 //this constructor is called when the presence associated
-JSPositionListener::JSPositionListener(JSObjectScript* script)
- :  jsObjScript(script),
-    sporefToListenTo(NULL),
-    sporefToListenFrom(NULL),
-    hasRegisteredListener(false)
+JSPositionListener::JSPositionListener(JSObjectScript* script, VisAddParams* addParams)
+ : jsObjScript(script),
+   sporefToListenTo(NULL),
+   sporefToListenFrom(NULL),
+   hasRegisteredListener(false)
 {
+    if (addParams != NULL)
+    {
+        if (addParams->mLocation != NULL)
+            mLocation    = *addParams->mLocation;
+        if (addParams->mOrientation != NULL)
+            mOrientation = *addParams->mOrientation;
+        if (addParams->mBounds != NULL)
+            mBounds      = *addParams->mBounds;
+        if (addParams->mMesh != NULL)
+            mMesh        = *addParams->mMesh;
+    }
 }
 
 
@@ -208,6 +219,73 @@ v8::Handle<v8::Value> JSPositionListener::struct_getPosition()
     return CreateJSResult(curContext,getPosition());
 }
 
+v8::Handle<v8::Value> JSPositionListener::struct_getTransTime()
+{
+    String errorMsg;
+    if (! passErrorChecks(errorMsg,"getTransTime"))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
+
+
+    uint64 transTime = mLocation.updateTime().raw();
+    String convertedString;
+    
+    try
+    {
+        convertedString = boost::lexical_cast<String>(transTime);
+    }
+    catch(boost::bad_lexical_cast & blc)
+    {
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in getTransTime.  Cound not convert uint64 to string.")));
+    }
+
+    return v8::String::New(convertedString.c_str());
+}
+
+
+v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
+{
+    String errorMsg;
+    if (! passErrorChecks(errorMsg,"getOrientTime"))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
+
+
+    uint64 orientTime = mOrientation.updateTime().raw();
+    String convertedString;
+    
+    try
+    {
+        convertedString = boost::lexical_cast<String>(orientTime);
+    }
+    catch(boost::bad_lexical_cast & blc)
+    {
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in getOrientTime.  Cound not convert uint64 to string.")));
+    }
+
+    return v8::String::New(convertedString.c_str());
+}
+
+
+v8::Handle<v8::Value> JSPositionListener::struct_getSporefListeningTo()
+{
+    return wrapSporef(sporefToListenTo);
+}
+v8::Handle<v8::Value> JSPositionListener::struct_getSporefListeningFrom()
+{
+    return wrapSporef(sporefToListenFrom);
+}
+
+v8::Handle<v8::Value> JSPositionListener::wrapSporef(SpaceObjectReference* sporef)
+{
+    if (sporef == NULL)
+    {
+        SpaceObjectReference sp = SpaceObjectReference::null();
+        return v8::String::New(sp.toString().c_str());
+    }
+
+    return v8::String::New(sporef->toString().c_str());
+}
+
+
 
 v8::Handle<v8::Value>JSPositionListener::struct_getVelocity()
 {
@@ -247,7 +325,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getScale()
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
 
     v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
-    return CreateJSResult(curContext,getBounds().radius());
+    return v8::Number::New(getBounds().radius());
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getDistance(const Vector3d& distTo)
@@ -260,7 +338,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getDistance(const Vector3d& dis
     double distVal = (distTo - curPos).length();
 
     v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
-    return CreateJSResult(curContext,distVal);
+    return v8::Number::New(distVal);
 }
 
 

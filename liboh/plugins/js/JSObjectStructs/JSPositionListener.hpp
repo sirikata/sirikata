@@ -13,6 +13,35 @@ namespace JS {
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 
+struct VisAddParams
+{
+    VisAddParams(const SpaceObjectReference* sporefWatchFrom, const TimedMotionVector3f* loc, const TimedMotionQuaternion* orient, const BoundingSphere3f* bounds, const String* mesh, const bool* isVisible)
+     : mSporefWatchingFrom (sporefWatchFrom),
+       mLocation(loc),
+       mOrientation(orient),
+       mBounds(bounds),
+       mMesh(mesh),
+       mIsVisible(isVisible)
+    {}
+    VisAddParams(const bool* isVisible)
+     : mSporefWatchingFrom (NULL),
+       mLocation(NULL),
+       mOrientation(NULL),
+       mBounds(NULL),
+       mMesh(NULL),
+       mIsVisible(isVisible)
+    {}
+
+    
+    const SpaceObjectReference*          mSporefWatchingFrom;
+    const TimedMotionVector3f*                     mLocation;
+    const TimedMotionQuaternion*                mOrientation;
+    const BoundingSphere3f*                          mBounds;
+    const String*                                      mMesh;
+    const bool*                                   mIsVisible;
+};
+
+
 
 //note: only position and isConnected will actually set the flag of the watchable
 struct JSPositionListener : public PositionListener,
@@ -20,7 +49,7 @@ struct JSPositionListener : public PositionListener,
 {
     friend class JSSerializer;
 
-    JSPositionListener(JSObjectScript* script);
+    JSPositionListener(JSObjectScript* script, VisAddParams* addParams);
     ~JSPositionListener();
 
     //objToListenTo for presence objects contains the sporef following
@@ -40,6 +69,11 @@ struct JSPositionListener : public PositionListener,
     virtual v8::Handle<v8::Value> struct_getOrientationVel();
     virtual v8::Handle<v8::Value> struct_getScale();
     virtual v8::Handle<v8::Value> struct_getMesh();
+    virtual v8::Handle<v8::Value> struct_getTransTime();
+    virtual v8::Handle<v8::Value> struct_getOrientTime();
+    virtual v8::Handle<v8::Value> struct_getSporefListeningTo();
+    virtual v8::Handle<v8::Value> struct_getSporefListeningFrom();
+    
     
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
 
@@ -76,6 +110,8 @@ protected:
     bool registerAsPosAndMeshListener();
     void deregisterAsPosAndMeshListener();
 
+    v8::Handle<v8::Value> wrapSporef(SpaceObjectReference* sporef);
+    
 private:
     //returns true if inContext and sporefToListenTo is not null
     //otherwise, returns false, and adds to error message reason it failed.  Arg
@@ -86,6 +122,9 @@ private:
     bool hasRegisteredListener;
 
 };
+
+
+
 
 
 }//end namespace js
