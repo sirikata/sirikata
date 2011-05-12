@@ -243,7 +243,21 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     */
 
     presence.prototype.getMesh = function(){}
-    
+
+
+      /** @function
+       @return Returns the identifier for the space that the presence is in.
+       @type String
+       */
+      presence.prototype.getSpaceID = function(){}
+
+      /** @function
+       @return Returns the identifier for the presence in the space that it's in.
+       @type String
+       */
+      presence.prototype.getPresenceID = function(){}
+      
+      
   };
 
 
