@@ -75,6 +75,11 @@ system.registerHandler = function (a, b, c)
 
 system.self = 'I am Self!';
 
+system.__isResetting = function()
+{
+    return false;
+};
+
 system.sendMessage = function(sender, msgObj, receiver)
 {
     print('\nIn system.sendMessage\n');
