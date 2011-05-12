@@ -146,7 +146,7 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     return this.__prettyPrintFieldsData__;
 };
 
-(
+{
   /** @namespace presence */
   var presence = function()
   {
@@ -246,8 +246,8 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     
   };
 
-)
 
+}
 
 
 
