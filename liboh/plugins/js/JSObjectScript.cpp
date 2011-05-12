@@ -128,7 +128,7 @@ void printException(v8::TryCatch& try_catch) {
 v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, int argc, v8::Handle<v8::Value> argv[], String* exc = NULL) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
-    
+
     TryCatch try_catch;
 
     Handle<Value> result;
@@ -347,12 +347,12 @@ bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toL
 //JSContextStruct calls the below function (requestReset).  If reset was
 //requested by root context, then set mResetting to true.  In the check handlers
 //function, if mResetting is true, stops comparing event against handlers.
-//Then, call resetScript.  resetScript tears down the rest of the script.  
+//Then, call resetScript.  resetScript tears down the rest of the script.
 v8::Handle<v8::Value> JSObjectScript::requestReset(JSContextStruct* jscont)
 {
     if (jscont != mContext)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  Cannot call reset unless within root context.")));
-    
+
     mResetting = true;
     return v8::Undefined();
 }
@@ -745,7 +745,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-    
+
     // Special casing emerson compilation
     v8::Handle<v8::String> source;
 #ifdef EMERSON_COMPILE
@@ -1065,10 +1065,15 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     EvalContext& ctx = mEvalContextStack.top();
     if (!ctx.currentScriptDir.empty()) {
         path fq = ctx.currentScriptDir / filename_as_path;
-        if (boost::filesystem::exists(fq)) {
-            *full_file_out = fq;
-            *base_path_out = ctx.currentScriptBaseDir;
-            return;
+        try {
+            if (boost::filesystem::exists(fq)) {
+                *full_file_out = fq;
+                *base_path_out = ctx.currentScriptBaseDir;
+                return;
+            }
+        } catch (boost::filesystem::filesystem_error) {
+            // Ignore, this just means we don't have access to some directory so
+            // we can't check for its existence.
         }
     }
 
@@ -1078,10 +1083,15 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     for (std::list<String>::iterator pit = search_paths.begin(); pit != search_paths.end(); pit++) {
         path base_path(*pit);
         path fq = base_path / filename_as_path;
-        if (boost::filesystem::exists(fq)) {
-            *full_file_out = fq;
-            *base_path_out = base_path;
-            return;
+        try {
+            if (boost::filesystem::exists(fq)) {
+                *full_file_out = fq;
+                *base_path_out = base_path;
+                return;
+            }
+        } catch (boost::filesystem::filesystem_error) {
+            // Ignore, this just means we don't have access to some directory so
+            // we can't check for its existence.
         }
     }
 
@@ -1299,12 +1309,12 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     mHandlingEvent = true;
 
 
-    
+
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
         if (mResetting)
             break;
-        
+
         if (mEventHandlers[s]->matches(obj,msgSender,to))
         {
             // Adding support for the knowing the message properties too
@@ -1323,7 +1333,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     //the entire script.
     if (mResetting)
         resetScript();
-    
+
     if (!matchesSomeHandler) {
         JSLOG(info,"Message did not match any files");
     }
@@ -1336,7 +1346,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
 //adds all outstanding changes and then deletes all outstanding in that order.
 void JSObjectScript::flushQueuedHandlerEvents()
 {
-    
+
     //Adding
     for (int s=0; s < (int)mQueuedHandlerEventsAdd.size(); ++s)
     {
@@ -1525,7 +1535,7 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     //presuming that we are connecting to the same space;
     //arbitrarily saying that we'll just be on top of the root object.
     Location startingLoc(poser,Quaternion::identity(),Vector3f(0,0,0),Vector3f(0,1,0),0);
-    
+
     //Arbitrarily saying that we're just going to use a simple bounding sphere.
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
 
