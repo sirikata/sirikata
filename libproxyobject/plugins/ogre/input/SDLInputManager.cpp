@@ -138,6 +138,18 @@ static const IdPair::Primary &getWindowEventId(SDL_WindowEventID sdlId) {
     return unknownId;
 }
 
+SDLInputManager::InitializationException::InitializationException(const String& msg)
+ : std::exception(), _msg(msg + String("(") + String(SDL_GetError()) + String(")"))
+{
+}
+
+SDLInputManager::InitializationException::~InitializationException() throw() {
+}
+
+const char* SDLInputManager::InitializationException::what() const throw() {
+    return _msg.c_str();
+}
+
 
 SDLInputManager::SDLInputManager(Graphics::OgreSystem* parent, unsigned int width,unsigned int height, bool fullscreen, int ogrePixelFormat,bool grabCursor, void *&currentWindow)
  : InputManager(new Task::ThreadSafeWorkQueue),
@@ -148,13 +160,13 @@ SDLInputManager::SDLInputManager(Graphics::OgreSystem* parent, unsigned int widt
     mWidth = width;
     mHasKeyboardFocus = true;
     mHeight = height;
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0) {
-        SILOG(ogre,error,"Couldn't initialize SDL: "<<SDL_GetError());
-    }
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE) < 0)
+        throw InitializationException("SDL_Init failed.");
 
 #if 1
     if (currentWindow) {
         mWindowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
+        if (mWindowID == 0) throw InitializationException("SDL_CreateWindow failed.");
         SDL_RaiseWindow(mWindowID);
         SDL_ShowWindow(mWindowID);
 #ifdef _WIN32
@@ -184,7 +196,6 @@ SDLInputManager::SDLInputManager(Graphics::OgreSystem* parent, unsigned int widt
 		DragAcceptFiles(pInfo.window, TRUE);
 #endif
     }else {
-        SDL_Init(SDL_INIT_VIDEO);
         SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
         SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
         SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
@@ -193,6 +204,7 @@ SDLInputManager::SDLInputManager(Graphics::OgreSystem* parent, unsigned int widt
         SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
         mWindowID = SDL_CreateWindow("Sirikata",0,0,width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | (fullscreen?SDL_WINDOW_FULLSCREEN:0));
+        if (mWindowID == 0) throw InitializationException("SDL_CreateWindow failed.");
         SDL_GLContext ctx=mWindowContext=SDL_GL_CreateContext(mWindowID);
         SDL_GL_MakeCurrent(mWindowID,ctx);
         SDL_ShowWindow(mWindowID);

@@ -80,6 +80,15 @@ class SDLInputManager : public InputManager {
     bool mHasKeyboardFocus;
     static int modifiersFromSDL(int sdlMod);
 public:
+    class InitializationException : public std::exception {
+    public:
+        InitializationException(const String& msg);
+        virtual ~InitializationException() throw();
+        virtual const char* what() const throw();
+    private:
+        std::string _msg;
+    };
+
     OptionValue*mDragDeadband;
     OptionValue*mDragMultiplier;
     OptionValue*mWorldScale;

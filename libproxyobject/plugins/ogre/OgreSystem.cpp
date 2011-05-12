@@ -587,21 +587,31 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                 SILOG(ogre,warning,"Setting window width from "<<mWindowWidth->as<uint32>()<< " to "<<mRenderWindow->getWidth()<<'\n'<<"Setting window height from "<<mWindowHeight->as<uint32>()<< " to "<<mRenderWindow->getHeight()<<'\n');
                 *mWindowWidth->get()=Any(mRenderWindow->getWidth());
                 *mWindowHeight->get()=Any(mRenderWindow->getHeight());
-                mInputManager=new SDLInputManager(this,
-                    mRenderWindow->getWidth(),
-                    mRenderWindow->getHeight(),
-                    mFullScreen->as<bool>(),
-                    mWindowDepth->as<Ogre::PixelFormat>(),
-                    grabCursor->as<bool>(),
-                    hWnd);
+                try {
+                    mInputManager=new SDLInputManager(this,
+                        mRenderWindow->getWidth(),
+                        mRenderWindow->getHeight(),
+                        mFullScreen->as<bool>(),
+                        mWindowDepth->as<Ogre::PixelFormat>(),
+                        grabCursor->as<bool>(),
+                        hWnd);
+                } catch (SDLInputManager::InitializationException exc) {
+                    SILOG(ogre,error,exc.what());
+                    return false;
+                }
             }else {
-                mInputManager=new SDLInputManager(this,
-                    mWindowWidth->as<uint32>(),
-                    mWindowHeight->as<uint32>(),
-                    mFullScreen->as<bool>(),
-                    mWindowDepth->as<Ogre::PixelFormat>(),
-                    grabCursor->as<bool>(),
-                    hWnd);
+                try {
+                    mInputManager=new SDLInputManager(this,
+                        mWindowWidth->as<uint32>(),
+                        mWindowHeight->as<uint32>(),
+                        mFullScreen->as<bool>(),
+                        mWindowDepth->as<Ogre::PixelFormat>(),
+                        grabCursor->as<bool>(),
+                        hWnd);
+                } catch (SDLInputManager::InitializationException exc) {
+                    SILOG(ogre,error,exc.what());
+                    return false;
+                }
                 Ogre::NameValuePairList misc;
 #ifdef __APPLE__
                 {
