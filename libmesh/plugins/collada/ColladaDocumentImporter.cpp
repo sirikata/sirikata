@@ -383,6 +383,11 @@ void ColladaDocumentImporter::finish ()
     const COLLADAFW::VisualScene* vis_scene = vis_scene_it->second;
     // Iterate through nodes. Currently we'll only output anything for nodes
     // with <instance_node> elements.
+    // Track the visited nodes so we don't reprocess nodes and end up adding
+    // their data (instanced geoemtries, lights) twice. We used to expand
+    // (flatten) everything, but now we track the full hierarchy including node
+    // instancing, so we can skip reprocessing
+    std::tr1::unordered_set<const COLLADAFW::Node*> visited;
     for(size_t i = 0; i < vis_scene->getRootNodes().getCount(); i++) {
         const COLLADAFW::Node* rn = vis_scene->getRootNodes()[i];
 
@@ -396,9 +401,12 @@ void ColladaDocumentImporter::finish ()
             if (curnode.mode == NodeState::Fresh) {
                 // In this traversal we don't need to do anything when the node
                 // is just added
-
                 COLLADABU::Math::Matrix4 xform = curnode.node->getTransformationMatrix();
                 curnode.transform = curnode.transform * Matrix4x4f(xform, Matrix4x4f::ROW_MAJOR());
+
+                // Mark as visited
+                assert( visited.find(curnode.node) == visited.end() );
+                visited.insert(curnode.node);
 
                 curnode.mode = NodeState::Geo;
             }
@@ -485,7 +493,6 @@ void ColladaDocumentImporter::finish ()
                 curnode.mode = NodeState::InstNodes;
             }
             if (curnode.mode == NodeState::InstNodes) {
-
                 // Instance Nodes
                 if ((size_t)curnode.child >= (size_t)curnode.node->getInstanceNodes().getCount()) {
                     curnode.child = 0;
@@ -500,7 +507,10 @@ void ColladaDocumentImporter::finish ()
                     // updated version of this node
                     node_stack.push( NodeState(curnode.node, curnode.parent, curnode.transform, curnode.child+1, curnode.mode) );
                     // And the child node
-                    node_stack.push( NodeState(instanced_node, curnode.node, curnode.transform) );
+                    // Since this is an instance, we want to make sure we only
+                    // process it once
+                    if (visited.find(instanced_node) == visited.end())
+                        node_stack.push( NodeState(instanced_node, curnode.node, curnode.transform) );
                 }
             }
             if (curnode.mode == NodeState::Nodes) {
@@ -509,6 +519,8 @@ void ColladaDocumentImporter::finish ()
                     // updated version of this node
                     node_stack.push( NodeState(curnode.node, curnode.parent, curnode.transform, curnode.child+1, curnode.mode) );
                     // And the child node
+                    // Non instanced nodes always get added since there is no
+                    // way to visit them twice if we don't visit instanced nodes twice.
                     node_stack.push( NodeState(curnode.node->getChildNodes()[curnode.child], curnode.node, curnode.transform) );
                 }
             }
