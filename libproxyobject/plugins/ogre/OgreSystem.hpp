@@ -48,6 +48,7 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Filter.hpp>
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -128,6 +129,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
 
     // FIXME need to support multiple parsers, see #124
     ModelsSystem* mModelParser;
+    Mesh::Filter* mModelFilter;
 
     Transfer::TransferPoolPtr mTransferPool;
 

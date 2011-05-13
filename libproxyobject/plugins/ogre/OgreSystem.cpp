@@ -64,6 +64,8 @@
 #include <sirikata/core/util/KnownMessages.hpp>
 #include <sirikata/core/util/KnownScriptTypes.hpp>
 
+#include <sirikata/mesh/CompositeFilter.hpp>
+
 using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
@@ -194,6 +196,12 @@ OgreSystem::OgreSystem(Context* ctx)
     mSceneManager=NULL;
     mMouseHandler=NULL;
     mRayQuery=NULL;
+
+    {
+        std::vector<String> names_and_args;
+        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
+        mModelFilter = new Mesh::CompositeFilter(names_and_args);
+    }
 }
 namespace {
 class FrequencyType{public:
@@ -850,6 +858,7 @@ OgreSystem::~OgreSystem() {
     destroyMouseHandler();
     delete mInputManager;
 
+    delete mModelFilter;
     delete mModelParser;
 }
 
@@ -891,6 +900,13 @@ void OgreSystem::parseMesh(const Transfer::URI& orig_uri, const Transfer::Finger
 }
 void OgreSystem::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
     Mesh::MeshdataPtr parsed = mModelParser->load(orig_uri, fp, data);
+    if (parsed) {
+        Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
+        input_data->push_back(parsed);
+        Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);
+        assert(output_data->single());
+        parsed = output_data->get();
+    }
     mContext->mainStrand->post(std::tr1::bind(cb, parsed));
 }
 
