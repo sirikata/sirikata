@@ -433,10 +433,10 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
     }
 }
 
-void OgreSystem::constructSystemLight(const String& name, const Vector3f& direction) {
+void OgreSystem::constructSystemLight(const String& name, const Vector3f& direction, float brightness) {
     LightInfo li;
 
-    Color lcol(1.f, 1.f, 1.f);
+    Color lcol(brightness, brightness, brightness);
     li.setLightDiffuseColor(lcol);
     li.setLightSpecularColor(lcol);
     li.setLightFalloff(1.f, 0.f, 0.f);
@@ -452,12 +452,13 @@ void OgreSystem::constructSystemLight(const String& name, const Vector3f& direct
 void OgreSystem::loadSystemLights() {
     if (useModelLights()) return;
 
-    constructSystemLight("forward", Vector3f(0.f, 0.f, 1.f));
-    constructSystemLight("back", Vector3f(0.f, 0.f, -1.f));
-    constructSystemLight("left", Vector3f(-1.f, 0.f, 0.f));
-    constructSystemLight("right", Vector3f(1.f, 0.f, 0.f));
-    constructSystemLight("up", Vector3f(0.f, 1.f, 0.f));
-    constructSystemLight("down", Vector3f(0.f, -1.f, 0.f));
+    float brightness = 1.f/3;
+    constructSystemLight("forward", Vector3f(0.f, 0.f, 1.f), brightness);
+    constructSystemLight("back", Vector3f(0.f, 0.f, -1.f), brightness);
+    constructSystemLight("left", Vector3f(-1.f, 0.f, 0.f), brightness);
+    constructSystemLight("right", Vector3f(1.f, 0.f, 0.f), brightness);
+    constructSystemLight("up", Vector3f(0.f, 1.f, 0.f), brightness);
+    constructSystemLight("down", Vector3f(0.f, -1.f, 0.f), brightness);
 }
 
 bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {

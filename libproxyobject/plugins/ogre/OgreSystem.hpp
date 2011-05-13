@@ -141,7 +141,7 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     // Loads system lights if they are being used.
     void loadSystemLights();
     // Helper for loadSystemLights.
-    void constructSystemLight(const String& name, const Vector3f& direction);
+    void constructSystemLight(const String& name, const Vector3f& direction, float brightness);
 
     bool renderOneFrame(Task::LocalTime, Duration frameTime);
     ///all the things that should happen just before the frame
