@@ -62,6 +62,7 @@ public:
     return mStarted;
   }
 
+    void cancel();
 protected:
 
   void metadataFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
@@ -81,6 +82,7 @@ protected:
   double mPriority;
   DownloadCallback cb;
 };
+typedef std::tr1::shared_ptr<ResourceDownloadTask> ResourceDownloadTaskPtr;
 
 } // namespace Sirikata
 

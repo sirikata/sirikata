@@ -1312,6 +1312,7 @@ ${GFX}/resourceManager/CDNArchiveFactory.cpp
 ${GFX}/resourceManager/CDNArchivePlugin.cpp
 ${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
+${GFX}/resourceManager/AssetDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
 ${GFX}/resourceManager/DistanceDownloadPlanner.cpp
 ${GFX}/resourceManager/SAngleDownloadPlanner.cpp

@@ -48,8 +48,14 @@ ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoo
 }
 
 ResourceDownloadTask::~ResourceDownloadTask()
-{  
+{
 //FIXME: How do we unsubscribe from an active download?!?!?!
+}
+
+void ResourceDownloadTask::cancel() {
+    // FIXME This should fully cancel, but for now its sufficient to just not
+    // perform the callback.
+    cb = 0;
 }
 
 void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
@@ -66,7 +72,7 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ResourceDownloadTa
                                          std::tr1::shared_ptr<ChunkRequest> request,
             std::tr1::shared_ptr<const DenseData> response)
 {
-    if (response != NULL) {
+    if (response != NULL && cb) {
         cb(request, response);
     }
     else {

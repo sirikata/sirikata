@@ -41,6 +41,9 @@
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
+
+#include "resourceManager/AssetDownloadTask.hpp"
+
 namespace Sirikata {
 namespace Graphics {
 class OgreSystem;
@@ -66,7 +69,6 @@ protected:
     ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
-    uint32 mRemainingDownloads; // Downloads remaining before loading can occur
     std::tr1::shared_ptr<TextureBindingsMap> mTextureFingerprints;
 
     typedef std::vector<Ogre::Light*> LightList;
@@ -74,9 +76,6 @@ protected:
 
     Transfer::URI mURI;
     String mURIString;
-
-    bool mHaveURIHash;
-    SHA256 mURIHash; // Hash of mURI content. Stored so we can possibly avoid a download.
 
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
@@ -88,12 +87,11 @@ protected:
     // more nodes.
     bool mVisible;
 
+    AssetDownloadTaskPtr mAssetDownload;
+
     void fixTextures();
 
-    // Wrapper for createMesh which allows us to use a WorkQueue
-    void createMeshWork(Mesh::MeshdataPtr md);
-
-    void createMesh(Mesh::MeshdataPtr md);
+    void createMesh();
 
     void init(Ogre::Entity *obj);
 
@@ -176,8 +174,6 @@ public:
 
     void unloadMesh();
 
-    void downloadMeshFile(Transfer::URI const& uri);
-
     // interface from MeshListener
     public:
         virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
@@ -185,18 +181,10 @@ public:
 
     protected:
 
-    void handleMeshParsed(Mesh::MeshdataPtr md);
-
     // If a mesh had already been downloaded (by us or someone else), we have
     // the hash, *and* the object still exists, we should be able to just add it
     // to the scene.
-    bool tryInstantiateExistingMesh();
-
-    void MeshDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest>request, std::tr1::shared_ptr<const Transfer::DenseData> response);
-
-    // After a mesh is downloaded, try instantiating it from an existing mesh,
-    // i.e. in case this URI/underlying hash has already been loaded.
-    void tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response);
+    bool tryInstantiateExistingMesh(const String& meshname);
 };
 typedef std::tr1::shared_ptr<Entity> EntityPtr;
 

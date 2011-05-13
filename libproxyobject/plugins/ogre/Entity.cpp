@@ -39,6 +39,7 @@
 #include "OgreHeaders.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "Lights.hpp"
+#include <sirikata/core/network/IOStrandImpl.hpp>
 
 using namespace Sirikata::Transfer;
 
@@ -110,7 +111,6 @@ Entity::Entity(OgreSystem *scene,
     mOgreObject(NULL),
     mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(ppo->getObjectReference()) )),
     mMovingIter(scene->mMovingEntities.end()),
-    mHaveURIHash(false),
     mVisible(true)
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
@@ -126,8 +126,6 @@ Entity::Entity(OgreSystem *scene,
     ppo->ProxyObjectProvider::addListener(this);
     ppo->PositionProvider::addListener(this);
 
-
-    mRemainingDownloads = 0;
     mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive=true;
     getProxy().MeshProvider::addListener(this);
@@ -434,26 +432,6 @@ void Entity::setSelected(bool selected) {
       mSceneNode->showBoundingBox(selected);
 }
 
-void Entity::MeshDownloaded(std::tr1::shared_ptr<ChunkRequest>request, std::tr1::shared_ptr<const DenseData> response)
-{
-    mURIHash = request->getMetadata().getFingerprint();
-    mHaveURIHash = true;
-    mScene->context()->mainStrand->post(std::tr1::bind(&Entity::tryInstantiateExistingMeshOrParse, this, request, response));
-}
-
-void Entity::downloadMeshFile(Transfer::URI const& uri)
-{
-    assert( !uri.empty() );
-
-    std::tr1::shared_ptr<ResourceDownloadTask> dl =
-      std::tr1::shared_ptr<ResourceDownloadTask> (new ResourceDownloadTask(
-        uri, getScene()->transferPool(),
-        mProxy->priority,
-        std::tr1::bind(&Entity::MeshDownloaded,
-                       this, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-    (*dl)( dl);
-}
-
 
 /////////////////////////////////////////////////////////////////////
 // overrides from MeshListener
@@ -469,25 +447,24 @@ void Entity::processMesh(Transfer::URI const& meshFile)
     if (meshFile.empty())
         return;
 
-    // If it's the same mesh *and* we still have it around just leave it alone
-    if (mURI == meshFile && mOgreObject)
+    // If it's the same mesh *and* we still have it around or are working on it, just leave it alone
+    if (mURI == meshFile && (mAssetDownload || mOgreObject))
         return;
-
-    // If we have the hash and can instantiate, avoid doing any additional work
-    if (mURI == meshFile && tryInstantiateExistingMesh()) return;
 
     // Otherwise, start the download process
     mURI = meshFile;
     mURIString = meshFile.toString();
-    mHaveURIHash = false;
 
-    downloadMeshFile(meshFile);
+    mAssetDownload = AssetDownloadTaskPtr(
+        new AssetDownloadTask(
+            mURI, getScene(), mProxy->priority,
+            mScene->context()->mainStrand->wrap(
+                std::tr1::bind(&Entity::createMesh, this)
+            )
+        )
+    );
 }
 
-void Entity::createMeshWork(MeshdataPtr md) {
-    createMesh(md);
-    return;
-}
 Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectInfo::Texture::WrapMode w) {
     switch(w) {
       case MaterialEffectInfo::Texture::WRAP_MODE_CLAMP:
@@ -1070,36 +1047,42 @@ public:
     }
 };
 
-bool Entity::tryInstantiateExistingMesh() {
-    if (!mHaveURIHash) return false;
-
-    String hash = mURIHash.convertToHexString();
-    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(hash);
+bool Entity::tryInstantiateExistingMesh(const String& meshname) {
+    Ogre::MeshPtr mp = Ogre::MeshManager::getSingleton().getByName(meshname);
     if (!mp.isNull()) {
-        loadMesh(hash);
+        loadMesh(meshname);
         return true;
     }
     return false;
 }
 
-void Entity::tryInstantiateExistingMeshOrParse(Transfer::ChunkRequestPtr request, DenseDataPtr response) {
-    if (tryInstantiateExistingMesh()) return;
 
-    // Otherwise, follow the rest of the normal process.
-    mScene->parseMesh(mURI, request->getMetadata().getFingerprint(), response, std::tr1::bind(&Entity::handleMeshParsed, this, std::tr1::placeholders::_1));
+void Entity::createMesh() {
+    MeshdataPtr mdptr = mAssetDownload->asset();
 
-}
-
-void Entity::createMesh(MeshdataPtr mdptr) {
-    const Meshdata& md = *mdptr;
-
-    SHA256 sha = md.hash;
+    SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();
 
-    if (!md.instances.empty()) {
+    // If we already have it, just load the existing one
+    if (tryInstantiateExistingMesh(hash)) return;
+
+    for(AssetDownloadTask::Dependencies::const_iterator tex_it = mAssetDownload->dependencies().begin(); tex_it != mAssetDownload->dependencies().end(); tex_it++) {
+        const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
+        if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
+            String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
+
+            (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
+
+            fixOgreURI(id);
+            CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+        }
+    }
+
+
+    if (!mdptr->instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
-        for (MaterialEffectInfoList::const_iterator mat=md.materials.begin(),mate=md.materials.end();mat!=mate;++mat,++index) {
+        for (MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
             std::string matname = hash+"_mat_"+boost::lexical_cast<std::string>(index);
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
@@ -1112,7 +1095,6 @@ void Entity::createMesh(MeshdataPtr mdptr) {
         }
 
         Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-
         /// FIXME: set bounds, bounding radius here
         Ogre::ManualResourceLoader *reload;
         Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
@@ -1136,18 +1118,18 @@ void Entity::createMesh(MeshdataPtr mdptr) {
     }
     // Lights
     int light_idx = 0;
-    Meshdata::LightInstanceIterator lightinst_it = md.getLightInstanceIterator();
+    Meshdata::LightInstanceIterator lightinst_it = mdptr->getLightInstanceIterator();
     uint32 lightinst_idx;
     Matrix4x4f pos_xform;
     while( lightinst_it.next(&lightinst_idx, &pos_xform) ) {
-        const LightInstance& lightinst = md.lightInstances[lightinst_idx];
+        const LightInstance& lightinst = mdptr->lightInstances[lightinst_idx];
 
         // Get the instanced submesh
-        if(lightinst.lightIndex >= (int)md.lights.size()){
-            SILOG(ogre,error, "bad light index %d for lights only sized %d\n"<<lightinst.lightIndex<<"/"<<(int)md.lights.size());
+        if(lightinst.lightIndex >= (int)mdptr->lights.size()){
+            SILOG(ogre,error, "bad light index %d for lights only sized %d\n"<<lightinst.lightIndex<<"/"<<(int)mdptr->lights.size());
             continue;
         }
-        const LightInfo& sublight = md.lights[lightinst.lightIndex];
+        const LightInfo& sublight = mdptr->lights[lightinst.lightIndex];
 
         String lightname = getProxy().getObjectReference().toString()+"_light_"+hash+ boost::lexical_cast<String>(light_idx++);
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
@@ -1168,50 +1150,6 @@ void Entity::createMesh(MeshdataPtr mdptr) {
             mSceneNode->addChild(xformnode);
             //light->setDebugDisplayEnabled(true);
         }
-    }
-}
-
-void Entity::downloadFinished(std::tr1::shared_ptr<ChunkRequest> request,
-  std::tr1::shared_ptr<const DenseData> response, MeshdataPtr md) {
-
-  if (mActiveCDNArchive && mTextureFingerprints->find(request->getURI().toString()) == mTextureFingerprints->end() ) {
-      String id = request->getURI().toString() + request->getMetadata().getFingerprint().toString();
-
-      (*mTextureFingerprints)[request->getURI().toString()] = id;
-
-      fixOgreURI(id);
-      CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(response));
-  }
-
-  mRemainingDownloads--;
-  if (mRemainingDownloads == 0)
-    mScene->context()->mainStrand->post(std::tr1::bind(&Entity::createMeshWork, this, md));
-}
-
-void Entity::handleMeshParsed(MeshdataPtr md) {
-    if (!md) {
-        SILOG(ogre,error,"Failed to parse mesh " << mURI.toString());
-        return;
-    }
-
-    mRemainingDownloads += md->textures.size();
-
-    // Special case for no dependent downloads
-    if (mRemainingDownloads == 0) {
-        mScene->context()->mainStrand->post(std::tr1::bind(&Entity::createMeshWork, this, md));
-        return;
-    }
-
-    for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
-      String texURI = mURIString.substr(0, mURIString.rfind("/")+1) + (*it);
-
-      std::tr1::shared_ptr<ResourceDownloadTask> dl =
-        std::tr1::shared_ptr<ResourceDownloadTask>(new ResourceDownloadTask(
-                                                  Transfer::URI(texURI), getScene()->transferPool(),
-                                                  mProxy->priority,
-                                                  std::tr1::bind(&Entity::downloadFinished, this,
-                                                  std::tr1::placeholders::_1, std::tr1::placeholders::_2, md)));
-        (*dl) (dl);
     }
 }
 
