@@ -157,7 +157,7 @@ JSVisibleStruct* JSVisibleStructMonitor::checkWatchingWithFrom(const SpaceObject
 {
     ListenFromMapIter iter = mObjectsToFollow.find(sporefVisible);
 
-    if (iter != mObjectsToFollow.end())
+    if (iter == mObjectsToFollow.end())
         return NULL;
 
     for (SpaceToVisMapIter spVisIter = iter->second.begin(); spVisIter != iter->second.end(); ++spVisIter)
