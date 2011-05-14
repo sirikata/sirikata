@@ -46,6 +46,8 @@
 #include "TransformFilter.hpp"
 #include "CenterFilter.hpp"
 
+#include "TriangulateFilter.hpp"
+
 static int common_filters_plugin_refcount = 0;
 
 SIRIKATA_PLUGIN_EXPORT_C void init ()
@@ -68,6 +70,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
         FilterFactory::getSingleton().registerConstructor("scale", TransformFilter::createScale);
 
         FilterFactory::getSingleton().registerConstructor("center", CenterFilter::create);
+
+        FilterFactory::getSingleton().registerConstructor("triangulate", TriangulateFilter::create);
     }
 
     ++common_filters_plugin_refcount;

@@ -1,5 +1,5 @@
 /*  Sirikata
- *  CompositeFilters.hpp
+ *  TriangulateFilter.hpp
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -30,25 +30,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/mesh/CompositeFilter.hpp>
+#ifndef _LIBMESH_PLUGIN_COMMON_FILTERS_TRIANGULATE_FILTER_HPP_
+#define _LIBMESH_PLUGIN_COMMON_FILTERS_TRIANGULATE_FILTER_HPP_
+
+#include <sirikata/mesh/Filter.hpp>
 
 namespace Sirikata {
 namespace Mesh {
 
-// This is just a set of "constructors" for composite filters that we want to
-// expose. These are simple enough to include directly.
+/** TriangulateFilter converts non-triangulated meshes, e.g. triangle fans and
+ *  triangle strips, into triangle list representations. This is useful as a
+ *  preprocess to filters which require triangle representations.
+ *
+ *  You can control which types it converts using the parameter: 'trifan',
+ *  'tristrip', or 'all'. 'all' is the default.
+ */
+class TriangulateFilter : public Filter {
+public:
+    static Filter* create(const String& args);
 
-Filter* ReduceDrawCalls(const String& args) {
-    std::vector<String> names_and_args;
-    names_and_args.push_back("triangulate"); names_and_args.push_back("all");
-    names_and_args.push_back("single-material-geometry"); names_and_args.push_back("");
-    names_and_args.push_back("squash-materials"); names_and_args.push_back("");
-    names_and_args.push_back("squash-primitives"); names_and_args.push_back("");
-    names_and_args.push_back("squash-instanced-geometry"); names_and_args.push_back("");
-    names_and_args.push_back("squash-primitives"); names_and_args.push_back("");
+    TriangulateFilter(bool tristrips, bool trifans);
+    virtual ~TriangulateFilter() {}
 
-    return new CompositeFilter(names_and_args);
-}
+    virtual FilterDataPtr apply(FilterDataPtr input);
+
+private:
+    bool mTriStrips;
+    bool mTriFans;
+};
 
 } // namespace Mesh
 } // namespace Sirikata
+
+#endif //_LIBMESH_PLUGIN_COMMON_FILTERS_TRIANGULATE_FILTER_HPP_
