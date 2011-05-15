@@ -68,14 +68,33 @@ void SubMeshGeometry::append(const SubMeshGeometry& rhs, const Matrix4x4f& xform
 
     // FIXME: influenceStartIndex? jointindices? weights? inverseBindMatrices?
 
-    assert((this->texUVs.size() == 0 && index_offset == 0) ||
-        this->texUVs.size() == rhs.texUVs.size()); // same tex uvs or first
-                                                   // added
-    if (this->texUVs.size() == 0) {
-        // Copy
-        this->texUVs = rhs.texUVs;
+    // Either one set has 0 texUVs (and we can fill them in) or both have the
+    // same size
+    assert(this->texUVs.size() == 0 || rhs.texUVs.size() == 0 ||
+        this->texUVs.size() == rhs.texUVs.size()
+    );
+
+    if (rhs.texUVs.size() == 0) {
+        // Fill in bogus values
+        for(uint32 ti = 0; ti < this->texUVs.size(); ti++) {
+            uint32 stride = this->texUVs[ti].stride;
+            uint32 to_insert = rhs.positions.size() * stride;
+            for(uint32 uvi = 0; uvi < to_insert; uvi++)
+                this->texUVs[ti].uvs.push_back(0);
+        }
     }
     else {
+        if (this->texUVs.size() == 0) {
+            // Fill in bogus values for past entries
+            for(uint32 ti = 0; ti < rhs.texUVs.size(); ti++) {
+                uint32 stride = rhs.texUVs[ti].stride;
+                uint32 to_insert = index_offset * stride;
+                this->texUVs.push_back(TextureSet());
+                this->texUVs[ti].stride = stride;
+                for(uint32 uvi = 0; uvi < to_insert; uvi++)
+                    this->texUVs[ti].uvs.push_back(0);
+            }
+        }
         // Append
         for(uint32 ti = 0; ti < rhs.texUVs.size(); ti++) {
             assert( this->texUVs[ti].stride == rhs.texUVs[ti].stride );
