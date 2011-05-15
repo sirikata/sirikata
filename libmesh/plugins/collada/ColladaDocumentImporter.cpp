@@ -374,6 +374,13 @@ void ColladaDocumentImporter::finish ()
     COLLADA_LOG(insane, mMesh->geometry.size() << " : mMesh->geometry.size()");
     COLLADA_LOG(insane, mVisualScenes.size() << " : mVisualScenes");
 
+
+    if (mVisualSceneId == COLLADAFW::UniqueId()) {
+        COLLADA_LOG(error, "No visual_scene found. The scene will have no contents.");
+        mState = FINISHED;
+        return;
+    }
+
     // NOTE: postProcess expects geometry and lights to have been filled in.
     postProcess ();
 
@@ -552,7 +559,8 @@ bool ColladaDocumentImporter::writeGlobalAsset ( COLLADAFW::FileInfo const* asse
 bool ColladaDocumentImporter::writeScene ( COLLADAFW::Scene const* scene )
 {
     const COLLADAFW::InstanceVisualScene* inst_vis_scene = scene->getInstanceVisualScene();
-    mVisualSceneId = inst_vis_scene->getInstanciatedObjectId();
+    if (inst_vis_scene != NULL)
+        mVisualSceneId = inst_vis_scene->getInstanciatedObjectId();
 
     const COLLADAFW::InstanceKinematicsScene* inst_kin_scene = scene->getInstanceKinematicsScene();
     if (inst_kin_scene) {
