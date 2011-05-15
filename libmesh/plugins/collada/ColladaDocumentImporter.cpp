@@ -692,8 +692,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
         COLLADAFW::MeshPrimitive * prim = primitives[prim_index];
         if (prim->getPrimitiveType()==COLLADAFW::MeshPrimitive::POLYLIST||
             prim->getPrimitiveType()==COLLADAFW::MeshPrimitive::POLYGONS) {
-            COLLADA_LOG(error,"ERROR: we do not support concave COLLADA POLYGONS\n");
-            //continue;
+            COLLADA_LOG(insane,"Polygons found in a COLLADA model. Transforming into trifans, but this is only a heuristic, they may render incorrectly.");
         }
         size_t groupedVertexElementCount;
         bool multiPrim;
