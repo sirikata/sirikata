@@ -34,6 +34,7 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "Camera.hpp"
 #include <sirikata/core/options/Options.hpp>
+#include "Entity.hpp"
 
 namespace Sirikata {
 namespace Graphics {

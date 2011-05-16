@@ -32,7 +32,6 @@
 #ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
 #define SIRIKATA_GRAPHICS_CAMERA_HPP__
 
-#include "Entity.hpp"
 #include "OgreHeaders.hpp"
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
@@ -41,6 +40,9 @@
 
 namespace Sirikata {
 namespace Graphics {
+
+class Entity;
+class OgreSystem;
 
 class Camera {
 public:

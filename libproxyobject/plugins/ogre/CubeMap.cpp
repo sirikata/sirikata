@@ -33,6 +33,7 @@
 #include "OgreSystem.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
+#include "Entity.hpp"
 
 class xTest :public Ogre::RenderTargetListener{
 public:

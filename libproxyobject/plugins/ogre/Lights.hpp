@@ -38,6 +38,8 @@
 #include "OgreHeaders.hpp"
 #include <OgreLight.h>
 
+#include "OgreConversions.hpp"
+
 namespace Sirikata {
 namespace Graphics {
 

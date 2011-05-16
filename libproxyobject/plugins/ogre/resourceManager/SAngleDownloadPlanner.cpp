@@ -32,6 +32,7 @@
 
 #include "SAngleDownloadPlanner.hpp"
 #include <sirikata/core/util/SolidAngle.hpp>
+#include "../Entity.hpp"
 
 namespace Sirikata {
 
