@@ -81,7 +81,7 @@ std.movement.MoveAndRotate = system.Class.extend(
             this._pres.velocity = this._pres.velocity.add(
                 this._pres.orientation.mul(scaled_vel)
             );
-            this._startReeval();
+            this._startReeval(true);
         },
         rotate: function(axis, angle) {
             var newVel = this._localOrientVel.mul(
@@ -89,9 +89,9 @@ std.movement.MoveAndRotate = system.Class.extend(
             );
             this._pres.orientationVel = newVel;
             this._localOrientVel = newVel;
-            this._startReeval();
+            this._startReeval(true);
         },
-        _startReeval: function() {
+        _startReeval: function(is_first) {
             this._moving = this.moving();
             this._rotating = this.rotating();
 
@@ -107,13 +107,32 @@ std.movement.MoveAndRotate = system.Class.extend(
             if ((this._update_type == this.UPDATE_TYPE_ALL && (this._moving || this._rotating)) ||
                 (this._update_type == this.UPDATE_TYPE_MOVEMENT && this._moving) ||
                 (this._update_type == this.UPDATE_TYPE_ROTATION && this._rotating) ||
-                (this._moving && this._rotating) // Real reeval
-               )
-                system.timeout(.05, std.core.bind(this._reeval, this));
+                (this._moving && this._rotating || is_first) // Real reeval
+               ) {
+                   // is_first tracks whether this is the first
+                   // request for reeval. We do this specially to
+                   // force reevaluation immediately upon setting
+                   // values. We need to do this because when the
+                   // orientation changes we want to make sure the
+                   // velocity also gets the corresponding
+                   // update. Otherwise, the deltas used can become
+                   // incorrect so a sequence like [ move forward,
+                   // rotate right, rotate_left, move backward ],
+                   // which should have all elements cancel out, can
+                   // end up with a small velocity because the move
+                   // backwards is computed using the right local
+                   // orientation but the presence's velocity might
+                   // not have been updated yet (still waiting for
+                   // first timeout).
+                   if (is_first)
+                       this._reeval(is_first);
+                   else
+                       system.timeout(.05, std.core.bind(this._reeval, this));
+               }
         },
-        _reeval: function() {
+        _reeval: function(is_first) {
             // Only perform reeval if we really need it
-            if (this._moving && this._rotating)
+            if (this._moving && this._rotating || is_first)
                 this._pres.velocity = this._pres.orientation.mul(this._localVel);
 
             // Then do callbacks
