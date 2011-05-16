@@ -897,6 +897,7 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
 
 	bool success = true;
 	if(e->getDevice()->isKeyboard()) {
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS || SIRIKATA_PLATFORM == PLATFORM_LINUX
             // Work around a problem with Berkelium where cut/copy/paste don't
             // seem to get the same delay as other keyboard repeats. Instead,
             // just filter the repeats out for these keys
@@ -905,6 +906,21 @@ Sirikata::Task::EventResponse WebViewManager::onButton(Sirikata::Task::EventPtr 
                 success = true; // Pretend we ate it
             else
                 success = this->injectKeyEvent(e->pressed(), (e->pressed() && !e->activelyPressed()), e->mModifier, e->mButton);
+#elif SIRIKATA_PLATFORM == PLATFORM_MAC
+	    if (e->mModifier == MOD_GUI && (e->pressed() && e->activelyPressed())) {
+	      if (e->mButton == SDL_SCANCODE_X)
+		success = this->injectCut();
+	      else if (e->mButton == SDL_SCANCODE_C)
+		success = this->injectCopy();
+	      else if (e->mButton == SDL_SCANCODE_V)
+		success = this->injectPaste();
+	      else
+		success = this->injectKeyEvent(e->pressed(), (e->pressed() && !e->activelyPressed()), e->mModifier, e->mButton);
+	    }
+	    else {
+	      success = this->injectKeyEvent(e->pressed(), (e->pressed() && !e->activelyPressed()), e->mModifier, e->mButton);
+	    }
+#endif
 	}
 
 	if (success) {
