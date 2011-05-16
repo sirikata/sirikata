@@ -202,7 +202,8 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
- : mParent(ho),
+ : contIDTracker(0),
+   mParent(ho),
    mManager(jMan),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    hiddenObjectCount(0),
@@ -231,7 +232,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
     SpaceObjectReference sporef = SpaceObjectReference::null();
-    mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate);
+    mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate,contIDTracker);
+    mContStructMap[contIDTracker] = mContext;
+    ++contIDTracker;
 
 
     String script_contents = init_script->as<String>();
@@ -1011,11 +1014,10 @@ void JSObjectScript::print(const String& str) {
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared, JSContextStruct* jscont)
 {
-    //create timerstruct
     Network::IOService* ioserve = mParent->getIOService();
-    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,cb,jscont,ioserve);
+    JSTimerStruct* jstimer = new JSTimerStruct(this,Duration::seconds(period),cb,jscont,ioserve,contID, timeRemaining,isSuspended,isCleared);
 
     v8::HandleScope handle_scope;
 
@@ -1025,7 +1027,12 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
-    return returner;
+    return handle_scope.Close(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::create_timeout(double period, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
+{
+    return create_timeout(period,cb,jscont->getContextID(),0,false,false,jscont);
 }
 
 
@@ -1298,6 +1305,12 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
 }
 
 
+void JSObjectScript::registerFixupSuspendable(JSSuspendable* jssusp, uint32 contID)
+{
+    toFixup[contID].push_back(jssusp);
+}
+
+
 void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
 {
     v8::HandleScope handle_scope;
@@ -1311,7 +1324,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
 
-   //bftm:clean all this up later
+
 
     if (! parsed)
     {
@@ -1504,8 +1517,11 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     v8::HandleScope handle_scope;
 
     v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,canCreatePres,canCreateEnt,canEval,mManager->mContextGlobalTemplate);
+    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,canCreatePres,canCreateEnt,canEval,mManager->mContextGlobalTemplate, contIDTracker);
+    mContStructMap[contIDTracker] = internalContextField;
+    ++contIDTracker;
 
+    
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
 

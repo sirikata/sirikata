@@ -909,23 +909,28 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 
 
 /**
-   @param Number.  How long to wait before executing callback function (2nd
-   arg).  (Units of seconds.)
-   @param Funciton.
+   @param time number of seconds to wait before executing the callback
+   @param callback The function to invoke once "time" number of seconds have passed
 
+   @param {Reserved} uint32 contextId
+   @param {Reserved} double timeRemaining
+   @param {Reserved} bool   isSuspended
+   @param {Reserved} bool   isCleared
+
+   
    timeout sets a timer.  When the number of seconds specified by arg 1 have
    elapsed, executes function specified by arg2.
  */
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 {
 
-    if (args.Length() != 2)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second argumnet is callback")) );
+    if ((args.Length() != 2) && (args.Length() != 6))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  Requires either two arguments(duration, callback) or requires six arguments (same as before + <uint32: contextId><double: timeRemaining><bool: isSuspended><bool: isCleared>.  ")) );
 
     v8::Handle<v8::Value> dur         = args[0];
     v8::Handle<v8::Value> cb_val      = args[1];
 
-
+    
     //just returns the ScriptTimeout function
     String errorMessage      =  "Error decoding system in root_timeout of JSSystem.cpp.  ";
     JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
@@ -952,7 +957,41 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    return jsfake->struct_createTimeout(Duration::seconds(native_dur), cb_persist);
+    if (args.Length() == 2)
+        return jsfake->struct_createTimeout(native_dur, cb_persist);
+
+    //resuming an already-created timeout.
+    v8::Handle<v8::Value> contIDVal         = args[2];
+    v8::Handle<v8::Value> timeRemainingVal  = args[3];
+    v8::Handle<v8::Value> isSuspendedVal    = args[4];
+    v8::Handle<v8::Value> isClearedVal      = args[5];
+
+    
+    uint32 contID;
+    double timeRemaining;
+    bool isSuspended,isCleared;
+    
+    if (! contIDVal->IsUint32())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Context id should be a uint32.")) );
+
+    contID = contIDVal->ToUint32()->Value();
+
+    if (! timeRemainingVal->IsNumber())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Time remaining should be a double.")) );
+    timeRemaining = timeRemainingVal->ToNumber()->Value();
+
+    if (! isSuspendedVal->IsBoolean())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Is suspended should be a boolean.")) );
+
+    isSuspended = isSuspendedVal->ToBoolean()->Value();
+
+    if (! isClearedVal->IsBoolean())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Is cleared should be a boolean.")) );
+
+    isCleared = isClearedVal->ToBoolean()->Value();
+    
+
+    return jsfake->struct_createTimeout(native_dur, cb_persist, contID,timeRemaining,isSuspended,isCleared);
 }
 
 

@@ -22,8 +22,9 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl,uint32 contID)
  : JSSuspendable(),
+   mContextID(contID),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
    hasOnConnectedCallback(false),
@@ -41,6 +42,11 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //taken care of in the createContext function of this class.
 }
 
+
+uint32 JSContextStruct::getContextID()
+{
+    return mContextID;
+}
 
 
 //performs the initialization and population of util object, system object,
@@ -539,11 +545,16 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
-v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(const Duration& dur,  v8::Persistent<v8::Function>& cb)
+v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,  v8::Persistent<v8::Function>& cb)
 {
     //the timer that's created automatically registers as a suspendable with
     //this context.
-    return jsObjScript->create_timeout(dur, cb, this);
+    return jsObjScript->create_timeout(period, cb, this);
+}
+
+v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared)
+{
+    return jsObjScript->create_timeout(period,cb, contID, timeRemaining, isSuspended,isCleared,this);
 }
 
 

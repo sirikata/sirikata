@@ -127,8 +127,12 @@ public:
 
 
     /** Set a timeout with a callback. */
-    v8::Handle<v8::Value> create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb, JSContextStruct* jscont);
+    v8::Handle<v8::Value> create_timeout(double period, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
 
+    v8::Handle<v8::Value> create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared,JSContextStruct* jscont);
+    
+    void registerFixupSuspendable(JSSuspendable* jssuspendable, uint32 contID);
+    
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
@@ -219,7 +223,15 @@ public:
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb);
 
     JSContextStruct* rootContext() const { return mContext; }
+
+
 private:
+
+    // Each context has an id that is assigned from this variable.
+    uint32 contIDTracker;
+    std::map<uint32,JSContextStruct*> mContStructMap;
+    
+    
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
     // way the system defines actions (e.g. import searches the current script's
@@ -279,6 +291,7 @@ private:
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
 
+    
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
@@ -307,7 +320,7 @@ private:
 
 
     HostedObjectPtr mParent;
-    //v8::Persistent<v8::Context> mContext;
+
 
     //This function returns to you the current value of present token and
     //incrmenets presenceToken so that get a unique one each time.  If
@@ -326,7 +339,10 @@ private:
     //returns the jspresstruct associated with new object
     JSPresenceStruct* addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token);
 
-
+    
+    typedef std::map<uint32, SuspendableVec> ContIDToSuspMap;
+    ContIDToSuspMap toFixup;
+    
 
     //looks through all previously connected presneces (located in mPresences).
     //returns the corresponding jspresencestruct that has a spaceobjectreference

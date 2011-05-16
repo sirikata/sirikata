@@ -14,20 +14,75 @@ namespace Sirikata {
 namespace JS {
 
 
-JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur, v8::Persistent<v8::Function>& callback,JSContextStruct* jscont, Sirikata::Network::IOService* ioserve)
- : JSSuspendable(),
-   jsObjScript(jsobj),
-   cb(callback),
-   jsContStruct(jscont),
-   mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
-   timeUntil(dur.toSeconds())
-{
-    mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
-    if (jscont != NULL)
-        jscont->struct_registerSuspendable(this);
+JSTimerStruct::JSTimerStruct(JSObjectScript*jsobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared)
+ :JSSuspendable(),
+  jsObjScript(jsobj),
+  cb(callback),
+  jsContStruct(jscont),
+  mDeadlineTimer(NULL),
+  timeUntil(dur.toSeconds()),
+  mTimeRemaining(timeRemaining)
+{
+    if (isCleared)
+    {
+        clear();
+        return;
+    }
+
+    mDeadlineTimer =new Sirikata::Network::DeadlineTimer(*ioserve);
+    if (isSuspended)
+        suspend();
+
+    
+    if (contID != jscont->getContextID())
+    {
+        jsobj->registerFixupSuspendable(this,contID);
+    }
+    else
+    {
+        if (timeRemaining == 0)
+            mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
+        else
+            mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeRemaining*1000000));
+    
+        mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+
+
+        if (jscont != NULL)
+            jscont->struct_registerSuspendable(this);
+    }
 }
+
+void JSTimerStruct::fixSuspendableToContext(JSContextStruct* toAttachTo)
+{
+    jsContStruct = toAttachTo;
+
+    if (mTimeRemaining == 0)
+        mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
+    else
+        mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(mTimeRemaining*1000000));
+    
+    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+    
+    jsContStruct->struct_registerSuspendable(this);
+}
+
+
+// JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur, v8::Persistent<v8::Function>& callback,JSContextStruct* jscont, Sirikata::Network::IOService* ioserve)
+//  : JSSuspendable(),
+//    jsObjScript(jsobj),
+//    cb(callback),
+//    jsContStruct(jscont),
+//    mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
+//    timeUntil(dur.toSeconds())
+// {
+//     mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
+//     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+
+//     if (jscont != NULL)
+//         jscont->struct_registerSuspendable(this);
+// }
 
 JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage)
 {
@@ -70,6 +125,51 @@ JSTimerStruct::~JSTimerStruct()
 
     delete mDeadlineTimer;
 }
+
+//returning all data necessary to re-generate timer
+//  uint32   contextId
+//  double period
+//  double timeUntil timer expires
+//  bool  isSuspended
+//  bool  isCleared
+//  func  cb
+v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
+{
+    v8::HandleScope handle_scope;
+    
+    uint32  contId   = jsContStruct->getContextID();
+    bool    issusp   = getIsSuspended();
+    bool    isclear  = getIsCleared();
+    double  period   = -1;
+    double  tUntil   = -1;
+
+    v8::Handle<v8::Function> cbFunc;
+    
+    if (! isclear)
+    {
+        cbFunc = cb;
+        period = timeUntil;
+        if (issusp)
+            tUntil = timeUntil;
+        else
+        {
+            boost::posix_time::time_duration pt = mDeadlineTimer->expires_from_now();
+            tUntil = (double)(pt.total_microseconds()/1000000.);
+        }
+    }
+
+    v8::Handle<v8::Object> returner = v8::Object::New();
+    returner->Set(v8::String::New("period"), v8::Number::New(period));    
+    returner->Set(v8::String::New("cb"),cbFunc);
+    
+    returner->Set(v8::String::New("timeRemaining"),v8::Number::New(tUntil));
+    returner->Set(v8::String::New("isSuspended"),v8::Boolean::New(issusp));
+    returner->Set(v8::String::New("isCleared"),v8::Boolean::New(isclear));
+    returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(contId));
+    
+    return handle_scope.Close(returner);
+}
+
 
 
 void JSTimerStruct::evaluateCallback(const boost::system::error_code& error)
@@ -126,12 +226,14 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
         return JSSuspendable::clear();
     }
 
-    mDeadlineTimer->cancel();
+    if (mDeadlineTimer != NULL)
+        mDeadlineTimer->cancel();
 
     if (jsContStruct != NULL)
         jsContStruct->struct_deregisterSuspendable(this);
 
-    cb.Dispose();
+    if (! cb.IsEmpty())
+        cb.Dispose();
     return JSSuspendable::clear();
 }
 

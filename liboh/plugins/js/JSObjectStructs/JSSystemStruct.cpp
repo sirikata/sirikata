@@ -175,9 +175,14 @@ v8::Handle<v8::Value> JSSystemStruct::struct_reset()
 
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
-v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb)
+v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period, v8::Persistent<v8::Function>& cb)
 {
-    return associatedContext->struct_createTimeout(dur,cb);
+    return associatedContext->struct_createTimeout(period,cb);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared)
+{
+    return associatedContext->struct_createTimeout(period,cb, contID, timeRemaining, isSuspended,isCleared);
 }
 
 

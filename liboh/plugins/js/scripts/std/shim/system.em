@@ -201,13 +201,22 @@ if(system == undefined)
       /** @function
        @param time number of seconds to wait before executing the callback
        @param callback The function to invoke once "time" number of seconds have passed
+
+       @param {Reserved} uint32 contextId
+       @param {Reserved} double timeRemaining
+       @param {Reserved} bool   isSuspended
+       @param {Reserved} bool   isCleared
+       
        @return a object representing a handle for this timer. This handle can be used in future to suspend and resume the timer
        */
-      system.timeout = function (/**Number*/timeUntil, /**function*/callback)
+      system.timeout = function (/**Number*/period, /**function*/callback, /**uint32*/contextId, /**double*/timeRemaining,/**bool*/isSuspended, /**bool*/isCleared)
       {
           var selfKey = (this.self == null )? this.__NULL_TOKEN__ : this.self.toString();
           var wrappedFunction = this.__wrapTimeout(callback,selfKey);
-          return baseSystem.timeout(timeUntil,wrappedFunction);
+          if (typeof(isCleared) == 'undefined')
+              return baseSystem.timeout(period,wrappedFunction);
+
+          return baseSystem.timeout(period,wrappedFunction,contextId,timeRemaining,isSuspended,isCleared);
       };
 
 

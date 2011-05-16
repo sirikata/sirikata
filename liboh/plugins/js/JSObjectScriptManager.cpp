@@ -161,7 +161,7 @@ void JSObjectScriptManager::createTimerTemplate()
     mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
     mTimerTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSTimer::resume));
     mTimerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSTimer::isSuspended));
-
+    mTimerTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSTimer::getAllData));
 }
 
 

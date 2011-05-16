@@ -30,13 +30,14 @@ class VisAddParams;
 
 struct JSContextStruct : public JSSuspendable
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
     //user.  if unsuccessful, return null.
     static JSContextStruct* decodeContextStruct(v8::Handle<v8::Value> toDecode, String& errorMsg);
 
+    uint32 getContextID();
 
 
     //contexts can be suspended (suspends all suspendables within the context)
@@ -124,8 +125,10 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
 
     //create a timer that will fire cb in dur seconds from now,
-    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
+    v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
 
+    v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
+    
     //Tries to eval the emerson code in native_contents that came from origin
     //sOrigin inside of this context.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
@@ -160,7 +163,8 @@ struct JSContextStruct : public JSSuspendable
     }
     
 private:
-
+    uint32 mContextID;
+    
     //runs through suspendable map to check if have a presence in this sandbox
     //matching sporef
     bool hasPresence(const SpaceObjectReference& sporef);

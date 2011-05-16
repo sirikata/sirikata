@@ -3,6 +3,7 @@
 #define __SIRIKATA_JS_SUSPENDABLE_HPP__
 
 #include <map>
+#include <vector>
 #include <v8.h>
 
 
@@ -34,6 +35,9 @@ private:
 
 typedef std::map<JSSuspendable*, int> SuspendableMap;
 typedef SuspendableMap::iterator SuspendableIter;
+
+typedef std::vector<JSSuspendable*> SuspendableVec;
+typedef SuspendableVec::iterator SuspendableVecIter;
 
 } //end namespace js
 } //end sirikata

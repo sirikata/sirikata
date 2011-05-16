@@ -83,8 +83,10 @@ struct JSSystemStruct
 
     //create a timer that will fire in dur seconds from now, that will bind the
     //this parameter to target and that will fire the callback cb.
-    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
+    v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
 
+    v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
+    
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
     v8::Handle<v8::Value> struct_reset();
