@@ -115,7 +115,8 @@ $(document).ready(
 		height: 'auto',
 		width: 300,
                 height: 400,
-		modal: false
+		modal: false,
+                position: 'right'
 	});
         $('#chat-log').hide();
         $('#chat-submit-name').click(registerHotkeys);

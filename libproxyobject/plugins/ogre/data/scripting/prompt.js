@@ -234,7 +234,8 @@ $(document).ready(function() {
 			Run: runCommand,
 			"Close Tab": closePrompt
 		},
-		close: dialogClosed
+		close: dialogClosed,
+                position: 'left'
 	});
 
 	/*<button type="button" onclick="runCommand()">Run</button>
