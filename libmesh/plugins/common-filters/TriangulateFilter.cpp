@@ -96,16 +96,16 @@ FilterDataPtr TriangulateFilter::apply(FilterDataPtr input) {
                     // the different triplet for each winding order: 0, 1, 2 or
                     // 1, 0, 2.
 
-                    for(int tri_idx = 0; tri_idx < prim_it->indices.size()-2; tri_idx++) {
+                    for(int tri_idx = 2; tri_idx < prim_it->indices.size(); tri_idx++) {
                         if (tri_idx % 2 == 0) {
+                            new_prim.indices.push_back( prim_it->indices[tri_idx-2] );
+                            new_prim.indices.push_back( prim_it->indices[tri_idx-1] );
                             new_prim.indices.push_back( prim_it->indices[tri_idx] );
-                            new_prim.indices.push_back( prim_it->indices[tri_idx+1] );
-                            new_prim.indices.push_back( prim_it->indices[tri_idx+2] );
                         }
                         else {
-                            new_prim.indices.push_back( prim_it->indices[tri_idx+1] );
-                            new_prim.indices.push_back( prim_it->indices[tri_idx+0] );
-                            new_prim.indices.push_back( prim_it->indices[tri_idx+2] );
+                            new_prim.indices.push_back( prim_it->indices[tri_idx-1] );
+                            new_prim.indices.push_back( prim_it->indices[tri_idx-2] );
+                            new_prim.indices.push_back( prim_it->indices[tri_idx] );
                         }
                     }
 
@@ -119,10 +119,10 @@ FilterDataPtr TriangulateFilter::apply(FilterDataPtr input) {
                     // Triangle fans are pretty simple. They generate n
                     // triangles for n+2 vertices. Triangle n is formed by
                     // vertices 0, n+1, n+2, in that order.
-                    for(int tri_idx = 0; tri_idx < prim_it->indices.size()-2; tri_idx++) {
+                    for(int tri_idx = 2; tri_idx < prim_it->indices.size(); tri_idx++) {
                         new_prim.indices.push_back( prim_it->indices[0] );
-                        new_prim.indices.push_back( prim_it->indices[tri_idx+1] );
-                        new_prim.indices.push_back( prim_it->indices[tri_idx+2] );
+                        new_prim.indices.push_back( prim_it->indices[tri_idx-1] );
+                        new_prim.indices.push_back( prim_it->indices[tri_idx] );
                     }
 
                     *prim_it = new_prim;
