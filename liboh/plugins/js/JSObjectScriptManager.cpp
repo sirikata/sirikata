@@ -410,6 +410,7 @@ void JSObjectScriptManager::createHandlerTemplate()
     mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::_isSuspended));
     mHandlerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSHandler::_resume));
     mHandlerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSHandler::_clear));
+    mHandlerTemplate->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSHandler::getAllData));
 }
 
 

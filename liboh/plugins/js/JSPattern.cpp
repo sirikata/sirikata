@@ -50,6 +50,27 @@ Pattern::Pattern(const std::string& _name,v8::Handle<v8::Value> _value,v8::Handl
 }
 
 
+v8::Handle<v8::Value> Pattern::getAllData( )
+{
+    v8::HandleScope handle_scope;
+
+    v8::Handle<v8::Object> returner = v8::Object::New(); 
+
+    bool hasName = (name() == "") ? false:true;
+    returner->Set(v8::String::New("hasName"), v8::Boolean::New( hasName));
+    returner->Set(v8::String::New("name"), v8::String::New(name().c_str()));
+    returner->Set(v8::String::New("hasValue"), v8::Boolean::New(hasValue()));
+    if (hasValue())
+        returner->Set(v8::String::New("value"),value());
+
+    returner->Set(v8::String::New("hasPrototype"), v8::Boolean::New(hasPrototype()));
+    if (hasPrototype())
+        returner->Set(v8::String::New("prototype"),prototype());
+    
+    return handle_scope.Close(returner);
+}
+
+
 bool Pattern::matches(v8::Handle<v8::Object> obj) const
 {
     if (mName == "")
@@ -158,6 +179,23 @@ Pattern PatternExtract(Handle<Object>& src_obj) {
     return Pattern(name, val, proto);
 }
 
+v8::Handle<v8::Value>getAllData(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  No args should be passed to pattern's getAllData.")));
+
+
+    v8::Handle<v8::Value> mThis = args.This();
+    if (! PatternValidate(mThis))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error decoding pattern in getAllData")));
+
+    Pattern mPattern = PatternExtract(mThis);
+    
+    return mPattern.getAllData();
+        
+}
+
+
 // And this is the real implementation
 Handle<Value> PatternConstructor(const Arguments& args) {
     Handle<Object> self = args.This();
@@ -198,7 +236,8 @@ Handle<FunctionTemplate> CreatePatternTemplate() {
     Local<ObjectTemplate> pattern_prototype_templ = pattern_constructor_templ->PrototypeTemplate();
 
     pattern_prototype_templ->Set(JS_STRING(toString), v8::FunctionTemplate::New(PatternToString));
-
+    pattern_prototype_templ->Set(JS_STRING(getAllData), v8::FunctionTemplate::New(getAllData));
+    
     // Pattern instance
     Local<ObjectTemplate> pattern_instance_templ = pattern_constructor_templ->InstanceTemplate();
 

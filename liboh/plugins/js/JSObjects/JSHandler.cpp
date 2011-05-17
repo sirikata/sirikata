@@ -31,6 +31,19 @@ v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
     return v8::Undefined();
 }
 
+v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
+{
+    JSObjectScript* caller;
+    JSEventHandlerStruct* handler;
+    readHandler(args,caller,handler);
+
+    if (handler == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot getAllData: cannot decode handler.")));
+
+
+    return handler->getAllData();
+}
+
 
 /**
    Calling suspend prevents this handler from being triggered until it's resumed.

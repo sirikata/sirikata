@@ -69,21 +69,6 @@ void JSTimerStruct::fixSuspendableToContext(JSContextStruct* toAttachTo)
 }
 
 
-// JSTimerStruct::JSTimerStruct(JSObjectScript* jsobj, const Duration& dur, v8::Persistent<v8::Function>& callback,JSContextStruct* jscont, Sirikata::Network::IOService* ioserve)
-//  : JSSuspendable(),
-//    jsObjScript(jsobj),
-//    cb(callback),
-//    jsContStruct(jscont),
-//    mDeadlineTimer (new Sirikata::Network::DeadlineTimer(*ioserve)),
-//    timeUntil(dur.toSeconds())
-// {
-//     mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
-//     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
-
-//     if (jscont != NULL)
-//         jscont->struct_registerSuspendable(this);
-// }
-
 JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage)
 {
     v8::HandleScope handle_scope;  //for garbage collection.

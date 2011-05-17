@@ -21,6 +21,8 @@ struct JSEventHandlerStruct : public JSSuspendable
 
     void printHandler();
 
+    v8::Handle<v8::Value>getAllData();
+    
     virtual v8::Handle<v8::Value> suspend();
     virtual v8::Handle<v8::Value> resume();
     virtual v8::Handle<v8::Value> clear();

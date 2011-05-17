@@ -31,6 +31,31 @@ JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Pers
 
 }
 
+v8::Handle<v8::Value> JSEventHandlerStruct::getAllData()
+{
+    v8::HandleScope handle_scope;
+
+    bool    issusp   = getIsSuspended();
+    bool    isclear  = getIsCleared();
+    
+    v8::Handle<v8::Object> returner = v8::Object::New();
+    returner->Set(v8::String::New("callback"), cb);
+    returner->Set(v8::String::New("sender"), sender);
+    returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(jscont->getContextID()));
+
+    returner->Set(v8::String::New("isSuspended"),v8::Boolean::New(issusp));
+    returner->Set(v8::String::New("isCleared"),v8::Boolean::New(isclear));
+
+
+    v8::Handle<v8::Array> pattArray = v8::Array::New();
+    for (PatternListSize s =0; s < pattern.size(); ++s)
+        pattArray->Set(v8::Number::New(s), pattern[s].getAllData());
+
+    returner->Set(v8::String::New("patterns"), pattArray);
+
+    handle_scope.Close(returner);
+}
+
 
 JSEventHandlerStruct::~JSEventHandlerStruct()
 {
