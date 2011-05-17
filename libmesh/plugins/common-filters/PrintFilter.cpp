@@ -140,8 +140,9 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
 
     printf("Submesh Geometry List:\n");
     for(SubMeshGeometryList::const_iterator it = md->geometry.begin(); it != md->geometry.end(); it++) {
-        printf("   Name: %s, Positions: %d Normals: %d Primitives: %d\n", it->name.c_str(),
-                (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size());
+        printf("   Name: %s, Positions: %d Normals: %d Primitives: %d, UVs: %d (sets) x %d (stride) x %d (count)\n", it->name.c_str(),
+            (int)it->positions.size(), (int)it->normals.size(), (int)it->primitives.size(),
+            (int)it->texUVs.size(), (int)( it->texUVs.size() ? it->texUVs[0].stride : 0), (int)( it->texUVs.size() ? it->texUVs[0].uvs.size() : 0));
 
         for(std::vector<SubMeshGeometry::Primitive>::const_iterator p = it->primitives.begin(); p != it->primitives.end(); p++) {
             printf("      Primitive: material: %d, indices: %d, type: %s\n", (int)p->materialId, (int)p->indices.size(), PrimitiveTypeToString(p->primitiveType));

@@ -906,8 +906,13 @@ bool ColladaDocumentImporter::makeTexture
             color.getColor().getGreen() == 1.0 &&
             color.getColor().getBlue() == 1.0 &&
             color.getColor().getAlpha() == 1.0);
+        // Full transparency is checked because 1. some exporters (Sketchup 6 in
+        // particular) exported with their transparency value inverted and
+        // 2. completely transparent elements don't make any sense for display.
+        bool is_fully_transparent = (color.getColor().getAlpha() == 0.0);
         if ((type != MaterialEffectInfo::Texture::OPACITY && is_black && !forceBlack) ||
-            (type == MaterialEffectInfo::Texture::OPACITY && is_white))
+            (type == MaterialEffectInfo::Texture::OPACITY && is_white) ||
+            (type == MaterialEffectInfo::Texture::OPACITY && is_fully_transparent))
             return false;
 
         output.push_back(MaterialEffectInfo::Texture());
