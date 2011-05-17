@@ -74,10 +74,17 @@ $(document).ready(function() {
 			});
 		}
 	});
-	
+
+/* This was here because it needed to specifically use the $.ajax call to
+ * collect file listing info. This is a limitation of the plugin we're
+ * using. It's also causing problems elsewhere, so we're disabling it for
+ * now. To fix, it probably requires the other code to support getting listings
+ * via some more generic mechanism.
+ *
 	jQuery.ajax = function(ajax_settings) {
 		directory_list_callback_store[ajax_settings.data] = ajax_settings;
 		chrome.send("ui-action", ['action_directory_list_request', ajax_settings.data]);
 	};
+*/
 	
 });
