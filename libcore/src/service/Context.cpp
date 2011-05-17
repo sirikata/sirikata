@@ -157,7 +157,7 @@ void Context::startForceQuitTimer() {
     mKillService = Network::IOServiceFactory::makeIOService();
     mKillTimer = Network::IOTimer::create(mKillService);
     mKillTimer->wait(
-        Duration::seconds(15),
+        Duration::seconds(5),
         std::tr1::bind(&Context::forceQuit, this)
     );
     mKillThread = std::tr1::shared_ptr<Thread>(
