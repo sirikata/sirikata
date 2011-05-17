@@ -3,7 +3,7 @@ var editors = [];
 
 function updateCurEditor(selected) {
     if (selected === undefined) {
-        var $tabs = $('#edittabs').tabs();
+        var $tabs = $('#edittabs');
         selected = $tabs.tabs('option', 'selected');
     }
     curEditor = editors[selected];
@@ -12,14 +12,17 @@ function updateCurEditor(selected) {
 Editor = function(objid) {
     var small_objid = (objid.length < 8 ? objid : objid.slice(0, 7));
 
-    var tabname = 'tab-' + objid;
-    var tabeditor = 'tab-' + objid + '-editor';
-    var tabresults = 'tab-' + objid + '-results';
-    $('#edittabs').append('<div class="editorthumb" id="' + tabname + '">' +
+    var objid_salt = objid + Math.round(Math.random() * 100000).toString();
+    console.log('objid_salt: ' + objid_salt);
+    var tabname = 'tab-' + objid_salt;
+    var tabeditor = 'tab-' + objid_salt + '-editor';
+    var tabresults = 'tab-' + objid_salt + '-results';
+    var editor_tab = $('<div class="editorthumb" id="' + tabname + '">' +
                           '<div class="editborder"><div id="' + tabresults + '" class="codeedit"></div></div>' +
                           '<div class="editborder"><div id="' + tabeditor + '" class="codeedit"></div></div>' +
                           '</div>');
-    var $tabs = $('#edittabs').tabs();
+    editor_tab.appendTo('#edittabs');
+    var $tabs = $('#edittabs');
     var idx = $tabs.tabs('length');
     $tabs.tabs('add', '#' + tabname, small_objid);
     editors[idx] = this;
@@ -154,6 +157,10 @@ function findEditorIndex(objid) {
 }
 
 function addObject(objid) {
+    // Reinit
+    if (editors.length == 0)
+        $('#edittabs').tabs({ select: function(event, ui) { updateCurEditor(ui.index); } });
+
     var edidx = findEditorIndex(objid);
     if (edidx === null) {
         // Didn't find it, create it
@@ -182,11 +189,12 @@ function closePrompt() {
 	console.log("selected index = " + selectedIndex);
 	delete editors[selectedIndex].results;
 	delete editors[selectedIndex].editor;
-	$("#" + editors[selectedIndex].tabname).remove();
 	$('#edittabs').tabs('remove', selectedIndex);
+	$("#" + editors[selectedIndex].tabname).remove();
 	editors.splice(selectedIndex, 1);
 	if (editors.length == 0) {
-		$( "#emerson-prompt-dialog" ).dialog( "close" );
+	    $( "#emerson-prompt-dialog" ).dialog( "close" );
+            $('#edittabs').tabs('destroy');
 	} else {
 		updateCurEditor();
 	}
@@ -222,8 +230,6 @@ $(document).ready(function() {
 	/*<div id="edittabs">
 		<ul id="edittab_titles"></ul>
 	</div>*/
-
-	$('#edittabs').tabs({ select: function(event, ui) { updateCurEditor(ui.index); } });
 
 	$( "#emerson-prompt-dialog" ).dialog({
 		autoOpen: false,
