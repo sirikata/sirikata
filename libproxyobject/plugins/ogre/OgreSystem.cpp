@@ -1389,6 +1389,13 @@ boost::any OgreSystem::getCamera(vector<boost::any>& params) {
     camera_fov["y"] = Invokable::asAny(fovy);
     camera_info["fov"] = Invokable::asAny(camera_fov);
 
+    Invokable::Dict camera_pos;
+    Vector3d pos = mPrimaryCamera->getPosition();
+    camera_pos["x"] = Invokable::asAny(pos.x);
+    camera_pos["y"] = Invokable::asAny(pos.y);
+    camera_pos["z"] = Invokable::asAny(pos.z);
+    camera_info["position"] = Invokable::asAny(camera_pos);
+
     return Invokable::asAny(camera_info);
 }
 

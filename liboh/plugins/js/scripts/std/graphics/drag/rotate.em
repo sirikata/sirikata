@@ -33,7 +33,7 @@
 system.require('std/movement/movableremote.em');
 system.require('std/graphics/drag/handler.em');
 
-/** @namespace 
+/** @namespace
     RotateDragHandler responds to drag events by moving a selected object.
  */
 std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
@@ -44,10 +44,48 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
             this._super(gfx);
         },
 
+        // Computes the direction from the center of the sphere to the
+        // point currently hit by the mouse, or undefined if the mouse
+        // is currently beyond the bounds of the sphere.
+        _spherePos: function(evt) {
+            var center_pos = this._dragging.getPosition();
+            var scale = this._dragging.getScale();
+
+            var look_from = this._graphics.cameraPosition();
+            var look_at = this._graphics.cameraDirection(evt.x, evt.y);
+
+            var center_to_cam = look_from.sub(center_pos);
+
+            var a = look_at.dot(look_at);
+            var b = look_at.mul(2).dot( center_to_cam );
+            var c = center_to_cam.dot(center_to_cam) - scale*scale;
+
+            var descrim = b*b - 4*a*c;
+            if (descrim < 0) return undefined;
+            var descrim_root = util.sqrt(descrim);
+
+            var t1 = (-b + descrim_root) / (2*a);
+            var t2 = (-b + descrim_root) / (2*a);
+
+            var t = undefined;
+            if (t1 > 0) {
+                if (t2 > 0)
+                    t = (t1 < t2) ? t1 : t2;
+                else
+                    t = t1;
+            } else if (t2 > 0) {
+                t = t2;
+            }
+            if (!t) return undefined;
+            var on_sphere = look_from.add(look_at.mul(t));
+            return on_sphere.sub(center_pos).normal();
+        },
+
         /** @memberOf std.graphics.RotateDragHandler */
-        selected: function(obj) {
+        selected: function(obj, evt) {
             this._dragging = obj ?
                 new std.movement.MovableRemote(obj) : null;
+            this._startingDir = this._spherePos(evt);
         },
 
         /** @memberOf std.graphics.RotateDragHandler */
@@ -57,31 +95,13 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
             if (!this._dragging.dragOrientation)
                 this._dragging.dragOrientation = this._dragging.getOrientation();
 
-            var cameraAxis = this._graphics.cameraDirection();
+            var endingDir = this._spherePos(evt);
+            if (!this._startingDir || !endingDir) return;
 
-            var radianX = 0, radianY = 0, radianZ = 0;
-            var sensitivity =0.25;
+            var around = endingDir.cross(this._startingDir);
+            var angle = util.asin(around.length());
 
-            var ctrlX = true, ctrlZ = true;
-            if (ctrlX) {
-                if (ctrlZ)
-                    radianZ = 3.14159 * 2 * -evt.dx * sensitivity;
-                else
-                    if (cameraAxis.z > 0) sensitivity *=-1;
-                radianX = 3.14159 * 2 * -evt.dy * sensitivity;
-            }
-            else {
-                if (ctrlZ) {
-                    if (cameraAxis.x <= 0) sensitivity *=-1;
-                    radianZ = 3.14159 * 2 * -evt.dy * sensitivity;
-                }
-                else
-                    radianY = 3.14159 * 2 * evt.dx * sensitivity;
-            }
-            var rotX = new util.Quaternion( new util.Vec3(1,0,0), radianX);
-            var rotY = new util.Quaternion( new util.Vec3(0,1,0), radianY);
-            var rotZ = new util.Quaternion( new util.Vec3(0,0,1), radianZ);
-            var dragRotation = rotX.mul(rotY).mul(rotZ).mul(this._dragging.dragOrientation);
+            var dragRotation = (new util.Quaternion(around, angle)).mul(this._dragging.dragOrientation);
             this._dragging.setOrientation( dragRotation );
         },
 

@@ -116,6 +116,17 @@ function() {
         return this.invoke("camera");
     };
 
+    /** Gets the camera's current position. Note that this can be different from
+     *  the position of the presence it is attached to because it may be in 3rd
+     *  person mode. Useful if you need to figure out something based on the
+     *  display, e.g. how a click on a particular x,y screen coordinate should
+     *  map to the world.
+     */
+    std.graphics.Graphics.prototype.cameraPosition = function() {
+        var cam_info = this.camera();
+        return < cam_info.position.x, cam_info.position.y, cam_info.position.z >;
+    };
+
     /** Compute a vector indicating the direction a particular point in the
      *  camera's viewport points. (x,y) should be in the range (-1,-1)-(1,1),
      *  the same as the values provided by mouse click and drag events.  If no
