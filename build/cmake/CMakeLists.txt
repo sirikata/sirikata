@@ -1178,6 +1178,10 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/task/EventManager.cpp
   ${LIBOGRE_SOURCE_DIR}/task/Event.cpp
   ${LIBOGRE_SOURCE_DIR}/task/UniqueId.cpp
+  ${LIBOGRE_SOURCE_DIR}/input/InputEvents.cpp
+  ${LIBOGRE_SOURCE_DIR}/input/InputDevice.cpp
+  ${LIBOGRE_SOURCE_DIR}/input/SDLInputDevice.cpp
+  ${LIBOGRE_SOURCE_DIR}/input/SDLInputManager.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   )
 
@@ -1301,7 +1305,6 @@ SET(LIBCORE_PLUGIN_LOCAL_SOURCES
 
 SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR ${LIBPROXYOBJECT_PLUGIN_DIR}/ogre)
 SET(GFX ${LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_DIR})
-SET(INPUT ${GFX}/input)
 SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${Ogre_PBJ_CPP_FILES}
   ${SirikataOgreCoreZipCpp}
@@ -1309,10 +1312,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/OgreMeshRaytrace.cpp
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
-  ${INPUT}/SDLInputManager.cpp
-  ${INPUT}/InputEvents.cpp
-  ${INPUT}/InputDevice.cpp
-  ${INPUT}/SDLInputDevice.cpp
   ${GFX}/Entity.cpp
   ${GFX}/Camera.cpp
   ${GFX}/OgrePlugin.cpp

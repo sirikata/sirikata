@@ -33,13 +33,13 @@
 #ifndef SIRIKATA_INPUT_ButtonToAxis_HPP__
 #define SIRIKATA_INPUT_ButtonToAxis_HPP__
 
-#include "InputDevice.hpp"
+#include <sirikata/ogre/input/InputDevice.hpp>
 
 namespace Sirikata {
 namespace Input {
 
 /** Mostly for hatswitches or d-pad's on a joystick. */
-class AxisToButton : public InputDevice {
+class SIRIKATA_OGRE_EXPORT AxisToButton : public InputDevice {
     struct HatButton {
         AxisValue mLow;
         AxisValue mHigh;
@@ -50,7 +50,7 @@ class AxisToButton : public InputDevice {
     int mParentAxis;
 
 public:
-    AxisToButton (const std::string &name, const InputDevicePtr &parent, int parentAxis) 
+    AxisToButton (const std::string &name, const InputDevicePtr &parent, int parentAxis)
         : mParentDevice(parent), mParentAxis(parentAxis) {
         setName(name);
     }
@@ -91,12 +91,12 @@ public:
 typedef std::tr1::shared_ptr<AxisToButton> AxisToButtonPtr;
 
 /** Make arrow keys on a keyboard emulate a mouse/axis. */
-class ButtonToAxis : public InputDevice {
+class SIRIKATA_OGRE_EXPORT ButtonToAxis : public InputDevice {
     typedef std::map <int, float> AxisMap;
     AxisMap mAxisPoints;
     InputDevicePtr mParentDevice;
 public:
-    ButtonToAxis (const std::string &name, const InputDevicePtr &parent) 
+    ButtonToAxis (const std::string &name, const InputDevicePtr &parent)
         : mParentDevice(parent) {
         setName(name);
     }

@@ -221,7 +221,7 @@ enum WindowEventType {
     WindowQuit
 };
 
-class InputDevice {
+class SIRIKATA_OGRE_EXPORT InputDevice {
 protected:
     std::string mName;
     InputManager *mManager;
@@ -297,7 +297,7 @@ public:
 };
 
 
-class PointerDevice : public InputDevice {
+class SIRIKATA_OGRE_EXPORT PointerDevice : public InputDevice {
     struct DragInfo {
         int mButton;
         bool mIsDragging;

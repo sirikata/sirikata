@@ -33,8 +33,8 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>
-#include "InputEvents.hpp"
-#include "InputDevice.hpp"
+#include <sirikata/ogre/input/InputEvents.hpp>
+#include <sirikata/ogre/input/InputDevice.hpp>
 
 namespace Sirikata {
 namespace Input {

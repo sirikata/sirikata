@@ -35,8 +35,8 @@
 #include <sirikata/core/util/DynamicLibrary.hpp>
 #include "WebViewManager.hpp"
 #include "WebView.hpp"
-#include "input/SDLInputManager.hpp"
-#include "input/InputEvents.hpp"
+#include <sirikata/ogre/input/SDLInputManager.hpp>
+#include <sirikata/ogre/input/InputEvents.hpp>
 #include "SDL_scancode.h"
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
@@ -49,7 +49,7 @@
 #include "berkelium/Context.hpp"
 #endif
 
-#include "input/SDLInputDevice.hpp"
+#include <sirikata/ogre/input/SDLInputDevice.hpp>
 
 template<> Sirikata::Graphics::WebViewManager* Ogre::Singleton<Sirikata::Graphics::WebViewManager>::ms_Singleton = 0;
 

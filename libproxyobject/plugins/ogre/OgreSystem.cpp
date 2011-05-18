@@ -45,9 +45,9 @@
 #include "Lights.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
-#include "input/SDLInputManager.hpp"
-#include "input/InputDevice.hpp"
-#include "input/InputEvents.hpp"
+#include <sirikata/ogre/input/SDLInputManager.hpp>
+#include <sirikata/ogre/input/InputDevice.hpp>
+#include <sirikata/ogre/input/InputEvents.hpp>
 #include "OgreMeshRaytrace.hpp"
 #include "resourceManager/CDNArchivePlugin.hpp"
 #include "resourceManager/ResourceDownloadTask.hpp"

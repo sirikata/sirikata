@@ -39,7 +39,7 @@
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/transfer/DiskManager.hpp>
-#include "input/InputEvents.hpp"
+#include <sirikata/ogre/input/InputEvents.hpp>
 
 namespace Sirikata {
 

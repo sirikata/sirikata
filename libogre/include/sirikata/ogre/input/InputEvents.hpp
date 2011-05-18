@@ -33,7 +33,7 @@
 #ifndef SIRIKATA_INPUT_InputEvents_HPP__
 #define SIRIKATA_INPUT_InputEvents_HPP__
 
-#include "InputDevice.hpp"
+#include <sirikata/ogre/input/InputDevice.hpp>
 
 namespace Sirikata {
 
@@ -50,7 +50,7 @@ using Graphics::WebView;
     retrieve the specific device that fired the event,
     and to determine the name of any buttons/axes, or the
     the meaning of each modifier/scancode. */
-class InputEvent : public Task::Event {
+class SIRIKATA_OGRE_EXPORT InputEvent : public Task::Event {
     InputDeviceWPtr mDevice;
 
 public:
@@ -73,7 +73,7 @@ public:
 typedef std::tr1::shared_ptr<InputEvent> InputEventPtr;
 
 /** Base class for keyboard/mouse/joystick button events. */
-class ButtonEvent : public InputEvent {
+class SIRIKATA_OGRE_EXPORT ButtonEvent : public InputEvent {
 public:
     KeyEvent mEvent; ///< If the event is ButtonPressed or ButtonReleased
     KeyButton mButton; ///< Which scancode (keyboard)
@@ -112,7 +112,7 @@ typedef std::tr1::shared_ptr<ButtonEvent> ButtonEventPtr;
 /** Fired whenever a button has been pushed down. This event is only
     fired when the button is pressed.  Note that both a ButtonReleased
     and a ButtonPressed event will be fired if modifiers change. */
-class ButtonPressed :public ButtonEvent {
+class SIRIKATA_OGRE_EXPORT ButtonPressed :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("ButtonPressed");
@@ -128,7 +128,7 @@ typedef std::tr1::shared_ptr<ButtonPressed> ButtonPressedEventPtr;
 /** Fired on repeats -- whenever a button has been pushed and held
  * down.
  */
-class ButtonRepeated :public ButtonEvent {
+class SIRIKATA_OGRE_EXPORT ButtonRepeated :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("ButtonRepeated");
@@ -142,7 +142,7 @@ public:
 typedef std::tr1::shared_ptr<ButtonRepeated> ButtonRepeatedEventPtr;
 
 /** Fired whenever a button is no longer held down. */
-class ButtonReleased :public ButtonEvent {
+class SIRIKATA_OGRE_EXPORT ButtonReleased :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("ButtonReleased");
@@ -160,7 +160,7 @@ typedef std::tr1::shared_ptr<ButtonReleased> ButtonReleasedEventPtr;
     and for other cases, it may be more appropriate to use ButtonToAxis.
 
     This event is currently never fired unless there is a reason it is needed. */
-class ButtonDown :public ButtonEvent {
+class SIRIKATA_OGRE_EXPORT ButtonDown :public ButtonEvent {
 public:
     static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("ButtonDown");
@@ -178,7 +178,7 @@ typedef std::tr1::shared_ptr<ButtonDown> ButtonDownEventPtr;
 
     For example, the mouse wheel is fired only once upon scrolling a few lines.
     On the other hand, a joystick is constantly fired whenever the value changes. */
-class AxisEvent: public InputEvent {
+class SIRIKATA_OGRE_EXPORT AxisEvent: public InputEvent {
 public:
     AxisIndex mAxis;
     AxisValue mValue;
@@ -214,7 +214,7 @@ typedef std::tr1::shared_ptr<AxisEvent> AxisEventPtr;
     sequence for the specific letter produced.
 
     FIXME: How are Backspace and Delete handled? */
-class TextInputEvent: public InputEvent {
+class SIRIKATA_OGRE_EXPORT TextInputEvent: public InputEvent {
 public:
     std::string mText; ///< UTF-8 formatted string to be appended to an input box.
 
@@ -231,7 +231,7 @@ public:
 typedef std::tr1::shared_ptr<TextInputEvent> TextInputEventPtr;
 
 /** Base class for all pointer motion events. */
-class MouseEvent: public InputEvent {
+class SIRIKATA_OGRE_EXPORT MouseEvent: public InputEvent {
 public:
     float mX; ///< X coordinate, from -1 (left) to 1 (right), same as AxisEvent
     float mY; ///< Y coordinate, from -1 (bottom) to 1 (top), same as AxisEvent
@@ -254,7 +254,7 @@ public:
 typedef std::tr1::shared_ptr<MouseEvent> MouseEventPtr;
 
 /** Event called when the cursor moves, and no buttons are down. */
-class MouseHoverEvent: public MouseEvent {
+class SIRIKATA_OGRE_EXPORT MouseHoverEvent: public MouseEvent {
 public:
     static const IdPair::Primary &getEventId() {
         static IdPair::Primary retval("MouseHoverEvent");
@@ -269,7 +269,7 @@ public:
 typedef std::tr1::shared_ptr<MouseHoverEvent> MouseHoverEventPtr;
 
 /** Base class for events involving a mouse click. */
-class MouseDownEvent: public MouseEvent {
+class SIRIKATA_OGRE_EXPORT MouseDownEvent: public MouseEvent {
 public:
     MouseButton mButton; ///< The button this event is about.
     float mXStart; ///< X coordinate when the mouse button was first pressed, -1 to 1
@@ -326,7 +326,7 @@ typedef std::tr1::shared_ptr<MouseDownEvent> MouseDownEventPtr;
 
 /** Event when the mouse was clicked (pressed and released
     without moving) */
-class MouseClickEvent: public MouseDownEvent {
+class SIRIKATA_OGRE_EXPORT MouseClickEvent: public MouseDownEvent {
 public:
 
     static const IdPair::Primary getEventId() {
@@ -344,7 +344,7 @@ public:
 typedef std::tr1::shared_ptr<MouseClickEvent> MouseClickEventPtr;
 
 /** Event when the mouse was pressed. Always sent. */
-class MousePressedEvent: public MouseDownEvent {
+class SIRIKATA_OGRE_EXPORT MousePressedEvent: public MouseDownEvent {
 public:
 
     static const IdPair::Primary getEventId() {
@@ -362,7 +362,7 @@ public:
 typedef std::tr1::shared_ptr<MousePressedEvent> MousePressedEventPtr;
 
 /** Event when the mouse was released. Always sent. */
-class MouseReleasedEvent: public MouseDownEvent {
+class SIRIKATA_OGRE_EXPORT MouseReleasedEvent: public MouseDownEvent {
 public:
 
     static const IdPair::Primary getEventId() {
@@ -381,7 +381,7 @@ typedef std::tr1::shared_ptr<MouseReleasedEvent> MouseReleasedEventPtr;
 
 /** Event when the mouse was dragged. If this event fires, then
     you will not get a MouseClickEvent. */
-class MouseDragEvent: public MouseDownEvent {
+class SIRIKATA_OGRE_EXPORT MouseDragEvent: public MouseDownEvent {
 public:
     MouseDragType mType;
 
@@ -406,7 +406,7 @@ typedef std::tr1::shared_ptr<MouseDragEvent> MouseDragEventPtr;
 
 /** Various SDL-specific events relating to the status of the
     top-level window. */
-class WindowEvent: public Task::Event {
+class SIRIKATA_OGRE_EXPORT WindowEvent: public Task::Event {
 public:
     static const IdPair::Primary& Shown() {
         static IdPair::Primary retval("WindowShown"); return retval;
@@ -467,7 +467,7 @@ public:
 };
 typedef std::tr1::shared_ptr<WindowEvent> WindowEventPtr;
 
-class DragAndDropEvent : public Task::Event {
+class SIRIKATA_OGRE_EXPORT DragAndDropEvent : public Task::Event {
 public:
     static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("DragAndDrop");
@@ -487,7 +487,7 @@ typedef std::tr1::shared_ptr<DragAndDropEvent> DragAndDropEventPtr;
 
 
 /** Events generated by a WebView calling Client.event(name, [args]) */
-class WebViewEvent : public InputEvent {
+class SIRIKATA_OGRE_EXPORT WebViewEvent : public InputEvent {
 public:
     static const IdPair::Primary& getEventId(){
         static IdPair::Primary retval("WebView");

@@ -33,9 +33,9 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>
-#include "SDLInputManager.hpp"
-#include "SDLInputDevice.hpp"
-#include "InputEvents.hpp"
+#include <sirikata/ogre/input/SDLInputManager.hpp>
+#include <sirikata/ogre/input/SDLInputDevice.hpp>
+#include <sirikata/ogre/input/InputEvents.hpp>
 
 #include <SDL.h>
 #include <SDL_video.h>

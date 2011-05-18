@@ -38,11 +38,11 @@
 #include "Entity.hpp"
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "input/InputEvents.hpp"
+#include <sirikata/ogre/input/InputEvents.hpp>
 
-#include "input/SDLInputDevice.hpp"
-#include "input/SDLInputManager.hpp"
-#include "input/InputManager.hpp"
+#include <sirikata/ogre/input/SDLInputDevice.hpp>
+#include <sirikata/ogre/input/SDLInputManager.hpp>
+#include <sirikata/ogre/input/InputManager.hpp>
 
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>

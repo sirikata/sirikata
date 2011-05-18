@@ -35,7 +35,8 @@ extern "C" typedef void* SDL_GLContext;
 extern "C" typedef union SDL_Event SDL_Event;
 
 #include <sirikata/ogre/task/EventManager.hpp>
-#include "InputManager.hpp"
+#include <sirikata/ogre/input/InputManager.hpp>
+
 namespace Sirikata {
 
 namespace Graphics {
@@ -54,7 +55,7 @@ typedef std::tr1::shared_ptr<SDLMouse> SDLMousePtr;
 typedef std::tr1::shared_ptr<SDLJoystick> SDLJoystickPtr;
 typedef std::tr1::shared_ptr<SDLKeyboard> SDLKeyboardPtr;
 
-struct SDLKeyRepeatInfo {
+struct SIRIKATA_OGRE_EXPORT SDLKeyRepeatInfo {
     SDLKeyRepeatInfo();
     ~SDLKeyRepeatInfo();
 
@@ -68,7 +69,7 @@ struct SDLKeyRepeatInfo {
 typedef std::tr1::shared_ptr<SDLKeyRepeatInfo> SDLKeyRepeatInfoPtr;
 
 
-class SDLInputManager : public InputManager {
+class SIRIKATA_OGRE_EXPORT SDLInputManager : public InputManager {
     Graphics::OgreRenderer* mParent;
     SDL_WindowID mWindowID;
     SDL_GLContext mWindowContext;

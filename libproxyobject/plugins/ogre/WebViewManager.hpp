@@ -35,8 +35,8 @@
 #include "OgreHeaders.hpp"
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
-#include "input/InputEvents.hpp"
-#include "input/InputManager.hpp"
+#include <sirikata/ogre/input/InputEvents.hpp>
+#include <sirikata/ogre/input/InputManager.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>
 #include "WebView.hpp"
 

@@ -55,9 +55,9 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/util/Time.hpp>
 
-#include "SDLInputManager.hpp"
-#include "InputEvents.hpp"
-#include "SDLInputDevice.hpp"
+#include <sirikata/ogre/input/SDLInputManager.hpp>
+#include <sirikata/ogre/input/InputEvents.hpp>
+#include <sirikata/ogre/input/SDLInputDevice.hpp>
 
 #include <sirikata/ogre/OgreRenderer.hpp>
 

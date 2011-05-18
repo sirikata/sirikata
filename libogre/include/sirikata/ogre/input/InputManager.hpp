@@ -34,14 +34,14 @@
 #define SIRIKATA_INPUT_InputManager_HPP__
 
 #include <sirikata/ogre/task/EventManager.hpp>
-#include "InputDevice.hpp"
+#include <sirikata/ogre/input/InputDevice.hpp>
 
 namespace Sirikata {
 namespace Input {
 
 typedef std::tr1::weak_ptr<InputDevice> InputDeviceWPtr;
 
-struct InputDeviceEvent : public Task::Event {
+struct SIRIKATA_OGRE_EXPORT InputDeviceEvent : public Task::Event {
     typedef Task::IdPair IdPair;
     static const IdPair::Primary &getEventId() {
         static IdPair::Primary retval("InputDeviceEvent");
@@ -56,7 +56,7 @@ struct InputDeviceEvent : public Task::Event {
     }
 };
 
-class InputManager : public Task::GenEventManager {
+class SIRIKATA_OGRE_EXPORT InputManager : public Task::GenEventManager {
 protected:
     std::set<InputDevicePtr> mAllDevices;
 public:

@@ -33,7 +33,7 @@
 #ifndef SIRIKATA_INPUT_SDLInputDevice_HPP__
 #define SIRIKATA_INPUT_SDLInputDevice_HPP__
 
-#include "InputDevice.hpp"
+#include <sirikata/ogre/input/InputDevice.hpp>
 
 struct SDL_MouseMotionEvent;
 struct _SDL_Joystick;
@@ -50,7 +50,7 @@ typedef std::tr1::shared_ptr<SDLJoystick> SDLJoystickPtr;
 class SDLKeyboard;
 typedef std::tr1::shared_ptr<SDLKeyboard> SDLKeyboardPtr;
 
-class SDLMouse: public PointerDevice {
+class SIRIKATA_OGRE_EXPORT SDLMouse: public PointerDevice {
     unsigned int mWhich;
     unsigned int mNumButtons;
 public:
@@ -105,7 +105,7 @@ public:
 
 class SDLDigitalHatswitch;
 
-class SDLJoystick : public InputDevice {
+class SIRIKATA_OGRE_EXPORT SDLJoystick : public InputDevice {
 private:
     std::string mName;
     std::vector<std::string> mButtonNames;
@@ -138,7 +138,7 @@ public:
                   int yrel);
 };
 
-class SDLKeyboard : public InputDevice {
+class SIRIKATA_OGRE_EXPORT SDLKeyboard : public InputDevice {
     unsigned int mWhich;
 public:
     SDLKeyboard(unsigned int which);
@@ -156,15 +156,15 @@ public:
 };
 
 
-bool keyIsModifier(Input::KeyButton b);
-String keyButtonString(Input::KeyButton b);
-String keyModifiersString(Input::Modifier m);
-String mouseButtonString(Input::MouseButton b);
-String axisString(Input::AxisIndex i);
-Input::KeyButton keyButtonFromStrings(std::vector<String>& parts);
-Input::Modifier keyModifiersFromStrings(std::vector<String>& parts);
-Input::MouseButton mouseButtonFromStrings(std::vector<String>& parts);
-Input::AxisIndex axisFromStrings(std::vector<String>& parts);
+SIRIKATA_OGRE_EXPORT bool keyIsModifier(Input::KeyButton b);
+SIRIKATA_OGRE_EXPORT String keyButtonString(Input::KeyButton b);
+SIRIKATA_OGRE_EXPORT String keyModifiersString(Input::Modifier m);
+SIRIKATA_OGRE_EXPORT String mouseButtonString(Input::MouseButton b);
+SIRIKATA_OGRE_EXPORT String axisString(Input::AxisIndex i);
+SIRIKATA_OGRE_EXPORT Input::KeyButton keyButtonFromStrings(std::vector<String>& parts);
+SIRIKATA_OGRE_EXPORT Input::Modifier keyModifiersFromStrings(std::vector<String>& parts);
+SIRIKATA_OGRE_EXPORT Input::MouseButton mouseButtonFromStrings(std::vector<String>& parts);
+SIRIKATA_OGRE_EXPORT Input::AxisIndex axisFromStrings(std::vector<String>& parts);
 
 }
 }

@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
-#include "InputEvents.hpp"
+#include <sirikata/ogre/input/InputEvents.hpp>
 
 namespace Sirikata {
 namespace Input {
