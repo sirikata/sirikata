@@ -271,6 +271,23 @@ SDLInputManager::SDLInputManager(Graphics::OgreRenderer* parent, unsigned int wi
 */
 }
 
+
+float SDLInputManager::dragDeadBand() const {
+    return mDragDeadband->as<float>();
+}
+
+float SDLInputManager::relativeMouseToAxis() const {
+    return mRelativeMouseToAxis->as<float>();
+}
+
+float SDLInputManager::wheelToAxis() const {
+    return mWheelToAxis->as<float>();
+}
+
+float SDLInputManager::joyBallToAxis() const {
+    return mJoyBallToAxis->as<float>();
+}
+
 void SDLInputManager::filesDropped(const std::vector<std::string> &files) {
     std::vector<std::string> allFiles; // Recursively search!
 	for (size_t i = 0; i < files.size(); ++i) {

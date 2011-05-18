@@ -69,7 +69,7 @@ SDLMouse::SDLMouse(SDLInputManager *manager, unsigned int which) : mWhich(which)
     unsigned int wid,hei;
     manager->getWindowSize(wid,hei);
     float maxsize = sqrt((float)(wid*wid+hei*hei));
-    float drag_deadband (manager->mDragDeadband->as<float>());
+    float drag_deadband (manager->dragDeadBand());
     setDragDeadband(2*drag_deadband/maxsize);
     setName(SDL_GetMouseName(which));
 
@@ -121,7 +121,7 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
     bool changedy = (getAxis(AXIS_CURSORY) != yPctFromCenter);
     if (mRelativeMode) {
         // negate y axis since coordinates start at bottom-left.
-        float to_axis(em->mRelativeMouseToAxis->as<float>());
+        float to_axis(em->relativeMouseToAxis());
         fireAxis(thisptr, em, AXIS_RELX, AxisValue::fromCentered(to_axis*event.xrel));
         fireAxis(thisptr, em, AXIS_RELY, AxisValue::fromCentered(-to_axis*event.yrel));
         // drag events still get fired...
@@ -148,7 +148,7 @@ void SDLMouse::fireMotion(const SDLMousePtr &thisptr,
 }
 void SDLMouse::fireWheel(const SDLMousePtr &thisptr,
                          SDLInputManager *em, int xrel, int yrel) {
-    float to_axis (em->mWheelToAxis->as<float>());
+    float to_axis (em->wheelToAxis());
     SILOG(input,detailed,"WHEEL: " << xrel << "; " << yrel);
     fireAxis(thisptr, em, WHEELX, AxisValue::fromCentered(to_axis*xrel));
     fireAxis(thisptr, em, WHEELY, AxisValue::fromCentered(to_axis*yrel));
@@ -215,7 +215,7 @@ void SDLJoystick::fireHat(const SDLJoystickPtr &thisptr,
 }
 void SDLJoystick::fireBall(const SDLJoystickPtr &thisptr,
                           SDLInputManager *em, unsigned int ballNumber, int xrel, int yrel) {
-    float to_axis (em->mJoyBallToAxis->as<float>());
+    float to_axis (em->joyBallToAxis());
     fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber, AxisValue::fromCentered(to_axis*xrel));
     fireAxis(thisptr, em, mNumGeneralAxes + 2*ballNumber + 1, AxisValue::fromCentered(to_axis*yrel));
 }

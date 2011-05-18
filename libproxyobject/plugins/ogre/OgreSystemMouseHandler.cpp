@@ -231,7 +231,7 @@ EventResponse OgreSystemMouseHandler::axisHandler(EventPtr ev) {
     if (!axisev)
         return EventResponse::nop();
 
-    float multiplier = mParent->mInputManager->mWheelToAxis->as<float>();
+    float multiplier = mParent->mInputManager->wheelToAxis();
 
     if (axisev->mAxis == SDLMouse::WHEELY) {
         bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(0, axisev->mValue.getCentered()/multiplier));

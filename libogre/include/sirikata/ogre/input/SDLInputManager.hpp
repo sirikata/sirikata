@@ -80,6 +80,15 @@ class SIRIKATA_OGRE_EXPORT SDLInputManager : public InputManager {
     unsigned int mWidth, mHeight;
     bool mHasKeyboardFocus;
     static int modifiersFromSDL(int sdlMod);
+
+    OptionValue*mDragDeadband;
+    OptionValue*mDragMultiplier;
+    OptionValue*mWorldScale;
+    OptionValue*mAxisToRadians;
+    OptionValue*mRotateSnap;
+    OptionValue*mWheelToAxis;
+    OptionValue*mRelativeMouseToAxis;
+    OptionValue*mJoyBallToAxis;
 public:
     class InitializationException : public std::exception {
     public:
@@ -90,14 +99,10 @@ public:
         std::string _msg;
     };
 
-    OptionValue*mDragDeadband;
-    OptionValue*mDragMultiplier;
-    OptionValue*mWorldScale;
-    OptionValue*mAxisToRadians;
-    OptionValue*mRotateSnap;
-    OptionValue*mWheelToAxis;
-    OptionValue*mRelativeMouseToAxis;
-    OptionValue*mJoyBallToAxis;
+    float dragDeadBand() const;
+    float relativeMouseToAxis() const;
+    float wheelToAxis() const;
+    float joyBallToAxis() const;
 
     void getWindowSize(unsigned int &width, unsigned int &height) {
         width = this->mWidth;
