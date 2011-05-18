@@ -602,7 +602,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                         mRenderWindow->getWidth(),
                         mRenderWindow->getHeight(),
                         mFullScreen->as<bool>(),
-                        mWindowDepth->as<Ogre::PixelFormat>(),
                         grabCursor->as<bool>(),
                         hWnd);
                 } catch (SDLInputManager::InitializationException exc) {
@@ -615,7 +614,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
                         mWindowWidth->as<uint32>(),
                         mWindowHeight->as<uint32>(),
                         mFullScreen->as<bool>(),
-                        mWindowDepth->as<Ogre::PixelFormat>(),
                         grabCursor->as<bool>(),
                         hWnd);
                 } catch (SDLInputManager::InitializationException exc) {

@@ -39,7 +39,7 @@ extern "C" typedef union SDL_Event SDL_Event;
 namespace Sirikata {
 
 namespace Graphics {
-class OgreSystem;
+class OgreRenderer;
 }
 
 namespace Input {
@@ -69,7 +69,7 @@ typedef std::tr1::shared_ptr<SDLKeyRepeatInfo> SDLKeyRepeatInfoPtr;
 
 
 class SDLInputManager : public InputManager {
-    Graphics::OgreSystem* mParent;
+    Graphics::OgreRenderer* mParent;
     SDL_WindowID mWindowID;
     SDL_GLContext mWindowContext;
     std::vector<SDLKeyboardPtr> mKeys;
@@ -102,11 +102,10 @@ public:
         width = this->mWidth;
         height = this->mHeight;
     }
-    SDLInputManager(Graphics::OgreSystem* parent,
+    SDLInputManager(Graphics::OgreRenderer* parent,
         unsigned int width,
         unsigned int height,
         bool fullscreen,
-        int ogrePixelFmt, // fixme: which one do we use?
         bool grabCursor,
         void *&currentWindowData);
     bool tick(Task::LocalTime currentTime, Duration frameTime);

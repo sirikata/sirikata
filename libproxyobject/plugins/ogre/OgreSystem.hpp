@@ -47,6 +47,8 @@
 #include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 
+#include <sirikata/ogre/OgreRenderer.hpp>
+
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/Filter.hpp>
 
@@ -77,7 +79,7 @@ class CDNArchivePlugin;
 class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener, public Ogre::WindowEventListener
+class OgreSystem: public OgreRenderer, public TimeSteppedQueryableSimulation, protected SessionEventListener, public Ogre::WindowEventListener
 {
     Context* mContext;
     VWObjectPtr mViewer;

@@ -1178,7 +1178,7 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/task/EventManager.cpp
   ${LIBOGRE_SOURCE_DIR}/task/Event.cpp
   ${LIBOGRE_SOURCE_DIR}/task/UniqueId.cpp
-  ${LIBOGRE_SOURCE_DIR}/Ogre.cpp
+  ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   )
 
 SET(LIBSPACE_SOURCES

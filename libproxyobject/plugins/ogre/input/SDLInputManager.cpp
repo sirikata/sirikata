@@ -36,8 +36,6 @@
 #endif
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include "../OgreHeaders.hpp"
-#include <OgreRenderWindow.h>
 #include <SDL.h>
 #include <SDL_video.h>
 #include <SDL_syswm.h>
@@ -61,7 +59,7 @@
 #include "InputEvents.hpp"
 #include "SDLInputDevice.hpp"
 
-#include "../OgreSystem.hpp"
+#include <sirikata/ogre/OgreRenderer.hpp>
 
 #define TO_AXIS (1./128.)
 #define DEFAULT_DRAG_DEADBAND 20.0
@@ -151,11 +149,10 @@ const char* SDLInputManager::InitializationException::what() const throw() {
 }
 
 
-SDLInputManager::SDLInputManager(Graphics::OgreSystem* parent, unsigned int width,unsigned int height, bool fullscreen, int ogrePixelFormat,bool grabCursor, void *&currentWindow)
+SDLInputManager::SDLInputManager(Graphics::OgreRenderer* parent, unsigned int width,unsigned int height, bool fullscreen, bool grabCursor, void *&currentWindow)
  : InputManager(new Task::ThreadSafeWorkQueue),
    mParent(parent)
 {
-    Ogre::PixelFormat fmt = (Ogre::PixelFormat)ogrePixelFormat;
     mWindowContext=0;
     mWidth = width;
     mHasKeyboardFocus = true;

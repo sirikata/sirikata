@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Ogre.hpp
+ *  Ogre.cpp
  *
  *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
@@ -30,23 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_OGRE_OGRE_HPP_
-#define _SIRIKATA_OGRE_OGRE_HPP_
-
-#include <sirikata/ogre/Platform.hpp>
+#include <sirikata/ogre/OgreRenderer.hpp>
 
 namespace Sirikata {
 namespace Graphics {
 
-/** Represents a SQLite database connection. */
-class SIRIKATA_OGRE_EXPORT OgreRenderer {
-public:
-    OgreRenderer();
-    ~OgreRenderer();
+OgreRenderer::OgreRenderer() {
+}
 
-};
+OgreRenderer::~OgreRenderer() {
+}
 
 } // namespace Graphics
 } // namespace Sirikata
-
-#endif //_SIRIKATA_OGRE_OGRE_HPP_

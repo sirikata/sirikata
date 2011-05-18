@@ -39,7 +39,7 @@
 #include <sirikata/core/util/PluginManager.hpp>
 
 #include <sirikata/ogre/Platform.hpp>
-#include <sirikata/ogre/Ogre.hpp>
+#include <sirikata/ogre/OgreRenderer.hpp>
 
 int main(int argc, char** argv) {
     using namespace Sirikata;

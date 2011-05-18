@@ -1,5 +1,5 @@
 /*  Sirikata
- *  Ogre.cpp
+ *  OgreRenderer.hpp
  *
  *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
@@ -30,16 +30,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/ogre/Ogre.hpp>
+#ifndef _SIRIKATA_OGRE_OGRE_RENDERER_HPP_
+#define _SIRIKATA_OGRE_OGRE_RENDERER_HPP_
+
+#include <sirikata/ogre/Platform.hpp>
 
 namespace Sirikata {
 namespace Graphics {
 
-OgreRenderer::OgreRenderer() {
-}
+/** Represents a SQLite database connection. */
+class SIRIKATA_OGRE_EXPORT OgreRenderer {
+public:
+    OgreRenderer();
+    virtual ~OgreRenderer();
 
-OgreRenderer::~OgreRenderer() {
-}
+    // Event injection for SDL created windows.
+    virtual void injectWindowResized(uint32 w, uint32 h) {}
+
+};
 
 } // namespace Graphics
 } // namespace Sirikata
+
+#endif //_SIRIKATA_OGRE_OGRE_RENDERER_HPP_
