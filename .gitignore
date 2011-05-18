@@ -87,6 +87,8 @@ docs/html
 
 # Ogre data
 libproxyobject/plugins/ogre/data/jquery
+ogre.cfg
+Ogre.log
 
 # Emerson regression data
 liboh/plugins/js/emerson/regression/*.out
@@ -96,3 +98,10 @@ liboh/plugins/js/emerson/alt_regress/regressionResults.txt
 # Emerson doc generation tools and output
 tools/doc/emersonapi/
 tools/doc/jsdoc-toolkit/
+
+# Fake cdn data
+cdn/fake_root/_hashcache
+cdn/fake_root/test
+
+# CDN client cache
+HttpChunkHandlerCache
