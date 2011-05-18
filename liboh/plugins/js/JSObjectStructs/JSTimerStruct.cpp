@@ -144,13 +144,19 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
     }
 
     v8::Handle<v8::Object> returner = v8::Object::New();
-    returner->Set(v8::String::New("period"), v8::Number::New(period));    
-    returner->Set(v8::String::New("cb"),cbFunc);
+
+    if (isclear)
+    {
+        returner->Set(v8::String::New("isCleared"),v8::Boolean::New(isclear));
+        returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(contId));
+        return handle_scope.Close(returner);
+    }
     
+    returner->Set(v8::String::New("period"), v8::Number::New(period));    
+    returner->Set(v8::String::New("callback"),cbFunc);
     returner->Set(v8::String::New("timeRemaining"),v8::Number::New(tUntil));
     returner->Set(v8::String::New("isSuspended"),v8::Boolean::New(issusp));
-    returner->Set(v8::String::New("isCleared"),v8::Boolean::New(isclear));
-    returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(contId));
+
     
     return handle_scope.Close(returner);
 }

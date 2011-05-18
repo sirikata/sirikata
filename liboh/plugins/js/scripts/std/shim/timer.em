@@ -13,6 +13,12 @@
           
       };
 
+      /**
+       @return Object with the following fields: {boolean} isCleared , {uint32} contextId, {double, optional} period, {function, optional} callback, {double, optional} timeRemaining, {boolean, optional} isSuspended.
+       */
+      timer.prototype.getAllData = function()
+      {
+      };
       
       /**
        Calling this function on a timer makes it so that the timer's associated
