@@ -172,7 +172,16 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     */
 
     presence.prototype.setVelocity = function(/** util.Vec3 */ newvel){}
-    
+
+
+      /**
+       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {string} sporefFrom, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime, {boolean} isCleared , {uint32} contextId, {boolean} isConnected, {boolean} hasConnectedCallback, {boolean, optional} connectedCallback, {boolean} isSuspended, {vec3,optional} suspendedVelocity, {quaternion,optional} suspendedOrientationVelocity, 
+       */
+      presence.prototype.getAllData = function()
+      {
+      };
+
+      
     /**@function 
        @description Returns the velocity of the presence
        @return the vector corresponding to the velocity of the presence 

@@ -41,6 +41,37 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
 }
 
 
+v8::Handle<v8::Value> JSPresenceStruct::getAllData()
+{
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Object> returner = JSPositionListener::struct_getAllData();
+
+    uint32 contID = mContext->getContextID();
+    returner->Set(v8::String::New("isConnected"), v8::Boolean::New(isConnected));
+    returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(contID));
+    bool isclear   = getIsCleared();
+    returner->Set(v8::String::New("isCleared"), v8::Boolean::New(isclear));
+
+    returner->Set(v8::String::New("hasConnectCallback"), v8::Boolean::New(hasConnectedCallback));
+    if (hasConnectedCallback)
+        returner -> Set(v8::String::New("connectCallback"),    mOnConnectedCallback);
+
+    bool issusp = getIsSuspended();
+    returner->Set(v8::String::New("isSuspended"), v8::Boolean::New(issusp));
+    if (issusp)
+    {
+        if (!v8::Context::InContext())
+            return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in get all data of presences truct.  not currently in a v8 context.")));
+
+        v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
+
+        returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
+        returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
+    }
+    
+    return handle_scope.Close(returner);
+}
+
 
 v8::Handle<v8::Value> JSPresenceStruct::getIsConnectedV8()
 {

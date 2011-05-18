@@ -39,8 +39,9 @@ struct JSPresenceStruct : public JSPositionListener,
 
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
-
-
+    v8::Handle<v8::Value> getAllData();
+    
+    
     bool getIsConnected();
     v8::Handle<v8::Value> getIsConnectedV8();
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);

@@ -46,6 +46,27 @@ JSPositionListener::~JSPositionListener()
 
 }
 
+v8::Handle<v8::Object> JSPositionListener::struct_getAllData()
+{
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Object> returner = v8::Object::New();
+    returner->Set(v8::String::New("sporef"), struct_getSporefListeningTo());
+    returner->Set(v8::String::New("sporefFrom"), struct_getSporefListeningFrom());
+    returner->Set(v8::String::New("pos"), struct_getPosition());
+    returner->Set(v8::String::New("vel"), struct_getVelocity());
+    returner->Set(v8::String::New("orient"), struct_getOrientation());
+    returner->Set(v8::String::New("orientVel"), struct_getOrientationVel());
+    returner->Set(v8::String::New("scale"), struct_getScale());
+    returner->Set(v8::String::New("mesh"), struct_getMesh());
+    
+    returner->Set(v8::String::New("posTime"),struct_getTransTime());
+    returner->Set(v8::String::New("orientTime"), struct_getOrientTime());
+
+    return handle_scope.Close(returner);
+}
+
+
+
 
 void JSPositionListener::destroyed()
 {

@@ -32,8 +32,9 @@
       };
 
 
+
       /**
-       @return Object containing all data associated with this visible.  Fields or returned object: sporef (string), sporefFrom(string), pos (vec3), vel(vec3), orient(quat), orientVel(quat), scale(number), mesh(string), posTime(string), orientTime(string).
+       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {string} sporefFrom, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime, 
        */
       visible.prototype.getAllData = function()
       {

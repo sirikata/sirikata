@@ -32,9 +32,6 @@ public:
     v8::Handle<v8::Value> getStillVisible();
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
 
-    v8::Handle<v8::Value> struct_getAllData();
-
-
 private:
 
     JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams);

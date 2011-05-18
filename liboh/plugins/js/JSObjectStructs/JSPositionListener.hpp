@@ -73,7 +73,8 @@ struct JSPositionListener : public PositionListener,
     virtual v8::Handle<v8::Value> struct_getOrientTime();
     virtual v8::Handle<v8::Value> struct_getSporefListeningTo();
     virtual v8::Handle<v8::Value> struct_getSporefListeningFrom();
-    
+
+    virtual v8::Handle<v8::Object> struct_getAllData();
     
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
 
