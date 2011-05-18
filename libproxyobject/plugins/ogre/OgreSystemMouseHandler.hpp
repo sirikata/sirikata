@@ -33,8 +33,8 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
 #include <sirikata/ogre/task/UniqueId.hpp>
-#include "WebView.hpp"
-#include "WebViewManager.hpp"
+#include <sirikata/ogre/WebView.hpp>
+#include <sirikata/ogre/WebViewManager.hpp>
 #include "OgreMeshRaytrace.hpp"
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>

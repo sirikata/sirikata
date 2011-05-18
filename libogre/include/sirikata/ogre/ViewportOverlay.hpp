@@ -39,7 +39,7 @@
 #ifdef nil
 #undef nil
 #endif
-#include <sirikata/proxyobject/OverlayPosition.hpp>
+#include <sirikata/ogre/OverlayPosition.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -54,7 +54,7 @@ enum Tier
 	TIER_FRONT
 };
 
-class ViewportOverlay : public Ogre::RenderTargetListener
+class SIRIKATA_OGRE_EXPORT ViewportOverlay : public Ogre::RenderTargetListener
 {
 public:
 	Ogre::Viewport* viewport;

@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  WebViewManager.hpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons
@@ -35,11 +35,11 @@
 
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include "Ogre.h"
-#include "ViewportOverlay.hpp"
+#include <sirikata/ogre/ViewportOverlay.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include <sirikata/ogre/input/InputManager.hpp>
 #include <sirikata/ogre/task/EventManager.hpp>
-#include "WebView.hpp"
+#include <sirikata/ogre/WebView.hpp>
 
 namespace Sirikata {
 
@@ -80,7 +80,7 @@ struct WebViewCoord {
 *
 * The class you will need to go to for all your WebView-related needs.
 */
-class WebViewManager : public Ogre::Singleton<WebViewManager>
+class SIRIKATA_OGRE_EXPORT WebViewManager : public Ogre::Singleton<WebViewManager>
 {
 public:
 	/**

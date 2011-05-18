@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  WebView.hpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons
@@ -35,8 +35,7 @@
 
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include "Ogre.h"
-#include "ViewportOverlay.hpp"
-//#include <sirikata/proxyobject/ProxyObjectListener.hpp>
+#include <sirikata/ogre/ViewportOverlay.hpp>
 #include <sirikata/proxyobject/Invokable.hpp>
 #include <vector>
 #include <boost/any.hpp>
@@ -70,7 +69,7 @@ typedef std::vector<JSArgument> JSArguments;
 
 namespace Graphics {
 
-	class WebView;
+class WebView;
 #ifdef HAVE_BERKELIUM
     using Berkelium::WideString;
     using Berkelium::URLString;
@@ -82,7 +81,7 @@ namespace Graphics {
 	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
 	* as an Ogre Material) that can optionally be contained within a viewport overlay.
 	*/
-	class WebView
+class SIRIKATA_OGRE_EXPORT WebView
         : public Ogre::ManualResourceLoader
 #ifdef HAVE_BERKELIUM
         , public Berkelium::WindowDelegate
@@ -90,7 +89,6 @@ namespace Graphics {
         , public Invokable
 	{
 	public:
-
 		/**
 		* Loads a URL into the main frame.
 		*/

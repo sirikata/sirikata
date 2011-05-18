@@ -69,7 +69,7 @@
 using namespace std;
 
 //#include </Developer/SDKs/MacOSX10.4u.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/HIView.h>
-#include "WebViewManager.hpp"
+#include <sirikata/ogre/WebViewManager.hpp>
 
 //volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 //volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
@@ -1284,7 +1284,8 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
     //yet. This could be considered either our problem or a problem
     //with Berkelium.
     //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url + "')");
-    return Invokable::asAny(mMouseHandler->mUIWidgetView);
+    Invokable* inn = mMouseHandler->mUIWidgetView;
+    return Invokable::asAny(inn);
 }
 
 boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {

@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  WebViewManager.cpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons
@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/ogre/Platform.hpp>
 #include <sirikata/core/util/TemporalValue.hpp>
 #include <sirikata/core/util/DynamicLibrary.hpp>
-#include "WebViewManager.hpp"
-#include "WebView.hpp"
+#include <sirikata/ogre/WebViewManager.hpp>
+#include <sirikata/ogre/WebView.hpp>
 #include <sirikata/ogre/input/SDLInputManager.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include "SDL_scancode.h"

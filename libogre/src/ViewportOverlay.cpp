@@ -1,4 +1,4 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+/*  Sirikata
  *  ViewportOverlay.cpp
  *
  *  Copyright (c) 2009, Adam Jean Simmons
@@ -30,19 +30,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ViewportOverlay.hpp"
+#include <sirikata/ogre/ViewportOverlay.hpp>
 
 using namespace Ogre;
 
 namespace Sirikata {
 namespace Graphics {
 
-ViewportOverlay::ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height, 
+ViewportOverlay::ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewport, int width, int height,
 	const OverlayPosition& pos, const Ogre::String& matName, Ogre::uchar zOrder, Tier tier)
 : viewport(viewport), position(pos), isVisible(true), width(width), height(height), tier(tier), zOrder(zOrder)
 {
 	if(zOrder > 199)
-		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED, 
+		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
 			"Z-order is out of bounds, must be within [0, 199].", "ViewportOverlay::ViewportOverlay");
 
 	OverlayManager& overlayManager = OverlayManager::getSingleton();
@@ -51,7 +51,7 @@ ViewportOverlay::ViewportOverlay(const Ogre::String& name, Ogre::Viewport* viewp
 	panel->setMetricsMode(Ogre::GMM_PIXELS);
 	panel->setMaterialName(matName);
 	panel->setDimensions(width, height);
-	
+
 	overlay = overlayManager.create(name + "Overlay");
 	overlay->add2D(panel);
 	setZOrder(zOrder);

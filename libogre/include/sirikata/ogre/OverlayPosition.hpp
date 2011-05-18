@@ -57,7 +57,7 @@ enum RelativePosition
 * Describes the position of a viewport-overlay in relative/absolute metrics.
 * Used by WebViewListener and ProxyWebViewObject.
 */
-class SIRIKATA_PROXYOBJECT_EXPORT OverlayPosition
+class SIRIKATA_OGRE_EXPORT OverlayPosition
 {
 public:
 	/**
