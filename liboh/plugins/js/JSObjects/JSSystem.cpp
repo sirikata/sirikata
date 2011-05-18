@@ -1007,8 +1007,10 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 {
-    if (args.Length() != 3)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to>")) );
+    v8::HandleScope handle_scope;
+    
+    if ((args.Length() != 3) && (args.Length() != 4))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 or 4 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to><(optional) bool: whether handler is suspended>")) );
 
     // Changing the sequence of the arguments so as to get the same
     // as is generated in emerson
@@ -1016,7 +1018,6 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     v8::Handle<v8::Value> cb_val     = args[0];
     v8::Handle<v8::Value> pattern    = args[1];
     v8::Handle<v8::Value> sender_val = args[2];
-
 
     // Pattern
     PatternList native_patterns;
@@ -1077,8 +1078,21 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
 
-    return jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist);
+    if (args.Length() == 3)
+        return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, false));
+
+    
+    v8::Handle<v8::Value> suspVal = args[3];
+    String errMsgDecodeSusp = "Error decoding suspended argument when registering handler with system.  ";
+    bool isSuspended;
+    bool decodeSusp = decodeBool(suspVal, isSuspended, errMsgDecodeSusp);
+
+    if (! decodeSusp)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsgDecodeSusp.c_str())));
+
+    return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, isSuspended));
 }
+
 
 
 /**

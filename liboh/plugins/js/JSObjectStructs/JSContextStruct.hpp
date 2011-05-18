@@ -61,7 +61,7 @@ struct JSContextStruct : public JSSuspendable
     //creates a new jseventhandlerstruct and wraps it in a js object
     //registers the jseventhandlerstruct both with this context and
     //jsobjectscript
-    v8::Handle<v8::Value>  struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
+    v8::Handle<v8::Value>  struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool issusp);
 
     //create presence with mesh associated with string newMesh, and initFunction
     //to be called when presence is connected

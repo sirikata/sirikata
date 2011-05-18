@@ -170,10 +170,13 @@ if(system == undefined)
 
       // Not exposing this
       /** @ignore */
-      system.registerHandler = function (callback,pattern,sender)
+      system.registerHandler = function (callback,pattern,sender,issusp)
       {
           var wrappedCallback = this.__wrapRegHandler(callback);
-          baseSystem.registerHandler(wrappedCallback,pattern,sender);
+          if (typeof(issusp) =='undefined')
+              return baseSystem.registerHandler(wrappedCallback,pattern,sender);
+
+          return baseSystem.registerHandler(wrappedCallback,pattern,sender,issusp);
       };
 
       // Not exposing this
@@ -183,7 +186,8 @@ if(system == undefined)
           var returner = function (msg,sender,receiver)
           {
               system.__setBehindSelf(system._selfMap[receiver]);
-              toCallback(msg,sender);
+              toCallback(msg,sender,receiver);
+
           };
           return std.core.bind(returner,this);
       };

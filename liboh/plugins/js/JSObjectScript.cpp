@@ -1459,7 +1459,6 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
 {
     v8::Handle<v8::Context> ctx = (jscs == NULL) ? mContext->mContext : jscs->mContext;
-
     v8::Context::Scope context_scope(ctx);
     v8::HandleScope handle_scope;
 
@@ -1469,7 +1468,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
 
-    return returner;
+    return handle_scope.Close(returner);
 }
 
 
