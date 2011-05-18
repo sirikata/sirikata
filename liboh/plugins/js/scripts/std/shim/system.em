@@ -321,7 +321,7 @@ if(system == undefined)
           /** Boolean */ canProx, /** Boolean */ canImport, /** Boolean */ canCreatePresence, /** Boolean */ canCreateEntity,
           /** Boolean */ canEval)
       {
-          return baseSystem.createSandbox.apply(baseSystem, arguments);
+          return baseSystem.create_context.apply(baseSystem, arguments);
       };
 
 
