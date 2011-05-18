@@ -33,14 +33,16 @@
 #ifndef SIRIKATA_EventManager_HPP__
 #define SIRIKATA_EventManager_HPP__
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/ogre/Platform.hpp>
+
 #include <sirikata/core/queue/LockFreeQueue.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include "UniqueId.hpp"
-#include "Event.hpp"
 #include <sirikata/core/task/Time.hpp>
+
+#include <sirikata/ogre/task/UniqueId.hpp>
+#include <sirikata/ogre/task/Event.hpp>
 
 /** @namespace Sirikata::Task
  * Sirikata::Task contains the task-oriented functions for communication
@@ -68,7 +70,7 @@ class WorkQueue;
  * Defines the set of return values for an EventListener. An acceptable
  * value includes the bitwise or of any values in the enum.
  */
-class EventResponse {
+class SIRIKATA_OGRE_EXPORT EventResponse {
 	enum {
 		NOP,
 		DELETE_LISTENER=1,
@@ -124,12 +126,12 @@ enum EventOrder {
 	NUM_EVENTORDER
 };
 /// Exception thrown if an invalid EventOrder is passed.
-class EventOrderException : std::exception {};
+class SIRIKATA_OGRE_EXPORT EventOrderException : std::exception {};
 
 /** Some EventManagers may require a different base class which
  * inherits from Event but have additional properties. */
 template <class EventBase=Event>
-class EventManager {
+class SIRIKATA_OGRE_EXPORT EventManager {
 
 	/* TYPEDEFS */
 public:

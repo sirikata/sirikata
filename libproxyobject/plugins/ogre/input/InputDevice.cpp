@@ -31,8 +31,8 @@
  */
 
 #include <sirikata/core/util/Standard.hh>
-#include "../task/Event.hpp"
-#include "../task/EventManager.hpp"
+#include <sirikata/ogre/task/Event.hpp>
+#include <sirikata/ogre/task/EventManager.hpp>
 #include "InputEvents.hpp"
 #include "InputDevice.hpp"
 

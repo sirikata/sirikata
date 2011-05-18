@@ -44,8 +44,8 @@
 #include "input/SDLInputManager.hpp"
 #include "input/InputManager.hpp"
 
-#include "task/Event.hpp"
-#include "task/EventManager.hpp"
+#include <sirikata/ogre/task/Event.hpp>
+#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/Time.hpp>
 #include <set>
 

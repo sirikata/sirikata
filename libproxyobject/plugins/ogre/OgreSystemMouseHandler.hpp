@@ -32,12 +32,12 @@
 
 #include <sirikata/proxyobject/Platform.hpp>
 #include "OgreSystem.hpp"
-#include "task/UniqueId.hpp"
+#include <sirikata/ogre/task/UniqueId.hpp>
 #include "WebView.hpp"
 #include "WebViewManager.hpp"
 #include "OgreMeshRaytrace.hpp"
-#include "task/Event.hpp"
-#include "task/EventManager.hpp"
+#include <sirikata/ogre/task/Event.hpp>
+#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/transfer/DiskManager.hpp>
 #include "input/InputEvents.hpp"
 

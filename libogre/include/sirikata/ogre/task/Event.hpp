@@ -33,6 +33,8 @@
 #ifndef SIRIKATA_Event_HPP__
 #define SIRIKATA_Event_HPP__
 
+#include <sirikata/ogre/Platform.hpp>
+
 namespace Sirikata {
 
 /*
@@ -47,7 +49,7 @@ namespace Task {
  * a Secondary ID, which should contain a specific pointer or string value
  * identifying the specific instance of the thrown event.
  */
-class IdPair {
+class SIRIKATA_OGRE_EXPORT IdPair {
 public:
 	/** The Secondary ID should attempt to specify the specific type of
 	 * event (specific enough to prevent a large number of listeners,
@@ -255,7 +257,7 @@ enum EventHistory {
 };
 
 /** Base class for any events that are to be thrown */
-class Event {
+class SIRIKATA_OGRE_EXPORT Event {
 protected:
 	/**
 	 * a IdPair used to determine which EventListeners are interested:

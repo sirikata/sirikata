@@ -37,7 +37,7 @@
 #include "ViewportOverlay.hpp"
 #include "input/InputEvents.hpp"
 #include "input/InputManager.hpp"
-#include "task/EventManager.hpp"
+#include <sirikata/ogre/task/EventManager.hpp>
 #include "WebView.hpp"
 
 namespace Sirikata {

@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "EventManager.hpp"
-#include "UniqueId.hpp"
-#include "Event.hpp"
+#include <sirikata/ogre/task/EventManager.hpp>
+#include <sirikata/ogre/task/UniqueId.hpp>
+#include <sirikata/ogre/task/Event.hpp>
 
 #include <sirikata/core/task/WorkQueue.hpp>
 

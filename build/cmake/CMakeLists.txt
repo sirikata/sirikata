@@ -1175,6 +1175,9 @@ SET(LIBSQLITE_SOURCES
   )
 
 SET(LIBOGRE_SOURCES
+  ${LIBOGRE_SOURCE_DIR}/task/EventManager.cpp
+  ${LIBOGRE_SOURCE_DIR}/task/Event.cpp
+  ${LIBOGRE_SOURCE_DIR}/task/UniqueId.cpp
   ${LIBOGRE_SOURCE_DIR}/Ogre.cpp
   )
 
@@ -1306,9 +1309,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/OgreMeshRaytrace.cpp
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
-  ${GFX}/task/EventManager.cpp
-  ${GFX}/task/Event.cpp
-  ${GFX}/task/UniqueId.cpp
   ${INPUT}/SDLInputManager.cpp
   ${INPUT}/InputEvents.cpp
   ${INPUT}/InputDevice.cpp

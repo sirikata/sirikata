@@ -33,7 +33,7 @@
 #ifndef SIRIKATA_INPUT_InputManager_HPP__
 #define SIRIKATA_INPUT_InputManager_HPP__
 
-#include "../task/EventManager.hpp"
+#include <sirikata/ogre/task/EventManager.hpp>
 #include "InputDevice.hpp"
 
 namespace Sirikata {

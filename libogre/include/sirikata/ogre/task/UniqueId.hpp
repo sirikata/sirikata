@@ -33,9 +33,8 @@
 #ifndef SIRIKATA_UniqueId_HPP__
 #define SIRIKATA_UniqueId_HPP__
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/ogre/Platform.hpp>
 #include <typeinfo>
-
 
 namespace Sirikata {
 
@@ -53,7 +52,7 @@ namespace Task {
  * @see TimerQueue
  * @see EventManager
  */
-class FunctionId {
+class SIRIKATA_OGRE_EXPORT FunctionId {
 private:
 	void *mThisPtr; ///< do not dereference
 	std::string mClassId; ///< A compile-time constant, usually a class name or file or module name.
@@ -130,7 +129,7 @@ public:
 
 
 /** A default integer that reuses IDs to stay compact. */
-class CompactSubId {
+class SIRIKATA_OGRE_EXPORT CompactSubId {
 public:
 	typedef int Type; ///< What primitive storage type this needs
 private:
@@ -163,7 +162,7 @@ public:
 };
 
 /** A 64-bit number that is always increasing, and never reuses IDs. */
-class IncreasingSubId {
+class SIRIKATA_OGRE_EXPORT IncreasingSubId {
 public:
 	typedef int64 Type; ///< What primitive storage type this needs
 private:
@@ -195,7 +194,7 @@ typedef IncreasingSubId SubscriptionIdClass;
 
 /// The primitive type associated with SubscriptionIdClass.
 typedef SubscriptionIdClass::Type SubscriptionId;
-struct SubscriptionIdHasher {
+struct SIRIKATA_OGRE_EXPORT SubscriptionIdHasher {
 	std::size_t operator() (SubscriptionId sid) const{
 #ifdef __APPLE__
 		return std::tr1::hash<unsigned int>()(((unsigned int)(sid>>32))^(unsigned int)sid);

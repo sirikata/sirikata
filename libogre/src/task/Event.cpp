@@ -30,9 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/core/util/AtomicTypes.hpp>
-#include "Event.hpp"
 
 namespace Sirikata {
 namespace Task {

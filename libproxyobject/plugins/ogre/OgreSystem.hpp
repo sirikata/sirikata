@@ -44,7 +44,7 @@
 #include "resourceManager/DistanceDownloadPlanner.hpp"
 #include "resourceManager/SAngleDownloadPlanner.hpp"
 
-#include "task/EventManager.hpp"
+#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
