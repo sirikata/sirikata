@@ -313,10 +313,9 @@ void HostedObject::connect(
         const String& mesh,
         const String& phy,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
         PresenceToken token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,ppd, token);
+    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,token);
 }
 
 
@@ -330,7 +329,6 @@ void HostedObject::connect(
         const String& phy,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
         PresenceToken token)
 {
     if (spaceID == SpaceID::null())
@@ -351,7 +349,7 @@ void HostedObject::connect(
         mesh,
         phy,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, token),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
@@ -386,7 +384,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -399,12 +397,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     if (info.server == NullServerID)
     {
@@ -415,20 +413,10 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     SpaceObjectReference self_objref(space, obj);
     if(mPresenceData->find(self_objref) == mPresenceData->end())
     {
-        if (ppd != NULL)
-        {
-            ppd->populateSpaceObjRef(SpaceObjectReference(space,obj));
-            mPresenceData->insert(
-                PresenceDataMap::value_type(self_objref, *ppd)
-            );
-        }
-        else
-        {
-            PerPresenceData toInsert(this,space,obj);
-            mPresenceData->insert(
-                PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
-            );
-        }
+        PerPresenceData toInsert(this,space,obj);
+        mPresenceData->insert(
+            PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
+        );
     }
 
     // Convert back to local time

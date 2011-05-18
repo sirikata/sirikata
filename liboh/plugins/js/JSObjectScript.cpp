@@ -1589,7 +1589,7 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
-    mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", UUID::null(),NULL,presToke);
+    mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", UUID::null(),presToke);
 
     //create a presence object associated with this presence and return it;
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);

@@ -263,7 +263,6 @@ public:
         const String& mesh,
         const String& physics,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
     void connect(
@@ -274,7 +273,6 @@ public:
         const String& physics,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
 
@@ -287,8 +285,8 @@ public:
     // connection callbacks manually.
 
 
-    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
-    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd);
+    void handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
+    void handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info);
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
