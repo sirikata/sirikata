@@ -315,7 +315,7 @@ void HostedObject::connect(
         const UUID&object_uuid_evidence,
         PresenceToken token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,token);
+    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,ObjectReference::null(),token);
 }
 
 
@@ -329,12 +329,15 @@ void HostedObject::connect(
         const String& phy,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
+        const ObjectReference& orefID,
         PresenceToken token)
 {
     if (spaceID == SpaceID::null())
         return;
 
-    SpaceObjectReference connectingSporef (spaceID,ObjectReference(UUID::random()));
+    ObjectReference oref = (orefID == ObjectReference::null()) ? ObjectReference(UUID::random()) : orefID;
+    
+    SpaceObjectReference connectingSporef (spaceID,oref);
     mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
 
 

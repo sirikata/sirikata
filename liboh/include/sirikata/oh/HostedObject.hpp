@@ -273,6 +273,7 @@ public:
         const String& physics,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
+        const ObjectReference& orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
 
 
