@@ -1166,7 +1166,8 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     new_ctx.currentScriptDir = full_filename.parent_path();
     new_ctx.currentScriptBaseDir = full_base_dir;
     ScriptOrigin origin( v8::String::New( (new_ctx.getFullRelativeScriptDir() / full_filename.filename()).string().c_str() ) );
-    mImportedFiles.insert( full_filename.string() );
+
+    mImportedFiles[jscont->getContextID()].insert( full_filename.string() );
 
     return  protectedEval(contents, &origin, new_ctx,jscont);
 }
@@ -1239,10 +1240,16 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
         errorMessage += filename;
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
-    if (mImportedFiles.find(full_filename.string()) != mImportedFiles.end()) {
+
+    ImportedFileMapIter iter = mImportedFiles.find(jscont->getContextID());
+    if (iter != mImportedFiles.end())
+    {
+        if (iter->second.find(full_filename.string()) != iter->second.end())
+        {
         //JSLOG(detailed, " Skipping already imported file: " << filename);
         JSLOG(debug, " Skipping already imported file: " << filename);
         return v8::Undefined();
+        }
     }
 
     return absoluteImport(full_filename, full_base,jscont);

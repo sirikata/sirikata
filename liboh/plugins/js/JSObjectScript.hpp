@@ -272,7 +272,11 @@ private:
 
     std::stack<EvalContext> mEvalContextStack;
 
-    std::set<String> mImportedFiles;
+    //indexed by which context/sandbox you're in.
+    typedef     std::map<uint32,std::set<String>  > ImportedFileMap;
+    typedef ImportedFileMap::iterator ImportedFileMapIter;
+    ImportedFileMap mImportedFiles;
+
 
     // add an extenstion to the filename that you get for import/require
     std::string* extensionize(std::string);
