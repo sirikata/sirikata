@@ -228,17 +228,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     v8::HandleScope handle_scope;
 
+    mHandlingEvent = false;
     SpaceObjectReference sporef = SpaceObjectReference::null();
     mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate);
-
-    mHandlingEvent = false;
-
-
-    //Always load the shim layer.
-    // This is required. So do NOT remove. It is
-    // not the same as libraray
-    // TODO: hardcoded
-    import("std/shim.em",NULL);
 
 
     String script_contents = init_script->as<String>();

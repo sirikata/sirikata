@@ -27,8 +27,7 @@ var repeatingTimer  = std.core.RepeatingTimer(5, callback);
 
 function toExecuteInsideContext()
 {
-    __system.require('std/shim.em');
-    system.require('std/core/repeatingTimer.em');
+    system.import('std/core/repeatingTimer.em');
 
     x = '\nInside context\n';
     var callback = function()

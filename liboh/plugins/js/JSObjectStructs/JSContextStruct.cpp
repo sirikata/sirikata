@@ -73,6 +73,11 @@ void JSContextStruct::createContextObjects()
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
+
+    //Always load the shim layer.
+    //import shim
+    jsObjScript->import("std/shim.em",this);
+    
 }
 
 
