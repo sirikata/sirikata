@@ -35,10 +35,10 @@
 
 #include <sirikata/mesh/LightInfo.hpp>
 
-#include "OgreHeaders.hpp"
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreLight.h>
 
-#include "OgreConversions.hpp"
+#include <sirikata/ogre/OgreConversions.hpp>
 
 namespace Sirikata {
 namespace Graphics {

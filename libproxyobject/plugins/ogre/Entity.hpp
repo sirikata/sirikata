@@ -37,7 +37,7 @@
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
-#include "OgreConversions.hpp"
+#include <sirikata/ogre/OgreConversions.hpp>
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>

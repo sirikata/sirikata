@@ -49,7 +49,7 @@
 #include <sirikata/ogre/input/InputDevice.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include "OgreMeshRaytrace.hpp"
-#include "resourceManager/CDNArchivePlugin.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchivePlugin.hpp>
 #include "resourceManager/ResourceDownloadTask.hpp"
 
 #include <sirikata/core/util/DynamicLibrary.hpp>

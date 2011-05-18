@@ -32,10 +32,10 @@
 #ifndef _CDN_ARCHIVE_HPP_
 #define _CDN_ARCHIVE_HPP_
 
-#include <sirikata/proxyobject/Platform.hpp>
+#include <sirikata/ogre/Platform.hpp>
 #include <Ogre.h>
 #include <vector>
-#include "CDNArchiveFactory.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchiveFactory.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -46,7 +46,7 @@ class CDNArchiveFactory;
  *  Meru's ResourceManager, and therefore indirectly via the web.
  *  See Ogre's documentation for details on the interface.
  */
-class CDNArchive : public Ogre::Archive
+class SIRIKATA_OGRE_EXPORT CDNArchive : public Ogre::Archive
 {
   time_t getModifiedTime(const Ogre::String&);
   unsigned int mNativeFileArchive;

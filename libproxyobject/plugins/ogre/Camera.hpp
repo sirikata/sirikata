@@ -32,7 +32,7 @@
 #ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
 #define SIRIKATA_GRAPHICS_CAMERA_HPP__
 
-#include "OgreHeaders.hpp"
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreRenderTarget.h>

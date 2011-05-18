@@ -30,12 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CDNArchiveFactory.hpp"
-#include "CDNArchive.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchiveFactory.hpp>
+#include <sirikata/ogre/resourceManager/CDNArchive.hpp>
 
 using namespace Ogre;
 
-template<> Sirikata::Graphics::CDNArchiveFactory* Ogre::Singleton<Sirikata::Graphics::CDNArchiveFactory>::ms_Singleton = 0;
+template<> SIRIKATA_OGRE_EXPORT Sirikata::Graphics::CDNArchiveFactory* Ogre::Singleton<Sirikata::Graphics::CDNArchiveFactory>::ms_Singleton = 0;
 
 namespace Sirikata {
 namespace Graphics {
@@ -88,7 +88,7 @@ void CDNArchiveFactory::addArchiveDataNoLock(unsigned int archiveName, const Ogr
     CDNArchiveFiles[uri]=rbuffer;
   }
 
-  if (std::find(CDNArchivePackages[archiveName].begin(), CDNArchivePackages[archiveName].end(), uri) == 
+  if (std::find(CDNArchivePackages[archiveName].begin(), CDNArchivePackages[archiveName].end(), uri) ==
                 CDNArchivePackages[archiveName].end() )
   {
     CDNArchivePackages[archiveName].push_back(uri);

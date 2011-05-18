@@ -32,7 +32,8 @@
 #ifndef _REPLACING_DATA_STREAM_HPP_
 #define _REPLACING_DATA_STREAM_HPP_
 
-#include "../OgreHeaders.hpp"
+#include <sirikata/ogre/Platform.hpp>
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreDataStream.h>
 #ifndef STANDALONE
 #include <OgreCommon.h>
@@ -52,7 +53,7 @@ namespace Graphics {
  * but the default implementation of replaceData works appropriately
  * for the meru file naming conventions for ogre materials.
  */
-class ReplacingDataStream : public Ogre::DataStream{
+class SIRIKATA_OGRE_EXPORT ReplacingDataStream : public Ogre::DataStream{
 protected:
   static void find_lexeme (const Ogre::String&input,
                                                 Ogre::String::size_type &where_lexeme_start,

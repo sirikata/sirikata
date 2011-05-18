@@ -35,8 +35,8 @@
 #include "Entity.hpp"
 #include <sirikata/core/options/Options.hpp>
 #include "OgreSystem.hpp"
-#include "resourceManager/CDNArchive.hpp"
-#include "OgreHeaders.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchive.hpp>
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include "resourceManager/ResourceDownloadTask.hpp"
 #include "Lights.hpp"
 #include <sirikata/core/network/IOStrandImpl.hpp>

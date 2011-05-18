@@ -30,7 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CDNArchivePlugin.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchivePlugin.hpp>
 
 using namespace Ogre;
 

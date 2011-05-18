@@ -32,7 +32,8 @@
 
 #ifndef _SIRIKATA_GRAPHICS_VIEWPORT_OVERLAY_HPP_
 #define _SIRIKATA_GRAPHICS_VIEWPORT_OVERLAY_HPP_
-#include "OgreHeaders.hpp"
+
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include "Ogre.h"
 #include "OgrePanelOverlayElement.h"
 #ifdef nil

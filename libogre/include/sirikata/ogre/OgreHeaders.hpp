@@ -1,7 +1,7 @@
-/*  Meru
- *  CDNArchivePlugin.hpp
+/*  Sirikata
+ *  OgreHeaders.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,33 +29,24 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _CDN_ARCHIVE_PLUGIN_HPP_
-#define _CDN_ARCHIVE_PLUGIN_HPP_
-#include "../OgreHeaders.hpp"
-#include <Ogre.h>
-#include <OgrePlugin.h>
-#include "CDNArchiveFactory.hpp"
 
-namespace Sirikata {
-namespace Graphics {
+#ifndef _OGRE_HEADERS_HPP_
+#define _OGRE_HEADERS_HPP_
 
-/** Plugin to setup CDNArchive and CDNArchive factory with
- *  Ogre.  A specialization of Ogre::Plugin.  See Ogre's
- *  documentation for interface details and documentation.
- */
-class CDNArchivePlugin : public Ogre::Plugin {
-public:
-	CDNArchivePlugin();
+#include <sirikata/core/util/Platform.hpp>
+#include <boost/thread.hpp>
 
-	const Ogre::String& getName() const;
+#ifdef _WIN32
+#undef BOOST_ALL_DYN_LINK
+#endif
 
-	void install();
-	void initialise();
-	void shutdown();
-	void uninstall();
-};
+#include <OgrePrerequisites.h>
+#include <OgreConfig.h>
 
-} // namespace Graphics
-} // namespace Sirikata
+#ifdef _WIN32
+#ifndef BOOST_ALL_DYN_LINK
+#define BOOST_ALL_DYN_LINK
+#endif
+#endif
 
-#endif //_CDN_ARCHIVE_PLUGIN_HPP_
+#endif // _OGRE_HEADERS_HPP_

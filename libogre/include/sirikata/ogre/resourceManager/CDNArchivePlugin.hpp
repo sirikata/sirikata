@@ -1,7 +1,7 @@
-/*  Sirikata libproxyobject -- Ogre Graphics Plugin
- *  OgreHeaders.hpp
+/*  Meru
+ *  CDNArchivePlugin.hpp
  *
- *  Copyright (c) 2009, Daniel Reiter Horn
+ *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -29,19 +29,35 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _CDN_ARCHIVE_PLUGIN_HPP_
+#define _CDN_ARCHIVE_PLUGIN_HPP_
 
-#ifndef _OGRE_HEADERS_HPP_
-#define _OGRE_HEADERS_HPP_
-#include <sirikata/proxyobject/Platform.hpp>
-#include <boost/thread.hpp>
-#ifdef _WIN32
-#undef BOOST_ALL_DYN_LINK
-#endif
-#include <OgrePrerequisites.h>
-#include <OgreConfig.h>
-#ifdef _WIN32
-#ifndef BOOST_ALL_DYN_LINK
-#define BOOST_ALL_DYN_LINK
-#endif
-#endif
-#endif
+#include <sirikata/ogre/Platform.hpp>
+#include <sirikata/ogre/OgreHeaders.hpp>
+#include <Ogre.h>
+#include <OgrePlugin.h>
+#include <sirikata/ogre/resourceManager/CDNArchiveFactory.hpp>
+
+namespace Sirikata {
+namespace Graphics {
+
+/** Plugin to setup CDNArchive and CDNArchive factory with
+ *  Ogre.  A specialization of Ogre::Plugin.  See Ogre's
+ *  documentation for interface details and documentation.
+ */
+class SIRIKATA_OGRE_EXPORT CDNArchivePlugin : public Ogre::Plugin {
+public:
+	CDNArchivePlugin();
+
+	const Ogre::String& getName() const;
+
+	void install();
+	void initialise();
+	void shutdown();
+	void uninstall();
+};
+
+} // namespace Graphics
+} // namespace Sirikata
+
+#endif //_CDN_ARCHIVE_PLUGIN_HPP_

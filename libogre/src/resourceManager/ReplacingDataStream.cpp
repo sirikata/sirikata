@@ -30,9 +30,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ReplacingDataStream.hpp"
+#include <sirikata/ogre/resourceManager/ReplacingDataStream.hpp>
 
-#include "CDNArchive.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchive.hpp>
 #include <boost/regex.hpp>
 #include <vector>
 

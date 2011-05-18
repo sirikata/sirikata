@@ -32,6 +32,7 @@
 
 #ifndef OGRE_CONVERSIONS_HPP
 #define OGRE_CONVERSIONS_HPP
+
 namespace Sirikata {
 typedef Vector4f ColorAlpha;
 typedef Vector3f Color;
@@ -95,4 +96,4 @@ inline Sirikata::Color fromOgreRGB(const Ogre::ColourValue &rgba) {
 }
 }
 }
-#endif
+#endif // OGRE_CONVERSIONS_HPP

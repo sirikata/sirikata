@@ -30,11 +30,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "CDNArchive.hpp"
+#include <sirikata/ogre/resourceManager/CDNArchive.hpp>
 #include <cassert>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
-#include "ReplacingDataStream.hpp"
+#include <sirikata/ogre/resourceManager/ReplacingDataStream.hpp>
 
 namespace Sirikata {
 namespace Graphics {

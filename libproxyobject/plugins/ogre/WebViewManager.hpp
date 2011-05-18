@@ -32,7 +32,8 @@
 
 #ifndef _SIRIKATA_GRAPHICS_WEBVIEWMANAGER_HPP_
 #define _SIRIKATA_GRAPHICS_WEBVIEWMANAGER_HPP_
-#include "OgreHeaders.hpp"
+
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include "Ogre.h"
 #include "ViewportOverlay.hpp"
 #include <sirikata/ogre/input/InputEvents.hpp>

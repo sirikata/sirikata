@@ -36,7 +36,7 @@
 #include <sirikata/core/util/Time.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "OgreHeaders.hpp"
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
 #include <OgreWindowEventUtilities.h>

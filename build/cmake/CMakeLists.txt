@@ -1182,6 +1182,10 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/input/InputDevice.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputDevice.cpp
   ${LIBOGRE_SOURCE_DIR}/input/SDLInputManager.cpp
+  ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchive.cpp
+  ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchiveFactory.cpp
+  ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchivePlugin.cpp
+  ${LIBOGRE_SOURCE_DIR}/resourceManager/ReplacingDataStream.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   )
 
@@ -1315,10 +1319,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/Entity.cpp
   ${GFX}/Camera.cpp
   ${GFX}/OgrePlugin.cpp
-${GFX}/resourceManager/CDNArchive.cpp
-${GFX}/resourceManager/CDNArchiveFactory.cpp
-${GFX}/resourceManager/CDNArchivePlugin.cpp
-${GFX}/resourceManager/ReplacingDataStream.cpp
 ${GFX}/resourceManager/ResourceDownloadTask.cpp
 ${GFX}/resourceManager/AssetDownloadTask.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp

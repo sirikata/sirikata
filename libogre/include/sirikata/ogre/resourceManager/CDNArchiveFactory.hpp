@@ -32,7 +32,8 @@
 #ifndef _CDN_ARCHIVE_FACTORY_HPP_
 #define _CDN_ARCHIVE_FACTORY_HPP_
 
-#include "../OgreHeaders.hpp"
+#include <sirikata/ogre/Platform.hpp>
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include <Ogre.h>
 #include <OgreArchiveFactory.h>
 #include <OgreSingleton.h>
@@ -44,7 +45,7 @@ namespace Graphics {
 /** Archive factory for URLArchives, a specialization of Ogre::ArchiveFactory.
  *  See Ogre's documentation for interface details and documentation.
  */
-class CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CDNArchiveFactory> {
+class SIRIKATA_OGRE_EXPORT CDNArchiveFactory : public Ogre::ArchiveFactory, public Ogre::Singleton<CDNArchiveFactory> {
 
   friend class CDNArchive;
 
