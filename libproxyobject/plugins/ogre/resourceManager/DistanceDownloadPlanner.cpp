@@ -32,7 +32,7 @@
 
 
 #include "DistanceDownloadPlanner.hpp"
-#include "../Entity.hpp"
+#include <sirikata/ogre/Entity.hpp>
 #include "SAngleDownloadPlanner.hpp"
 #include <stdlib.h>
 #include <algorithm>
@@ -92,7 +92,7 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 {
     if (camera == NULL) return 0;
 
-    Vector3d cameraLoc = camera->following()->getOgrePosition();
+    Vector3d cameraLoc = camera->getPosition();
     Vector3d objLoc = proxy->getPosition();
     Vector3d diff = cameraLoc - objLoc;
 

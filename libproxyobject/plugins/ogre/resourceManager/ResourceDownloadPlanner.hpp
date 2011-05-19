@@ -40,7 +40,7 @@
 #include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include "../Camera.hpp"
+#include <sirikata/ogre/Camera.hpp>
 #include <vector>
 #include <sirikata/core/transfer/URI.hpp>
 

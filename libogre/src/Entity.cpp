@@ -1,4 +1,4 @@
-/*  Sirikata Graphical Object Host
+/*  Sirikata
  *  Entity.cpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
@@ -30,15 +30,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "boost/lexical_cast.hpp"
-#include <sirikata/proxyobject/Platform.hpp>
-#include "Entity.hpp"
-#include <sirikata/core/options/Options.hpp>
-#include "OgreSystem.hpp"
+#include <boost/lexical_cast.hpp>
+#include <sirikata/ogre/Entity.hpp>
+#include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/resourceManager/CDNArchive.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
-#include "resourceManager/ResourceDownloadTask.hpp"
-#include "Lights.hpp"
+#include <sirikata/ogre/Lights.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 using namespace Sirikata::Transfer;
@@ -104,14 +101,13 @@ bool forEachTexture(const Ogre::MaterialPtr &material, Functor func) {
 	return false;
 }
 
-Entity::Entity(OgreSystem *scene,
-    const ProxyObjectPtr &ppo)
-  : mScene(scene),
-    mProxy(ppo),
-    mOgreObject(NULL),
-    mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(ppo->getObjectReference()) )),
-    mMovingIter(scene->mMovingEntities.end()),
-    mVisible(true)
+Entity::Entity(OgreRenderer *scene, const String& name)
+ : mScene(scene),
+   mName(name),
+   mOgreObject(NULL),
+   mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(name) )),
+   mMovingIter(scene->mMovingEntities.end()),
+   mVisible(true)
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
 
@@ -119,22 +115,14 @@ Entity::Entity(OgreSystem *scene,
     addToScene(NULL);
 
     bool successful = scene->mSceneEntities.insert(
-        OgreSystem::SceneEntitiesMap::value_type(mProxy->getObjectReference(), this)).second;
+        OgreRenderer::SceneEntitiesMap::value_type(mName, this)).second;
 
     assert (successful == true);
 
-    ppo->ProxyObjectProvider::addListener(this);
-    ppo->PositionProvider::addListener(this);
-
     mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive=true;
-    getProxy().MeshProvider::addListener(this);
-    unloadMesh();
 
-    mDestroyTimer = Network::IOTimer::create(
-        mScene->context()->ioService,
-        std::tr1::bind(&Entity::handleDestroyTimeout, this)
-    );
+    unloadMesh();
 }
 
 Entity::~Entity() {
@@ -143,21 +131,18 @@ Entity::~Entity() {
     if (toDestroy) {
         getScene()->getSceneManager()->destroyEntity(toDestroy);
     }
-    getProxy().MeshProvider::removeListener(this);
 
-
-    OgreSystem::SceneEntitiesMap::iterator iter =
-        mScene->mSceneEntities.find(mProxy->getObjectReference());
+    OgreRenderer::SceneEntitiesMap::iterator iter =
+        mScene->mSceneEntities.find(mName);
     if (iter != mScene->mSceneEntities.end()) {
-        // will fail while in the OgreSystem destructor.
+        // will fail while in the OgreRenderer destructor.
         mScene->mSceneEntities.erase(iter);
     }
     if (mMovingIter != mScene->mMovingEntities.end()) {
         mScene->mMovingEntities.erase(mMovingIter);
         mMovingIter = mScene->mMovingEntities.end();
     }
-    getProxy().ProxyObjectProvider::removeListener(this);
-    getProxy().PositionProvider::removeListener(this);
+
     removeFromScene();
     init(NULL);
     mSceneNode->detachAllObjects();
@@ -173,8 +158,8 @@ Entity::~Entity() {
     }
 }
 
-std::string Entity::ogreMeshName(const SpaceObjectReference&ref) {
-    return "Mesh:"+ref.toString();
+std::string Entity::ogreMeshName(const String& name) {
+    return "Mesh:"+name;
 }
 std::string Entity::ogreMovableName()const{
     return ogreMeshName(id());
@@ -192,7 +177,7 @@ void Entity::init(Ogre::Entity *obj) {
     if (obj) {
         mOgreObject->setUserAny(Ogre::Any(this));
         mSceneNode->attachObject(obj);
-        updateScale( getProxy().getBounds().radius() );
+        updateScale( this->bounds().radius() );
         updateVisibility();
     }
 }
@@ -258,42 +243,6 @@ void Entity::setOgreOrientation(const Quaternion &orient) {
     mSceneNode->setOrientation(toOgre(orient));
 }
 
-
-void Entity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) {
-    SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
-    if (!getProxy().isStatic()) {
-        setStatic(false);
-    } else {
-        setOgrePosition(Vector3d(newLocation.position()));
-        setOgreOrientation(newOrient.position());
-    }
-    updateScale( newBounds.radius() );
-}
-
-void Entity::validated() {
-    mDestroyTimer->cancel();
-    processMesh( mProxy->getMesh() );
-}
-
-void Entity::invalidated() {
-    // To mask very quick removal/addition sequences, defer unloading
-    mDestroyTimer->wait(Duration::seconds(1));
-}
-
-void Entity::handleDestroyTimeout() {
-    unloadMesh();
-}
-
-void Entity::destroyed() {
-    delete this;
-}
-void Entity::extrapolateLocation(TemporalValue<Location>::Time current) {
-    Location loc (getProxy().extrapolateLocation(current));
-    setOgrePosition(loc.getPosition());
-    setOgreOrientation(loc.getOrientation());
-    setStatic(getProxy().isStatic());
-}
-
 Vector3d Entity::getOgrePosition() {
     if (mScene == NULL) assert(false);
     return fromOgre(mSceneNode->getPosition(), mScene->getOffset());
@@ -329,7 +278,7 @@ void Entity::fixTextures() {
 		Ogre::MaterialPtr material = subEnt->getMaterial();
 		if (forEachTexture(material, ShouldReplaceTexture(mTextureBindings))) {
 			SILOG(ogre,detailed,"Replacing a material "<<id());
-			Ogre::MaterialPtr newMaterial = material->clone(material->getName()+id().toString(), false, Ogre::String());
+			Ogre::MaterialPtr newMaterial = material->clone(material->getName()+id(), false, Ogre::String());
 			String newTexture;
 			for (TextureBindingsMap::const_iterator iter = mTextureBindings.begin();
 					iter != mTextureBindings.end();
@@ -345,8 +294,8 @@ void Entity::fixTextures() {
 	}
 }
 
-void Entity::bindTexture(const std::string &textureName, const SpaceObjectReference &objId) {
-	mTextureBindings[textureName] = objId.toString();
+void Entity::bindTexture(const std::string &textureName, const String& objId) {
+	mTextureBindings[textureName] = objId;
 	fixTextures();
 }
 void Entity::unbindTexture(const std::string &textureName) {
@@ -379,7 +328,7 @@ void Entity::loadMesh(const String& meshname)
         throw;
       }
     } catch (...) {
-        SILOG(ogre,error,"Failed to load mesh "<<getProxy().getMesh()<< " (id "<<id()<<")!");
+        SILOG(ogre,error,"Failed to load mesh "<< meshname << " (id "<<id()<<")!");
 
         return;
         //new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
@@ -396,9 +345,9 @@ void Entity::loadMesh(const String& meshname)
         new_entity->setMaterialName("BaseWhiteTexture");
     }
     unsigned int num_subentities=new_entity->getNumSubEntities();
-    SHA256 random_seed=SHA256::computeDigest(id().toRawHexData());
+    SHA256 random_seed=SHA256::computeDigest(id());
     const SHA256::Digest &digest=random_seed.rawData();
-    Ogre::Vector4 parallax_steps(getScene()->mParallaxSteps->as<float>(),getScene()->mParallaxShadowSteps->as<int>(),0.0,1.0);
+    Ogre::Vector4 parallax_steps(getScene()->parallaxSteps(), getScene()->parallaxShadowSteps(),0.0,1.0);
     unsigned short av=digest[0]+256*(unsigned short)digest[1];
     unsigned short bv=digest[2]+256*(unsigned short)digest[3];
     unsigned short cv=digest[4]+256*(unsigned short)digest[5];
@@ -433,15 +382,6 @@ void Entity::setSelected(bool selected) {
 }
 
 
-/////////////////////////////////////////////////////////////////////
-// overrides from MeshListener
-// MCB: integrate these with the MeshObject model class
-
-void Entity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
-{
-
-}
-
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
     if (meshFile.empty())
@@ -457,7 +397,7 @@ void Entity::processMesh(Transfer::URI const& meshFile)
 
     mAssetDownload = AssetDownloadTaskPtr(
         new AssetDownloadTask(
-            mURI, getScene(), mProxy->priority,
+            mURI, getScene(), this->priority(),
             mScene->context()->mainStrand->wrap(
                 std::tr1::bind(&Entity::createMesh, this)
             )
@@ -1131,7 +1071,7 @@ void Entity::createMesh() {
         }
         const LightInfo& sublight = mdptr->lights[lightinst.lightIndex];
 
-        String lightname = getProxy().getObjectReference().toString()+"_light_"+hash+ boost::lexical_cast<String>(light_idx++);
+        String lightname = mName+"_light_"+hash+ boost::lexical_cast<String>(light_idx++);
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
         if (!light->isAttached()) {
             mLights.push_back(light);
@@ -1152,12 +1092,6 @@ void Entity::createMesh() {
         }
     }
 }
-
-void Entity::onSetScale (ProxyObjectPtr proxy, float32 scale )
-{
-    updateScale(scale);
-}
-
 
 }
 }

@@ -1,5 +1,5 @@
 /*  Sirikata Graphical Object Host
- *  Camera.hpp
+ *  Entity.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
@@ -29,80 +29,69 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_GRAPHICS_CAMERA_HPP__
-#define SIRIKATA_GRAPHICS_CAMERA_HPP__
 
-#include <sirikata/ogre/OgreHeaders.hpp>
-#include <OgreMovableObject.h>
-#include <OgreRenderable.h>
-#include <OgreRenderTarget.h>
+#ifndef SIRIKATA_OGRE_PROXY_ENTITY_HPP__
+#define SIRIKATA_OGRE_PROXY_ENTITY_HPP__
 
+#include <sirikata/ogre/Entity.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 namespace Sirikata {
 namespace Graphics {
 
-class Entity;
 class OgreSystem;
 
-class Camera {
+/** Ogre entities using ProxyObjects for their information. */
+class ProxyEntity
+    : public Sirikata::Graphics::Entity,
+      public PositionListener,
+      public ProxyObjectListener,
+      public MeshListener
+{
+protected:
+    const ProxyObjectPtr mProxy;
+    Network::IOTimerPtr mDestroyTimer;
+
+    void handleDestroyTimeout();
+
 public:
-    enum Mode {
-        FirstPerson,
-        ThirdPerson
-    };
+    ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo);
+    virtual ~ProxyEntity();
 
-private:
-    OgreSystem *const mScene;
-    Ogre::Camera* mOgreCamera;
-    Ogre::SceneNode *mSceneNode;
+    // Entity Overrides
+    virtual BoundingSphere3f bounds();
+    virtual float32 priority();
 
-    Ogre::RenderTarget *mRenderTarget;
-    Ogre::Viewport *mViewport;
 
-    Entity* mFollowing;
-
-    Mode mMode;
-    Vector3d mOffset;
-public:
-
-    Camera(OgreSystem *scene, Entity* follow);
-    ~Camera();
-
-    Entity* following() const;
-
-    void attach (const String&renderTargetName,
-        uint32 width,
-        uint32 height,
-        Vector4f back_color);
-
-    void detach();
-
-    void windowResized();
-
-    void tick(const Time& t, const Duration& dt);
-
-    Ogre::Viewport* getViewport() {
-        return mViewport;
+    ProxyObject &getProxy() const {
+        return *mProxy;
     }
-    Ogre::Camera* getOgreCamera() {
-        return mOgreCamera;
+    const ProxyObjectPtr &getProxyPtr() const {
+        return mProxy;
     }
 
-    void setMode(Mode m);
 
-    void setOffset(Vector3d offset) {
-        mOffset = offset;
-    }
+    static ProxyEntity *fromMovableObject(Ogre::MovableObject *obj);
 
-    Vector3d getPosition() const;
-    Quaternion getOrientation() const;
-private:
+    // PositionListener
+    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
 
-    static String ogreCameraName(const SpaceObjectReference&ref);
+    // ProxyObjectListener
+    virtual void validated();
+    virtual void invalidated();
+    virtual void destroyed();
 
+    // interface from MeshListener
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
+    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
+
+
+    void extrapolateLocation(TemporalValue<Location>::Time current);
 };
+typedef std::tr1::shared_ptr<Entity> EntityPtr;
 
 }
 }
 
-#endif
+#endif //SIRIKATA_OGRE_PROXY_ENTITY_HPP__

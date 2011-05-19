@@ -30,27 +30,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "OgreSystem.hpp"
-#include <sirikata/proxyobject/Platform.hpp>
-#include "Camera.hpp"
+#include <sirikata/ogre/Camera.hpp>
+#include <sirikata/ogre/OgreRenderer.hpp>
+#include <sirikata/ogre/OgreConversions.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include "Entity.hpp"
+#include "Ogre.h"
+#include <sirikata/core/util/Time.hpp>
 
 namespace Sirikata {
 namespace Graphics {
 
-Camera::Camera(OgreSystem *scene, Entity* follow)
+Camera::Camera(OgreRenderer *scene, const String& cameraName)
  : mScene(scene),
    mOgreCamera(NULL),
    mSceneNode(NULL),
    mRenderTarget(NULL),
    mViewport(NULL),
-   mFollowing(follow),
    mMode(FirstPerson),
    mOffset(Vector3d(0, 0, 0))
 {
-    String cameraName = ogreCameraName(following()->id());
-
     mSceneNode = scene->getSceneManager()->createSceneNode(cameraName);
     mSceneNode->setInheritScale(false);
     mScene->getSceneManager()->getRootSceneNode()->addChild(mSceneNode);
@@ -63,12 +61,14 @@ Camera::Camera(OgreSystem *scene, Entity* follow)
 
     mSceneNode->attachObject(mOgreCamera);
 
-    mOgreCamera->setNearClipDistance(scene->getOptions()->referenceOption("nearplane")->as<float32>());
-    mOgreCamera->setFarClipDistance(scene->getOptions()->referenceOption("farplane")->as<float32>());
+    mOgreCamera->setNearClipDistance(scene->nearPlane());
+    mOgreCamera->setFarClipDistance(scene->farPlane());
+}
 
-    Vector3d goalPos = mFollowing->getProxyPtr()->getPosition();
-    Quaternion goalOrient = mFollowing->getProxyPtr()->getOrientation();
-    mSceneNode->setPosition(toOgre(goalPos, mFollowing->getScene()->getOffset()));
+void Camera::initialize() {
+    Vector3d goalPos = getGoalPosition();
+    Quaternion goalOrient = getGoalOrientation();
+    mSceneNode->setPosition(toOgre(goalPos, mScene->getOffset()));
     mSceneNode->setOrientation(toOgre(goalOrient));
 
     setMode(FirstPerson);
@@ -86,17 +86,12 @@ Camera::~Camera() {
     mScene->getSceneManager()->destroySceneNode(mSceneNode);
 }
 
-Entity* Camera::following() const {
-    return mFollowing;
-}
-
 void Camera::setMode(Mode m) {
     mMode = m;
-    mFollowing->setVisible( mMode == FirstPerson ? false : true );
 }
 
 Vector3d Camera::getPosition() const {
-    return fromOgre(mSceneNode->getPosition(), mFollowing->getScene()->getOffset());
+    return fromOgre(mSceneNode->getPosition(), mScene->getOffset());
 }
 Quaternion Camera::getOrientation() const {
     return fromOgre(mSceneNode->getOrientation());
@@ -141,8 +136,8 @@ void Camera::windowResized() {
 }
 
 void Camera::tick(const Time& t, const Duration& dt) {
-    Vector3d goalPos = mFollowing->getOgrePosition();
-    Quaternion goalOrient = mFollowing->getOgreOrientation();
+    Vector3d goalPos = getGoalPosition();
+    Quaternion goalOrient = getGoalOrientation();
 
     Vector3d pos;
     Quaternion orient;
@@ -157,12 +152,12 @@ void Camera::tick(const Time& t, const Duration& dt) {
         // In third person mode, the target is offset so we'll be behind and
         // above ourselves and we need to interpolate to the target.
         // Offset the goal.
-        BoundingSphere3f following_bounds = mFollowing->getProxyPtr()->getBounds();
+        BoundingSphere3f following_bounds = getGoalBounds();
         goalPos += Vector3d(following_bounds.center());
         // > 1 factor gets us beyond the top of the object
         goalPos += mOffset * (following_bounds.radius());
         // Restore the current values from the scene node.
-        pos = fromOgre(mSceneNode->getPosition(), mFollowing->getScene()->getOffset());
+        pos = fromOgre(mSceneNode->getPosition(), mScene->getOffset());
         orient = fromOgre(mSceneNode->getOrientation());
         // And interpolate.
         Vector3d toGoal = goalPos-pos;
@@ -177,13 +172,8 @@ void Camera::tick(const Time& t, const Duration& dt) {
         }
     }
 
-    mSceneNode->setPosition(toOgre(pos, mFollowing->getScene()->getOffset()));
+    mSceneNode->setPosition(toOgre(pos, mScene->getOffset()));
     mSceneNode->setOrientation(toOgre(orient));
-}
-
-
-std::string Camera::ogreCameraName(const SpaceObjectReference&ref) {
-    return "Camera:"+ref.toString();
 }
 
 }

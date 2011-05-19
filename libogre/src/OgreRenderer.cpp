@@ -35,7 +35,10 @@
 namespace Sirikata {
 namespace Graphics {
 
-OgreRenderer::OgreRenderer() {
+OgreRenderer::OgreRenderer(Context* ctx)
+ : mContext(ctx),
+   mFloatingPointOffset(0,0,0)
+{
 }
 
 OgreRenderer::~OgreRenderer() {

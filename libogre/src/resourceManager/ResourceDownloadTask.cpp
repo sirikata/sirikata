@@ -32,7 +32,7 @@
 
 #include <sirikata/core/util/Thread.hpp>
 
-#include "ResourceDownloadTask.hpp"
+#include <sirikata/ogre/resourceManager/ResourceDownloadTask.hpp>
 #include <stdio.h>
 
 using namespace std;

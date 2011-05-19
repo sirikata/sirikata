@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
+/*  Sirikata Graphical Object Host
+ *  Camera.cpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,47 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+#include "ProxyCamera.hpp"
+#include "ProxyEntity.hpp"
+#include <sirikata/ogre/OgreRenderer.hpp>
+#include <sirikata/core/options/Options.hpp>
 
 namespace Sirikata {
+namespace Graphics {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
+ProxyCamera::ProxyCamera(OgreRenderer *scene, ProxyEntity* follow)
+ : Camera(scene, ogreCameraName(follow->id())),
+   mFollowing(follow)
 {
-    c->add(this);
-    camera = NULL;
 }
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
-
+ProxyCamera::~ProxyCamera() {
 }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
-
+Vector3d ProxyCamera::getGoalPosition() {
+    return mFollowing->getProxyPtr()->getPosition();
 }
 
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
+Quaternion ProxyCamera::getGoalOrientation() {
+    return mFollowing->getProxyPtr()->getOrientation();
 }
 
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
+BoundingSphere3f ProxyCamera::getGoalBounds() {
+    return mFollowing->getProxyPtr()->getBounds();
 }
 
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
+void ProxyCamera::setMode(Mode m) {
+    Camera::setMode(m);
+    mFollowing->setVisible( mMode == FirstPerson ? false : true );
 }
 
-void ResourceDownloadPlanner::poll()
-{
-
+ProxyEntity* ProxyCamera::following() const {
+    return mFollowing;
 }
 
-void ResourceDownloadPlanner::stop()
-{
+std::string ProxyCamera::ogreCameraName(const String& ref) {
+    return "Camera:"+ref;
+}
 
 }
 }

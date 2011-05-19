@@ -1,7 +1,7 @@
 /*  Sirikata
- *  MeshView.cpp
+ *  Camera.hpp
  *
- *  Copyright (c) 2011, Stanford University
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,38 +30,81 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/core/network/IOServiceFactory.hpp>
-#include <sirikata/core/network/IOService.hpp>
-
-#include <sirikata/core/options/Options.hpp>
-#include <sirikata/core/options/CommonOptions.hpp>
-#include <sirikata/core/util/PluginManager.hpp>
+#ifndef SIRIKATA_OGRE_CAMERA_HPP__
+#define SIRIKATA_OGRE_CAMERA_HPP__
 
 #include <sirikata/ogre/Platform.hpp>
-#include <sirikata/ogre/OgreRenderer.hpp>
+#include <sirikata/ogre/OgreHeaders.hpp>
+#include <OgreMovableObject.h>
+#include <OgreRenderable.h>
+#include <OgreRenderTarget.h>
 
-int main(int argc, char** argv) {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
 
-    InitOptions();
-    ParseOptions(argc, argv);
+namespace Sirikata {
+namespace Graphics {
 
-    PluginManager plugins;
-    plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+class OgreRenderer;
 
-    Network::IOService* ios = Network::IOServiceFactory::makeIOService();
-    Network::IOStrand* iostrand = ios->createStrand();
+class SIRIKATA_OGRE_EXPORT Camera {
+public:
+    enum Mode {
+        FirstPerson,
+        ThirdPerson
+    };
 
-    //OgreRenderer* renderer = new OgreRenderer();
+protected:
+    OgreRenderer *const mScene;
+    Ogre::Camera* mOgreCamera;
+    Ogre::SceneNode *mSceneNode;
 
-    ios->run();
+    Ogre::RenderTarget *mRenderTarget;
+    Ogre::Viewport *mViewport;
 
-    //delete renderer;
+    Mode mMode;
+    Vector3d mOffset;
 
-    delete iostrand;
-    Network::IOServiceFactory::destroyIOService(ios);
+public:
+    Camera(OgreRenderer *scene, const String& name);
+    virtual ~Camera();
 
-    return 0;
+    // Require an additional initialize call in order to use virtual functions
+    // for position, orientation
+    void initialize();
+
+    virtual Vector3d getGoalPosition() = 0;
+    virtual Quaternion getGoalOrientation() = 0;
+    virtual BoundingSphere3f getGoalBounds() = 0;
+
+    void attach (const String&renderTargetName,
+        uint32 width,
+        uint32 height,
+        Vector4f back_color);
+
+    void detach();
+
+    void windowResized();
+
+    void tick(const Time& t, const Duration& dt);
+
+    Ogre::Viewport* getViewport() {
+        return mViewport;
+    }
+    Ogre::Camera* getOgreCamera() {
+        return mOgreCamera;
+    }
+
+    virtual void setMode(Mode m);
+
+    void setOffset(Vector3d offset) {
+        mOffset = offset;
+    }
+
+    Vector3d getPosition() const;
+    Quaternion getOrientation() const;
+
+};
+
 }
+}
+
+#endif // SIRIKATA_OGRE_CAMERA_HPP_

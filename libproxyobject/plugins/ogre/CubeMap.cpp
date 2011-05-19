@@ -33,7 +33,10 @@
 #include "OgreSystem.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
-#include "Entity.hpp"
+#include <sirikata/ogre/OgreConversions.hpp>
+#include "ProxyCamera.hpp"
+#include "ProxyEntity.hpp"
+#include <sirikata/ogre/Entity.hpp>
 
 class xTest :public Ogre::RenderTargetListener{
 public:

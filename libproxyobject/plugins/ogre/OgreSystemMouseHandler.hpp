@@ -75,7 +75,7 @@ private:
     Input::Modifier getCurrentModifiers() const;
 
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
-    Entity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
+    ProxyEntity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
 
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY);
 

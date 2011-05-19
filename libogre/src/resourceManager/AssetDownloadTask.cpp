@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../OgreSystem.hpp"
-#include "AssetDownloadTask.hpp"
+#include <sirikata/ogre/OgreRenderer.hpp>
+#include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
 using namespace std::tr1::placeholders;
@@ -40,7 +40,7 @@ using namespace Sirikata::Mesh;
 
 namespace Sirikata {
 
-AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreSystem* const scene, double priority, FinishedCallback cb)
+AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb)
  : mScene(scene),
    mAssetURI(uri),
    mPriority(priority),

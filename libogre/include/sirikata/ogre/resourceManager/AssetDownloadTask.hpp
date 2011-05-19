@@ -33,11 +33,12 @@
 #ifndef _SIRIKATA_OGRE_ASSET_DOWNLOAD_TASK_HPP_
 #define _SIRIKATA_OGRE_ASSET_DOWNLOAD_TASK_HPP_
 
-#include "ResourceDownloadTask.hpp"
+#include <sirikata/ogre/resourceManager/ResourceDownloadTask.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Graphics {
-class OgreSystem;
+class OgreRenderer;
 }
 
 /** An AssetDownloadTask manages the full download of an asset, including
@@ -59,7 +60,7 @@ public:
     };
     typedef std::map<Transfer::URI, ResourceData> Dependencies;
 
-    AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreSystem* const scene, double priority, FinishedCallback cb);
+    AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
     ~AssetDownloadTask();
 
     Mesh::MeshdataPtr asset() const { return mAsset; }
@@ -74,7 +75,7 @@ private:
     void textureDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<const Transfer::DenseData> response);
 
-    Graphics::OgreSystem *const mScene;
+    Graphics::OgreRenderer *const mScene;
     Transfer::URI mAssetURI;
     double mPriority; // FIXME this should really be a function or functor to
                       // get priority so it can be kept up to date

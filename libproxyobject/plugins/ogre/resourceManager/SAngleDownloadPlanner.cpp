@@ -32,7 +32,6 @@
 
 #include "SAngleDownloadPlanner.hpp"
 #include <sirikata/core/util/SolidAngle.hpp>
-#include "../Entity.hpp"
 
 namespace Sirikata {
 
@@ -62,7 +61,7 @@ double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 
     float radius = proxy->getBounds().radius();
     Vector3d objLoc = proxy->getPosition();
-    Vector3d cameraLoc = camera->following()->getOgrePosition();
+    Vector3d cameraLoc = camera->getPosition();
 
     if (withinBound(radius, objLoc, cameraLoc)) return 0.99;
 

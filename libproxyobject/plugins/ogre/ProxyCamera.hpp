@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
+/*  Sirikata Graphical Object Host
+ *  Camera.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,38 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
+#ifndef SIRIKATA_OGRE_PROXY_CAMERA_HPP__
+#define SIRIKATA_OGRE_PROXY_CAMERA_HPP__
 
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+#include <sirikata/ogre/Camera.hpp>
+#include <sirikata/core/util/SpaceObjectReference.hpp>
 
 namespace Sirikata {
+namespace Graphics {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
-{
-    c->add(this);
-    camera = NULL;
-}
+class ProxyEntity;
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
+// This class just overrides some virtual methods to make the camera follow a ProxyObject.
+class ProxyCamera : public Camera{
+private:
+    ProxyEntity* mFollowing;
+public:
+    ProxyCamera(OgreRenderer *scene, ProxyEntity* follow);
+    ~ProxyCamera();
 
-}
+    ProxyEntity* following() const;
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
+    virtual Vector3d getGoalPosition();
+    virtual Quaternion getGoalOrientation();
+    virtual BoundingSphere3f getGoalBounds();
 
-}
+    virtual void setMode(Mode m);
 
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
+private:
+    static String ogreCameraName(const String& ref);
+};
 
 }
 }
+
+#endif // SIRIKATA_OGRE_PROXY_CAMERA_HPP__

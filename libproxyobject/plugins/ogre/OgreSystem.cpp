@@ -40,9 +40,9 @@
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "Camera.hpp"
-#include "Entity.hpp"
-#include "Lights.hpp"
+#include "ProxyCamera.hpp"
+#include "ProxyEntity.hpp"
+#include <sirikata/ogre/Lights.hpp>
 #include <Ogre.h>
 #include "CubeMap.hpp"
 #include <sirikata/ogre/input/SDLInputManager.hpp>
@@ -50,7 +50,7 @@
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include "OgreMeshRaytrace.hpp"
 #include <sirikata/ogre/resourceManager/CDNArchivePlugin.hpp>
-#include "resourceManager/ResourceDownloadTask.hpp"
+#include <sirikata/ogre/resourceManager/ResourceDownloadTask.hpp>
 
 #include <sirikata/core/util/DynamicLibrary.hpp>
 
@@ -176,15 +176,14 @@ Ogre::Plugin*OgreSystem::sCDNArchivePlugin=NULL;
 std::list<OgreSystem*> OgreSystem::sActiveOgreScenes;
 uint32 OgreSystem::sNumOgreSystems=0;
 OgreSystem::OgreSystem(Context* ctx)
- : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
-   mContext(ctx),
+ : OgreRenderer(ctx),
+   TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
    mLastFrameTime(Task::LocalTime::now()),
    mResourcesDir(getOgreResourcesDir()),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
      mQuitRequested(false),
      mQuitRequestHandled(false),
      mSuspended(false),
-     mFloatingPointOffset(0,0,0),
      mPrimaryCamera(NULL)
 {
     increfcount();
@@ -321,7 +320,8 @@ Ogre::RenderTarget*OgreSystem::createRenderTarget(String name, uint32 width, uin
     if (height==0) height=mWindowHeight->as<uint32>();
     return createRenderTarget(name,width,height,true,mWindowDepth->as<Ogre::PixelFormat>());
 }
-Ogre::RenderTarget*OgreSystem::createRenderTarget(const String&name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf) {
+Ogre::RenderTarget*OgreSystem::createRenderTarget(const String&name, uint32 width, uint32 height, bool automipmap, int pixelFmt) {
+    Ogre::PixelFormat pf = (Ogre::PixelFormat)pixelFmt;
     if (mRenderTarget&&mRenderTarget->getName()==name) {
         return mRenderTarget;
     }else if (sRenderTarget&&sRenderTarget->getName()==name) {
@@ -714,6 +714,24 @@ void OgreSystem::injectWindowResized(uint32 w, uint32 h) {
     windowResized(mRenderWindow);
 }
 
+float32 OgreSystem::nearPlane() {
+    return getOptions()->referenceOption("nearplane")->as<float32>();
+}
+
+float32 OgreSystem::farPlane() {
+    return getOptions()->referenceOption("farplane")->as<float32>();
+}
+
+float32 OgreSystem::parallaxSteps() {
+    return getOptions()->referenceOption("parallax-steps")->as<float32>();
+}
+
+int32 OgreSystem::parallaxShadowSteps() {
+    return getOptions()->referenceOption("parallax-shadow-steps")->as<int>();
+}
+
+
+
 namespace {
 bool ogreLoadPlugin(const String& _filename, const String& root = "") {
     using namespace boost::filesystem;
@@ -875,14 +893,15 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;
 
-    Entity* mesh = new Entity(this,p);
+    ProxyEntity* mesh = new ProxyEntity(this,p);
     dlPlanner->addNewObject(p,mesh);
 
     bool is_viewer = (p->getObjectReference() == mPresenceID);
     if (is_viewer)
     {
         assert(mPrimaryCamera == NULL);
-        mPrimaryCamera = new Camera(this, mesh);
+        mPrimaryCamera = new ProxyCamera(this, mesh);
+        mPrimaryCamera->initialize();
         mPrimaryCamera->attach("", 0, 0, mBackgroundColor);
         attachCamera("", mPrimaryCamera);
     }
@@ -952,6 +971,20 @@ Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
     return internalRayTrace(traceFrom,true,resultCount,returnResult,normal,subent,NULL,false,which);
 }
+
+ProxyEntity* OgreSystem::getEntity(const SpaceObjectReference &proxyId) const {
+    SceneEntitiesMap::const_iterator iter = mSceneEntities.find(proxyId.toString());
+    if (iter != mSceneEntities.end()) {
+        Entity* ent = (*iter).second;
+        return static_cast<ProxyEntity*>(ent);
+    } else {
+        return NULL;
+    }
+}
+ProxyEntity* OgreSystem::getEntity(const ProxyObjectPtr &proxy) const {
+    return getEntity(proxy->getObjectReference());
+}
+
 bool OgreSystem::queryRay(const Vector3d&position,
                           const Vector3f&direction,
                           const double maxDistance,
@@ -962,21 +995,21 @@ bool OgreSystem::queryRay(const Vector3d&position,
     int resultCount=0;
     int subent;
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
-    Entity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0);
+    ProxyEntity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0);
     if (retval != NULL) {
         returnName= retval->getProxy().getObjectReference();
         return true;
     }
     return false;
 }
-Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which) const {
+ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which) const {
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
     mRayQuery->setRay(traceFrom);
     mRayQuery->setSortByDistance(aabbOnly);
     const Ogre::RaySceneQueryResult& resultList = mRayQuery->execute();
 
-    Entity *toReturn = NULL;
+    ProxyEntity *toReturn = NULL;
     returnresult = 0;
     int count = 0;
     std::vector<RayTraceResult> fineGrainedResults;
@@ -985,9 +1018,9 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
         Ogre::Entity *foundEntity = dynamic_cast<Ogre::Entity*>(result.movable);
         if (!foundEntity) continue;
-        Entity *ourEntity = Entity::fromMovableObject(result.movable);
+        ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
         if (!ourEntity) continue;
-        if (ourEntity->id() == mPresenceID) continue;
+        if (ourEntity->id() == mPresenceID.toString()) continue;
 
         RayTraceResult rtr(result.distance,result.movable);
         bool passed=aabbOnly&&result.distance > 0;
@@ -1027,7 +1060,7 @@ Entity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,i
         for (std::vector<RayTraceResult>::const_iterator iter  = fineGrainedResults.begin()+which,iterEnd=fineGrainedResults.end();
              iter != iterEnd; ++iter) {
             const RayTraceResult &result = (*iter);
-            Entity *foundEntity = Entity::fromMovableObject(result.mMovableObject);
+            ProxyEntity *foundEntity = ProxyEntity::fromMovableObject(result.mMovableObject);
             if (foundEntity) {
                 toReturn = foundEntity;
                 returnresult = result.mDistance;
@@ -1117,7 +1150,7 @@ void OgreSystem::stop() {
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     std::list<Entity*>::iterator iter;
     for (iter = mMovingEntities.begin(); iter != mMovingEntities.end();) {
-        Entity *current = *iter;
+        ProxyEntity *current = static_cast<ProxyEntity*>(*iter);
         ++iter;
         SpaceID space(current->getProxy().getObjectReference().space());
         Time cur_time = simTime();
@@ -1331,8 +1364,8 @@ boost::any OgreSystem::bbox(vector<boost::any>& params) {
     SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
     bool setting = Invokable::anyAsBoolean(params[2]);
 
-    if (mSceneEntities.find(objid) == mSceneEntities.end()) return boost::any();
-    Entity* ent = mSceneEntities.find(objid)->second;
+    if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
+    Entity* ent = mSceneEntities.find(objid.toString())->second;
     ent->setSelected(setting);
 
     return boost::any();

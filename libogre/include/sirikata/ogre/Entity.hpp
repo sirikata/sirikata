@@ -1,4 +1,4 @@
-/*  Sirikata Graphical Object Host
+/*  Sirikata
  *  Entity.hpp
  *
  *  Copyright (c) 2009, Patrick Reiter Horn
@@ -29,11 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef SIRIKATA_GRAPHICS_ENTITY_HPP__
-#define SIRIKATA_GRAPHICS_ENTITY_HPP__
+#ifndef SIRIKATA_OGRE_ENTITY_HPP__
+#define SIRIKATA_OGRE_ENTITY_HPP__
 
-#include <sirikata/core/util/UUID.hpp>
-#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/ogre/Platform.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
@@ -42,24 +41,21 @@
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
 
-#include "resourceManager/AssetDownloadTask.hpp"
+#include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
 
 namespace Sirikata {
 namespace Graphics {
-class OgreSystem;
 
-/** Base class for any ProxyObject that has a representation in Ogre. */
-class Entity
-  : public PositionListener,
-    public ProxyObjectListener,
-    public MeshListener
-{
+class OgreRenderer;
+
+/** Base class for objects represented in Ogre as a mesh. */
+class SIRIKATA_OGRE_EXPORT Entity {
 public:
     typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
     typedef std::map<String, String > TextureBindingsMap;
 protected:
-    OgreSystem *const mScene;
-    const ProxyObjectPtr mProxy;
+    OgreRenderer *const mScene;
+    String mName;
 
     Ogre::Entity* mOgreObject;
     Ogre::SceneNode *mSceneNode;
@@ -80,8 +76,6 @@ protected:
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
 
-    Network::IOTimerPtr mDestroyTimer;
-
     // We need to track this because Ogre doesn't seem to do the right
     // thing if you toggle visibility with cascading, then later add
     // more nodes.
@@ -100,38 +94,28 @@ protected:
     void updateScale(float scale);
     void updateVisibility();
 
-    void handleDestroyTimeout();
 protected:
     void setOgrePosition(const Vector3d &pos);
-
     void setOgreOrientation(const Quaternion &orient);
-public:
-    ProxyObject &getProxy() const {
-        return *mProxy;
-    }
-    const ProxyObjectPtr &getProxyPtr() const {
-        return mProxy;
-    }
-    Entity(OgreSystem *scene,
-        const ProxyObjectPtr &ppo);
 
-    ~Entity();
+public:
+    Entity(OgreRenderer *scene, const String& name);
+    virtual ~Entity();
+
+    // These should be overridden to allow this class to learn about the
+    // properties of this Entity.
+    virtual BoundingSphere3f bounds() = 0;
+    virtual float32 priority() = 0;
+
 
     static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
     void removeFromScene();
     void addToScene(Ogre::SceneNode *newParent=NULL);
 
-    OgreSystem *getScene() const{
+    OgreRenderer *getScene() const{
         return mScene;
     }
-
-    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
-
-    // ProxyObjectListener
-    virtual void validated();
-    virtual void invalidated();
-    virtual void destroyed();
 
     Ogre::SceneNode *getSceneNode() {
         return mSceneNode;
@@ -142,30 +126,23 @@ public:
     }
 
     Vector3d getOgrePosition();
-
     Quaternion getOgreOrientation();
-
-    void extrapolateLocation(TemporalValue<Location>::Time current);
 
     void setSelected(bool selected);
 
-    static std::string ogreMeshName(const SpaceObjectReference&ref);
+    static std::string ogreMeshName(const String& name);
     std::string ogreMovableName()const;
 
-
-    const SpaceObjectReference&id()const{
-        return mProxy->getObjectReference();
+    const String& id()const{
+        return mName;
     }
 
     void setVisible(bool vis);
 
-    void bindTexture(const std::string &textureName, const SpaceObjectReference &objId);
+    void bindTexture(const std::string &textureName, const String& objId);
     void unbindTexture(const std::string &textureName);
 
     void processMesh(Transfer::URI const& newMesh);
-
-    void downloadFinished(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-        std::tr1::shared_ptr<const Transfer::DenseData> response, Mesh::MeshdataPtr md);
 
     /** Load the mesh and use it for this entity
      *  \param meshname the name (ID) of the mesh to use for this entity
@@ -174,10 +151,6 @@ public:
 
     void unloadMesh();
 
-    // interface from MeshListener
-    public:
-        virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-        virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
 
     protected:
 
@@ -191,4 +164,4 @@ typedef std::tr1::shared_ptr<Entity> EntityPtr;
 }
 }
 
-#endif
+#endif //SIRIKATA_OGRE_ENTITY_HPP__
