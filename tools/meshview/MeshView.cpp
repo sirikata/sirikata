@@ -40,13 +40,26 @@
 
 #include <sirikata/ogre/Platform.hpp>
 #include <sirikata/ogre/OgreRenderer.hpp>
+#include <sirikata/ogre/Camera.hpp>
 
 #include <sirikata/core/trace/Trace.hpp>
 
-int main(int argc, char** argv) {
-    using namespace Sirikata;
-    using namespace Sirikata::Graphics;
+using namespace Sirikata;
+using namespace Sirikata::Graphics;
 
+class MeshViewCamera : public Graphics::Camera {
+public:
+  MeshViewCamera(OgreRenderer* scene)
+    : Graphics::Camera(scene, "MeshView")
+  {}
+
+  virtual Vector3d getGoalPosition() { return Vector3d(0, 0, 0); }
+  virtual Quaternion getGoalOrientation() { return Quaternion::identity(); }
+  virtual BoundingSphere3f getGoalBounds() { return BoundingSphere3f(Vector3f(0, 0, 0), 1.f); }
+
+};
+
+int main(int argc, char** argv) {
     InitOptions();
     ParseOptions(argc, argv);
 
@@ -64,10 +77,15 @@ int main(int argc, char** argv) {
     OgreRenderer* renderer = new OgreRenderer(ctx);
     renderer->initialize("");
 
+    MeshViewCamera* cam = new MeshViewCamera(renderer);
+    cam->initialize();
+    cam->attach("", 0, 0, Vector4f(.5,.5,.7,1));
+
     ctx->add(ctx);
     ctx->add(renderer);
     ctx->run(1);
 
+    delete cam;
     delete renderer;
 
     ctx->cleanup();
