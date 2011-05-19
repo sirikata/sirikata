@@ -74,6 +74,11 @@ public:
 
 int main(int argc, char** argv) {
     InitOptions();
+
+    InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
+        .addOption(new OptionValue("mesh","",Sirikata::OptionValueType<String>(),"Mesh to load and display."))
+        ;
+
     ParseOptions(argc, argv);
 
     PluginManager plugins;
@@ -99,7 +104,7 @@ int main(int argc, char** argv) {
     MeshViewEntity* ent = new MeshViewEntity(renderer);
     ent->setOgrePosition(Vector3d(0, 0, 0));
     ent->setOgreOrientation(Quaternion::identity());
-    ent->processMesh(Transfer::URI("meerkat:///benchristel/chapelzipped/chapel.dae/optimized/0/chapel.dae"));
+    ent->processMesh(Transfer::URI(GetOptionValue<String>("mesh")));
 
     ctx->add(ctx);
     ctx->add(renderer);
