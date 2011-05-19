@@ -33,6 +33,7 @@
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/CompositeFilter.hpp>
 
 #include <sirikata/ogre/Camera.hpp>
 #include <sirikata/ogre/Entity.hpp>
@@ -252,6 +253,12 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mResourcesDir(getOgreResourcesDir()),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) )
 {
+    {
+        std::vector<String> names_and_args;
+        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
+        names_and_args.push_back("center"); names_and_args.push_back("");
+        mModelFilter = new Mesh::CompositeFilter(names_and_args);
+    }
 }
 
 bool OgreRenderer::initialize(const String& options) {
@@ -857,7 +864,7 @@ void OgreRenderer::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fing
 
 void OgreRenderer::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
     Mesh::MeshdataPtr parsed = mModelParser->load(orig_uri, fp, data);
-    if (parsed) {
+    if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);
         Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);

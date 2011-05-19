@@ -94,10 +94,6 @@ protected:
     void updateScale(float scale);
     void updateVisibility();
 
-protected:
-    void setOgrePosition(const Vector3d &pos);
-    void setOgreOrientation(const Quaternion &orient);
-
 public:
     Entity(OgreRenderer *scene, const String& name);
     virtual ~Entity();
@@ -124,6 +120,9 @@ public:
     Ogre::Entity *getOgreEntity() const {
         return mOgreObject;
     }
+
+    void setOgrePosition(const Vector3d &pos);
+    void setOgreOrientation(const Quaternion &orient);
 
     Vector3d getOgrePosition();
     Quaternion getOgreOrientation();

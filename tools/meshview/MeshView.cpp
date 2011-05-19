@@ -41,6 +41,7 @@
 #include <sirikata/ogre/Platform.hpp>
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/Camera.hpp>
+#include <sirikata/ogre/Entity.hpp>
 
 #include <sirikata/core/trace/Trace.hpp>
 
@@ -50,13 +51,25 @@ using namespace Sirikata::Graphics;
 class MeshViewCamera : public Graphics::Camera {
 public:
   MeshViewCamera(OgreRenderer* scene)
-    : Graphics::Camera(scene, "MeshView")
+    : Graphics::Camera(scene, "MeshView") // Only support 1 camera
   {}
+    virtual ~MeshViewCamera() {}
 
-  virtual Vector3d getGoalPosition() { return Vector3d(0, 0, 0); }
+  virtual Vector3d getGoalPosition() { return Vector3d(0, 0, 2); }
   virtual Quaternion getGoalOrientation() { return Quaternion::identity(); }
   virtual BoundingSphere3f getGoalBounds() { return BoundingSphere3f(Vector3f(0, 0, 0), 1.f); }
 
+};
+
+class MeshViewEntity : public Graphics::Entity {
+public:
+    MeshViewEntity(OgreRenderer* scene)
+     : Graphics::Entity(scene, "MeshViewEntity") // Only support 1 entity
+    {}
+    virtual ~MeshViewEntity() {}
+
+    virtual BoundingSphere3f bounds() { return BoundingSphere3f(Vector3f(0,0,0), 1.f); }
+    virtual float32 priority() { return 1.f; }
 };
 
 int main(int argc, char** argv) {
@@ -65,6 +78,8 @@ int main(int argc, char** argv) {
 
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
+    // FIXME this should be an option
+    plugins.loadList( "colladamodels,common-filters,nvtt" );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* iostrand = ios->createStrand();
@@ -79,12 +94,18 @@ int main(int argc, char** argv) {
 
     MeshViewCamera* cam = new MeshViewCamera(renderer);
     cam->initialize();
-    cam->attach("", 0, 0, Vector4f(.5,.5,.7,1));
+    cam->attach("", 0, 0, Vector4f(.7,.7,.7,1));
+
+    MeshViewEntity* ent = new MeshViewEntity(renderer);
+    ent->setOgrePosition(Vector3d(0, 0, 0));
+    ent->setOgreOrientation(Quaternion::identity());
+    ent->processMesh(Transfer::URI("meerkat:///benchristel/chapelzipped/chapel.dae/optimized/0/chapel.dae"));
 
     ctx->add(ctx);
     ctx->add(renderer);
     ctx->run(1);
 
+    delete ent;
     delete cam;
     delete renderer;
 

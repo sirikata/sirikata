@@ -53,8 +53,6 @@
 #include <sirikata/core/util/KnownMessages.hpp>
 #include <sirikata/core/util/KnownScriptTypes.hpp>
 
-#include <sirikata/mesh/CompositeFilter.hpp>
-
 using namespace std;
 
 namespace Sirikata {
@@ -74,13 +72,6 @@ OgreSystem::OgreSystem(Context* ctx)
     mSceneManager=NULL;
     mMouseHandler=NULL;
     mRayQuery=NULL;
-
-    {
-        std::vector<String> names_and_args;
-        names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
-        names_and_args.push_back("center"); names_and_args.push_back("");
-        mModelFilter = new Mesh::CompositeFilter(names_and_args);
-    }
 }
 
 

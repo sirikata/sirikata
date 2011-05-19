@@ -999,6 +999,7 @@ bool Entity::tryInstantiateExistingMesh(const String& meshname) {
 
 void Entity::createMesh() {
     MeshdataPtr mdptr = mAssetDownload->asset();
+    if (!mdptr) return;
 
     SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();
