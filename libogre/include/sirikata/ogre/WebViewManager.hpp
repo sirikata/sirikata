@@ -97,7 +97,7 @@ public:
 	*                      WebView::loadHTML (to resolve relative URLs).
 	* @throws Ogre::Exception::ERR_INTERNAL_ERROR When initialization fails
 	*/
-    WebViewManager(Ogre::Viewport* defaultViewport, Input::InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory);
+    WebViewManager(Ogre::Viewport* defaultViewport, Sirikata::Input::InputManager* inputMgr, const std::string& binDirectory, const std::string& baseDirectory);
 
 	/**
 	* Destroys any active WebViews, the WebViewMouse singleton (if instantiated).
@@ -239,7 +239,7 @@ public:
     bool injectCopy();
     bool injectPaste();
 
-    bool injectKeyEvent(bool pressed, bool repeat, Input::Modifier mod, Input::KeyButton button);
+    bool injectKeyEvent(bool pressed, bool repeat, Sirikata::Input::Modifier mod, Sirikata::Input::KeyButton button);
 
 	bool injectTextEvent(std::string utf8);
 
@@ -301,7 +301,7 @@ protected:
 	void handleTooltip(WebView* tooltipParent, const std::wstring& tipText);
 	void handleRequestDrag(WebView* caller);
 
-    Input::InputManager* mInputManager;
+    Sirikata::Input::InputManager* mInputManager;
 
     /** Callback which generates WebView events due to a script in a WebView.  This is the portal
      *  from Javascript into the InputEvent system.

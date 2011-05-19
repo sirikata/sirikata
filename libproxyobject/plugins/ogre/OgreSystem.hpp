@@ -34,12 +34,10 @@
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
-#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
-#include <OgreWindowEventUtilities.h>
 #include "resourceManager/ResourceDownloadPlanner.hpp"
 #include "resourceManager/DistanceDownloadPlanner.hpp"
 #include "resourceManager/SAngleDownloadPlanner.hpp"
@@ -48,9 +46,6 @@
 #include <sirikata/core/task/WorkQueue.hpp>
 
 #include <sirikata/ogre/OgreRenderer.hpp>
-
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
-#include <sirikata/mesh/Filter.hpp>
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -65,34 +60,20 @@ class SubEntity;
 
 namespace Sirikata {
 class ProxyObject;
-namespace Input {
-class SDLInputManager;
-}
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
-class Entity;
 class ProxyEntity;
-using Input::SDLInputManager;
-class Camera;
 class ProxyCamera;
 class CubeMap;
 struct IntersectResult;
-class CDNArchivePlugin;
 class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public OgreRenderer, public TimeSteppedQueryableSimulation, protected SessionEventListener, public Ogre::WindowEventListener
+class OgreSystem: public OgreRenderer, protected SessionEventListener
 {
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
 
-    Vector4f mBackgroundColor;
-
-    // FIXME because we don't have proper multithreaded support in cppoh, we
-    // need to allocate our own thread dedicated to parsing
-    Network::IOService* mParsingIOService;
-    Network::IOWork* mParsingWork;
-    Thread* mParsingThread;
 
     friend class OgreSystemMouseHandler;
     OgreSystemMouseHandler *mMouseHandler;
@@ -100,65 +81,12 @@ class OgreSystem: public OgreRenderer, public TimeSteppedQueryableSimulation, pr
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
-    SDLInputManager *mInputManager;
-    Ogre::SceneManager *mSceneManager;
-    bool mOgreOwnedRenderWindow;
-    static Ogre::RenderTarget *sRenderTarget;
-    Ogre::RenderTarget *mRenderTarget;
-    Ogre::RenderWindow *mRenderWindow; // Should be the same as mRenderTarget,
-                                       // but we need the RenderWindow form to
-                                       // deal with window events.
-
-    OptionValue*mWindowWidth;
-    OptionValue*mWindowHeight;
-    OptionValue*mWindowDepth;
-    OptionValue*mFullScreen;
-    OptionValue* mOgreRootDir;
-    ///How many seconds we aim to spend in each frame
-    OptionValue*mFrameDuration;
-    OptionSet*mOptions;
-    Task::LocalTime mLastFrameTime;
-    static Ogre::Plugin* sCDNArchivePlugin;
-    static Ogre::Root* sRoot;
-    static CDNArchivePlugin* mCDNArchivePlugin;
-
-    String mResourcesDir;
-
-    // FIXME need to support multiple parsers, see #124
-    ModelsSystem* mModelParser;
-    Mesh::Filter* mModelFilter;
-
-    Transfer::TransferPoolPtr mTransferPool;
-
-    OptionValue* mModelLights; // Use model or basic lights
-
-    bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
-    // Loads system lights if they are being used.
-    void loadSystemLights();
-    // Helper for loadSystemLights.
-    void constructSystemLight(const String& name, const Vector3f& direction, float brightness);
 
-    bool renderOneFrame(Task::LocalTime, Duration frameTime);
-    ///all the things that should happen just before the frame
-    void preFrame(Task::LocalTime, Duration);
-    ///all the things that should happen once the frame finishes
-    void postFrame(Task::LocalTime, Duration);
 
     void screenshot(const String& filename);
 
-    void toggleSuspend();
-    void suspend();
-    void resume();
-
-    // Initiate quiting by indicating to the main loop that we want to shut down
-    void quit();
-
-    bool mQuitRequested;
-    bool mQuitRequestHandled;
-
-    bool mSuspended;
 
 
     Ogre::RaySceneQuery* mRayQuery;
@@ -172,11 +100,7 @@ class OgreSystem: public OgreRenderer, public TimeSteppedQueryableSimulation, pr
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
 public:
-    OptionValue *mParallaxSteps;
-    OptionValue *mParallaxShadowSteps;
-    static std::list<OgreSystem*> sActiveOgreScenes;
-    static uint32 sNumOgreSystems;
-    std::tr1::unordered_set<Camera*> mAttachedCameras;
+
     ProxyCamera *mPrimaryCamera;
 
     // For classes that only have access to OgreSystem and not a Context
@@ -187,22 +111,9 @@ public:
 
     String getResourcesDir() const { return mResourcesDir; }
 
-    bool useModelLights() const;
-
     ProxyCamera*getPrimaryCamera() {
         return mPrimaryCamera;
     }
-    SDLInputManager *getInputManager() {
-        return mInputManager;
-    }
-    OptionSet*getOptions(){
-        return mOptions;
-    }
-    const OptionSet*getOptions()const{
-        return mOptions;
-    }
-
-
 
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
@@ -242,12 +153,18 @@ public:
                      double &returnResult,
                      int&subent,
                      int which=0) const;
-    virtual Duration desiredTickRate()const;
-    ///returns if rendering should continue
-    virtual void poll();
-    virtual void stop();
-    static Ogre::Root *getRoot();
 
+
+    virtual void windowResized(Ogre::RenderWindow *rw);
+
+    virtual void poll();
+
+    virtual bool renderOneFrame(Task::LocalTime t, Duration frameTime);
+    virtual void preFrame(Task::LocalTime currentTime, Duration frameTime);
+    virtual void postFrame(Task::LocalTime current, Duration frameTime);
+
+
+    // ProxyCreationListener
     virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
     virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from
                                                    // ProxyCreationListener
@@ -255,40 +172,11 @@ public:
 
 
     // *******
-    // OgreRenderer Interface
-    // Event injection for SDL created windows.
-    void injectWindowResized(uint32 w, uint32 h);
-
-    virtual Transfer::TransferPoolPtr transferPool();
-
-    virtual Ogre::SceneManager* getSceneManager();
-
-    virtual Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, int pixelFmt);
-    ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
-    virtual Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
-    virtual void destroyRenderTarget(Ogre::ResourcePtr &name);
-    virtual void destroyRenderTarget(const String &name);
-    virtual Ogre::RenderTarget *getRenderTarget();
-
-    virtual float32 nearPlane();
-    virtual float32 farPlane();
-    virtual float32 parallaxSteps();
-    virtual int32 parallaxShadowSteps();
 
     virtual void attachCamera(const String&renderTargetName,Camera*);
     virtual void detachCamera(Camera*);
 
-    void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
-private:
-    void parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
-public:
-
     // *******
-
-
-
-    // Ogre::WindowEventListener Interface overloads
-    virtual void windowResized(Ogre::RenderWindow *rw);
 
     // ConnectionEventListener Interface
     virtual void onConnected(const Network::Address& addr);

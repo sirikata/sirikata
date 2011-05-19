@@ -67,12 +67,12 @@ public:
     void ensureUI();
     void windowResized(uint32 w, uint32 h);
 private:
-    void delegateEvent(Input::InputEventPtr inputev);
+    void delegateEvent(Sirikata::Input::InputEventPtr inputev);
 
     // Gets the current set of modifiers from the input system. Used for mouse
     // events exposed via Invokable interface since the internal mouse events
     // don't come with modifiers.
-    Input::Modifier getCurrentModifiers() const;
+    Sirikata::Input::Modifier getCurrentModifiers() const;
 
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
     ProxyEntity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
@@ -109,7 +109,7 @@ private:
 
     OgreSystem *mParent;
     std::vector<Task::SubscriptionId> mEvents;
-    typedef std::multimap<Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
+    typedef std::multimap<Sirikata::Input::InputDevice*, Task::SubscriptionId> DeviceSubMap;
     DeviceSubMap mDeviceSubscriptions;
 
     Invokable* mDelegate;

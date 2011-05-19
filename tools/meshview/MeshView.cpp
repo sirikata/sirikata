@@ -41,6 +41,8 @@
 #include <sirikata/ogre/Platform.hpp>
 #include <sirikata/ogre/OgreRenderer.hpp>
 
+#include <sirikata/core/trace/Trace.hpp>
+
 int main(int argc, char** argv) {
     using namespace Sirikata;
     using namespace Sirikata::Graphics;
@@ -54,11 +56,27 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* iostrand = ios->createStrand();
 
-    //OgreRenderer* renderer = new OgreRenderer();
+    Trace::Trace* trace = new Trace::Trace("meshview.log");
+    Time epoch = Timer::now();
 
-    ios->run();
+    Context* ctx = new Context("MeshView", ios, iostrand, trace, epoch);
 
-    //delete renderer;
+    OgreRenderer* renderer = new OgreRenderer(ctx);
+    renderer->initialize("");
+
+    ctx->add(ctx);
+    ctx->add(renderer);
+    ctx->run(1);
+
+    delete renderer;
+
+    ctx->cleanup();
+    trace->prepareShutdown();
+
+    delete ctx;
+
+    trace->shutdown();
+    delete trace;
 
     delete iostrand;
     Network::IOServiceFactory::destroyIOService(ios);
