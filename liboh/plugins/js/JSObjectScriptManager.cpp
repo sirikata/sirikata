@@ -202,7 +202,8 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("serialize"), v8::FunctionTemplate::New(JSSystem::root_serialize));
     mSystemTemplate->Set(v8::String::New("deserialize"), v8::FunctionTemplate::New(JSSystem::root_deserialize));
-    
+
+    mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
 
     
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));

@@ -325,7 +325,7 @@ if(system == undefined)
           return this.createSandbox.apply(this,arguments);//baseSystem.create_context.apply(baseSystem, arguments);
       };
 
-
+     
       /** @function
        @description Creates a new sandbox with associated capabilities
        @type context
@@ -545,6 +545,31 @@ if(system == undefined)
             baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback),position,space);
         };
 
+
+     
+     /**
+      @param {string} sporef,
+      @param {vec3} pos,
+      @param {vec3} vel,
+      @param {string} posTime,
+      @param {quaternion} orient,
+      @param {quaternion} orientVel,
+      @param {string} orientTime,
+      @param {string} mesh,
+      @param {number} scale,
+      @param {boolean} isCleared ,
+      @param {uint32} contextId,
+      @param {boolean} isConnected,
+      @param {boolean} hasConnectedCallback,
+      @param {function,null(if hasCC is false)} connectedCallback,
+      @param {boolean} isSuspended,
+      @param {vec3} suspendedVelocity,
+      @param {quaternion} suspendedOrientationVelocity,
+      */
+     system.restorePresence = function()
+     {
+         return baseSystem.restorePresence.apply(baseSystem,arguments);
+     };
       
       /** @deprecated Use createPresence */
       system.create_presence = function()

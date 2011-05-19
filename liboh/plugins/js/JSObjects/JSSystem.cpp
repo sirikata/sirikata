@@ -15,7 +15,7 @@
 #include "../JSEntityCreateInfo.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "JSVec3.hpp"
-
+#include "JSQuaternion.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -519,7 +519,176 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 }
 
 
+/**
+   @param {string} sporef,
+   @param {vec3} pos,
+   @param {vec3} vel,
+   @param {string} posTime,
+   @param {quaternion} orient,
+   @param {quaternion} orientVel,
+   @param {string} orientTime,
+   @param {string} mesh,
+   @param {number} scale,
+   @param {boolean} isCleared ,
+   @param {uint32} contextId,
+   @param {boolean} isConnected,
+   @param {boolean} hasConnectedCallback,
+   @param {function, null (if hasCC is false)} connectedCallback,
+   @param {boolean} isSuspended,
+   @param {vec3,optional} suspendedVelocity,
+   @param {quaternion,optional} suspendedOrientationVelocity,
+ */
+v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 17)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
+    v8::Handle<v8::Value> mSporefArg                       = args[0];
+    v8::Handle<v8::Value> posArg                           = args[1];
+    v8::Handle<v8::Value> velArg                           = args[2];
+    v8::Handle<v8::Value> posTimeArg                       = args[3];
+    v8::Handle<v8::Value> orientArg                        = args[4];
+    v8::Handle<v8::Value> orientVelArg                     = args[5];
+    v8::Handle<v8::Value> orientTimeArg                    = args[6];
+    v8::Handle<v8::Value> meshArg                          = args[7];
+    v8::Handle<v8::Value> scaleArg                         = args[8];
+    v8::Handle<v8::Value> isClearedArg                     = args[9];
+    v8::Handle<v8::Value> contextIDArg                     = args[10];
+    v8::Handle<v8::Value> isConnectedArg                   = args[11];
+    v8::Handle<v8::Value> hasConnectedCallbackArg          = args[12];
+    v8::Handle<v8::Value> connectedCallbackArg             = args[13];
+    v8::Handle<v8::Value> isSuspendedArg                   = args[14];
+    v8::Handle<v8::Value> suspendedVelocityArg             = args[15];
+    v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[16];
+
+
+    //now, it's time to decode them.
+    
+    String baseErrMsg = "Error in restorePresence.  Could not decode ";
+
+    String specificErrMsg =baseErrMsg + "sporef.";
+    SpaceObjectReference mSporef;
+    bool sporefDecoded = decodeSporef(mSporefArg, mSporef, specificErrMsg);
+    if (! sporefDecoded)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    TimedMotionVector3f mPos;
+    specificErrMsg = baseErrMsg + "timed motion vector.";
+    bool mPosDecoded = decodeTimedMotionVector(posArg,velArg,posTimeArg,mPos,specificErrMsg);
+    if (! mPosDecoded)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    TimedMotionQuaternion mOrient;
+    specificErrMsg = baseErrMsg + "timed motion quaternion.";
+    bool mOrientDecoded = decodeTimedMotionQuat(orientArg,orientVelArg,orientTimeArg,mOrient,specificErrMsg);
+    if (! mOrientDecoded)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    String mesh;
+    specificErrMsg = baseErrMsg + "mesh.";
+    bool meshDecodeSuccessful = decodeString(meshArg, mesh, specificErrMsg);
+    if (! meshDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    specificErrMsg = baseErrMsg + "scale.";
+    if (! NumericValidate(scaleArg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    double scale = NumericExtract(scaleArg);
+
+    bool isCleared;
+    specificErrMsg = baseErrMsg + "isCleared.";
+    bool isClearedDecodeSuccessful = decodeBool(isClearedArg, isCleared, specificErrMsg);
+    if (! isClearedDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    uint32 contextID;
+    specificErrMsg = baseErrMsg + "contextID.";
+    bool contextIDDecodeSuccessful = decodeUint32(contextIDArg, contextID, specificErrMsg);
+    if (! contextIDDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    bool isConnected;
+    specificErrMsg = baseErrMsg + "isConnected.";
+    bool isConnectedDecodeSuccessful = decodeBool(isConnectedArg, isConnected, specificErrMsg);
+    if (! isConnectedDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    
+
+    bool hasConnectedCallback;
+    specificErrMsg = baseErrMsg + "hasConnectedCallback.";
+    bool hasConnectedCallbackDecodeSuccessful = decodeBool(hasConnectedCallbackArg, hasConnectedCallback, specificErrMsg);
+    if (! hasConnectedCallbackDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    
+    specificErrMsg = baseErrMsg + "connectedCallback.";
+
+    v8::Handle<v8::Function>connCB;
+    if (hasConnectedCallback)
+    {
+        if (! connectedCallbackArg->IsFunction())
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+        else
+        {
+            connCB = v8::Handle<v8::Function>::Cast(connectedCallbackArg);
+        }
+    }
+
+    
+    bool isSuspended;
+    specificErrMsg = baseErrMsg + "isSuspended.";
+    bool isSuspendedDecodeSuccessful = decodeBool(isSuspendedArg, isSuspended, specificErrMsg);
+    if (! isSuspendedDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    Vector3f suspendedVelocity;
+    specificErrMsg = baseErrMsg + "suspendedVelocity.";
+    if (!Vec3ValValidate(suspendedVelocityArg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    suspendedVelocity = Vec3ValExtractF(suspendedVelocityArg);
+
+    Quaternion suspendedOrientationVelocity;
+    specificErrMsg = baseErrMsg + "suspendedOrientationVelocity.";
+    if (!QuaternionValValidate(suspendedOrientationVelocityArg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    suspendedOrientationVelocity = QuaternionValExtract(suspendedOrientationVelocityArg);
+
+
+
+
+    //decode system.
+    String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
+
+    PresStructRestoreParams restParams(
+        &mSporef,
+        &mPos,
+        &mOrient,
+        &mesh,
+        &scale,
+        &isCleared,
+        &contextID,
+        &isConnected,
+        &hasConnectedCallback,
+        (hasConnectedCallback? &connCB : NULL),
+        &isSuspended,
+        &suspendedVelocity,
+        &suspendedOrientationVelocity);
+
+    return handle_scope.Close(jssys->restorePresence(restParams));
+}
+
+                                                                                                                  
 /**
    @param String that contains a uri for a mesh for the new presence.
    @param Function to be called when presence gets connected to the world.

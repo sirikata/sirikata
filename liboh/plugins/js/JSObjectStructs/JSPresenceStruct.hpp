@@ -11,6 +11,45 @@
 namespace Sirikata {
 namespace JS {
 
+struct PresStructRestoreParams
+{
+    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,bool* hasConnectedCallback,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity)
+        : mSporef(sporef),
+          mTmv3f(tmv3f),
+          mTmq(tmq),
+          mMesh(mesh),
+          mScale(scale),
+          mIsCleared(isCleared),
+          mContID(contID),
+          mIsConnected(isConnected),
+          mHasConnectedCallback(hasConnectedCallback),
+          mConnCallback(connCallback),
+          mIsSuspended(isSuspended),
+          mSuspendedVelocity(suspendedVelocity),
+          mSuspendedOrientationVelocity(suspendedOrientationVelocity)
+    {
+    }
+
+    SpaceObjectReference* mSporef;
+    TimedMotionVector3f* mTmv3f;
+    TimedMotionQuaternion* mTmq;
+    String* mMesh;
+    double* mScale;
+    bool *mIsCleared;
+    uint32* mContID;
+    bool* mIsConnected;
+    bool* mHasConnectedCallback;
+    v8::Handle<v8::Function>* mConnCallback;
+    bool* mIsSuspended;
+    Vector3f* mSuspendedVelocity;
+    Quaternion* mSuspendedOrientationVelocity;
+
+    
+};
+
+
+
+
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 class JSPositionListener;

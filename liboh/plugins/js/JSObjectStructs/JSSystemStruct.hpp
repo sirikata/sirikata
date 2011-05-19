@@ -43,7 +43,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, VisAddParams* addParams);
 
-    
+    v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
     v8::Handle<v8::Value> struct_getPosition();
 

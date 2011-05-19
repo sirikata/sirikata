@@ -15,6 +15,19 @@
 namespace Sirikata{
 namespace JS{
 
+bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& errMsg)
+{
+    if (!toDecode->IsUint32())
+    {
+        errMsg += "  Could not decode as uint32.";
+        return false;
+    }
+    
+    toDecodeTo = toDecode->ToUint32()->Value();
+
+    return true;
+}
+
 
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)
 {

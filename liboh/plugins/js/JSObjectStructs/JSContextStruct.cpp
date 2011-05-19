@@ -48,6 +48,11 @@ uint32 JSContextStruct::getContextID()
     return mContextID;
 }
 
+v8::Handle<v8::Value> JSContextStruct::restorePresence(PresStructRestoreParams& psrp)
+{
+    return jsObjScript->restorePresence(psrp);
+}
+
 
 //performs the initialization and population of util object, system object,
 //and system object's presences array.

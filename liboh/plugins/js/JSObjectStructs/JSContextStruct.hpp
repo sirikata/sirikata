@@ -78,6 +78,8 @@ struct JSContextStruct : public JSSuspendable
     
     v8::Handle<v8::Value> struct_rootReset();
 
+    v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
+    
     //when add a handler, timer, when inside of context, want to register them.
     //That way, when call suspend on context and resume on context, can
     //suspend/resume them.

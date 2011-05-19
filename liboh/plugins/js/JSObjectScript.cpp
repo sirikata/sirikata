@@ -680,7 +680,6 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
         UUID::null(),
         ObjectReference::null()
     );
-
 }
 
 
@@ -1570,6 +1569,12 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
   return pf;
+}
+
+
+v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& psrp)
+{
+    lkjs;
 }
 
 

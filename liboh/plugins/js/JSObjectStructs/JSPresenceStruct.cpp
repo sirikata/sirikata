@@ -58,16 +58,15 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
 
     bool issusp = getIsSuspended();
     returner->Set(v8::String::New("isSuspended"), v8::Boolean::New(issusp));
-    if (issusp)
-    {
-        if (!v8::Context::InContext())
-            return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in get all data of presences truct.  not currently in a v8 context.")));
 
-        v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
+    if (!v8::Context::InContext())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in get all data of presences truct.  not currently in a v8 context.")));
 
-        returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
-        returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
-    }
+    v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
+
+    returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
+    returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
+
     
     return handle_scope.Close(returner);
 }
