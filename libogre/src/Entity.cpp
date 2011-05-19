@@ -45,6 +45,11 @@ namespace Graphics {
 
 using namespace Sirikata::Mesh;
 
+
+EntityListener::~EntityListener() {
+}
+
+
 static void fixOgreURI(String &uri) {
     for (String::iterator i=uri.begin();i!=uri.end();++i) {
         if(*i=='.') *i='{';
@@ -365,6 +370,8 @@ void Entity::loadMesh(const String& meshname)
 
     init(new_entity);
     fixTextures();
+
+    notify(&EntityListener::entityLoaded, this, true);
 }
 
 void Entity::unloadMesh() {
@@ -999,7 +1006,10 @@ bool Entity::tryInstantiateExistingMesh(const String& meshname) {
 
 void Entity::createMesh() {
     MeshdataPtr mdptr = mAssetDownload->asset();
-    if (!mdptr) return;
+    if (!mdptr) {
+        notify(&EntityListener::entityLoaded, this, false);
+        return;
+    }
 
     SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();

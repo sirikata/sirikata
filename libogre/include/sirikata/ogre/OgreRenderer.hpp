@@ -127,7 +127,7 @@ public:
 
 
     // Ogre::WindowEventListener Interface overloads
-    virtual void windowResized(Ogre::RenderWindow *rw) {}
+    virtual void windowResized(Ogre::RenderWindow *rw);
 
     // Options values
     virtual float32 nearPlane();
@@ -154,6 +154,9 @@ public:
      */
     void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
 
+
+    void screenshot(const String& filename);
+    void screenshotNextFrame(const String& filename);
   protected:
     static Ogre::Root *getRoot();
 
@@ -237,10 +240,16 @@ public:
                                         // location. register by Entity, but
                                         // only ProxyEntities use it
 
-    std::tr1::unordered_set<Camera*> mAttachedCameras;
+    typedef std::tr1::unordered_set<Camera*> CameraSet;
+    CameraSet mAttachedCameras;
 
     friend class Entity; //Entity will insert/delete itself from these arrays.
-    friend class Camera; //CameraEntity will insert/delete itself from the scene cameras array.
+    friend class Camera; //CameraEntity will insert/delete itself from the scene
+                         //cameras array.
+
+    // To simplify taking screenshots after a specific event has occurred, we
+    // allow them to be taken on the next frame.
+    String mNextFrameScreenshotFile;
 };
 
 } // namespace Graphics

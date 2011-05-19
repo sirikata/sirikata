@@ -43,13 +43,23 @@
 
 #include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
 
+#include <sirikata/core/util/ListenerProvider.hpp>
+
 namespace Sirikata {
 namespace Graphics {
 
 class OgreRenderer;
+class Entity;
+
+class SIRIKATA_OGRE_EXPORT EntityListener {
+  public:
+    virtual ~EntityListener();
+
+    virtual void entityLoaded(Entity* ent, bool success) {}
+};
 
 /** Base class for objects represented in Ogre as a mesh. */
-class SIRIKATA_OGRE_EXPORT Entity {
+class SIRIKATA_OGRE_EXPORT Entity : public Provider<EntityListener*> {
 public:
     typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
     typedef std::map<String, String > TextureBindingsMap;

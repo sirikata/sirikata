@@ -85,10 +85,6 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
     bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
 
 
-    void screenshot(const String& filename);
-
-
-
     Ogre::RaySceneQuery* mRayQuery;
     CubeMap *mCubeMap;
     ProxyEntity* internalRayTrace(const Ogre::Ray &traceFrom,

@@ -61,15 +61,32 @@ public:
 
 };
 
-class MeshViewEntity : public Graphics::Entity {
+class MeshViewEntity : public Graphics::Entity, public Graphics::EntityListener {
 public:
-    MeshViewEntity(OgreRenderer* scene)
-     : Graphics::Entity(scene, "MeshViewEntity") // Only support 1 entity
-    {}
+    MeshViewEntity(OgreRenderer* scene, const String& screenshot)
+     : Graphics::Entity(scene, "MeshViewEntity"), // Only support 1 entity
+       mScreenshot(screenshot)
+    {
+        this->addListener(this);
+    }
     virtual ~MeshViewEntity() {}
 
+    // Entity Interface
     virtual BoundingSphere3f bounds() { return BoundingSphere3f(Vector3f(0,0,0), 1.f); }
     virtual float32 priority() { return 1.f; }
+
+    // Entity Listener Interface
+    virtual void entityLoaded(Entity* ent, bool success) {
+        if (!mScreenshot.empty()) {
+            if (success)
+                mScene->screenshotNextFrame(mScreenshot);
+            else
+                SILOG(meshview,error, "Failed to load mesh.");
+            mScene->quit();
+        }
+    }
+private:
+    String mScreenshot;
 };
 
 int main(int argc, char** argv) {
@@ -77,6 +94,7 @@ int main(int argc, char** argv) {
 
     InitializeClassOptions::module(SIRIKATA_OPTIONS_MODULE)
         .addOption(new OptionValue("mesh","",Sirikata::OptionValueType<String>(),"Mesh to load and display."))
+        .addOption(new OptionValue("screenshot","",Sirikata::OptionValueType<String>(),"If non-empty, trigger a screenshot to the given filename and exit."))
         ;
 
     ParseOptions(argc, argv);
@@ -101,7 +119,7 @@ int main(int argc, char** argv) {
     cam->initialize();
     cam->attach("", 0, 0, Vector4f(.7,.7,.7,1));
 
-    MeshViewEntity* ent = new MeshViewEntity(renderer);
+    MeshViewEntity* ent = new MeshViewEntity(renderer, GetOptionValue<String>("screenshot"));
     ent->setOgrePosition(Vector3d(0, 0, 0));
     ent->setOgreOrientation(Quaternion::identity());
     ent->processMesh(Transfer::URI(GetOptionValue<String>("mesh")));

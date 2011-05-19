@@ -251,7 +251,8 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mFloatingPointOffset(0,0,0),
    mLastFrameTime(Task::LocalTime::now()),
    mResourcesDir(getOgreResourcesDir()),
-   mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) )
+   mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
+   mNextFrameScreenshotFile("")
 {
     {
         std::vector<String> names_and_args;
@@ -300,7 +301,7 @@ bool OgreRenderer::initialize(const String& options) {
 #define SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT "768"
 #endif
                            mWindowHeight=new OptionValue("windowheight",SIRIKATA_OGRE_DEFAULT_WINDOW_HEIGHT,OptionValueType<uint32>(),"Window height"),
-                           mWindowDepth=new OptionValue("colordepth","8",OgrePixelFormatParser(),"Pixel color depth"),
+                           mWindowDepth=new OptionValue("colordepth","8a",OgrePixelFormatParser(),"Pixel color depth"),
                            renderBufferAutoMipmap=new OptionValue("rendertargetautomipmap","false",OptionValueType<bool>(),"If the render target needs auto mipmaps generated"),
                            mFrameDuration=new OptionValue("fps","30",FrequencyType(),"Target framerate"),
                            shadowTechnique=new OptionValue("shadows","none",ShadowType(),"Shadow Style=[none,texture_additive,texture_modulative,stencil_additive,stencil_modulaive]"),
@@ -754,6 +755,11 @@ bool OgreRenderer::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTi
         (*iter++)->postFrame(postFrameTime, postFrameDelta);
     }
 
+    if (!mNextFrameScreenshotFile.empty()) {
+        screenshot(mNextFrameScreenshotFile);
+        mNextFrameScreenshotFile = "";
+    }
+
     static int counter=0;
     counter++;
 
@@ -818,17 +824,24 @@ boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
     return boost::any();
 }
 
-
 void OgreRenderer::injectWindowResized(uint32 w, uint32 h) {
     // You might think we would do this:
     //   mRenderWindow->windowMovedOrResized();
     // but it turns out that Ogre isn't handling externally created windows
     // properly. Instead, we force a resize directly.
-    if (!mOgreOwnedRenderWindow)
+    if (!mOgreOwnedRenderWindow) {
         mRenderWindow->resize(w, h);
+    }
     // Then, we force the resize event because apparently calling resize()
     // doesn't trigger it.
     windowResized(mRenderWindow);
+}
+
+void OgreRenderer::windowResized(Ogre::RenderWindow *rw) {
+    SILOG(ogre,insane,"Ogre resized window: " << rw->getWidth() << "x" << rw->getHeight());
+
+    for(CameraSet::iterator cam_it = mAttachedCameras.begin(); cam_it != mAttachedCameras.end(); cam_it++)
+        (*cam_it)->windowResized();
 }
 
 float32 OgreRenderer::nearPlane() {
@@ -872,6 +885,15 @@ void OgreRenderer::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::
         parsed = output_data->get();
     }
     mContext->mainStrand->post(std::tr1::bind(cb, parsed));
+}
+
+void OgreRenderer::screenshot(const String& filename) {
+    if (mRenderTarget != NULL)
+        mRenderTarget->writeContentsToFile(filename);
+}
+
+void OgreRenderer::screenshotNextFrame(const String& filename) {
+    mNextFrameScreenshotFile = filename;
 }
 
 } // namespace Graphics
