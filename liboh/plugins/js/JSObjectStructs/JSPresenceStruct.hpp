@@ -39,7 +39,6 @@ struct PresStructRestoreParams
     bool *mIsCleared;
     uint32* mContID;
     bool* mIsConnected;
-    bool* mHasConnectedCallback;
     v8::Handle<v8::Function>* mConnCallback;
     bool* mIsSuspended;
     Vector3f* mSuspendedVelocity;
@@ -145,7 +144,6 @@ struct JSPresenceStruct : public JSPositionListener,
 
 
 private:
-    bool mRestoring;
     uint32 mContID;
     
     //this function checks if we have a callback associated with this presence.

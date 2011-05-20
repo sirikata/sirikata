@@ -642,6 +642,8 @@ void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, Hoste
             mPresences[name] = *iter;
             (*iter)->connect(name);
             mUnconnectedPresences.erase(iter);
+            std::cout<<"\n\nDEBUG: Executing callbackUnconnected!\n\n";
+            
             return;
         }
     }
@@ -1493,6 +1495,7 @@ JSPresenceStruct*  JSObjectScript::addConnectedPresence(const SpaceObjectReferen
 //wraps the presence in a v8 object and returns it.
 v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
 {
+    v8::HandleScope handle_scope;
     v8::Handle<v8::Context> ctx = (ctxToWrapIn == NULL) ? mContext->mContext : *ctxToWrapIn;
     v8::Context::Scope context_scope(ctx);
 
@@ -1500,7 +1503,7 @@ v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap,
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToWrap));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 
-    return js_pres;
+    return handle_scope.Close(js_pres);
 }
 
 
@@ -1615,8 +1618,14 @@ v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& p
             UUID::null(),
             psrp.mSporef->object(),
             presToke);
+
+        mUnconnectedPresences.push_back(jspres);
+
+        return v8::Null();        
     }
-    return v8::Undefined();
+    //if is unconnected, return presence now.
+    v8::HandleScope handle_scope;
+    return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
 }
         
 

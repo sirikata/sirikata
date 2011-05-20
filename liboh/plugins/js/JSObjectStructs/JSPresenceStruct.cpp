@@ -5,6 +5,7 @@
 #include "../JSSerializer.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
+#include "../JSObjects/JSQuaternion.hpp"
 #include "JSPositionListener.hpp"
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
@@ -17,12 +18,13 @@ namespace JS {
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent, NULL),
    JSSuspendable(),
-   mRestoring(false),
    mContID(ctx->getContextID()),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    isConnected(false),
    hasConnectedCallback(true),
    mPresenceToken(presenceToken),
+   mSuspendedVelocity(Vector3f::nil()),
+   mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx)
 {
     mContext->struct_registerSuspendable(this);
@@ -32,11 +34,12 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Functi
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
-   mRestoring(false),
    mContID(ctx->getContextID()),
    isConnected(true),
    hasConnectedCallback(false),
    mPresenceToken(presenceToken),
+   mSuspendedVelocity(Vector3f::nil()),
+   mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx)
 {
     mContext->struct_registerSuspendable(this);
@@ -47,8 +50,8 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
-   mRestoring(true),
    isConnected(false),
+   hasConnectedCallback(false),
    mPresenceToken(presToken),
    mContext(NULL)
 {
@@ -61,9 +64,12 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParam
     mSuspendedVelocity = *psrp.mSuspendedVelocity;
     mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
 
-    hasConnectedCallback = *psrp.mHasConnectedCallback;
-    if (hasConnectedCallback)
+
+    if (psrp.mConnCallback != NULL)
+    {
+        hasConnectedCallback = true;
         mOnConnectedCallback = v8::Persistent<v8::Function>::New(*psrp.mConnCallback);
+    }
 
     if (*psrp.mIsSuspended)
         suspend();
@@ -74,6 +80,8 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParam
     mContID = *psrp.mContID;
     if (mContID != jscont->getContextID())
         parent->registerFixupSuspendable(this,mContID);
+    else
+        mContext = jscont;
     
 
     if (psrp.mOnProxRemovedEventHandler != NULL)
@@ -111,7 +119,6 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in get all data of presences truct.  not currently in a v8 context.")));
 
     v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
-
     returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
 
@@ -174,11 +181,6 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 
 
 
-v8::Handle<v8::Value> JSPresenceStruct::doneRestoring()
-{
-    mRestoring = false;
-    return v8::Undefined();
-}
 
 //note will still receive a call to disconnect from JSObjectScript.cpp, so don't
 //do too much clean up here.
@@ -225,18 +227,25 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosAndMeshListener();
 
-    if (! mRestoring)
-        callConnectedCallback();
+    std::cout<<"\n\nDEBUG: in connect of jspresencestruct\n";
+    callConnectedCallback();
 }
 
 
 void JSPresenceStruct::callConnectedCallback()
 {
+    std::cout<<"\nDEBUG in callConnectedCallback\n";
     if (hasConnectedCallback)
+    {
+        std::cout<<"\nDEBUB: calling connectedCallback\n";
         jsObjScript->handlePresCallback(mOnConnectedCallback,mContext,this);
+    }
 
     if (mContext != NULL)
+    {
+        std::cout<<"\nDEBUB: checkContextConnectCallback\n";
         mContext->checkContextConnectCallback(this);
+    }
 
 }
 

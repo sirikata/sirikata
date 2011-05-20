@@ -64,19 +64,21 @@ v8::Handle<v8::Value>  pres_disconnect(const v8::Arguments& args)
     return jspres->clear();
 }
 
-v8::Handle<v8::Value>  doneRestoring(const v8::Arguments& args)
+
+v8::Handle<v8::Value>  getIsConnected(const v8::Arguments& args)
 {
     if (args.Length() != 0)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  doneRestoring for presence requires no arguments.")));
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  getIsConnected for presence requires no arguments.")));
 
-    String errorMessage = "Error in doneRestoring while decoding presence.  ";
+    String errorMessage = "Error in getIsConnected while decoding presence.  ";
     JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
 
     if (jspres == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
 
-    return jspres->doneRestoring();
+    return v8::Boolean::New(jspres->getIsConnected());
 }
+
 
 
 v8::Handle<v8::Value>  getAllData(const v8::Arguments& args)

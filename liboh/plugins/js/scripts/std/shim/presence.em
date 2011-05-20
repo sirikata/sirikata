@@ -199,8 +199,8 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
        @param {boolean} isConnected,
        @param {function, null} connectedCallback,
        @param {boolean} isSuspended,
-       @param {vec3,optional} suspendedVelocity,
-       @param {quaternion,optional} suspendedOrientationVelocity,
+       @param {vec3} suspendedVelocity,
+       @param {quaternion} suspendedOrientationVelocity,
        @param {function, null} proxAddedCallback,
        @param {function, null} proxRemovedCallback,
        */
@@ -208,12 +208,6 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
       {
       };
 
-      /**@function
-       Should not be called directly by user.  Only restorer.
-       */
-      presence.prototype.doneRestoring = function()
-      {
-      };
       
     /**@function 
        @description Returns the velocity of the presence
