@@ -68,7 +68,7 @@ public:
     OgreRenderer(Context* ctx);
     virtual ~OgreRenderer();
 
-    virtual bool initialize(const String& options);
+    virtual bool initialize(const String& options, bool with_berkelium = true);
 
     Context* context() const { return mContext; }
 

@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     Context* ctx = new Context("MeshView", ios, iostrand, trace, epoch);
 
     OgreRenderer* renderer = new OgreRenderer(ctx);
-    renderer->initialize("");
+    renderer->initialize("", false);
 
     MeshViewCamera* cam = new MeshViewCamera(renderer);
     cam->initialize();

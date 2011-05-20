@@ -56,7 +56,7 @@ public:
 	 * and generic enough not to force interested listeners to specify
 	 * only a Primary ID. Usually something like a filename string or
 	 * UUID, however the pointer is allowed to be anything. */
-	class Secondary {
+	class SIRIKATA_OGRE_EXPORT Secondary {
 	public:
 		/** Pointers passed into the constructor should be cast to
 		 * an intptr_t when passed to the constructor. */
@@ -149,7 +149,7 @@ public:
 	 * However, the primary ID should not be generated during execution,
 	 * since each new ID requires adding another member to the internal
 	 * mapping from string to integer. */
-	class Primary {
+	class SIRIKATA_OGRE_EXPORT Primary {
 	private:
 		int mId;
 		static int getUniqueId(const std::string &id);

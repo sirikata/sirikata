@@ -262,7 +262,7 @@ OgreRenderer::OgreRenderer(Context* ctx)
     }
 }
 
-bool OgreRenderer::initialize(const String& options) {
+bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     ++sNumOgreSystems;
 
     mParsingIOService = Network::IOServiceFactory::makeIOService();
@@ -467,7 +467,8 @@ bool OgreRenderer::initialize(const String& options) {
     mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
     sActiveOgreScenes.push_back(this);
 
-    new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
+    if (with_berkelium)
+        new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
 
     loadSystemLights();
 
