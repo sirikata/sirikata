@@ -36,8 +36,8 @@
 
 #include <sirikata/core/task/WorkQueue.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
 #include "RemoteFileMetadata.hpp"
-#include "TransferHandlers.hpp"
 #include "URI.hpp"
 #include <stdio.h>
 #include <time.h>
@@ -51,7 +51,7 @@ namespace Transfer {
  * Base class for a request going into the transfer pool to set
  * the priority of a request
  */
-class TransferRequest {
+class SIRIKATA_EXPORT TransferRequest {
 
 public:
     typedef std::tr1::function<void()> ExecuteFinished;
@@ -109,7 +109,7 @@ typedef std::tr1::shared_ptr<TransferRequest> TransferRequestPtr;
  * Handles requests for metadata of a file when all you have is the URI
  */
 
-class MetadataRequest: public TransferRequest {
+class SIRIKATA_EXPORT MetadataRequest: public TransferRequest {
 
 public:
     typedef std::tr1::function<void(
@@ -137,12 +137,7 @@ public:
         return mURI;
     }
 
-    inline void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
-        std::tr1::shared_ptr<MetadataRequest> casted =
-                std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(req);
-        HttpNameHandler::getSingleton().resolve(casted, std::tr1::bind(
-                &MetadataRequest::execute_finished, this, _1, cb));
-    }
+    void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
 
     inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
         std::tr1::shared_ptr<MetadataRequest> fromC =
@@ -191,7 +186,7 @@ typedef std::tr1::shared_ptr<MetadataRequest> MetadataRequestPtr;
 /*
  * Handles requests for the data associated with a file:chunk pair
  */
-class ChunkRequest : public MetadataRequest {
+class SIRIKATA_EXPORT ChunkRequest : public MetadataRequest {
 
 public:
     typedef std::tr1::function<void(
@@ -223,26 +218,11 @@ public:
 		return *mChunk;
 	}
 
-	inline void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
-        std::tr1::shared_ptr<ChunkRequest> casted =
-                std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(req);
-        HttpChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
-                &ChunkRequest::execute_finished, this, _1, cb));
-	}
+    void execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb);
 
-	inline void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
-	    SILOG(transfer, detailed, "execute_finished in ChunkRequest called");
-        mDenseData = response;
-        HttpManager::getSingleton().postCallback(cb);
-        SILOG(transfer, detailed, "done ChunkRequest execute_finished");
-	}
+    void execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb);
 
-    inline void notifyCaller(std::tr1::shared_ptr<TransferRequest> from) {
-        std::tr1::shared_ptr<ChunkRequest> fromC =
-                std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(from);
-        HttpManager::getSingleton().postCallback(std::tr1::bind(mCallback, fromC, fromC->mDenseData));
-        SILOG(transfer, detailed, "done ChunkRequest notifyCaller");
-    }
+    void notifyCaller(std::tr1::shared_ptr<TransferRequest> from);
 
 protected:
     std::tr1::shared_ptr<RemoteFileMetadata> mMetadata;

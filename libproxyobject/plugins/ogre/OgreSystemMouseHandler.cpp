@@ -33,24 +33,29 @@
 #include "OgreSystemMouseHandler.hpp"
 
 #include "OgreSystem.hpp"
-#include "Camera.hpp"
-#include "Lights.hpp"
-#include "Entity.hpp"
+#include <sirikata/ogre/Camera.hpp>
+#include <sirikata/ogre/Lights.hpp>
+#include <sirikata/ogre/Entity.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "input/InputEvents.hpp"
+#include <sirikata/ogre/input/InputEvents.hpp>
 
-#include "input/SDLInputDevice.hpp"
-#include "input/SDLInputManager.hpp"
-#include "input/InputManager.hpp"
+#include <sirikata/ogre/input/SDLInputDevice.hpp>
+#include <sirikata/ogre/input/SDLInputManager.hpp>
+#include <sirikata/ogre/input/InputManager.hpp>
 
-#include "task/Event.hpp"
-#include "task/EventManager.hpp"
+#include <sirikata/ogre/task/Event.hpp>
+#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/Time.hpp>
 #include <set>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
+
+#include <sirikata/ogre/OgreConversions.hpp>
+
+#include "ProxyEntity.hpp"
+#include "ProxyCamera.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -94,7 +99,7 @@ void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPix
     }
 }
 
-Entity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which) {
+ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which) {
     Vector3d pos = cam->getPosition();
     Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
     SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<pos<<"; dir = "<<dir);
@@ -104,9 +109,9 @@ Entity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixe
     IntersectResult res;
     int subent=-1;
     Ogre::Ray traceFrom(toOgre(pos, mParent->getOffset()), toOgre(dir));
-    Entity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
+    ProxyEntity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
     if (mousedown && mouseOverEntity) {
-        Entity *me = mouseOverEntity;
+        ProxyEntity *me = mouseOverEntity;
         if (me) {
             mMouseDownTri = res;
             mMouseDownObject = me->getProxyPtr();
@@ -148,7 +153,7 @@ SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction) {
     Time time = mParent->simTime();
 
     int numObjectsUnderCursor=0;
-    Entity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
+    ProxyEntity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
     if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount)
         mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0);
     if (mouseOver)
@@ -231,7 +236,7 @@ EventResponse OgreSystemMouseHandler::axisHandler(EventPtr ev) {
     if (!axisev)
         return EventResponse::nop();
 
-    float multiplier = mParent->mInputManager->mWheelToAxis->as<float>();
+    float multiplier = mParent->mInputManager->wheelToAxis();
 
     if (axisev->mAxis == SDLMouse::WHEELY) {
         bool used = WebViewManager::getSingleton().injectMouseWheel(WebViewCoord(0, axisev->mValue.getCentered()/multiplier));

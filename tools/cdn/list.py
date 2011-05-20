@@ -2,7 +2,7 @@
 #
 # list.py - Grabs listings from a CDN and prints them to stdout.
 #
-# list.py url [-n num_assets] [-r report_value]
+# list.py url [-n num_assets] [-r report_value] [-t type]
 #
 # list.py is a utility for grabbing listings of content from a CDN
 # using its JSON API and piping them to stdout. On its own, it isn't
@@ -23,18 +23,27 @@
 #     zip - URL for the zip file
 #     screenshot - URL for the screenshot file
 #     thumbnail - URL for the thumbnail of the screenshot
-
+#
+#  -t type - The type of mesh to get.
+#     original - the original uploaded mesh [default]
+#     optimized - version optimized for streaming
+#
+#  -a action - The type of action to generate output for
+#     download - download the contents of the asset
+#     meerkat - the meerkat link, used for accessing via the TransferMediator
+#
 
 import json
 import sys
 import urllib2
 
 def usage():
-    print 'Usage: list.py url [-n num_assets] [-r report_value]'
+    print 'Usage: list.py url [-n num_assets] [-r report_value] [-t type] [-a action]'
 
-def grab_list(url, num, value):
+def grab_list(url, num, value, model_type, action):
 
     download_url = url + '/download'
+    meerkat_url = 'meerkat://'
     browse_url = url + '/api/browse'
     next_start = ''
     all_items = []
@@ -46,8 +55,12 @@ def grab_list(url, num, value):
         # Get real list of items
         models_js = models_js['content_items']
 
-        new_items = [ x['metadata']['types']['original'][value] for x in models_js ]
-        new_items = [ download_url  + '/' + x for x in new_items ]
+        if action == 'download':
+            new_items = [ download_url  + '/' + x['metadata']['types'][model_type][value] for x in models_js ]
+        elif action == 'meerkat':
+            # FIXME the second base_path is used to get the filename, e.g. foobar.dae, because currently that isn't provided on its own
+            new_items = [ meerkat_url + x['base_path'] + '/' + model_type + '/' + x['version_num'] + '/' + x['base_path'].split('/')[-1] for x in models_js ]
+
         all_items.extend(new_items)
 
     if len(all_items) > num:
@@ -62,6 +75,8 @@ def main():
     url = sys.argv[1]
     num = 10
     value = 'model'
+    model_type = 'original'
+    action = 'download'
 
     x = 2
     while x < len(sys.argv):
@@ -71,6 +86,12 @@ def main():
         elif sys.argv[x] == '-r':
             x += 1
             value = sys.argv[x]
+        elif sys.argv[x] == '-t':
+            x += 1
+            model_type = sys.argv[x]
+        elif sys.argv[x] == '-a':
+            x += 1
+            action = sys.argv[x]
         else:
             usage()
             exit(-1)
@@ -84,7 +105,7 @@ def main():
         }
     value = value_field_names[value]
 
-    items = grab_list(url, num, value)
+    items = grab_list(url, num, value, model_type, action)
     for item in items: print item
 
 if __name__ == "__main__":

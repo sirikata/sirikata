@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
+/*  Sirikata
+ *  Platform.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2011, Ewen Cheslack-Postava and Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,40 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
+#ifndef _SIRIKATA_OGRE_PLATFORM_HPP_
+#define _SIRIKATA_OGRE_PLATFORM_HPP_
 
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
+#include <sirikata/core/util/Platform.hpp>
 
-#define frequency 0.1
+#ifndef SIRIKATA_OGRE_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_OGRE_EXPORT
+#   else
+#     if defined(SIRIKATA_OGRE_BUILD)
+#       define SIRIKATA_OGRE_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_OGRE_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+#   define SIRIKATA_OGRE_PLUGIN_EXPORT __declspec(dllexport)
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_OGRE_EXPORT __attribute__ ((visibility("default")))
+#     define SIRIKATA_OGRE_PLUGIN_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_OGRE_EXPORT
+#     define SIRIKATA_OGRE_PLUGIN_EXPORT
+#   endif
+# endif
+#endif
 
-namespace Sirikata {
+#ifndef SIRIKATA_OGRE_EXPORT_C
+# define SIRIKATA_OGRE_EXPORT_C extern "C" SIRIKATA_OGRE_EXPORT
+#endif
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
-{
-    c->add(this);
-    camera = NULL;
-}
+#ifndef SIRIKATA_OGRE_PLUGIN_EXPORT_C
+# define SIRIKATA_OGRE_PLUGIN_EXPORT_C extern "C" SIRIKATA_OGRE_PLUGIN_EXPORT
+#endif
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
-
-}
-
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
-
-}
-
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
-
-}
-}
+#endif //_SIRIKATA_OGRE_PLATFORM_HPP_

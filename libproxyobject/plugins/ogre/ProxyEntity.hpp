@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadPlanner.hpp
+/*  Sirikata Graphical Object Host
+ *  Entity.hpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,47 +30,68 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
+#ifndef SIRIKATA_OGRE_PROXY_ENTITY_HPP__
+#define SIRIKATA_OGRE_PROXY_ENTITY_HPP__
 
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include <sirikata/ogre/Camera.hpp>
-#include <vector>
-#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/ogre/Entity.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/network/IOTimer.hpp>
 
 namespace Sirikata {
-namespace Graphics{
-class Entity;
-}
+namespace Graphics {
 
-class ResourceDownloadPlanner : public MeshListener, public PollingService
+class OgreSystem;
+
+/** Ogre entities using ProxyObjects for their information. */
+class ProxyEntity
+    : public Sirikata::Graphics::Entity,
+      public PositionListener,
+      public ProxyObjectListener,
+      public MeshListener
 {
+protected:
+    const ProxyObjectPtr mProxy;
+    Network::IOTimerPtr mDestroyTimer;
+
+    void handleDestroyTimeout();
+
 public:
-    ResourceDownloadPlanner(Context* c);
-    ~ResourceDownloadPlanner();
+    ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo);
+    virtual ~ProxyEntity();
 
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::Camera *entity);
+    // Entity Overrides
+    virtual BoundingSphere3f bounds();
+    virtual float32 priority();
 
-    //MeshListener interface
+
+    ProxyObject &getProxy() const {
+        return *mProxy;
+    }
+    const ProxyObjectPtr &getProxyPtr() const {
+        return mProxy;
+    }
+
+
+    static ProxyEntity *fromMovableObject(Ogre::MovableObject *obj);
+
+    // PositionListener
+    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
+
+    // ProxyObjectListener
+    virtual void validated();
+    virtual void invalidated();
+    virtual void destroyed();
+
+    // interface from MeshListener
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
 
-    //PollingService interface
-    virtual void poll();
-    virtual void stop();
 
-protected:
-    Graphics::Camera *camera;
-
+    void extrapolateLocation(TemporalValue<Location>::Time current);
 };
+typedef std::tr1::shared_ptr<Entity> EntityPtr;
+
+}
 }
 
-#endif
+#endif //SIRIKATA_OGRE_PROXY_ENTITY_HPP__

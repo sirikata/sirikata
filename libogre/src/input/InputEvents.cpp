@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
+/*  Sirikata libproxyobject -- Ogre Graphics Plugin
+ *  InputEvents.cpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2009, Daniel Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,44 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+#include <sirikata/core/util/Standard.hh>
+#include <sirikata/ogre/input/InputEvents.hpp>
 
 namespace Sirikata {
+namespace Input {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
+WebViewEvent::WebViewEvent(const String &wvName, const String& _name, const std::vector<String>& _args)
+ : InputEvent(InputDeviceWPtr(), IdPair(getEventId(), _name)),
+   webview(wvName),
+   name(_name),
+   args(_args)
 {
-    c->add(this);
-    camera = NULL;
 }
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
 
+
+WebViewEvent::WebViewEvent(const String &wvName, const std::vector<DataReference<const char*> >& jsargs)
+ : InputEvent(InputDeviceWPtr(), IdPair(getEventId(),
+       jsargs.empty()?std::string():std::string(jsargs[0].data(), jsargs[0].length()))),
+   webview(wvName)
+{
+    if (jsargs.size() >= 1) {
+        name = std::string(jsargs[0].data(), jsargs[0].length());
+        args.reserve(jsargs.size()-1);
+        for (size_t i = 1; i < jsargs.size(); i++) {
+            args.push_back(std::string(jsargs[i].data(), jsargs[i].length()));
+        }
+    }
 }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
 
+
+
+
+
+WebViewEvent::~WebViewEvent() {
 }
 
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
 
 }
 }

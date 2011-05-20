@@ -31,7 +31,7 @@
  */
 
 #include <sirikata/proxyobject/Platform.hpp>
-#include "OgreHeaders.hpp"
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include "OgreMeshRaytrace.hpp"
 #include "OgreSubMesh.h"
 #include "OgreRay.h"

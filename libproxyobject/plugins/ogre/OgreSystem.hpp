@@ -34,21 +34,18 @@
 #define _SIRIKATA_OGRE_GRAPHICS_
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/util/Time.hpp>
-#include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "OgreHeaders.hpp"
+#include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
-#include <OgreWindowEventUtilities.h>
 #include "resourceManager/ResourceDownloadPlanner.hpp"
 #include "resourceManager/DistanceDownloadPlanner.hpp"
 #include "resourceManager/SAngleDownloadPlanner.hpp"
 
-#include "task/EventManager.hpp"
+#include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
 
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
-#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/ogre/OgreRenderer.hpp>
 
 //Thank you Apple:
 // /System/Library/Frameworks/CoreServices.framework/Headers/../Frameworks/CarbonCore.framework/Headers/MacTypes.h
@@ -63,33 +60,20 @@ class SubEntity;
 
 namespace Sirikata {
 class ProxyObject;
-namespace Input {
-class SDLInputManager;
-}
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
-class Entity;
-using Input::SDLInputManager;
-class Camera;
+class ProxyEntity;
+class ProxyCamera;
 class CubeMap;
 struct IntersectResult;
-class CDNArchivePlugin;
 class OgreSystemMouseHandler;
 
 /** Represents one OGRE SceneManager, a single environment. */
-class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventListener, public Ogre::WindowEventListener
+class OgreSystem: public OgreRenderer, protected SessionEventListener
 {
-    Context* mContext;
     VWObjectPtr mViewer;
     SpaceObjectReference mPresenceID;
 
-    Vector4f mBackgroundColor;
-
-    // FIXME because we don't have proper multithreaded support in cppoh, we
-    // need to allocate our own thread dedicated to parsing
-    Network::IOService* mParsingIOService;
-    Network::IOWork* mParsingWork;
-    Thread* mParsingThread;
 
     friend class OgreSystemMouseHandler;
     OgreSystemMouseHandler *mMouseHandler;
@@ -97,78 +81,13 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
     void destroyMouseHandler();
     void tickInputHandler(const Task::LocalTime& t) const;
 
-    SDLInputManager *mInputManager;
-    Ogre::SceneManager *mSceneManager;
-    bool mOgreOwnedRenderWindow;
-    static Ogre::RenderTarget *sRenderTarget;
-    Ogre::RenderTarget *mRenderTarget;
-    Ogre::RenderWindow *mRenderWindow; // Should be the same as mRenderTarget,
-                                       // but we need the RenderWindow form to
-                                       // deal with window events.
-
-    typedef std::tr1::unordered_map<SpaceObjectReference,Entity*,SpaceObjectReference::Hasher> SceneEntitiesMap;
-    SceneEntitiesMap mSceneEntities;
-    std::list<Entity*> mMovingEntities;
-
-    friend class Entity; //Entity will insert/delete itself from these arrays.
-    friend class Camera; //CameraEntity will insert/delete itself from the scene cameras array.
-    OptionValue*mWindowWidth;
-    OptionValue*mWindowHeight;
-    OptionValue*mWindowDepth;
-    OptionValue*mFullScreen;
-    OptionValue* mOgreRootDir;
-    ///How many seconds we aim to spend in each frame
-    OptionValue*mFrameDuration;
-    OptionSet*mOptions;
-    Task::LocalTime mLastFrameTime;
-    static Ogre::Plugin* sCDNArchivePlugin;
-    static Ogre::Root* sRoot;
-    static CDNArchivePlugin* mCDNArchivePlugin;
-
-    String mResourcesDir;
-
-    // FIXME need to support multiple parsers, see #124
-    ModelsSystem* mModelParser;
-    Mesh::Filter* mModelFilter;
-
-    Transfer::TransferPoolPtr mTransferPool;
-
-    OptionValue* mModelLights; // Use model or basic lights
-
-    bool loadBuiltinPlugins();
     OgreSystem(Context* ctx);
     bool initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String&options);
-    // Loads system lights if they are being used.
-    void loadSystemLights();
-    // Helper for loadSystemLights.
-    void constructSystemLight(const String& name, const Vector3f& direction, float brightness);
 
-    bool renderOneFrame(Task::LocalTime, Duration frameTime);
-    ///all the things that should happen just before the frame
-    void preFrame(Task::LocalTime, Duration);
-    ///all the things that should happen once the frame finishes
-    void postFrame(Task::LocalTime, Duration);
-    void destroyRenderTarget(Ogre::ResourcePtr &name);
 
-    void screenshot(const String& filename);
-
-    void toggleSuspend();
-    void suspend();
-    void resume();
-
-    // Initiate quiting by indicating to the main loop that we want to shut down
-    void quit();
-
-    bool mQuitRequested;
-    bool mQuitRequestHandled;
-
-    bool mSuspended;
-
-    Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, Ogre::PixelFormat pf);
-    Vector3d mFloatingPointOffset;
     Ogre::RaySceneQuery* mRayQuery;
     CubeMap *mCubeMap;
-    Entity* internalRayTrace(const Ogre::Ray &traceFrom,
+    ProxyEntity* internalRayTrace(const Ogre::Ray &traceFrom,
                      bool aabbOnly,
                      int&resultCount,
                      double &returnResult,
@@ -177,14 +96,8 @@ class OgreSystem: public TimeSteppedQueryableSimulation, protected SessionEventL
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
 public:
-    OptionValue *mParallaxSteps;
-    OptionValue *mParallaxShadowSteps;
-    static std::list<OgreSystem*> sActiveOgreScenes;
-    static uint32 sNumOgreSystems;
-    std::tr1::unordered_set<Camera*> mAttachedCameras;
-    Camera *mPrimaryCamera;
 
-    Context* context() const { return mContext; }
+    ProxyCamera *mPrimaryCamera;
 
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();
@@ -192,33 +105,11 @@ public:
     VWObjectPtr getViewer() const { return mViewer; }
     SpaceObjectReference getViewerPresence() const { return mPresenceID; }
 
-    Transfer::TransferPoolPtr transferPool();
-
     String getResourcesDir() const { return mResourcesDir; }
 
-    bool useModelLights() const;
-
-    ///adds the camera to the list of attached cameras, making it the primary camera if it is first to be added
-    void  attachCamera(const String&renderTargetName,Camera*);
-    ///removes the camera from the list of attached cameras.
-    void detachCamera(Camera*);
-    Camera*getPrimaryCamera() {
+    ProxyCamera*getPrimaryCamera() {
         return mPrimaryCamera;
     }
-    SDLInputManager *getInputManager() {
-        return mInputManager;
-    }
-    OptionSet*getOptions(){
-        return mOptions;
-    }
-    const OptionSet*getOptions()const{
-        return mOptions;
-    }
-
-    const Vector3d& getOffset()const {return mFloatingPointOffset;}
-    void destroyRenderTarget(const String &name);
-    ///creates or restores a render target. if name is 0 length it will return the render target associated with this OgreSystem
-    Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
 
     static TimeSteppedQueryableSimulation* create(
         Context* ctx,
@@ -233,34 +124,9 @@ public:
         delete os;
         return NULL;
     }
-    Entity* getEntity(const SpaceObjectReference &proxyId) const {
-        SceneEntitiesMap::const_iterator iter = mSceneEntities.find(proxyId);
-        if (iter != mSceneEntities.end()) {
-            return (*iter).second;
-        } else {
-            return NULL;
-        }
-    }
-    Entity* getEntity(const ProxyObjectPtr &proxy) const {
-        return getEntity(proxy->getObjectReference());
-    }
 
-    typedef std::tr1::function<void(Mesh::MeshdataPtr)> ParseMeshCallback;
-    /** Tries to parse a mesh. Can handle different types of meshes and tries to
-     *  find the right parser using magic numbers.  If it is unable to find the
-     *  right parser, returns NULL.  Otherwise, returns the parsed mesh as a
-     *  Meshdata object.
-     *  \param orig_uri original URI, used to construct correct relative paths
-     *                  for dependent resources
-     *  \param fp the fingerprint of the data, used for unique naming and passed
-     *            through to the resulting mesh data
-     *  \param data the contents of the
-     *  \param cb callback to invoke when parsing is complete
-     */
-    void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
-private:
-    void parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
-public:
+    ProxyEntity* getEntity(const SpaceObjectReference &proxyId) const;
+    ProxyEntity* getEntity(const ProxyObjectPtr &proxy) const;
 
     bool queryRay(const Vector3d&position,
                   const Vector3f&direction,
@@ -283,23 +149,30 @@ public:
                      double &returnResult,
                      int&subent,
                      int which=0) const;
-    virtual Duration desiredTickRate()const;
-    ///returns if rendering should continue
+
+
+    virtual void windowResized(Ogre::RenderWindow *rw);
+
     virtual void poll();
-    virtual void stop();
-    Ogre::RenderTarget *getRenderTarget();
-    static Ogre::Root *getRoot();
-    Ogre::SceneManager* getSceneManager();
+
+    virtual bool renderOneFrame(Task::LocalTime t, Duration frameTime);
+    virtual void preFrame(Task::LocalTime currentTime, Duration frameTime);
+    virtual void postFrame(Task::LocalTime current, Duration frameTime);
+
+
+    // ProxyCreationListener
     virtual void onCreateProxy(ProxyObjectPtr p); // MCB: interface from ProxyCreationListener
     virtual void onDestroyProxy(ProxyObjectPtr p); // MCB: interface from
                                                    // ProxyCreationListener
 
 
-    // Event injection for SDL created windows.
-    void injectWindowResized(uint32 w, uint32 h);
 
-    // Ogre::WindowEventListener Interface overloads
-    virtual void windowResized(Ogre::RenderWindow *rw);
+    // *******
+
+    virtual void attachCamera(const String&renderTargetName,Camera*);
+    virtual void detachCamera(Camera*);
+
+    // *******
 
     // ConnectionEventListener Interface
     virtual void onConnected(const Network::Address& addr);

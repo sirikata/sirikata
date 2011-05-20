@@ -78,6 +78,7 @@ Mesh::MeshdataPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer
             if (result) return result;
         }
     }
+    SILOG(AnyModelsSystem,error,"Couldn't find parser for " << uri);
     return result;
 }
 

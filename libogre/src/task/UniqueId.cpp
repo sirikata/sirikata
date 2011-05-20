@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
+/*  Sirikata Kernel -- Task scheduling system
+ *  UniqueId.cpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2008, Patrick Reiter Horn
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+#include <sirikata/ogre/task/UniqueId.hpp>
 
 namespace Sirikata {
+namespace Task {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
-{
-    c->add(this);
-    camera = NULL;
-}
+IncreasingSubId::Type IncreasingSubId::nextid = 0;
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
+CompactSubId::Type CompactSubId::nextid = 0;
 
-}
-
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
-
-}
-
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
+std::list<CompactSubId::Type> CompactSubId::freelist;
 
 }
 }

@@ -1,7 +1,7 @@
-/*  Meru
- *  ResourceDownloadTask.cpp
+/*  Sirikata
+ *  OverlayPosition.cpp
  *
- *  Copyright (c) 2009, Stanford University
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,61 +30,26 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+#include <sirikata/ogre/OverlayPosition.hpp>
 
 namespace Sirikata {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
-{
-    c->add(this);
-    camera = NULL;
+OverlayPosition::OverlayPosition(const RelativePosition &relPosition, short offsetLeft, short offsetTop) {
+    usingRelative = true;
+    data.rel.position = relPosition;
+    data.rel.x = offsetLeft;
+    data.rel.y = offsetTop;
 }
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
-
+OverlayPosition::OverlayPosition(short absoluteLeft, short absoluteTop) {
+    usingRelative = false;
+    data.abs.left = absoluteLeft;
+    data.abs.top = absoluteTop;
 }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
-
-}
-
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
-
+OverlayPosition::OverlayPosition() {
+    usingRelative = false;
+    data.abs.left = 0;
+    data.abs.top = 0;
 }
 }

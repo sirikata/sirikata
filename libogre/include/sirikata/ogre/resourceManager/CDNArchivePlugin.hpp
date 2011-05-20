@@ -1,5 +1,5 @@
 /*  Meru
- *  ResourceDownloadTask.cpp
+ *  CDNArchivePlugin.hpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -29,62 +29,35 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#ifndef _CDN_ARCHIVE_PLUGIN_HPP_
+#define _CDN_ARCHIVE_PLUGIN_HPP_
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+#include <sirikata/ogre/Platform.hpp>
+#include <sirikata/ogre/OgreHeaders.hpp>
+#include <Ogre.h>
+#include <OgrePlugin.h>
+#include <sirikata/ogre/resourceManager/CDNArchiveFactory.hpp>
 
 namespace Sirikata {
+namespace Graphics {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
-{
-    c->add(this);
-    camera = NULL;
-}
+/** Plugin to setup CDNArchive and CDNArchive factory with
+ *  Ogre.  A specialization of Ogre::Plugin.  See Ogre's
+ *  documentation for interface details and documentation.
+ */
+class SIRIKATA_OGRE_EXPORT CDNArchivePlugin : public Ogre::Plugin {
+public:
+	CDNArchivePlugin();
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
+	const Ogre::String& getName() const;
 
-}
+	void install();
+	void initialise();
+	void shutdown();
+	void uninstall();
+};
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
+} // namespace Graphics
+} // namespace Sirikata
 
-}
-
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
-
-}
-}
+#endif //_CDN_ARCHIVE_PLUGIN_HPP_

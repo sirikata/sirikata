@@ -1,5 +1,5 @@
 /*  Meru
- *  ResourceDownloadTask.cpp
+ *  CDNArchivePlugin.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -30,61 +30,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
+#include <sirikata/ogre/resourceManager/CDNArchivePlugin.hpp>
 
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 0.1
+using namespace Ogre;
 
 namespace Sirikata {
+namespace Graphics {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
+static String sPluginName = "CDNArchive";
+
+CDNArchivePlugin::CDNArchivePlugin()
 {
-    c->add(this);
-    camera = NULL;
 }
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
-
+const String& CDNArchivePlugin::getName() const {
+	return sPluginName;
 }
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
-
+void CDNArchivePlugin::install() {
+	if (!CDNArchiveFactory::getSingletonPtr()) {
+		new CDNArchiveFactory();
+	}
+	ArchiveManager::getSingleton().addArchiveFactory(CDNArchiveFactory::getSingletonPtr());
 }
 
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
+void CDNArchivePlugin::initialise() {
 }
 
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
-{
-
+void CDNArchivePlugin::shutdown() {
 }
 
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
-{
-
+void CDNArchivePlugin::uninstall() {
+	delete CDNArchiveFactory::getSingletonPtr();
 }
 
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
-
-}
-}
+} // namespace Graphics
+} // namespace Sirikata
