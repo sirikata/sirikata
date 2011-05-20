@@ -48,11 +48,11 @@ ProxyCamera::~ProxyCamera() {
 }
 
 Vector3d ProxyCamera::getGoalPosition() {
-    return mFollowing->getProxyPtr()->getPosition();
+    return mFollowing->getOgrePosition();
 }
 
 Quaternion ProxyCamera::getGoalOrientation() {
-    return mFollowing->getProxyPtr()->getOrientation();
+    return mFollowing->getOgreOrientation();
 }
 
 BoundingSphere3f ProxyCamera::getGoalBounds() {
