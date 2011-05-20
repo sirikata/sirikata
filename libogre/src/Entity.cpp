@@ -370,8 +370,6 @@ void Entity::loadMesh(const String& meshname)
 
     init(new_entity);
     fixTextures();
-
-    notify(&EntityListener::entityLoaded, this, true);
 }
 
 void Entity::unloadMesh() {
@@ -1102,6 +1100,8 @@ void Entity::createMesh() {
             //light->setDebugDisplayEnabled(true);
         }
     }
+
+    notify(&EntityListener::entityLoaded, this, true);
 }
 
 }
