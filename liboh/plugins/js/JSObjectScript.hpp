@@ -112,7 +112,7 @@ public:
 
     /** Dummy callback for testing exposing new functionality to scripts. */
     void debugPrintString(std::string cStrMsgBody) const;
-    void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody) const;
+    void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody);
 
 
     /** Print the given string to the current output. */
@@ -335,7 +335,7 @@ private:
     void printMPresences();
 
 
-    ODP::Port* mMessagingPort;
+    std::map< SpaceObjectReference ,ODP::Port* >mMessagingPortMap;
     ODP::Port* mCreateEntityPort;
 
     JSObjectScriptManager* mManager;

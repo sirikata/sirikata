@@ -206,7 +206,8 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
    mManager(jMan),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    hiddenObjectCount(0),
-   mResetting(false)
+   mResetting(false),
+   mCreateEntityPort(NULL)
 {
 
     OptionValue* init_script;
@@ -592,11 +593,15 @@ void JSObjectScript::onConnected(SessionEventProviderPtr from, const SpaceObject
     v8::HandleScope handle_scope;
 
     //register port for messaging
-    mMessagingPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
-    if (mMessagingPort)
-        mMessagingPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
+    ODP::Port* msgPort = mParent->bindODPPort(space_id, obj_refer, Services::COMMUNICATION);
+    if (msgPort != NULL)
+    {
+        mMessagingPortMap[SpaceObjectReference(space_id,obj_refer)] = msgPort;
+        msgPort->receive( std::tr1::bind(&JSObjectScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
+    }
 
-    mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
+    if (!mCreateEntityPort)
+        mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
     //check for callbacks associated with presence connection
 
@@ -688,12 +693,21 @@ bool JSObjectScript::valid() const
 
 
 
-void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObjectReference* from, const std::string& msgBody) const
+void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObjectReference* from, const std::string& msgBody) 
 {
+
+    std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(*from);
+    if (iter == mMessagingPortMap.end())
+    {
+        JSLOG(error,"Trying to send from a sporef that does not exist");
+        return;
+    }
+    
     ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
     MemoryReference toSend(msgBody);
 
-    mMessagingPort->send(dest,toSend);
+    
+    iter->second->send(dest,toSend);
 }
 
 

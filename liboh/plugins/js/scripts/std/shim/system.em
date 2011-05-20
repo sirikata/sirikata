@@ -56,12 +56,26 @@ if(system == undefined)
           this._selfMap[selfKey] = toAdd;
       };
 
+     system.printSelfMap = function()
+     {
+         __system.print('\nPrinting self map\n');
+         for (var s in this._selfMap)
+         {
+             __system.print(s);
+             __system.print('\n');
+             __system.print(this._selfMap[s]);
+             __system.print('\n');
+             
+         }
+         __system.print('\n\n');
+     };
+     
       system.__NULL_TOKEN__ = 'null';
 
       //data
       system._selfMap = { };
 
-      system.__behindSelf = baseSystem;
+      system.__behindSelf = system;
 
       system.__setBehindSelf = function(toSetTo)
       {
@@ -69,7 +83,7 @@ if(system == undefined)
       };
 
       system.__defineGetter__("self", function(){
-                                return this.__behindSelf;
+                                return system.__behindSelf;
                             });
 
       system.__defineSetter__("self", function(val){
@@ -168,7 +182,7 @@ if(system == undefined)
       {
           var returner = function (msg,sender,receiver)
           {
-              this.__setBehindSelf(this._selfMap[receiver]);
+              system.__setBehindSelf(system._selfMap[receiver]);
               toCallback(msg,sender);
           };
           return std.core.bind(returner,this);
@@ -571,7 +585,6 @@ if(system == undefined)
        */
       system.onPresenceConnected = function(/**Function */callback)
       {
-          //baseSystem.onPresenceConnected.apply(baseSystem,[this.__wrapPresConnCB(callback)]);
           baseSystem.onPresenceConnected(this.__wrapPresConnCB(callback));
       };
 
@@ -582,7 +595,6 @@ if(system == undefined)
        */
       system.onPresenceDisconnected = function (/**Function*/callback)
       {
-          //baseSystem.onPresenceDisconnected.apply(baseSystem,[this.__wrapPresConnCB(callback)]);
           baseSystem.onPresenceDisconnected(this.__wrapPresConnCB(callback));
       };
 
