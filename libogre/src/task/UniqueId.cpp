@@ -39,5 +39,7 @@ IncreasingSubId::Type IncreasingSubId::nextid = 0;
 
 CompactSubId::Type CompactSubId::nextid = 0;
 
+std::list<CompactSubId::Type> CompactSubId::freelist;
+
 }
 }

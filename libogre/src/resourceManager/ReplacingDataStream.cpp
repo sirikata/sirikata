@@ -68,6 +68,10 @@ ReplacingDataStream::ReplacingDataStream(Ogre::DataStreamPtr &input, const Ogre:
         }
     }
 }
+
+ReplacingDataStream::~ReplacingDataStream() {
+}
+
 template <class MemoryBuffer> bool tnext_eol(const MemoryBuffer &input,
                                              typename MemoryBuffer::size_type &where_lexeme_start) {
     size_t size=input.size();

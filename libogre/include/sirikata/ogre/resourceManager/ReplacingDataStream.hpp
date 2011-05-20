@@ -146,6 +146,8 @@ public:
      * \param textureAliases is a list of textures thirdname->first name list so that efficient materials can refer to the first names directly
      */
   ReplacingDataStream(Ogre::DataStreamPtr&input,const Ogre::String &destination, const Ogre::NameValuePairList*textureAliases);
+  virtual ~ReplacingDataStream();
+
   virtual size_t read(void* buf, size_t count);
   virtual Ogre::String getAsString(void);
   virtual void skip(long count);

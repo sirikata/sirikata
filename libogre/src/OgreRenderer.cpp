@@ -40,6 +40,7 @@
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/DynamicLibrary.hpp>
 

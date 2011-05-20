@@ -35,8 +35,8 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 
 #include <sirikata/core/network/IOServiceFactory.hpp>
-
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/network/IOWork.hpp>
 
 
 #if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
@@ -64,7 +64,7 @@ AggregateManager::AggregateManager( LocationService* loc) :
 
     mAggregationService = Network::IOServiceFactory::makeIOService();
     mAggregationStrand = mAggregationService->createStrand();
-    mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");    
+    mIOWork = new Network::IOWork(mAggregationService, "Aggregation Work");
 
     static char x = '1';
     mTransferPool = mTransferMediator->registerClient("SpaceAggregator_"+x);
@@ -85,7 +85,7 @@ AggregateManager::~AggregateManager() {
     delete mAggregationStrand;
     Network::IOServiceFactory::destroyIOService(mAggregationService);
     mAggregationService = NULL;
-    
+
     delete mAggregationThread;
 
     delete mIOWork;
@@ -140,7 +140,7 @@ void AggregateManager::addChild(const UUID& uuid, const UUID& child_uuid) {
 
     std::cout << "addChild:  "  << uuid.toString()
               << " CHILD " << child_uuid.toString() << " "
-              << "\n";   
+              << "\n";
 
     mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
@@ -157,16 +157,16 @@ void AggregateManager::removeChild(const UUID& uuid, const UUID& child_uuid) {
     boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
 
     addDirtyAggregates(child_uuid);
-    
+
     mAggregateGenerationStartTime =  Timer::now();
 
     mAggregationStrand->post(Duration::seconds(20), std::tr1::bind(&AggregateManager::generateMeshesFromQueue, this, mAggregateGenerationStartTime));
   }
 }
 
-void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {  
+void AggregateManager::aggregateObserved(const UUID& objid, uint32 nobservers) {
   boost::mutex::scoped_lock lock(mAggregateObjectsMutex);
-  
+
   if (mAggregateObjects.find(objid) != mAggregateObjects.end())
     mAggregateObjects[objid]->mNumObservers = nobservers;
 }
@@ -270,7 +270,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
     }
   }
 
-  if (!allMeshesAvailable) return false;  
+  if (!allMeshesAvailable) return false;
 
   MeshdataPtr agg_mesh =  MeshdataPtr( new Meshdata() );
   agg_mesh->globalTransform = Matrix4x4f::identity();
@@ -515,16 +515,16 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   snprintf(localMeshName, MESHNAME_LEN, "%d_aggregate_mesh_%s.dae", aggObject->mTreeLevel, uuid.toString().c_str());
   std::string cdnMeshName = "meerkat:///tahir/" + std::string(localMeshName);
   agg_mesh->uri = cdnMeshName;
-  
+
   //Simplify the mesh...
   mMeshSimplifier.simplify(agg_mesh, 600);
 
-  //... and now create the collada file, upload to the CDN and update LOC. 
+  //... and now create the collada file, upload to the CDN and update LOC.
   mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
 
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
-  system( cmdline.c_str()  );    
+  system( cmdline.c_str()  );
 
   //Update loc
   mLoc->updateLocalAggregateMesh(uuid, cdnMeshName);
@@ -539,7 +539,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
            bndsX, bndsY, bndsZ, 0.0, 0.0, 0.0, 1.0, cdnMeshName.c_str(), bnds.radius());
   scenefile.write(sceneline,strlen(sceneline));
   scenefile.close();*/
-  
+
   //Keep the meshstore's memory usage under control.
   boost::mutex::scoped_lock meshStoreLock(mMeshStoreMutex);
   if (mMeshStore.size() > 20)
@@ -638,16 +638,16 @@ void AggregateManager::getLeaves(const std::vector<UUID>& individualObjects) {
 
     while (uuid != UUID::null()) {
       if (mDirtyAggregateObjects.find(uuid) != mDirtyAggregateObjects.end()) {
-        
+
         float solid_angle = TWO_PI * (1-sqrt(1- pow(radius/obj->mDistance,2)));
-        
+
         if (solid_angle > ONE_PIXEL_SOLID_ANGLE) {
           obj->mLeaves.push_back(indl_uuid);
         }
       }
-      
+
       uuid = obj->mParentUUID;
-      
+
       if (mAggregateObjects.find(uuid) != mAggregateObjects.end())
         obj = mAggregateObjects[uuid];
     }
@@ -655,36 +655,36 @@ void AggregateManager::getLeaves(const std::vector<UUID>& individualObjects) {
 }
 
 void AggregateManager::generateMeshesFromQueue(Time postTime) {
-    if (postTime < mAggregateGenerationStartTime) {      
+    if (postTime < mAggregateGenerationStartTime) {
       return;
     }
 
     //Get the leaves that belong to each node.
-    std::vector<UUID> individualObjects;    
+    std::vector<UUID> individualObjects;
 
     if ( mDirtyAggregateObjects.size() > 0 ) {
       for (std::tr1::unordered_map<UUID, std::tr1::shared_ptr<AggregateObject>, UUID::Hasher >::iterator it = mAggregateObjects.begin();
            it != mAggregateObjects.end() ; it++)
       {
-          std::tr1::shared_ptr<AggregateObject> aggObject = it->second;           
-      
+          std::tr1::shared_ptr<AggregateObject> aggObject = it->second;
+
           if (aggObject->mChildren.size() == 0) {
             individualObjects.push_back(aggObject->mUUID);
           }
 
           if (mDirtyAggregateObjects.find(it->first) == mDirtyAggregateObjects.end()) {
             continue;
-          }      
-     
+          }
+
           float radius  = INT_MAX;
           for (uint32 i=0; i < aggObject->mChildren.size(); i++) {
             BoundingSphere3f bnds = mLoc->bounds(aggObject->mChildren[i]);
             if (bnds.radius() < radius) {
               radius = bnds.radius();
-            }           
+            }
           }
 
-          if (radius == INT_MAX) radius = 0;            
+          if (radius == INT_MAX) radius = 0;
 
           aggObject->mDistance = 0.01 + radius/sqrt( 1.0 - pow( 1-HUMAN_FOV/TWO_PI, 2) );
       }
@@ -731,7 +731,7 @@ void AggregateManager::generateMeshesFromQueue(Time postTime) {
 void AggregateManager::updateChildrenTreeLevel(const UUID& uuid, uint16 treeLevel) {
     //mAggregateObjectsMutex MUST be locked BEFORE calling this function.
 
-    mAggregateObjects[uuid]->mTreeLevel = treeLevel;    
+    mAggregateObjects[uuid]->mTreeLevel = treeLevel;
 
     for (uint32 i = 0; i < mAggregateObjects[uuid]->mChildren.size(); i++) {
       updateChildrenTreeLevel(mAggregateObjects[uuid]->mChildren[i], treeLevel+1);

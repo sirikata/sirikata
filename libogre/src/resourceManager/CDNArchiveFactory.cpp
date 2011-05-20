@@ -35,7 +35,7 @@
 
 using namespace Ogre;
 
-template<> SIRIKATA_OGRE_EXPORT Sirikata::Graphics::CDNArchiveFactory* Ogre::Singleton<Sirikata::Graphics::CDNArchiveFactory>::ms_Singleton = 0;
+template<> Sirikata::Graphics::CDNArchiveFactory* Ogre::Singleton<Sirikata::Graphics::CDNArchiveFactory>::ms_Singleton = 0;
 
 namespace Sirikata {
 namespace Graphics {
