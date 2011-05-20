@@ -532,17 +532,18 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
    @param {boolean} isCleared ,
    @param {uint32} contextId,
    @param {boolean} isConnected,
-   @param {boolean} hasConnectedCallback,
-   @param {function, null (if hasCC is false)} connectedCallback,
+   @param {function, null} connectedCallback,
    @param {boolean} isSuspended,
    @param {vec3,optional} suspendedVelocity,
    @param {quaternion,optional} suspendedOrientationVelocity,
+   @param {function, null} proxAddedCallback,
+   @param {function, null} proxRemovedCallback,
  */
 v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
     
-    if (args.Length() != 17)
+    if (args.Length() != 18)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
     v8::Handle<v8::Value> mSporefArg                       = args[0];
@@ -557,12 +558,12 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> isClearedArg                     = args[9];
     v8::Handle<v8::Value> contextIDArg                     = args[10];
     v8::Handle<v8::Value> isConnectedArg                   = args[11];
-    v8::Handle<v8::Value> hasConnectedCallbackArg          = args[12];
-    v8::Handle<v8::Value> connectedCallbackArg             = args[13];
-    v8::Handle<v8::Value> isSuspendedArg                   = args[14];
-    v8::Handle<v8::Value> suspendedVelocityArg             = args[15];
-    v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[16];
-
+    v8::Handle<v8::Value> connectedCallbackArg             = args[12];
+    v8::Handle<v8::Value> isSuspendedArg                   = args[13];
+    v8::Handle<v8::Value> suspendedVelocityArg             = args[14];
+    v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[15];
+    v8::Handle<v8::Value> proxAddedCallbackArg             = args[16];
+    v8::Handle<v8::Value> proxRemovedCallbackArg           = args[17];
 
     //now, it's time to decode them.
     
@@ -620,25 +621,15 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
     
 
-    bool hasConnectedCallback;
-    specificErrMsg = baseErrMsg + "hasConnectedCallback.";
-    bool hasConnectedCallbackDecodeSuccessful = decodeBool(hasConnectedCallbackArg, hasConnectedCallback, specificErrMsg);
-    if (! hasConnectedCallbackDecodeSuccessful)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
     
     specificErrMsg = baseErrMsg + "connectedCallback.";
-
     v8::Handle<v8::Function>connCB;
-    if (hasConnectedCallback)
-    {
-        if (! connectedCallbackArg->IsFunction())
-            return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
-        else
-        {
-            connCB = v8::Handle<v8::Function>::Cast(connectedCallbackArg);
-        }
-    }
+    if (connectedCallbackArg->IsFunction())
+        connCB = v8::Handle<v8::Function>::Cast(connectedCallbackArg);
+    else if (! connectedCallbackArg->IsNull())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
 
     
     bool isSuspended;
@@ -661,7 +652,22 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     suspendedOrientationVelocity = QuaternionValExtract(suspendedOrientationVelocityArg);
 
 
+    specificErrMsg = baseErrMsg + "proxAddedCallback.";
+    v8::Handle<v8::Function>proxAddCB;
+    if (proxAddedCallbackArg->IsFunction())
+        proxAddCB = v8::Handle<v8::Function>::Cast(proxAddedCallbackArg);
+    else if (! proxAddedCallbackArg->IsNull())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
+
+    specificErrMsg = baseErrMsg + "proxRemovedCallback.";
+    v8::Handle<v8::Function>proxRemCB;
+    if (proxRemovedCallbackArg->IsFunction())
+        proxRemCB = v8::Handle<v8::Function>::Cast(proxRemovedCallbackArg);
+    else if (! proxRemovedCallbackArg->IsNull())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    
 
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
@@ -679,12 +685,15 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         &isCleared,
         &contextID,
         &isConnected,
-        &hasConnectedCallback,
-        (hasConnectedCallback? &connCB : NULL),
+        (connCB.IsEmpty() ? NULL : &connCB),
         &isSuspended,
         &suspendedVelocity,
-        &suspendedOrientationVelocity);
+        &suspendedOrientationVelocity,
+        (proxRemCB.IsEmpty() ? NULL : &proxRemCB),
+        (proxAddCB.IsEmpty() ? NULL : &proxAddCB)
+    );
 
+    
     return handle_scope.Close(jssys->restorePresence(restParams));
 }
 

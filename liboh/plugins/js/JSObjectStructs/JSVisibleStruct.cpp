@@ -1,6 +1,7 @@
 
 #include "JSVisibleStruct.hpp"
 #include "../JSObjectScript.hpp"
+#include "JSPresenceStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "../JSLogging.hpp"
 #include <v8.h>

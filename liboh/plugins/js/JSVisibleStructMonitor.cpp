@@ -1,7 +1,7 @@
 #include "JSVisibleStructMonitor.hpp"
 #include "JSObjectStructs/JSPositionListener.hpp"
 #include "JSLogging.hpp"
-
+#include "JSObjectStructs/JSPresenceStruct.hpp"
 
 
 namespace Sirikata{

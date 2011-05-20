@@ -1,5 +1,6 @@
 #include "JSSuspendable.hpp"
 #include <v8.h>
+#include "JSPresenceStruct.hpp"
 
 namespace Sirikata{
 namespace JS{

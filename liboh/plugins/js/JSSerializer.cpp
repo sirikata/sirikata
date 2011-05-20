@@ -7,6 +7,7 @@
 #include "JSObjects/JSVisible.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
 #include "JSObjectStructs/JSSystemStruct.hpp"
+#include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectScript.hpp"
 #include "JSLogging.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"

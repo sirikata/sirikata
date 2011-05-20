@@ -18,7 +18,7 @@ class JSEventHandlerStruct;
 class JSPresenceStruct;
 class JSPositionListener;
 class VisAddParams;
-
+struct PresStructRestoreParams;
 
 //Most calls in this class just go straight through into associated context to
 //make a sibling call.  Split system into intermediate layer between v8-bound

@@ -6,6 +6,7 @@
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
 #include "../JSObjects/JSQuaternion.hpp"
+#include "JSPresenceStruct.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace Sirikata {

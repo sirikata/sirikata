@@ -10,6 +10,7 @@
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
 #include "JSPositionListener.hpp"
+#include "JSPresenceStruct.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -28,10 +29,9 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 }
 
 
-//FIXME: Eventually need to check a capability as to whether can actually restore.
+
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
 {
-    lkjs;
     associatedContext->restorePresence(psrp);
 }
 

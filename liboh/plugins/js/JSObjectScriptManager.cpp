@@ -334,6 +334,8 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSPresence::getSpace));
   proto_t->Set(v8::String::New("getPresenceID"),v8::FunctionTemplate::New(JSPresence::getOref));
+
+  proto_t->Set(v8::String::New("doneRestoring"),v8::FunctionTemplate::New(JSPresence::doneRestoring));
   
   //meshes
   proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
@@ -382,6 +384,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   proto_t->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSPresence::pres_suspend));
   proto_t->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSPresence::pres_resume));
+  proto_t->Set(v8::String::New("disconnect"), v8::FunctionTemplate::New(JSPresence::pres_disconnect));
 
 
 

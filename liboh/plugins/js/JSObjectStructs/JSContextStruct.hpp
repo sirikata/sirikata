@@ -27,6 +27,7 @@ class JSUtilObjStruct;
 class JSPositionListener;
 class JSSystemStruct;
 class VisAddParams;
+struct PresStructRestoreParams;
 
 struct JSContextStruct : public JSSuspendable
 {

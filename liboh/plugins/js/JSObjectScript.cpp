@@ -663,7 +663,7 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
     JSPresenceStruct* jspres = findPresence(name);
 
     if (jspres != NULL)
-        jspres->disconnect();
+        jspres->disconnectCalledFromObjScript();
 }
 
 
@@ -1572,11 +1572,53 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& psrp)
+v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx)
 {
-    lkjs;
-}
 
+    if (jsctx != mContext)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Can only restore presence from root context.")) );
+
+
+    v8::Context::Scope context_scope(jsctx->mContext);
+
+
+    //get location
+    Vector3f newPos            = psrp.mTmv3f->extrapolate(mParent->currentLocalTime()).position();
+    Quaternion newOrient       = psrp.mTmq->extrapolate(mParent->currentLocalTime()).position();
+    Vector3f newVel            = psrp.mTmv3f->velocity();
+    Quaternion orientVel       = psrp.mTmq->velocity();
+
+    Vector3f newAngAxis;
+    float newAngVel;
+    orientVel.toAngleAxis(newAngVel,newAngAxis);
+
+    Vector3d newPosD(newPos.x,newPos.y,newPos.z);
+    Location newLoc(newPosD,newOrient,newVel, newAngAxis,newAngVel);
+    
+
+    //get bounding sphere
+    BoundingSphere3f bs = BoundingSphere3f(newPos, *psrp.mScale);
+
+    HostedObject::PresenceToken presToke = incrementPresenceToken();
+    JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
+
+
+    
+    if (*psrp.mIsConnected)
+    {
+        mParent->connect(psrp.mSporef->space(),
+            newLoc,
+            bs,
+            *psrp.mMesh,
+            "",
+            SolidAngle::Max,
+            UUID::null(),
+            psrp.mSporef->object(),
+            presToke);
+    }
+    return v8::Undefined();
+}
+        
 
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.

@@ -175,12 +175,45 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
 
 
       /**
-       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {string} sporefFrom, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime, {boolean} isCleared , {uint32} contextId, {boolean} isConnected, {boolean} hasConnectedCallback, {function,optional} connectedCallback, {boolean} isSuspended, {vec3} suspendedVelocity, {quaternion} suspendedOrientationVelocity, 
+       @function
+       Disconnects presence from space.  Emerson presence object still exists, but its isConnected field
+       evaluates to false.
+       */
+      presence.prototype.disconnect = function()
+      {
+      };
+      
+      /**
+       @return Object containing all data associated with this presence.  Fields of returned object:
+            @param {string} sporef,
+            @param {vec3} pos,
+       @param {vec3} vel,
+       @param {string} posTime,
+       @param {quaternion} orient,
+       @param {quaternion} orientVel,
+       @param {string} orientTime,
+       @param {string} mesh,
+       @param {number} scale,
+       @param {boolean} isCleared ,
+       @param {uint32} contextId,
+       @param {boolean} isConnected,
+       @param {function, null} connectedCallback,
+       @param {boolean} isSuspended,
+       @param {vec3,optional} suspendedVelocity,
+       @param {quaternion,optional} suspendedOrientationVelocity,
+       @param {function, null} proxAddedCallback,
+       @param {function, null} proxRemovedCallback,
        */
       presence.prototype.getAllData = function()
       {
       };
 
+      /**@function
+       Should not be called directly by user.  Only restorer.
+       */
+      presence.prototype.doneRestoring = function()
+      {
+      };
       
     /**@function 
        @description Returns the velocity of the presence

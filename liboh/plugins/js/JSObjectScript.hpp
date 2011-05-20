@@ -97,8 +97,9 @@ public:
     //connection and disconnection events.
     void handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres);
 
-    v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
-    
+
+    v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx);
+
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -229,7 +230,8 @@ public:
 
 
 private:
-
+    bool mRestoring;
+    
     // Each context has an id that is assigned from this variable.
     uint32 contIDTracker;
     std::map<uint32,JSContextStruct*> mContStructMap;

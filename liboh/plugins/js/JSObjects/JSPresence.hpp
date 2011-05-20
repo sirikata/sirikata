@@ -28,10 +28,12 @@ v8::Handle<v8::Value>  getSpace(const v8::Arguments& args);
 v8::Handle<v8::Value>  getOref(const v8::Arguments& args);
 
 v8::Handle<v8::Value>  getAllData(const v8::Arguments& args);
+v8::Handle<v8::Value>  pres_disconnect(const v8::Arguments& args);
 
 v8::Handle<v8::Value>  getVelocity(const v8::Arguments& args);
 v8::Handle<v8::Value>  setVelocity(const v8::Arguments& args);
 
+v8::Handle<v8::Value>  doneRestoring(const v8::Arguments& args);
 
 v8::Handle<v8::Value>  getOrientation(const v8::Arguments& args);
 v8::Handle<v8::Value>  setOrientation(const v8::Arguments& args);

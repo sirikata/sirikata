@@ -50,7 +50,7 @@ uint32 JSContextStruct::getContextID()
 
 v8::Handle<v8::Value> JSContextStruct::restorePresence(PresStructRestoreParams& psrp)
 {
-    return jsObjScript->restorePresence(psrp);
+    return jsObjScript->restorePresence(psrp,this);
 }
 
 

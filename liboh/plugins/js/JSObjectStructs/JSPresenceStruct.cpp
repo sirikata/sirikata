@@ -17,6 +17,8 @@ namespace JS {
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent, NULL),
    JSSuspendable(),
+   mRestoring(false),
+   mContID(ctx->getContextID()),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    isConnected(false),
    hasConnectedCallback(true),
@@ -30,6 +32,8 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Functi
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
+   mRestoring(false),
+   mContID(ctx->getContextID()),
    isConnected(true),
    hasConnectedCallback(false),
    mPresenceToken(presenceToken),
@@ -39,6 +43,53 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
     JSPositionListener::setListenTo(&_sporef, &_sporef);
     JSPositionListener::registerAsPosAndMeshListener();
 }
+
+JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
+ : JSPositionListener(parent,NULL),
+   JSSuspendable(),
+   mRestoring(true),
+   isConnected(false),
+   mPresenceToken(presToken),
+   mContext(NULL)
+{
+
+    mLocation    = *psrp.mTmv3f;
+    mOrientation = *psrp.mTmq;
+    mMesh        = *psrp.mMesh;
+    mBounds      =  BoundingSphere3f( center  ,* psrp.mScale);
+    
+    mSuspendedVelocity = *psrp.mSuspendedVelocity;
+    mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
+
+    hasConnectedCallback = *psrp.mHasConnectedCallback;
+    if (hasConnectedCallback)
+        mOnConnectedCallback = v8::Persistent<v8::Function>::New(*psrp.mConnCallback);
+
+    if (*psrp.mIsSuspended)
+        suspend();
+
+    if (*psrp.mIsCleared)
+        clear();
+
+    mContID = *psrp.mContID;
+    if (mContID != jscont->getContextID())
+        parent->registerFixupSuspendable(this,mContID);
+    
+
+    if (psrp.mOnProxRemovedEventHandler != NULL)
+        mOnProxRemovedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxRemovedEventHandler);
+
+    if (psrp.mOnProxAddedEventHandler != NULL)
+        mOnProxAddedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxAddedEventHandler);
+
+    //if we were not connected before, then we will not request the space to go
+    //through the rest of its connection procedure, which means that we should
+    //save the sporef inside psrp
+    if (! *psrp.mIsConnected )
+        JSPositionListener::setListenTo( psrp.mSporef ,NULL);
+                
+}
+
 
 
 v8::Handle<v8::Value> JSPresenceStruct::getAllData()
@@ -52,9 +103,6 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     bool isclear   = getIsCleared();
     returner->Set(v8::String::New("isCleared"), v8::Boolean::New(isclear));
 
-    returner->Set(v8::String::New("hasConnectCallback"), v8::Boolean::New(hasConnectedCallback));
-    if (hasConnectedCallback)
-        returner -> Set(v8::String::New("connectCallback"),    mOnConnectedCallback);
 
     bool issusp = getIsSuspended();
     returner->Set(v8::String::New("isSuspended"), v8::Boolean::New(issusp));
@@ -66,6 +114,25 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
 
     returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
+
+
+    //onConnected
+    if (mOnConnectedCallback.IsEmpty())
+        returner->Set(v8::String::New("connectCallback"), v8::Null());
+    else
+        returner -> Set(v8::String::New("connectCallback"),    mOnConnectedCallback);
+    
+    //prox removed
+    if (mOnProxRemovedEventHandler.IsEmpty())
+        returner->Set(v8::String::New("onProxRemovedEventHandler"), v8::Null());
+    else
+        returner->Set(v8::String::New("onProxRemovedEventHandler"), mOnProxRemovedEventHandler);
+
+    //prox added func
+    if (mOnProxAddedEventHandler.IsEmpty())
+        returner->Set(v8::String::New("onProxAddedEventHandler"), v8::Null());
+    else
+        returner->Set(v8::String::New("onProxAddedEventHandler"), mOnProxAddedEventHandler);
 
     
     return handle_scope.Close(returner);
@@ -106,23 +173,30 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 }
 
 
-v8::Handle<v8::Value>JSPresenceStruct::requestDisconnect()
+
+v8::Handle<v8::Value> JSPresenceStruct::doneRestoring()
 {
-    jsObjScript->requestDisconnect(this);
+    mRestoring = false;
     return v8::Undefined();
 }
 
-
 //note will still receive a call to disconnect from JSObjectScript.cpp, so don't
 //do too much clean up here.
+//when doing disconnecting call his
 v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
-    requestDisconnect();
+    jsObjScript->requestDisconnect(this);
+    
     if (isConnected)
         deregisterAsPosAndMeshListener();
 
+
     isConnected = false;
-    clearPreviousConnectedCB();
+    //clearPreviousConnectedCB();
+
+    if (mContext != NULL)
+        mContext->checkContextDisconnectCallback(this);
+    
     return JSSuspendable::clear();
 }
 
@@ -151,8 +225,8 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosAndMeshListener();
 
-
-    callConnectedCallback();
+    if (! mRestoring)
+        callConnectedCallback();
 }
 
 
@@ -235,7 +309,8 @@ JSPresenceStruct::~JSPresenceStruct()
 
 }
 
-void JSPresenceStruct::disconnect()
+//called from jsobjectscript.
+void JSPresenceStruct::disconnectCalledFromObjScript()
 {
     if (getIsCleared())
         return;
@@ -245,11 +320,12 @@ void JSPresenceStruct::disconnect()
 
     isConnected = false;
 
-
     if (mContext != NULL)
         mContext->checkContextDisconnectCallback(this);
-
 }
+
+
+
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {

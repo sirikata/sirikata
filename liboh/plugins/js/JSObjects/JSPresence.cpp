@@ -49,6 +49,36 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 
 }
 
+
+v8::Handle<v8::Value>  pres_disconnect(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  disconnect for presence requires no arguments.")));
+
+    String errorMessage = "Error in disconnect while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    return jspres->clear();
+}
+
+v8::Handle<v8::Value>  doneRestoring(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  doneRestoring for presence requires no arguments.")));
+
+    String errorMessage = "Error in doneRestoring while decoding presence.  ";
+    JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (jspres == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
+
+    return jspres->doneRestoring();
+}
+
+
 v8::Handle<v8::Value>  getAllData(const v8::Arguments& args)
 {
     if (args.Length() != 0)
