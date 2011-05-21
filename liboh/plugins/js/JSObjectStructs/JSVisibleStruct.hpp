@@ -32,11 +32,10 @@ public:
     v8::Handle<v8::Value> getStillVisible();
     v8::Handle<v8::Value> checkEqual(JSVisibleStruct* jsvis);
 
-
-
 private:
 
-    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently);
+    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams);
+
 
     //these notifiers should only be called by the friend class JSVisibleStructMonitor
     void notifyVisible();

@@ -10,6 +10,7 @@
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
 #include "JSPositionListener.hpp"
+#include "JSPresenceStruct.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -28,14 +29,25 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 }
 
 
+
+v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
+{
+    associatedContext->restorePresence(psrp);
+}
+
+
+
 JSSystemStruct::~JSSystemStruct()
 {
 }
 
-v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporef)
+
+
+v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
 {
-    return associatedContext->struct_create_vis(sporef);
+    return associatedContext->struct_create_vis(sporefWatching,addParams);
 }
+
 
 v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserialize)
 {
@@ -83,13 +95,13 @@ v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
+v8::Handle<v8::Value> JSSystemStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool isSuspended)
 {
     if (!canRecv)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to receive messages.")));
 
 
-    return associatedContext->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist);
+    return associatedContext->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist,isSuspended);
 }
 
 JSContextStruct* JSSystemStruct::getContext()
@@ -172,9 +184,14 @@ v8::Handle<v8::Value> JSSystemStruct::struct_reset()
 
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
-v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb)
+v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period, v8::Persistent<v8::Function>& cb)
 {
-    return associatedContext->struct_createTimeout(dur,cb);
+    return associatedContext->struct_createTimeout(period,cb);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared)
+{
+    return associatedContext->struct_createTimeout(period,cb, contID, timeRemaining, isSuspended,isCleared);
 }
 
 

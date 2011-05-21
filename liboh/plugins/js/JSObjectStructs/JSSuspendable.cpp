@@ -1,5 +1,6 @@
 #include "JSSuspendable.hpp"
 #include <v8.h>
+#include "JSPresenceStruct.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -33,13 +34,11 @@ bool JSSuspendable::getIsSuspended()
 
 v8::Handle<v8::Boolean> JSSuspendable::getIsSuspendedV8()
 {
-    v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(isSuspended);
 }
 
 v8::Handle<v8::Boolean> JSSuspendable::getIsClearedV8()
 {
-    v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(isCleared);
 }
 

@@ -21,6 +21,7 @@ v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
     JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
+    
     if (handler == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Cannot print contents: handler has already been cleared.")));
 
@@ -29,6 +30,18 @@ v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
     handler->printHandler();
     
     return v8::Undefined();
+}
+
+v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+
+    String errMsg  = "Error decoding event handler in getAllData.";
+    JSEventHandlerStruct* handler = JSEventHandlerStruct::decodeEventHandlerStruct(args.This(), errMsg);
+    if (handler == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
+    
+    return handle_scope.Close(handler->getAllData());
 }
 
 

@@ -161,7 +161,7 @@ void JSObjectScriptManager::createTimerTemplate()
     mTimerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSTimer::suspend));
     mTimerTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSTimer::resume));
     mTimerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSTimer::isSuspended));
-
+    mTimerTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSTimer::getAllData));
 }
 
 
@@ -202,7 +202,8 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("serialize"), v8::FunctionTemplate::New(JSSystem::root_serialize));
     mSystemTemplate->Set(v8::String::New("deserialize"), v8::FunctionTemplate::New(JSSystem::root_deserialize));
-    
+
+    mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
 
     
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
@@ -307,6 +308,8 @@ void JSObjectScriptManager::createVisibleTemplate()
     mVisibleTemplate->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));
     mVisibleTemplate->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
     mVisibleTemplate->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
+
+    mVisibleTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
 }
 
 
@@ -331,6 +334,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSPresence::getSpace));
   proto_t->Set(v8::String::New("getPresenceID"),v8::FunctionTemplate::New(JSPresence::getOref));
+
   
   //meshes
   proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
@@ -344,6 +348,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSPresence::getPosition));
   proto_t->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
 
+  proto_t->Set(v8::String::New("getIsConnected"), v8::FunctionTemplate::New(JSPresence::getIsConnected));
+  
   //velocities
   proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
   proto_t->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
@@ -364,7 +370,10 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("__hidden_onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
   proto_t->Set(v8::String::New("__hidden_onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
 
-
+  //for restore-ability.
+  proto_t->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSPresence::getAllData));
+  
+  
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 
@@ -376,6 +385,7 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   proto_t->Set(v8::String::New("suspend"), v8::FunctionTemplate::New(JSPresence::pres_suspend));
   proto_t->Set(v8::String::New("resume"), v8::FunctionTemplate::New(JSPresence::pres_resume));
+  proto_t->Set(v8::String::New("disconnect"), v8::FunctionTemplate::New(JSPresence::pres_disconnect));
 
 
 
@@ -408,6 +418,7 @@ void JSObjectScriptManager::createHandlerTemplate()
     mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::_isSuspended));
     mHandlerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSHandler::_resume));
     mHandlerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSHandler::_clear));
+    mHandlerTemplate->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSHandler::getAllData));
 }
 
 

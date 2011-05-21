@@ -11,6 +11,46 @@
 namespace Sirikata {
 namespace JS {
 
+struct PresStructRestoreParams
+{
+    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity,v8::Handle<v8::Function>*proxRemFunc,v8::Handle<v8::Function>*proxAddFunc)
+        : mSporef(sporef),
+          mTmv3f(tmv3f),
+          mTmq(tmq),
+          mMesh(mesh),
+          mScale(scale),
+          mIsCleared(isCleared),
+          mContID(contID),
+          mIsConnected(isConnected),
+          mConnCallback(connCallback),
+          mIsSuspended(isSuspended),
+          mSuspendedVelocity(suspendedVelocity),
+          mSuspendedOrientationVelocity(suspendedOrientationVelocity),
+          mOnProxRemovedEventHandler(proxRemFunc),
+          mOnProxAddedEventHandler(proxAddFunc)
+    {
+    }
+
+    SpaceObjectReference* mSporef;
+    TimedMotionVector3f* mTmv3f;
+    TimedMotionQuaternion* mTmq;
+    String* mMesh;
+    double* mScale;
+    bool *mIsCleared;
+    uint32* mContID;
+    bool* mIsConnected;
+    v8::Handle<v8::Function>* mConnCallback;
+    bool* mIsSuspended;
+    Vector3f* mSuspendedVelocity;
+    Quaternion* mSuspendedOrientationVelocity;
+    v8::Handle<v8::Function>* mOnProxRemovedEventHandler;
+    v8::Handle<v8::Function>* mOnProxAddedEventHandler;
+    
+};
+
+
+
+
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
 class JSPositionListener;
@@ -18,16 +58,25 @@ class JSPositionListener;
 //note: only position and isConnected will actually set the flag of the watchable
 struct JSPresenceStruct : public JSPositionListener,
                           public JSSuspendable
-
 {
     //isConnected is false using this: have no sporef.
     JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken);
+
+    //Already have a sporef (ie, turn an entity in the world that wasn't built
+    //for scripting into one that is)
     JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
+
+    //restoration constructor
+    JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont);
+
+    virtual void fixupSuspendable()
+    {}
+    
     ~JSPresenceStruct();
 
 
     void connect(const SpaceObjectReference& _sporef);
-    void disconnect();
+    void disconnectCalledFromObjScript();
 
 
     virtual v8::Handle<v8::Value> suspend();
@@ -40,8 +89,10 @@ struct JSPresenceStruct : public JSPositionListener,
 
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
+    v8::Handle<v8::Value> getAllData();
 
-
+    v8::Handle<v8::Value> doneRestoring();
+    
     bool getIsConnected();
     v8::Handle<v8::Value> getIsConnectedV8();
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
@@ -74,9 +125,6 @@ struct JSPresenceStruct : public JSPositionListener,
     //returns this presence as a visible object.
     v8::Persistent<v8::Object>  toVisible();
 
-    //gets the associated jsobjectscript to request hosted object to disconnect
-    //this presence.
-    v8::Handle<v8::Value>requestDisconnect();
 
     v8::Handle<v8::Value>  runSimulation(String simname);
 
@@ -96,7 +144,8 @@ struct JSPresenceStruct : public JSPositionListener,
 
 
 private:
-
+    uint32 mContID;
+    
     //this function checks if we have a callback associated with this presence.
     //Then it asks jsobjectscript to call the callback
     void callConnectedCallback();

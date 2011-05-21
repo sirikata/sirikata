@@ -170,10 +170,13 @@ if(system == undefined)
 
       // Not exposing this
       /** @ignore */
-      system.registerHandler = function (callback,pattern,sender)
+      system.registerHandler = function (callback,pattern,sender,issusp)
       {
           var wrappedCallback = this.__wrapRegHandler(callback);
-          baseSystem.registerHandler(wrappedCallback,pattern,sender);
+          if (typeof(issusp) =='undefined')
+              return baseSystem.registerHandler(wrappedCallback,pattern,sender);
+
+          return baseSystem.registerHandler(wrappedCallback,pattern,sender,issusp);
       };
 
       // Not exposing this
@@ -183,7 +186,8 @@ if(system == undefined)
           var returner = function (msg,sender,receiver)
           {
               system.__setBehindSelf(system._selfMap[receiver]);
-              toCallback(msg,sender);
+              toCallback(msg,sender,receiver);
+
           };
           return std.core.bind(returner,this);
       };
@@ -201,13 +205,22 @@ if(system == undefined)
       /** @function
        @param time number of seconds to wait before executing the callback
        @param callback The function to invoke once "time" number of seconds have passed
+
+       @param {Reserved} uint32 contextId
+       @param {Reserved} double timeRemaining
+       @param {Reserved} bool   isSuspended
+       @param {Reserved} bool   isCleared
+       
        @return a object representing a handle for this timer. This handle can be used in future to suspend and resume the timer
        */
-      system.timeout = function (/**Number*/timeUntil, /**function*/callback)
+      system.timeout = function (/**Number*/period, /**function*/callback, /**uint32*/contextId, /**double*/timeRemaining,/**bool*/isSuspended, /**bool*/isCleared)
       {
           var selfKey = (this.self == null )? this.__NULL_TOKEN__ : this.self.toString();
           var wrappedFunction = this.__wrapTimeout(callback,selfKey);
-          return baseSystem.timeout(timeUntil,wrappedFunction);
+          if (typeof(isCleared) == 'undefined')
+              return baseSystem.timeout(period,wrappedFunction);
+
+          return baseSystem.timeout(period,wrappedFunction,contextId,timeRemaining,isSuspended,isCleared);
       };
 
 
@@ -312,7 +325,7 @@ if(system == undefined)
           return this.createSandbox.apply(this,arguments);//baseSystem.create_context.apply(baseSystem, arguments);
       };
 
-
+     
       /** @function
        @description Creates a new sandbox with associated capabilities
        @type context
@@ -532,6 +545,30 @@ if(system == undefined)
             baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback),position,space);
         };
 
+
+     
+     /**
+      @param {string} sporef,
+      @param {vec3} pos,
+      @param {vec3} vel,
+      @param {string} posTime,
+      @param {quaternion} orient,
+      @param {quaternion} orientVel,
+      @param {string} orientTime,
+      @param {string} mesh,
+      @param {number} scale,
+      @param {boolean} isCleared ,
+      @param {uint32} contextId,
+      @param {boolean} isConnected,
+      @param {function,null} connectedCallback,
+      @param {boolean} isSuspended,
+      @param {vec3} suspendedVelocity,
+      @param {quaternion} suspendedOrientationVelocity,
+      */
+     system.restorePresence = function()
+     {
+         return baseSystem.restorePresence.apply(baseSystem,arguments);
+     };
       
       /** @deprecated Use createPresence */
       system.create_presence = function()

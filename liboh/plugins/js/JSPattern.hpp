@@ -62,6 +62,8 @@ public:
 
     bool matches(v8::Handle<v8::Object> obj) const;
     void printPattern() const;
+    v8::Handle<v8::Value>getAllData();
+
     
 private:
     std::string mName;
@@ -70,11 +72,13 @@ private:
 };
 
 typedef std::vector<Pattern> PatternList;
+typedef PatternList::size_type PatternListSize;
 
 /** Create a template for a Pattern function. */
 v8::Handle<v8::FunctionTemplate> CreatePatternTemplate();
 void DestroyPatternTemplate();
 
+v8::Handle<v8::Value>getAllData(const v8::Arguments& args);
 void PatternFill(Handle<Object>& dest, const Pattern& src);
 Handle<Value> CreateJSResult(Handle<Object>& orig, const Pattern& src);
 Handle<Value> CreateJSResult(v8::Handle<v8::Context>& ctx, const Pattern& src);

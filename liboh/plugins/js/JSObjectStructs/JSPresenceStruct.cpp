@@ -5,6 +5,7 @@
 #include "../JSSerializer.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
+#include "../JSObjects/JSQuaternion.hpp"
 #include "JSPositionListener.hpp"
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
@@ -15,12 +16,15 @@ namespace JS {
 
 //this constructor is called when the presence associated
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
- : JSPositionListener(parent),
+ : JSPositionListener(parent, NULL),
    JSSuspendable(),
+   mContID(ctx->getContextID()),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    isConnected(false),
    hasConnectedCallback(true),
    mPresenceToken(presenceToken),
+   mSuspendedVelocity(Vector3f::nil()),
+   mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx)
 {
     mContext->struct_registerSuspendable(this);
@@ -28,11 +32,14 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Functi
 
 
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
- : JSPositionListener(parent),
+ : JSPositionListener(parent,NULL),
    JSSuspendable(),
+   mContID(ctx->getContextID()),
    isConnected(true),
    hasConnectedCallback(false),
    mPresenceToken(presenceToken),
+   mSuspendedVelocity(Vector3f::nil()),
+   mSuspendedOrientationVelocity(Quaternion::identity()),
    mContext(ctx)
 {
     mContext->struct_registerSuspendable(this);
@@ -40,6 +47,103 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
     JSPositionListener::registerAsPosAndMeshListener();
 }
 
+JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
+ : JSPositionListener(parent,NULL),
+   JSSuspendable(),
+   isConnected(false),
+   hasConnectedCallback(false),
+   mPresenceToken(presToken),
+   mContext(NULL)
+{
+
+    mLocation    = *psrp.mTmv3f;
+    mOrientation = *psrp.mTmq;
+    mMesh        = *psrp.mMesh;
+    mBounds      =  BoundingSphere3f( center  ,* psrp.mScale);
+    
+    mSuspendedVelocity = *psrp.mSuspendedVelocity;
+    mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
+
+
+    if (psrp.mConnCallback != NULL)
+    {
+        hasConnectedCallback = true;
+        mOnConnectedCallback = v8::Persistent<v8::Function>::New(*psrp.mConnCallback);
+    }
+
+    if (*psrp.mIsSuspended)
+        suspend();
+
+    if (*psrp.mIsCleared)
+        clear();
+
+    mContID = *psrp.mContID;
+    if (mContID != jscont->getContextID())
+        parent->registerFixupSuspendable(this,mContID);
+    else
+        mContext = jscont;
+    
+
+    if (psrp.mOnProxRemovedEventHandler != NULL)
+        mOnProxRemovedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxRemovedEventHandler);
+
+    if (psrp.mOnProxAddedEventHandler != NULL)
+        mOnProxAddedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxAddedEventHandler);
+
+    //if we were not connected before, then we will not request the space to go
+    //through the rest of its connection procedure, which means that we should
+    //save the sporef inside psrp
+    if (! *psrp.mIsConnected )
+        JSPositionListener::setListenTo( psrp.mSporef ,NULL);
+                
+}
+
+
+
+v8::Handle<v8::Value> JSPresenceStruct::getAllData()
+{
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Object> returner = JSPositionListener::struct_getAllData();
+
+    uint32 contID = mContext->getContextID();
+    returner->Set(v8::String::New("isConnected"), v8::Boolean::New(isConnected));
+    returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(contID));
+    bool isclear   = getIsCleared();
+    returner->Set(v8::String::New("isCleared"), v8::Boolean::New(isclear));
+
+
+    bool issusp = getIsSuspended();
+    returner->Set(v8::String::New("isSuspended"), v8::Boolean::New(issusp));
+
+    if (!v8::Context::InContext())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in get all data of presences truct.  not currently in a v8 context.")));
+
+    v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
+    returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
+    returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
+
+
+    //onConnected
+    if (mOnConnectedCallback.IsEmpty())
+        returner->Set(v8::String::New("connectCallback"), v8::Null());
+    else
+        returner -> Set(v8::String::New("connectCallback"),    mOnConnectedCallback);
+    
+    //prox removed
+    if (mOnProxRemovedEventHandler.IsEmpty())
+        returner->Set(v8::String::New("onProxRemovedEventHandler"), v8::Null());
+    else
+        returner->Set(v8::String::New("onProxRemovedEventHandler"), mOnProxRemovedEventHandler);
+
+    //prox added func
+    if (mOnProxAddedEventHandler.IsEmpty())
+        returner->Set(v8::String::New("onProxAddedEventHandler"), v8::Null());
+    else
+        returner->Set(v8::String::New("onProxAddedEventHandler"), mOnProxAddedEventHandler);
+
+    
+    return handle_scope.Close(returner);
+}
 
 
 v8::Handle<v8::Value> JSPresenceStruct::getIsConnectedV8()
@@ -76,23 +180,25 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 }
 
 
-v8::Handle<v8::Value>JSPresenceStruct::requestDisconnect()
-{
-    jsObjScript->requestDisconnect(this);
-    return v8::Undefined();
-}
 
 
 //note will still receive a call to disconnect from JSObjectScript.cpp, so don't
 //do too much clean up here.
+//when doing disconnecting call his
 v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
-    requestDisconnect();
+    jsObjScript->requestDisconnect(this);
+    
     if (isConnected)
         deregisterAsPosAndMeshListener();
 
+
     isConnected = false;
-    clearPreviousConnectedCB();
+    //clearPreviousConnectedCB();
+
+    if (mContext != NULL)
+        mContext->checkContextDisconnectCallback(this);
+    
     return JSSuspendable::clear();
 }
 
@@ -121,7 +227,6 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosAndMeshListener();
 
-
     callConnectedCallback();
 }
 
@@ -129,10 +234,14 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 void JSPresenceStruct::callConnectedCallback()
 {
     if (hasConnectedCallback)
+    {
         jsObjScript->handlePresCallback(mOnConnectedCallback,mContext,this);
+    }
 
     if (mContext != NULL)
+    {
         mContext->checkContextConnectCallback(this);
+    }
 
 }
 
@@ -205,7 +314,8 @@ JSPresenceStruct::~JSPresenceStruct()
 
 }
 
-void JSPresenceStruct::disconnect()
+//called from jsobjectscript.
+void JSPresenceStruct::disconnectCalledFromObjScript()
 {
     if (getIsCleared())
         return;
@@ -215,11 +325,12 @@ void JSPresenceStruct::disconnect()
 
     isConnected = false;
 
-
     if (mContext != NULL)
         mContext->checkContextDisconnectCallback(this);
-
 }
+
+
+
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {

@@ -6,12 +6,27 @@
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
 #include "../JSObjectStructs/JSPresenceStruct.hpp"
 #include "../JSObjectStructs/JSPositionListener.hpp"
+#include <boost/lexical_cast.hpp>
+#include "JSVec3.hpp"
+#include "JSQuaternion.hpp"
+#include "../JSLogging.hpp"
+
 
 namespace Sirikata{
 namespace JS{
 
+bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& errMsg)
+{
+    if (!toDecode->IsUint32())
+    {
+        errMsg += "  Could not decode as uint32.";
+        return false;
+    }
+    
+    toDecodeTo = toDecode->ToUint32()->Value();
 
-
+    return true;
+}
 
 
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)
@@ -43,6 +58,163 @@ JSPositionListener* decodeJSPosListener(v8::Handle<v8::Value> toDecode,String& e
         return jsvis;
 
     return NULL;
+}
+
+
+bool decodeSporef(v8::Handle<v8::Value> toDecode, SpaceObjectReference& sporef, String& errorMessage)
+{
+    String sporefStr;
+    bool strDecode = decodeString(toDecode,sporefStr,errorMessage);
+    if (! strDecode )
+        return false;
+
+    try
+    {
+        sporef  = SpaceObjectReference(sporefStr);
+    }
+    catch (std::invalid_argument& ia)
+    {
+        errorMessage += "  Could not convert string to sporef when decoding sporef.";
+        return false;
+    }
+
+    return true;
+}
+
+bool decodeUint64FromString(v8::Handle<v8::Value> toDecode,uint64& decodedInt, String& errorMessage)
+{
+    String decodedVal;
+    bool strDecoded = decodeString(toDecode,decodedVal,errorMessage);
+    if (!strDecoded)
+    {
+        errorMessage += "Could not convert value to string.  ";
+        return false;
+    }
+
+    try
+    {
+        decodedInt = boost::lexical_cast<uint64>(decodedVal);
+    }
+    catch(boost::bad_lexical_cast & blc)
+    {
+        errorMessage += "Could not convert string to uint64.";
+        return false;
+    }
+
+    return true;
+}
+
+//does not assume that toDecode is a string.  Checks it first.
+bool decodeTimeFromString (v8::Handle<v8::Value> toDecode, Time& toDecodeTo, String& errorMessage)
+{
+    uint64 timeVal;
+    bool isUint64 = decodeUint64FromString(toDecode,timeVal,errorMessage);
+
+    if (! isUint64)
+    {
+        errorMessage += "Time to decode was not a uint64.  ";
+        return false;
+    }
+    
+    toDecodeTo = Time(timeVal);
+
+    return true;
+}
+
+
+
+bool decodeTimedMotionVector(v8::Handle<v8::Value>toDecodePos, v8::Handle<v8::Value>toDecodeVel,v8::Handle<v8::Value>toDecodeTimeAsString, TimedMotionVector3f& toDecodeTo, String& errorMessage)
+{
+    //decode position
+    bool isVec3 = Vec3ValValidate(toDecodePos);
+    if (! isVec3)
+    {
+        errorMessage += "Could not convert position to a vector.  ";
+        return false;
+    }
+    Vector3f position = Vec3ValExtractF(toDecodePos);
+
+    //decode velocity
+    isVec3 = Vec3ValValidate(toDecodeVel);
+    if (! isVec3)
+    {
+        errorMessage += "Could not convert velocity to a vector.  ";
+        return false;
+    }
+    Vector3f velocity = Vec3ValExtractF(toDecodeVel);
+
+    //decode time.
+    Time decodedTime;
+    bool timeDecoded = decodeTimeFromString(toDecodeTimeAsString,decodedTime,errorMessage);
+    if (! timeDecoded)
+    {
+        errorMessage += "Could not convert value to a time when deconding timed motion vector.  ";
+        return false;
+    }
+
+    MotionVector3f motVec(position,velocity);
+    toDecodeTo = TimedMotionVector3f(decodedTime,motVec);
+    return true;
+}
+
+bool decodeTimedMotionQuat(v8::Handle<v8::Value> orientationQuat,v8::Handle<v8::Value> orientationVelQuat,v8::Handle<v8::Value> toDecodeTimeAsString, TimedMotionQuaternion& toDecodeTo, String& errorMessage)
+{
+    //decode orientation
+    bool isQuat =QuaternionValValidate(orientationQuat);
+    if (! isQuat)
+    {
+        errorMessage += "Could not convert orientation to a quaternion.  ";
+        return false;
+    }
+    Quaternion orientation = QuaternionValExtract(orientationQuat);
+
+    //decode orientation velocity
+    isQuat = QuaternionValValidate(orientationVelQuat);
+    if (! isQuat)
+    {
+        errorMessage += "Could not convert orientation velocity to a quaternion.  ";
+        return false;
+    }
+    Quaternion orientationVel = QuaternionValExtract(orientationVelQuat);
+
+    //decode time.
+    Time decodedTime;
+    bool timeDecoded = decodeTimeFromString(toDecodeTimeAsString,decodedTime,errorMessage);
+    if (! timeDecoded)
+    {
+        errorMessage += "Could not convert value to a time when deconding timed motion vector.  ";
+        return false;
+    }
+
+    MotionQuaternion motQuat(orientation,orientationVel);
+    toDecodeTo = TimedMotionQuaternion(decodedTime,motQuat);
+    return true;
+}
+
+bool decodeBoundingSphere3f(v8::Handle<v8::Value> toDecodeCenterVec, v8::Handle<v8::Value> toDecodeRadius, BoundingSphere3f& toDecodeTo, String& errMsg)
+{
+    bool isVec3 = Vec3ValValidate(toDecodeCenterVec);
+    if (! isVec3)
+    {
+        errMsg += "Error decoding bounding sphere.  Position argument passed in for center of sphere is not a vec3.";
+        return false;
+    }
+
+    Vector3f centerPos = Vec3ValExtractF(toDecodeCenterVec);
+
+    bool isNumber  = NumericValidate(toDecodeRadius);
+    if (! isNumber)
+    {
+        errMsg += "Error decoding bounding sphere.  Radius argument passed in is not a number.  ";
+        return false;
+    }
+
+
+    double rad = NumericExtract(toDecodeRadius);
+
+
+    toDecodeTo = BoundingSphere3f(centerPos, rad);
+    return true;
 }
 
 

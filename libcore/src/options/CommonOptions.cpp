@@ -77,7 +77,8 @@ void InitOptions() {
 
         .addOption(new OptionValue(PROFILE, "false", Sirikata::OptionValueType<bool>(), "Whether to report profiling information."))
 
-        .addOption(new OptionValue(OPT_CDN_HOST, "open3dhub.com",Sirikata::OptionValueType<String>(), "Hostname for CDN server."))
+        .addOption(new OptionValue(OPT_CDN_HOST,"open3dhub.com",Sirikata::OptionValueType<String>(), "Hostname for CDN server."))
+
         .addOption(new OptionValue(OPT_CDN_SERVICE, "http", Sirikata::OptionValueType<String>(), "Service to access CDN by."))
         .addOption(new OptionValue(OPT_CDN_DNS_URI_PREFIX, "/dns", Sirikata::OptionValueType<String>(), "URI prefix for CDN HTTP name looksup."))
         .addOption(new OptionValue(OPT_CDN_DOWNLOAD_URI_PREFIX, "/download", Sirikata::OptionValueType<String>(), "URI prefix for CDN HTTP downloads."))

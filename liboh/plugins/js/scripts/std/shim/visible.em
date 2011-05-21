@@ -30,8 +30,16 @@
        */
       visible.prototype.getPosition = function(){
       };
-      
 
+
+
+      /**
+       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {string} sporefFrom, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime, 
+       */
+      visible.prototype.getAllData = function()
+      {
+      };
+      
       /**
        @return Number associated with the velocity at which this visible object is travelling.
 

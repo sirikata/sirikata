@@ -17,7 +17,7 @@
 namespace Sirikata {
 namespace JS {
 
-JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender, JSContextStruct* jscs)
+JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender, JSContextStruct* jscs, bool issusp)
  : JSSuspendable(),
    pattern(_pattern),
    cb(_cb),
@@ -29,7 +29,38 @@ JSEventHandlerStruct::JSEventHandlerStruct(const PatternList& _pattern, v8::Pers
     if (jscont != NULL)
         jscont->struct_registerSuspendable(this);
 
+    if (issusp)
+        suspend();
 }
+
+v8::Handle<v8::Value> JSEventHandlerStruct::getAllData()
+{
+    v8::HandleScope handle_scope;
+    bool isSusp  = getIsSuspended();
+    bool isClear = getIsCleared();
+    v8::Local<v8::Object> returner =v8::Object::New();
+
+    returner->Set(v8::String::New("isCleared"),v8::Boolean::New(isClear));
+    returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(jscont->getContextID()));
+    
+    if (isClear)
+        return handle_scope.Close(returner);
+
+    returner->Set(v8::String::New("sender"), sender);
+    
+    returner->Set(v8::String::New("isSuspended"),v8::Boolean::New(isSusp));
+
+    v8::Handle<v8::Array> pattArray = v8::Array::New();
+    for (PatternListSize s =0; s < pattern.size(); ++s)
+        pattArray->Set(v8::Number::New(s), pattern[s].getAllData());
+
+    returner->Set(v8::String::New("patterns"), pattArray);
+
+    returner->Set(v8::String::New("callback"), cb);
+    
+    return handle_scope.Close(returner);
+}
+
 
 
 JSEventHandlerStruct::~JSEventHandlerStruct()
@@ -177,6 +208,43 @@ void JSEventHandlerStruct::printHandler()
     std::cout<<"\n\n";
 
 }
+
+
+JSEventHandlerStruct* JSEventHandlerStruct::decodeEventHandlerStruct(v8::Handle<v8::Value> toDecode, String& errorMessage)
+{
+    v8::HandleScope handle_scope;  //for garbage collection.
+
+    if (! toDecode->IsObject())
+    {
+        errorMessage += "Error in decode of JSEventHandlerStruct.  Should have received an object to decode.";
+        return NULL;
+    }
+
+    v8::Handle<v8::Object> toDecodeObject = toDecode->ToObject();
+
+    //now check internal field count
+    if (toDecodeObject->InternalFieldCount() != JSHANDLER_FIELD_COUNT )
+    {
+        errorMessage += "Error in decode of JSEventHandlerStruct.  Object given does not have adequate number of internal fields for decode.";
+        return NULL;
+    }
+
+    //now actually try to decode each.
+    //decode the jsVisibleStruct field
+    v8::Local<v8::External> wrapJSHandlerStructObj;
+    wrapJSHandlerStructObj = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD));
+
+    void* ptr = wrapJSHandlerStructObj->Value();
+
+    JSEventHandlerStruct* returner;
+    returner = static_cast<JSEventHandlerStruct*>(ptr);
+    if (returner == NULL)
+        errorMessage += "Error in decode of JSEventHandlerStruct.  Internal field of object given cannot be casted to a JSEventHandlerStruct.";
+
+    return returner;
+}
+
+
 
 
 }}//end namespaces

@@ -11,6 +11,11 @@ namespace JS{
 
 class JSObjectScript;
 class JSVisibleStruct;
+class VisAddParams;
+
+//lkjs;
+//FIXME
+//There is an error.  here.  visible sturct monitor needs to also be informed when a presence connects to the world that had been disconnected so that it can then register as position and mesh listeners;
 
 class JSVisibleStructMonitor
 {
@@ -30,7 +35,10 @@ public:
     //then toWhom should be SpaceObjectReference::null();
     //note: when creating a visible struct that is associated with a presence,
     //you should provide the same sporef for both whatsVisible and toWhom.
-    JSVisibleStruct* createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently);
+//    JSVisibleStruct* createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently);
+
+
+    JSVisibleStruct* createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& visibleTo, VisAddParams* addParams);
 
     
     //Returns null if do not have a visible struct that has sporefVisible and
@@ -67,7 +75,7 @@ private:
 
     //helper functions for createVisStruct.
     JSVisibleStruct* createVisStructFromNone(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible);
-    JSVisibleStruct* createVisStructFromHaveListeners(JSObjectScript* jsobjscript,const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently);
+    JSVisibleStruct* createVisStructFromHaveListeners(JSObjectScript* jsobjscript,const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, VisAddParams* addParams);
     
 
     //helper functions for deRegisterVisibleStruct function

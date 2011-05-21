@@ -172,7 +172,43 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     */
 
     presence.prototype.setVelocity = function(/** util.Vec3 */ newvel){}
-    
+
+
+      /**
+       @function
+       Disconnects presence from space.  Emerson presence object still exists, but its isConnected field
+       evaluates to false.
+       */
+      presence.prototype.disconnect = function()
+      {
+      };
+      
+      /**
+       @return Object containing all data associated with this presence.  Fields of returned object:
+            @param {string} sporef,
+            @param {vec3} pos,
+       @param {vec3} vel,
+       @param {string} posTime,
+       @param {quaternion} orient,
+       @param {quaternion} orientVel,
+       @param {string} orientTime,
+       @param {string} mesh,
+       @param {number} scale,
+       @param {boolean} isCleared ,
+       @param {uint32} contextId,
+       @param {boolean} isConnected,
+       @param {function, null} connectedCallback,
+       @param {boolean} isSuspended,
+       @param {vec3} suspendedVelocity,
+       @param {quaternion} suspendedOrientationVelocity,
+       @param {function, null} proxAddedCallback,
+       @param {function, null} proxRemovedCallback,
+       */
+      presence.prototype.getAllData = function()
+      {
+      };
+
+      
     /**@function 
        @description Returns the velocity of the presence
        @return the vector corresponding to the velocity of the presence 

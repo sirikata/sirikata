@@ -1,6 +1,7 @@
 
 #include "JSVisibleStruct.hpp"
 #include "../JSObjectScript.hpp"
+#include "JSPresenceStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "../JSLogging.hpp"
 #include <v8.h>
@@ -9,11 +10,13 @@ namespace Sirikata {
 namespace JS {
 
 
-
-JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, bool visibleCurrently)
- : JSPositionListener(parent),
-   stillVisible(new bool(visibleCurrently))
+JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams)
+ : JSPositionListener(parent,addParams),
+   stillVisible(new bool(false))
 {
+    if ((addParams != NULL) && (addParams->mIsVisible != NULL))
+        *stillVisible = *addParams->mIsVisible;
+
     JSPositionListener::setListenTo(&whatsVisible,&toWhom);
 
     //only register as pos listener if still visible is true

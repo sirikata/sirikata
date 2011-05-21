@@ -17,7 +17,8 @@ class JSContextStruct;
 class JSEventHandlerStruct;
 class JSPresenceStruct;
 class JSPositionListener;
-
+class VisAddParams;
+struct PresStructRestoreParams;
 
 //Most calls in this class just go straight through into associated context to
 //make a sibling call.  Split system into intermediate layer between v8-bound
@@ -40,8 +41,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporef);
-    
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, VisAddParams* addParams);
+
+    v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
     v8::Handle<v8::Value> struct_getPosition();
 
@@ -61,7 +63,7 @@ struct JSSystemStruct
     //if do not have the capability, throws an error.
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 
-    v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist);
+    v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist, bool isSuspended);
 
     v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct);
 
@@ -81,8 +83,10 @@ struct JSSystemStruct
 
     //create a timer that will fire in dur seconds from now, that will bind the
     //this parameter to target and that will fire the callback cb.
-    v8::Handle<v8::Value> struct_createTimeout(const Duration& dur, v8::Persistent<v8::Function>& cb);
+    v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
 
+    v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
+    
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
     v8::Handle<v8::Value> struct_reset();

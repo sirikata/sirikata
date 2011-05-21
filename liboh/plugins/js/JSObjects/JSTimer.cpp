@@ -48,6 +48,21 @@ v8::Handle<v8::Value> resetTimer(const v8::Arguments& args)
     return jstimer->struct_resetTimer(native_dur);
 }
 
+v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("getAllData requires 0 arguments.  Aborting.")) );
+
+    String errorMessage = "Error in getAllData of JSTimer.cpp trying to decode jstimerstruct.  ";
+    JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
+    if (jstimer == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return handle_scope.Close(jstimer->struct_getAllData());
+}
+
 
 /**
    Calling clear prevents the timer from ever re-firing again.

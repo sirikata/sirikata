@@ -22,8 +22,9 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl,uint32 contID)
  : JSSuspendable(),
+   mContextID(contID),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
    hasOnConnectedCallback(false),
@@ -41,6 +42,16 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //taken care of in the createContext function of this class.
 }
 
+
+uint32 JSContextStruct::getContextID()
+{
+    return mContextID;
+}
+
+v8::Handle<v8::Value> JSContextStruct::restorePresence(PresStructRestoreParams& psrp)
+{
+    return jsObjScript->restorePresence(psrp,this);
+}
 
 
 //performs the initialization and population of util object, system object,
@@ -81,10 +92,9 @@ void JSContextStruct::createContextObjects()
 }
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporef)
+v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
 {
-    v8::HandleScope handle_scope;
-    return jsObjScript->createVisiblePersistent(sporef,SpaceObjectReference::null(),false,mContext);
+    return jsObjScript->createVisiblePersistent(sporefWatching, addParams, mContext);
 }
 
 
@@ -540,11 +550,16 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
 
 //create a timer that will fire in dur seconds from now, that will bind the
 //this parameter to target and that will fire the callback cb.
-v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(const Duration& dur,  v8::Persistent<v8::Function>& cb)
+v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,  v8::Persistent<v8::Function>& cb)
 {
     //the timer that's created automatically registers as a suspendable with
     //this context.
-    return jsObjScript->create_timeout(dur, cb, this);
+    return jsObjScript->create_timeout(period, cb, this);
+}
+
+v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared)
+{
+    return jsObjScript->create_timeout(period,cb, contID, timeRemaining, isSuspended,isCleared,this);
 }
 
 
@@ -607,11 +622,11 @@ v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci
 //creates a new jseventhandlerstruct and wraps it in a js object
 //registers the jseventhandlerstruct both with this context and
 //jsobjectscript
-v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist)
+v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool issusp)
 {
     //constructor of new_handler should take care of registering with context as
     //a suspendable.
-    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this);
+    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this,issusp);
 
     jsObjScript->registerHandler(new_handler);
     return jsObjScript->makeEventHandlerObject(new_handler,this);

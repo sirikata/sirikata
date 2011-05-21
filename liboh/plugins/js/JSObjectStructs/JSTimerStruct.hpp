@@ -17,8 +17,9 @@ namespace JS {
 struct JSTimerStruct : public JSSuspendable
 {
 
-    JSTimerStruct(JSObjectScript* jsobj, const Duration& dur, v8::Persistent<v8::Function>& callback,JSContextStruct* jscont, Sirikata::Network::IOService* ioserve);
 
+    JSTimerStruct(JSObjectScript*jsobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared);
+    
     ~JSTimerStruct();
 
     static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
@@ -31,13 +32,19 @@ struct JSTimerStruct : public JSSuspendable
     virtual v8::Handle<v8::Value>resume();
     virtual v8::Handle<v8::Value>clear();
 
-
+    v8::Handle<v8::Value> struct_getAllData();
+    
     JSObjectScript* jsObjScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
     Sirikata::Network::DeadlineTimer* mDeadlineTimer;
-    double timeUntil; //time until the timer fires
+    double timeUntil; //first time create timer will fire after timeUntil seconds
+    double mTimeRemaining; //when restoring a timer, will fire in this many more
+                           //seconds.
 
+
+    virtual void fixSuspendableToContext(JSContextStruct* toAttachTo);
+    
 };
 
 typedef std::map<JSTimerStruct*,int>  TimerMap;

@@ -55,7 +55,7 @@ public:
     OptionSet* getOptions() const { return mOptions; }
     String defaultScript() const;
 
-    v8::Persistent<v8::ObjectTemplate> mEntityTemplate;
+
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
     v8::Persistent<v8::ObjectTemplate> mVisibleTemplate;
 

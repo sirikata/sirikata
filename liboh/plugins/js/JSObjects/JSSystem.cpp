@@ -15,7 +15,7 @@
 #include "../JSEntityCreateInfo.hpp"
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "JSVec3.hpp"
-
+#include "JSQuaternion.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -116,38 +116,92 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 }
 
 
-
+//address of visible watching;
+//address of visible watchingFrom;
+//vector3 of position x,y,z;
+//vector3 of velocity x,y,z;
+//string time
+//quaternion orientation
+//quaternion orientation vel
+//string time
+//vector 3 of center position
+//float of radius
+//mesh
 v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 {
-    v8::HandleScope handle_scope;
-    
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require a single string argument to create visible object.")));
+    if ((args.Length() != 11) && (args.Length() != 1))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require either a single string argument to create visible object.  Or requires three arguments: <visible from string> <visible to string> <vec3 position>")));
 
-    String decodedStr;
-    String errMsg = "Error in system when trying to createVisible.  ";
-    bool strDecode = decodeString(args[0],decodedStr,errMsg);
-    if (! strDecode )
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-
-    
-    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+    String errMsg_sys = "Error decoding system struct when creating visible. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg_sys);
 
     if (jssys == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-        
-    try
-    {
-        SpaceObjectReference sporef(decodedStr);
-        return jssys->struct_create_vis(sporef);
-    }
-    catch (std::invalid_argument& ia)
-    {
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error.  Cannot decode address passed in.")));
-    }
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg_sys.c_str())));
 
-    return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error creating visible object.")));
+    
+    //decode first arg: sporef watching
+    SpaceObjectReference sporefVisWatching;
+    String baseErrMsg  = "Error in system when trying to createVisible.  ";
+    String errMsg      = baseErrMsg + "Could not decode first argument.";
+    bool sporefDecoded = decodeSporef(args[0],sporefVisWatching,errMsg);
+
+    if (! sporefDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    if  (args.Length() == 1)
+        return jssys->struct_create_vis(sporefVisWatching,NULL);
+
+    
+    //decode second arg: sporef watching from
+    SpaceObjectReference sporefVisWatchingFrom;
+    errMsg = baseErrMsg + "Could not decode second argument.  ";
+    sporefDecoded = decodeSporef(args[1],sporefVisWatchingFrom,errMsg);
+
+    if (! sporefDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    
+    //decode third-fifth args: timed motion vector
+    TimedMotionVector3f location;
+    errMsg = baseErrMsg + "Could not decode 3-5 arguments corresponding to position.  ";
+    bool decodedTMV = decodeTimedMotionVector(args[2],args[3],args[4], location,errMsg);
+
+    if (! decodedTMV)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    //decode sixth-eighth args: timed motion quaternion
+    TimedMotionQuaternion orientation;
+    errMsg = baseErrMsg + "Could not decode 6-8 arguments corresponding to orientation.  ";
+    bool decodedTMQ = decodeTimedMotionQuat(args[5],args[6],args[7], orientation,errMsg);
+
+    if (! decodedTMQ)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+
+    //decode ninth-tenth args: bounding sphere
+    BoundingSphere3f bsph;
+    errMsg = baseErrMsg + "Could not decode 9-10 arguments corresponding to bounding sphere.  ";
+    bool decodedBSPH = decodeBoundingSphere3f(args[8],args[9], bsph,errMsg);
+
+    if (! decodedBSPH)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+    
+
+    //decode eleventh arg: mesh string
+    String meshString;
+    errMsg = baseErrMsg + "Could not decode 11th argument corresponding to mesh string.  ";
+    bool meshDecoded = decodeString(args[10],meshString,errMsg);
+
+    if (! meshDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    bool isVisible = false;
+    
+    VisAddParams vap(&sporefVisWatchingFrom,&location,&orientation,&bsph,&meshString,&isVisible);
+    
+    return jssys->struct_create_vis(sporefVisWatching,&vap);
 }
+
 
 
 /**
@@ -465,7 +519,185 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 }
 
 
+/**
+   @param {string} sporef,
+   @param {vec3} pos,
+   @param {vec3} vel,
+   @param {string} posTime,
+   @param {quaternion} orient,
+   @param {quaternion} orientVel,
+   @param {string} orientTime,
+   @param {string} mesh,
+   @param {number} scale,
+   @param {boolean} isCleared ,
+   @param {uint32} contextId,
+   @param {boolean} isConnected,
+   @param {function, null} connectedCallback,
+   @param {boolean} isSuspended,
+   @param {vec3,optional} suspendedVelocity,
+   @param {quaternion,optional} suspendedOrientationVelocity,
+   @param {function, null} proxAddedCallback,
+   @param {function, null} proxRemovedCallback,
+ */
+v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 18)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
+    v8::Handle<v8::Value> mSporefArg                       = args[0];
+    v8::Handle<v8::Value> posArg                           = args[1];
+    v8::Handle<v8::Value> velArg                           = args[2];
+    v8::Handle<v8::Value> posTimeArg                       = args[3];
+    v8::Handle<v8::Value> orientArg                        = args[4];
+    v8::Handle<v8::Value> orientVelArg                     = args[5];
+    v8::Handle<v8::Value> orientTimeArg                    = args[6];
+    v8::Handle<v8::Value> meshArg                          = args[7];
+    v8::Handle<v8::Value> scaleArg                         = args[8];
+    v8::Handle<v8::Value> isClearedArg                     = args[9];
+    v8::Handle<v8::Value> contextIDArg                     = args[10];
+    v8::Handle<v8::Value> isConnectedArg                   = args[11];
+    v8::Handle<v8::Value> connectedCallbackArg             = args[12];
+    v8::Handle<v8::Value> isSuspendedArg                   = args[13];
+    v8::Handle<v8::Value> suspendedVelocityArg             = args[14];
+    v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[15];
+    v8::Handle<v8::Value> proxAddedCallbackArg             = args[16];
+    v8::Handle<v8::Value> proxRemovedCallbackArg           = args[17];
+
+    //now, it's time to decode them.
+    
+    String baseErrMsg = "Error in restorePresence.  Could not decode ";
+
+    String specificErrMsg =baseErrMsg + "sporef.";
+    SpaceObjectReference mSporef;
+    bool sporefDecoded = decodeSporef(mSporefArg, mSporef, specificErrMsg);
+    if (! sporefDecoded)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    TimedMotionVector3f mPos;
+    specificErrMsg = baseErrMsg + "timed motion vector.";
+    bool mPosDecoded = decodeTimedMotionVector(posArg,velArg,posTimeArg,mPos,specificErrMsg);
+    if (! mPosDecoded)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    TimedMotionQuaternion mOrient;
+    specificErrMsg = baseErrMsg + "timed motion quaternion.";
+    bool mOrientDecoded = decodeTimedMotionQuat(orientArg,orientVelArg,orientTimeArg,mOrient,specificErrMsg);
+    if (! mOrientDecoded)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    String mesh;
+    specificErrMsg = baseErrMsg + "mesh.";
+    bool meshDecodeSuccessful = decodeString(meshArg, mesh, specificErrMsg);
+    if (! meshDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    specificErrMsg = baseErrMsg + "scale.";
+    if (! NumericValidate(scaleArg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    double scale = NumericExtract(scaleArg);
+
+    bool isCleared;
+    specificErrMsg = baseErrMsg + "isCleared.";
+    bool isClearedDecodeSuccessful = decodeBool(isClearedArg, isCleared, specificErrMsg);
+    if (! isClearedDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    uint32 contextID;
+    specificErrMsg = baseErrMsg + "contextID.";
+    bool contextIDDecodeSuccessful = decodeUint32(contextIDArg, contextID, specificErrMsg);
+    if (! contextIDDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    bool isConnected;
+    specificErrMsg = baseErrMsg + "isConnected.";
+    bool isConnectedDecodeSuccessful = decodeBool(isConnectedArg, isConnected, specificErrMsg);
+    if (! isConnectedDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    
+
+
+    
+    specificErrMsg = baseErrMsg + "connectedCallback.";
+    v8::Handle<v8::Function>connCB;
+    if (connectedCallbackArg->IsFunction())
+        connCB = v8::Handle<v8::Function>::Cast(connectedCallbackArg);
+    else if (! connectedCallbackArg->IsNull())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    
+    bool isSuspended;
+    specificErrMsg = baseErrMsg + "isSuspended.";
+    bool isSuspendedDecodeSuccessful = decodeBool(isSuspendedArg, isSuspended, specificErrMsg);
+    if (! isSuspendedDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    Vector3f suspendedVelocity;
+    specificErrMsg = baseErrMsg + "suspendedVelocity.";
+    if (!Vec3ValValidate(suspendedVelocityArg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    suspendedVelocity = Vec3ValExtractF(suspendedVelocityArg);
+
+    Quaternion suspendedOrientationVelocity;
+    specificErrMsg = baseErrMsg + "suspendedOrientationVelocity.";
+    if (!QuaternionValValidate(suspendedOrientationVelocityArg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    suspendedOrientationVelocity = QuaternionValExtract(suspendedOrientationVelocityArg);
+
+
+    specificErrMsg = baseErrMsg + "proxAddedCallback.";
+    v8::Handle<v8::Function>proxAddCB;
+    if (proxAddedCallbackArg->IsFunction())
+        proxAddCB = v8::Handle<v8::Function>::Cast(proxAddedCallbackArg);
+    else if (! proxAddedCallbackArg->IsNull())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+
+    specificErrMsg = baseErrMsg + "proxRemovedCallback.";
+    v8::Handle<v8::Function>proxRemCB;
+    if (proxRemovedCallbackArg->IsFunction())
+        proxRemCB = v8::Handle<v8::Function>::Cast(proxRemovedCallbackArg);
+    else if (! proxRemovedCallbackArg->IsNull())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    
+
+    //decode system.
+    String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
+
+    PresStructRestoreParams restParams(
+        &mSporef,
+        &mPos,
+        &mOrient,
+        &mesh,
+        &scale,
+        &isCleared,
+        &contextID,
+        &isConnected,
+        (connCB.IsEmpty() ? NULL : &connCB),
+        &isSuspended,
+        &suspendedVelocity,
+        &suspendedOrientationVelocity,
+        (proxRemCB.IsEmpty() ? NULL : &proxRemCB),
+        (proxAddCB.IsEmpty() ? NULL : &proxAddCB)
+    );
+
+    
+    return handle_scope.Close(jssys->restorePresence(restParams));
+}
+
+                                                                                                                  
 /**
    @param String that contains a uri for a mesh for the new presence.
    @param Function to be called when presence gets connected to the world.
@@ -855,23 +1087,28 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
 
 
 /**
-   @param Number.  How long to wait before executing callback function (2nd
-   arg).  (Units of seconds.)
-   @param Funciton.
+   @param time number of seconds to wait before executing the callback
+   @param callback The function to invoke once "time" number of seconds have passed
 
+   @param {Reserved} uint32 contextId
+   @param {Reserved} double timeRemaining
+   @param {Reserved} bool   isSuspended
+   @param {Reserved} bool   isCleared
+
+   
    timeout sets a timer.  When the number of seconds specified by arg 1 have
    elapsed, executes function specified by arg2.
  */
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 {
 
-    if (args.Length() != 2)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  First arg should be duration, second argumnet is callback")) );
+    if ((args.Length() != 2) && (args.Length() != 6))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to ScriptTimeout of JSSystem.cpp.  Requires either two arguments(duration, callback) or requires six arguments (same as before + <uint32: contextId><double: timeRemaining><bool: isSuspended><bool: isCleared>.  ")) );
 
     v8::Handle<v8::Value> dur         = args[0];
     v8::Handle<v8::Value> cb_val      = args[1];
 
-
+    
     //just returns the ScriptTimeout function
     String errorMessage      =  "Error decoding system in root_timeout of JSSystem.cpp.  ";
     JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
@@ -898,7 +1135,41 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
 
-    return jsfake->struct_createTimeout(Duration::seconds(native_dur), cb_persist);
+    if (args.Length() == 2)
+        return jsfake->struct_createTimeout(native_dur, cb_persist);
+
+    //resuming an already-created timeout.
+    v8::Handle<v8::Value> contIDVal         = args[2];
+    v8::Handle<v8::Value> timeRemainingVal  = args[3];
+    v8::Handle<v8::Value> isSuspendedVal    = args[4];
+    v8::Handle<v8::Value> isClearedVal      = args[5];
+
+    
+    uint32 contID;
+    double timeRemaining;
+    bool isSuspended,isCleared;
+    
+    if (! contIDVal->IsUint32())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Context id should be a uint32.")) );
+
+    contID = contIDVal->ToUint32()->Value();
+
+    if (! timeRemainingVal->IsNumber())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Time remaining should be a double.")) );
+    timeRemaining = timeRemainingVal->ToNumber()->Value();
+
+    if (! isSuspendedVal->IsBoolean())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Is suspended should be a boolean.")) );
+
+    isSuspended = isSuspendedVal->ToBoolean()->Value();
+
+    if (! isClearedVal->IsBoolean())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Is cleared should be a boolean.")) );
+
+    isCleared = isClearedVal->ToBoolean()->Value();
+    
+
+    return jsfake->struct_createTimeout(native_dur, cb_persist, contID,timeRemaining,isSuspended,isCleared);
 }
 
 
@@ -914,8 +1185,10 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 {
-    if (args.Length() != 3)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to>")) );
+    v8::HandleScope handle_scope;
+    
+    if ((args.Length() != 3) && (args.Length() != 4))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 or 4 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to><(optional) bool: whether handler is suspended>")) );
 
     // Changing the sequence of the arguments so as to get the same
     // as is generated in emerson
@@ -923,7 +1196,6 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     v8::Handle<v8::Value> cb_val     = args[0];
     v8::Handle<v8::Value> pattern    = args[1];
     v8::Handle<v8::Value> sender_val = args[2];
-
 
     // Pattern
     PatternList native_patterns;
@@ -984,8 +1256,21 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
 
-    return jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist);
+    if (args.Length() == 3)
+        return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, false));
+
+    
+    v8::Handle<v8::Value> suspVal = args[3];
+    String errMsgDecodeSusp = "Error decoding suspended argument when registering handler with system.  ";
+    bool isSuspended;
+    bool decodeSusp = decodeBool(suspVal, isSuspended, errMsgDecodeSusp);
+
+    if (! decodeSusp)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsgDecodeSusp.c_str())));
+
+    return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, isSuspended));
 }
+
 
 
 /**

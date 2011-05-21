@@ -202,7 +202,8 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
- : mParent(ho),
+ : contIDTracker(0),
+   mParent(ho),
    mManager(jMan),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
    hiddenObjectCount(0),
@@ -231,7 +232,9 @@ JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectS
 
     mHandlingEvent = false;
     SpaceObjectReference sporef = SpaceObjectReference::null();
-    mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate);
+    mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate,contIDTracker);
+    mContStructMap[contIDTracker] = mContext;
+    ++contIDTracker;
 
 
     String script_contents = init_script->as<String>();
@@ -477,11 +480,16 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis
 
 //attempts to make a new jsvisible struct...may be returned an existing one.
 //then wraps it as v8 object.
-v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
+v8::Persistent<v8::Object>  JSObjectScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,VisAddParams* addParams, v8::Handle<v8::Context>ctx)
 {
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, isVisible);
+    SpaceObjectReference visTo = SpaceObjectReference::null();
+    if ((addParams != NULL) && (addParams->mSporefWatchingFrom != NULL))
+        visTo = * addParams->mSporefWatchingFrom;
+        
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visTo,addParams);
     return createVisiblePersistent(jsvis,ctx);
 }
+
 
 v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
 {
@@ -499,11 +507,12 @@ v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStru
 }
 
 
+
 //attempts to make a new jsvisible struct...may be returned an existing one.
 //then wraps it as v8 object.
-v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,bool isVisible, v8::Handle<v8::Context> ctx)
+v8::Local<v8::Object> JSObjectScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,VisAddParams* addParams, v8::Handle<v8::Context> ctx)
 {
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, isVisible);
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, addParams);
     return createVisibleObject(jsvis,ctx);
 }
 
@@ -546,7 +555,11 @@ void JSObjectScript::printMPresences()
 void  JSObjectScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, true);
+
+
+    bool isVis = true;
+    VisAddParams vap(&isVis);
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, &vap);
 
     // Invoke user callback
     PresenceMapIter iter = mPresences.find(querier);
@@ -650,7 +663,7 @@ void JSObjectScript::onDisconnected(SessionEventProviderPtr from, const SpaceObj
     JSPresenceStruct* jspres = findPresence(name);
 
     if (jspres != NULL)
-        jspres->disconnect();
+        jspres->disconnectCalledFromObjScript();
 }
 
 
@@ -665,7 +678,7 @@ void JSObjectScript::create_entity(EntityCreateInfo& eci)
         eci.physics,
         eci.solid_angle,
         UUID::null(),
-        NULL
+        ObjectReference::null()
     );
 }
 
@@ -845,7 +858,14 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 //user
 v8::Persistent<v8::Object> JSObjectScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
 {
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),true);
+    bool isVis = true;
+    VisAddParams vap(&isVis);
+
+
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),&vap);
+
+
+    
     return createVisiblePersistent(jsvis, jscont->mContext);
 }
 
@@ -994,11 +1014,10 @@ void JSObjectScript::print(const String& str) {
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared, JSContextStruct* jscont)
 {
-    //create timerstruct
     Network::IOService* ioserve = mParent->getIOService();
-    JSTimerStruct* jstimer = new JSTimerStruct(this,dur,cb,jscont,ioserve);
+    JSTimerStruct* jstimer = new JSTimerStruct(this,Duration::seconds(period),cb,jscont,ioserve,contID, timeRemaining,isSuspended,isCleared);
 
     v8::HandleScope handle_scope;
 
@@ -1008,7 +1027,12 @@ v8::Handle<v8::Value> JSObjectScript::create_timeout(const Duration& dur, v8::Pe
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
-    return returner;
+    return handle_scope.Close(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::create_timeout(double period, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont)
+{
+    return create_timeout(period,cb,jscont->getContextID(),0,false,false,jscont);
 }
 
 
@@ -1142,7 +1166,8 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     new_ctx.currentScriptDir = full_filename.parent_path();
     new_ctx.currentScriptBaseDir = full_base_dir;
     ScriptOrigin origin( v8::String::New( (new_ctx.getFullRelativeScriptDir() / full_filename.filename()).string().c_str() ) );
-    mImportedFiles.insert( full_filename.string() );
+
+    mImportedFiles[jscont->getContextID()].insert( full_filename.string() );
 
     return  protectedEval(contents, &origin, new_ctx,jscont);
 }
@@ -1215,10 +1240,16 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
         errorMessage += filename;
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
-    if (mImportedFiles.find(full_filename.string()) != mImportedFiles.end()) {
+
+    ImportedFileMapIter iter = mImportedFiles.find(jscont->getContextID());
+    if (iter != mImportedFiles.end())
+    {
+        if (iter->second.find(full_filename.string()) != iter->second.end())
+        {
         //JSLOG(detailed, " Skipping already imported file: " << filename);
         JSLOG(debug, " Skipping already imported file: " << filename);
         return v8::Undefined();
+        }
     }
 
     return absoluteImport(full_filename, full_base,jscont);
@@ -1270,10 +1301,20 @@ v8::Handle<v8::Object> JSObjectScript::getMessageSender(const ODP::Endpoint& src
     SpaceObjectReference from(src.space(), src.object());
     SpaceObjectReference to  (dst.space(), dst.object());
 
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,false);
+
+    bool isVis = false;
+    VisAddParams vap(&isVis);
+
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,&vap);
     v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
 
     return returner;
+}
+
+
+void JSObjectScript::registerFixupSuspendable(JSSuspendable* jssusp, uint32 contID)
+{
+    toFixup[contID].push_back(jssusp);
 }
 
 
@@ -1290,7 +1331,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
 
-   //bftm:clean all this up later
+
 
     if (! parsed)
     {
@@ -1425,7 +1466,6 @@ void JSObjectScript::deleteHandler(JSEventHandlerStruct* toDelete)
 v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
 {
     v8::Handle<v8::Context> ctx = (jscs == NULL) ? mContext->mContext : jscs->mContext;
-
     v8::Context::Scope context_scope(ctx);
     v8::HandleScope handle_scope;
 
@@ -1435,7 +1475,7 @@ v8::Handle<v8::Object> JSObjectScript::makeEventHandlerObject(JSEventHandlerStru
     returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
 
-    return returner;
+    return handle_scope.Close(returner);
 }
 
 
@@ -1453,6 +1493,7 @@ JSPresenceStruct*  JSObjectScript::addConnectedPresence(const SpaceObjectReferen
 //wraps the presence in a v8 object and returns it.
 v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn)
 {
+    v8::HandleScope handle_scope;
     v8::Handle<v8::Context> ctx = (ctxToWrapIn == NULL) ? mContext->mContext : *ctxToWrapIn;
     v8::Context::Scope context_scope(ctx);
 
@@ -1460,7 +1501,7 @@ v8::Local<v8::Object> JSObjectScript::wrapPresence(JSPresenceStruct* presToWrap,
     js_pres->SetInternalField(PRESENCE_FIELD_PRESENCE,External::New(presToWrap));
     js_pres->SetInternalField(TYPEID_FIELD,External::New(new String(PRESENCE_TYPEID_STRING)));
 
-    return js_pres;
+    return handle_scope.Close(js_pres);
 }
 
 
@@ -1483,8 +1524,11 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     v8::HandleScope handle_scope;
 
     v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,canCreatePres,canCreateEnt,canEval,mManager->mContextGlobalTemplate);
+    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,canCreatePres,canCreateEnt,canEval,mManager->mContextGlobalTemplate, contIDTracker);
+    mContStructMap[contIDTracker] = internalContextField;
+    ++contIDTracker;
 
+    
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
 
@@ -1529,6 +1573,60 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 }
 
 
+v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx)
+{
+
+    if (jsctx != mContext)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Can only restore presence from root context.")) );
+
+
+    v8::Context::Scope context_scope(jsctx->mContext);
+
+
+    //get location
+    Vector3f newPos            = psrp.mTmv3f->extrapolate(mParent->currentLocalTime()).position();
+    Quaternion newOrient       = psrp.mTmq->extrapolate(mParent->currentLocalTime()).position();
+    Vector3f newVel            = psrp.mTmv3f->velocity();
+    Quaternion orientVel       = psrp.mTmq->velocity();
+
+    Vector3f newAngAxis;
+    float newAngVel;
+    orientVel.toAngleAxis(newAngVel,newAngAxis);
+
+    Vector3d newPosD(newPos.x,newPos.y,newPos.z);
+    Location newLoc(newPosD,newOrient,newVel, newAngAxis,newAngVel);
+    
+
+    //get bounding sphere
+    BoundingSphere3f bs = BoundingSphere3f(newPos, *psrp.mScale);
+
+    HostedObject::PresenceToken presToke = incrementPresenceToken();
+    JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
+
+
+    
+    if (*psrp.mIsConnected)
+    {
+        mParent->connect(psrp.mSporef->space(),
+            newLoc,
+            bs,
+            *psrp.mMesh,
+            "",
+            SolidAngle::Max,
+            UUID::null(),
+            psrp.mSporef->object(),
+            presToke);
+
+        mUnconnectedPresences.push_back(jspres);
+
+        return v8::Null();        
+    }
+    //if is unconnected, return presence now.
+    v8::HandleScope handle_scope;
+    return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
+}
+        
+
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.
 v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx, const Vector3d& poser, const SpaceID& spaceToCreateIn)
@@ -1546,8 +1644,10 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
-    mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", UUID::null(),NULL,presToke);
+    mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", SolidAngle::Max,UUID::null(),ObjectReference::null(),presToke);
 
+
+    
     //create a presence object associated with this presence and return it;
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);
 

@@ -299,7 +299,7 @@ void HostedObject::initializeScript(const String& script, const String& args)
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script);
     if (mgr) {
-        SILOG(oh,debug,"[HO] Creating script for object with args of "<<args);
+        SILOG(oh,insane,"[HO] Creating script for object with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
         mObjectScript->scriptTypeIs(script);
         mObjectScript->scriptOptionsIs(args);
@@ -313,10 +313,9 @@ void HostedObject::connect(
         const String& mesh,
         const String& phy,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
         PresenceToken token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,ppd, token);
+    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,ObjectReference::null(),token);
 }
 
 
@@ -330,13 +329,15 @@ void HostedObject::connect(
         const String& phy,
         const SolidAngle& queryAngle,
         const UUID&object_uuid_evidence,
-        PerPresenceData* ppd,
+        const ObjectReference& orefID,
         PresenceToken token)
 {
     if (spaceID == SpaceID::null())
         return;
 
-    SpaceObjectReference connectingSporef (spaceID,ObjectReference(UUID::random()));
+    ObjectReference oref = (orefID == ObjectReference::null()) ? ObjectReference(UUID::random()) : orefID;
+    
+    SpaceObjectReference connectingSporef (spaceID,oref);
     mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
 
 
@@ -351,7 +352,7 @@ void HostedObject::connect(
         mesh,
         phy,
         queryAngle,
-        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3, ppd),
+        std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, token),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
@@ -386,7 +387,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 
 
-void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
+void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
@@ -399,12 +400,12 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     // We have to manually do what mContext->mainStrand->wrap( ... ) should be
     // doing because it can't handle > 5 arguments.
     mContext->mainStrand->post(
-        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info, ppd)
+        std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info)
     );
 }
 
 
-void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info, PerPresenceData* ppd)
+void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
     if (info.server == NullServerID)
     {
@@ -415,20 +416,10 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     SpaceObjectReference self_objref(space, obj);
     if(mPresenceData->find(self_objref) == mPresenceData->end())
     {
-        if (ppd != NULL)
-        {
-            ppd->populateSpaceObjRef(SpaceObjectReference(space,obj));
-            mPresenceData->insert(
-                PresenceDataMap::value_type(self_objref, *ppd)
-            );
-        }
-        else
-        {
-            PerPresenceData toInsert(this,space,obj);
-            mPresenceData->insert(
-                PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
-            );
-        }
+        PerPresenceData toInsert(this,space,obj);
+        mPresenceData->insert(
+            PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
+        );
     }
 
     // Convert back to local time
@@ -488,11 +479,6 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
 }
-
-
-
-
-
 
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
@@ -740,6 +726,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
 
+    
     SpaceID space = spaceobj.space();
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
@@ -748,6 +735,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
+            
             TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
@@ -765,19 +753,24 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
+            {
                 return true;
+            }
+
 
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
             if (!proxy_obj) {
                 Transfer::URI meshuri;
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
+                
                 // FIXME use weak_ptr instead of raw
                 proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy);
             }
             else {
                 // Reset so that updates from this new "session" for this proxy
                 // get applied
+                
                 proxy_obj->reset();
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh, &phy);
                 // Mark as valid again
@@ -810,9 +803,13 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (!proxy_obj) continue;
 
 
+            proxy_manager->destroyObject(proxy_obj);;
+
+
             if (mObjectScript)
                 mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
+            //lkjs;
             proxy_obj->invalidate();
 
             CONTEXT_OHTRACE(prox,

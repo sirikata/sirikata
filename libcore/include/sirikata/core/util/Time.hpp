@@ -37,7 +37,7 @@
 #include "../task/Time.hpp"
 namespace Sirikata {
 class Time : private Task::LocalTime{
-    Time (uint64 raw) :LocalTime(raw){}
+
     Time (const LocalTime &local):LocalTime(local) {
 
     }
@@ -46,6 +46,8 @@ class Time : private Task::LocalTime{
      : LocalTime()
     {}
 
+    Time (uint64 raw) :LocalTime(raw){}
+    
     uint64 raw() const {
         return static_cast<const LocalTime*>(this)->raw();
     }

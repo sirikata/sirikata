@@ -27,6 +27,8 @@ v8::Handle<v8::Value> root_canCreateEnt(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canEval(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args);
+v8::Handle<v8::Value> createVisFromAddress(const v8::Handle<v8::Value>& addressFor);
+v8::Handle<v8::Value> createVisFromFull(const v8::Arguments& args);
 
 
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);
@@ -41,6 +43,7 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args);
 v8::Handle<v8::Value> root_getVersion(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args);
+v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args);
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args);
