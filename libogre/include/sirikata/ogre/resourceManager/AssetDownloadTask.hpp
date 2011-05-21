@@ -50,7 +50,7 @@ class OgreRenderer;
  *  callbacks as more data becomes available. Currently, it just manages
  *  downloading all dependencies and notifying you when the are complete.
  */
-class AssetDownloadTask {
+class AssetDownloadTask : public SelfWeakPtr<AssetDownloadTask>{
 public:
     typedef std::tr1::function<void()> FinishedCallback;
 
@@ -59,8 +59,10 @@ public:
         std::tr1::shared_ptr<const Transfer::DenseData> response;
     };
     typedef std::map<Transfer::URI, ResourceData> Dependencies;
-
+private:
     AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
+public:
+    static std::tr1::shared_ptr<AssetDownloadTask> construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
     ~AssetDownloadTask();
 
     Mesh::MeshdataPtr asset() const { return mAsset; }
@@ -69,8 +71,13 @@ public:
     void cancel();
 private:
     void downloadAssetFile();
+    static void weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<Transfer::ChunkRequest> request, std::tr1::shared_ptr<const Transfer::DenseData> response);
     void assetFileDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request, std::tr1::shared_ptr<const Transfer::DenseData> response);
+    static void weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::MeshdataPtr md);
     void handleAssetParsed(Mesh::MeshdataPtr md);
+
+    static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&,std::tr1::shared_ptr<Transfer::ChunkRequest> request,
+        std::tr1::shared_ptr<const Transfer::DenseData> response);
 
     void textureDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<const Transfer::DenseData> response);

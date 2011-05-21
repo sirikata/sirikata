@@ -39,7 +39,11 @@ using namespace Sirikata::Transfer;
 using namespace Sirikata::Mesh;
 
 namespace Sirikata {
-
+std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTask::construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb){
+    std::tr1::shared_ptr<AssetDownloadTask> retval(SelfWeakPtr<AssetDownloadTask>::internalConstruct(new AssetDownloadTask(uri,scene,priority,cb)));
+    retval->downloadAssetFile();
+    return retval;
+}
 AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb)
  : mScene(scene),
    mAssetURI(uri),
@@ -48,7 +52,6 @@ AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRen
    mAsset(),
    mRemainingDownloads(0)
 {
-    downloadAssetFile();
 }
 
 AssetDownloadTask::~AssetDownloadTask() {
@@ -68,13 +71,18 @@ void AssetDownloadTask::downloadAssetFile() {
         new ResourceDownloadTask(
             mAssetURI, mScene->transferPool(),
             mPriority,
-            std::tr1::bind(&AssetDownloadTask::assetFileDownloaded, this, _1, _2)
+            std::tr1::bind(&AssetDownloadTask::weakAssetFileDownloaded, getWeakPtr(), _1, _2)
         )
     );
     mActiveDownloads[mAssetURI] = dl;
     (*dl)(dl);
 }
-
+void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+    std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
+    if (locked){
+        locked->assetFileDownloaded(request,response);
+    }
+}
 void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
@@ -88,10 +96,15 @@ void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> r
 
     mScene->parseMesh(
         mAssetURI, request->getMetadata().getFingerprint(), response,
-        std::tr1::bind(&AssetDownloadTask::handleAssetParsed, this, _1)
+        std::tr1::bind(&AssetDownloadTask::weakHandleAssetParsed, getWeakPtr(), _1)
     );
 }
-
+void AssetDownloadTask::weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::MeshdataPtr md){
+    std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
+    if (locked){
+        locked->handleAssetParsed(md);
+    }    
+}
 void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
     mAsset = md;
 
@@ -117,14 +130,19 @@ void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
             new ResourceDownloadTask(
                 texURI, mScene->transferPool(),
                 mPriority,
-                std::tr1::bind(&AssetDownloadTask::textureDownloaded, this, _1, _2)
+                std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
             )
         );
         mActiveDownloads[texURI] = dl;
         (*dl) (dl);
     }
 }
-
+void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+    std::tr1::shared_ptr<AssetDownloadTask>locked(thus.lock());
+    if (locked) {
+        locked->textureDownloaded(request,response);
+    }
+}
 void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     // Clear the download task
     mActiveDownloads.erase(request->getURI());

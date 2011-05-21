@@ -399,15 +399,13 @@ void Entity::processMesh(Transfer::URI const& meshFile)
     // Otherwise, start the download process
     mURI = meshFile;
     mURIString = meshFile.toString();
-
-    mAssetDownload = AssetDownloadTaskPtr(
-        new AssetDownloadTask(
+//<const Transfer::URI&, Graphics::OgreRenderer* const , double , AssetDownloadTask::FinishedCallback >
+    mAssetDownload = 
+        AssetDownloadTask::construct(
             mURI, getScene(), this->priority(),
             mScene->context()->mainStrand->wrap(
                 std::tr1::bind(&Entity::createMesh, this)
-            )
-        )
-    );
+            ));
 }
 
 Ogre::TextureUnitState::TextureAddressingMode translateWrapMode(MaterialEffectInfo::Texture::WrapMode w) {
