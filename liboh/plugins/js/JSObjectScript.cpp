@@ -351,6 +351,7 @@ bool JSObjectScript::isRootContext(JSContextStruct* jscont)
 }
 
 
+
 JSObjectScript::~JSObjectScript()
 {
 }

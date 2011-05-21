@@ -73,6 +73,26 @@ if(system == undefined)
      
       system.__NULL_TOKEN__ = 'null';
 
+     /**@ignore
+      c++ runtime calls this function whenever a proximity result occurs.
+      this dispatches to the actual presence's prox callback function
+      */
+     system.__gotProx = function()
+     {
+         
+     };
+
+     /**@ignore
+      c++ runtime calls this function whenever a proximity result occurs.
+      this dispatches to the actual presence's prox callback function
+      */
+     system.__removedProx = function()
+     {
+         
+     };
+
+
+     
       //data
       system._selfMap = { };
 
