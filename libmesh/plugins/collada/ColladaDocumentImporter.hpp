@@ -110,13 +110,13 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         State mState;
 
         //returns false if everything specified was black in case all colors are black and a black rather than default material should be returned
-        bool makeTexture (Mesh::MaterialEffectInfo::Texture::Affecting type,
+        void makeTexture (Mesh::MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding * binding,
                           const COLLADAFW::EffectCommon * effect,
                           const COLLADAFW::ColorOrTexture & color,
                           size_t geom_index,
                           size_t prim_index,
-                          Mesh::MaterialEffectInfo::TextureList&output, bool forceBlack=false);
+                          Mesh::MaterialEffectInfo::TextureList&output);
         size_t finishEffect(const COLLADAFW::MaterialBinding *binding, size_t geom_index, size_t prim_index);
     /////////////////////////////////////////////////////////////////
     // interface from COLLADAFW::IWriter

@@ -883,25 +883,20 @@ bool ColladaDocumentImporter::writeMaterial ( COLLADAFW::Material const* materia
 
     return true;
 }
-bool ColladaDocumentImporter::makeTexture
+void ColladaDocumentImporter::makeTexture
                          (MaterialEffectInfo::Texture::Affecting type,
                           const COLLADAFW::MaterialBinding *binding,
                           const COLLADAFW::EffectCommon * effectCommon,
                           const COLLADAFW::ColorOrTexture & color,
                           size_t geomindex,
                           size_t primindex,
-                          MaterialEffectInfo::TextureList&output , bool forceBlack) {
+                          MaterialEffectInfo::TextureList&output) {
     using namespace COLLADAFW;
     if (color.isColor()) {
-        // We can safely ignore either anything black or anything white that
-        // affects opacity. We'll forceBlack at least one item if everything is
-        // black. However, we need to be careful about the alpha channel -- if
+        // We can safely ignore anything white that
+        // affects opacity. However, we need to be careful about the alpha channel -- if
         // it is anything but 1 then we would get incorrect results with the
         // default black texture.
-        bool is_black = (color.getColor().getRed() == 0.0 &&
-            color.getColor().getGreen() == 0.0 &&
-            color.getColor().getBlue() == 0.0 &&
-            color.getColor().getAlpha() == 1.0);
         bool is_white = (color.getColor().getRed() == 1.0 &&
             color.getColor().getGreen() == 1.0 &&
             color.getColor().getBlue() == 1.0 &&
@@ -910,10 +905,9 @@ bool ColladaDocumentImporter::makeTexture
         // particular) exported with their transparency value inverted and
         // 2. completely transparent elements don't make any sense for display.
         bool is_fully_transparent = (color.getColor().getAlpha() == 0.0);
-        if ((type != MaterialEffectInfo::Texture::OPACITY && is_black && !forceBlack) ||
-            (type == MaterialEffectInfo::Texture::OPACITY && is_white) ||
+        if ((type == MaterialEffectInfo::Texture::OPACITY && is_white) ||
             (type == MaterialEffectInfo::Texture::OPACITY && is_fully_transparent))
-            return false;
+            return;
 
         output.push_back(MaterialEffectInfo::Texture());
         MaterialEffectInfo::Texture &retval=output.back();
@@ -999,7 +993,6 @@ bool ColladaDocumentImporter::makeTexture
         retval.maxMipLevel = sampler->getMipmapMaxlevel();
         retval.uri = mTextureMap[sampler->getSourceImage()];
     }
-    return true;
 }
 
 bool ColladaDocumentImporter::writeEffect ( COLLADAFW::Effect const* eff )
@@ -1049,33 +1042,22 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
     // And translate it
     MaterialEffectInfo&mat = mEffects.back();
     CommonEffectPointerArray commonEffects = effect->getCommonEffects();
-    bool allBlack=true;
-    bool curBlack=false;
     if (commonEffects.getCount()) {
         EffectCommon* commonEffect = commonEffects[0];
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
           case EffectCommon::SHADER_PHONG:
-//            curBlack=!makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
-//            if (!curBlack) allBlack=false;
+//            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
           case EffectCommon::SHADER_LAMBERT:
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;
-//            curBlack=!makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
-//            if (!curBlack) allBlack=false;
+            makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
+//            makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
           case EffectCommon::SHADER_CONSTANT:
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;
-            curBlack=!makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),geomIndex,primIndex,mat.textures);
-            if (!curBlack) allBlack=false;
-//            curBlack=!makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
-//            if (!curBlack) allBlack=false;
+            makeTexture(MaterialEffectInfo::Texture::EMISSION, binding, commonEffect,commonEffect->getEmission(),geomIndex,primIndex,mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::OPACITY, binding, commonEffect,commonEffect->getOpacity(),geomIndex,primIndex,mat.textures);
+//            makeTexture(MaterialEffectInfo::Texture::REFLECTIVE,binding, commonEffect,commonEffect->getReflective(),geomIndex,primIndex,mat.textures);
             break;
           default:
             break;
-        }
-        if (allBlack) {
-            makeTexture(MaterialEffectInfo::Texture::DIFFUSE,binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures,true);
         }
         mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
             ? commonEffect->getShininess().getFloatValue()
