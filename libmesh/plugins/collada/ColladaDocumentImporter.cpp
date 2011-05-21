@@ -1044,10 +1044,29 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
     CommonEffectPointerArray commonEffects = effect->getCommonEffects();
     if (commonEffects.getCount()) {
         EffectCommon* commonEffect = commonEffects[0];
+        mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
+            ? commonEffect->getShininess().getFloatValue()
+             : 1.0;
+        // The COLLADA spec says that there are really two models in use for
+        // <blinn> tags. We can figure which one is in use based on the
+        // shininess value.
+        if (mat.shininess > 1.0) { // Blinn-Phong
+            // Do nothing, we've got the exponent as we want it since we put
+            // Phong style parameters into Meshdata.
+        }
+        else { // Blinn-Torrance-Sparrow
+            // We don't have a way to represent this complicated model
+            // yet. Instead, we pass it through as if it were phong, but
+            // adjust the specular.
+            mat.shininess = mat.shininess * 128.f;
+        }
+        mat.reflectivity = commonEffect->getReflectivity().getType()==FloatOrParam::FLOAT
+            ? commonEffect->getReflectivity().getFloatValue()
+             : 1.0;
         switch (commonEffect->getShaderType()) {
           case EffectCommon::SHADER_BLINN:
           case EffectCommon::SHADER_PHONG:
-//            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
+            makeTexture(MaterialEffectInfo::Texture::SPECULAR, binding, commonEffect,commonEffect->getSpecular(),geomIndex,primIndex,mat.textures);
           case EffectCommon::SHADER_LAMBERT:
             makeTexture(MaterialEffectInfo::Texture::DIFFUSE, binding, commonEffect,commonEffect->getDiffuse(),geomIndex,primIndex,mat.textures);
 //            makeTexture(MaterialEffectInfo::Texture::AMBIENT, binding, commonEffect,commonEffect->getAmbient(),geomIndex,primIndex,mat.textures);
@@ -1059,13 +1078,6 @@ size_t ColladaDocumentImporter::finishEffect(const COLLADAFW::MaterialBinding *b
           default:
             break;
         }
-        mat.shininess= commonEffect->getShininess().getType()==FloatOrParam::FLOAT
-            ? commonEffect->getShininess().getFloatValue()
-             : 1.0;
-        mat.reflectivity = commonEffect->getReflectivity().getType()==FloatOrParam::FLOAT
-            ? commonEffect->getReflectivity().getFloatValue()
-             : 1.0;
-
     }else {
         mat.textures.push_back(MaterialEffectInfo::Texture());
         mat.textures.back().color.x=effect->getStandardColor().getRed();

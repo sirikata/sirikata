@@ -480,65 +480,39 @@ public:
             pass->setSpecular(ColourValue(0,0,0,0));
         }
         for (size_t i=0;i<mMat->textures.size();++i) {
-          MaterialEffectInfo::Texture tex=mMat->textures[i];
-          Ogre::Pass*pass=tech->getPass(0);
-/*
-            if (tex.uri.length()&&tech->getNumPasses()<=valid_passes) {
-                pass=tech->createPass();
-                ++valid_passes;
-            }
-*/
-            if (tex.uri.length()==0) {
+            MaterialEffectInfo::Texture tex=mMat->textures[i];
+            Ogre::Pass*pass=tech->getPass(0);
+            if (tex.uri.length()==0) { // Flat colors
                 switch (tex.affecting) {
                 case MaterialEffectInfo::Texture::DIFFUSE:
                   pass->setDiffuse(ColourValue(tex.color.x,
                                                tex.color.y,
                                                tex.color.z,
                                                tex.color.w));
-/*
-                  pass->setAmbient(ColourValue(0,0,0,0));
-                  pass->setSelfIllumination(ColourValue(0,0,0,0));
-                  pass->setSpecular(ColourValue(0,0,0,0));
-*/
                   break;
                 case MaterialEffectInfo::Texture::AMBIENT:
-/*
-                  pass->setDiffuse(ColourValue(0,0,0,0));
-                  pass->setSelfIllumination(ColourValue(0,0,0,0));
-                  pass->setSpecular(ColourValue(0,0,0,0));
-*/
                   pass->setAmbient(ColourValue(tex.color.x,
                                                tex.color.y,
                                                tex.color.z,
                                                tex.color.w));
                   break;
                 case MaterialEffectInfo::Texture::EMISSION:
-/*
-                  pass->setDiffuse(ColourValue(0,0,0,0));
-                  pass->setAmbient(ColourValue(0,0,0,0));
-                  pass->setSpecular(ColourValue(0,0,0,0));
-*/
                   pass->setSelfIllumination(ColourValue(tex.color.x,
                                                         tex.color.y,
                                                         tex.color.z,
                                                         tex.color.w));
                   break;
                 case MaterialEffectInfo::Texture::SPECULAR:
-/*
-                  pass->setDiffuse(ColourValue(0,0,0,0));
-                  pass->setAmbient(ColourValue(0,0,0,0));
-                  pass->setSelfIllumination(ColourValue(0,0,0,0));
-
                   pass->setSpecular(ColourValue(tex.color.x,
                                                 tex.color.y,
                                                 tex.color.z,
                                                 tex.color.w));
-*///FIXME looks awful for some reason
+                  pass->setShininess(mMat->shininess);
                   break;
                 default:
                   break;
                 }
-            }else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) {
+            } else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) { // or textured
                 String texURI = mURI.substr(0, mURI.rfind("/")+1) + tex.uri;
                 Entity::TextureBindingsMap::iterator where = mTextureFingerprints->find(texURI);
                 if (where!=mTextureFingerprints->end()) {
