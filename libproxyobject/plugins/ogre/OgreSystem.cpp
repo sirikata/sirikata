@@ -161,6 +161,7 @@ static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
     p->getProxyManager()->destroyObject(p);
 }
 
+
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;

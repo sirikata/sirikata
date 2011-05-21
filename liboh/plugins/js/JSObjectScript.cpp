@@ -642,8 +642,6 @@ void JSObjectScript::callbackUnconnected(const SpaceObjectReference& name, Hoste
             mPresences[name] = *iter;
             (*iter)->connect(name);
             mUnconnectedPresences.erase(iter);
-            std::cout<<"\n\nDEBUG: Executing callbackUnconnected!\n\n";
-            
             return;
         }
     }

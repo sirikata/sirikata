@@ -227,23 +227,19 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
     JSPositionListener::setListenTo(&_sporef,NULL);
     JSPositionListener::registerAsPosAndMeshListener();
 
-    std::cout<<"\n\nDEBUG: in connect of jspresencestruct\n";
     callConnectedCallback();
 }
 
 
 void JSPresenceStruct::callConnectedCallback()
 {
-    std::cout<<"\nDEBUG in callConnectedCallback\n";
     if (hasConnectedCallback)
     {
-        std::cout<<"\nDEBUB: calling connectedCallback\n";
         jsObjScript->handlePresCallback(mOnConnectedCallback,mContext,this);
     }
 
     if (mContext != NULL)
     {
-        std::cout<<"\nDEBUB: checkContextConnectCallback\n";
         mContext->checkContextConnectCallback(this);
     }
 
