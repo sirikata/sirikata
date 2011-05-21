@@ -58,8 +58,7 @@ def grab_list(url, num, value, model_type, action):
         if action == 'download':
             new_items = [ download_url  + '/' + x['metadata']['types'][model_type][value] for x in models_js ]
         elif action == 'meerkat':
-            # FIXME the second base_path is used to get the filename, e.g. foobar.dae, because currently that isn't provided on its own
-            new_items = [ meerkat_url + x['base_path'] + '/' + model_type + '/' + x['version_num'] + '/' + x['base_path'].split('/')[-1] for x in models_js ]
+            new_items = [ meerkat_url + x['base_path'] + '/' + model_type + '/' + x['version_num'] + '/' + x['base_name'] for x in models_js ]
 
         all_items.extend(new_items)
 
