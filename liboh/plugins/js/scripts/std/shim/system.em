@@ -361,12 +361,30 @@ if(system == undefined)
       };
 
 
+     /**@ignore
+      Runs through presences array, and determines if should add presConn to that array
+      */
+     system.__addToPresencesArray = function (presConn)
+     {
+         for (var s in system.presences)
+         {
+             if (system.presences[s].toString() == presConn.toString())
+                 return;
+         }
+         system.presences.push(presConn);
+     };
+     
       //not exposing
       /** @ignore */
       system.__wrapPresConnCB = function(callback)
       {
+          
+          
+          
           var returner = function(presConn)
           {
+              system.__addToPresencesArray(presConn);
+              
               this.addToSelfMap(presConn);
               this.__setBehindSelf(presConn);
               if (typeof(callback) === 'function')
@@ -549,7 +567,8 @@ if(system == undefined)
                 space = this.self.getSpaceID();
             if ((typeof(position) == 'undefined') || (position === null))
                 position = this.self.getPosition();
-            
+
+
             baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback),position,space);
         };
 
@@ -726,8 +745,8 @@ if(system == undefined)
       /** @field @type Array
        @description Used to store all the presences of the sandbox currrently connected to the world.
        */
-      /** Array */ system.presences = baseSystem.presences;
-
+      /** Array */  system.presences = [];
+     
       system.__presence_constructor__ = __system.__presence_constructor__;
       system.__visible_constructor__ = __system.__visible_constructor__;
 

@@ -76,8 +76,6 @@ void JSContextStruct::createContextObjects()
     system_obj->SetInternalField(SYSTEM_TEMPLATE_SYSTEM_FIELD, v8::External::New(mSystem));
     system_obj->SetInternalField(TYPEID_FIELD, v8::External::New(new String(SYSTEM_TYPEID_STRING)));
 
-    v8::Local<v8::Array> arrayObj = v8::Array::New();
-    system_obj->Set(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME), arrayObj);
 
     //populates internal jscontextstruct field
     systemObj = v8::Persistent<v8::Object>::New(system_obj);
@@ -309,33 +307,10 @@ JSContextStruct::~JSContextStruct()
 }
 
 
-v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct* jspres,EmersonScript* emerScript)
-{
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext);
-
-    // Get the presences array
-    v8::Local<v8::Array> presences_array =
-        v8::Local<v8::Array>::Cast(systemObj->Get(v8::String::New(JSSystemNames::PRESENCES_ARRAY_NAME)));
-    uint32 new_pos = presences_array->Length();
-
-    // Create the object for the new presence
-    v8::Local<v8::Object> js_pres =emerScript->wrapPresence(jspres,&(mContext));
-
-    // Insert into the presences array
-    presences_array->Set(v8::Number::New(new_pos), js_pres);
-
-    return v8::Persistent<v8::Object>::New(js_pres);
-}
-
 
 
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
 {
-    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
-    if (emerScript == NULL)
-        return;
-    addToPresencesArray(jspres,emerScript);
 
     //check whether should evaluate any further callbacks.
     if (getIsSuspended() || getIsCleared())

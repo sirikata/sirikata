@@ -148,9 +148,6 @@ struct JSContextStruct : public JSSuspendable
     void checkContextConnectCallback(JSPresenceStruct* jspres);
     void checkContextDisconnectCallback(JSPresenceStruct* jspres);
 
-    //Adds the following presence to the presence array associated with the
-    //system object that is associated with this context.
-    v8::Persistent<v8::Object> addToPresencesArray(JSPresenceStruct* jspres,EmersonScript* emerscript);
 
     v8::Handle<v8::Value> clearConservePres(std::vector<JSPresenceStruct*>& jspresVec);
 
