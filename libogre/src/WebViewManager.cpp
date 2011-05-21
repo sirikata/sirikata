@@ -940,7 +940,7 @@ Sirikata::Task::EventResponse WebViewManager::onKeyTextInput(Sirikata::Task::Eve
         // We need to filter some characters that are getting in but cause
         // problems.
         String filtered_text;
-        for(int i = 0; i < e->mText.size(); i++) {
+        for(int i = 0; i < (int)e->mText.size(); i++) {
             int x = (int)e->mText[i];
             if ((int)e->mText[i] != 127) // delete
                 filtered_text.push_back(e->mText[i]);

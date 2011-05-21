@@ -70,9 +70,9 @@ public:
     virtual Duration desiredTickRate()const=0;
     ///returns true if simulation should continue (false quits app)
     virtual void poll()=0;
-    
+
     /* Do nothing for invoke */
-    virtual boost::any invoke(std::vector<boost::any>& params){ return NULL; }
+    virtual boost::any invoke(std::vector<boost::any>& params){ return boost::any(); }
 };
 
 }

@@ -671,7 +671,7 @@ private:
   virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
 		      uint16 local_port, uint16 remote_port)
   {
-    stream(cb, initial_data, length, local_port, remote_port, NULL);
+    stream(cb, initial_data, length, local_port, remote_port, 0);
   }
 
   virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length,

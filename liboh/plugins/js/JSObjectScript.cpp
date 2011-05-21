@@ -203,12 +203,12 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 JSObjectScript::JSObjectScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
  : contIDTracker(0),
+   mResetting(false),
    mParent(ho),
+   mCreateEntityPort(NULL),
    mManager(jMan),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
-   hiddenObjectCount(0),
-   mResetting(false),
-   mCreateEntityPort(NULL)
+   hiddenObjectCount(0)
 {
 
     OptionValue* init_script;
@@ -485,7 +485,7 @@ v8::Persistent<v8::Object>  JSObjectScript::createVisiblePersistent(const SpaceO
     SpaceObjectReference visTo = SpaceObjectReference::null();
     if ((addParams != NULL) && (addParams->mSporefWatchingFrom != NULL))
         visTo = * addParams->mSporefWatchingFrom;
-        
+
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visTo,addParams);
     return createVisiblePersistent(jsvis,ctx);
 }
@@ -706,7 +706,7 @@ bool JSObjectScript::valid() const
 
 
 
-void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObjectReference* from, const std::string& msgBody) 
+void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObjectReference* from, const std::string& msgBody)
 {
 
     std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(*from);
@@ -715,11 +715,11 @@ void JSObjectScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObje
         JSLOG(error,"Trying to send from a sporef that does not exist");
         return;
     }
-    
+
     ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
     MemoryReference toSend(msgBody);
 
-    
+
     iter->second->send(dest,toSend);
 }
 
@@ -865,7 +865,7 @@ v8::Persistent<v8::Object> JSObjectScript::presToVis(JSPresenceStruct* jspres, J
     JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),&vap);
 
 
-    
+
     return createVisiblePersistent(jsvis, jscont->mContext);
 }
 
@@ -1528,7 +1528,7 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     mContStructMap[contIDTracker] = internalContextField;
     ++contIDTracker;
 
-    
+
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
 
@@ -1595,7 +1595,7 @@ v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& p
 
     Vector3d newPosD(newPos.x,newPos.y,newPos.z);
     Location newLoc(newPosD,newOrient,newVel, newAngAxis,newAngVel);
-    
+
 
     //get bounding sphere
     BoundingSphere3f bs = BoundingSphere3f(newPos, *psrp.mScale);
@@ -1604,7 +1604,7 @@ v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& p
     JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
 
 
-    
+
     if (*psrp.mIsConnected)
     {
         mParent->connect(psrp.mSporef->space(),
@@ -1619,13 +1619,13 @@ v8::Handle<v8::Value> JSObjectScript::restorePresence(PresStructRestoreParams& p
 
         mUnconnectedPresences.push_back(jspres);
 
-        return v8::Null();        
+        return v8::Null();
     }
     //if is unconnected, return presence now.
     v8::HandleScope handle_scope;
     return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
 }
-        
+
 
 //takes in a string corresponding to the new presence's mesh and a function
 //callback to run when the presence is connected.
@@ -1647,7 +1647,7 @@ v8::Handle<v8::Value> JSObjectScript::create_presence(const String& newMesh, v8:
     mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", SolidAngle::Max,UUID::null(),ObjectReference::null(),presToke);
 
 
-    
+
     //create a presence object associated with this presence and return it;
     JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);
 

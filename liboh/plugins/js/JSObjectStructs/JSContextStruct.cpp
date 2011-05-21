@@ -24,17 +24,17 @@ namespace JS {
 
 JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl,uint32 contID)
  : JSSuspendable(),
-   mContextID(contID),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
+   mContextID(contID),
    hasOnConnectedCallback(false),
    hasOnDisconnectedCallback(false),
    associatedPresence(whichPresence),
    mHomeObject(new SpaceObjectReference(*home)),
    mSystem(new JSSystemStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
+   mContGlobTempl(contGlobTempl),
    mUtil(NULL),
-   inClear(false),
-   mContGlobTempl(contGlobTempl)
+   inClear(false)
 {
     createContextObjects();
 
@@ -88,7 +88,7 @@ void JSContextStruct::createContextObjects()
     //Always load the shim layer.
     //import shim
     jsObjScript->import("std/shim.em",this);
-    
+
 }
 
 
@@ -157,7 +157,7 @@ v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeseria
     if (!parsed)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error deserializing string.")));
 
-    
+
     v8::Local<v8::Object> obj = v8::Object::New();
     bool deserializedSuccess = JSSerializer::deserializeObject(jsObjScript, js_msg,obj);
     if (!deserializedSuccess)

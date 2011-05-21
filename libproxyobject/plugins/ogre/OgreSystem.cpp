@@ -431,7 +431,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 {
     // Decode the command. First argument is the "function name"
     if (params.empty() || !Invokable::anyIsString(params[0]))
-        return NULL;
+        return boost::any();
 
     string name = Invokable::anyAsString(params[0]);
     SILOG(ogre,detailed,"Invoking the function " << name);
@@ -494,8 +494,8 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, boo
 
 boost::any OgreSystem::createWindow(vector<boost::any>& params) {
     // Create a window using the specified url
-    if (params.size() < 3) return NULL;
-    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return NULL;
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return boost::any();
 
     String window_name = Invokable::anyAsString(params[1]);
     String html_url = Invokable::anyAsString(params[2]);
@@ -506,8 +506,8 @@ boost::any OgreSystem::createWindow(vector<boost::any>& params) {
 
 boost::any OgreSystem::createWindowFile(vector<boost::any>& params) {
     // Create a window using the specified url
-    if (params.size() < 3) return NULL;
-    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return NULL;
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return boost::any();
 
     String window_name = Invokable::anyAsString(params[1]);
     String html_url = Invokable::anyAsString(params[2]);
@@ -518,13 +518,13 @@ boost::any OgreSystem::createWindowFile(vector<boost::any>& params) {
 }
 
 boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
-    if (params.size() != 3) return NULL;
-    if (!anyIsString(params[1]) || !anyIsString(params[2])) return NULL;
+    if (params.size() != 3) return boost::any();
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return boost::any();
 
     String window_name = anyAsString(params[1]);
     String html_url = anyAsString(params[2]);
 
-    if (!mMouseHandler) return NULL;
+    if (!mMouseHandler) return boost::any();
 
     //This is disabled and we put these directly in the ui.html
     //script currently because evaluateJS may execute before the page
@@ -538,8 +538,8 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
 
 boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
     // Create a window using the specified HTML content
-    if (params.size() < 3) return NULL;
-    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return NULL;
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1]) || !Invokable::anyIsString(params[2])) return boost::any();
 
     String window_name = Invokable::anyAsString(params[1]);
     String html_script = Invokable::anyAsString(params[2]);
@@ -550,8 +550,8 @@ boost::any OgreSystem::createWindowHTML(vector<boost::any>& params) {
 }
 
 boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
-    if (params.size() < 2) return NULL;
-    if (!Invokable::anyIsInvokable(params[1])) return NULL;
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsInvokable(params[1])) return boost::any();
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
     mMouseHandler->setDelegate(handler);

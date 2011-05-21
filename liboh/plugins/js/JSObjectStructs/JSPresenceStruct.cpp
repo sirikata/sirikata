@@ -18,8 +18,8 @@ namespace JS {
 JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent, NULL),
    JSSuspendable(),
-   mContID(ctx->getContextID()),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
+   mContID(ctx->getContextID()),
    isConnected(false),
    hasConnectedCallback(true),
    mPresenceToken(presenceToken),
@@ -60,7 +60,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParam
     mOrientation = *psrp.mTmq;
     mMesh        = *psrp.mMesh;
     mBounds      =  BoundingSphere3f( center  ,* psrp.mScale);
-    
+
     mSuspendedVelocity = *psrp.mSuspendedVelocity;
     mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
 
@@ -82,7 +82,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParam
         parent->registerFixupSuspendable(this,mContID);
     else
         mContext = jscont;
-    
+
 
     if (psrp.mOnProxRemovedEventHandler != NULL)
         mOnProxRemovedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxRemovedEventHandler);
@@ -95,7 +95,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParam
     //save the sporef inside psrp
     if (! *psrp.mIsConnected )
         JSPositionListener::setListenTo( psrp.mSporef ,NULL);
-                
+
 }
 
 
@@ -128,7 +128,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
         returner->Set(v8::String::New("connectCallback"), v8::Null());
     else
         returner -> Set(v8::String::New("connectCallback"),    mOnConnectedCallback);
-    
+
     //prox removed
     if (mOnProxRemovedEventHandler.IsEmpty())
         returner->Set(v8::String::New("onProxRemovedEventHandler"), v8::Null());
@@ -141,7 +141,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     else
         returner->Set(v8::String::New("onProxAddedEventHandler"), mOnProxAddedEventHandler);
 
-    
+
     return handle_scope.Close(returner);
 }
 
@@ -188,7 +188,7 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
     jsObjScript->requestDisconnect(this);
-    
+
     if (isConnected)
         deregisterAsPosAndMeshListener();
 
@@ -198,7 +198,7 @@ v8::Handle<v8::Value> JSPresenceStruct::clear()
 
     if (mContext != NULL)
         mContext->checkContextDisconnectCallback(this);
-    
+
     return JSSuspendable::clear();
 }
 

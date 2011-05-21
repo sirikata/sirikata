@@ -55,14 +55,14 @@ public:
     virtual Duration desiredTickRate() const = 0;
     ///returns true if simulation should continue (false quits app)
     virtual void poll()=0;
-    
+
 
     /* This interface is for scripting */
     /* Not making it as a purely virtual as this might break other dependent plugin classes */
-    virtual boost::any invoke(std::vector<boost::any>& params){ return NULL; }
-    
-    
-    
+    virtual boost::any invoke(std::vector<boost::any>& params){ return boost::any(); }
+
+
+
 };
 
 }

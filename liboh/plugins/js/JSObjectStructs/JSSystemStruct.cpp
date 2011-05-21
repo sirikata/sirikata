@@ -33,6 +33,7 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
 {
     associatedContext->restorePresence(psrp);
+    return v8::Undefined();
 }
 
 

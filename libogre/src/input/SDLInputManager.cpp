@@ -162,7 +162,7 @@ SDLInputManager::SDLInputManager(Graphics::OgreRenderer* parent, unsigned int wi
 
 #if 1
     if (currentWindow) {
-        mWindowID=mWindowID=SDL_CreateWindowFrom(currentWindow);
+        mWindowID=SDL_CreateWindowFrom(currentWindow);
         if (mWindowID == 0) throw InitializationException("SDL_CreateWindow failed.");
         SDL_RaiseWindow(mWindowID);
         SDL_ShowWindow(mWindowID);
