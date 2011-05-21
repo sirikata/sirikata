@@ -30,6 +30,9 @@ struct JSSystemStruct
 
     static JSSystemStruct* decodeSystemStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
 
+    v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
+    v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
+    
     //regular members
     v8::Handle<v8::Value> struct_canSendMessage();
     v8::Handle<v8::Value> struct_canRecvMessage();
@@ -97,6 +100,8 @@ private:
     //associated data
     JSContextStruct* associatedContext;
     bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt,canEval;
+    
+    
 };
 
 

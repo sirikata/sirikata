@@ -101,6 +101,49 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
     return handle_scope.Close(returner);
 }
 
+v8::Handle<v8::Value> root_proxAddedHandler(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error registering prox added handler requires one argument <function>")));
+
+    String errMsg = "Error decoding system struct when registering prox added handler. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+
+    v8::Handle<v8::Value> cbVal = args[0];
+    if (!cbVal -> IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error in prox added handler.  First argument should be a function.")));
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cbVal);
+    return jssys->proxAddedHandlerCallallback(cb);
+}
+
+
+v8::Handle<v8::Value> root_proxRemovedHandler(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error registering prox removed handler requires one argument <function>")));
+
+    String errMsg = "Error decoding system struct when registering prox removed handler. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+
+    v8::Handle<v8::Value> cbVal = args[0];
+    if (!cbVal -> IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error in prox removed handler.  First argument should be a function.")));
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cbVal);
+    return jssys->proxRemovedHandlerCallallback(cb);
+}
+
+
+
 v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;

@@ -28,11 +28,20 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 }
 
 
+v8::Handle<v8::Value> JSSystemStruct::proxAddedHandlerCallallback(v8::Handle<v8::Function>cb)
+{
+    return associatedContext->proxAddedHandlerCallallback(cb);
+}
+v8::Handle<v8::Value> JSSystemStruct::proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb)
+{
+    return associatedContext->proxRemovedHandlerCallallback(cb);
+}
+    
+
 
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
 {
-    associatedContext->restorePresence(psrp);
-    return v8::Undefined();
+    return associatedContext->restorePresence(psrp);
 }
 
 

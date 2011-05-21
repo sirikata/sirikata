@@ -174,6 +174,9 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
+    mSystemTemplate->Set(v8::String::New("registerProxAddedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxAddedHandler));
+    mSystemTemplate->Set(v8::String::New("registerProxRemovedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxRemovedHandler));
+    
 
     mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
     mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
@@ -373,9 +376,10 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
   //callback on prox addition and removal
-  proto_t->Set(v8::String::New("__hidden_onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
-  proto_t->Set(v8::String::New("__hidden_onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
-
+  // proto_t->Set(v8::String::New("__hidden_onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
+  // proto_t->Set(v8::String::New("__hidden_onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
+  //lkjs;
+  
   //for restore-ability.
   proto_t->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSPresence::getAllData));
 

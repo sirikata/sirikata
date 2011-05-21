@@ -158,12 +158,19 @@ struct JSContextStruct : public JSSuspendable
     v8::Persistent<v8::Context> mContext;
 
     String getScript();
+    v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
+    v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
 
+    
     
     JSPresenceStruct* getAssociatedPresenceStruct()
     {
         return associatedPresence;
     }
+
+    v8::Persistent<v8::Function>proxAddedFunc;
+    v8::Persistent<v8::Function>proxRemovedFunc;
+
     
 private:
     uint32 mContextID;
@@ -216,6 +223,8 @@ private:
     //is suspended/resumed
     SuspendableMap associatedSuspendables;
 
+    
+    
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \
     String fname (funcName);               \

@@ -42,19 +42,77 @@ if(system == undefined)
   system = new Object();
 }
 
+function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
+{
+    this.sporef  = sporef;
+    this.presObj = presObj;
+
+    this.proxResultSet = {   };
+
+    
+    //to set a prox add callback
+    this.setProxAddCB = function (proxAddCB)
+    {
+        if (typeof(proxAddCB) == 'undefined')
+            this.proxAddCB  = null;
+        else
+            this.proxAddCB  = std.core.bind(proxAddCB, this.presObj);        
+    };
+
+    //to set a prox removed callback
+    this.setProxRemCB = function (proxRemCB)
+    {
+        if (typeof(proxRemCB) == 'undefined')
+            this.proxRemCB  = null;
+        else
+            this.proxRemCB  = std.core.bind(proxRemCB, this.presObj);        
+        
+    };
+
+    this.setProxAddCB(proxAddCB);
+    this.setProxRemCB(proxRemCB);
+
+    //call this function when get a visible object added to prox results
+    this.proxAddedEvent = function (visibleObj)
+    {
+        //add to proxResultSet
+        this.proxResultSet[visibleObj.toString()] = visibleObj;
+        //trigger callback
+        if (typeof(this.proxAddCB) != 'undefined')
+            this.proxAddCB(visibleObj);
+    };
+
+    //call this function when get a visible object removed to prox results
+    this.proxRemovedEvent = function (visibleObj)
+    {
+        //add to proxResultSet
+        delete this.proxResultSet[visibleObj.toString()];
+
+        //trigger callback
+        if (typeof(this.proxRemCB) != 'undefined')
+            this.proxRemCB(visibleObj);
+    };
+    
+    this.debugPrint = function(printFunc)
+    {
+        printFunc('sporef name ' + this.sporef + '\n');
+    };
+}
+
 
 (function()
  {
-      var baseSystem = __system;
-      var isResetting = false;
+     var baseSystem = __system;
+     var isResetting = false;
      
-      system = {};
+     system = {};
 
+     
       //self declarations
       system.addToSelfMap= function(toAdd)
       {
           var selfKey = (toAdd == null)? this.__NULL_TOKEN__: toAdd.toString();
-          this._selfMap[selfKey] = toAdd;
+          this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd,null,null);
       };
 
      system.printSelfMap = function()
@@ -64,7 +122,7 @@ if(system == undefined)
          {
              __system.print(s);
              __system.print('\n');
-             __system.print(this._selfMap[s]);
+             this._selfMap[s].debugPrint(__system.print);
              __system.print('\n');
              
          }
@@ -72,24 +130,6 @@ if(system == undefined)
      };
      
       system.__NULL_TOKEN__ = 'null';
-
-     /**@ignore
-      c++ runtime calls this function whenever a proximity result occurs.
-      this dispatches to the actual presence's prox callback function
-      */
-     system.__gotProx = function()
-     {
-         
-     };
-
-     /**@ignore
-      c++ runtime calls this function whenever a proximity result occurs.
-      this dispatches to the actual presence's prox callback function
-      */
-     system.__removedProx = function()
-     {
-         
-     };
 
 
      
@@ -214,9 +254,8 @@ if(system == undefined)
       {
           var returner = function (msg,sender,receiver)
           {
-              system.__setBehindSelf(system._selfMap[receiver]);
+              system.__setBehindSelf(system._selfMap[receiver].presObj);
               toCallback(msg,sender,receiver);
-
           };
           return std.core.bind(returner,this);
       };
@@ -258,7 +297,7 @@ if(system == undefined)
       {
           var returner = function()
           {
-              this.__setBehindSelf(this._selfMap[toStringSelf]);
+              this.__setBehindSelf(this._selfMap[toStringSelf].presObj);
               callback();
           };
 
@@ -398,13 +437,9 @@ if(system == undefined)
       /** @ignore */
       system.__wrapPresConnCB = function(callback)
       {
-          
-          
-          
           var returner = function(presConn)
           {
               system.__addToPresencesArray(presConn);
-              
               this.addToSelfMap(presConn);
               this.__setBehindSelf(presConn);
               if (typeof(callback) === 'function')
@@ -496,6 +531,7 @@ if(system == undefined)
                       else
                           return excep;   //there is an emerson syntax error
                   }
+                  return false;  //should never get here;
               };
 
               var quoteEscaper = function (str)
@@ -683,30 +719,71 @@ if(system == undefined)
       };
 
 
-      system.__sys_onProxAdded= function (presCalling, funcToCall)
+     /**
+      @param visObj is a visible object that has now moved into presence's result set
+      @param presVisTo is a string that is the identifier for the presence the visible is visible to.
+
+      Resets self as well
+      */
+     var proxAddedManager = function(visObj, presVisTo)
+     {
+         if (presVisTo.toString() in system._selfMap)
+         {
+             //reset self;
+             system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
+             //fire proxAddedEvent.
+             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj);
+         }
+         else
+             throw 'Error: received prox added message for presence not controlling';
+     };
+
+     /**
+      @param visObj is a visible object that has now moved into presence's result set
+      @param presVisTo is a string that is the identifier for the presence the visible is visible to.
+
+      Resets self as well
+      */
+     var proxRemovedManager = function(visObj, presVisTo)
+     {
+         if (presVisTo.toString() in system._selfMap)
+         {
+             //reset self;
+             system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
+             //fire proxRemovedEvent.
+             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj);
+         }
+         else
+             throw 'Error: received prox added message for presence not controlling';
+     };
+
+
+     baseSystem.registerProxAddedHandler(proxAddedManager);
+     baseSystem.registerProxRemovedHandler(proxRemovedManager);
+
+     /**
+      @presCalling this is the presence that want to register onProxAdded function fro
+      @funcToCall this is the function to call when a new presence joins presCalling's result set.
+      */
+      system.__sys_register_onProxAdded= function (presCalling, funcToCall)
       {
-          var wrappedCallback = this.__wrapOnProx(presCalling,funcToCall);
-          presCalling.__hidden_onProxAdded(wrappedCallback);
+          if (presCalling.toString()  in this._selfMap)
+              this._selfMap[presCalling.toString()].setProxAddCB(funcToCall);
+          else
+              throw 'Error: do not have a presence in map matching ' + presCalling.toString();
       };
-
-      system.__sys_onProxRemoved = function (presCalling, funcToCall)
+     
+     /**
+      @presCalling this is the presence that want to register onProxRemoved function fro
+      @funcToCall this is the function to call when a new presence exits presCalling's result set.
+      */
+      system.__sys_register_onProxRemoved = function (presCalling, funcToCall)
       {
-          var wrappedCallback = this.__wrapOnProx(presCalling,funcToCall);
-          presCalling.__hidden_onProxRemoved(wrappedCallback);
+          if (presCalling.toString()  in this._selfMap)
+              this._selfMap[presCalling.toString()].setProxRemCB(funcToCall);
+          else
+              throw 'Error: do not have a presence in map matching ' + presCalling.toString();
       };
-
-      system.__wrapOnProx = function (presCalling,funcToCall)
-      {
-          var returner = function(newVis)
-          {
-              this.__setBehindSelf(presCalling);
-              funcToCall(newVis);
-          };
-
-          return std.core.bind(returner,this);
-      };
-
-
 
 
       /** @function

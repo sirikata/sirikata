@@ -56,6 +56,27 @@ v8::Handle<v8::Value> JSContextStruct::restorePresence(PresStructRestoreParams& 
 }
 
 
+
+v8::Handle<v8::Value> JSContextStruct::proxAddedHandlerCallallback(v8::Handle<v8::Function>cb)
+{
+    if (!proxAddedFunc.IsEmpty())
+        proxAddedFunc.Dispose();
+
+    proxAddedFunc = v8::Persistent<v8::Function>::New(cb);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSContextStruct::proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb)
+{
+    if (!proxRemovedFunc.IsEmpty())
+        proxRemovedFunc.Dispose();
+
+    proxRemovedFunc = v8::Persistent<v8::Function>::New(cb);
+    return v8::Undefined();
+}
+
+
+
 //performs the initialization and population of util object, system object,
 //and system object's presences array.
 void JSContextStruct::createContextObjects()

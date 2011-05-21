@@ -52,13 +52,13 @@ system.__presence_constructor__.prototype.getSimulation =
 system.__presence_constructor__.prototype.onProxAdded =
 function (funcToCallback)
 {
-    system.__sys_onProxAdded(this,funcToCallback);
+    system.__sys_register_onProxAdded(this,funcToCallback);
 };
 
 system.__presence_constructor__.prototype.onProxRemoved =
 function (funcToCallback)
 {
-    system.__sys_onProxRemoved(this,funcToCallback);
+    system.__sys_register_onProxRemoved(this,funcToCallback);
 };
 
 
