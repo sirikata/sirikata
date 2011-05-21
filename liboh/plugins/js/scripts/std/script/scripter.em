@@ -31,7 +31,6 @@
  */
 
 system.require('std/core/bind.em');
-system.require('std/escape.em');
 system.require('std/core/pretty.em');
 
 if (typeof(std) === "undefined") std = {};
@@ -72,7 +71,7 @@ function() {
         if (!target) return;
 
         this._parent.invoke("initScript", target);
-        this._scriptingWindow.eval('addObject(' + Escape.escapeString(target.toString(), '"') + ');');
+        this._scriptingWindow.call('addObject', target.toString());
         //this._scriptingWindow.show();
         system.timeout(.1, std.core.bind(this._scriptingWindow.focus, this._scriptingWindow));
         this._scriptedObjects[target.toString()] = target;
@@ -101,9 +100,9 @@ function() {
         var win = this._scriptingWindow;
 
         if (msg.value !== undefined)
-            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(std.core.pretty(msg.value), '"') + ')');
+            win.call('addMessage', sender.toString(), std.core.pretty(msg.value));
         if (msg.exception !== undefined)
-            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString('Exception: ' + std.core.pretty(msg.exception), '"') + ')');
+            win.call('addMessage', sender.toString(), 'Exception: ' + std.core.pretty(msg.exception));
     };
 
     ns.Scripter.prototype._handlePrint = function(msg, sender) {
@@ -111,7 +110,7 @@ function() {
 
         if (msg.print) {
             var to_print = msg.print;
-            win.eval('addMessage(' + Escape.escapeString(sender.toString(), '\"') + ', ' + Escape.escapeString(std.core.pretty(to_print), '"') + ')');
+            win.call('addMessage', sender.toString(), std.core.pretty(to_print));
         }
     };
 

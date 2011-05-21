@@ -31,7 +31,6 @@
  */
 
 system.require("std/library.em");
-system.require('std/escape.em');
 
 /** The chat class enables chat with other nearby objects. It brings up a UI for
  *  chatting and deals with sending and receiving chat messages.
@@ -52,7 +51,7 @@ std.graphics.Chat = system.Class.extend(
         },
 
         toggle: function() {
-            this._ui.eval('Chat.toggleVisible()');
+            this._ui.call('Chat.toggleVisible');
         },
 
         // Send a message to all current members of the chat group
@@ -70,7 +69,7 @@ std.graphics.Chat = system.Class.extend(
 
         // Handle a chat message from someone else.
         onChatFromNeighbor: function(msg, sender) {
-            this._ui.eval('Chat.addMessage(' +  Escape.escapeString(msg.username + ': ' + msg.chat, '"') + ')' );
+            this._ui.call('Chat.addMessage', msg.username + ': ' + msg.chat);
         },
 
         // Handle an initial message from a new neighbor, adding them and listening for messages from them.

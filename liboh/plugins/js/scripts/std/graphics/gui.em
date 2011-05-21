@@ -30,6 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+system.require('std/escape.em');
+
 if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
@@ -55,6 +57,62 @@ function() {
     /** Evaluate the Javascript string inside the GUI context. */
     std.graphics.GUI.prototype.eval = function(js) {
         this._gui.invoke("eval", js);
+    };
+
+    var getGUIJSValue = function(arg) {
+        if (typeof(arg) === 'string')
+            return Escape.escapeString(arg, '"');
+        else if (typeof(arg) === 'undefined' ||
+                 (typeof(arg) === 'object' && arg === null) ||
+                 typeof(arg) === 'number' ||
+                 typeof(arg) === 'boolean')
+            return arg.toString();
+        else
+            throw new TypeError("Invalid object type passed to GUI.call.");
+    };
+
+    /** Call a method in the GUI context. This is just a convenience
+     *  wrapper around eval which will build the string to eval
+     *  automatically from the method arguments.
+     *
+     *  Example:
+     *   var x = 7;
+     *   var st = 'hello "Bob"';
+     *   gui.call('myfunc', x, st);
+     *  is equivalent to
+     *   gui.eval( "myfunc(7, 'hello \"Bob\"');" );
+     */
+    std.graphics.GUI.prototype.call = function() {
+        if (arguments.length < 1) return;
+        var methodname = arguments[0];
+
+        var ev_str = methodname + '(';
+
+        for(var i = 1; i < arguments.length; i++) {
+            if (i > 1) ev_str += ', ';
+
+            var arg = arguments[i];
+            ev_str += getGUIJSValue(arg);
+        }
+
+        ev_str += ')';
+
+        this.eval(ev_str);
+    };
+
+    /** Set the value of a variable in the GUI context. This is just a
+     *  convenience wrapper around eval which will build the string to
+     *  eval automatically from the arguments.
+     *
+     *  Example:
+     *   gui.set('myvar', 17)
+     *  is equivalent to
+     *   gui.eval('var myvar = 17;');
+     *
+     */
+    std.graphics.GUI.prototype.set = function(varname, value) {
+        var ev_str = varname + ' = ' + getGUIJSValue(value) + ';';
+        this.eval(ev_str);
     };
 
     /** Hides the GUI window. */
