@@ -185,10 +185,21 @@ void WebView::initializeWebView(
     webView->addBindOnStartLoading(WideString::point_to(L"sirikata.__event"),
                   Berkelium::Script::Variant::bindFunction(
                       WideString::point_to(L"send"), false));
+    // Note that the setup here is a little weird -- single arguments
+    // are passed through as their value, everything else as a single
+    // array. Note also that we handle the event name separately
     webView->addEvalOnStartLoading(
         WideString::point_to(L"sirikata.event = function(n, args) {\n"
                              L"sirikata.__event.apply(this, [n].concat(args));\n"
                              L"};"));
+    webView->addEvalOnStartLoading(
+        WideString::point_to(
+            L"sirikata.log = function() {\n"
+            L"var args = [];\n"
+            L"for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }\n"
+            L"sirikata.event.apply(this, ['__log', args]);\n"
+            L"};"));
+    bind("__log", std::tr1::bind(&WebView::userLog, this, _1, _2));
     // Deprecated
     webView->addBindOnStartLoading(WideString::point_to(L"chrome"),
                   Berkelium::Script::Variant::emptyObject());
@@ -207,6 +218,34 @@ void WebView::initializeWebView(
         webView->resize(0, 0);
     }
 #endif
+}
+
+void WebView::userLog(WebView* wv, const JSArguments& args) {
+    if (args.size() == 0)
+        return; // not sure why they would do this
+
+    String level(args[0].begin());
+    String msg;
+    for(int i = 1; i < (int)args.size(); i++) {
+        if (i > 1) msg = msg + ' ';
+        msg = msg + String(args[i].begin());
+    }
+
+    // This kinda sucks, but SILOG requires the literal value, not a variable
+    if (level == "fatal")
+        SILOG(ui, fatal, msg);
+    else if (level == "error")
+        SILOG(ui, error, msg);
+    else if (level == "warning" || level == "warn")
+        SILOG(ui, warning, msg);
+    else if (level == "info")
+        SILOG(ui, info, msg);
+    else if (level == "debug")
+        SILOG(ui, debug, msg);
+    else if (level == "detailed")
+        SILOG(ui, detailed, msg);
+    else if (level == "insane")
+        SILOG(ui, insane, msg);
 }
 
 void WebView::createMaterial()

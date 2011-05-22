@@ -94,6 +94,7 @@ Editor.prototype.runCommand = function(msg) {
         command
     ];
     sirikata.event("event", arg_map);
+    sirikata.log('fatal', 'Command:', command);
 };
 
 // We track key up and key down to make shift + enter trigger a send

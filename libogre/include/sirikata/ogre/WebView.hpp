@@ -552,6 +552,10 @@ class SIRIKATA_OGRE_EXPORT WebView
             int dx, int dy,
             const Berkelium::Rect &scrollRect);
 #endif // HAVE_BERKELIUM
+
+        /** Pass user logging request on to logging system. */
+        void userLog(WebView* wv, const JSArguments& args);
+
         };
 }
 }
