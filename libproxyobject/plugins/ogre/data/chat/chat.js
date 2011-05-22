@@ -50,7 +50,7 @@ var runCommand = function() {
     var arg_map = [
         'Chat', username, command
     ];
-    chrome.send("chat", arg_map);
+    sirikata.event("chat", arg_map);
 };
 
 // We track key up and key down to make shift + enter trigger a send

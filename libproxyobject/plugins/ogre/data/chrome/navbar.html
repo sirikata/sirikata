@@ -92,13 +92,13 @@
 
       function goAddress() {
         var url=document.getElementById('addresstext').value;
-        chrome.send("event",["navgo", url])
+        sirikata.event("event",["navgo", url])
       }
-      function goBack() { chrome.send("event",["navback"]); }
-      function goForward() { chrome.send("event",["navforward"]); }
-      function goRefresh() { chrome.send("event",["navrefresh"]); }
-      function goNewTab() { chrome.send("event",["navnewtab"]); }
-      function goCloseTab() { chrome.send("event",["navdel"]); }
+      function goBack() { sirikata.event("event",["navback"]); }
+      function goForward() { sirikata.event("event",["navforward"]); }
+      function goRefresh() { sirikata.event("event",["navrefresh"]); }
+      function goNewTab() { sirikata.event("event",["navnewtab"]); }
+      function goCloseTab() { sirikata.event("event",["navdel"]); }
     </script>
   </head>
   <body onLoad="initButtons()">
@@ -113,4 +113,3 @@
     <div class="button" id="deltab", onclick="goCloseTab()"></div>
   </body>
 </html>
-

@@ -93,7 +93,7 @@ Editor.prototype.runCommand = function(msg) {
         this.object,
         command
     ];
-    chrome.send("event", arg_map);
+    sirikata.event("event", arg_map);
 };
 
 // We track key up and key down to make shift + enter trigger a send

@@ -33,7 +33,7 @@ $(function(){
 });
 
 function set_query_angle(num) {
-  chrome.send("set_query_angle", [num.toString()]);
+  sirikata.event("set_query_angle", [num.toString()]);
 }
 </script>
 </head>

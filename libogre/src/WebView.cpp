@@ -179,6 +179,17 @@ void WebView::initializeWebView(
 #ifdef HAVE_BERKELIUM
     webView = win;
     webView->setDelegate(this);
+    // Unlike chrome.send (below) this version does not do logging.
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata"),
+                  Berkelium::Script::Variant::emptyObject());
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.__event"),
+                  Berkelium::Script::Variant::bindFunction(
+                      WideString::point_to(L"send"), false));
+    webView->addEvalOnStartLoading(
+        WideString::point_to(L"sirikata.event = function(n, args) {\n"
+                             L"sirikata.__event.apply(this, [n].concat(args));\n"
+                             L"};"));
+    // Deprecated
     webView->addBindOnStartLoading(WideString::point_to(L"chrome"),
                   Berkelium::Script::Variant::emptyObject());
     webView->addBindOnStartLoading(WideString::point_to(L"chrome.send_"),
