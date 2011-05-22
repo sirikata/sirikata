@@ -88,13 +88,8 @@ Editor.prototype.runCommand = function(msg) {
     this.addMessage('>>> ' + command);
     this.appendMessage(command);
 
-    var arg_map = [
-        'ExecScript',
-        this.object,
-        command
-    ];
-    sirikata.event("event", arg_map);
-    sirikata.log('fatal', 'Command:', command);
+    sirikata.event("event", 'ExecScript', this.object, command);
+    sirikata.log('debug', 'Command:', command);
 };
 
 // We track key up and key down to make shift + enter trigger a send

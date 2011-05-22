@@ -189,15 +189,18 @@ void WebView::initializeWebView(
     // are passed through as their value, everything else as a single
     // array. Note also that we handle the event name separately
     webView->addEvalOnStartLoading(
-        WideString::point_to(L"sirikata.event = function(n, args) {\n"
-                             L"sirikata.__event.apply(this, [n].concat(args));\n"
-                             L"};"));
+        WideString::point_to(
+            L"sirikata.event = function() {\n"
+            L"var args = [];\n"
+            L"for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }\n"
+            L"sirikata.__event.apply(this, args);\n"
+            L"};"));
     webView->addEvalOnStartLoading(
         WideString::point_to(
             L"sirikata.log = function() {\n"
             L"var args = [];\n"
             L"for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }\n"
-            L"sirikata.event.apply(this, ['__log', args]);\n"
+            L"sirikata.event.apply(this, ['__log'].concat(args));\n"
             L"};"));
     bind("__log", std::tr1::bind(&WebView::userLog, this, _1, _2));
     // Deprecated

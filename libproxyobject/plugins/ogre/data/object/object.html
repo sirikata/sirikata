@@ -5,13 +5,11 @@
         var script_type = document.getElementById('ScriptType').value;
         var python_module = document.getElementById('PythonModule').value;
         var python_class = document.getElementById('PythonClass').value;
-        var arg_map = [
+        sirikata.event("event",
           'CreateScriptedObject',
           'ScriptType', script_type,
           'PythonModule', python_module,
-          'PythonClass', python_class
-        ];
-        sirikata.event("event",arg_map);
+          'PythonClass', python_class);
       }
     </script>
   </head>

@@ -92,13 +92,13 @@
 
       function goAddress() {
         var url=document.getElementById('addresstext').value;
-        sirikata.event("event",["navgo", url])
+        sirikata.event("event", "navgo", url)
       }
-      function goBack() { sirikata.event("event",["navback"]); }
-      function goForward() { sirikata.event("event",["navforward"]); }
-      function goRefresh() { sirikata.event("event",["navrefresh"]); }
-      function goNewTab() { sirikata.event("event",["navnewtab"]); }
-      function goCloseTab() { sirikata.event("event",["navdel"]); }
+      function goBack() { sirikata.event("event", "navback"); }
+      function goForward() { sirikata.event("event", "navforward"); }
+      function goRefresh() { sirikata.event("event", "navrefresh"); }
+      function goNewTab() { sirikata.event("event", "navnewtab"); }
+      function goCloseTab() { sirikata.event("event", "navdel"); }
     </script>
   </head>
   <body onLoad="initButtons()">

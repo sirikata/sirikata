@@ -47,10 +47,7 @@ var runCommand = function() {
 
     addMessage(username + ": " + command);
 
-    var arg_map = [
-        'Chat', username, command
-    ];
-    sirikata.event("chat", arg_map);
+    sirikata.event("chat", 'Chat', username, command);
 };
 
 // We track key up and key down to make shift + enter trigger a send

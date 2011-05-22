@@ -33,7 +33,7 @@ function submitHandler() {
 	var title = $('#resource-title').val();
 	var desc = $('#resource-description').val();
 	$('#main-container').html('<h1>Processing...</h1>');
-	sirikata.event("event", [path,title,desc]);
+	sirikata.event("event", path,title,desc);
 	return false;
 }
 
