@@ -27,6 +27,11 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 {
 }
 
+v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
+{
+    return associatedContext->debug_fileWrite(strToWrite,filename);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::proxAddedHandlerCallallback(v8::Handle<v8::Function>cb)
 {

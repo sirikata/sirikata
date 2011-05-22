@@ -78,6 +78,35 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args)
+{
+    if(args.Length() != 2)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling fileWrite.  Require 2 arguments: 1 a string to write and 2 a filename to write to")));
+
+    v8::Handle<v8::Value> strToWriteVal    = args[0];
+    v8::Handle<v8::Value> fileToWriteToVal = args[1];
+
+    String errMsg = "Error in debug_fileWrite.  Could not decode argument as string.  ";
+    String strToWrite,filename;
+    bool strDecode = decodeString(strToWriteVal,strToWrite,errMsg);
+    if (!strDecode)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
+
+    strDecode = decodeString(fileToWriteToVal,filename,errMsg);
+    if (!strDecode)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
+    
+
+    errMsg = "Error decoding system struct when registering prox added handler. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    return jssys->debug_fileWrite(strToWrite,filename);
+}
+
+
 v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;

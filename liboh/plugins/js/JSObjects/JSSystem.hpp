@@ -32,6 +32,8 @@ v8::Handle<v8::Value> createVisFromFull(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_headless(const v8::Arguments& args);
 
+v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args);
+
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);
 v8::Handle<v8::Value> root_require(const v8::Arguments& args);
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args);

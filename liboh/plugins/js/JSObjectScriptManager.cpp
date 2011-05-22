@@ -161,6 +161,7 @@ void JSObjectScriptManager::createTimerTemplate()
     mTimerTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSTimer::resume));
     mTimerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSTimer::isSuspended));
     mTimerTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSTimer::getAllData));
+    mTimerTemplate->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSTimer::getType));
 }
 
 
@@ -179,6 +180,8 @@ void JSObjectScriptManager::createSystemTemplate()
     
 
     mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
+    mSystemTemplate->Set(v8::String::New("__debugFileWrite"),v8::FunctionTemplate::New(JSSystem::debug_fileWrite));
+
     mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
     mSystemTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSSystem::root_registerHandler));
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
@@ -298,6 +301,7 @@ void JSObjectScriptManager::createVisibleTemplate()
 
     v8::Local<v8::Template> proto_t = mVisibleTemplate->PrototypeTemplate();
     //these function calls are defined in JSObjects/JSVisible.hpp
+
     proto_t->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
     proto_t->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
 
@@ -315,10 +319,13 @@ void JSObjectScriptManager::createVisibleTemplate()
     proto_t->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
 
     proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
+    proto_t->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSVisible::getType));
 
+    
     // For instance templates
     v8::Local<v8::ObjectTemplate> instance_t = mVisibleTemplate->InstanceTemplate();
     instance_t->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
+
 }
 
 

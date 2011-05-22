@@ -43,6 +43,10 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //taken care of in the createContext function of this class.
 }
 
+v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
+{
+    jsObjScript->debug_fileWrite(strToWrite,filename);
+}
 
 uint32 JSContextStruct::getContextID()
 {

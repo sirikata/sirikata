@@ -61,6 +61,7 @@ function (funcToCallback)
     system.__sys_register_onProxRemoved(this,funcToCallback);
 };
 
+system.__presence_constructor__.prototype.proxResultSet = {};
 
 
 Object.defineProperty(system.__presence_constructor__.prototype, "position",
@@ -130,6 +131,14 @@ system.__presence_constructor__.prototype.__prettyPrintFieldsData__ = [
 system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
     return this.__prettyPrintFieldsData__;
 };
+
+system.__presence_constructor__.prototype.__getType = function()
+{
+  return 'presence';
+};
+     
+
+
 
 {
   /** @namespace presence */

@@ -77,6 +77,7 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> struct_setReset();
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
+    v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
 
     v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
     

@@ -99,6 +99,12 @@ v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
     return handle_scope.Close(jsvis->struct_getAllData());
 }
 
+v8::Handle<v8::Value> getType(const v8::Arguments& args)
+{
+    return v8::String::New("visible");
+}
+
+
 
 
 /**

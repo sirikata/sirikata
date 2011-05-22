@@ -102,20 +102,6 @@ function bInitializer(myMaster)
 
                 
         system.print('\n\nIn b.  This is my position: '  + system.self.getPosition().toString());
-        
-        // var printMsgReceived = function(msg,sender)
-        // {
-        //     system.print('Got a received message');
-        //     for (var s in msg)
-        //     {
-        //         system.print('\n\n');
-        //         system.print(s);
-        //         system.print(msg[s]);
-        //     }
-                
-        // };
-        
-        // printMsgReceived <- {::};
 
         
         var allSelfData = system.self.toVisible().getAllData();

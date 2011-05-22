@@ -51,6 +51,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
     v8::Handle<v8::Value> struct_getPosition();
+    v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
+
 
     v8::Handle<v8::Value> struct_print(const String& msg);
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);

@@ -49,6 +49,10 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
 
     this.proxResultSet = {   };
 
+    this.__getType = function()
+    {
+        return "presenceEntry";
+    };
     
     //to set a prox add callback
     this.setProxAddCB = function (proxAddCB)
@@ -58,7 +62,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
         else
             this.proxAddCB  = std.core.bind(proxAddCB, this.presObj);        
     };
-
+    
     //to set a prox removed callback
     this.setProxRemCB = function (proxRemCB)
     {
@@ -107,6 +111,11 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      
      system = {};
 
+     system.__getType = function()
+     {
+       return 'system';
+     };
+     
      
       //self declarations
       system.addToSelfMap= function(toAdd)
@@ -131,7 +140,11 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      
       system.__NULL_TOKEN__ = 'null';
 
-
+     system.getAllData = function()
+     {
+         return system.__selfMap;
+     };
+     
      
       //data
       system._selfMap = { };
@@ -303,6 +316,13 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
 
           return std.core.bind(returner,this);
       };
+
+     
+     /** @ignore*/
+     system.__debugFileWrite = function(strToWrite,filename)
+     {
+         baseSystem.__debugFileWrite(strToWrite,filename);
+     };
 
 
       /** @function

@@ -35,7 +35,7 @@
 
 #include <sirikata/core/util/KnownServices.hpp>
 
-
+#include <fstream>
 #include "JSObjectScript.hpp"
 #include "JSObjectScriptManager.hpp"
 #include "JSLogging.hpp"
@@ -312,6 +312,16 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
  :  contIDTracker(0),
     mManager(jMan)
 {
+}
+
+
+v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,const String& filename)
+{
+    std::ofstream fWriter (filename.c_str());
+    fWriter<<strToWrite;
+    fWriter.flush();
+    fWriter.close();
+    return v8::Undefined();
 }
 
 

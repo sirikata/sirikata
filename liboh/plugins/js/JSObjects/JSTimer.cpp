@@ -99,6 +99,11 @@ v8::Handle<v8::Value> suspend(const v8::Arguments& args)
     
 }
 
+v8::Handle<v8::Value> getType(const v8::Arguments& args)
+{
+    return v8::String::New("timer");
+}
+
 
 /**
    Calling this function on a timer makes it so that the timer's associated
