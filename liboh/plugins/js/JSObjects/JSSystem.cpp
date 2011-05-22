@@ -615,15 +615,14 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
    @param {boolean} isSuspended,
    @param {vec3,optional} suspendedVelocity,
    @param {quaternion,optional} suspendedOrientationVelocity,
-   @param {function, null} proxAddedCallback,
-   @param {function, null} proxRemovedCallback,
  */
 v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
+    
+    if (args.Length() != 16)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 16 arguments")));
 
-    if (args.Length() != 18)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
     v8::Handle<v8::Value> mSporefArg                       = args[0];
     v8::Handle<v8::Value> posArg                           = args[1];
@@ -641,8 +640,6 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> isSuspendedArg                   = args[13];
     v8::Handle<v8::Value> suspendedVelocityArg             = args[14];
     v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[15];
-    v8::Handle<v8::Value> proxAddedCallbackArg             = args[16];
-    v8::Handle<v8::Value> proxRemovedCallbackArg           = args[17];
 
     //now, it's time to decode them.
 
@@ -731,23 +728,6 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     suspendedOrientationVelocity = QuaternionValExtract(suspendedOrientationVelocityArg);
 
 
-    specificErrMsg = baseErrMsg + "proxAddedCallback.";
-    v8::Handle<v8::Function>proxAddCB;
-    if (proxAddedCallbackArg->IsFunction())
-        proxAddCB = v8::Handle<v8::Function>::Cast(proxAddedCallbackArg);
-    else if (! proxAddedCallbackArg->IsNull())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
-
-
-    specificErrMsg = baseErrMsg + "proxRemovedCallback.";
-    v8::Handle<v8::Function>proxRemCB;
-    if (proxRemovedCallbackArg->IsFunction())
-        proxRemCB = v8::Handle<v8::Function>::Cast(proxRemovedCallbackArg);
-    else if (! proxRemovedCallbackArg->IsNull())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
-
-
-
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
     JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
@@ -767,9 +747,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         (connCB.IsEmpty() ? NULL : &connCB),
         &isSuspended,
         &suspendedVelocity,
-        &suspendedOrientationVelocity,
-        (proxRemCB.IsEmpty() ? NULL : &proxRemCB),
-        (proxAddCB.IsEmpty() ? NULL : &proxAddCB)
+        &suspendedOrientationVelocity
     );
 
 

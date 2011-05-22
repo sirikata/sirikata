@@ -375,10 +375,6 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
   proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
-  //callback on prox addition and removal
-  // proto_t->Set(v8::String::New("__hidden_onProxAdded"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxAddedEvent));
-  // proto_t->Set(v8::String::New("__hidden_onProxRemoved"),v8::FunctionTemplate::New(JSPresence::ScriptOnProxRemovedEvent));
-  //lkjs;
   
   //for restore-ability.
   proto_t->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSPresence::getAllData));

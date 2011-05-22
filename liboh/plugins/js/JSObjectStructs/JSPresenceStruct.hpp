@@ -13,7 +13,7 @@ namespace JS {
 
 struct PresStructRestoreParams
 {
-    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity,v8::Handle<v8::Function>*proxRemFunc,v8::Handle<v8::Function>*proxAddFunc)
+    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity)
         : mSporef(sporef),
           mTmv3f(tmv3f),
           mTmq(tmq),
@@ -25,9 +25,7 @@ struct PresStructRestoreParams
           mConnCallback(connCallback),
           mIsSuspended(isSuspended),
           mSuspendedVelocity(suspendedVelocity),
-          mSuspendedOrientationVelocity(suspendedOrientationVelocity),
-          mOnProxRemovedEventHandler(proxRemFunc),
-          mOnProxAddedEventHandler(proxAddFunc)
+          mSuspendedOrientationVelocity(suspendedOrientationVelocity)
     {
     }
 
@@ -43,9 +41,6 @@ struct PresStructRestoreParams
     bool* mIsSuspended;
     Vector3f* mSuspendedVelocity;
     Quaternion* mSuspendedOrientationVelocity;
-    v8::Handle<v8::Function>* mOnProxRemovedEventHandler;
-    v8::Handle<v8::Function>* mOnProxAddedEventHandler;
-    
 };
 
 
@@ -84,9 +79,6 @@ struct JSPresenceStruct : public JSPositionListener,
     virtual v8::Handle<v8::Value> clear();
 
 
-    v8::Handle<v8::Value> registerOnProxRemovedEventHandler(v8::Handle<v8::Function>cb);
-    v8::Handle<v8::Value> registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb);
-
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 
     v8::Handle<v8::Value> getAllData();
@@ -103,8 +95,6 @@ struct JSPresenceStruct : public JSPositionListener,
 
     void addAssociatedContext(JSContextStruct*);
 
-    v8::Persistent<v8::Function> mOnProxRemovedEventHandler;
-    v8::Persistent<v8::Function> mOnProxAddedEventHandler;
     v8::Persistent<v8::Function> mOnConnectedCallback;
 
     HostedObject::PresenceToken getPresenceToken();

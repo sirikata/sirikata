@@ -54,8 +54,6 @@ v8::Handle<v8::Value> toString(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptGetVelocity(v8::Local<v8::String> property, const v8::AccessorInfo &info);
 void ScriptSetVelocity(v8::Local<v8::String> property, v8::Local<v8::Value> value, const v8::AccessorInfo& info);
 
-v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args);
-v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args);
 
 bool getURI(const v8::Arguments& args,std::string& returner);
 v8::Handle<v8::Value>runSimulation(const v8::Arguments& args);

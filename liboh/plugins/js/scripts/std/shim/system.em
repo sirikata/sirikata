@@ -53,7 +53,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     //to set a prox add callback
     this.setProxAddCB = function (proxAddCB)
     {
-        if (typeof(proxAddCB) == 'undefined')
+        if ((typeof(proxAddCB) == 'undefined')|| (proxRemCB == null))
             this.proxAddCB  = null;
         else
             this.proxAddCB  = std.core.bind(proxAddCB, this.presObj);        
@@ -62,7 +62,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     //to set a prox removed callback
     this.setProxRemCB = function (proxRemCB)
     {
-        if (typeof(proxRemCB) == 'undefined')
+        if ((typeof(proxRemCB) == 'undefined') || (proxRemCB == null))
             this.proxRemCB  = null;
         else
             this.proxRemCB  = std.core.bind(proxRemCB, this.presObj);        
@@ -78,7 +78,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
         //add to proxResultSet
         this.proxResultSet[visibleObj.toString()] = visibleObj;
         //trigger callback
-        if (typeof(this.proxAddCB) != 'undefined')
+        if ((typeof(this.proxAddCB) != 'undefined') && (this.proxAddCB != null))
             this.proxAddCB(visibleObj);
     };
 
@@ -89,7 +89,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
         delete this.proxResultSet[visibleObj.toString()];
 
         //trigger callback
-        if (typeof(this.proxRemCB) != 'undefined')
+        if ((typeof(this.proxRemCB) != 'undefined') && (this.proxRemCB != null))
             this.proxRemCB(visibleObj);
     };
     
@@ -445,7 +445,6 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
               if (typeof(callback) === 'function')
                   callback(presConn);
           };
-
           return std.core.bind(returner,this);
       };
 

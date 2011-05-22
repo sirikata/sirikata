@@ -84,13 +84,6 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     else
         mContext = jscont;
 
-
-    if (psrp.mOnProxRemovedEventHandler != NULL)
-        mOnProxRemovedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxRemovedEventHandler);
-
-    if (psrp.mOnProxAddedEventHandler != NULL)
-        mOnProxAddedEventHandler = v8::Persistent<v8::Function>::New(*psrp.mOnProxAddedEventHandler);
-
     //if we were not connected before, then we will not request the space to go
     //through the rest of its connection procedure, which means that we should
     //save the sporef inside psrp
@@ -129,18 +122,6 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
         returner->Set(v8::String::New("connectCallback"), v8::Null());
     else
         returner -> Set(v8::String::New("connectCallback"),    mOnConnectedCallback);
-
-    //prox removed
-    if (mOnProxRemovedEventHandler.IsEmpty())
-        returner->Set(v8::String::New("onProxRemovedEventHandler"), v8::Null());
-    else
-        returner->Set(v8::String::New("onProxRemovedEventHandler"), mOnProxRemovedEventHandler);
-
-    //prox added func
-    if (mOnProxAddedEventHandler.IsEmpty())
-        returner->Set(v8::String::New("onProxAddedEventHandler"), v8::Null());
-    else
-        returner->Set(v8::String::New("onProxAddedEventHandler"), mOnProxAddedEventHandler);
 
 
     return handle_scope.Close(returner);
@@ -376,27 +357,6 @@ void JSPresenceStruct::addAssociatedContext(JSContextStruct* toAdd)
     associatedContexts.push_back(toAdd);
 }
 
-v8::Handle<v8::Value> JSPresenceStruct::registerOnProxRemovedEventHandler(v8::Handle<v8::Function> cb)
-{
-    v8::HandleScope handle_scope;
-    if (!mOnProxRemovedEventHandler.IsEmpty())
-        mOnProxRemovedEventHandler.Dispose();
-
-    mOnProxRemovedEventHandler = v8::Persistent<v8::Function>::New(cb);
-
-    return v8::Boolean::New(true);
-}
-
-v8::Handle<v8::Value> JSPresenceStruct::registerOnProxAddedEventHandler(v8::Handle<v8::Function> cb)
-{
-    v8::HandleScope handle_scope;
-    if (!mOnProxAddedEventHandler.IsEmpty())
-        mOnProxAddedEventHandler.Dispose();
-
-    mOnProxAddedEventHandler = v8::Persistent<v8::Function>::New(cb);
-
-    return v8::Boolean::New(true);
-}
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {

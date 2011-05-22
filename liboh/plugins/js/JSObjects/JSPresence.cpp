@@ -245,33 +245,6 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
     return mStruct->runSimulation(simname);
 }
 
-/**
-   @param Function to execute when an presence satisfies your solid angle query.
-   Function takes in a single argument corresponding to the visible object
-   associated with the presence that satisfies your solid angle query.
-
-   Setting an onProxAdded ensures that the system calls the function passed in
-   when other presences become close enough to your presence.
- */
-v8::Handle<v8::Value> ScriptOnProxAddedEvent(const v8::Arguments& args)
-{
-    String errorMessage = "Error in ScriptOnProxAddedEvent while decoding presence.  ";
-    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-
-    if (mStruct == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded.")) );
-
-    v8::Handle<v8::Value> cb_val = args[0];
-    if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxAdded().  Must contain callback function.")) );
-
-    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-
-    return mStruct->registerOnProxAddedEventHandler(cb);
-}
 
 /**
   Calculates the distance between this presence and a specified position vector
@@ -330,38 +303,6 @@ void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSe
     //return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 }
 
-
-/**
-   @param Function to execute when a presence changes from satisfying your solid
-   angle query to not satisfying your solid angle query.  Function takes in a
-   single argument corresponding to the visible object associated with the
-   presence that no longer satisfies your solid angle query.
-
-   Setting an onProxRemoved ensures that the system calls the function passed in
-   when other presences that were close enough to be within your solid angle
-   result set no longer are.
- */
-v8::Handle<v8::Value> ScriptOnProxRemovedEvent(const v8::Arguments& args)
-{
-
-    String errorMessage = "Error in ScriptOnProxRemovedEvent while decoding presence.  ";
-    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
-
-    if (mStruct == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
-
-
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved.")) );
-
-    v8::Handle<v8::Value> cb_val = args[0];
-    if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to onProxRemoved().  Must contain callback function.")) );
-
-    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-
-    return mStruct->registerOnProxRemovedEventHandler(cb);
-}
 
 
 
