@@ -35,6 +35,18 @@
 namespace Sirikata {
 namespace Mesh {
 
+CompositeFilter::Exception::Exception(const String& msg)
+ : std::exception(), _msg(msg)
+{
+}
+
+CompositeFilter::Exception::~Exception() throw() {
+}
+
+const char* CompositeFilter::Exception::what() const throw() {
+    return _msg.c_str();
+}
+
 CompositeFilter::CompositeFilter() {
 
 }
@@ -47,7 +59,7 @@ CompositeFilter::CompositeFilter(const std::vector<String>& names_and_args) {
 
 void CompositeFilter::add(const String& name, const String& args) {
     if (!FilterFactory::getSingleton().hasConstructor(name))
-        throw "No filter named " + name;
+        throw CompositeFilter::Exception("No filter named " + name);
     FilterPtr next_filter(
         FilterFactory::getSingleton().getConstructor(name)(args)
     );

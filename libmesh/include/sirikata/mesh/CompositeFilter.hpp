@@ -45,6 +45,15 @@ namespace Mesh {
  */
 class SIRIKATA_MESH_EXPORT CompositeFilter : public Filter {
 public:
+    class SIRIKATA_MESH_EXPORT Exception : std::exception {
+    public:
+        Exception(const String& msg);
+        virtual ~Exception() throw();
+        virtual const char* what() const throw();
+    private:
+        std::string _msg;
+    };
+
     CompositeFilter();
     /** Constructor taking a sequence of arguments as
      *  [filter1_name, filter1_args, filter2_name, filter2_args, ...].

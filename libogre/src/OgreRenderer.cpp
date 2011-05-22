@@ -255,11 +255,16 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
    mNextFrameScreenshotFile("")
 {
-    {
+    try {
         std::vector<String> names_and_args;
         names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
         names_and_args.push_back("center"); names_and_args.push_back("");
+        names_and_args.push_back("foo"); names_and_args.push_back("");
         mModelFilter = new Mesh::CompositeFilter(names_and_args);
+    }
+    catch(Mesh::CompositeFilter::Exception e) {
+        SILOG(ogre,warning,"Couldn't allocate requested model load filter, will not apply filter to loaded models.");
+        mModelFilter = NULL;
     }
 }
 
