@@ -228,7 +228,7 @@ void OgreMesh::intersect(Ogre::Node *node, const Ogre::Ray &ray, IntersectResult
     newt.v1.coord = (orient * (newt.v1.coord * scale)) + position;
     newt.v2.coord = (orient * (newt.v2.coord * scale)) + position;
     newt.v3.coord = (orient * (newt.v3.coord * scale)) + position;
-    intersectTri(ray, rtn, &newt, true);
+    intersectTri(ray, rtn, &newt, false);
     if (rtn.intersected) { rtn.tri = *itr; }
     //intersectTri(ray, rtn, &*itr);
 /*    if (i < 10) {
