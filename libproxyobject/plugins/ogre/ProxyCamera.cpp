@@ -39,29 +39,51 @@ namespace Sirikata {
 namespace Graphics {
 
 ProxyCamera::ProxyCamera(OgreRenderer *scene, ProxyEntity* follow)
- : Camera(scene, ogreCameraName(follow->id())),
-   mFollowing(follow)
+ : Camera(scene, ogreCameraName(follow->id()))
 {
+    reparent(follow);
 }
 
 ProxyCamera::~ProxyCamera() {
+    if (mFollowing != NULL)
+        ((Provider<ProxyEntityListener*>*)mFollowing)->removeListener(this);
+}
+
+void ProxyCamera::proxyEntityDestroyed(ProxyEntity*) {
+    mFollowing = NULL;
+}
+
+void ProxyCamera::reparent(ProxyEntity* follow) {
+    mFollowing = follow;
+    ((Provider<ProxyEntityListener*>*)mFollowing)->addListener(this);
+
+    // We don't do anything with these, but they force caching of the current state
+    getGoalPosition();
+    getGoalOrientation();
+    getGoalBounds();
+
+    // Reset the mode to the existing setting
+    setMode(mMode);
 }
 
 Vector3d ProxyCamera::getGoalPosition() {
-    return mFollowing->getOgrePosition();
+    if (mFollowing) return (mLastGoalPosition = mFollowing->getOgrePosition());
+    else return mLastGoalPosition;
 }
 
 Quaternion ProxyCamera::getGoalOrientation() {
-    return mFollowing->getOgreOrientation();
+    if (mFollowing) return (mLastGoalOrientation = mFollowing->getOgreOrientation());
+    else return mLastGoalOrientation;
 }
 
 BoundingSphere3f ProxyCamera::getGoalBounds() {
-    return mFollowing->getProxyPtr()->getBounds();
+    if (mFollowing) return (mLastGoalBounds = mFollowing->getProxyPtr()->getBounds());
+    else return mLastGoalBounds;
 }
 
 void ProxyCamera::setMode(Mode m) {
     Camera::setMode(m);
-    mFollowing->setVisible( mMode == FirstPerson ? false : true );
+    if (mFollowing) mFollowing->setVisible( mMode == FirstPerson ? false : true );
 }
 
 ProxyEntity* ProxyCamera::following() const {

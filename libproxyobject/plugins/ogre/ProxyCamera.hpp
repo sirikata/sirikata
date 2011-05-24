@@ -35,16 +35,19 @@
 
 #include <sirikata/ogre/Camera.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
+#include "ProxyEntity.hpp"
 
 namespace Sirikata {
 namespace Graphics {
 
-class ProxyEntity;
-
 // This class just overrides some virtual methods to make the camera follow a ProxyObject.
-class ProxyCamera : public Camera{
+class ProxyCamera : public Camera, public ProxyEntityListener {
 private:
     ProxyEntity* mFollowing;
+    // Cache of values in case mFollowing disappears
+    Vector3d mLastGoalPosition;
+    Quaternion mLastGoalOrientation;
+    BoundingSphere3f mLastGoalBounds;
 public:
     ProxyCamera(OgreRenderer *scene, ProxyEntity* follow);
     ~ProxyCamera();
@@ -57,6 +60,12 @@ public:
 
     virtual void setMode(Mode m);
 
+    // Reparent this camera to a new ProxyEntity. This is used to reparent to a
+    // new ProxyObject when the Pinto results cause the old version to disappear.
+    void reparent(ProxyEntity* follow);
+
+    // ProxyEntityListener Interface
+    virtual void proxyEntityDestroyed(ProxyEntity*);
 private:
     static String ogreCameraName(const String& ref);
 };

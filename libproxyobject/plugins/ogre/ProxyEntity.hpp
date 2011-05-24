@@ -41,13 +41,21 @@ namespace Sirikata {
 namespace Graphics {
 
 class OgreSystem;
+class ProxyEntity;
+
+class ProxyEntityListener {
+public:
+    virtual ~ProxyEntityListener();
+    virtual void proxyEntityDestroyed(ProxyEntity*) {};
+};
 
 /** Ogre entities using ProxyObjects for their information. */
 class ProxyEntity
     : public Sirikata::Graphics::Entity,
       public PositionListener,
       public ProxyObjectListener,
-      public MeshListener
+      public MeshListener,
+      public Provider<ProxyEntityListener*>
 {
 protected:
     const ProxyObjectPtr mProxy;

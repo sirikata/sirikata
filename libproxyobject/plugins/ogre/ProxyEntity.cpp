@@ -38,6 +38,9 @@ using namespace Sirikata::Transfer;
 namespace Sirikata {
 namespace Graphics {
 
+ProxyEntityListener::~ProxyEntityListener() {
+}
+
 ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
  : Entity(scene, ppo->getObjectReference().toString()),
    mProxy(ppo)
@@ -97,6 +100,7 @@ void ProxyEntity::handleDestroyTimeout() {
 }
 
 void ProxyEntity::destroyed() {
+    Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
     delete this;
 }
 

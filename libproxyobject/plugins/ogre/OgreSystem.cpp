@@ -172,15 +172,19 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     bool is_viewer = (p->getObjectReference() == mPresenceID);
     if (is_viewer)
     {
-        assert(mPrimaryCamera == NULL);
-        ProxyCamera* cam = new ProxyCamera(this, mesh);
-        cam->initialize();
-        cam->attach("", 0, 0, mBackgroundColor);
-        attachCamera("", cam);
-        // Only store as primary camera now because doing it earlier loops back
-        // to detachCamera, which then *removes* it as primary camera. It does
-        // this because attach does a "normal" cleanup procedure before attaching.
-        mPrimaryCamera = cam;
+        if (mPrimaryCamera != NULL) {
+            mPrimaryCamera->reparent(mesh);
+        }
+        else {
+            ProxyCamera* cam = new ProxyCamera(this, mesh);
+            cam->initialize();
+            cam->attach("", 0, 0, mBackgroundColor);
+            attachCamera("", cam);
+            // Only store as primary camera now because doing it earlier loops back
+            // to detachCamera, which then *removes* it as primary camera. It does
+            // this because attach does a "normal" cleanup procedure before attaching.
+            mPrimaryCamera = cam;
+        }
     }
 }
 
