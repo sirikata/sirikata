@@ -298,6 +298,8 @@ bool CubeMap::tooSmall(Ogre::Vector3 delta) {
 
 bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
 
+    if (mParent->getPrimaryCamera()->following() == NULL) return true;
+
     if (mFaceCounter==0) {
         Ogre::Vector3 curCamera=toOgre(mParent->getPrimaryCamera()->following()->getOgrePosition(),mParent->getOffset());
         Ogre::Vector3 delta=curCamera-mState[mMapCounter].mLastActualPosition;
