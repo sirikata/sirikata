@@ -58,8 +58,8 @@ function checkpoint(presenceEntries)
 
     markAndBranch(globalObj, shadowTree, idGenerator, markedObjectMap);
     var serialized = system.serialize(shadowTree);
-    //system.print(serialized);
-    //system.prettyprint(shadowTree);
+    system.print(serialized);
+    system.prettyprint(shadowTree);
 
     system.__debugFileWrite(serialized, 'testFile.em.bu');
     
@@ -116,22 +116,22 @@ function markAndBranch(objGraphCatalog, shadowTree, idGenerator, markedObjects)
     }
     if (checkPresence(objGraphCatalog))
     {
-        //processPresence(objGraphCatalog,shadowTree,idGenerator,markedObjects);
+        processPresence(objGraphCatalog,shadowTree,idGenerator,markedObjects);
         return;            
     }
     if (checkTimer(objGraphCatalog))
     {
-        //processTimer(objGraphCatalog,shadowTree,idGenerator,markedObjects);
+        processTimer(objGraphCatalog,shadowTree,idGenerator,markedObjects);
         return;
     }
     if (checkVisible(objGraphCatalog))
     {
-        //processVisible(objGraphCatalog,shadowTree,idGenerator,markedObjects);
+        processVisible(objGraphCatalog,shadowTree,idGenerator,markedObjects);
         return;
     }
     if (checkPresenceEntry(objGraphCatalog))
     {
-        //processPresenceEntry(objGraphCatalog,shadowTree,idGenerator,markedObjects);
+        processPresenceEntry(objGraphCatalog,shadowTree,idGenerator,markedObjects);
         return;
     }
     
@@ -254,13 +254,13 @@ function processSystem(objGraphCatalog, shadowTree, idGenerator, markedObjects)
 {
     if (!checkSystem(objGraphCatalog))
         throw 'Error in process system.  First argument must be a system object.';
-
+    
     //set a type for shadowTree (it already has an id)
     shadowTree[TYPE_FIELD_STRING] = SYSTEM_TYPE_STRING;
     
     var sysData = new NonRestorable();
     sysData.selfMap = objGraphCatalog.getAllData();
-
+    
     shadowTree.selfMap = new NonRestorable();
     var theMark = checkMarked(sysData.selfMap,markedObjects);
     if (theMark == null)
@@ -275,9 +275,9 @@ function processSystem(objGraphCatalog, shadowTree, idGenerator, markedObjects)
     else
     {
         //is marked.  create pointer for it.
-        shadowTree[s].selfMap = new NonRestorable();
-        shadowTree[s].selfMap[TYPE_FIELD_STRING] = POINTER_OBJECT_STRING;
-        shadowTree[s].selfMap[POINTER_FIELD_STRING] = theMark;
+        shadowTree.selfMap = new NonRestorable();
+        shadowTree.selfMap[TYPE_FIELD_STRING] = POINTER_OBJECT_STRING;
+        shadowTree.selfMap[POINTER_FIELD_STRING] = theMark;
     }
 }
 

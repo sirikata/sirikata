@@ -142,7 +142,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
 
      system.getAllData = function()
      {
-         return system.__selfMap;
+         return system._selfMap;
      };
      
      
