@@ -33,36 +33,21 @@
 
 /* Add functions to the prototype for presence */
 
-system.shim = new Object();
-system.__presence_constructor__.prototype.runSimulation =
-function(name)
-{
-  system.print("\n\nIn side the runSimulation\n\n");
-  var pres = this;
-  if(!system.shim.graphics)
-  {
-      system.print("\n\n Got the new graphics object\n\n");
-      system.shim.graphics = new Object();
-  }
-  if(!system.shim.graphics[pres])
-  {
-    system.shim.graphics[pres] = new Object();
-    system.print("\n\nBefore _runSimulation\n\n");
-    system.shim.graphics[pres][name] = pres._runSimulation(name);
-  }
+(function() {
+     // Just a cache, but the underlying system will also store copies
+     // and give us the existing one. This is necessary to make reset
+     // transparent.
+     var sims = {};
 
-  var return_val = system.shim.graphics[pres][name];
-
-	return return_val;
-};
+     system.__presence_constructor__.prototype.runSimulation = function(name) {
+         if (!sims[this]) sims[this] = {};
+         if (!sims[this][name]) sims[this][name] = this._runSimulation(name);
+         return sims[this][name];
+     };
+ })();
 
 system.__presence_constructor__.prototype.getSimulation =
-function(name)
-{
-
-  if(!system.shim.graphics || !system.shim.graphics[this]) return undefined;
-  return system.shim.graphics[this][name];
-};
+    system.__presence_constructor__.prototype.runSimulation;
 
 system.__presence_constructor__.prototype.onProxAdded =
 function (funcToCallback)
@@ -298,9 +283,3 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
 
 
 }
-
-
-
-
-
-

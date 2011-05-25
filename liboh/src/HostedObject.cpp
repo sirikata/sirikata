@@ -102,11 +102,7 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
     TimeSteppedSimulation* sim = NULL;
 
     PresenceDataMap::iterator psd_it = mPresenceData->find(sporef);
-    if (psd_it == mPresenceData->end())
-    {
-        std::cout<<"\n\nERROR: should have an entry for this space object reference in presencedatamap.  Aborting.\n\n";
-        assert(false);
-    }
+    assert (psd_it != mPresenceData->end());
 
     PerPresenceData& pd =  psd_it->second;
     addSimListeners(pd,simName,sim);
@@ -190,11 +186,8 @@ void HostedObject::getProxySpaceObjRefs(const SpaceObjectReference& sporef,Space
 //They are returned in ss.
 void HostedObject::getSpaceObjRefs(SpaceObjRefVec& ss) const
 {
-    if (mPresenceData == NULL)
-    {
-        std::cout<<"\n\n\nCalling getSpaceObjRefs when not connected to any spaces.  This really shouldn't happen\n\n\n";
-        assert(false);
-    }
+    // must be connected to at least one space
+    assert(mPresenceData != NULL);
 
     PresenceDataMap::const_iterator smapIter;
     for (smapIter = mPresenceData->begin(); smapIter != mPresenceData->end(); ++smapIter)
@@ -366,9 +359,10 @@ void HostedObject::connect(
 
 void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,TimeSteppedSimulation*& sim)
 {
-    SpaceID space = mObjectHost->getDefaultSpace();
-
-    SILOG(cppoh,error,simName);
+    if (pd.sims.find(simName) != pd.sims.end()) {
+        sim = pd.sims[simName];
+        return;
+    }
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
     sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), "");
@@ -381,6 +375,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     }
     else
     {
+        pd.sims[simName] = sim;
         mObjectHost->addListener(sim);
         HO_LOG(info,String("Successfully initialized ") + simName);
     }
