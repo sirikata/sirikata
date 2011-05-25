@@ -103,7 +103,7 @@ void AssetDownloadTask::weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTa
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
     if (locked){
         locked->handleAssetParsed(md);
-    }    
+    }
 }
 void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
     mAsset = md;
@@ -112,6 +112,29 @@ void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
         SILOG(ogre,error,"Failed to parse mesh " << mAssetURI.toString());
         mCB();
         return;
+    }
+
+    // This is a sanity check. There's no way Ogre can reasonably handle meshes
+    // that require a ton of draw calls. Estimate them here and if its too high,
+    // destroy the data and invoke the callback to make it look like failure.
+    {
+        // Draw calls =
+        //   Number of instances * number of primitives in instance
+        uint32 draw_calls = 0;
+        Meshdata::GeometryInstanceIterator geoinst_it = md->getGeometryInstanceIterator();
+        uint32 geoinst_idx;
+        Matrix4x4f pos_xform;
+        while( geoinst_it.next(&geoinst_idx, &pos_xform) )
+            draw_calls += md->geometry[ md->instances[geoinst_idx].geometryIndex ].primitives.size();
+
+        // Arbitrary number, but probably more than we should even allow given
+        // that there are probably hundreds or thousands of other objects
+        if (draw_calls > 500) {
+            SILOG(ogre,error,"Excessively complicated mesh: " << mAssetURI.toString() << " has " << draw_calls << " draw calls. Ignoring this mesh.");
+            mAsset = Mesh::MeshdataPtr();
+            mCB();
+            return;
+        }
     }
 
     mRemainingDownloads = md->textures.size();
