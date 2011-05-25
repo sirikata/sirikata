@@ -222,6 +222,62 @@ util.Quaternion.prototype.zAxis = function() {
     return new util.Vec3(fTxz+fTwy, fTyz-fTwx, 1.0-(fTxx+fTyy));
 };
 
+
+util.Quaternion.prototype.axis = function() {
+    var wSq = this.w * this.w;
+    if (wSq >= 1 - 1e-08) {
+        return new util.Vec3(0, 0, 0);
+    }
+    var axis = new util.Vec3(this.x, this.y, this.z);
+    axis = axis.scale(1 / Math.sqrt(1 - wSq));
+    return axis;
+};
+
+util.Quaternion.prototype.angle = function() {
+    if (this.w >= 0.99) { // acos doesn't return values for w = 1
+        return 0;
+    }
+    return 2 * Math.acos(this.w);
+};
+
+util.Quaternion.fromLookAt = function(direction, up) {
+    up = up || <0, 1, 0>;
+    if (direction.length() < 1e-08)
+        return new util.Quaternion(0, 0, 0, 1);
+
+    direction = direction.normal();
+
+    // Orient the -z axis to be along direction.
+    var firstQuat;
+    if ((direction - <0, 0, -1>).lengthSquared() < 1e-08) {
+        firstQuat = new util.Quaternion(0, 0, 0, 1);
+    } else if ((direction - <0, 0, 1>).lengthSquared() < 1e-08) {
+        firstQuat = new util.Quaternion(0, 1, 0, 0);
+    } else {
+        var quatAxis = <0, 0, -1>.cross(direction);
+        var angle = util.acos(<0, 0, -1>.dot(direction));
+        quatAxis = quatAxis.normal();
+        firstQuat = new util.Quaternion(quatAxis, angle);
+    }
+
+    // Compute new up vector and orient the y axis to be along that direction.
+    var secondQuat;
+    if (direction != up) {
+        var left = direction.cross(up);
+        var newUp = left.cross(direction);
+        newUp = newUp.normal();
+        var quatAxis = <0, 1, 0>.cross(newUp);
+        var angle = util.acos(<0, 1, 0>.dot(newUp));
+        quatAxis = quatAxis.normal();
+        secondQuat = new util.Quaternion(quatAxis, angle);
+    } else {
+        secondQuat = new util.Quaternion(0, 0, 0, 1);
+    }
+
+    return secondQuat.mul(firstQuat);
+}
+
+
 util.Quaternion.prototype.__prettyPrintFieldsData__ = ["x", "y", "z", "w"];
 util.Quaternion.prototype.__prettyPrintFields__ = function() {
     return this.__prettyPrintFieldsData__;
