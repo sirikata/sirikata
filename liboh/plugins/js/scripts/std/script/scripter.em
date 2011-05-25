@@ -49,7 +49,7 @@ function() {
         this._scriptedObjects = {};
 
 	try {
-            var scripting_gui = this._parent._simulator.addGUIModule("scripting", "../scripting/prompt.js");
+            var scripting_gui = this._parent._simulator.addGUIModule("Scripter", "../scripting/prompt.js");
             scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this));
             this._scriptingWindow = scripting_gui;
             //this._scriptingWindow.hide();

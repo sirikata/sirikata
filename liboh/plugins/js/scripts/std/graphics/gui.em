@@ -45,13 +45,14 @@ function() {
      *  objects. These present 2D user interface widgets to the user,
      *  which are coded as HTML + Javascript pages.
      */
-    std.graphics.GUI = function(me) {
+    std.graphics.GUI = function(name, me) {
+        this._name = name;
         this._gui = me;
     };
 
     /** Bind a listener for events from this GUI. */
     std.graphics.GUI.prototype.bind = function(type, cb) {
-        this._gui.invoke("bind", type, cb);
+        this._gui.invoke("bind", this._name + '-' + type, cb);
     };
 
     /** Evaluate the Javascript string inside the GUI context. */

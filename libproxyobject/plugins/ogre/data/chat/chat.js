@@ -1,5 +1,4 @@
-
-(function() {
+sirikata.ui("Chat", function() {
 
 Chat = {};
 
@@ -120,4 +119,4 @@ $(document).ready(
         $('#chat-run-command').click(runCommand);
 });
 
-})();
+});

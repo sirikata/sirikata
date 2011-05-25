@@ -43,7 +43,7 @@ std.graphics.Chat = system.Class.extend(
 
             this._chat_group = [];
 
-            this._ui = this._sim.addGUIModule("chat_dialog", "chat/chat.js");
+            this._ui = this._sim.addGUIModule("Chat", "chat/chat.js");
             this._ui.bind("chat", std.core.bind(this.onSendChat, this));
             var p  = new util.Pattern("name", "get_protocol");
             std.core.bind(this.onTestMessage, this) <- p;

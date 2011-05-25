@@ -1,4 +1,4 @@
-(function() {
+sirikata.ui("Scripter", function() {
 
 Scripter = {};
 
@@ -255,4 +255,4 @@ $(document).ready(function() {
 	$("head").append(newcsslink);
 });
 
-})();
+});

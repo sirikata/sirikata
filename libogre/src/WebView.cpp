@@ -182,6 +182,7 @@ void WebView::initializeWebView(
     // Unlike chrome.send (below) this version does not do logging.
     webView->addBindOnStartLoading(WideString::point_to(L"sirikata"),
                   Berkelium::Script::Variant::emptyObject());
+    webView->addEvalOnStartLoading(WideString::point_to(L"__sirikata = sirikata;\n"));
     webView->addBindOnStartLoading(WideString::point_to(L"sirikata.__event"),
                   Berkelium::Script::Variant::bindFunction(
                       WideString::point_to(L"send"), false));
@@ -203,6 +204,18 @@ void WebView::initializeWebView(
             L"sirikata.event.apply(this, ['__log'].concat(args));\n"
             L"};"));
     bind("__log", std::tr1::bind(&WebView::userLog, this, _1, _2));
+    webView->addEvalOnStartLoading(
+        WideString::point_to(
+            L"sirikata.ui = function(name, ui_code) {\n"
+            L"  var sirikata = {};\n"
+            L"  for(var i in __sirikata) { sirikata[i] = __sirikata[i]; }\n"
+            L"  sirikata.event = function() {\n"
+            L"    var args = [];\n"
+            L"    for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }\n"
+            L"    return __sirikata.event.apply(this, [name + '-' + args[0]].concat(args.slice(1)) );"
+            L"  };\n"
+            L"  eval('(' + ui_code.toString() + ')()');\n"
+            L"};"));
     // Deprecated
     webView->addBindOnStartLoading(WideString::point_to(L"chrome"),
                   Berkelium::Script::Variant::emptyObject());

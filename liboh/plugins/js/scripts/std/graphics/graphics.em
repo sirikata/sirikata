@@ -95,20 +95,20 @@ function() {
     /** Request that the given URL be presented as a widget. */
     std.graphics.Graphics.prototype.createGUI = function(name, url, width, height) {
         if (width && height)
-            return new std.graphics.GUI(this._simulator.invoke("createWindowFile", name, url, width, height));
+            return new std.graphics.GUI(name, this._simulator.invoke("createWindowFile", name, url, width, height));
         else
-            return new std.graphics.GUI(this._simulator.invoke("createWindowFile", name, url));
+            return new std.graphics.GUI(name, this._simulator.invoke("createWindowFile", name, url));
     };
 
     /** Request that the given URL be added as a module in the UI. */
     std.graphics.Graphics.prototype.addGUIModule = function(name, url) {
     	system.print("adding GUI module");
-    	return new std.graphics.GUI(this._simulator.invoke("addModuleToUI", name, url));
+    	return new std.graphics.GUI(name, this._simulator.invoke("addModuleToUI", name, url));
     };
     
     /** Request that the given URL be presented as a widget. */
     std.graphics.Graphics.prototype.createBrowser = function(name, url) {
-        return new std.graphics.GUI(this._simulator.invoke("createWindow", name, url));
+        return new std.graphics.GUI(name, this._simulator.invoke("createWindow", name, url));
     };
 
     /** Get basic camera description. This is read-only data. */
