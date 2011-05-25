@@ -156,12 +156,6 @@ OgreSystem::~OgreSystem() {
     destroyMouseHandler();
 }
 
-static void KillWebView(OgreSystem*ogreSystem,ProxyObjectPtr p) {
-    SILOG(ogre,detailed,"Killing WebView!");
-    p->getProxyManager()->destroyObject(p);
-}
-
-
 void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;

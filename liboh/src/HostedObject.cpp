@@ -336,7 +336,7 @@ void HostedObject::connect(
         return;
 
     ObjectReference oref = (orefID == ObjectReference::null()) ? ObjectReference(UUID::random()) : orefID;
-    
+
     SpaceObjectReference connectingSporef (spaceID,oref);
     mObjectHost->registerHostedObject(connectingSporef,getSharedPtr());
 
@@ -726,7 +726,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success) return false;
 
-    
+
     SpaceID space = spaceobj.space();
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Prox::ProximityUpdate update = contents.update(idx);
@@ -735,7 +735,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             Sirikata::Protocol::Prox::ObjectAddition addition = update.addition(aidx);
 
             SpaceObjectReference proximateID(spaceobj.space(), ObjectReference(addition.object()));
-            
+
             TimedMotionVector3f loc(localTime(space, addition.location().t()), MotionVector3f(addition.location().position(), addition.location().velocity()));
 
             CONTEXT_OHTRACE(prox,
@@ -763,14 +763,14 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 Transfer::URI meshuri;
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
-                
+
                 // FIXME use weak_ptr instead of raw
                 proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy);
             }
             else {
                 // Reset so that updates from this new "session" for this proxy
                 // get applied
-                
+
                 proxy_obj->reset();
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh, &phy);
                 // Mark as valid again
@@ -797,20 +797,22 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             if (!proxy_manager)
                 continue;
 
+            SpaceObjectReference removed_obj_ref(spaceobj.space(),
+                ObjectReference(removal.object()));
+            if (mPresenceData->find(removed_obj_ref) != mPresenceData->end()) {
+                SILOG(oh,info,"Ignoring self removal from proximity results.");
+            }
+            else {
+                ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);
+                if (proxy_obj) {
+                    proxy_manager->destroyObject(proxy_obj);
 
-            ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(SpaceObjectReference(spaceobj.space(),
-                                                                     ObjectReference(removal.object())));
-            if (!proxy_obj) continue;
+                    if (mObjectScript)
+                        mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
-
-            proxy_manager->destroyObject(proxy_obj);;
-
-
-            if (mObjectScript)
-                mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
-
-            //lkjs;
-            proxy_obj->invalidate();
+                    proxy_obj->invalidate();
+                }
+            }
 
             CONTEXT_OHTRACE(prox,
                 spaceobj.object().getAsUUID(),
