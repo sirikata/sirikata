@@ -51,6 +51,7 @@ function() {
 	try {
             var scripting_gui = this._parent._simulator.addGUIModule("Scripter", "../scripting/prompt.js");
             scripting_gui.bind("event", std.core.bind(this._handleScriptEvent, this));
+            scripting_gui.onException( function(msg, file, line) { system.print('Scripting GUI Exception: ' + msg + ' at ' + file + ':' + line); } );
             this._scriptingWindow = scripting_gui;
             //this._scriptingWindow.hide();
         } catch (ex) {

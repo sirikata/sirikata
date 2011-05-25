@@ -477,6 +477,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 		unsigned short texHeight;
         ///map from callback name to function1's
 		std::map<std::string, JSDelegate> delegateMap;
+                Invokable* mExceptionHandler;
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
 

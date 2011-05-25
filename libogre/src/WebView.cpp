@@ -85,6 +85,7 @@ WebView::WebView(
 	isFading = false;
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
+        mExceptionHandler = NULL;
 	texFiltering = Ogre::FO_NONE;
 
     mBorderLeft = border.mBorderLeft;
@@ -139,6 +140,7 @@ WebView::WebView(const std::string& name, const std::string& type, unsigned shor
 	isFading = false;
 	deltaFadePerMS = 0;
 	lastFadeTimeMS = 0;
+        mExceptionHandler = NULL;
 	this->texFiltering = texFiltering;
 
 	createMaterial();
@@ -915,7 +917,21 @@ void WebView::onConsoleMessage(Berkelium::Window *win, WideString wmessage,
     std::string sourceId (sourceString.data(), sourceString.length());
     Berkelium::stringUtil_free(textString);
     Berkelium::stringUtil_free(sourceString);
-    SILOG(webview,detailed,"onConsoleMessage " << message << " at file " << sourceId << ":" << line_no);
+
+    static String exc_prefix = "Uncaught";
+    if (message.substr(0, exc_prefix.size()) == exc_prefix) {
+        SILOG(webview,error,"WebView Exception: " << message << " at file " << sourceId << ":" << line_no);
+        if (this->mExceptionHandler != NULL) {
+            std::vector<boost::any> params;
+            params.push_back(Invokable::asAny(String(message)));
+            params.push_back(Invokable::asAny(String(sourceId)));
+            params.push_back(Invokable::asAny(line_no));
+            this->mExceptionHandler->invoke(params);
+        }
+    }
+    else {
+        SILOG(webview,detailed,"onConsoleMessage " << message << " at file " << sourceId << ":" << line_no);
+    }
 }
 void WebView::onScriptAlert(Berkelium::Window *win, WideString message,
                             WideString defaultValue, URLString url,
@@ -1314,6 +1330,24 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
   if (name == "focus")
       WebViewManager::getSingleton().focusWebView(this);
+
+  if (name == "onException") {
+      if (params.size() != 2) {
+          SILOG(webview,error,"Invoking 'onException' expects 2 arguments." );
+          return boost::any();
+      }
+      if (!Invokable::anyIsInvokable(params[1])){
+          SILOG(webview,error,"Invoking 'onException' expects function argument." );
+          return boost::any();
+      }
+
+      Invokable* exchandler = Invokable::anyAsInvokable(params[1]);
+      this->mExceptionHandler = exchandler;
+
+      // FIXME return value
+      return boost::any();
+
+  }
 
   return boost::any();
 }

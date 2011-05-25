@@ -131,4 +131,8 @@ function() {
         this._gui.invoke("focus");
     };
 
+    /** Bind a listener for exception events. Listener should have the form fn(message, file, linenum). */
+    std.graphics.GUI.prototype.onException = function(cb) {
+        this._gui.invoke("onException", cb);
+    };
 })();
