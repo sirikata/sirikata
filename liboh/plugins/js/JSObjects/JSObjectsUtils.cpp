@@ -11,6 +11,9 @@
 #include "JSQuaternion.hpp"
 #include "../JSLogging.hpp"
 
+#include <iomanip>
+#include <iostream>
+
 
 namespace Sirikata{
 namespace JS{
@@ -24,7 +27,6 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
     }
     
     toDecodeTo = toDecode->ToUint32()->Value();
-
     return true;
 }
 

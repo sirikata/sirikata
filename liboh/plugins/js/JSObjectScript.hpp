@@ -70,6 +70,8 @@ public:
     virtual ~JSObjectScript();
 
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
+    v8::Handle<v8::Value> debug_fileRead(const String& filename);
+    
 
     v8::Handle<v8::Value> executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 

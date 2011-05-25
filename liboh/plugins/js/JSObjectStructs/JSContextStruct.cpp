@@ -48,6 +48,11 @@ v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,c
     jsObjScript->debug_fileWrite(strToWrite,filename);
 }
 
+v8::Handle<v8::Value> JSContextStruct::debug_fileRead(const String& filename)
+{
+    jsObjScript->debug_fileRead(filename);
+}
+
 uint32 JSContextStruct::getContextID()
 {
     return mContextID;

@@ -315,12 +315,39 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
 }
 
 
+v8::Handle<v8::Value> debug_fileRead(const String& filename)
+{
+    std::ifstream fRead(filename.c_str(), std::ios::binary | std::ios::in);
+    std::ifstream::pos_type begin, end;
+
+    begin = fRead.tellg();
+    fRead.seekg(0,std::ios::end);
+    end   = fRead.tellg();
+    fRead.seekg(0,std::ios::beg);
+
+    std::ifstream::pos_type size = end-begin;
+    char* readBuf = new char[size];
+    fRead.read(readBuf,size);
+
+    v8::Handle<v8::Value> returner = v8::String::New(readBuf,size);
+    delete readBuf;
+    return returner;
+}
+
+
 v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,const String& filename)
 {
-    std::ofstream fWriter (filename.c_str());
-    fWriter<<strToWrite;
+    std::ofstream fWriter (filename.c_str(),  std::ios::out | std::ios::binary);
+
+    for (String::size_type s = 0; s < strToWrite.size(); ++s)
+    {
+        char toWrite = strToWrite[s];
+        fWriter.write(&toWrite,sizeof(toWrite));
+    }
+
     fWriter.flush();
     fWriter.close();
+
     return v8::Undefined();
 }
 

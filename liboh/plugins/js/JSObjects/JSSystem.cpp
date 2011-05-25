@@ -78,6 +78,28 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling fileRead.  Require 1 argument: a string filename to read from")));
+
+    v8::Handle<v8::Value> fileToReadFromVal = args[0];
+
+    String errMsg = "Error in debug_fileRead.  Could not decode argument as string.  ";
+    String fileToReadFrom;
+    bool strDecode = decodeString(fileToReadFromVal,fileToReadFrom,errMsg);
+    if (!strDecode)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
+
+    errMsg = "Error decoding system struct when calling fileRead. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+    return jssys->debug_fileRead(fileToReadFrom);
+}
+
 v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args)
 {
     if(args.Length() != 2)
@@ -97,7 +119,7 @@ v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
     
 
-    errMsg = "Error decoding system struct when registering prox added handler. ";
+    errMsg = "Error decoding system struct when calling fileWrite. ";
     JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
 
     if (jssys == NULL)

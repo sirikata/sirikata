@@ -52,6 +52,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> struct_getPosition();
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
+    v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
 
     v8::Handle<v8::Value> struct_print(const String& msg);
