@@ -1,7 +1,11 @@
+(function() {
+
+Scripter = {};
+
 var curEditor = undefined;
 var editors = [];
 
-function updateCurEditor(selected) {
+var updateCurEditor = function(selected) {
     if (selected === undefined) {
         var $tabs = $('#edittabs');
         selected = $tabs.tabs('option', 'selected');
@@ -9,7 +13,7 @@ function updateCurEditor(selected) {
     curEditor = editors[selected];
 };
 
-Editor = function(objid) {
+var Editor = function(objid) {
     var small_objid = (objid.length < 8 ? objid : objid.slice(0, 7));
 
     var objid_salt = objid + Math.round(Math.random() * 100000).toString();
@@ -143,16 +147,16 @@ Editor.prototype.editHistoryForward = function() {
     this.updateEditorHistory();
 };
 
-function findEditorIndex(objid) {
+var findEditorIndex = function(objid) {
     for (var i=0; i<editors.length; i++) {
 	if (editors[i].object == objid) {
             return i;
 	}
     }
     return null;
-}
+};
 
-function addObject(objid) {
+var addObject = function(objid) {
     // Reinit
     if (editors.length == 0)
         $('#edittabs').tabs({ select: function(event, ui) { updateCurEditor(ui.index); } });
@@ -166,21 +170,23 @@ function addObject(objid) {
     else {
         $('#edittabs').tabs('select', i);
     }
-}
+};
+Scripter.addObject = addObject;
 
-function addMessage(objid, msg) {
+var addMessage = function(objid, msg) {
     var edidx = findEditorIndex(objid);
     if (edidx === null) return;
     editors[edidx].addMessage(msg);
-}
+};
+Scripter.addMessage = addMessage;
 
-function dialogClosed() {
+var dialogClosed = function() {
 	while (editors.length > 0) {
 		closePrompt();
 	}
-}
+};
 
-function closePrompt() {
+var closePrompt = function() {
 	var selectedIndex = $('#edittabs').tabs('option', 'selected');
 	console.log("selected index = " + selectedIndex);
 	delete editors[selectedIndex].results;
@@ -194,19 +200,19 @@ function closePrompt() {
 	} else {
 		updateCurEditor();
 	}
-}
+};
 
-function runCommand() {
+var runCommand = function() {
     if (curEditor)
         curEditor.runCommand();
-}
+};
 
-function editHistoryBack() {
+var editHistoryBack = function() {
     if (curEditor)
         curEditor.editHistoryBack();
 };
 
-function editHistoryForward() {
+var editHistoryForward = function() {
     if (curEditor)
         curEditor.editHistoryForward();
 };
@@ -248,3 +254,5 @@ $(document).ready(function() {
 	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'})
 	$("head").append(newcsslink);
 });
+
+})();

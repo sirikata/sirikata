@@ -1,5 +1,6 @@
-directory_list_callback_store = {};
-function directory_list_request(result) {
+(function() {
+var directory_list_callback_store = {};
+var directory_list_request_fn = function(result) {
 	var path_requested = result.path;
 	initial_ajax_settings = directory_list_callback_store[path_requested];
 	delete directory_list_callback_store[path_requested];
@@ -17,7 +18,8 @@ function directory_list_request(result) {
 	}
 	
 	initial_ajax_settings.success.call(initial_ajax_settings.context,json_result,"", null);	
-}
+};
+directory_list_request = directory_list_request_fn;
 
 $(document).ready(function() {
 	
@@ -88,3 +90,5 @@ $(document).ready(function() {
 */
 	
 });
+
+})();

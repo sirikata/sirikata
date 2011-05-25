@@ -47,7 +47,6 @@ function alert_permanent(title, text) {
 }
 
 function alert_message(title, text) {
-	console.log("WHAT THE FUCK");
 	var $dialog = $('<div></div>')
 	.html(text)
 	.dialog({
