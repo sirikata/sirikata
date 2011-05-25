@@ -51,7 +51,6 @@
 
 #include <sirikata/oh/ObjectHost.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
-#include <sirikata/oh/PerPresenceData.hpp>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 
 #include <sirikata/proxyobject/OrphanLocUpdateManager.hpp>

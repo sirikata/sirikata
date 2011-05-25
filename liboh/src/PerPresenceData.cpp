@@ -5,7 +5,7 @@
 #include <sirikata/proxyobject/ProxyObject.hpp>
 #include <sirikata/proxyobject/VWObject.hpp>
 #include <sirikata/oh/ObjectHostProxyManager.hpp>
-#include <sirikata/oh/PerPresenceData.hpp>
+#include "PerPresenceData.hpp"
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 

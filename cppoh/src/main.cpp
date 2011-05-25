@@ -60,7 +60,6 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 #include <sirikata/oh/ObjectFactory.hpp>
-#include <sirikata/oh/PerPresenceData.hpp>
 
 #ifdef __GNUC__
 #include <fenv.h>

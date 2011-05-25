@@ -12,7 +12,7 @@
 namespace Sirikata
 {
 
-class SIRIKATA_OH_EXPORT PerPresenceData
+class PerPresenceData
 {
 public:
     HostedObject* parent;

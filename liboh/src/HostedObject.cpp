@@ -57,6 +57,7 @@
 #include <vector>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
 #include <sirikata/core/network/Frame.hpp>
+#include "PerPresenceData.hpp"
 #include "Protocol_Frame.pbj.hpp"
 #include "Protocol_JSMessage.pbj.hpp"
 
@@ -1163,8 +1164,6 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 
     std::string payload = serializePBJMessage(container);
 
-
-    //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream != SSTStreamPtr()) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
