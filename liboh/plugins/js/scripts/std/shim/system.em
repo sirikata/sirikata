@@ -721,6 +721,7 @@ if(system == undefined)
       /** Array */ system.presences = baseSystem.presences;
 
       system.__presence_constructor__ = __system.__presence_constructor__;
+      system.__visible_constructor__ = __system.__visible_constructor__;
 
 
       // Invoking these force the callbacks to be registered, making

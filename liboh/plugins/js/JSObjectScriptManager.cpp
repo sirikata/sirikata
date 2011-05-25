@@ -189,7 +189,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
 
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
-    
+
     //check what permissions fake root is loaded with
     mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
     mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
@@ -205,7 +205,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("restorePresence"), v8::FunctionTemplate::New(JSSystem::root_restorePresence));
 
-    
+
     mSystemTemplate->Set(v8::String::New("getPosition"), v8::FunctionTemplate::New(JSSystem::root_getPosition));
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
@@ -218,13 +218,15 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("create_entity_no_space"), v8::FunctionTemplate::New(JSSystem::root_createEntityNoSpace));
 
     mSystemTemplate->Set(v8::String::New("create_entity"), v8::FunctionTemplate::New(JSSystem::root_createEntity));
-    
+
 
     mSystemTemplate->Set(v8::String::New("onPresenceConnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceConnected));
     mSystemTemplate->Set(v8::String::New("onPresenceDisconnected"),v8::FunctionTemplate::New(JSSystem::root_onPresenceDisconnected));
 
 
     mSystemTemplate->Set(JS_STRING(__presence_constructor__), mPresenceTemplate);
+    mSystemTemplate->Set(JS_STRING(__visible_constructor__), mVisibleTemplate);
+
     mSystemTemplate->Set(v8::String::New("require"), v8::FunctionTemplate::New(JSSystem::root_require));
     mSystemTemplate->Set(v8::String::New("reset"),v8::FunctionTemplate::New(JSSystem::root_reset));
     mSystemTemplate->Set(v8::String::New("set_script"),v8::FunctionTemplate::New(JSSystem::root_setScript));
@@ -288,28 +290,31 @@ void JSObjectScriptManager::createJSInvokableObjectTemplate()
 void JSObjectScriptManager::createVisibleTemplate()
 {
     v8::HandleScope handle_scope;
-    mVisibleTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-    // An internal field holds the external address of the visible object
-    mVisibleTemplate->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 
+    mVisibleTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
 
+    v8::Local<v8::Template> proto_t = mVisibleTemplate->PrototypeTemplate();
     //these function calls are defined in JSObjects/JSVisible.hpp
-    mVisibleTemplate->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
-    mVisibleTemplate->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
+    proto_t->Set(v8::String::New("__debugRef"),v8::FunctionTemplate::New(JSVisible::__debugRef));
+    proto_t->Set(v8::String::New("toString"),v8::FunctionTemplate::New(JSVisible::toString));
 
-    mVisibleTemplate->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
-    mVisibleTemplate->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSVisible::getVelocity));
-    mVisibleTemplate->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSVisible::getOrientation));
-    mVisibleTemplate->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSVisible::getOrientationVel));
-    mVisibleTemplate->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSVisible::getScale));
-    mVisibleTemplate->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSVisible::getMesh));
-    mVisibleTemplate->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSVisible::getSpace));
-    mVisibleTemplate->Set(v8::String::New("getVisibleID"),v8::FunctionTemplate::New(JSVisible::getOref));
-    mVisibleTemplate->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));
-    mVisibleTemplate->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
-    mVisibleTemplate->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
+    proto_t->Set(v8::String::New("getPosition"),v8::FunctionTemplate::New(JSVisible::getPosition));
+    proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSVisible::getVelocity));
+    proto_t->Set(v8::String::New("getOrientation"),v8::FunctionTemplate::New(JSVisible::getOrientation));
+    proto_t->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSVisible::getOrientationVel));
+    proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSVisible::getScale));
+    proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSVisible::getMesh));
+    proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSVisible::getSpace));
+    proto_t->Set(v8::String::New("getVisibleID"),v8::FunctionTemplate::New(JSVisible::getOref));
+    proto_t->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));
+    proto_t->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
+    proto_t->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
 
-    mVisibleTemplate->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
+    proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
+
+    // For instance templates
+    v8::Local<v8::ObjectTemplate> instance_t = mVisibleTemplate->InstanceTemplate();
+    instance_t->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
 }
 
 
@@ -335,7 +340,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSPresence::getSpace));
   proto_t->Set(v8::String::New("getPresenceID"),v8::FunctionTemplate::New(JSPresence::getOref));
 
-  
+
   //meshes
   proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSPresence::getMesh));
   proto_t->Set(v8::String::New("setMesh"),v8::FunctionTemplate::New(JSPresence::setMesh));
@@ -349,7 +354,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("setPosition"),v8::FunctionTemplate::New(JSPresence::setPosition));
 
   proto_t->Set(v8::String::New("getIsConnected"), v8::FunctionTemplate::New(JSPresence::getIsConnected));
-  
+
   //velocities
   proto_t->Set(v8::String::New("getVelocity"),v8::FunctionTemplate::New(JSPresence::getVelocity));
   proto_t->Set(v8::String::New("setVelocity"),v8::FunctionTemplate::New(JSPresence::setVelocity));
@@ -372,8 +377,8 @@ void JSObjectScriptManager::createPresenceTemplate()
 
   //for restore-ability.
   proto_t->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSPresence::getAllData));
-  
-  
+
+
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
 

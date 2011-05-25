@@ -468,7 +468,7 @@ v8::Local<v8::Object> JSObjectScript::createVisibleObject(JSVisibleStruct* jsvis
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctxToCreateIn);
 
-    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->NewInstance();
+    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->GetFunction()->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
@@ -496,7 +496,7 @@ v8::Persistent<v8::Object> JSObjectScript::createVisiblePersistent(JSVisibleStru
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctxToCreateIn);
 
-    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->NewInstance();
+    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->GetFunction()->NewInstance();
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 

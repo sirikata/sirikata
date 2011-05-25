@@ -1,12 +1,15 @@
 
 {
+
+    // NOTE: These are just for documentation
+
   /** @namespace visible */
   var visible = function()
   {
       /**
        @param Vec3.
        @return Number.
-       
+
        @description Returns the distance from this visible object to the position
        specified by first argument vector.
        */
@@ -34,12 +37,12 @@
 
 
       /**
-       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {string} sporefFrom, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime, 
+       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {string} sporefFrom, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime,
        */
       visible.prototype.getAllData = function()
       {
       };
-      
+
       /**
        @return Number associated with the velocity at which this visible object is travelling.
 
@@ -61,7 +64,7 @@
        */
       visible.prototype.getVisibleID = function(){};
 
-      
+
       /**
        @return Quaternion associated with visible object's orientation.
 
@@ -108,6 +111,77 @@
        */
       visible.prototype.checkEqual = function(){
       };
-      
   };
+
 }
+
+// These are the real wrappers
+(function() {
+
+     // Hide visible but let rest of method override behavior.
+     var visible = system.__visible_constructor__;
+     delete system.__visible_constructor__;
+
+     Object.defineProperty(visible.prototype, "position",
+                           {
+                               get: function() { return this.getPosition(); },
+                               enumerable: true
+                           }
+                          );
+
+     Object.defineProperty(visible.prototype, "velocity",
+                           {
+                               get: function() { return this.getVelocity(); },
+                               enumerable: true
+                           }
+                          );
+
+     Object.defineProperty(visible.prototype, "orientation",
+                           {
+                               get: function() { return this.getOrientation(); },
+                               enumerable: true
+                           }
+                          );
+
+
+     Object.defineProperty(visible.prototype, "orientationVel",
+                           {
+                               get: function() { return this.getOrientationVel(); },
+                               enumerable: true
+                           }
+                          );
+
+
+     Object.defineProperty(visible.prototype, "scale",
+                           {
+                               get: function() { return this.getScale(); },
+                               enumerable: true
+                           }
+                          );
+
+
+     Object.defineProperty(visible.prototype, "mesh",
+                           {
+                               get: function() { return this.getMesh(); },
+                               enumerable: true
+                           }
+                          );
+/* FIXME physics access is currently only available on presences.
+     Object.defineProperty(visible.prototype, "physics",
+                           {
+                               get: function() { return this.getPhysics(); },
+                               enumerable: true
+                           }
+                          );
+*/
+     visible.prototype.__prettyPrintFieldsData__ = [
+         "position", "velocity",
+         "orientation", "orientationVel",
+         "scale", "mesh", "physics"
+     ];
+     visible.prototype.__prettyPrintFields__ = function() {
+         return this.__prettyPrintFieldsData__;
+     };
+
+
+})();
