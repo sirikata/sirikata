@@ -33,7 +33,9 @@ namespace Sirikata{
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
        proxyManager(new ObjectHostProxyManager(_space)),
-       validSpaceObjRef(true)
+       validSpaceObjRef(true),
+       updateFields(LOC_FIELD_NONE),
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
     {
     }
 
@@ -47,7 +49,9 @@ namespace Sirikata{
                      Vector3f(0,0,0),Vector3f(0,1,0),0),
             ProxyObject::UpdateNeeded()),
        proxyManager(new ObjectHostProxyManager(_space)),
-       validSpaceObjRef(false)
+       validSpaceObjRef(false),
+       updateFields(LOC_FIELD_NONE),
+       rerequestTimer( Network::IOTimer::create(_parent->context()->ioService) )
     {
     }
 
@@ -56,6 +60,8 @@ PerPresenceData::~PerPresenceData() {
     // anymore. We can't delete the ProxyManager, but we can clear it out and
     // trigger destruction events for the proxies it holds.
     proxyManager->destroy();
+
+    rerequestTimer->cancel();
 }
 
     void PerPresenceData::populateSpaceObjRef(const SpaceObjectReference& sporef)

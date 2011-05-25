@@ -959,7 +959,7 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 
 void HostedObject::requestLocationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f& loc)
 {
-    sendLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL);
+    updateLocUpdateRequest(space, oref,&loc, NULL, NULL, NULL, NULL);
 }
 
 //only update the position of the object, leave the velocity and orientation unaffected
@@ -1076,7 +1076,7 @@ Vector3f HostedObject::requestCurrentVelocity(const SpaceID& space, const Object
 }
 
 void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectReference& oref, const TimedMotionQuaternion& orient) {
-    sendLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
+    updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
 }
 
 BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const ObjectReference& oref) {
@@ -1085,12 +1085,12 @@ BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const O
 }
 
 void HostedObject::requestBoundsUpdate(const SpaceID& space, const ObjectReference& oref, const BoundingSphere3f& bounds) {
-    sendLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL);
+    updateLocUpdateRequest(space, oref,NULL, NULL, &bounds, NULL, NULL);
 }
 
 void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference& oref, const String& mesh)
 {
-    sendLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
+    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, &mesh, NULL);
 }
 
 const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref) {
@@ -1100,7 +1100,7 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
 
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
 {
-    sendLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
+    updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
 }
 
 void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {
@@ -1126,51 +1126,80 @@ void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReferen
     requestQueryUpdate(space, oref, SolidAngle::Max);
 }
 
-void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {
+void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {
+    assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
+    PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
+
+    if (loc != NULL) { pd.requestLocation = *loc; pd.updateFields |= PerPresenceData::LOC_FIELD_LOC; }
+    if (orient != NULL) { pd.requestOrientation = *orient; pd.updateFields |= PerPresenceData::LOC_FIELD_ORIENTATION; }
+    if (bounds != NULL) { pd.requestBounds = *bounds; pd.updateFields |= PerPresenceData::LOC_FIELD_BOUNDS; }
+    if (mesh != NULL) { pd.requestMesh = *mesh; pd.updateFields |= PerPresenceData::LOC_FIELD_MESH; }
+    if (phy != NULL) { pd.requestPhysics = *phy; pd.updateFields |= PerPresenceData::LOC_FIELD_PHYSICS; }
+
+    // Cancel the re-request timer if it was active
+    pd.rerequestTimer->cancel();
+
+    sendLocUpdateRequest(space, oref);
+}
+
+void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
+    assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
+    PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
+
     ProxyObjectPtr self_proxy = getProxy(space, oref);
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
-    if (loc != NULL) {
-        self_proxy->setLocation(*loc, 0, true);
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_LOC) {
+        self_proxy->setLocation(pd.requestLocation, 0, true);
         Protocol::ITimedMotionVector requested_loc = loc_request.mutable_location();
-        requested_loc.set_t( spaceTime(space, loc->updateTime()) );
-        requested_loc.set_position(loc->position());
-        requested_loc.set_velocity(loc->velocity());
+        requested_loc.set_t( spaceTime(space, pd.requestLocation.updateTime()) );
+        requested_loc.set_position(pd.requestLocation.position());
+        requested_loc.set_velocity(pd.requestLocation.velocity());
     }
-    if (orient != NULL) {
-        self_proxy->setOrientation(*orient, 0, true);
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_ORIENTATION) {
+        self_proxy->setOrientation(pd.requestOrientation, 0, true);
         Protocol::ITimedMotionQuaternion requested_orient = loc_request.mutable_orientation();
-        requested_orient.set_t( spaceTime(space, orient->updateTime()) );
-        requested_orient.set_position(orient->position().normal()); //want to
-                                                                    //normalize
-                                                                    //the positions.
-        requested_orient.set_velocity(orient->velocity());
+        requested_orient.set_t( spaceTime(space, pd.requestOrientation.updateTime()) );
+        //Normalize positions, which only make sense as unit quaternions.
+        requested_orient.set_position(pd.requestOrientation.position().normal());
+        requested_orient.set_velocity(pd.requestOrientation.velocity());
     }
-    if (bounds != NULL) {
-        self_proxy->setBounds(*bounds, 0, true);
-        loc_request.set_bounds(*bounds);
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_BOUNDS) {
+        self_proxy->setBounds(pd.requestBounds, 0, true);
+        loc_request.set_bounds(pd.requestBounds);
     }
-    if (mesh != NULL)
-    {
-        self_proxy->setMesh(Transfer::URI(*mesh), 0, true);
-        loc_request.set_mesh(*mesh);
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_MESH) {
+        self_proxy->setMesh(Transfer::URI(pd.requestMesh), 0, true);
+        loc_request.set_mesh(pd.requestMesh);
     }
-    if (phy != NULL)
-    {
-        self_proxy->setPhysics(*phy, 0, true);
-        loc_request.set_physics(*phy);
+    if (pd.updateFields & PerPresenceData::LOC_FIELD_PHYSICS) {
+        self_proxy->setPhysics(pd.requestPhysics, 0, true);
+        loc_request.set_physics(pd.requestPhysics);
     }
 
     std::string payload = serializePBJMessage(container);
 
+    bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
-    if (spaceStream != SSTStreamPtr()) {
+    if (spaceStream) {
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);
 
-        conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
+        send_succeeded = conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
             OBJECT_PORT_LOCATION, NULL);
+    }
+
+    if (send_succeeded) {
+        pd.updateFields = PerPresenceData::LOC_FIELD_NONE;
+    }
+    else {
+        // Set up retry timer. Just rerun this method, but add no new
+        // update fields.
+        pd.rerequestTimer->wait(
+            Duration::milliseconds((int64)10),
+            std::tr1::bind(&HostedObject::sendLocUpdateRequest, this, space, oref)
+        );
     }
 }
 

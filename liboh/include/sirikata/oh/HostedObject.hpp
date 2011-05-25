@@ -184,14 +184,6 @@ public:
     void processInitScriptMessage(MemoryReference& body);
     bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
 
-    /// Attempt to restore this item from database including script
-    //void initializeRestoreFromDatabase(const SpaceID&spaceID);
-
-    /* Initializes this HostedObject, particularly to get it set up with the
-     *  underlying ObjectHost.
-     */
-    //void init();  Removed: will just connect to underlying object host during
-    //connect call
     void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
 
@@ -394,7 +386,8 @@ public:
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update
-    void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
+    void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
+    void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
 
     public:
     HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);

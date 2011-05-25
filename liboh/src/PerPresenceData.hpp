@@ -23,6 +23,24 @@ public:
     ObjectHostProxyManagerPtr proxyManager;
     bool validSpaceObjRef;
 
+    // Outstanding requests for loc updates.
+    enum LocField {
+        LOC_FIELD_NONE = 0,
+        LOC_FIELD_LOC = 1,
+        LOC_FIELD_ORIENTATION = 1 << 1,
+        LOC_FIELD_BOUNDS = 1 << 2,
+        LOC_FIELD_MESH = 1 << 3,
+        LOC_FIELD_PHYSICS = 1 << 4
+    };
+
+    LocField updateFields;
+    TimedMotionVector3f requestLocation;
+    TimedMotionQuaternion requestOrientation;
+    BoundingSphere3f requestBounds;
+    String requestMesh;
+    String requestPhysics;
+    Network::IOTimerPtr rerequestTimer;
+
 
     PerPresenceData(HostedObject* _parent, const SpaceID& _space, const ObjectReference& _oref);
     PerPresenceData(HostedObject* _parent, const SpaceID& _space);
@@ -36,6 +54,16 @@ public:
     void initializeAs(ProxyObjectPtr proxyobj);
 
 };
+
+inline PerPresenceData::LocField operator|(PerPresenceData::LocField a, PerPresenceData::LocField b){
+    return static_cast<PerPresenceData::LocField>(static_cast<int>(a) | static_cast<int>(b));
+}
+inline PerPresenceData::LocField operator|=(PerPresenceData::LocField& a, PerPresenceData::LocField b){
+    return (a = static_cast<PerPresenceData::LocField>(static_cast<int>(a) | static_cast<int>(b)));
+}
+inline PerPresenceData::LocField operator&(PerPresenceData::LocField a, PerPresenceData::LocField b){
+    return static_cast<PerPresenceData::LocField>(static_cast<int>(a) & static_cast<int>(b));
+}
 
 }//end namespace sirikata
 
