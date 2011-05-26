@@ -218,6 +218,8 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
         }
     }
 
+    printf("Joints: %d instanced (%d in list)\n", md->getJointCount(), md->joints.size());
+
     // Compute the expected number of draw calls assuming no smart
     // transformation is occuring. This should be:
     // Number of instances * number of primitives in instance

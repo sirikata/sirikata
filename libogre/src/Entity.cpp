@@ -400,7 +400,7 @@ void Entity::processMesh(Transfer::URI const& meshFile)
     mURI = meshFile;
     mURIString = meshFile.toString();
 //<const Transfer::URI&, Graphics::OgreRenderer* const , double , AssetDownloadTask::FinishedCallback >
-    mAssetDownload = 
+    mAssetDownload =
         AssetDownloadTask::construct(
             mURI, getScene(), this->priority(),
             mScene->context()->mainStrand->wrap(
@@ -614,6 +614,37 @@ public:
 
 };
 
+class SkeletonManualLoader : public Ogre::ManualResourceLoader {
+public:
+    SkeletonManualLoader(MeshdataPtr meshdata)
+     : mdptr(meshdata)
+    {
+    }
+
+    void prepareResource(Ogre::Resource*r) {
+    }
+
+    void loadResource(Ogre::Resource *r) {
+        Ogre::Skeleton* skel = dynamic_cast<Ogre::Skeleton*> (r);
+
+        std::map<uint32, Ogre::Bone*> bones;
+
+        Meshdata::JointIterator joint_it = mdptr->getJointIterator();
+        uint32 joint_id;
+        uint32 joint_idx;
+        Matrix4x4f pos_xform;
+        uint32 parent_id;
+        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id) ) {
+            Ogre::Bone* bone = skel->createBone(joint_id);
+            if (parent_id != 0)
+                bones[parent_id]->addChild(bone);
+            bones[joint_id] = bone;
+        }
+    }
+
+private:
+    MeshdataPtr mdptr;
+};
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
     MeshdataPtr mdptr;
@@ -1015,10 +1046,22 @@ void Entity::createMesh() {
             }
         }
 
-        Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
-        /// FIXME: set bounds, bounding radius here
-        Ogre::ManualResourceLoader *reload;
-        Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
+        // Skeleton
+        if (!mdptr->joints.empty()) {
+            Ogre::SkeletonManager& skel_mgr = Ogre::SkeletonManager::getSingleton();
+            Ogre::ManualResourceLoader *reload;
+            Ogre::SkeletonPtr skel (skel_mgr.create(hash+"_skeleton",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
+                    (reload=new SkeletonManualLoader(mdptr))));
+            reload->prepareResource(&*skel);
+            reload->loadResource(&*skel);
+        }
+
+        // Mesh
+        {
+            Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
+            /// FIXME: set bounds, bounding radius here
+            Ogre::ManualResourceLoader *reload;
+            Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
 #ifdef _WIN32
 #ifdef NDEBUG
 			OGRE_NEW
@@ -1029,14 +1072,15 @@ void Entity::createMesh() {
 			OGRE_NEW
 #endif
 			MeshdataManualLoader(mdptr))));
-        reload->prepareResource(&*mo);
-        reload->loadResource(&*mo);
+            reload->prepareResource(&*mo);
+            reload->loadResource(&*mo);
 
-        bool check = mm.resourceExists(hash);
+            bool check = mm.resourceExists(hash);
+        }
 
         loadMesh(hash);
-
     }
+
     // Lights
     int light_idx = 0;
     Meshdata::LightInstanceIterator lightinst_it = mdptr->getLightInstanceIterator();

@@ -229,6 +229,26 @@ uint32 Meshdata::getInstancedGeometryCount() const {
     return count;
 }
 
+
+
+Meshdata::JointIterator Meshdata::getJointIterator() const {
+    return JointIterator(this);
+}
+
+uint32 Meshdata::getJointCount() const {
+    uint32 count = 0;
+    Meshdata::JointIterator joint_it = getJointIterator();
+    uint32 joint_id;
+    uint32 joint_idx;
+    Matrix4x4f pos_xform;
+    uint32 parent_id;
+    while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id) )
+        count++;
+    return count;
+}
+
+
+
 Meshdata::LightInstanceIterator Meshdata::getLightInstanceIterator() const {
     return LightInstanceIterator(this);
 }
@@ -330,6 +350,103 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
         }
     }
 }
+
+
+
+
+Meshdata::JointIterator::JointIterator(const Meshdata* const mesh)
+ : mMesh(mesh),
+   mRoot(-1),
+   mNextID(1)
+{
+}
+
+bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id) {
+    while(true) { // Outer loop keeps us moving until we hit something to return
+
+        // First, if we emptied out, try to handle the next root.
+        if (mStack.empty()) {
+            mRoot++;
+            if (mRoot >= (int32)mMesh->rootNodes.size()) return false;
+
+            JointNodeState st;
+            st.index = mMesh->rootNodes[mRoot];
+            st.step = NodeState::Init;
+            st.currentChild = -1;
+            st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
+            st.joint_id = 0;
+            mStack.push(st);
+        }
+
+        JointNodeState& node = mStack.top();
+
+        if (node.step == NodeState::Init) {
+            // On the first visit, check if this is a joint and yield
+            // it. However, no matter what, we'll need to advance to the next
+            // step
+            node.step = NodeState::Nodes;
+            node.currentChild = -1;
+
+            for(uint32 i = 0; i < mMesh->joints.size(); i++) {
+                if (mMesh->joints[i] == node.index) {
+                    // Otherwise, just yield the information
+                    // Allocate new joint id, but save the current setting first
+                    // since we need it as the parent_id.
+                    *parent_id = node.joint_id;
+                    node.joint_id = mNextID; // allocate new id
+                    mNextID++;
+                    *joint_id = node.joint_id;
+                    *joint_idx = i;
+                    *xform = node.transform;
+                    return true;
+                }
+            }
+        }
+
+        if (node.step == NodeState::Nodes) {
+            node.currentChild++;
+            if (node.currentChild >= (int)mMesh->nodes[node.index].children.size()) {
+                node.step = NodeState::InstanceNodes;
+                node.currentChild = -1;
+                continue;
+            }
+
+            JointNodeState st;
+            st.index = mMesh->nodes[node.index].children[node.currentChild];
+            st.step = NodeState::Init;
+            st.currentChild = -1;
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            st.joint_id = node.joint_id;
+            mStack.push(st);
+            continue;
+        }
+
+        if (node.step == NodeState::InstanceNodes) {
+            node.currentChild++;
+            if (node.currentChild >= (int)mMesh->nodes[node.index].instanceChildren.size()) {
+                node.step = NodeState::Done;
+                node.currentChild = -1;
+                continue;
+            }
+
+            JointNodeState st;
+            st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
+            st.step = NodeState::Init;
+            st.currentChild = -1;
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            st.joint_id = node.joint_id;
+            mStack.push(st);
+            continue;
+        }
+
+        if (node.step == NodeState::Done) {
+            // We're finished with the node, just pop it so parent will continue
+            // processing
+            mStack.pop();
+        }
+    }
+}
+
 
 
 

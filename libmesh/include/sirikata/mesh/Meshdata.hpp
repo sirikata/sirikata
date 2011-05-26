@@ -112,7 +112,7 @@ struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
 
     SkinControllerList skinControllers;
 
-    
+
 
     /** Append the given SubMeshGeometry to the end of this one. Use the given
      *  transformation to transform the geometry before adding it.  This is a
@@ -294,6 +294,7 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     // instance iterators
     struct SIRIKATA_MESH_EXPORT NodeState {
         enum Step {
+            Init,
             Nodes,
             InstanceNodes,
             InstanceGeometries,
@@ -306,7 +307,9 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
         Step step;
         int32 currentChild;
     };
-
+    struct SIRIKATA_MESH_EXPORT JointNodeState : public NodeState {
+        uint32 joint_id;
+    };
   public:
 
     // Allows you to generate a list of GeometryInstances with their transformations.
@@ -328,6 +331,31 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
      * because many nodes may refer to the same InstanceGeometry.
      */
     uint32 getInstancedGeometryCount() const;
+
+
+    // Allows you to generate a list of joints with their transformations.
+    class SIRIKATA_MESH_EXPORT JointIterator {
+    public:
+        JointIterator(const Meshdata* const mesh);
+        // Get the next Joint's unique ID, its index in the list of joints, its
+        // transform, and parent joint ID. Returns true if
+        // values were set, false if there were no more joints. Joint IDs are
+        // non-zero, so you can check for, e.g., no parent with parent_id == 0
+        // or if (parent_id). The joint_idx is an index into Meshdata::joints.
+        bool next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id);
+    private:
+        const Meshdata* mMesh;
+
+        int32 mRoot;
+        std::stack<JointNodeState> mStack;
+        uint32 mNextID;
+    };
+    JointIterator getJointIterator() const;
+    /** Get count of joints geometry. This can differ from joints.size()
+     *  because nodes acting as joints may be instantiated multiple times.
+     */
+    uint32 getJointCount() const;
+
 
     // Allows you to generate a list of GeometryInstances with their transformations.
     class SIRIKATA_MESH_EXPORT LightInstanceIterator {
