@@ -627,18 +627,37 @@ public:
     void loadResource(Ogre::Resource *r) {
         Ogre::Skeleton* skel = dynamic_cast<Ogre::Skeleton*> (r);
 
-        std::map<uint32, Ogre::Bone*> bones;
+        typedef std::map<uint32, Ogre::Bone*> BoneMap;
+        BoneMap bones;
 
+        // Bones
+        // Basic root bone, no xform
+        bones[0] = skel->createBone(0);
         Meshdata::JointIterator joint_it = mdptr->getJointIterator();
         uint32 joint_id;
         uint32 joint_idx;
         Matrix4x4f pos_xform;
         uint32 parent_id;
         while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id) ) {
-            Ogre::Bone* bone = skel->createBone(joint_id);
-            if (parent_id != 0)
-                bones[parent_id]->addChild(bone);
+            Ogre::Bone* bone = bones[parent_id]->createChild(joint_id);
+            bone->setInitialState();
             bones[joint_id] = bone;
+        }
+
+        // Animations (currently simple test scaling animation)
+        Ogre::Animation* anim = skel->createAnimation("anim", 1.0);
+        for(BoneMap::iterator bit = bones.begin(); bit != bones.end(); bit++) {
+            Ogre::NodeAnimationTrack* track = anim->createNodeTrack(bit->first, bit->second);
+            Ogre::TransformKeyFrame* key;
+            key = track->createNodeKeyFrame(0.0);
+            key->setTranslate(Ogre::Vector3(0.0f, 0.0f, 0.0f));
+            key->setScale(Ogre::Vector3(1.0f, 1.0f, 1.0f));
+            key->setRotation(Ogre::Quaternion(1.0f, 0.0f, 0.0f, 0.0f));
+
+            key = track->createNodeKeyFrame(1.0);
+            key->setTranslate(Ogre::Vector3(0.0f, 0.0f, 0.0f));
+            key->setScale(Ogre::Vector3(2.0f, 2.0f, 2.0f));
+            key->setRotation(Ogre::Quaternion(1.0f, 0.0f, 0.0f, 0.0f));
         }
     }
 
@@ -812,6 +831,29 @@ public:
             if (geoinst.geometryIndex >= md.geometry.size())
                 continue;
             const SubMeshGeometry& submesh = md.geometry[geoinst.geometryIndex];
+
+            if (submesh.skinControllers.size() > 1) {
+                SILOG(ogre,error,"Don't know how to handle multiple skin controllers, leaving in T-pose.");
+            }
+            else if (submesh.skinControllers.size() == 1) {
+                const SkinController& skin = submesh.skinControllers[0];
+                // Set weights. This maps directly from our
+                // (vert_idx,jointIndex,weight) pairs (at least as we
+                // decode them) into Ogre.
+                // FIXME this can be done on a per-submesh (rather
+                // than per-mesh) basis. Do we ever need that?
+                Ogre::VertexBoneAssignment vba;
+                for(uint32 vidx = 0; vidx < submesh.positions.size(); vidx++) {
+                    vba.vertexIndex = vidx;
+                    for(uint32 ass_idx = skin.weightStartIndices[vidx]; ass_idx < skin.weightStartIndices[vidx+1]; ass_idx++) {
+                        vba.boneIndex = skin.joints[ skin.jointIndices[ass_idx] ];
+                        vba.weight = skin.weights[ass_idx];
+                        mesh->addBoneAssignment(vba);
+                    }
+                }
+                mesh->_compileBoneAssignments();
+            }
+
             BoundingBox3f3f submeshaabb;
             double rad=0;
             geoinst.computeTransformedBounds(md, pos_xform, &submeshaabb, &rad);
@@ -1047,10 +1089,11 @@ void Entity::createMesh() {
         }
 
         // Skeleton
+        Ogre::SkeletonPtr skel(NULL);
         if (!mdptr->joints.empty()) {
             Ogre::SkeletonManager& skel_mgr = Ogre::SkeletonManager::getSingleton();
             Ogre::ManualResourceLoader *reload;
-            Ogre::SkeletonPtr skel (skel_mgr.create(hash+"_skeleton",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
+            skel = Ogre::SkeletonPtr(skel_mgr.create(hash+"_skeleton",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
                     (reload=new SkeletonManualLoader(mdptr))));
             reload->prepareResource(&*skel);
             reload->loadResource(&*skel);
@@ -1074,6 +1117,8 @@ void Entity::createMesh() {
 			MeshdataManualLoader(mdptr))));
             reload->prepareResource(&*mo);
             reload->loadResource(&*mo);
+            if (!skel.isNull())
+                mo->_notifySkeleton(skel);
 
             bool check = mm.resourceExists(hash);
         }
