@@ -63,10 +63,18 @@ struct SIRIKATA_MESH_EXPORT SkinController {
     std::vector<uint32> joints;
 
     Matrix4x4f bindShapeMatrix;
-    ///n+1 elements where n is the number of vertices, so that we can do simple subtraction to find out how many joints influence each vertex
+    ///n+1 elements where n is the number of vertices, so that we can do simple
+    ///subtraction to find out how many joints influence each vertex
     std::vector<unsigned int> weightStartIndices;
+    // weights and jointIndices are the same size and are a sparse
+    // representation of the (vertex,bone) = weight matrix: the
+    // weightStartIndices let you figure out the range in these arrays that
+    // correspond to a single vertex. In that range, each pair represents the
+    // weight for one joint for the current vertex, with the rest of the joints
+    // having weight 0.
     std::vector<float> weights;
     std::vector<unsigned int>jointIndices;
+    // One inverse bind matrix per joint.
     std::vector<Matrix4x4f> inverseBindMatrices;
 };
 typedef std::vector<SkinController> SkinControllerList;

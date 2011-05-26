@@ -291,6 +291,7 @@ void ColladaDocumentImporter::translateSkinControllers() {
         uint32 mesh_idx = geom_it->second;
         SubMeshGeometry& mesh = mMesh->geometry[mesh_idx];
 
+
         // Copy data into SubMeshGeometry
         mesh.skinControllers.push_back(SkinController());
         SkinController& mesh_skin = mesh.skinControllers.back();
@@ -300,10 +301,28 @@ void ColladaDocumentImporter::translateSkinControllers() {
             mesh_skin.joints.push_back(jidx_it->second);
         }
         mesh_skin.bindShapeMatrix = skindata.bindShapeMatrix;
-        mesh_skin.weightStartIndices = skindata.weightStartIndices;
-        mesh_skin.weights = skindata.weights;
-        mesh_skin.jointIndices = skindata.jointIndices;
         mesh_skin.inverseBindMatrices = skindata.inverseBindMatrices;
+        // These items depend on the number of vertices and that number changed
+        // because we require all properties to share the same index
+        // (e.g. position, uvs, normal, etc). We need to generate a new, very
+        // likely longer version of this data that fits the new set of indices.
+        std::vector<uint32>& inv_vert_index_map = mExtraGeometryData[mesh_idx].inverseVertexIndexMap;
+        for(uint32 new_vidx = 0; new_vidx < mesh.positions.size(); new_vidx++) {
+            // Start index is current size of the lists being built
+            mesh_skin.weightStartIndices.push_back( mesh_skin.weights.size() );
+            // Figure out the original index
+            uint32 orig_vidx = inv_vert_index_map[new_vidx];
+
+            // Copy data for that vertex's range in original data, using
+            // weightStartIndices to figure this out
+            for(uint32 vweight_idx = skindata.weightStartIndices[orig_vidx]; vweight_idx < skindata.weightStartIndices[orig_vidx+1]; vweight_idx++) {
+                mesh_skin.weights.push_back( skindata.weights[vweight_idx] );
+                mesh_skin.jointIndices.push_back( skindata.jointIndices[vweight_idx] );
+            }
+        }
+        // weightStartIndices has a final value so we can always subtract two
+        // items to get length, fill in lats item with final size
+        mesh_skin.weightStartIndices.push_back( mesh_skin.weights.size() );
     }
 }
 
@@ -716,6 +735,7 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
             mExtraGeometryData.back().primitives.push_back(ExtraPrimitiveData());
             outputPrim=&submesh->primitives.back();
             setupPrim(outputPrim,mExtraGeometryData.back().primitives.back(),prim);
+            std::vector<uint32>& inverse_vert_index_map = mExtraGeometryData.back().inverseVertexIndexMap;
             size_t faceCount=prim->getGroupedVerticesVertexCount(i);
             if (!multiPrim)
                 faceCount *= prim->getGroupedVertexElementsCount();
@@ -776,6 +796,14 @@ bool ColladaDocumentImporter::writeGeometry ( COLLADAFW::Geometry const* geometr
                 }
                 if (where==indexSetMap.end()) {
                     indexSetMap[uniqueIndexSet]=submesh->positions.size();
+                    uint32 new_vert_idx = submesh->positions.size();
+                    // inverse_vert_index_map lets us map back to original
+                    // indices for each *vertex* (i.e. position). Used to map
+                    // backward in weights for bones to map to the expanded
+                    // number of vertices.
+                    // -Note the push_back puts it at submesh->positions.size(),
+                    // i.e. the index is *new vertex index*.
+                    inverse_vert_index_map.push_back(uniqueIndexSet.positionIndices);
                     outputPrim->indices.push_back(submesh->positions.size());
                     if (vdata||vdatad) {
                         if (vdata) {

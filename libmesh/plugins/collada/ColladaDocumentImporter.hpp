@@ -207,11 +207,19 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         };
         struct ExtraGeometryData {
             std::vector<ExtraPrimitiveData> primitives;
+            // Reverse index from new vert index -> orig vert index, for
+            // per-vertex weights since they are applied separately
+            std::vector<uint32> inverseVertexIndexMap;
         };
         void setupPrim(Mesh::SubMeshGeometry::Primitive* outputPrim,
                        ExtraPrimitiveData&outputPrimExtra,
                        const COLLADAFW::MeshPrimitive*prim);
-        std::vector<ExtraGeometryData> mExtraGeometryData;//a list of mappings from texture coordinate set to list indices
+        //a list of:
+        //  mappings from texture coordinate set to list indices
+        //  mappings from new position indices to original (for mapping indices
+        //     backward into animation weight data to make vertices that were
+        //     expanded to multiple vertices get weights applied to both).
+        std::vector<ExtraGeometryData> mExtraGeometryData;
         IndicesMap mLightMap;
         Mesh::LightInfoList mLights;
 
