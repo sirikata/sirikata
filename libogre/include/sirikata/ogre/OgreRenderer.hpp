@@ -128,6 +128,7 @@ public:
 
     // Ogre::WindowEventListener Interface overloads
     virtual void windowResized(Ogre::RenderWindow *rw);
+    virtual void windowFocusChange(Ogre::RenderWindow *rw);
 
     // Options values
     virtual float32 nearPlane();

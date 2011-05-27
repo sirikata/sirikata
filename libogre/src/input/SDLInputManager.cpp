@@ -271,6 +271,9 @@ SDLInputManager::SDLInputManager(Graphics::OgreRenderer* parent, unsigned int wi
 */
 }
 
+void SDLInputManager::windowFocusChange() {
+    SDL_SetModState(KMOD_NONE);
+}
 
 float SDLInputManager::dragDeadBand() const {
     return mDragDeadband->as<float>();
@@ -484,9 +487,11 @@ bool SDLInputManager::tick(Task::LocalTime currentTime, Duration frameTime){
             }
             if (event->window.event==SDL_WINDOWEVENT_FOCUS_LOST) {
                 mHasKeyboardFocus=false;
+                windowFocusChange();
             }
             if (event->window.event==SDL_WINDOWEVENT_FOCUS_GAINED) {
                 mHasKeyboardFocus=true;
+                windowFocusChange();
             }
             break;
 

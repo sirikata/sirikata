@@ -850,6 +850,10 @@ void OgreRenderer::windowResized(Ogre::RenderWindow *rw) {
         (*cam_it)->windowResized();
 }
 
+void OgreRenderer::windowFocusChange(Ogre::RenderWindow *rw) {
+    mInputManager->windowFocusChange();
+}
+
 float32 OgreRenderer::nearPlane() {
     return mOptions->referenceOption("nearplane")->as<float32>();
 }

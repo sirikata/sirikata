@@ -99,6 +99,8 @@ public:
         std::string _msg;
     };
 
+    void windowFocusChange();
+
     float dragDeadBand() const;
     float relativeMouseToAxis() const;
     float wheelToAxis() const;
