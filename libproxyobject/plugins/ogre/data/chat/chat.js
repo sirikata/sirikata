@@ -115,7 +115,6 @@ Chat.toggleVisible = toggleVisible;
 	        height: 'auto',
 	        width: 300,
                 height: 400,
-	        modal: false,
                 position: 'right'
             }
         );

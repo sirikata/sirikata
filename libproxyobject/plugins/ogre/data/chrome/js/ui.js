@@ -78,7 +78,12 @@ sirikata.ui = function(name, ui_code) {
  */
 sirikata.ui.window = function(selector, params) {
     var win_data = $(selector);
-    return win_data.dialog(params);
+    var real_params = {};
+    for(var i in params) {
+        if (i == 'modal') continue;
+        real_params[i] = params[i];
+    }
+    return win_data.dialog(real_params);
 };
 
 /** Use the given element like a button. Allows you to do things like set a click handler.

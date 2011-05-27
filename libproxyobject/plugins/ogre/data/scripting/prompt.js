@@ -237,7 +237,7 @@ var editHistoryForward = function() {
 		autoOpen: false,
 		height: 'auto',
 		width: 450,
-		modal: false,
+		modal: true,
 		buttons: {
 		    Run: runCommand,
 		    "Close Tab": closePrompt
