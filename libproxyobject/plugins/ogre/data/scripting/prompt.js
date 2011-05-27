@@ -1,4 +1,6 @@
-sirikata.ui("Scripter", function() {
+sirikata.ui(
+    "Scripter",
+    function() {
 
 Scripter = {};
 
@@ -217,23 +219,20 @@ var editHistoryForward = function() {
         curEditor.editHistoryForward();
 };
 
-$(document).ready(function() {
-	$LAB
-    .script("../ace/build/src/ace-uncompressed.js")
-    .script("../ace/build/src/theme-dawn.js")
-    .script("../ace/build/src/mode-javascript.js").wait();
+
+        $LAB
+            .script("../ace/build/src/ace-uncompressed.js")
+            .script("../ace/build/src/theme-dawn.js")
+            .script("../ace/build/src/mode-javascript.js").wait();
 
 	$('<div />').attr({id:'emerson-prompt-dialog', title:'Emerson Scripting'})
-		.append($("<div />").attr({id:'edittabs'})
-				.append($("<ul />").attr({id:'edittab_titles'}).append(''))
-		)
-	.appendTo('body');
+	    .append($("<div />").attr({id:'edittabs'})
+		    .append($("<ul />").attr({id:'edittab_titles'}).append(''))
+		   )
+	    .appendTo('body');
 
-	/*<div id="edittabs">
-		<ul id="edittab_titles"></ul>
-	</div>*/
-
-	$( "#emerson-prompt-dialog" ).dialog({
+	$( "#emerson-prompt-dialog" ).dialog(
+            {
 		autoOpen: false,
 		height: 'auto',
 		width: 450,
@@ -246,13 +245,9 @@ $(document).ready(function() {
                 position: 'left'
 	});
 
-	/*<button type="button" onclick="runCommand()">Run</button>
-	<button type="button" onclick="closePrompt()">Close</button>*/
-
 	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../jquery_themes/redmond/jquery-ui-1.8.6.custom.css'})
 	$("head").append(newcsslink);
 	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../scripting/prompt.css'})
 	$("head").append(newcsslink);
-});
 
 });

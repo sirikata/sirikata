@@ -1,4 +1,6 @@
-sirikata.ui("Chat", function() {
+sirikata.ui(
+    "Chat",
+    function() {
 
 Chat = {};
 
@@ -87,8 +89,8 @@ var toggleVisible = function() {
 };
 Chat.toggleVisible = toggleVisible;
 
-$(document).ready(
-    function() {
+
+        // UI setup
         $('<div>' +
           ' <div id="chat-login">' +
           '  Username: <input type="text" id="username" name="username"/>' +
@@ -106,17 +108,19 @@ $(document).ready(
           ' </div>' +
           '</div>').attr({id:'chat-dialog', title:'Chat'}).appendTo('body');
 
-	$( "#chat-dialog" ).dialog({
-		autoOpen: false,
-		height: 'auto',
-		width: 300,
+        $( "#chat-dialog" ).dialog(
+            {
+	        autoOpen: false,
+	        height: 'auto',
+	        width: 300,
                 height: 400,
-		modal: false,
+	        modal: false,
                 position: 'right'
-	});
+            }
+        );
+
         $('#chat-log').hide();
         $('#chat-submit-name').click(registerHotkeys);
         $('#chat-run-command').click(runCommand);
-});
 
 });
