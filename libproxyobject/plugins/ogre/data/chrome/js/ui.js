@@ -80,3 +80,10 @@ sirikata.ui.window = function(selector, params) {
     var win_data = $(selector);
     return win_data.dialog(params);
 };
+
+/** Use the given element like a button. Allows you to do things like set a click handler.
+ *  @param selector selector or DOM element to use as button.
+ */
+sirikata.ui.button = function(selector) {
+    return $(selector);
+};

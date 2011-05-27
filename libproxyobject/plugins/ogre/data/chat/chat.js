@@ -121,7 +121,7 @@ Chat.toggleVisible = toggleVisible;
         );
 
         $('#chat-log').hide();
-        $('#chat-submit-name').click(registerHotkeys);
-        $('#chat-run-command').click(runCommand);
+        sirikata.ui.button('#chat-submit-name').click(registerHotkeys);
+        sirikata.ui.button('#chat-run-command').click(runCommand);
 
 });
