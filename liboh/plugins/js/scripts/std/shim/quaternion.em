@@ -222,24 +222,33 @@ util.Quaternion.prototype.zAxis = function() {
     return new util.Vec3(fTxz+fTwy, fTyz-fTwx, 1.0-(fTxx+fTyy));
 };
 
-
+/**
+  @function
+  @return The axis of rotation represented by this quaternion.
+*/
 util.Quaternion.prototype.axis = function() {
-    var wSq = this.w * this.w;
-    if (wSq >= 1 - 1e-08) {
-        return new util.Vec3(0, 0, 0);
-    }
     var axis = new util.Vec3(this.x, this.y, this.z);
-    axis = axis.scale(1 / Math.sqrt(1 - wSq));
+    axis = axis.normal();
     return axis;
 };
 
+/**
+  @function
+  @return The angle of rotation represented by this quaternion.
+*/
 util.Quaternion.prototype.angle = function() {
-    if (this.w >= 0.99) { // acos doesn't return values for w = 1
-        return 0;
-    }
-    return 2 * Math.acos(this.w);
+    var quat = this.normal();
+    return 2 * Math.acos(quat.w);
 };
 
+/**
+  @function
+  @param direction Vector that represents direction to look at.
+  @param up Up direction of the quaternion.
+  @return A quaternion constructed so that the -z axis (lookat direction) points
+          in the same direction as the direction vector, with the up vector
+          as close as possible to the given up vector.
+*/
 util.Quaternion.fromLookAt = function(direction, up) {
     up = up || <0, 1, 0>;
     if (direction.length() < 1e-08)
