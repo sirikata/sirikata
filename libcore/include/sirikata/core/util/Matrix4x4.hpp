@@ -161,6 +161,16 @@ public:
             setRow(i, Vector4x(other[i][0], other[i][1], other[i][2], other[i][3]));
     }
 
+    template<typename T>
+    Matrix4x4(T* other, COLUMN_MAJOR c) {
+        for(int i = 0; i < 4; i++)
+            setCol(i, Vector4x(other[i*4+0], other[i*4+1], other[i*4+2], other[i*4+3]));
+    }    template<typename T>
+    Matrix4x4(T* other, ROW_MAJOR c) {
+        for(int i = 0; i < 4; i++)
+            setRow(i, Vector4x(other[i*4+0], other[i*4+1], other[i*4+2], other[i*4+3]));
+    }
+
     const Vector4x& getCol(unsigned int which) const {
         assert(which<4);
         return mCol[which];

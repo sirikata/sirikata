@@ -241,6 +241,14 @@ typedef std::vector<MaterialEffectInfo> MaterialEffectInfoList;
 struct  SIRIKATA_MESH_EXPORT InstanceSkinAnimation {
 };
 
+/** Represents a series of key frames */
+struct SIRIKATA_MESH_EXPORT TransformationKeyFrames {
+    typedef std::vector<float> TimeList;
+    TimeList inputs;
+    typedef std::vector<Matrix4x4f> TransformationList;
+    TransformationList outputs;
+};
+
 // A scene graph node. Contains a transformation, set of children nodes,
 // camera instances, geometry instances, skin controller instances, light
 // instances, and instances of other nodes.
@@ -260,6 +268,10 @@ struct SIRIKATA_MESH_EXPORT Node {
     // subtree. Because they are instantiations, their
     // instanceChildren[i]->parent != this node's index.
     NodeIndexList instanceChildren;
+
+    // Map of name -> animation curve.
+    typedef std::map<String, TransformationKeyFrames> AnimationMap;
+    AnimationMap animations;
 };
 typedef std::vector<Node> NodeList;
 

@@ -220,6 +220,46 @@ void ColladaDocumentImporter::translateNodes() {
                     uint32 joint_idx = mMesh->joints.size();
                     mMesh->joints.push_back(nindex);
                     mJointIndices[curnode.node->getUniqueId()] = joint_idx;
+
+                    // Check for any animations on this node. Animations may
+                    // apply to any sub-transformation, but we don't have a way
+                    // to handle this right now. Check that we're only trying to
+                    // work with a single
+                    if (curnode.node->getTransformations().getCount() > 1) {
+                        SILOG(collada,error,"Found joint with multiple transformations, ignoring animations if there are any.");
+                    }
+                    else {
+                        for(int ti = 0; ti < curnode.node->getTransformations().getCount(); ti++) {
+                            COLLADAFW::Transformation* joint_xform = curnode.node->getTransformations()[ti];
+                            const COLLADAFW::UniqueId& joint_anim = joint_xform->getAnimationList();
+                            if (!joint_anim.isValid()) continue;
+
+                            printf("Node animation: %s\n", joint_anim.toAscii().c_str());
+
+                            // Get list of bindings. Each item in the bindings
+                            // list represents a single animation for this
+                            // joint, e.g. walk, idle, sit.
+                            const AnimationBindings& bindings = mAnimationBindings[joint_anim];
+                            for(AnimationBindings::const_iterator bind_it = bindings.begin(); bind_it != bindings.end(); bind_it++) {
+                                if (bind_it->animationClass != COLLADAFW::AnimationList::MATRIX4X4) {
+                                    SILOG(collada,error,"Non-matrix animatable output not currently supported.");
+                                    continue;
+                                }
+                                // The binding just indexes into our set of
+                                // animation curves
+                                const AnimationCurve& anim_curve = mAnimationCurves[bind_it->animation];
+                                // And conversion of this is straightforward. We
+                                // currently only support matrix4x4 (see above
+                                // check)
+                                TransformationKeyFrames& anim_out = mMesh->nodes[nindex].animations[anim_curve.name];
+                                assert(anim_curve.outputs.size() == 16*anim_curve.inputs.size());
+                                for(uint32 sample_idx = 0; sample_idx < anim_curve.inputs.size(); sample_idx++) {
+                                    anim_out.inputs.push_back( anim_curve.inputs[sample_idx] );
+                                    anim_out.outputs.push_back( Matrix4x4f( &anim_curve.inputs[16*sample_idx], Matrix4x4f::ROW_MAJOR() ) );
+                                }
+                            }
+                        }
+                    }
                 }
 
                 curnode.mode = NodeState::Geo;
@@ -1194,9 +1234,14 @@ static void convertColladaFloatDoubleArray(const COLLADAFW::FloatOrDoubleArray& 
 
 bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* animation )
 {
+    // Each animation written here represents a single series of time -> value
+    // (usually matrix for transformation) mappings, i.e. the keyframes for a
+    // single value.
+
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimation(" << animation << ") entered");
 
     if (animation->getAnimationType()==COLLADAFW::Animation::ANIMATION_CURVE) {//makes sure static cast will work
+        //printf("animation: %s %s\n", animation->getUniqueId().toAscii().c_str(), animation->getOriginalId().c_str());
         const COLLADAFW::AnimationCurve* curveAnimation = static_cast<const COLLADAFW::AnimationCurve*>(animation);
         AnimationCurve* copy = &mAnimationCurves[animation->getUniqueId()];
 
@@ -1205,6 +1250,8 @@ bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* anima
         // FIXME interpolation types don't seem to be getting returned, only
         // getInterpolationType() has a value. Currently always assuming linear.
         // FIXME tangents
+
+        copy->name = animation->getOriginalId();
     }
     else {
         COLLADA_LOG(error, "Unsupported animation type encountered: " << (int)animation->getAnimationType());
@@ -1216,12 +1263,24 @@ bool ColladaDocumentImporter::writeAnimation ( COLLADAFW::Animation const* anima
 
 bool ColladaDocumentImporter::writeAnimationList ( COLLADAFW::AnimationList const* animationList )
 {
+    // An animation list is a confusing name. Each animation list contains a
+    // list of animation curves (list of keyframes) for a *single* joint but
+    // across multiple animations. So AnimationList contains something like:
+    // AnimationList = [ keyframes from animation 1 for joint x,
+    //                   keyframes from animation 2 for joint y,
+    //                   keyframes from animation 3 for joint z]
+
     COLLADA_LOG(insane, "ColladaDocumentImporter::writeAnimationList(" << animationList << ") entered");
 
     AnimationBindings* copy = &mAnimationBindings[animationList->getUniqueId()];
     const COLLADAFW::AnimationList::AnimationBindings& orig = animationList->getAnimationBindings();
-    for(uint32 i = 0; i < orig.getCount(); i++)
+    //printf("animation list: %s %d bindings\n", animationList->getUniqueId().toAscii().c_str(), (int)orig.getCount());
+    for(uint32 i = 0; i < orig.getCount(); i++) {
+        // Note that firstIndex and secondIndex seem to do nothing for the
+        //skeleton matrix4x4 bindings we currently handle.
+        //printf(" binding: %s %d %d->%d\n", orig[i].animation.toAscii().c_str(), (orig[i].animationClass ==  COLLADAFW::AnimationList::MATRIX4X4) ? 1 : 0, orig[i].firstIndex, orig[i].secondIndex);
         copy->push_back( orig[i] );
+    }
 
     return true;
 }
