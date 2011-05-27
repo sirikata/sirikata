@@ -70,7 +70,8 @@ public:
     // Entity Overrides
     virtual BoundingSphere3f bounds();
     virtual float32 priority();
-
+    virtual void tick(const Time& t, const Duration& deltaTime);
+    virtual bool isDynamic() const;
 
     ProxyObject &getProxy() const {
         return *mProxy;

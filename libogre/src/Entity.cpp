@@ -112,7 +112,8 @@ Entity::Entity(OgreRenderer *scene, const String& name)
    mOgreObject(NULL),
    mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(name) )),
    mMovingIter(scene->mMovingEntities.end()),
-   mVisible(true)
+   mVisible(true),
+   mCurrentAnimation(NULL)
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
 
@@ -195,9 +196,9 @@ void Entity::updateScale(float scale) {
     mSceneNode->setScale( rad_factor, rad_factor, rad_factor );
 }
 
-void Entity::setStatic(bool isStatic) {
+void Entity::setDynamic(bool dyn) {
     const std::list<Entity*>::iterator end = mScene->mMovingEntities.end();
-    if (isStatic) {
+    if (!dyn) {
         if (mMovingIter != end) {
             SILOG(ogre,detailed,"Removed "<<this<<" from moving entities queue.");
             mScene->mMovingEntities.erase(mMovingIter);
@@ -211,9 +212,36 @@ void Entity::setStatic(bool isStatic) {
     }
 }
 
+void Entity::checkDynamic() {
+    setDynamic(this->isDynamic());
+}
+
 void Entity::setVisible(bool vis) {
     mVisible = vis;
     updateVisibility();
+}
+
+void Entity::setAnimation(const String& name) {
+    // Disable current animation if we have one
+    if (mCurrentAnimation) {
+        mCurrentAnimation->setEnabled(false);
+        mCurrentAnimation = NULL;
+    }
+
+    if (name.empty()) return;
+
+    // Find and enable new animation
+    Ogre::AnimationState* state = mOgreObject->getAnimationState(name);
+    if (state == NULL) {
+        SILOG(ogre,error,"Tried to set animation to non-existant track.");
+        return;
+    }
+    state->setEnabled(true);
+    state->setLoop(true);
+    state->setTimePosition(0.f);
+    mCurrentAnimation = state;
+
+    checkDynamic();
 }
 
 void Entity::updateVisibility() {
@@ -225,7 +253,9 @@ void Entity::removeFromScene() {
     if (oldParent) {
         oldParent->removeChild(mSceneNode);
     }
-    setStatic(true);
+    // Force dynamicity off
+    setAnimation("");
+    setDynamic(false);
 }
 void Entity::addToScene(Ogre::SceneNode *newParent) {
     if (newParent == NULL) {
@@ -233,7 +263,18 @@ void Entity::addToScene(Ogre::SceneNode *newParent) {
     }
     removeFromScene();
     newParent->addChild(mSceneNode);
-    setStatic(false); // May get set to true after the next frame has drawn.
+    checkDynamic();
+}
+
+bool Entity::isDynamic() const {
+    return (mCurrentAnimation != NULL);
+}
+
+void Entity::tick(const Time& t, const Duration& deltaTime) {
+    if (mCurrentAnimation)
+        mCurrentAnimation->addTime(deltaTime.seconds());
+
+    checkDynamic();
 }
 
 void Entity::setOgrePosition(const Vector3d &pos) {

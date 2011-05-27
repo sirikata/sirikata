@@ -368,14 +368,6 @@ bool OgreSystem::renderOneFrame(Task::LocalTime t, Duration frameTime) {
 
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     OgreRenderer::preFrame(currentTime, frameTime);
-    std::list<Entity*>::iterator iter;
-    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end();) {
-        ProxyEntity *current = static_cast<ProxyEntity*>(*iter);
-        ++iter;
-        SpaceID space(current->getProxy().getObjectReference().space());
-        Time cur_time = simTime();
-        current->extrapolateLocation(cur_time);
-    }
 }
 
 void OgreSystem::postFrame(Task::LocalTime current, Duration frameTime) {

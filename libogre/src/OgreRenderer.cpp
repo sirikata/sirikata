@@ -773,6 +773,11 @@ bool OgreRenderer::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTi
 }
 
 void OgreRenderer::preFrame(Task::LocalTime currentTime, Duration frameTime) {
+    std::list<Entity*>::iterator iter;
+    Time cur_time = mContext->simTime();
+    for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); iter++)
+        (*iter)->tick(cur_time, frameTime);
+
     for(std::tr1::unordered_set<Camera*>::iterator cam_it = mAttachedCameras.begin(); cam_it != mAttachedCameras.end(); cam_it++) {
         Camera* cam = *cam_it;
         cam->tick(Time::microseconds(currentTime.raw()), frameTime);

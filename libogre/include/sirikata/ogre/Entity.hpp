@@ -90,6 +90,9 @@ protected:
     // thing if you toggle visibility with cascading, then later add
     // more nodes.
     bool mVisible;
+    // And we track this because it's more efficient than looping through all
+    // available animations on the mesh.
+    Ogre::AnimationState* mCurrentAnimation;
 
     AssetDownloadTaskPtr mAssetDownload;
 
@@ -99,7 +102,11 @@ protected:
 
     void init(Ogre::Entity *obj);
 
-    void setStatic(bool isStatic);
+    // Note that this is forceful -- it doesn't do any checks. Generally you
+    // should only use it from within checkDynamic().
+    void setDynamic(bool isStatic);
+    // Checks whether the object is dynamic and updates the renderer
+    void checkDynamic();
 
     void updateScale(float scale);
     void updateVisibility();
@@ -109,10 +116,15 @@ public:
     virtual ~Entity();
 
     // These should be overridden to allow this class to learn about the
-    // properties of this Entity.
+    // properties of this Entity or override the basic behavior of Entity.
     virtual BoundingSphere3f bounds() = 0;
     virtual float32 priority() = 0;
-
+    virtual void tick(const Time& t, const Duration& deltaTime);
+    // Check if the object is dynamic, i.e. needs updates every frame. The
+    // Entity base class is only non-static during animations. Be sure to
+    // include the base classes implementation when checking whether the object
+    // is static.
+    virtual bool isDynamic() const;
 
     static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
@@ -147,6 +159,8 @@ public:
     }
 
     void setVisible(bool vis);
+
+    void setAnimation(const String& name);
 
     void bindTexture(const std::string &textureName, const String& objId);
     void unbindTexture(const std::string &textureName);

@@ -70,19 +70,26 @@ float32 ProxyEntity::priority() {
     return mProxy->priority;
 }
 
+void ProxyEntity::tick(const Time& t, const Duration& deltaTime) {
+    // Update location from proxy as well as doing normal updates
+    Entity::tick(t, deltaTime);
+    extrapolateLocation(t);
+}
+
+bool ProxyEntity::isDynamic() const {
+    return Entity::isDynamic() || !getProxy().isStatic();
+}
+
 ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
     return static_cast<ProxyEntity*>( Ogre::any_cast<Entity*>(movable->getUserAny()) );
 }
 
 void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) {
     SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
-    if (!getProxy().isStatic()) {
-        setStatic(false);
-    } else {
-        setOgrePosition(Vector3d(newLocation.position()));
-        setOgreOrientation(newOrient.position());
-    }
+    setOgrePosition(Vector3d(newLocation.position()));
+    setOgreOrientation(newOrient.position());
     updateScale( newBounds.radius() );
+    checkDynamic();
 }
 
 void ProxyEntity::validated() {
@@ -108,7 +115,6 @@ void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {
     Location loc (getProxy().extrapolateLocation(current));
     setOgrePosition(loc.getPosition());
     setOgreOrientation(loc.getOrientation());
-    setStatic(getProxy().isStatic());
 }
 
 /////////////////////////////////////////////////////////////////////
