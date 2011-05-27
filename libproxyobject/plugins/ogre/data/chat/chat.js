@@ -108,7 +108,8 @@ Chat.toggleVisible = toggleVisible;
           ' </div>' +
           '</div>').attr({id:'chat-dialog', title:'Chat'}).appendTo('body');
 
-        $( "#chat-dialog" ).dialog(
+        sirikata.ui.window(
+            '#chat-dialog',
             {
 	        autoOpen: false,
 	        height: 'auto',

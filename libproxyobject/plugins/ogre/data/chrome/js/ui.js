@@ -69,3 +69,14 @@ sirikata.ui = function(name, ui_code) {
         }
     );
 };
+
+/** Create a UI window from the given element.
+ *  @param selector selector or DOM element to convert into a window
+ *  @param params settings for this window. Currently this mainly just
+ *         passes through to jQuery UI, but the settings may change in the
+ *         future.
+ */
+sirikata.ui.window = function(selector, params) {
+    var win_data = $(selector);
+    return win_data.dialog(params);
+};

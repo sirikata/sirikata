@@ -231,19 +231,21 @@ var editHistoryForward = function() {
 		   )
 	    .appendTo('body');
 
-	$( "#emerson-prompt-dialog" ).dialog(
+        sirikata.ui.window(
+            '#emerson-prompt-dialog',
             {
 		autoOpen: false,
 		height: 'auto',
 		width: 450,
 		modal: false,
 		buttons: {
-			Run: runCommand,
-			"Close Tab": closePrompt
+		    Run: runCommand,
+		    "Close Tab": closePrompt
 		},
 		close: dialogClosed,
                 position: 'left'
-	});
+	    }
+        );
 
 	var newcsslink = $("<link />").attr({rel:'stylesheet', type:'text/css', href:'../jquery_themes/redmond/jquery-ui-1.8.6.custom.css'})
 	$("head").append(newcsslink);
