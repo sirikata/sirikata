@@ -31,6 +31,7 @@
  */
 
 system.require('std/core/pretty.em');
+system.require('std/escape.em');
 
 // This is just a document hack.
 // System should not be in the if as there is something wrong if it
@@ -470,12 +471,11 @@ if(system == undefined)
                   var funcString = quoteEscaper(script.toString());
                   if (arg !== null)
                   {
-                      var serializedArg = quoteEscaper(this.serialize(arg));
-                      funcString = '"' + '(' + funcString + ") ( system.deserialize(@" + serializedArg + "@));" + '"';
+                      var serializedArg = Escape.escapeString(this.serialize(arg), '@');
+                      funcString = '"' + '(' + funcString + ") ( system.deserialize(" + serializedArg + "));" + '"';
                   }
                   else
                       funcString = '"' + '(' + funcString + ") ( );" + '"';
-
 
                   this.__hidden_createEntity(position, 'js',funcString,mesh,scale,solidAngle,space);
               }
