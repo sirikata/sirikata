@@ -75,19 +75,22 @@ def generate_images(items, klass):
 
 def compute_diffs(items):
     for item in items:
-        sshot_baseline = filename_from_url(item, 'baseline')
-        sshot_new = filename_from_url(item, 'new')
-        sshot_diff = filename_from_url(item, 'diff')
+        try:
+            sshot_baseline = filename_from_url(item, 'baseline')
+            sshot_new = filename_from_url(item, 'new')
+            sshot_diff = filename_from_url(item, 'diff')
+            
+            im_base = Image.open(sshot_baseline)
+            im_new = Image.open(sshot_new)
 
-        im_base = Image.open(sshot_baseline)
-        im_new = Image.open(sshot_new)
-
-        # Note that this comparison isn't great, its RGB based but something like LAB would be preferable.
-        im_diff = ImageChops.difference(im_base, im_new)
-        diff_stats = ImageStat.Stat(im_diff)
-        print item, max(diff_stats.rms) # max of rgb RMSs
-        if max([channel[1] for channel in diff_stats.extrema]) > 0: # max of RGBs maxes
-            im_diff.save(sshot_diff)
+            # Note that this comparison isn't great, its RGB based but something like LAB would be preferable.
+            im_diff = ImageChops.difference(im_base, im_new)
+            diff_stats = ImageStat.Stat(im_diff)
+            print item, max(diff_stats.rms) # max of rgb RMSs
+            if max([channel[1] for channel in diff_stats.extrema]) > 0: # max of RGBs maxes
+                im_diff.save(sshot_diff)
+        except IOError:
+            print item, 'skipped due to missing files.'
 
 def rebaseline(items):
     # This is simple, just copy over the new images to baseline
