@@ -234,8 +234,6 @@ void ColladaDocumentImporter::translateNodes() {
                             const COLLADAFW::UniqueId& joint_anim = joint_xform->getAnimationList();
                             if (!joint_anim.isValid()) continue;
 
-                            printf("Node animation: %s\n", joint_anim.toAscii().c_str());
-
                             // Get list of bindings. Each item in the bindings
                             // list represents a single animation for this
                             // joint, e.g. walk, idle, sit.

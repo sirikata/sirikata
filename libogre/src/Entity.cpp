@@ -627,8 +627,24 @@ public:
     void loadResource(Ogre::Resource *r) {
         Ogre::Skeleton* skel = dynamic_cast<Ogre::Skeleton*> (r);
 
+        // We have to set some binding information for each joint (bind shape
+        // matrix * inverseBindMatrix_i for each joint i). Collada has a more
+        // flexible animation system, so here we only support this if there is 1
+        // SubMeshGeometry with 1 SkinController
+        if (mdptr->geometry.size() != 1 || mdptr->geometry[0].skinControllers.size() != 1) {
+            SILOG(ogre,error,"Only know how to handle skinning for 1 SubMeshGeometry and 1 SkinController. Leaving skeleton unbound.");
+        }
+        const SkinController& skin = mdptr->geometry[0].skinControllers[0];
+
         typedef std::map<uint32, Ogre::Bone*> BoneMap;
         BoneMap bones;
+
+        // We build animations as we go since the Meshdata doesn't
+        // have a central index of animations -- we need to add them
+        // as we encounter them and then adjust them, adding tracks
+        // for different bones, as we go.
+        typedef std::map<String, Ogre::Animation*> AnimationMap;
+        AnimationMap animations;
 
         // Bones
         // Basic root bone, no xform
@@ -638,27 +654,57 @@ public:
         uint32 joint_idx;
         Matrix4x4f pos_xform;
         uint32 parent_id;
+        Matrix4x4f bsm = skin.bindShapeMatrix;
         while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id) ) {
             Ogre::Bone* bone = bones[parent_id]->createChild(joint_id);
+
+            // We need to work backwards from the joint_idx (index into
+            // mdptr->joints) to the index of the joint in this skin controller
+            // (so we can lookup inverseBindMatrices).
+            uint32 skin_joint_idx = 0;
+            for(skin_joint_idx = 0; skin_joint_idx < skin.joints.size(); skin_joint_idx++)
+                if (skin.joints[skin_joint_idx] == joint_idx) break;
+            // If we couldn't find it, its not bound for this animation/submesh
+            if (skin_joint_idx >= skin.joints.size()) continue;
+
+            Matrix4x4f ibm = skin.inverseBindMatrices[skin_joint_idx];
+            Matrix4x4f start_xform = bsm * ibm;
+            // Ogre wants this in translate/rotate/scale, so we need to extract
+            // those components from the mat.
+            Vector4f start_pos = start_xform.getCol(3);
+            //bone->setPosition( start_pos.x, start_pos.y, start_pos.z );
             bone->setInitialState();
             bones[joint_id] = bone;
+
+            if (parent_id != 0) continue;
+            const Node& node = mdptr->nodes[ mdptr->joints[joint_idx] ];
+            for(Node::AnimationMap::const_iterator anim_it = node.animations.begin(); anim_it != node.animations.end(); anim_it++) {
+                // Find/create the animation
+                const String& anim_name = anim_it->first;
+                const TransformationKeyFrames& anim_key_frames = anim_it->second;
+                if (animations.find(anim_name) == animations.end())
+                    animations[anim_name] = skel->createAnimation(anim_name, 0.0);
+                Ogre::Animation* anim = animations[anim_name];
+
+                // Add track, making sure we set the length long
+                // enough to support this new track
+                Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);
+                for(uint32 key_it = 0; key_it < anim_key_frames.inputs.size(); key_it++) {
+                    float32 key_time = anim_key_frames.inputs[key_it];
+                    anim->setLength( std::max(anim->getLength(), key_time) );
+
+                    Matrix4x4f key_val = start_xform * anim_key_frames.outputs[key_it];
+                    Ogre::TransformKeyFrame* key = track->createNodeKeyFrame(key_time);
+
+                    Vector4f trans = key_val.getCol(3);
+                    key->setTranslate(Ogre::Vector3(trans.x, trans.y, trans.z));
+                    key->setScale(Ogre::Vector3(1.0f, 1.0f, 1.0f));
+                    //key->setRotation( Graphics::toOgre( Quaternion(key_val.extract3x3()) ) );
+                    key->setRotation(Ogre::Quaternion(1.f, 0.f, 0.f, 0.f));
+                }
+            }
         }
 
-        // Animations (currently simple test scaling animation)
-        Ogre::Animation* anim = skel->createAnimation("anim", 1.0);
-        for(BoneMap::iterator bit = bones.begin(); bit != bones.end(); bit++) {
-            Ogre::NodeAnimationTrack* track = anim->createNodeTrack(bit->first, bit->second);
-            Ogre::TransformKeyFrame* key;
-            key = track->createNodeKeyFrame(0.0);
-            key->setTranslate(Ogre::Vector3(0.0f, 0.0f, 0.0f));
-            key->setScale(Ogre::Vector3(1.0f, 1.0f, 1.0f));
-            key->setRotation(Ogre::Quaternion(1.0f, 0.0f, 0.0f, 0.0f));
-
-            key = track->createNodeKeyFrame(1.0);
-            key->setTranslate(Ogre::Vector3(0.0f, 0.0f, 0.0f));
-            key->setScale(Ogre::Vector3(2.0f, 2.0f, 2.0f));
-            key->setRotation(Ogre::Quaternion(1.0f, 0.0f, 0.0f, 0.0f));
-        }
     }
 
 private:
