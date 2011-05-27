@@ -30,7 +30,7 @@ struct LoopedObjPointer
        name(n),
        label(l)
     {}
-    
+
     v8::Handle<v8::Object> parent;
     String name;
     int32 label;
@@ -46,17 +46,19 @@ typedef FixupMap::iterator FixupMapIter;
 class JSSerializer
 {
     static void pointOtherObject(int32 int32ToPointTo,Sirikata::JS::Protocol::IJSFieldValue& jsf_value);
-    
+
     static void annotateObject(ObjectVec& objVec, v8::Handle<v8::Object> v8Obj,int32 toStampWith);
-    
+
     static void unmarkSerialized(ObjectVec& toUnmark);
-    
+
     static void serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::JS::Protocol::JSMessage&,int32& toStampWith,ObjectVec& allObjs);
 
     static void serializeFunctionInternal(v8::Local<v8::Function> funcToSerialize, Sirikata::JS::Protocol::IJSFieldValue& field_to_put_in, int32& toStampWith);
-    
+
 
     static void serializeVisible(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
+    static void fillVisible(Sirikata::JS::Protocol::IJSMessage&, const SpaceObjectReference& listenTo, const SpaceObjectReference& listenFrom); // Reused by serializePresence
+    static void serializePresence(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
     static void serializeSystem(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
     static void serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs );
 
@@ -65,15 +67,15 @@ class JSSerializer
 
 
     static bool deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& toFixUp);
-    
+
 
     static bool deserializeObjectInternal( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo, ObjectMap& labeledObjs,FixupMap& toFixUp);
 
-    
+
 public:
     static std::string serializeObject(v8::Local<v8::Value> v8Val,int32 toStamp = 0);
     static bool deserializeObject(JSObjectScript*, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo);
-    
+
 
 };
 
