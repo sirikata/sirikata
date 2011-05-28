@@ -154,7 +154,8 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
         if (!isStr2)
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments of same type.  First argument is string.  Second argument is not.")) );
 
-        return v8::String::New((str1+str2).c_str());
+        String newStr = str1+str2;
+        return v8::String::New(newStr.c_str(), newStr.size());
     }
 
 

@@ -158,7 +158,7 @@ inline v8::Handle<v8::Value> AnyToV8(JSObjectScript* parent, const boost::any& v
         for(Sirikata::Invokable::Dict::const_iterator di = native_dict.begin(); di != native_dict.end(); di++) {
             v8::Handle<v8::Value> rhs = AnyToV8(parent, di->second);
             if (!rhs.IsEmpty())
-                dict->Set(v8::String::New(di->first.c_str()), rhs);
+                dict->Set(v8::String::New(di->first.c_str(), di->first.size()), rhs);
         }
         return dict;
     }

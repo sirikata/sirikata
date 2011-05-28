@@ -629,18 +629,8 @@ bool getURI(const v8::Arguments& args,std::string& returner)
 {
     //assumes that the URI object is in the first 0th arg field
     Handle<Value> newVis = args[0];
-
-    //means that the argument passed was not a string identifying where
-    //we could get the uri
-    if (!newVis->IsString())
-        return false;
-
-    v8::String::Utf8Value newvis_str(newVis);
-    if (! *newvis_str)
-        return false;
-
-    returner= std::string(*newvis_str);
-    return true;
+    String dummy;
+    return decodeString(newVis,returner,dummy);
 }
 
 /**

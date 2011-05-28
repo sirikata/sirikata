@@ -476,9 +476,7 @@ v8::Handle<v8::Value> root_print(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-
-    v8::String::Utf8Value str(args[0]);
-    String toPrint( ToCString(str));
+    INLINE_STR_CONV_ERROR(args[0],root_print,0,toPrint);
 
     return jsfake->struct_print(toPrint);
 }
@@ -792,22 +790,18 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
     Vector3d pos(Vec3Extract(val_obj));
 
     //getting script type
-    v8::String::Utf8Value strScriptType(args[1]);
-    const char* cstrType = ToCString(strScriptType);
-    String scriptType(cstrType);
-
+    INLINE_STR_CONV_ERROR(args[1],createEntity,1,scriptType);
+    
     // get the script to attach from the args
     //script is a string args
-    v8::String::Utf8Value scriptOpters(args[2]);
-    const char* cstrOpts = ToCString(scriptOpters);
-    String scriptOpts (cstrOpts);
+    INLINE_STR_CONV_ERROR(args[2],createEntity,2,scriptOpts);
     scriptOpts = "--init-script="+scriptOpts;
     
     //get the mesh to represent as
-    v8::String::Utf8Value mesh_str(args[3]);
-    const char* mesh_cstr = ToCString(mesh_str);
-    String mesh(mesh_cstr);
+    INLINE_STR_CONV_ERROR(args[3],createEntity,3,mesh);
 
+    
+    
     //get the scale
     Handle<Object> scale_arg = ObjectCast(args[4]);
     if (!NumericValidate(scale_arg))
@@ -886,21 +880,16 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
     Vector3d pos(Vec3Extract(val_obj));
 
     //getting script type
-    v8::String::Utf8Value strScriptType(args[1]);
-    const char* cstrType = ToCString(strScriptType);
-    String scriptType(cstrType);
+    INLINE_STR_CONV_ERROR(args[1],createEntNoSpace,1,scriptType);
+    
 
     // get the script to attach from the args
     //script is a string args
-    v8::String::Utf8Value scriptOpters(args[2]);
-    const char* cstrOpts = ToCString(scriptOpters);
-    String scriptOpts (cstrOpts);
+    INLINE_STR_CONV_ERROR(args[2],createEntNoSpace,2,scriptOpts);
     scriptOpts = "--init-script="+scriptOpts;
     
     //get the mesh to represent as
-    v8::String::Utf8Value mesh_str(args[3]);
-    const char* mesh_cstr = ToCString(mesh_str);
-    String mesh(mesh_cstr);
+    INLINE_STR_CONV_ERROR(args[3],createEntNoSpace,3,mesh);
 
     //get the scale
     Handle<Object> scale_arg = ObjectCast(args[4]);

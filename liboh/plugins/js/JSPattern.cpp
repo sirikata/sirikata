@@ -35,7 +35,7 @@
 #include <iostream>
 #include <iomanip>
 #include "JSObjects/JSObjectsUtils.hpp"
-
+#include "JSLogging.hpp"
 using namespace v8;
 
 namespace Sirikata {
@@ -58,7 +58,7 @@ v8::Handle<v8::Value> Pattern::getAllData( )
 
     bool hasName = (name() == "") ? false:true;
     returner->Set(v8::String::New("hasName"), v8::Boolean::New( hasName));
-    returner->Set(v8::String::New("name"), v8::String::New(name().c_str()));
+    returner->Set(v8::String::New("name"), v8::String::New(name().c_str(), name().size()));
     returner->Set(v8::String::New("hasValue"), v8::Boolean::New(hasValue()));
     if (hasValue())
         returner->Set(v8::String::New("value"),value());
@@ -76,14 +76,14 @@ bool Pattern::matches(v8::Handle<v8::Object> obj) const
     if (mName == "")
         return true;
     
-    if (!obj->Has(v8::String::New(mName.c_str())))
+    if (!obj->Has(v8::String::New(mName.c_str(), mName.size())))
     {
         return false;
     }
     
     if (hasValue())
     {
-        Handle<Value> field = obj->Get(v8::String::New(mName.c_str()));
+        Handle<Value> field = obj->Get(v8::String::New(mName.c_str(),mName.size()));
 
         if (!field->Equals(mValue))
             return false;
@@ -106,9 +106,7 @@ void Pattern::printPattern() const
     if (hasValue())
     {
         //std::cout<<" Having hard time with value\n";
-        v8::String::Utf8Value stringValue(mValue);
-        const char* strval = ToCString(stringValue);
-        std::string stringVal (strval);
+        INLINE_STR_CONV(mValue,stringVal, "error decoding string in printPattern");
         std::cout<<"  Value: "<<stringVal<<"\n";
     }
     else

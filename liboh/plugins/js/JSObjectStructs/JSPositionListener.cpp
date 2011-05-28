@@ -179,7 +179,7 @@ String JSPositionListener::getMesh()
 
 v8::Handle<v8::Value> JSPositionListener::struct_getMesh()
 {
-    return v8::String::New(mMesh.c_str());
+    return v8::String::New(mMesh.c_str(),mMesh.size());
 }
 
 
@@ -260,7 +260,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getTransTime()
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in getTransTime.  Cound not convert uint64 to string.")));
     }
 
-    return v8::String::New(convertedString.c_str());
+    return v8::String::New(convertedString.c_str(), convertedString.size());
 }
 
 
@@ -283,7 +283,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in getOrientTime.  Cound not convert uint64 to string.")));
     }
 
-    return v8::String::New(convertedString.c_str());
+    return v8::String::New(convertedString.c_str(),convertedString.size());
 }
 
 

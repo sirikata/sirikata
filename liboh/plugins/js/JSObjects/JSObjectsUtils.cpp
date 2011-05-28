@@ -29,6 +29,7 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
 }
 
 
+
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)
 {
     v8::String::Utf8Value str(toDecode);
@@ -36,7 +37,7 @@ bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& 
     //can decode string
     if (*str)
     {
-        decodedValue = String(*str);
+        decodedValue = String(*str,str.length());
         return true;
     }
 

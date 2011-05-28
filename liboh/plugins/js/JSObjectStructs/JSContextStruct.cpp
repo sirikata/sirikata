@@ -206,7 +206,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_setReset()
 
 v8::Handle<v8::Value> JSContextStruct::struct_getScript()
 {
-    return v8::String::New(getScript().c_str());
+    return v8::String::New(getScript().c_str(), getScript().size());
 }
 
 String JSContextStruct::getScript()

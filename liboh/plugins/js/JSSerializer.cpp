@@ -77,24 +77,21 @@ void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::J
 
 
     v8::Handle<v8::Value> name = v8Func->GetName();
-    v8::String::Utf8Value msgBodyArgs1(name);
-    const char* cMsgBody1 = ToCString(msgBodyArgs1);
-    std::string cStrMsgBody1(cMsgBody1);
+    INLINE_STR_CONV(name,cStrMsgBody1,"error decoding string in serializeFunction");
 
+
+    
     jsf.set_name(cStrMsgBody1);
 
     v8::Local<v8::Value> value = v8Func->ToString();
-    v8::String::Utf8Value msgBodyArgs2(value);
-    const char* cMsgBody2 = ToCString(msgBodyArgs2);
-    std::string cStrMsgBody2(cMsgBody2);
+    INLINE_STR_CONV(value,cStrMsgBody2, "error decoding string in serializeFunction");
+
 
     Sirikata::JS::Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
     jsf_value.set_s_value(cStrMsgBody2);
 
     v8::Local<v8::String> proto = v8Func->ObjectProtoToString();
-    v8::String::Utf8Value msgBodyArgs3(proto);
-    const char* cMsgBody3 = ToCString(msgBodyArgs3);
-    std::string cStrMsgBody3(cMsgBody3);
+    INLINE_STR_CONV(proto,cStrMsgBody3, "error decoding string in serializeFunction");
 
     jsf.set_prototype(cStrMsgBody3);
 
@@ -210,8 +207,8 @@ std::vector<String> getPropertyNames(v8::Local<v8::Object> obj) {
     v8::Local<v8::Array> properties = obj->GetPropertyNames();
     for(uint32 i = 0; i < properties->Length(); i++) {
         v8::Local<v8::Value> prop_name = properties->Get(i);
-          v8::String::Utf8Value prop_name_utf(prop_name);
-          results.push_back(String(ToCString(prop_name_utf)));
+        INLINE_STR_CONV(prop_name,tmpStr, "error decoding string in getPropertyNames");
+        results.push_back(tmpStr);
     }
 
     return results;
@@ -243,10 +240,8 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
 void JSSerializer::serializeFunctionInternal(v8::Local<v8::Function> funcToSerialize, Sirikata::JS::Protocol::IJSFieldValue& field_to_put_in, int32& toStampWith)
 {
     v8::Local<v8::Value> value = funcToSerialize->ToString();
-    v8::String::Utf8Value msgBodyArgs2(value);
-    const char* cMsgBody2 = ToCString(msgBodyArgs2);
-    std::string cStrMsgBody2(cMsgBody2);
-
+    INLINE_STR_CONV(value,cStrMsgBody2, "error decoding string in serializeFunctionInternal");
+    
     Sirikata::JS::Protocol::IJSFunctionObject jsfuncObj = field_to_put_in.mutable_f_value();
     jsfuncObj.set_f_value(cStrMsgBody2);
     jsfuncObj.set_func_id(toStampWith);
@@ -329,10 +324,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         if(prop_val->IsFunction())
         {
             v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
-            v8::Local<v8::Value> value = v8Func->ToString();
-            v8::String::Utf8Value msgBodyArgs2(value);
-            const char* cMsgBody2 = ToCString(msgBodyArgs2);
-            std::string cStrMsgBody2(cMsgBody2);
+            INLINE_STR_CONV(v8Func->ToString(),cStrMsgBody2, "error decoding string in serializeObjectInternal");
+            
             if (cStrMsgBody2.find("{ [native code] }") != String::npos)
                 continue;
         }
@@ -433,9 +426,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         }
         else if(prop_val->IsString())
         {
-          v8::String::Utf8Value msgBodyArgs2(prop_val);
-          const char* cMsgBody2 = ToCString(msgBodyArgs2);
-          std::string s_value(cMsgBody2);
+          INLINE_STR_CONV(prop_val,s_value, "error decoding string in serializeObjectInternal");
+          
           jsf_value.set_s_value(s_value);
         }
         else if(prop_val->IsNumber())
@@ -477,7 +469,7 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
             JSLOG(error, "error deserializing object pointing to "<< iter->first<< ". No record of that label.");
             return false;
         }
-        iter->second.parent->Set(v8::String::New(iter->second.name.c_str()), finder->second);
+        iter->second.parent->Set(v8::String::New(iter->second.name.c_str(), iter->second.name.size()), finder->second);
     }
     return true;
 }
