@@ -205,7 +205,7 @@ INCLUDE(GitRevision)
 #  * Revisions also only have additions and are very minor.
 SET(SIRIKATA_VERSION_MAJOR "0" CACHE STRING "Sirikata's major version" FORCE)
 SET(SIRIKATA_VERSION_MINOR "0" CACHE STRING "Sirikata's minor version" FORCE)
-SET(SIRIKATA_VERSION_REVISION "4" CACHE STRING "Sirikata's revision version" FORCE)
+SET(SIRIKATA_VERSION_REVISION "5" CACHE STRING "Sirikata's revision version" FORCE)
 
 # These get translated into two settings: the VERSION and
 # SOVERSION. The SOVERSION includes just the major number so anything
