@@ -32,7 +32,11 @@ namespace JS
 
    // We are currently executing in the global context of the entity
    // FIXME: need to take care fo the "this" pointer
-   v8::Handle<v8::Value> result = script_->invokeCallback(script_->rootContext(), function_, argc, &argv[0]);
+   v8::Handle<v8::Value> result;
+   if (argc > 0)
+       result = script_->invokeCallback(script_->rootContext(), function_, argc, &argv[0]);
+   else
+       result = script_->invokeCallback(script_->rootContext(), function_);
 
    if(result.IsEmpty())
    {
