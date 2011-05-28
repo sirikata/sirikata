@@ -7,6 +7,11 @@ boost::any Invokable::invoke(std::vector<boost::any>& params) {
     return boost::any();
 }
 
+boost::any Invokable::invoke() {
+    std::vector<boost::any> parms;
+    return invoke(parms);
+}
+
 Invokable::~Invokable() {
 }
 

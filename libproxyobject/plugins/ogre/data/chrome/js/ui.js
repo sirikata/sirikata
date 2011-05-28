@@ -66,6 +66,7 @@ sirikata.ui = function(name, ui_code) {
                 return __sirikata.event.apply(this, [name + '-' + args[0]].concat(args.slice(1)) );
             };
             eval('(' + ui_code.toString() + ')()');
+            sirikata.event('__ready'); // really name-__ready
         }
     );
 };

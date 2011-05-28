@@ -53,13 +53,15 @@ function() {
      */
     std.graphics.DefaultGraphics = function(pres, name) {
         this._pres = pres;
-        this._simulator = new std.graphics.Graphics(pres, name);
-
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this));
+    };
+    std.graphics.DefaultGraphics.prototype.finishInit = function(gfx) {
+        // assert(gfx == this._simulator);
         this._cameraMode = 'first';
 
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
-        this._chat = new std.graphics.Chat(pres, this._simulator);
+        this._chat = new std.graphics.Chat(this._pres, this._simulator);
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
@@ -170,8 +172,8 @@ function() {
     };
 
     /** Request that the given URL be added as a module in the UI. */
-    std.graphics.DefaultGraphics.prototype.addGUIModule = function(name, url) {
-        return this._simulator.addGUIModule(name, url);
+    std.graphics.DefaultGraphics.prototype.addGUIModule = function(name, url, cb) {
+        return this._simulator.addGUIModule(name, url, cb);
     };
 
 

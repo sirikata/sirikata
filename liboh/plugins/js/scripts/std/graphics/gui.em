@@ -44,10 +44,14 @@ function() {
      *  The GUI class wraps the underlying GUI Invokable
      *  objects. These present 2D user interface widgets to the user,
      *  which are coded as HTML + Javascript pages.
+     *
+     *  The callback is passed this GUI as a parameter.
      */
-    std.graphics.GUI = function(name, me) {
+    std.graphics.GUI = function(name, me, onready) {
         this._name = name;
         this._gui = me;
+        if (onready)
+            this.bind('__ready', std.core.bind(onready, undefined, this));
     };
 
     /** Bind a listener for events from this GUI. */

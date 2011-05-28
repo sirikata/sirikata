@@ -87,6 +87,11 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
 
     Ogre::RaySceneQuery* mRayQuery;
     CubeMap *mCubeMap;
+
+    Invokable* mOnReadyCallback;
+
+    void handleUIReady();
+
     ProxyEntity* internalRayTrace(const Ogre::Ray &traceFrom,
                      bool aabbOnly,
                      int&resultCount,
@@ -184,6 +189,9 @@ public:
     // Methods for handling Invokable actions
     virtual boost::any invoke(std::vector<boost::any>& params);
 
+    // Sets the onReady callback, invoked when the basic graphics and UI are
+    // ready to be used.
+    boost::any setOnReady(std::vector<boost::any>& params);
     // Helper which creates a WebView window, either
     boost::any createWindow(const String& name, bool is_html, bool is_file, String content, uint32 width, uint32 height);
     // Create a window using a URL

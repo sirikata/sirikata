@@ -89,6 +89,9 @@ class SIRIKATA_OGRE_EXPORT WebView
         , public Invokable
 	{
 	public:
+
+            typedef std::tr1::function<void()> ReadyCallback;
+
 		/**
 		* Loads a URL into the main frame.
 		*/
@@ -114,6 +117,8 @@ class SIRIKATA_OGRE_EXPORT WebView
 		* @param javascript The Javascript to evaluate/execute.
 		*/
 		void evaluateJS(const std::string& javascript);
+
+                void setReadyCallback(ReadyCallback cb);
 
 		/**
 		* Sets a global 'Client' callback that can be invoked via Javascript from
@@ -481,6 +486,8 @@ class SIRIKATA_OGRE_EXPORT WebView
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
 
+                ReadyCallback mReadyCallback;
+
 		friend class WebViewManager;
 
 
@@ -553,6 +560,13 @@ class SIRIKATA_OGRE_EXPORT WebView
             int dx, int dy,
             const Berkelium::Rect &scrollRect);
 #endif // HAVE_BERKELIUM
+
+
+        /** Handle a callback from the page saying it is ready. This isn't
+         * guaranteed to always occur -- it only happens if
+         * sirikata.event('__ready') is triggered from within the page.
+         */
+        void handleReadyCallback(WebView* wv, const JSArguments& args);
 
         /** Pass user logging request on to logging system. */
         void userLog(WebView* wv, const JSArguments& args);

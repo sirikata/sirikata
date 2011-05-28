@@ -45,16 +45,24 @@ function() {
      *  allowing you to get access to input, control display options,
      *  and perform operations like picking in response to mouse
      *  clicks.
+     * 
+     *  The callback passed in is invoked when
      */
-    std.graphics.Graphics = function(pres, name) {
+    std.graphics.Graphics = function(pres, name, cb) {
         this.presence = pres;
         this._simulator = pres.runSimulation(name);
         this.inputHandler = new std.graphics.InputHandler(this);
+        this._setOnReady(cb);
     };
 
     std.graphics.Graphics.prototype.invoke = function() {
         // Just forward manual invoke commands directly
         return this._simulator.invoke.apply(this._simulator, arguments);
+    };
+
+    /** Set the callback to invoke when the system is ready for rendering. */
+    std.graphics.Graphics.prototype._setOnReady = function(cb) {
+        this.invoke('onReady', std.core.bind(cb, undefined, this));
     };
 
     /** Request that the renderer suspend rendering. It continues to exist, but doesn't use any CPU on rendering. */
@@ -93,22 +101,21 @@ function() {
     };
 
     /** Request that the given URL be presented as a widget. */
-    std.graphics.Graphics.prototype.createGUI = function(name, url, width, height) {
+    std.graphics.Graphics.prototype.createGUI = function(name, url, width, height, cb) {
         if (width && height)
-            return new std.graphics.GUI(name, this._simulator.invoke("createWindowFile", name, url, width, height));
+            return new std.graphics.GUI(name, this._simulator.invoke("createWindowFile", name, url, width, height), cb);
         else
-            return new std.graphics.GUI(name, this._simulator.invoke("createWindowFile", name, url));
+            return new std.graphics.GUI(name, this._simulator.invoke("createWindowFile", name, url), cb);
     };
 
     /** Request that the given URL be added as a module in the UI. */
-    std.graphics.Graphics.prototype.addGUIModule = function(name, url) {
-    	system.print("adding GUI module");
-    	return new std.graphics.GUI(name, this._simulator.invoke("addModuleToUI", name, url));
+    std.graphics.Graphics.prototype.addGUIModule = function(name, url, cb) {
+    	return new std.graphics.GUI(name, this._simulator.invoke("addModuleToUI", name, url), cb);
     };
-    
+
     /** Request that the given URL be presented as a widget. */
-    std.graphics.Graphics.prototype.createBrowser = function(name, url) {
-        return new std.graphics.GUI(name, this._simulator.invoke("createWindow", name, url));
+    std.graphics.Graphics.prototype.createBrowser = function(name, url, cb) {
+        return new std.graphics.GUI(name, this._simulator.invoke("createWindow", name, url), cb);
     };
 
     /** Get basic camera description. This is read-only data. */

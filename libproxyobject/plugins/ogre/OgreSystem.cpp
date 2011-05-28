@@ -61,7 +61,8 @@ namespace Graphics {
 
 OgreSystem::OgreSystem(Context* ctx)
  : OgreRenderer(ctx),
-   mPrimaryCamera(NULL)
+   mPrimaryCamera(NULL),
+   mOnReadyCallback(NULL)
 {
     increfcount();
     mCubeMap=NULL;
@@ -143,7 +144,15 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     //finish instantiation here
     instantiateAllObjects(proxyManager);
 
+    mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
     return true;
+}
+
+void OgreSystem::handleUIReady() {
+    // Currently the only blocker for being ready is that the UI loaded. If we
+    // end up with more, we may need to make this just set a flag and then check
+    // if all conditions are met.
+    if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
 }
 
 void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
@@ -426,6 +435,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
     string name = Invokable::anyAsString(params[0]);
     SILOG(ogre,detailed,"Invoking the function " << name);
 
+    if(name == "onReady")
+        return setOnReady(params);
     if(name == "createWindow")
         return createWindow(params);
     else if(name == "createWindowFile")
@@ -462,6 +473,15 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
     }
 
+    return boost::any();
+}
+
+boost::any OgreSystem::setOnReady(std::vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsInvokable(params[1])) return boost::any();
+
+    Invokable* handler = Invokable::anyAsInvokable(params[1]);
+    mOnReadyCallback = handler;
     return boost::any();
 }
 
@@ -516,12 +536,8 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
 
     if (!mMouseHandler) return boost::any();
 
-    //This is disabled and we put these directly in the ui.html
-    //script currently because evaluateJS may execute before the page
-    //finishes loading, resulting in loadModule not being defined
-    //yet. This could be considered either our problem or a problem
-    //with Berkelium.
-    //mMouseHandler->mUIWidgetView->evaluateJS("loadModule('" + html_url + "')");
+    // Note the ../, this is because that loadModule executes from within data/chrome
+    mMouseHandler->mUIWidgetView->evaluateJS("loadModule('../" + html_url + "')");
     Invokable* inn = mMouseHandler->mUIWidgetView;
     return Invokable::asAny(inn);
 }

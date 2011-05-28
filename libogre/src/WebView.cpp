@@ -210,6 +210,7 @@ void WebView::initializeWebView(
                              L"console.log([n].concat(args));\n"
                              L"chrome.send_.apply(this, [n].concat(args));\n"
                              L"};"));
+    bind("__ready", std::tr1::bind(&WebView::handleReadyCallback, this, _1, _2));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
         webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
@@ -217,6 +218,14 @@ void WebView::initializeWebView(
         webView->resize(0, 0);
     }
 #endif
+}
+
+void WebView::setReadyCallback(ReadyCallback cb) {
+    mReadyCallback = cb;
+}
+
+void WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
+    if (mReadyCallback) mReadyCallback();
 }
 
 void WebView::userLog(WebView* wv, const JSArguments& args) {
@@ -1220,6 +1229,7 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
     UTF8String nameUTF8 = Berkelium::WideToUTF8(name.toString());
     std::string nameStr(nameUTF8.get<std::string>());
     Berkelium::stringUtil_free(nameUTF8);
+    SILOG(webview,detailed,"Handling web view event " << nameStr);
 	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
     if(i != delegateMap.end())

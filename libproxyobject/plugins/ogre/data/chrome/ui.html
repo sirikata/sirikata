@@ -27,17 +27,15 @@ $LAB
 .script("js/menu.js")
 .script("js/open_file.js")
 .script("js/cdn_upload.js")
-.script("../scripting/prompt.js")
-.script("../chat/chat.js")
-.wait(done);
-
-function done() {
-	$('#ui-box').show();
-}
+.wait(function() {
+    $('#ui-box').show();
+    sirikata.event('__ready');
+});
 
 function loadModule(path) {
 	$LAB.script(path).wait();
 }
+
 </script>
 
 </head>
