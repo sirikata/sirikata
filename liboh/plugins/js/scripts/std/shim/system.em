@@ -53,6 +53,17 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     {
         return "presenceEntry";
     };
+
+    //print prox result set.
+    this.printProxResultSet = function()
+    {
+        system.print('\nPrinting result set for presence: ' + this.sporef.toString()+'\n');
+        for (var s in this.proxResultSet)
+        {
+            system.print('\t' + s.toString() + '\n' );
+        }
+    };
+    
     
     //to set a prox add callback
     this.setProxAddCB = function (proxAddCB)
@@ -77,7 +88,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     this.setProxRemCB(proxRemCB);
 
     //call this function when get a visible object added to prox results
-    this.proxAddedEvent = function (visibleObj)
+    this.proxAddedEvent = function (visibleObj,visTo)
     {
         //add to proxResultSet
         this.proxResultSet[visibleObj.toString()] = visibleObj;
@@ -87,9 +98,10 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     };
 
     //call this function when get a visible object removed to prox results
-    this.proxRemovedEvent = function (visibleObj)
+    this.proxRemovedEvent = function (visibleObj,visTo)
     {
         //add to proxResultSet
+
         delete this.proxResultSet[visibleObj.toString()];
 
         //trigger callback
@@ -751,7 +763,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
              //reset self;
              system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
              //fire proxAddedEvent.
-             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj);
+             system._selfMap[presVisTo.toString()].proxAddedEvent(visObj,presVisTo);
          }
          else
              throw 'Error: received prox added message for presence not controlling';
@@ -770,13 +782,20 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
              //reset self;
              system.__setBehindSelf( system._selfMap[presVisTo.toString()].presObj);
              //fire proxRemovedEvent.
-             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj);
+             system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj,presVisTo);
          }
          else
              throw 'Error: received prox added message for presence not controlling';
      };
 
 
+     var tmpFunc =function()
+     {
+         
+     };
+     // baseSystem.registerProxAddedHandler(tmpFunc);
+     // baseSystem.registerProxRemovedHandler(tmpFunc);
+     
      baseSystem.registerProxAddedHandler(proxAddedManager);
      baseSystem.registerProxRemovedHandler(proxRemovedManager);
 
