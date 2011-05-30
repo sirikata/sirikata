@@ -61,6 +61,15 @@ T safeLexicalCast(const String& orig) {
     return safeLexicalCast<T>(orig, (T)0);
 }
 
+namespace {
+int32 countQuotes(const String& str) {
+    int32 count = 0;
+    for(uint32 i = 0; i < str.size(); i++)
+        if (str[i] == '"') count++;
+    return count;
+}
+}
+
 void CSVObjectFactory::generate()
 {
 
@@ -84,6 +93,7 @@ void CSVObjectFactory::generate()
     int scale_idx = -1;
     int objid_idx = -1;
     int solid_angle_idx = -1;
+    int physics_opts_idx = -1;
 
     // For each line
     while(fp && (count < mMaxObjects))
@@ -98,7 +108,7 @@ void CSVObjectFactory::generate()
        }
 
 
-        // Split into parts
+        // Split into parts by commas
         StringList line_parts;
         int last_comma = -1;
         String::size_type next_comma = 0;
@@ -111,15 +121,44 @@ void CSVObjectFactory::generate()
             else
                 next_val = line.substr(last_comma + 1, next_comma - (last_comma+1));
 
-            // Remove quotes from beginning and end
-            if (next_val.size() > 1 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
-                next_val = next_val.substr(1, next_val.size() - 2);
-
             line_parts.push_back(next_val);
 
             last_comma = next_comma;
         }
+        // Then deal with quotes. We may have actually split too
+        // aggressively above because a quoted string may include
+        // commas. To address this, we rebuild the list from the
+        // current one, possibly merging entries when the quotes don't
+        // match correctly.
+        //
+        // This approach isn't perfect -- it won't handle commas
+        // inside quotes inside other quotes, but if you're hitting
+        // that then this format is getting too complicated and we
+        // should use something more sane like JSON.
+        StringList quoted_line_parts;
+        for(StringList::const_iterator it = line_parts.begin(); it != line_parts.end(); it++) {
+            if (quoted_line_parts.empty()) {
+                quoted_line_parts.push_back(*it);
+                continue;
+            }
 
+            // If we don't have matching quotes on the last item, just append
+            if (countQuotes(quoted_line_parts.back()) % 2 != 0)
+                quoted_line_parts.back() += "," + *it;
+            else
+                quoted_line_parts.push_back(*it);
+        }
+        // Finally, make a pass through removing surrounding quotes,
+        // storing back in the original list
+        line_parts.clear();
+        for(StringList::const_iterator it = quoted_line_parts.begin(); it != quoted_line_parts.end(); it++) {
+            // Remove quotes from beginning and end
+            const String& next_val = *it;
+            if (next_val.size() > 1 && next_val[0] == '"' && next_val[next_val.size()-1] == '"')
+                line_parts.push_back(next_val.substr(1, next_val.size() - 2));
+            else
+                line_parts.push_back(next_val);
+        }
 
         if (is_first) {
             for(uint32 idx = 0; idx < line_parts.size(); idx++)
@@ -142,6 +181,7 @@ void CSVObjectFactory::generate()
                 {
                     solid_angle_idx = idx;
                 }
+                if (line_parts[idx] == "physics") physics_opts_idx = idx;
 
 
             }
@@ -225,6 +265,11 @@ void CSVObjectFactory::generate()
                 }
 
 
+                String physics_opts =
+                    physics_opts_idx == -1 ?
+                    "" :
+                    line_parts[physics_opts_idx];
+
                 /*
 
                   Ticket #134
@@ -249,6 +294,7 @@ void CSVObjectFactory::generate()
                 oci.bounds = BoundingSphere3f(Vector3f::nil(), scale);
                 oci.mesh = mesh;
                 oci.query_angle = query_angle;
+                oci.physics = physics_opts;
                 mIncompleteObjects.push(oci);
 
                 count++;
@@ -282,7 +328,7 @@ void CSVObjectFactory::connectObjects()
 
         oci.object->connect(
             mSpace,
-            oci.loc, oci.bounds, oci.mesh, "",
+            oci.loc, oci.bounds, oci.mesh, oci.physics,
             const_cast<SolidAngle&>(oci.query_angle),
             UUID::null(),
             ObjectReference::null()

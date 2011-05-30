@@ -68,6 +68,7 @@ private:
         BoundingSphere3f bounds;
         String mesh;
         SolidAngle query_angle;
+        String physics;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;
     int32 mConnectRate;
