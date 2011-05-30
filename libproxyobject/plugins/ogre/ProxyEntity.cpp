@@ -81,7 +81,7 @@ bool ProxyEntity::isDynamic() const {
 }
 
 ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
-    return static_cast<ProxyEntity*>( Ogre::any_cast<Entity*>(movable->getUserAny()) );
+    return static_cast<ProxyEntity*>( Entity::fromMovableObject(movable) );
 }
 
 void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) {
