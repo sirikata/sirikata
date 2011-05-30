@@ -679,7 +679,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
         proxy_obj->setMesh(Transfer::URI(*mesh), seqno);
 
     if (phy && *phy != "")
-        proxy_obj->setPhysics(*mesh, seqno);
+        proxy_obj->setPhysics(*phy, seqno);
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
