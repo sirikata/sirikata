@@ -191,7 +191,7 @@ Ogre::Ray OgreMesh::transformRay(Ogre::Node *node, const Ogre::Ray &ray) {
 bool OgreMesh::intersectTri(const Ogre::Ray &ray, IntersectResult &rtn, Triangle*itr, bool isplane) {
     std::pair<bool, Real> hit = isplane
       ? Ogre::Math::intersects(ray, Ogre::Plane(itr->v1.coord, itr->v2.coord,itr->v3.coord))
-      : Ogre::Math::intersects(ray, itr->v1.coord, itr->v2.coord,itr->v3.coord, true, false);
+      : Ogre::Math::intersects(ray, itr->v1.coord, itr->v2.coord,itr->v3.coord, true, true);
     rtn.u = 0;
     rtn.v = 0;
     if (hit.first && hit.second < rtn.distance) {
