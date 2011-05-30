@@ -504,7 +504,8 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     PhysicsPointerMap::iterator it = BulletPhysicsPointers.find(uuid);
     BulletPhysicsPointerData * objPointers = &(it->second);
 
-    dynamicsWorld->removeRigidBody(objPointers->objRigidBody);
+    if (objPointers->objRigidBody)
+        dynamicsWorld->removeRigidBody(objPointers->objRigidBody);
 
     delete objPointers->objShape;
 	delete objPointers->objMotionState;
