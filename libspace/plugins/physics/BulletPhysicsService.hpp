@@ -106,6 +106,11 @@ public:
     virtual BoundingSphere3f bounds(const UUID& uuid);
     virtual const String& mesh(const UUID& uuid);
     virtual const String& physics(const UUID& uuid);
+    // Added for Bullet implementation
+    bool isFixed(const UUID& uuid);
+    void setLocation(const UUID& uuid, const TimedMotionVector3f& newloc);
+    void setOrientation(const UUID& uuid, const TimedMotionQuaternion& neworient);
+
 
     virtual void addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bounds, const String& mesh, const String& physics);
     virtual void removeLocalObject(const UUID& uuid);
@@ -192,52 +197,42 @@ private:
 
 class SirikataMotionState : public btMotionState {
 public:
-    SirikataMotionState(const btTransform &initialpos, BulletPhysicsService::LocationInfo * locinfo, UUID uuid, BulletPhysicsService* service) {
-        mObjLocationInfo = locinfo;
-        mPosition = initialpos;
-        mUUID = uuid;
-        ptrToService = service;
+    SirikataMotionState(BulletPhysicsService* service, UUID uuid)
+     : ptrToService(service),
+       mUUID(uuid)
+    {
     }
 
     virtual ~SirikataMotionState() {
     }
 
-    void setLocationInfo(BulletPhysicsService::LocationInfo * locinfo) {
-        mObjLocationInfo = locinfo;
-    }
-
     virtual void getWorldTransform(btTransform &worldTrans) const {
-        worldTrans = mPosition;
+        Vector3f objPosition = ptrToService->currentPosition(mUUID);
+        Quaternion objOrient = ptrToService->currentOrientation(mUUID);
+        worldTrans = btTransform(
+            btQuaternion(objOrient.x,objOrient.y,objOrient.z,objOrient.w),
+            btVector3(objPosition.x,objPosition.y,objPosition.z)
+        );
     }
 
     virtual void setWorldTransform(const btTransform &worldTrans) {
-        if(NULL == mObjLocationInfo) return;
-        btQuaternion rot = worldTrans.getRotation();
-
-        //FIXME this should work, but somewhere in the pipeline to Ogre w becomes NaN and we get an exception
-        //printf("Old Orientation: %f, %f, %f, %f\n", mObjLocationInfo->orientation.position().x, mObjLocationInfo->orientation.position().y, mObjLocationInfo->orientation.position().z, mObjLocationInfo->orientation.position().w);
-        TimedMotionQuaternion newOrientation(mObjLocationInfo->orientation.updateTime(), MotionQuaternion(Quaternion(rot.x(), rot.y(), rot.z(), rot.w()), mObjLocationInfo->orientation.velocity()));
-        //printf("New Orientation: %f, %f, %f, %f\n", newOrientation.position().x, newOrientation.position().y, newOrientation.position().z, newOrientation.position().w);
-        if(!(mObjLocationInfo->isFixed)) {
-			//mObjLocationInfo->orientation = newOrientation;
-		}
+        assert(ptrToService->isFixed(mUUID) == false);
 
         btVector3 pos = worldTrans.getOrigin();
-        //printf("Old Position: %f, %f, %f\n", mObjLocationInfo->location.position().x, mObjLocationInfo->location.position().y, mObjLocationInfo->location.position().z);
-        TimedMotionVector3f newLocation(mObjLocationInfo->location.updateTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), mObjLocationInfo->location.velocity()));
-        if(!(mObjLocationInfo->isFixed)) {
-			mObjLocationInfo->location = newLocation;
-		}
-        //printf("New Position: %f, %f, %f\n", pos.x(), pos.y(), pos.z());
+        TimedMotionVector3f newLocation(ptrToService->context()->simTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), Vector3f(0, 0, 0)));
+        ptrToService->setLocation(mUUID, newLocation);
+
+        btQuaternion rot = worldTrans.getRotation();
+        TimedMotionQuaternion newOrientation(ptrToService->context()->simTime(), MotionQuaternion(Quaternion(rot.x(), rot.y(), rot.z(), rot.w()), Quaternion::identity()));
+        ptrToService->setOrientation(mUUID, newOrientation);
+
 
         ptrToService->physicsUpdates.insert(mUUID);
     }
 
 protected:
-    BulletPhysicsService::LocationInfo * mObjLocationInfo;
-    btTransform mPosition;
+    BulletPhysicsService* ptrToService;
     UUID mUUID;
-    BulletPhysicsService * ptrToService;
 }; // class SirikataMotionState
 
 } // namespace Sirikata

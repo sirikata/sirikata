@@ -182,6 +182,32 @@ const String& BulletPhysicsService::physics(const UUID& uuid) {
     return locinfo.physics;
 }
 
+bool BulletPhysicsService::isFixed(const UUID& uuid) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    const LocationInfo& locinfo = it->second;
+    return locinfo.isFixed;
+}
+
+void BulletPhysicsService::setLocation(const UUID& uuid, const TimedMotionVector3f& newloc) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo& locinfo = it->second;
+    locinfo.location = newloc;
+    notifyLocalLocationUpdated( uuid, locinfo.aggregate, newloc );
+}
+
+void BulletPhysicsService::setOrientation(const UUID& uuid, const TimedMotionQuaternion& neworient) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    assert(it != mLocations.end());
+
+    LocationInfo& locinfo = it->second;
+    locinfo.orientation = neworient;
+    notifyLocalOrientationUpdated( uuid, locinfo.aggregate, neworient );
+}
+
 void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
 
 	meshLoaded = false;
@@ -347,9 +373,6 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
 	//initialize the world transformation
 	Matrix4x4f worldTransformation = Matrix4x4f::identity();
-    //get the position and orientation
-    Vector3f objPosition = locinfo.location.position();
-    Quaternion objOrient = locinfo.orientation.position();
 
     /***Let's now find the bounding box for the entire object, which is needed for re-scaling purposes.
 	* Supposedly the system scales every mesh down to a unit sphere and then scales up by the scale factor
@@ -380,7 +403,6 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
     if(objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
 		double scalingFactor = locinfo.bounds.radius()/mesh_rad;
-                BULLETLOG(detailed, "objposition: " << objPosition.x << ", " << objPosition.y << ", " << objPosition.z);
                 BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
 		newObjData.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
 	}
@@ -438,9 +460,6 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
                                 );
 			}
 			Vector3f bMin = bbox.min();
-			/*objPosition.x = objPosition.x + bMin.x;
-			objPosition.y = objPosition.y + bMin.y;
-			objPosition.z = objPosition.z - bMin.z;*/
 		}
                 BULLETLOG(detailed, "total bounds: " << bbox);
                 BULLETLOG(detailed, "bounds radius: " << mesh_rad);
@@ -452,14 +471,13 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 	else if(objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
 
 		newObjData.objShape = new btSphereShape(locinfo.bounds.radius());
-                BULLETLOG(detailed, "objposition: " << objPosition.x << ", " << objPosition.y << ", " << objPosition.z);
                 BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
 	}
 	else {
             BULLETLOG(detailed, "Error in objBBox initialization!");
 	}
     //register the motion state (callbacks) for Bullet
-    newObjData.objMotionState = new SirikataMotionState(btTransform(btQuaternion(objOrient.x,objOrient.y,objOrient.z,objOrient.w),btVector3(objPosition.x,objPosition.y,objPosition.z)), &(it->second), uuid, this);
+    newObjData.objMotionState = new SirikataMotionState(this, uuid);
 
     //set a placeholder for the inertial vector
 	btVector3 objInertia(0,0,0);
