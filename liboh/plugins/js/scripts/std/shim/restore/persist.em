@@ -42,7 +42,9 @@ function checkpointPartialPersist(objToPersistFrom, filename)
     var markedObjectMap = new std.persist.NonRestorable();
 
     //add myself to markedObjectMap before beginning.
-    mark(objToPersistFrom, markedObjectMap);
+    var rootID = mark(objToPersistFrom, markedObjectMap);
+    shadowTree[std.persist.ID_FIELD_STRING] = rootID;
+
     //recursively traverse objet graph.
     markAndBranch(objToPersistFrom, shadowTree,markedObjectMap);
 

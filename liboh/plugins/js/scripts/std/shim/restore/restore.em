@@ -69,7 +69,7 @@ function fixReferences(rootToFix, ptrsToFix)
 function fixupObjectSerial(objToFix)
 {
     if (!(std.persist.ID_FIELD_STRING in objToFix))
-        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';
+        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';            
 
     var objID = objToFix[std.persist.ID_FIELD_STRING];
 
@@ -92,7 +92,7 @@ function fixupObjectSerial(objToFix)
     for (var s in objToFix)
     {
         //ignore the serialization metadata when deserializing object
-        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING))
+        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING) || (s== std.persist.NO_RESTORE_STRING))
             continue;
 
         if (typeof (objToFix[s]) == "object")

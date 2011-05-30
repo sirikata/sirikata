@@ -188,12 +188,12 @@ std.persist = {
             }
         }
 
-        return OBJECT_SERIAL;
+        return std.persist.OBJECT_SERIAL;
     }
     
 };
 
 
-// system.require('std/shim/restore/nameService.em');
-// system.require('std/shim/restore/persist.em');
-// system.require('std/shim/restore/restore.em');
+system.require('std/shim/restore/nameService.em');
+system.require('std/shim/restore/persist.em');
+system.require('std/shim/restore/restore.em');

@@ -335,6 +335,13 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          baseSystem.__debugFileWrite(strToWrite,filename);
      };
 
+     /** @ignore */
+     system.__debugFileRead = function(filename)
+     {
+         return baseSystem.__debugFileRead(filename);
+     };
+
+     
 
       /** @function
 

@@ -147,6 +147,7 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
+
     v8::Handle<v8::Value> returner = strToUint16Str(stringifiedObject);
     
     return handle_scope.Close(returner);
@@ -213,7 +214,7 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
     JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
 
     if (jssys == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str(), errMsg.length())));
 
     return jssys->deserializeObject(serString);
 }

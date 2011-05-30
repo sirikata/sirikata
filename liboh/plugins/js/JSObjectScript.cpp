@@ -315,7 +315,7 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
 }
 
 
-v8::Handle<v8::Value> debug_fileRead(const String& filename)
+v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 {
     std::ifstream fRead(filename.c_str(), std::ios::binary | std::ios::in);
     std::ifstream::pos_type begin, end;
