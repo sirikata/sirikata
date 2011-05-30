@@ -30,6 +30,7 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args);
 v8::Handle<v8::Value> dist(const v8::Arguments& args);
 bool isVisibleObject(v8::Handle<v8::Value> v8Val);
 v8::Handle<v8::Value> getMesh(const v8::Arguments& args);
+v8::Handle<v8::Value> getPhysics(const v8::Arguments& args);
 v8::Handle<v8::Value> getAllData(const v8::Arguments& args);
 
 

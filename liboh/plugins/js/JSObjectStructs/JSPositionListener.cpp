@@ -30,6 +30,8 @@ JSPositionListener::JSPositionListener(JSObjectScript* script, VisAddParams* add
             mBounds      = *addParams->mBounds;
         if (addParams->mMesh != NULL)
             mMesh        = *addParams->mMesh;
+        if (addParams->mPhysics != NULL)
+            mPhysics     = *addParams->mPhysics;
     }
 }
 
@@ -59,7 +61,8 @@ v8::Handle<v8::Object> JSPositionListener::struct_getAllData()
     returner->Set(v8::String::New("orientVel"), struct_getOrientationVel());
     returner->Set(v8::String::New("scale"), struct_getScale());
     returner->Set(v8::String::New("mesh"), struct_getMesh());
-    
+    returner->Set(v8::String::New("physics"), struct_getPhysics());
+
     returner->Set(v8::String::New("posTime"),struct_getTransTime());
     returner->Set(v8::String::New("orientTime"), struct_getOrientTime());
 
@@ -160,7 +163,7 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
     mOrientation = newOrient;
     mBounds      = newBounds;
 
-    
+
     //if I received an updated location and I am associated with an object that
     //I am listeningFrom, then I should propagate this update to visible structs
     //that may not know about updates to this presence.
@@ -183,6 +186,17 @@ v8::Handle<v8::Value> JSPositionListener::struct_getMesh()
 }
 
 
+String JSPositionListener::getPhysics()
+{
+    return mPhysics;
+}
+
+v8::Handle<v8::Value> JSPositionListener::struct_getPhysics()
+{
+    return v8::String::New(mPhysics.c_str(),mPhysics.size());
+}
+
+
 void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh)
 {
     mMesh = newMesh.toString();
@@ -202,6 +216,11 @@ void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale )
         if (*sporefToListenFrom != SpaceObjectReference::null())
             jsObjScript->checkForwardUpdate(*sporefToListenFrom,mLocation,mOrientation,mBounds);
     }
+}
+
+void JSPositionListener::onSetPhysics (ProxyObjectPtr proxy, const String& newphy )
+{
+    mPhysics = newphy;
 }
 
 
@@ -250,7 +269,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getTransTime()
 
     uint64 transTime = mLocation.updateTime().raw();
     String convertedString;
-    
+
     try
     {
         convertedString = boost::lexical_cast<String>(transTime);
@@ -273,7 +292,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
 
     uint64 orientTime = mOrientation.updateTime().raw();
     String convertedString;
-    
+
     try
     {
         convertedString = boost::lexical_cast<String>(orientTime);

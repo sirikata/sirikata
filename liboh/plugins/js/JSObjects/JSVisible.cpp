@@ -58,25 +58,39 @@ v8::Handle<v8::Value> dist(const v8::Arguments& args)
  */
 Handle<v8::Value> getMesh(const v8::Arguments& args)
 {
-    
+
     String errorMessage = "Error in getMesh while decoding visible.  ";
     JSVisibleStruct* mStruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
-    
+
     if (mStruct == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     return mStruct->struct_getMesh();
 }
 
+/**
+   @return A string containing physics settings for this object.
+ */
+Handle<v8::Value> getPhysics(const v8::Arguments& args)
+{
+    String errorMessage = "Error in getPhysics while decoding visible.  ";
+    JSVisibleStruct* mStruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
+
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return mStruct->struct_getPhysics();
+}
+
 
 v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if (args.Length() != 0)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: getAllData call takes no arguments.")));
 
-    
+
     std::string errorMessage = "In getAllData function of visible.  ";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
     if (jsvis == NULL)

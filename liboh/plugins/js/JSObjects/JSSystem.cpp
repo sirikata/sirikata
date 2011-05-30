@@ -84,7 +84,7 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
 
     if (!args[0]->IsObject())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must pass in an *object* to serialize.")));
-    
+
     v8::HandleScope handle_scope;
     Local<v8::Object> v8Object = args[0]->ToObject();
     String serializedObject = JSSerializer::serializeObject(v8Object);
@@ -95,10 +95,10 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
 v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling deserialize.  Must pass in a string to be deserialized.")));
-    
+
     String errMsg = "Error.  Must pass in a *string* to deserialize.";
     String decodedVal;
     bool strDecoded = decodeString(args[0], decodedVal, errMsg);
@@ -127,9 +127,10 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 //vector 3 of center position
 //float of radius
 //mesh
+//physics
 v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 {
-    if ((args.Length() != 11) && (args.Length() != 1))
+    if ((args.Length() != 12) && (args.Length() != 1))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require either a single string argument to create visible object.  Or requires three arguments: <visible from string> <visible to string> <vec3 position>")));
 
     String errMsg_sys = "Error decoding system struct when creating visible. ";
@@ -138,7 +139,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg_sys.c_str())));
 
-    
+
     //decode first arg: sporef watching
     SpaceObjectReference sporefVisWatching;
     String baseErrMsg  = "Error in system when trying to createVisible.  ";
@@ -151,7 +152,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     if  (args.Length() == 1)
         return jssys->struct_create_vis(sporefVisWatching,NULL);
 
-    
+
     //decode second arg: sporef watching from
     SpaceObjectReference sporefVisWatchingFrom;
     errMsg = baseErrMsg + "Could not decode second argument.  ";
@@ -160,7 +161,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     if (! sporefDecoded)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
-    
+
     //decode third-fifth args: timed motion vector
     TimedMotionVector3f location;
     errMsg = baseErrMsg + "Could not decode 3-5 arguments corresponding to position.  ";
@@ -185,7 +186,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 
     if (! decodedBSPH)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-    
+
 
     //decode eleventh arg: mesh string
     String meshString;
@@ -195,10 +196,20 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     if (! meshDecoded)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
+
+    //decode twelfth arg: physics string
+    String physicsString;
+    errMsg = baseErrMsg + "Could not decode 12th argument corresponding to physics string.  ";
+    bool physicsDecoded = decodeString(args[11],physicsString,errMsg);
+
+    if (! physicsDecoded)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+
+
     bool isVisible = false;
-    
-    VisAddParams vap(&sporefVisWatchingFrom,&location,&orientation,&bsph,&meshString,&isVisible);
-    
+
+    VisAddParams vap(&sporefVisWatchingFrom,&location,&orientation,&bsph,&meshString,&physicsString,&isVisible);
+
     return jssys->struct_create_vis(sporefVisWatching,&vap);
 }
 
@@ -540,7 +551,7 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if (args.Length() != 18)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
@@ -564,7 +575,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> proxRemovedCallbackArg           = args[17];
 
     //now, it's time to decode them.
-    
+
     String baseErrMsg = "Error in restorePresence.  Could not decode ";
 
     String specificErrMsg =baseErrMsg + "sporef.";
@@ -617,10 +628,10 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     bool isConnectedDecodeSuccessful = decodeBool(isConnectedArg, isConnected, specificErrMsg);
     if (! isConnectedDecodeSuccessful)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
-    
 
 
-    
+
+
     specificErrMsg = baseErrMsg + "connectedCallback.";
     v8::Handle<v8::Function>connCB;
     if (connectedCallbackArg->IsFunction())
@@ -629,7 +640,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
 
-    
+
     bool isSuspended;
     specificErrMsg = baseErrMsg + "isSuspended.";
     bool isSuspendedDecodeSuccessful = decodeBool(isSuspendedArg, isSuspended, specificErrMsg);
@@ -665,7 +676,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     else if (! proxRemovedCallbackArg->IsNull())
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
-    
+
 
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
@@ -691,11 +702,11 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         (proxAddCB.IsEmpty() ? NULL : &proxAddCB)
     );
 
-    
+
     return handle_scope.Close(jssys->restorePresence(restParams));
 }
 
-                                                                                                                  
+
 /**
    @param String that contains a uri for a mesh for the new presence.
    @param Function to be called when presence gets connected to the world.
@@ -739,7 +750,7 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errSpaceMsg.c_str())));
 
     SpaceID toCreateIn(spaceStr);
-    
+
 
     //decode root
     String errorMessageFRoot = "Error decoding the system object from root_createPresence.  ";
@@ -771,7 +782,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 {
     if (args.Length() != 7)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error!  Requires <position vec>,<script type>, <script to execute>, <mesh uri>,<float scale>,<float solid_angle>,<space id> arguments")) );
-    
+
 
     //decode root
     String errorMessageFRoot = "Error decoding the system object from root_createEntity.  ";
@@ -791,17 +802,17 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
     //getting script type
     INLINE_STR_CONV_ERROR(args[1],createEntity,1,scriptType);
-    
+
     // get the script to attach from the args
     //script is a string args
     INLINE_STR_CONV_ERROR(args[2],createEntity,2,scriptOpts);
     scriptOpts = "--init-script="+scriptOpts;
-    
+
     //get the mesh to represent as
     INLINE_STR_CONV_ERROR(args[3],createEntity,3,mesh);
 
-    
-    
+
+
     //get the scale
     Handle<Object> scale_arg = ObjectCast(args[4]);
     if (!NumericValidate(scale_arg))
@@ -824,7 +835,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errSpaceMsg.c_str())));
 
     SpaceID toCreateIn(spaceStr);
-    
+
     //parse a bunch of arguments here
     EntityCreateInfo eci;
     eci.scriptType = scriptType;
@@ -881,13 +892,13 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
 
     //getting script type
     INLINE_STR_CONV_ERROR(args[1],createEntNoSpace,1,scriptType);
-    
+
 
     // get the script to attach from the args
     //script is a string args
     INLINE_STR_CONV_ERROR(args[2],createEntNoSpace,2,scriptOpts);
     scriptOpts = "--init-script="+scriptOpts;
-    
+
     //get the mesh to represent as
     INLINE_STR_CONV_ERROR(args[3],createEntNoSpace,3,mesh);
 
@@ -1084,7 +1095,7 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
    @param {Reserved} bool   isSuspended
    @param {Reserved} bool   isCleared
 
-   
+
    timeout sets a timer.  When the number of seconds specified by arg 1 have
    elapsed, executes function specified by arg2.
  */
@@ -1097,7 +1108,7 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     v8::Handle<v8::Value> dur         = args[0];
     v8::Handle<v8::Value> cb_val      = args[1];
 
-    
+
     //just returns the ScriptTimeout function
     String errorMessage      =  "Error decoding system in root_timeout of JSSystem.cpp.  ";
     JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
@@ -1133,11 +1144,11 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
     v8::Handle<v8::Value> isSuspendedVal    = args[4];
     v8::Handle<v8::Value> isClearedVal      = args[5];
 
-    
+
     uint32 contID;
     double timeRemaining;
     bool isSuspended,isCleared;
-    
+
     if (! contIDVal->IsUint32())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Context id should be a uint32.")) );
 
@@ -1156,7 +1167,7 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Is cleared should be a boolean.")) );
 
     isCleared = isClearedVal->ToBoolean()->Value();
-    
+
 
     return jsfake->struct_createTimeout(native_dur, cb_persist, contID,timeRemaining,isSuspended,isCleared);
 }
@@ -1175,7 +1186,7 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if ((args.Length() != 3) && (args.Length() != 4))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 or 4 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to><(optional) bool: whether handler is suspended>")) );
 
@@ -1248,7 +1259,7 @@ v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
     if (args.Length() == 3)
         return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, false));
 
-    
+
     v8::Handle<v8::Value> suspVal = args[3];
     String errMsgDecodeSusp = "Error decoding suspended argument when registering handler with system.  ";
     bool isSuspended;

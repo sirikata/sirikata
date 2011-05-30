@@ -304,6 +304,7 @@ void JSObjectScriptManager::createVisibleTemplate()
     proto_t->Set(v8::String::New("getOrientationVel"),v8::FunctionTemplate::New(JSVisible::getOrientationVel));
     proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSVisible::getScale));
     proto_t->Set(v8::String::New("getMesh"),v8::FunctionTemplate::New(JSVisible::getMesh));
+    proto_t->Set(v8::String::New("getPhysics"),v8::FunctionTemplate::New(JSVisible::getPhysics));
     proto_t->Set(v8::String::New("getSpaceID"),v8::FunctionTemplate::New(JSVisible::getSpace));
     proto_t->Set(v8::String::New("getVisibleID"),v8::FunctionTemplate::New(JSVisible::getOref));
     proto_t->Set(v8::String::New("getStillVisible"),v8::FunctionTemplate::New(JSVisible::getStillVisible));

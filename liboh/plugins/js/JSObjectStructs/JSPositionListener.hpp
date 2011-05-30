@@ -15,12 +15,13 @@ class JSObjectScript;
 
 struct VisAddParams
 {
-    VisAddParams(const SpaceObjectReference* sporefWatchFrom, const TimedMotionVector3f* loc, const TimedMotionQuaternion* orient, const BoundingSphere3f* bounds, const String* mesh, const bool* isVisible)
+    VisAddParams(const SpaceObjectReference* sporefWatchFrom, const TimedMotionVector3f* loc, const TimedMotionQuaternion* orient, const BoundingSphere3f* bounds, const String* mesh, const String* physics, const bool* isVisible)
      : mSporefWatchingFrom (sporefWatchFrom),
        mLocation(loc),
        mOrientation(orient),
        mBounds(bounds),
        mMesh(mesh),
+       mPhysics(physics),
        mIsVisible(isVisible)
     {}
     VisAddParams(const bool* isVisible)
@@ -29,15 +30,17 @@ struct VisAddParams
        mOrientation(NULL),
        mBounds(NULL),
        mMesh(NULL),
+       mPhysics(NULL),
        mIsVisible(isVisible)
     {}
 
-    
+
     const SpaceObjectReference*          mSporefWatchingFrom;
     const TimedMotionVector3f*                     mLocation;
     const TimedMotionQuaternion*                mOrientation;
     const BoundingSphere3f*                          mBounds;
     const String*                                      mMesh;
+    const String*                                   mPhysics;
     const bool*                                   mIsVisible;
 };
 
@@ -62,20 +65,22 @@ struct JSPositionListener : public PositionListener,
     virtual Quaternion   getOrientationVelocity();
     virtual BoundingSphere3f   getBounds();
     virtual String getMesh();
-    
+    virtual String getPhysics();
+
     virtual v8::Handle<v8::Value> struct_getPosition();
     virtual v8::Handle<v8::Value> struct_getVelocity();
     virtual v8::Handle<v8::Value> struct_getOrientation();
     virtual v8::Handle<v8::Value> struct_getOrientationVel();
     virtual v8::Handle<v8::Value> struct_getScale();
     virtual v8::Handle<v8::Value> struct_getMesh();
+    virtual v8::Handle<v8::Value> struct_getPhysics();
     virtual v8::Handle<v8::Value> struct_getTransTime();
     virtual v8::Handle<v8::Value> struct_getOrientTime();
     virtual v8::Handle<v8::Value> struct_getSporefListeningTo();
     virtual v8::Handle<v8::Value> struct_getSporefListeningFrom();
 
     virtual v8::Handle<v8::Object> struct_getAllData();
-    
+
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
 
     //simple accessors for sporef fields
@@ -87,8 +92,9 @@ struct JSPositionListener : public PositionListener,
 
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
+    virtual void onSetPhysics (ProxyObjectPtr proxy, const String& newphy);
 
-    
+
     virtual void destroyed();
 
     //calls updateLocation on jspos, filling in mLocation, mOrientation, and mBounds
@@ -105,6 +111,7 @@ protected:
     TimedMotionQuaternion         mOrientation;
     BoundingSphere3f                   mBounds;
     String                               mMesh;
+    String                            mPhysics;
 
 
     //registers/deregisters position listener with associated jsobjectscript
@@ -112,7 +119,7 @@ protected:
     void deregisterAsPosAndMeshListener();
 
     v8::Handle<v8::Value> wrapSporef(SpaceObjectReference* sporef);
-    
+
 private:
     //returns true if inContext and sporefToListenTo is not null
     //otherwise, returns false, and adds to error message reason it failed.  Arg

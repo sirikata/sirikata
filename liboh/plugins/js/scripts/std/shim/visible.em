@@ -166,14 +166,19 @@
                                enumerable: true
                            }
                           );
-/* FIXME physics access is currently only available on presences.
+
+      var decodePhysics = function(phy) {
+          if (phy.length == 0) return {};
+          return JSON.parse(phy);
+      };
+
      Object.defineProperty(visible.prototype, "physics",
                            {
-                               get: function() { return this.getPhysics(); },
+                               get: function() { return decodePhysics(this.getPhysics()); },
                                enumerable: true
                            }
                           );
-*/
+
      visible.prototype.__prettyPrintFieldsData__ = [
          "position", "velocity",
          "orientation", "orientationVel",
