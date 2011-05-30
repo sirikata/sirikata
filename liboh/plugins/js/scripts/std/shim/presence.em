@@ -117,7 +117,7 @@ Object.defineProperty(system.__presence_constructor__.prototype, "mesh",
 Object.defineProperty(system.__presence_constructor__.prototype, "physics",
                       {
                           get: function() { return this.getPhysics(); },
-                          set: function() { return this.setPhysics.apply(this, arguments); },
+                          set: function() { return this.updatePhysics.apply(this, arguments); },
                           enumerable: true
                       }
 );
@@ -265,7 +265,28 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
 
     presence.prototype.getMesh = function(){}
 
+      
+      /** @function
+       *  @description Returns the (decoded) physics settings of the presence.
+       *  @type Object
+       */
+      presence.prototype.getPhysics = function() {};
+      
+      /** @function
+       *  @description Sets the physics parameters for the
+       *               presence. Unspecified values will use the
+       *               defaults even if they were previously
+       *               specified.
+       *  @param newphys The new physics settings for the object
+       */
+      presence.prototype.setPhysics = function(/**Object */ newphys) {};
 
+      /** @function
+       *  @description Updates the physics parameters for the presence. Unspecified values use their previous setting.
+       *  @param newphys The new physics settings for the object.
+       */
+      presence.prototype.updatePhysics = function(/**Object */ newphys) {};
+      
       /** @function
        @return Returns the identifier for the space that the presence is in.
        @type String
@@ -283,3 +304,46 @@ system.__presence_constructor__.prototype.__prettyPrintFields__ = function() {
 
 
 }
+
+(function() {
+
+      // Physics is stored as an opaque string. This takes care of
+      // encoding and decoding that string. Currently the only
+      // supported type is JSON encoding.
+      
+      var decodePhysics = function(phy) {
+          if (phy.length == 0) return {};
+          return JSON.parse(phy);
+      };
+      
+      var encodePhysics = function(phy) {
+          return JSON.stringify(phy);
+      };
+      
+      var valid_physics_fields = ['treatment', 'bounds', 'mass'];
+      var orig_get_physics = system.__presence_constructor__.prototype.getPhysics;
+      var orig_set_physics = system.__presence_constructor__.prototype.setPhysics;
+
+      system.__presence_constructor__.prototype.getPhysics = function() {
+          return decodePhysics( orig_get_physics.apply(this) );
+      };
+
+      system.__presence_constructor__.prototype.setPhysics = function(update) {
+          var raw = {};
+          for(var i in valid_physics_fields) {
+              if (valid_physics_fields[i] in update)
+                  raw[valid_physics_fields[i]] = update[valid_physics_fields[i]];
+          }
+          return orig_set_physics.apply(this, [encodePhysics(raw)]);
+      };
+
+      system.__presence_constructor__.prototype.updatePhysics = function(update) {
+          var raw = this.getPhysics();
+          for(var i in valid_physics_fields) {
+              if (valid_physics_fields[i] in update)
+                  raw[valid_physics_fields[i]] = update[valid_physics_fields[i]];
+          }
+          return orig_set_physics.apply(this, [encodePhysics(raw)]);
+      };
+
+})();
