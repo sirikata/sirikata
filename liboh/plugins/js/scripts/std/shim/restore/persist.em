@@ -54,7 +54,6 @@ function checkpointPartialPersist(objToPersistFrom, filename)
 
     
     var serialized = system.serialize(shadowTree);
-    system.print(shadowTree);
 
 
     //save the file out to disk.
@@ -65,11 +64,12 @@ function checkpointPartialPersist(objToPersistFrom, filename)
 
 /**
  @param value/object to check if it has been marked.
- @return returns true if value passed in is an object that has been marked.  Returns null otherwise
+ @return returns name of object if value passed in is an object that
+ has been marked.  Returns null otherwise
  */
 function checkMarked(objToCheck, markedObjects)
 {
-    return (objToCheck in markedObjects) ? true : null ;
+    return (objToCheck in markedObjects) ? markedObjects[objToCheck] : null ;
 }
 
 
@@ -184,8 +184,8 @@ function interHandler(objGraphCatalog,shadowTree,field,markedObjects)
     {
         //is marked.  create pointer for it.
         shadowTree[field] = new std.persist.NonRestorable();
-        shadowTree[field][std.persist.TYPE_FIELD_STRING] = std.persist.POINTER_OBJECT_STRING;
-        shadowTree[field][std.persist.POINTER_FIELD_STRING] = theMark;
+        shadowTree[field][std.persist.TYPE_FIELD_STRING]     = std.persist.POINTER_OBJECT_TYPE_STRING;
+        shadowTree[field][std.persist.POINTER_FIELD_STRING]  = theMark;
     }
 }
 
@@ -225,7 +225,7 @@ function processSystem(objGraphCatalog, shadowTree, markedObjects)
     {
         //is marked.  create pointer for it.
         shadowTree.selfMap = new std.persist.NonRestorable();
-        shadowTree.selfMap[std.persist.TYPE_FIELD_STRING] = std.persist.POINTER_OBJECT_STRING;
+        shadowTree.selfMap[std.persist.TYPE_FIELD_STRING] = std.persist.POINTER_OBJECT_TYPE_STRING;
         shadowTree.selfMap[std.persist.POINTER_FIELD_STRING] = theMark;
     }
 }

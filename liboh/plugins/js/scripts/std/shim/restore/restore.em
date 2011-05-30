@@ -38,6 +38,8 @@ function restoreFrom(filename)
  */
 function fixReferences(rootToFix, ptrsToFix)
 {
+    var returner = { };
+
     switch(std.persist.checkObjectSerial(rootToFix))
     {
         case std.persist.NOT_OBJECT:
@@ -45,20 +47,22 @@ function fixReferences(rootToFix, ptrsToFix)
         break;
 
         case std.persist.OBJECT_SERIAL:
-        fixupObjectSerial(rootToFix,ptrsToFix);
+        returner = fixupObjectSerial(rootToFix,ptrsToFix);
         break;
 
         case std.persist.OBJECT_POINTER_SERIAL:
-        registerFixupObjectPointer(rootToFix,ptrsToFix);
+        throw 'Error.  Should not directly receive an object pointer in fixReferences.';
         break;
 
         case std.persist.SPECIAL_OBJECT:
-        fixupSpecialObject(rootToFix,ptrsToFix);
+        returner = fixupSpecialObject(rootToFix,ptrsToFix);
         break;
 
         default:
         throw 'Error in fixReferences of restore.em.  Unknown return value from std.persist.checkObjectSerial.';
     }
+
+    return returner;
 }
 
 /**
@@ -66,10 +70,15 @@ function fixReferences(rootToFix, ptrsToFix)
  object [such as system, presence, etc], and it isn't a pointer to
  another object.
  */
-function fixupObjectSerial(objToFix)
+function fixupObjectSerial(objToFix,ptrsToFix)
 {
     if (!(std.persist.ID_FIELD_STRING in objToFix))
-        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';            
+    {
+        system.prettyprint(objToFix);
+        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';      
+    }
+
+    
 
     var objID = objToFix[std.persist.ID_FIELD_STRING];
 
@@ -81,7 +90,7 @@ function fixupObjectSerial(objToFix)
 
     //temporarily copy old fields of local object to separate object.
     //Then delete them from local object
-    var oldLocalFields = {        };
+    var oldLocalFields = { };
     for (var s in localCopy)
         oldLocalFields[s] = localCopy[s];
 
@@ -91,16 +100,36 @@ function fixupObjectSerial(objToFix)
     
     for (var s in objToFix)
     {
-        //ignore the serialization metadata when deserializing object
-        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING) || (s== std.persist.NO_RESTORE_STRING))
+        //ignore the serialization metadata when deserializing the object
+        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING) || (s == std.persist.NO_RESTORE_STRING) || (s == std.persist.POINTER_FIELD_STRING) || (s== 'prototype'))
             continue;
 
-        if (typeof (objToFix[s]) == "object")
-            fixReferences(queuedForFurther[s]);     //finish copying data for remaining references
+        
+        if (std.persist.checkObjectSerial(objToFix[s]) == std.persist.OBJECT_POINTER_SERIAL)
+        {
+            //register the field, s, of localCopy to be fixed up.
+            registerFixupObjectPointer(objToFix[s], s, localCopy,ptrsToFix);                  
+        }
+        else if ((typeof (objToFix[s]) == "object") &&(objToFix[s] != null))
+        {
+            //finish copying data for remaining references
+            var newObj = fixReferences(objToFix[s],ptrsToFix);     
+            //in case scripter had deleted field associated with this object
+            localCopy[s] = newObj;
+        }
         else
-            localCopy[s] = objToFix[s];             //copy value types to local
+        {
+            //copy value types to local
+            localCopy[s] = objToFix[s];                
+        }
+
     }
+    
+    return localCopy;
 }
+
+
+
 
 
 /**
@@ -151,9 +180,9 @@ function fixSinglePtr(localObjToPoint, objPtrToFix,index)
         throw 'Error in fixSinglePtr.  Should not have received non-pointer record to point to.';
 
     //lookup local object
-    var localToPointTo = nameService.lookupObject(objPtrToFix[std.persist.ID_FIELD_STRING]);
+    var localToPointTo = nameService.lookupObject(objPtrToFix[std.persist.POINTER_FIELD_STRING]);
     if (localToPointTo == nameService.DNE)
-        throw 'Error in fixSinglePtr.  Have no record of object with name: ' + objPtrToFix[std.persist.ID_FIELD_STRING].toString();
+        throw 'Error in fixSinglePtr.  Have no record of object with name: ' + objPtrToFix[std.persist.POINTER_FIELD_STRING].toString();
     
     //perform fix    
     localObjToPoint[index] = localToPointTo;

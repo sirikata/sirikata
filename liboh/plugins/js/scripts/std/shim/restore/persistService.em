@@ -21,12 +21,12 @@ std.persist = {
 
     /*Type Constants*/
 
-    //use this as an index to retrieve the type of an object
+    //use this as an index to retrieve the type of local objects
     GET_TYPE_STRING                   :            '__getType',
     
 
     //set the type field of an object to this if have a loop.
-    POINTER_OBJECT_STRING             :     '__pointer_object',  
+    POINTER_OBJECT_TYPE_STRING        :     '__pointer_object',  
     SYSTEM_TYPE_STRING                :               'system',
     PRESENCE_OBJECT_TYPE_STRING       :             'presence',
     VISIBLE_TYPE_STRING               :              'visible',
@@ -167,17 +167,16 @@ std.persist = {
     {
         if (typeof(obj) != 'object' )
             return std.persist.NOT_OBJECT;
-        
-        if (std.persist.GET_TYPE_STRING in obj)
+
+        if (std.persist.TYPE_FIELD_STRING in obj)
         {
-            switch (obj[std.persist.GET_TYPE_STRING])
+            switch (obj[std.persist.TYPE_FIELD_STRING])
             {
                 //checks if it's a pointer object
-            case std.persist.POINTER_OBJECT_STRING:
-                {
-                    return std.persist.OBJECT_POINTER_SERIAL;
-                    break;                    
-                }
+            case std.persist.POINTER_OBJECT_TYPE_STRING:
+                return std.persist.OBJECT_POINTER_SERIAL;
+                break;                    
+
 
                 //if it's an object and it's got a type string that's
                 //not a pointer type, then it's likely to be a special
