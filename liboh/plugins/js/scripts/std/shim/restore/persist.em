@@ -97,7 +97,7 @@ function mark(objToMark, markedObjects)
     if (typeof(objToMark) != 'object')
         throw 'Error.  Asking to mark a non-object: '+objToMark.toString();            
 
-    var name = nameService.insertObject();
+    var name = nameService.insertObject(objToMark);
     markedObjects[objToMark] = name;
     return name;
 }
@@ -139,7 +139,7 @@ function markAndBranch(objGraphCatalog, shadowTree, markedObjects)
         processPresenceEntry(objGraphCatalog,shadowTree,markedObjects);
         return;
     }
-    if (std.persist.checkFunctionObjecto(objGraphCatalog))
+    if (std.persist.checkFunctionObject(objGraphCatalog))
     {
         processFunction(objGraphCatalog,shadowTree,markedObjects);
         return;

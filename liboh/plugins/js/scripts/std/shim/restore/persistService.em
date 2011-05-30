@@ -46,7 +46,7 @@ std.persist = {
     //will not persist objects that are marked as nonRestorable.
     NonRestorable : function ()    
     {
-        this[NO_RESTORE_STRING] = true;
+        this[std.persist.NO_RESTORE_STRING] = true;
     },
 
     checkNonRestorable : function (obj)
@@ -106,6 +106,7 @@ std.persist = {
         return false;
     },
 
+    
     /**
      @param obj to check if it is a PresenceEntry object
      @return true if PresenceEntry object.  false otherwise
@@ -140,11 +141,59 @@ std.persist = {
             return (obj[std.persist.GET_TYPE_STRING]() == std.persist.FUNCTION_TYPE_STRING);
 
         return false;
+    },
+
+
+    
+    NOT_OBJECT : -1,
+    OBJECT_SERIAL : 0,
+    OBJECT_POINTER_SERIAL : 1,
+    SPECIAL_OBJECT : 2,
+    
+    /**
+     Use when deserializing.  Returns true if what is passed in is an object
+     @param what we're checking is a serialized object
+     @return Returns one of three values:
+
+     -NOT_OBJECT (if arg passed in is not a serialized object or
+     object pointer);
+     -OBJECT_SERIAL (if arg passed in is a serialized object);
+     -OBJECT_POINTER_SERIAL (if arg passed in is a serialized object
+     pointer).
+     -SPECIAL_OBJECT (if arg passed in is a system, presence,
+     presenceEntry, etc. type of object).
+     */
+    checkObjectSerial : function (obj)
+    {
+        if (typeof(obj) != 'object' )
+            return std.persist.NOT_OBJECT;
+        
+        if (std.persist.GET_TYPE_STRING in obj)
+        {
+            switch (obj[std.persist.GET_TYPE_STRING])
+            {
+                //checks if it's a pointer object
+            case std.persist.POINTER_OBJECT_STRING:
+                {
+                    return std.persist.OBJECT_POINTER_SERIAL;
+                    break;                    
+                }
+
+                //if it's an object and it's got a type string that's
+                //not a pointer type, then it's likely to be a special
+                //object (system,presence, visible, etc.), and will
+                //need to be reconstructed more carefully.
+            default:
+                return std.persist.SPECIAL_OBJECT;
+            }
+        }
+
+        return OBJECT_SERIAL;
     }
     
 };
 
 
-system.require('std/shim/restore/nameService.em');
-system.require('std/shim/restore/persist.em');
-system.require('std/shim/restore/restore.em');
+// system.require('std/shim/restore/nameService.em');
+// system.require('std/shim/restore/persist.em');
+// system.require('std/shim/restore/restore.em');

@@ -33,7 +33,7 @@ if (typeof(std.persist) === 'undefined')
      var whichNameOn = 0;
      
      nameService = {};
-
+     
      /**
       Does Not Exist.  
       Returned when maps calling lookup on do not have a record for
@@ -41,6 +41,18 @@ if (typeof(std.persist) === 'undefined')
       */
      nameService.DNE = -1;
 
+     /**
+      Prints all objects that we're responsible for and their names 
+      */
+     nameService.__debugPrint = function ()
+     {
+         for (var s in namesToObjects)
+         {
+             system.print('\n');
+             system.print(s);
+         }
+     };
+     
      /**
       @param name to lookup.  (name will be an integer starting at
       zero).

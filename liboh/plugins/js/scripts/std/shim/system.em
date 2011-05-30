@@ -64,7 +64,6 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
         }
     };
     
-    
     //to set a prox add callback
     this.setProxAddCB = function (proxAddCB)
     {
