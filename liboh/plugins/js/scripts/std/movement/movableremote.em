@@ -119,6 +119,15 @@ function() {
             scale : scale
         } -> this._remote;
     };
+
+    /** @function */
+    std.movement.MovableRemote.prototype.setPhysics = function(phy) {
+        {
+            request : 'movable',
+            action : 'setPhysics',
+            physics : phy
+        } -> this._remote;
+    };
     
     /** @function */
     std.movement.MovableRemote.prototype.stop = function() {

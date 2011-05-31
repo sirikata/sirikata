@@ -231,7 +231,7 @@ var editHistoryForward = function() {
 		   )
 	    .appendTo('body');
 
-        sirikata.ui.window(
+        new sirikata.ui.window(
             '#emerson-prompt-dialog',
             {
 		autoOpen: false,

@@ -38,7 +38,9 @@ div.flush-right {
 	padding-left: 5px;
 	border-left: 1px solid #004db8;
 }
-label, input { display:block; }
+/* FIXME this was here for the cdn_upload.js file, but it was too
+broad, affecting other UIs, and I can't test that path anymore anyway.
+label, input { display:block; }*/
 .inline { display: inline; }
 
 div#ui-box { display: none; }

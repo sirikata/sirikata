@@ -60,7 +60,8 @@ function() {
             setVelocity : std.core.bind(this._handleSetVel, this),
             setOrientation : std.core.bind(this._handleSetRot, this),
             setRotationalVelocity : std.core.bind(this._handleSetRotVel, this),
-            setScale : std.core.bind(this._handleSetScale, this)
+            setScale : std.core.bind(this._handleSetScale, this),
+            setPhysics : std.core.bind(this._handleSetPhysics, this)
         };
     };
 
@@ -81,6 +82,7 @@ function() {
     std.movement.Movable.prototype._handleStop = function(msg, sender) {
         std.movement.stopMove(system.self);
         std.movement.stopRotate(system.self);
+        system.self.physics = { treatment : 'ignore' };
     };
 
     std.movement.Movable.prototype._handleSetPos = function(msg, sender) {
@@ -101,6 +103,10 @@ function() {
 
     std.movement.Movable.prototype._handleSetScale = function(msg, sender) {
         std.movement.scaleTo(system.self, msg.scale);
+    };
+
+    std.movement.Movable.prototype._handleSetPhysics = function(msg, sender) {
+        system.self.physics = msg.physics;
     };
 
 })();

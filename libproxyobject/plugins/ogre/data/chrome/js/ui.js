@@ -84,7 +84,27 @@ sirikata.ui.window = function(selector, params) {
         if (i == 'modal') continue;
         real_params[i] = params[i];
     }
-    return win_data.dialog(real_params);
+    this._ui = win_data.dialog(real_params);
+};
+
+sirikata.ui.window.prototype.show = function() {
+    this._ui.dialog('open');
+    return this;
+};
+
+sirikata.ui.window.prototype.hide = function() {
+    this._ui.dialog('close');
+    return this;
+};
+
+sirikata.ui.window.prototype.enable = function() {
+    this._ui.dialog('enable');
+    return this;
+};
+
+sirikata.ui.window.prototype.disable = function() {
+    this._ui.dialog('disable');
+    return this;
 };
 
 /** Use the given element like a button. Allows you to do things like set a click handler.

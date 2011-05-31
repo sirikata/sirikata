@@ -38,6 +38,7 @@ system.require('drag/move.em');
 system.require('drag/rotate.em');
 system.require('drag/scale.em');
 system.require('std/graphics/chat.em');
+system.require('std/graphics/physics.em');
 
 (
 function() {
@@ -62,6 +63,7 @@ function() {
         this._selected = null;
         this._scripter = new std.script.Scripter(this);
         this._chat = new std.graphics.Chat(this._pres, this._simulator);
+        this._physics = new std.graphics.PhysicsProperties(this._simulator);
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
@@ -83,6 +85,8 @@ function() {
 
         this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
 
+        this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
+
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
         this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
@@ -98,6 +102,8 @@ function() {
         this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
 
         this._binding.addFloat2Action('pickObject', std.core.bind(this.pickObject, this));
+
+        this._binding.addAction('updatePhysicsProperties', std.core.bind(this.updatePhysicsProperties, this));
 
         this._binding.addAction('startMoveDrag', std.core.bind(this.startDrag, this, this._draggers.move));
         this._binding.addAction('startRotateDrag', std.core.bind(this.startDrag, this, this._draggers.rotate));
@@ -125,6 +131,7 @@ function() {
             { key: ['button-pressed', 's', 'ctrl' ], action: 'scriptSelf' },
 
             { key: ['button-pressed', 'c', 'ctrl' ], action: 'toggleChat' },
+            { key: ['button-pressed', 'p', 'ctrl' ], action: 'togglePhysicsProperties' },
 
             { key: ['mouse-click', 3], action: 'pickObject' },
             { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
@@ -146,6 +153,8 @@ function() {
             { key: ['button', 'right' ], action: 'rotateRight' },
 
             { key: ['mouse-press', 1 ], action: 'pickObject' },
+
+            { key: ['mouse-press', 1 ], action: 'updatePhysicsProperties' },
 
             // Note that the ordering of registration here is critical.
             { key: ['mouse-press', 1, 'none' ], action: 'startMoveDrag' },
@@ -238,6 +247,12 @@ function() {
             this._selected = clicked;
             this._simulator.bbox(this._selected, true);
         }
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.updatePhysicsProperties = function() {
+        // Update even if not selected so display can be disabled
+        this._physics.update(this._selected);
     };
 
     /** @function */
