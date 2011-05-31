@@ -42,13 +42,25 @@ std.persist = {
     POINTER_FIELD_STRING  : '__pointer_field',
 
 
+    NON_RESTORE_MAX_NOT_PERSISTED : '__maxNotPersisted',
+    
+    
     //create a NonRestorable type.  When running through object graph,
     //will not persist objects that are marked as nonRestorable.
     NonRestorable : function ()    
     {
         this[std.persist.NO_RESTORE_STRING] = true;
+        this[std.persist.NON_RESTORE_MAX_NOT_PERSISTED] = 0;
     },
 
+    
+    nonRestorePush : function (objToPushOn,objToPush)
+    {
+        objToPushOn[objToPushOn[std.persist.NON_RESTORE_MAX_NOT_PERSISTED].toString()] = objToPush;
+        return objToPushOn[std.persist.NON_RESTORE_MAX_NOT_PERSISTED]++;
+    },
+
+    
     checkNonRestorable : function (obj)
     {
         if (typeof(obj)   == 'object')
@@ -57,7 +69,35 @@ std.persist = {
         return false;
     },
 
+    getValueFromPropValPair : function (obj)
+    {
+        if (typeof(obj) != 'object')
+            throw 'Error in getValueFromPropValPair.  Requires an object for an argument';
+        
+        if (!('length' in obj))
+            throw 'Error in getValueFromPropValPair.  Any fields received to decode should be arrays.';                
 
+        return obj[1];
+    },
+
+    getPropFromPropValPair : function (obj)
+    {
+        if (typeof(obj) != 'object')
+            throw 'Error in getPropFromPropValPair.  Requires an object for an argument';
+        
+        if (!('length' in obj))
+            throw 'Error in getPropFromPropValPair.  Any fields received to decode should be arrays.';
+
+        return obj[0];
+    },
+
+    wrapPropValPair : function (prop,val)
+    {
+       return [prop,val];
+    },
+    
+
+    
     /**
      @param obj to check if it is a system object
      @return true if system object.  false otherwise

@@ -52,13 +52,24 @@ function checkpointPartialPersist(objToPersistFrom, filename)
     //nameService
     nameService.enterSubtreeObjects(objToPersistFrom, markedObjectMap);
 
-    
     var serialized = system.serialize(shadowTree);
 
+    system.print('\n\nDEBUG\n');
+    system.prettyprint(shadowTree);
+    system.print('\n\n---\n');
 
+    var deser = system.deserialize(serialized);
+    system.print('\n\nDEBUG2\n');
+    system.prettyprint(deser);
+    system.print('\n\n---2\n');
+    
+    
     //save the file out to disk.
     var fName = typeof(filename) == 'undefined' ? 'testFile.em.bu' : filename;
     system.__debugFileWrite(serialized, fName);
+
+    
+
 }
 
 
@@ -150,42 +161,68 @@ function markAndBranch(objGraphCatalog, shadowTree, markedObjects)
     
     for (var s in objGraphCatalog)
     {
+        // check typeof s;
+        // lkjs;
         if (typeof(objGraphCatalog[s]) != 'object')
-            shadowTree[s] = objGraphCatalog[s];
+            pushValueType(objGraphCatalog,s,shadowTree);
         else
             interHandler(objGraphCatalog,shadowTree,s,markedObjects);
     }
 }
 
 
+/**
+ @param {object} objGraphCatalog the local copy of the object whose field we're trying to persist.
+ @param index: the name of the field of the local copy of the object we're trying to persist.
+ @param {object} shadowTree: the serialized tree of the local object that we're trying to copy.
+ */
+function pushValueType(objGraphCatalog,index,shadowTree)
+{
+    std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(index,objGraphCatalog[index]));
+}
+
+/**
+
+ */
 function interHandler(objGraphCatalog,shadowTree,field,markedObjects)
 {
     //check if got null object.
     if (objGraphCatalog[field] == null)
     {
-        shadowTree[field] = null;
+        std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(field,null));
         return;
     }
     
     if (std.persist.checkNonRestorable(objGraphCatalog))
         return;
-
     
     var theMark = checkMarked(objGraphCatalog[field],markedObjects);
+    var valToPush = new std.persist.NonRestorable();
     if (theMark == null)
     {
         //may want to do special things here to determine if it is a special object;
         //means that we have not already tagged this object
-        shadowTree[field] = new std.persist.NonRestorable();
-        shadowTree[field][std.persist.ID_FIELD_STRING] =  mark(objGraphCatalog[field],markedObjects);
-        markAndBranch(objGraphCatalog[field],shadowTree[field],markedObjects);
+        valToPush[std.persist.ID_FIELD_STRING]       =  mark(objGraphCatalog[field],markedObjects);
+        var index = std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(field,valToPush));
+        // markAndBranch(objGraphCatalog[field],valToPush,markedObjects);
+        markAndBranch(objGraphCatalog[field],shadowTree[index],markedObjects);
+
+        //clean up lkjs;
+        // shadowTree[field] = new std.persist.NonRestorable();
+        // shadowTree[field][std.persist.ID_FIELD_STRING] =  mark(objGraphCatalog[field],markedObjects);
+        // markAndBranch(objGraphCatalog[field],shadowTree[field],markedObjects);
     }
     else
     {
         //is marked.  create pointer for it.
-        shadowTree[field] = new std.persist.NonRestorable();
-        shadowTree[field][std.persist.TYPE_FIELD_STRING]     = std.persist.POINTER_OBJECT_TYPE_STRING;
-        shadowTree[field][std.persist.POINTER_FIELD_STRING]  = theMark;
+        valToPush[std.persist.TYPE_FIELD_STRING]     = std.persist.POINTER_OBJECT_TYPE_STRING;
+        valToPush[std.persist.POINTER_FIELD_STRING]  = theMark;
+        std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(field, valToPush));
+
+        
+        // shadowTree[field] = new std.persist.NonRestorable();
+        // shadowTree[field][std.persist.TYPE_FIELD_STRING]     = std.persist.POINTER_OBJECT_TYPE_STRING;
+        // shadowTree[field][std.persist.POINTER_FIELD_STRING]  = theMark;
     }
 }
 
@@ -203,6 +240,8 @@ function processSystem(objGraphCatalog, shadowTree, markedObjects)
 {
     if (!std.persist.checkSystem(objGraphCatalog))
         throw 'Error in process system.  First argument must be a system object.';
+
+    throw 'Error.  Will need to change how values are pushed to shadowTree for system.';
     
     //set a type for shadowTree (it already has an id)
     shadowTree[std.persist.TYPE_FIELD_STRING] = std.persist.SYSTEM_TYPE_STRING;
@@ -255,7 +294,8 @@ function  processPresenceEntry(pEntry,shadowTree, markedObjects)
 {
     if (std.persist.checkPresenceEntry(pEntry))
         throw 'Error processing presence entry.  First arg passed in must be a presence entry';
-    
+
+    throw 'Error.  Will need to change how values are pushed to shadowTree for presenceEntries.';
     
     shadowTree[std.persist.TYPE_FIELD_STRING] = std.persist.PRESENCE_ENTRY_OBJECT_STRING;
     
@@ -278,6 +318,8 @@ function processFunction(func,shadowTree,markedObjects)
     if (! std.persist.checkFunctionObject(func))
         throw 'Error processing function.  First arg passed in must be a function';
 
+    throw 'Error.  Will need to change how values are pushed to shadowTree for functions.';
+    
     shadowTree[std.persist.TYPE_FIELD_STRING] = std.persist.FUNCTION_OBJECT_TYPE_STRING;
     shadowTree.funcAsString  = func.toString();
 }
@@ -291,6 +333,8 @@ function processPresence(pres,shadowTree,markedObjects)
 {
     if (! std.persist.checkPresence(pres))
         throw 'Error processing presence.  First arg passed in must be a presence.';
+
+    throw 'Error.  Will need to change how values are pushed to shadowTree for presences.';
     
     
     shadowTree[std.persist.TYPE_FIELD_STRING] = std.persist.PRESENCE_OBJECT_TYPE_STRING;
@@ -331,6 +375,8 @@ function processTimer(timer,shadowTree,markedObjects)
     if (! std.persist.checkTimer(timer))
         throw 'Error processing timer.  First arg passed in must be a timer.';
 
+    throw 'Error.  Will need to change how values are pushed to shadowTree for timers.';
+    
     shadowTree[std.persist.TYPE_FIELD_STRING] = std.persist.TIMER_OBJECT_STRING;
 
     //loading presence data into a non-restorable so that
@@ -360,6 +406,8 @@ function processVisible(vis, shadowTree,markedObjects)
     if (! std.persist.checkVisible(vis))
         throw 'Error processing visible.  First argument passed in must be a visible.';
 
+    throw 'Error.  Will need to change how values are pushed to shadowTree for visibles.';
+    
     shadowTree[std.persist.TYPE_FIELD_STRING] = std.persist.VISIBLE_OBJECT_STRING;
 
     //loading presence data into a non-restorable so that

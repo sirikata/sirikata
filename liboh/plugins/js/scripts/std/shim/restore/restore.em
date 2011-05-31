@@ -19,6 +19,11 @@ function restoreFrom(filename)
     //system.prettyprint(deserializedGraph);
     // return deserializedGraph;
 
+    // system.print('\n\nDEBUG2\n');
+    // system.prettyprint(deserializedGraph);
+    // system.print('\n\n---2\n');
+    
+    
     //performs recursive restoration.
     var ptrsToFix = [];
     fixReferences(deserializedGraph,ptrsToFix);
@@ -72,13 +77,12 @@ function fixReferences(rootToFix, ptrsToFix)
  */
 function fixupObjectSerial(objToFix,ptrsToFix)
 {
-    if (!(std.persist.ID_FIELD_STRING in objToFix))
-    {
-        system.prettyprint(objToFix);
-        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';      
-    }
-
+    system.print('\n\ndebug: In objectserial\n\n');
+    system.prettyprint(objToFix);
     
+    if (!(std.persist.ID_FIELD_STRING in objToFix))
+        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';      
+
 
     var objID = objToFix[std.persist.ID_FIELD_STRING];
 
@@ -101,30 +105,36 @@ function fixupObjectSerial(objToFix,ptrsToFix)
     for (var s in objToFix)
     {
         //ignore the serialization metadata when deserializing the object
-        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING) || (s == std.persist.NO_RESTORE_STRING) || (s == std.persist.POINTER_FIELD_STRING) || (s== 'prototype'))
+        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING) || (s == std.persist.NO_RESTORE_STRING) || (s == std.persist.POINTER_FIELD_STRING) || (s== 'prototype') || (s == std.persist.NON_RESTORE_MAX_NOT_PERSISTED))
             continue;
+        
+        var fieldValue = std.persist.getValueFromPropValPair(objToFix[s]);
+        var indexValue = std.persist.getPropFromPropValPair (objToFix[s]);
+
+
+        system.print('\nPrinting field value\n');
+        system.prettyprint();
 
         
-        if (std.persist.checkObjectSerial(objToFix[s]) == std.persist.OBJECT_POINTER_SERIAL)
+        if (std.persist.checkObjectSerial(fieldValue) == std.persist.OBJECT_POINTER_SERIAL)
         {
+            system.print('\n\nDEBUG: got an object pointer\n\n');
             //register the field, s, of localCopy to be fixed up.
-            registerFixupObjectPointer(objToFix[s], s, localCopy,ptrsToFix);                  
+            registerFixupObjectPointer(fieldValue,indexValue, localCopy,ptrsToFix);                  
         }
-        else if ((typeof (objToFix[s]) == "object") &&(objToFix[s] != null))
+        else if ((typeof (fieldValue) == "object") &&(fieldValue != null))
         {
             //finish copying data for remaining references
-            var newObj = fixReferences(objToFix[s],ptrsToFix);     
-            //in case scripter had deleted field associated with this object
-            localCopy[s] = newObj;
+            var newObj = fixReferences(fieldValue,ptrsToFix);     
+            //in case scripter had deleted field associated with this object....this will re-populate
+            localCopy[indexValue] = newObj;
         }
         else
         {
             //copy value types to local
-            localCopy[s] = objToFix[s];                
+            localCopy[indexValue] = fieldValue;
         }
-
     }
-    
     return localCopy;
 }
 
