@@ -90,9 +90,22 @@ function() {
         this.invoke('screenshot');
     };
 
-    /** Request a screenshot be taken and stored on disk. */
+    /** Pick at the given location for an object. Stores the hit point which can be retrieved with pickedPosition(). */
     std.graphics.Graphics.prototype.pick = function(x, y) {
-        return this.invoke('pick', x, y);
+        var result = this.invoke('pick', x, y);
+        if (result.object) {
+            this._pickedPosition = new util.Vec3(result.position.x, result.position.y, result.position.z);
+            return result.object;
+        }
+        else {
+            this._pickedPosition = undefined;
+            return undefined;
+        }
+    };
+
+    /** */
+    std.graphics.Graphics.prototype.pickedPosition = function() {
+        return this._pickedPosition;
     };
 
     /** Request the bounding box for the object be enabled or disabled. */

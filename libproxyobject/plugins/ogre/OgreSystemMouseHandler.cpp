@@ -99,7 +99,7 @@ void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPix
     }
 }
 
-ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which) {
+ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which, Vector3f* hitPointOut) {
     Vector3d pos = cam->getPosition();
     Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
     SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<pos<<"; dir = "<<dir);
@@ -126,6 +126,7 @@ ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float 
                 return NULL; // FIXME: should try again.
             }
         }
+        if (hitPointOut != NULL) *hitPointOut = Vector3f(pos) + dir.normal()*dist;
         return mouseOverEntity;
     }
     return NULL;
@@ -146,16 +147,16 @@ bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, 
     return true;
 }
 
-SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction) {
+SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction, Vector3f* hitPointOut) {
     if (!mParent||!mParent->mPrimaryCamera) SpaceObjectReference::null();
 
     Camera *camera = mParent->mPrimaryCamera;
     Time time = mParent->simTime();
 
     int numObjectsUnderCursor=0;
-    ProxyEntity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject);
+    ProxyEntity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject, hitPointOut);
     if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount)
-        mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0);
+        mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0, hitPointOut);
     if (mouseOver)
         return mouseOver->getProxyPtr()->getObjectReference();
 

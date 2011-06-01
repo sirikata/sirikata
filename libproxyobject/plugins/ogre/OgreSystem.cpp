@@ -572,8 +572,18 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
 
     float x = Invokable::anyAsNumeric(params[1]);
     float y = Invokable::anyAsNumeric(params[2]);
-    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1);
-    return Invokable::asAny(result);
+    Vector3f hitPoint;
+    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1, &hitPoint);
+
+    Invokable::Dict pick_result;
+    pick_result["object"] = Invokable::asAny(result);
+    Invokable::Dict pick_position;
+    pick_position["x"] = Invokable::asAny(hitPoint.x);
+    pick_position["y"] = Invokable::asAny(hitPoint.y);
+    pick_position["z"] = Invokable::asAny(hitPoint.z);
+    pick_result["position"] = Invokable::asAny(pick_position);
+
+    return Invokable::asAny(pick_result);
 }
 
 

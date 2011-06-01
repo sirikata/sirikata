@@ -60,7 +60,7 @@ public:
     void setDelegate(Invokable* del);
 
     // FIXME no reason for this to be in this class.
-    SpaceObjectReference pick(Vector2f p, int direction);
+    SpaceObjectReference pick(Vector2f p, int direction, Vector3f* hitPointOut=NULL);
 
     //FIXME should this be public?
     WebView* mUIWidgetView;
@@ -75,7 +75,7 @@ private:
     Sirikata::Input::Modifier getCurrentModifiers() const;
 
     void mouseOverWebView(Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, bool mouseup);
-    ProxyEntity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0);
+    ProxyEntity* hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which=0, Vector3f* hitPointOut=NULL);
 
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY);
 
