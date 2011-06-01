@@ -766,9 +766,13 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             else {
                 // Reset so that updates from this new "session" for this proxy
                 // get applied
-
                 proxy_obj->reset();
-                processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, &mesh, &phy);
+
+                // We need to handle optional values properly -- they
+                // shouldn't get overwritten.
+                String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
+                String* phy_ptr = (addition.has_physics() ? &phy : NULL);
+                processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
                 // Mark as valid again
                 proxy_obj->validate();
             }
