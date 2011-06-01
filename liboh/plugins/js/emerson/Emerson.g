@@ -56,6 +56,7 @@ tokens
     DEFAULT;
     SWITCH;
     CASE;
+    CASE_BLOCK;   
     LABEL;	
     ASSIGN;
     MULT_ASSIGN;
@@ -184,8 +185,8 @@ statement
 	| breakStatement
 	| returnStatement
 	| withStatement
+       	| switchStatement   
 	| labelledStatement
-	| switchStatement
 	| throwStatement
         | whenStatement
 	| tryStatement
@@ -322,18 +323,27 @@ switchStatement
 	: 'switch' LTERM* '(' LTERM* expression LTERM* ')' LTERM* caseBlock -> ^(SWITCH expression caseBlock)
 	;
 	
+
 caseBlock
-	: '{' (LTERM* case1=caseClause)* (LTERM* defaultClause (LTERM* case2=caseClause)*)? LTERM* '}' -> 	^($case1)* (^(defaultClause)*)? (^($case2)*)?
-	;
+        :  '{' LTERM* case1=caseClause? LTERM* '}' -> ^(CASE_BLOCK $case1?)
+        |  '{' LTERM* def=defaultClause LTERM* '}' -> ^(CASE_BLOCK $def)
+        ;
+
 
 caseClause
-	: 'case' LTERM* expression LTERM* ':' LTERM* statementList? -> ^( CASE expression statementList?)
-	;
+	:'case' LTERM* expression LTERM* ':' LTERM* statementList? LTERM* defaultClause -> ^( CASE expression statementList? defaultClause)
+        | 'case' LTERM* expression LTERM* ':' LTERM* statementList? LTERM* caseClause? -> ^( CASE expression statementList? caseClause?)
+	; 
 	
 defaultClause
-	: 'default' LTERM* ':' LTERM* statementList? -> ^(DEFAULT statementList?)
+	: 'default' LTERM* ':' LTERM* statementList? LTERM* caseClauseSeenDefault? -> ^(DEFAULT statementList? caseClauseSeenDefault?)
 	;
-	
+        
+        
+caseClauseSeenDefault
+        : 'case' LTERM* expression LTERM* ':' LTERM* statementList? LTERM* caseClauseSeenDefault? -> ^( CASE expression statementList? caseClauseSeenDefault?)
+        ;
+        
 throwStatement
 	: 'throw' expression (LTERM | ';') -> ^(THROW expression)
 	;

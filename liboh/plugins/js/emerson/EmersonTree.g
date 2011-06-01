@@ -151,8 +151,8 @@ statement
     | breakStatement
     | returnStatement
     | withStatement
-    | labelledStatement
     | switchStatement
+    | labelledStatement
     | throwStatement
     | whenStatement
     | tryStatement
@@ -459,18 +459,71 @@ switchStatement
        )
 	;
 	
+// caseBlock
+//     : (caseClause)* (defaultClause*)? (caseClause*)?
+//     ;
+
 caseBlock
-    : (caseClause)* (defaultClause*)? (caseClause*)?
+    : ^(CASE_BLOCK
+        caseClause?
+    )
+    | ^(CASE_BLOCK
+        defaultClause
+    )
     ;
 
+    
 caseClause
-    : ^( CASE expression statementList?)
+    : ^( CASE
+        {
+            APP("case ");
+        }
+        expression
+        {
+            APP(":");
+        }
+        statementList?
+        caseClause?
+        )
+    | ^( CASE
+        {
+            APP("case ");
+        }
+        expression
+        {
+            APP(":");
+        }
+        statementList?
+        defaultClause
+       )
     ;
 	
 defaultClause
-    :^(DEFAULT statementList?)
+    :^(DEFAULT
+        {
+            APP("default: ");
+        }
+        statementList?
+        caseClauseSeenDefault?
+      )
     ;
-	
+
+caseClauseSeenDefault
+    : ^( CASE
+        {
+            APP("case ");
+        }
+        expression
+        {
+            APP(":");
+        }
+        statementList?
+        caseClauseSeenDefault?
+        )
+    ;
+
+
+    
 throwStatement
     : ^(THROW
         {

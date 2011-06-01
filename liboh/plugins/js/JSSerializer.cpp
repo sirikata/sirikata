@@ -263,8 +263,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
     v8::Local<v8::Object> v8Obj = v8Val->ToObject();
 
     //stamps message
+    annotateObject(objVec,v8Obj,toStampWith);
     annotateMessage(jsmessage,toStampWith);
-
 
     if(v8Obj->InternalFieldCount() > 0)
     {
@@ -351,7 +351,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             {
                 //means that we have not already stamped this function object
                 //as having been serialized.  need to serialize it now.
-                annotateObject(objVec,v8Func,toStampWith);
+                //annotateObject(objVec,v8Func,toStampWith);
                 serializeFunctionInternal(v8Func, jsf_value,toStampWith);
             }
             else
@@ -375,7 +375,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             if (hiddenValue.IsEmpty())
             {
                 //means that we have not already stamped this object, and should now
-                annotateObject(objVec,v8Array,toStampWith);
+                //annotateObject(objVec,v8Array,toStampWith);
                 Sirikata::JS::Protocol::IJSMessage ijs_m = jsf_value.mutable_a_value();
                 serializeObjectInternal(v8Array, ijs_m, toStampWith,objVec);
 
@@ -399,7 +399,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             {
                 //means that we have not already stamped this object, and should
                 //now
-                annotateObject(objVec,v8obj,toStampWith);
+                //annotateObject(objVec,v8obj,toStampWith);
 
                 Sirikata::JS::Protocol::IJSMessage ijs_o = jsf_value.mutable_o_value();
                 //recursively call serialize on this
@@ -483,7 +483,9 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
     FixupMap  toFixUp;
     v8::Handle<v8::Object> tmpParent;
 
-    //if can't handle first stage of deserialization, don't even worry about fixups
+    //if can't handle first stage of deserialization, don't even worry about
+    //fixups
+    labeledObjs[jsmessage.msg_id()] = deserializeTo;
     if (! deserializeObjectInternal(jsObjScript, jsmessage,deserializeTo, labeledObjs,toFixUp))
         return false;
 
