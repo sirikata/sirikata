@@ -1135,10 +1135,15 @@ bool Entity::tryInstantiateExistingMesh(const String& meshname) {
 
 
 void Entity::createMesh() {
+    bool usingDefault = false;
     MeshdataPtr mdptr = mAssetDownload->asset();
     if (!mdptr) {
-        notify(&EntityListener::entityLoaded, this, false);
-        return;
+        usingDefault = true;
+        mdptr = mScene->defaultMesh();
+        if (!mdptr) {
+            notify(&EntityListener::entityLoaded, this, false);
+            return;
+        }
     }
 
     SHA256 sha = mdptr->hash;
@@ -1147,18 +1152,19 @@ void Entity::createMesh() {
     // If we already have it, just load the existing one
     if (tryInstantiateExistingMesh(hash)) return;
 
-    for(AssetDownloadTask::Dependencies::const_iterator tex_it = mAssetDownload->dependencies().begin(); tex_it != mAssetDownload->dependencies().end(); tex_it++) {
-        const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-        if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
-            String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
+    if (!usingDefault) { // we currently assume no dependencies for default
+        for(AssetDownloadTask::Dependencies::const_iterator tex_it = mAssetDownload->dependencies().begin(); tex_it != mAssetDownload->dependencies().end(); tex_it++) {
+            const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
+            if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
+                String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
 
-            (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
+                (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
 
-            fixOgreURI(id);
-            CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+                fixOgreURI(id);
+                CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+            }
         }
     }
-
 
     if (!mdptr->instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();

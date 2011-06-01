@@ -82,6 +82,11 @@ private:
     void textureDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<const Transfer::DenseData> response);
 
+
+    // Fails the entire process as a result of one dependency (or the original
+    // asset) failing to download.
+    void failDownload();
+
     Graphics::OgreRenderer *const mScene;
     Transfer::URI mAssetURI;
     double mPriority; // FIXME this should really be a function or functor to

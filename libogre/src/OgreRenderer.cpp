@@ -891,6 +891,11 @@ void OgreRenderer::parseMesh(const Transfer::URI& orig_uri, const Transfer::Fing
 }
 
 void OgreRenderer::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb) {
+    Mesh::MeshdataPtr parsed = parseMeshWorkSync(orig_uri, fp, data);
+    mContext->mainStrand->post(std::tr1::bind(cb, parsed));
+}
+
+Mesh::MeshdataPtr OgreRenderer::parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
     Mesh::MeshdataPtr parsed = mModelParser->load(orig_uri, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
@@ -899,7 +904,7 @@ void OgreRenderer::parseMeshWork(const Transfer::URI& orig_uri, const Transfer::
         assert(output_data->single());
         parsed = output_data->get();
     }
-    mContext->mainStrand->post(std::tr1::bind(cb, parsed));
+    return parsed;
 }
 
 void OgreRenderer::screenshot(const String& filename) {

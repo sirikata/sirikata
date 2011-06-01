@@ -155,6 +155,10 @@ public:
      */
     void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
 
+    /** Get the default mesh to present if a model fails to load. This may
+     *  return an empty MeshdataPtr if no default mesh is specified.
+     */
+    virtual Mesh::MeshdataPtr defaultMesh() const { return Mesh::MeshdataPtr(); }
 
     void screenshot(const String& filename);
     void screenshotNextFrame(const String& filename);
@@ -177,6 +181,7 @@ public:
 
 
     void parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
+    Mesh::MeshdataPtr parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
 
     static Ogre::Root* sRoot;

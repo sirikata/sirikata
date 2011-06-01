@@ -88,6 +88,12 @@ void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> r
     assert(mActiveDownloads.size() == 1);
     mActiveDownloads.erase(mAssetURI);
 
+    // Lack of response data means failure of some sort
+    if (!response) {
+        failDownload();
+        return;
+    }
+
     // FIXME here we could have another callback which lets them get
     // at the hash to try to use an existing copy. Even with the
     // eventual centralized loading we want, this may still be
@@ -170,6 +176,12 @@ void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> req
     // Clear the download task
     mActiveDownloads.erase(request->getURI());
 
+    // Lack of response data means failure of some sort
+    if (!response) {
+        failDownload();
+        return;
+    }
+
     // Store data for later use
     mDependencies[request->getURI()].request = request;
     mDependencies[request->getURI()].response = response;
@@ -177,6 +189,17 @@ void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> req
     mRemainingDownloads--;
     if (mRemainingDownloads == 0)
         mCB();
+}
+
+void AssetDownloadTask::failDownload() {
+    // Cancel will stop the current download process.
+    cancel();
+
+    // In this case, since it wasn't user requested, we also clear any parsed
+    // data (e.g. if we failed on a texture download) and trigger a callback to
+    // let them know about the failure.
+    mAsset.reset();
+    mCB();
 }
 
 } // namespace Sirikata

@@ -126,6 +126,28 @@ void OgreSystem::instantiateAllObjects(ProxyManagerPtr pman)
     }
 }
 
+namespace {
+Transfer::DenseDataPtr read_file(const String& filename)
+{
+    ifstream myfile;
+    myfile.open (filename.c_str());
+    if (!myfile.is_open()) return Transfer::DenseDataPtr();
+
+    myfile.seekg(0, ios::end);
+    int length = myfile.tellg();
+    myfile.seekg(0, ios::beg);
+
+    Transfer::MutableDenseDataPtr output(new Transfer::DenseData(Transfer::Range(true)));
+    output->setLength(length, true);
+
+    // read data as a block:
+    myfile.read((char*)output->writableData(), length);
+    myfile.close();
+
+    return output;
+}
+}
+
 bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& presenceid, const String& options) {
     if(!OgreRenderer::initialize(options)) return false;
 
@@ -140,6 +162,12 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     dlPlanner = new SAngleDownloadPlanner(mContext);
 
     allocMouseHandler();
+
+    // The default mesh is just loaded from a known local file
+    using namespace boost::filesystem;
+    String cube_path = (path(mResourcesDir) / "cube.dae").string();
+    Transfer::DenseDataPtr cube_data = read_file(cube_path);
+    mDefaultMesh = parseMeshWorkSync(Transfer::URI("file:///fake.dae"), Transfer::Fingerprint::null(), cube_data);
 
     //finish instantiation here
     instantiateAllObjects(proxyManager);

@@ -1,0 +1,92 @@
+<?xml version="1.0" ?><COLLADA version="1.5.1" xmlns="http://www.collada.org/2005/11/COLLADASchema">
+  <asset>
+    <unit meter="1.0" name="meter"/>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+  <library_images>
+  </library_images>
+  <library_effects>
+    <effect id="nil_1" name="nil_1">
+      <profile_COMMON>
+        <technique sid="common">
+          <blinn>
+            <emission>
+              <color>0 0 0 1</color>
+            </emission>
+            <ambient>
+              <color>0 0 0 1</color>
+            </ambient>
+            <diffuse>
+              <color>1 1 1 1</color>
+            </diffuse>
+            <specular>
+              <color>1 1 1 1</color>
+            </specular>
+            <shininess>
+              <float>1.0</float>
+            </shininess>
+          </blinn>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_materials>
+    <material id="nil_1-material" name="nil_1">
+      <instance_effect url="#nil_1"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+  <geometry id="cubedae_1-geometry" name="cubedae_1">
+    <mesh>
+      <source id="1_1-positions">
+        <float_array count="24" id="1_1-positions-array">
+0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 0.0 1.0 1.0 1.0 0.0 0.0 1.0 0.0 1.0 1.0 1.0 0.0 1.0 1.0 1.0         </float_array>
+        <technique_common>
+          <accessor count="8" source="#1_1-positions-array" stride="3">
+            <param name="X" type="float"/>
+            <param name="Y" type="float"/>
+            <param name="Z" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <source id="1_1-normals">
+        <float_array count="18" id="1_1-normals-array">
+0.0 0.0 1.0 0.0 0.0 -1.0 0.0 1.0 0.0 0.0 -1.0 0.0 1.0 0.0 0.0 -1.0 0.0 0.0         </float_array>
+        <technique_common>
+          <accessor count="6" source="#1_1-normals-array" stride="3">
+            <param name="X" type="float"/>
+            <param name="Y" type="float"/>
+            <param name="Z" type="float"/>
+          </accessor>
+        </technique_common>
+      </source>
+      <vertices id="1_1-vertices">
+        <input semantic="POSITION" source="#1_1-positions"/>
+      </vertices>
+      <triangles count="12" material="nil_1-material">
+         <input offset="0" semantic="VERTEX" source="#1_1-vertices"/>
+         <input offset="1" semantic="NORMAL" source="#1_1-normals"/>
+      <p>0 1 6 1 4 1 0 1 2 1 6 1 0 5 3 5 2 5 0 5 1 5 3 5 2 2 7 2 6 2 2 2 3 2 7 2 4 4 6 4 7 4 4 4 7 4 5 4 0 3 4 3 5 3 0 3 5 3 1 3 1 0 5 0 7 0 1 0 7 0 3 0       </p>
+      </triangles>
+    </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="main_scene_000" name="MainScene">
+      <node id="main_node_000" name="MainNode">
+        <instance_geometry url="#cubedae_1-geometry">
+          <bind_material>
+          <technique_common>
+            <instance_material symbol="nil_1-material" target="#nil_1-material">
+              <bind_vertex_input input_semantic="TEXCOORD" input_set="0" semantic="CHANNEL0"/>
+            </instance_material>
+          </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#main_scene_000"/>
+  </scene>
+</COLLADA>

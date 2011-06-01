@@ -100,6 +100,8 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
                      int& returnSubMesh,
                      IntersectResult *returnIntersectResult, bool texcoord,
                      int which=0) const;
+
+    Mesh::MeshdataPtr mDefaultMesh;
 public:
 
     ProxyCamera *mPrimaryCamera;
@@ -176,6 +178,9 @@ public:
 
     virtual void attachCamera(const String&renderTargetName,Camera*);
     virtual void detachCamera(Camera*);
+
+
+    virtual Mesh::MeshdataPtr defaultMesh() const { return mDefaultMesh; }
 
     // *******
 

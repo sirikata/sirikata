@@ -72,11 +72,14 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ResourceDownloadTa
                                          std::tr1::shared_ptr<ChunkRequest> request,
             std::tr1::shared_ptr<const DenseData> response)
 {
-    if (response != NULL && cb) {
+    // Nothing to do with no callback
+    if (!cb) return;
+
+    if (response != NULL) {
         cb(request, response);
     }
     else {
-        SILOG(ogre,error,"Failed chunk download");
+        cb(request, Transfer::DenseDataPtr());
     }
 }
 
@@ -97,6 +100,7 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<ResourceDownloa
   }
   else {
       SILOG(ogre,error,"Failed metadata download");
+      if (cb) cb(ChunkRequestPtr(), Transfer::DenseDataPtr());
   }
 }
 
