@@ -4,6 +4,7 @@ sirikata.ui(
 
 Scripter = {};
 
+var window = undefined;
 var curEditor = undefined;
 var editors = [];
 
@@ -166,7 +167,7 @@ var addObject = function(objid) {
     var edidx = findEditorIndex(objid);
     if (edidx === null) {
         // Didn't find it, create it
-        $( "#emerson-prompt-dialog" ).dialog( "open" );
+        window.show();
         curEditor = new Editor(objid);
     }
     else {
@@ -197,7 +198,7 @@ var closePrompt = function() {
 	$("#" + editors[selectedIndex].tabname).remove();
 	editors.splice(selectedIndex, 1);
 	if (editors.length == 0) {
-	    $( "#emerson-prompt-dialog" ).dialog( "close" );
+            window.hide();
             $('#edittabs').tabs('destroy');
 	} else {
 		updateCurEditor();
@@ -231,9 +232,10 @@ var editHistoryForward = function() {
 		   )
 	    .appendTo('body');
 
-        new sirikata.ui.window(
+        window = new sirikata.ui.window(
             '#emerson-prompt-dialog',
             {
+                docked: true,
 		autoOpen: false,
 		height: 'auto',
 		width: 450,

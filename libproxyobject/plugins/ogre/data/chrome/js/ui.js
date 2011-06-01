@@ -84,26 +84,27 @@ sirikata.ui.window = function(selector, params) {
         if (i == 'modal') continue;
         real_params[i] = params[i];
     }
-    this._ui = win_data.dialog(real_params);
+
+    this._ui = win_data.dockablewindow(real_params);
 };
 
 sirikata.ui.window.prototype.show = function() {
-    this._ui.dialog('open');
+    this._ui.dockablewindow('open');
     return this;
 };
 
 sirikata.ui.window.prototype.hide = function() {
-    this._ui.dialog('close');
+    this._ui.dockablewindow('close');
     return this;
 };
 
 sirikata.ui.window.prototype.enable = function() {
-    this._ui.dialog('enable');
+    this._ui.dockablewindow('enable');
     return this;
 };
 
 sirikata.ui.window.prototype.disable = function() {
-    this._ui.dialog('disable');
+    this._ui.dockablewindow('disable');
     return this;
 };
 
