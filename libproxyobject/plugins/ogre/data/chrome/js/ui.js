@@ -85,6 +85,7 @@ sirikata.ui.window = function(selector, params) {
         real_params[i] = params[i];
     }
 
+//    real_params.parent = '#left-dock';
     this._ui = win_data.dockablewindow(real_params);
 };
 
@@ -95,6 +96,14 @@ sirikata.ui.window.prototype.show = function() {
 
 sirikata.ui.window.prototype.hide = function() {
     this._ui.dockablewindow('close');
+    return this;
+};
+
+sirikata.ui.window.prototype.toggle = function() {
+    if (this._ui.dockablewindow('isOpen'))
+        this.hide();
+    else
+        this.show();
     return this;
 };
 

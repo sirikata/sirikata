@@ -7,11 +7,7 @@ PhysicsSettings = {}; // External interface
 var window; // Our UI window
 
 var toggleVisible = function() {
-    var dialog = $( "#physics-dialog" );
-    if (dialog.dialog('isOpen'))
-        dialog.dialog('close');
-    else
-        dialog.dialog('open');
+    window.toggle();
 };
 PhysicsSettings.toggleVisible = toggleVisible;
 

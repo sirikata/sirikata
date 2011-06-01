@@ -3,6 +3,7 @@ sirikata.ui(
     function() {
 
 Chat = {};
+var window = undefined;
 
 var username = "";
 var pageScroll = function() {
@@ -81,11 +82,7 @@ var handleCodeKeyUp = function(evt) {
 };
 
 var toggleVisible = function() {
-    var dialog = $( "#chat-dialog" );
-    if (dialog.dialog('isOpen'))
-        dialog.dialog('close');
-    else
-        dialog.dialog('open');
+    window.toggle();
 };
 Chat.toggleVisible = toggleVisible;
 
@@ -108,7 +105,7 @@ Chat.toggleVisible = toggleVisible;
           ' </div>' +
           '</div>').attr({id:'chat-dialog', title:'Chat'}).appendTo('body');
 
-        new sirikata.ui.window(
+        window = new sirikata.ui.window(
             '#chat-dialog',
             {
 	        autoOpen: false,

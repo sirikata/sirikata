@@ -46,6 +46,7 @@ $.widget("ui.dockablewindow", {
                 minHeight: 150,
                 minWidth: 150,
                 modal: false,
+                parent: document.body,
                 position: {
                         my: 'center',
                         at: 'center',
@@ -82,7 +83,7 @@ $.widget("ui.dockablewindow", {
                         titleId = $.ui.dockablewindow.getTitleId(self.element),
 
                         uiDockableWindow = (self.uiDockableWindow = $('<div></div>'))
-                                .appendTo(document.body)
+                                .appendTo(self.options.parent)
                                 .hide()
                                 .addClass(uiDockableWindowClasses + options.dialogClass)
                                 .css({
@@ -302,7 +303,7 @@ $.widget("ui.dockablewindow", {
 
                 self.overlay = options.modal ? new $.ui.dockablewindow.overlay(self) : null;
                 if (uiDockableWindow.next().length) {
-                        uiDockableWindow.appendTo('body');
+                        uiDockableWindow.appendTo(self.options.parent);
                 }
                 self._size();
                 self._position(options.position);
@@ -398,7 +399,7 @@ $.widget("ui.dockablewindow", {
                 self.uiDockableWindow.draggable({
                         cancel: '.ui-dialog-content, .ui-dialog-titlebar-close',
                         handle: '.ui-dialog-titlebar',
-                        containment: 'document',
+                        containment: 'parent',
                         start: function(event, ui) {
                                 heightBeforeDrag = options.height === "auto" ? "auto" : $(this).height();
                                 $(this).height($(this).height()).addClass("ui-dialog-dragging");
@@ -440,7 +441,7 @@ $.widget("ui.dockablewindow", {
 
                 self.uiDockableWindow.resizable({
                         cancel: '.ui-dialog-content',
-                        containment: 'document',
+                        containment: 'parent',
                         alsoResize: self.element,
                         maxWidth: options.maxWidth,
                         maxHeight: options.maxHeight,
@@ -477,6 +478,10 @@ $.widget("ui.dockablewindow", {
         },
 
         _position: function(position) {
+            // Only position if we're working over the entire window rather than in a parent container
+            if (this.options.parent !== document.body)
+                return;
+
                 var myAt = [],
                         offset = [0, 0],
                         isVisible;
@@ -730,7 +735,7 @@ $.extend($.ui.dockablewindow.overlay, {
                 }
 
                 var $el = (this.oldInstances.pop() || $('<div></div>').addClass('ui-widget-overlay'))
-                        .appendTo(document.body)
+                        .appendTo(self.options.parent)
                         .css({
                                 width: this.width(),
                                 height: this.height()
