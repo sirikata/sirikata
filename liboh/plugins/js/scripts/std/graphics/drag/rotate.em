@@ -82,7 +82,7 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
         },
 
         /** @memberOf std.graphics.RotateDragHandler */
-        selected: function(obj, evt) {
+        selected: function(obj, hitpoint, evt) {
             this._dragging = obj ?
                 new std.movement.MovableRemote(obj) : null;
             this._startingDir = this._spherePos(evt);

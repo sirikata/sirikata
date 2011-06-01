@@ -33,7 +33,7 @@
 system.require('std/movement/movableremote.em');
 system.require('std/graphics/drag/handler.em');
 
-/** @namespace 
+/** @namespace
     MoveDragHandler responds to drag events by moving a selected object.
  */
 std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
@@ -44,9 +44,15 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
         },
 
         /** @memberOf std.graphics.MoveDragHandler */
-        selected: function(obj) {
-            this._dragging = obj ?
-                new std.movement.MovableRemote(obj) : null;
+        selected: function(obj, hitpoint, evt) {
+            if (obj) {
+                this._dragging = new std.movement.MovableRemote(obj);
+                this._dragPoint = hitpoint;
+            }
+            else {
+                this._dragging = null;
+                this._dragPoint = null;
+            }
         },
 
         /** @memberOf std.graphics.MoveDragHandler */
@@ -64,12 +70,13 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
 
             if (!lastClickAxis) return;
 
-            var moveVector = this._dragging.getPosition().sub( this._graphics.presence.getPosition() );
+            var moveVector = this._dragPoint.sub( this._graphics.presence.getPosition() );
             var moveDistance = moveVector.dot(centerAxis);
             var start = lastClickAxis.scale(moveDistance);
             var end = clickAxis.scale(moveDistance);
             var toMove = end.sub(start);
             this._dragging.dragPosition = this._dragging.dragPosition.add(toMove);
+            this._dragPoint = this._dragPoint.add(toMove);
             this._dragging.setPosition(this._dragging.dragPosition);
         },
 

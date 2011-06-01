@@ -260,7 +260,7 @@ function() {
         if (this._selected)
             this._dragger = dragger;
         if (this._dragger)
-            this._dragger.selected(this._selected, evt);
+            this._dragger.selected(this._selected, this._simulator.pickedPosition(), evt);
     };
 
     /** @function */

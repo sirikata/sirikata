@@ -47,7 +47,7 @@ std.graphics.DragHandler = system.Class.extend(
         },
 
         /** @memberOf std.graphics.DragHandler */
-        selected: function(obj) {
+        selected: function(obj, hitpoint, evt) {
         },
 
         /** @memberOf std.graphics.DragHandler */
