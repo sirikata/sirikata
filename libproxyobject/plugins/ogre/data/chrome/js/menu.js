@@ -109,5 +109,8 @@ $(document).ready(function() {
 	$('#menuone').menu(options);
 	
 	timeClock();
+
+                      // Version number
+	$("#sirikata-version-display").html('v' + sirikata.version.string + '-' + sirikata.version.commit.slice(0, 6));
 	
 });

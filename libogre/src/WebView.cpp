@@ -185,6 +185,18 @@ void WebView::initializeWebView(
     webView->addBindOnStartLoading(WideString::point_to(L"sirikata"),
                   Berkelium::Script::Variant::emptyObject());
     webView->addEvalOnStartLoading(WideString::point_to(L"__sirikata = sirikata;\n"));
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.version"),
+                  Berkelium::Script::Variant::emptyObject());
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.version.major"),
+        Berkelium::Script::Variant((int)SIRIKATA_VERSION_MAJOR));
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.version.minor"),
+        Berkelium::Script::Variant((int)SIRIKATA_VERSION_MINOR));
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.version.revision"),
+        Berkelium::Script::Variant((int)SIRIKATA_VERSION_REVISION));
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.version.commit"),
+        Berkelium::Script::Variant(SIRIKATA_GIT_REVISION));
+    webView->addBindOnStartLoading(WideString::point_to(L"sirikata.version.string"),
+        Berkelium::Script::Variant(SIRIKATA_VERSION));
     webView->addBindOnStartLoading(WideString::point_to(L"sirikata.__event"),
                   Berkelium::Script::Variant::bindFunction(
                       WideString::point_to(L"send"), false));
