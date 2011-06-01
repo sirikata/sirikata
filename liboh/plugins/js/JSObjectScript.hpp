@@ -134,9 +134,9 @@ public:
     v8::Handle<v8::Value> create_timeout(double period, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);
 
     v8::Handle<v8::Value> create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared,JSContextStruct* jscont);
-    
+
     void registerFixupSuspendable(JSSuspendable* jssuspendable, uint32 contID);
-    
+
     /** Eval a string, executing its contents in the root object's scope. */
     v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
@@ -176,8 +176,8 @@ public:
     //in v8 object.
     v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,VisAddParams* addParams, v8::Handle<v8::Context> ctx);
     v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,VisAddParams* addParams, v8::Handle<v8::Context> ctx);
-    
-    
+
+
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
 
 
@@ -191,11 +191,11 @@ public:
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
     v8::Handle<v8::Value> requestReset(JSContextStruct* jscont);
-    
+
 
 
     //registering position listeners to receive updates from loc
-    bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String* mesh);
+    bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String* mesh, String* phy);
     bool deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener* ml);
 
 
@@ -231,12 +231,12 @@ public:
 
 private:
     bool mRestoring;
-    
+
     // Each context has an id that is assigned from this variable.
     uint32 contIDTracker;
     std::map<uint32,JSContextStruct*> mContStructMap;
-    
-    
+
+
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
     // way the system defines actions (e.g. import searches the current script's
@@ -300,12 +300,12 @@ private:
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
 
-    
+
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
 
     void resetScript();
-    
+
     JSContextStruct* mContext;
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
@@ -348,10 +348,10 @@ private:
     //returns the jspresstruct associated with new object
     JSPresenceStruct* addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token);
 
-    
+
     typedef std::map<uint32, SuspendableVec> ContIDToSuspMap;
     ContIDToSuspMap toFixup;
-    
+
 
     //looks through all previously connected presneces (located in mPresences).
     //returns the corresponding jspresencestruct that has a spaceobjectreference

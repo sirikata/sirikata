@@ -300,7 +300,7 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
 
 //checks to see if the associated space object reference exists in the script.
 //if it does, then make the position listener a subscriber to its pos updates.
-bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String*mesh)
+bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String*mesh, String* phy)
 {
     ProxyObjectPtr p;
     bool succeeded = false;
@@ -331,6 +331,8 @@ bool JSObjectScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toL
             *bs = p->getBounds();
         if (mesh != NULL)
             *mesh = p->getMesh().toString();
+        if (phy != NULL)
+            *phy = p->getPhysics();
     }
     else
         JSLOG(insane,"problem registering to be a position listener. could not find associated object in hosted object.");

@@ -117,7 +117,7 @@ bool JSPositionListener::registerAsPosAndMeshListener()
         return false;
     }
 
-    hasRegisteredListener = jsObjScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds,&mMesh);
+    hasRegisteredListener = jsObjScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds,&mMesh,&mPhysics);
 
     return hasRegisteredListener;
 }
