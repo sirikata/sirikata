@@ -43,7 +43,7 @@ bool StringValidate(const Handle<Value>& val) {
 
 std::string StringExtract(const Handle<Value>& val) {
     v8::String::Utf8Value utf8val(val);
-    return std::string(*utf8val);
+    return std::string(*utf8val, utf8val.length());
 }
 
 bool NumericValidate(const Handle<Value>& val) {

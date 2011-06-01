@@ -89,7 +89,7 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
     Local<v8::Object> v8Object = args[0]->ToObject();
     String serializedObject = JSSerializer::serializeObject(v8Object);
 
-    return v8::String::New(serializedObject.c_str());
+    return v8::String::New(serializedObject.c_str(),serializedObject.length());
 }
 
 v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)

@@ -372,6 +372,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             v8::Local<v8::Object> v8Array = v8::Local<v8::Object>::Cast(prop_val);
             v8::Local<v8::Value> hiddenValue = v8Array->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
 
+
+            
             if (hiddenValue.IsEmpty())
             {
                 //means that we have not already stamped this object, and should now
@@ -395,6 +397,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         {
             v8::Local<v8::Object> v8obj = v8::Local<v8::Object>::Cast(prop_val);
             v8::Local<v8::Value> hiddenValue = v8obj->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
+
+            
             if (hiddenValue.IsEmpty())
             {
                 //means that we have not already stamped this object, and should
@@ -426,9 +430,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         }
         else if(prop_val->IsString())
         {
-          INLINE_STR_CONV(prop_val,s_value, "error decoding string in serializeObjectInternal");
-          
-          jsf_value.set_s_value(s_value);
+            INLINE_STR_CONV(prop_val,s_value, "error decoding string in serializeObjectInternal");
+            jsf_value.set_s_value(s_value);
         }
         else if(prop_val->IsNumber())
         {
@@ -469,6 +472,14 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
             JSLOG(error, "error deserializing object pointing to "<< iter->first<< ". No record of that label.");
             return false;
         }
+        // if (iter->second.name != "prototype")
+        //     iter->second.parent->Set(v8::String::New(iter->second.name.c_str(), iter->second.name.size()), finder->second);
+        // else
+        // {
+        //     std::cout<<"\nDEBUG: fixing up prototype.\n";
+        //     iter->second.parent->SetPrototype(finder->second);
+        // }
+        
         iter->second.parent->Set(v8::String::New(iter->second.name.c_str(), iter->second.name.size()), finder->second);
     }
     return true;
@@ -580,6 +591,9 @@ bool JSSerializer::deserializeObjectInternal( JSObjectScript* jsObjScript, Sirik
 
         String fieldname = jsf.name();
 
+        std::cout<<"\n\nDEBUG: deserializing name: "<<fieldname<<"\n";
+
+        
         v8::Local<v8::String> fieldkey = v8::String::New(fieldname.c_str(), fieldname.size());
         v8::Handle<v8::Value> val;
 

@@ -276,7 +276,7 @@ void JSObjectScript::printExceptionToScript(JSContextStruct* ctx, const String& 
     v8::Handle<v8::Function> printfunc = v8::Handle<v8::Function>::Cast(printval);
 
     int argc = 1;
-    v8::Handle<v8::Value> argv[1] = { v8::String::New(exc.c_str()) };
+    v8::Handle<v8::Value> argv[1] = { v8::String::New(exc.c_str(), exc.size()) };
 
     ProtectedJSCallbackFull(ctx->mContext, &sysobj, printfunc, argc, argv, NULL);
 }
@@ -785,12 +785,19 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         try {
             int em_compile_err = 0;
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
-            const char* js_script_cstr = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), em_compile_err, handleEmersonRecognitionError);
             String js_script_str;
-            if (js_script_cstr != NULL) js_script_str = String(js_script_cstr);
-            JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
 
-            source = v8::String::New(js_script_str.c_str(), js_script_str.size());
+            bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), js_script_str,em_compile_err, handleEmersonRecognitionError);
+            if (successfullyCompiled)
+            {
+                JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+                source = v8::String::New(js_script_str.c_str());
+            }
+            else
+            {
+                source = v8::String::New("");
+                JSLOG(error, "Got a compiler error in internalEval");
+            }
         }
         catch(EmersonParserException e) {
             return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
@@ -1366,7 +1373,7 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
         {
             // Adding support for the knowing the message properties too
             int argc = 3;
-            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str()) };
+            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str(), to.toString().size()) };
             TryCatch try_catch;
             invokeCallback(mContext, NULL, mEventHandlers[s]->cb, argc, argv);
 

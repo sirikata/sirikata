@@ -26,24 +26,24 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
 }
 
 
-char* emerson_compile(const char* em_script_str)
+bool emerson_compile(const char* em_script_str, std::string& toCompileTo)
 {
     FILE* no_dbg = NULL;
-    return emerson_compile(em_script_str, no_dbg);
+    return emerson_compile(em_script_str, toCompileTo,no_dbg);
 }
 
-char* emerson_compile(const char* em_script_str, FILE* dbg) {
+bool emerson_compile(const char* em_script_str, std::string& toCompileTo, FILE* dbg) {
     int errorNum;
-    return emerson_compile(em_script_str, errorNum, dbg);
+    return emerson_compile(em_script_str,toCompileTo, errorNum, dbg);
 }
 
 // This version of the function should be called from the main compiler
 
-char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, EmersonErrorFuncType error_cb) {
-    return emerson_compile(_originalFile, em_script_str, errorNum, error_cb, NULL);
+bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo, int& errorNum, EmersonErrorFuncType error_cb) {
+    return emerson_compile(_originalFile, em_script_str, toCompileTo,errorNum, error_cb, NULL);
 }
 
-char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg)
+bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo, int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg)
 {
   _emersonInfo = new EmersonInfo();
   if(_originalFile.size() > 0 )
@@ -58,16 +58,16 @@ char* emerson_compile(std::string _originalFile, const char* em_script_str, int&
 
   _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
 
-  return emerson_compile(em_script_str, errorNum, dbg);
+  return emerson_compile(em_script_str, toCompileTo,errorNum, dbg);
 }
 
-char* emerson_compile(const char* em_script_str, int& errorNum) {
-    return emerson_compile(em_script_str, errorNum, NULL);
+bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum) {
+    return emerson_compile(em_script_str, toCompileTo,errorNum, NULL);
 }
 
 // This is mor basic version of the function. Should be called from else where
 
-char* emerson_compile(const char* em_script_str, int& errorNum, FILE* dbg)
+bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum, FILE* dbg)
 {
     if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
@@ -81,8 +81,9 @@ char* emerson_compile(const char* em_script_str, int& errorNum, FILE* dbg)
     */
     pANTLR3_UINT8 str = (pANTLR3_UINT8)em_script_str;
     pANTLR3_INPUT_STREAM input = antlr3NewAsciiStringCopyStream(str, strlen(em_script_str), NULL);
-    char* js_str;
-
+//    char* js_str;
+    bool returner = false;
+    
     pEmersonLexer lxr;
     pEmersonParser psr;
     pANTLR3_COMMON_TOKEN_STREAM tstream;
@@ -161,9 +162,15 @@ char* emerson_compile(const char* em_script_str, int& errorNum, FILE* dbg)
 
         treePsr= EmersonTreeNew(nodes);
         _treeParser = treePsr;
-        js_str = (char*)treePsr->program(treePsr)->chars;
 
-        if (dbg != NULL) fprintf(dbg, "The generated code is \n %s \n", js_str);
+        
+        ANTLR3_STRING_struct* mString = treePsr->program(treePsr);
+        char* intermediate = (char*)mString->chars;
+        int sizeCode = mString->size;
+        toCompileTo = std::string(intermediate,sizeCode);
+        returner = true;
+        
+        if (dbg != NULL) fprintf(dbg, "The generated code is \n %s \n", toCompileTo.c_str());
 
         nodes   ->free  (nodes);	    nodes	= NULL;
         treePsr ->free  (treePsr);	    treePsr	= NULL;
@@ -181,5 +188,6 @@ char* emerson_compile(const char* em_script_str, int& errorNum, FILE* dbg)
     input->close (input);
     input= NULL;
 
-    return js_str;
+
+    return returner;
 }
