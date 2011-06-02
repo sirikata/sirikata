@@ -173,6 +173,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     instantiateAllObjects(proxyManager);
 
     mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
+    mMouseHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
     return true;
 }
 
@@ -181,6 +182,10 @@ void OgreSystem::handleUIReady() {
     // end up with more, we may need to make this just set a flag and then check
     // if all conditions are met.
     if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
+}
+
+void OgreSystem::handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom) {
+    SILOG(ogre, fatal, "UI requesting viewport resize to (" << left << ", " << top << ") - (" << right << ", " << bottom << ").");
 }
 
 void OgreSystem::windowResized(Ogre::RenderWindow *rw) {

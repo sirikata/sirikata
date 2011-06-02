@@ -86,7 +86,28 @@ sirikata.ui.window = function(selector, params) {
     }
 
     real_params.parent = '#left-dock';
+    var old_resize = real_params.resize;
+    real_params.sizeupdate = function(event, ui) {
+        if (old_resize) old_resize(event, ui);
+        sirikata.ui.window._recomputeViewport();
+    };
     this._ui = win_data.dockablewindow(real_params);
+};
+
+// Internal helper method. Recomputes and informs the host C++ code
+// what the size of the valid 'viewport' currently is, effectively the
+// rectangular region not covered by UI elements. This obviously does
+// not include floating elements, only the menu + docks.
+sirikata.ui.window._recomputeViewport = function() {
+    var dock_wid = 0;
+    $('#left-dock').children(':visible').each(function() {
+                                        if ($(this).width() > dock_wid) dock_wid = $(this).width();
+                                    });
+    var tot_wid = $(window).width();
+    var tot_height = $(window).height();
+    // FIXME get rid of menu height as well as the dock
+    // setViewport(left, top, right, bottom)
+    sirikata.event('__setViewport', dock_wid.toString(), (0).toString(), tot_wid.toString(), tot_height.toString());
 };
 
 sirikata.ui.window.prototype.show = function() {

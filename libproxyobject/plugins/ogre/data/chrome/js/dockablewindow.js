@@ -551,6 +551,8 @@ $.widget("ui.dockablewindow", {
             }
             this.uiDockableWindow.appendTo(this._getParent());
             this._position(this.options.position);
+
+            this._trigger('sizeupdate');
         },
 
         _minHeight: function() {

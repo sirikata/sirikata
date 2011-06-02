@@ -42,6 +42,8 @@
 #include "berkelium/ScriptVariant.hpp"
 #endif
 
+#include <boost/lexical_cast.hpp>
+
 using namespace Ogre;
 
 namespace Sirikata {
@@ -223,6 +225,7 @@ void WebView::initializeWebView(
                              L"chrome.send_.apply(this, [n].concat(args));\n"
                              L"};"));
     bind("__ready", std::tr1::bind(&WebView::handleReadyCallback, this, _1, _2));
+    bind("__setViewport", std::tr1::bind(&WebView::handleSetUIViewport, this, _1, _2));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
         webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
@@ -232,12 +235,27 @@ void WebView::initializeWebView(
 #endif
 }
 
+void WebView::setUpdateViewportCallback(UpdateViewportCallback cb) {
+    mUpdateViewportCallback = cb;
+}
+
 void WebView::setReadyCallback(ReadyCallback cb) {
     mReadyCallback = cb;
 }
 
 void WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
     if (mReadyCallback) mReadyCallback();
+}
+
+void WebView::handleSetUIViewport(WebView* wv, const JSArguments& args) {
+    assert(args.size() == 4);
+
+    int32 left = boost::lexical_cast<int32>(String(args[0].begin()));
+    int32 top = boost::lexical_cast<int32>(String(args[1].begin()));
+    int32 right = boost::lexical_cast<int32>(String(args[2].begin()));
+    int32 bottom = boost::lexical_cast<int32>(String(args[3].begin()));
+
+    if (mUpdateViewportCallback) mUpdateViewportCallback(left, top, right, bottom);
 }
 
 void WebView::userLog(WebView* wv, const JSArguments& args) {

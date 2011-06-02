@@ -91,6 +91,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 	public:
 
             typedef std::tr1::function<void()> ReadyCallback;
+            typedef std::tr1::function<void(int32 left, int32 top, int32 right, int32 bottom)> UpdateViewportCallback;
 
 		/**
 		* Loads a URL into the main frame.
@@ -117,6 +118,8 @@ class SIRIKATA_OGRE_EXPORT WebView
 		* @param javascript The Javascript to evaluate/execute.
 		*/
 		void evaluateJS(const std::string& javascript);
+
+                void setUpdateViewportCallback(UpdateViewportCallback cb);
 
                 void setReadyCallback(ReadyCallback cb);
 
@@ -486,6 +489,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 		Ogre::FilterOptions texFiltering;
 		std::pair<std::string, std::string> maskImageParameters;
 
+                UpdateViewportCallback mUpdateViewportCallback;
                 ReadyCallback mReadyCallback;
 
 		friend class WebViewManager;
@@ -567,6 +571,11 @@ class SIRIKATA_OGRE_EXPORT WebView
          * sirikata.event('__ready') is triggered from within the page.
          */
         void handleReadyCallback(WebView* wv, const JSArguments& args);
+
+        /** Handle callback from page indicating what portion of the screen
+         *  should be drawn to, i.e. the region unobscured by UI elements.
+         */
+        void handleSetUIViewport(WebView* wv, const JSArguments& args);
 
         /** Pass user logging request on to logging system. */
         void userLog(WebView* wv, const JSArguments& args);
