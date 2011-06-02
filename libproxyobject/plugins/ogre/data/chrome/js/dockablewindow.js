@@ -522,17 +522,17 @@ $.widget("ui.dockablewindow", {
         _updateDock: function() {
             // Make sure we have classes setup properly
             this.uiDockableWindow.removeClass("ui-dockablewindow-docked ui-dockablewindow-undocked");
-            if (this.options.docked) {
+            if (this.options.docked)
                 this.uiDockableWindow.addClass("ui-dockablewindow-docked");
-                this._setOption('width', $(this._getParent()).width());
-            }
             else
                 this.uiDockableWindow.addClass("ui-dockablewindow-undocked");
 
-            // NOTE: This is critical! The dragger ends up setting the
-            // position attribute directly and if we don't clear it,
-            // then it will get stuck in absolute positioning.
-            this.uiDockableWindow.css('position', '');
+            // note this happens after the classes are added so ui.js
+            // can figure out the right width for the dock.
+            this._trigger('startDockUpdate');
+
+            if (this.options.docked)
+                this._setOption('width', $(this._getParent()).width());
 
             // Make sure we've got parents setup properly for drag + resize
             if (this.options.draggable && $.fn.draggable) {
@@ -545,14 +545,17 @@ $.widget("ui.dockablewindow", {
                 this._makeResizable();
             }
 
+            // NOTE: This is critical! The dragger ends up setting the
+            // position attribute directly and if we don't clear it,
+            // then it will get stuck in absolute positioning.
+            this.uiDockableWindow.css('position', '');
+
             // Reparent and update position
             if (self.overlay) {
                 self.overlay.appendTo(this._getParent());
             }
             this.uiDockableWindow.appendTo(this._getParent());
             this._position(this.options.position);
-
-            this._trigger('sizeupdate');
         },
 
         _minHeight: function() {

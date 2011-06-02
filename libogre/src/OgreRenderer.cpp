@@ -460,6 +460,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     }
     try {
         mSceneManager=getRoot()->createSceneManager(ogreSceneManager->as<String>());
+        mOverlaySceneManager=getRoot()->createSceneManager(Ogre::ST_GENERIC, "overlay");
     }catch (Ogre::Exception &e) {
         if (e.getNumber()==Ogre::Exception::ERR_ITEM_NOT_FOUND) {
             SILOG(ogre,warning,"Cannot find ogre scene manager: "<<ogreSceneManager->as<String>());
@@ -598,6 +599,9 @@ OgreRenderer::~OgreRenderer() {
     }
     if (mSceneManager) {
         Ogre::Root::getSingleton().destroySceneManager(mSceneManager);
+    }
+    if (mOverlaySceneManager) {
+        Ogre::Root::getSingleton().destroySceneManager(mOverlaySceneManager);
     }
 
     for (std::list<OgreRenderer*>::iterator iter=sActiveOgreScenes.begin()

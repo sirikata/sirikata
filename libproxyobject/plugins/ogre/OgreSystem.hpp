@@ -106,6 +106,7 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
 public:
 
     ProxyCamera *mPrimaryCamera;
+    Camera* mOverlayCamera;
 
     // For classes that only have access to OgreSystem and not a Context
     Time simTime();

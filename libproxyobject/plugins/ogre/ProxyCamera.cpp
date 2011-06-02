@@ -38,8 +38,8 @@
 namespace Sirikata {
 namespace Graphics {
 
-ProxyCamera::ProxyCamera(OgreRenderer *scene, ProxyEntity* follow)
- : Camera(scene, ogreCameraName(follow->id()))
+ProxyCamera::ProxyCamera(OgreRenderer *scene, Ogre::SceneManager* scenemgr, ProxyEntity* follow)
+ : Camera(scene, scenemgr, ogreCameraName(follow->id()))
 {
     reparent(follow);
 }

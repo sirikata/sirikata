@@ -62,6 +62,7 @@ namespace Graphics {
 OgreSystem::OgreSystem(Context* ctx)
  : OgreRenderer(ctx),
    mPrimaryCamera(NULL),
+   mOverlayCamera(NULL),
    mOnReadyCallback(NULL)
 {
     increfcount();
@@ -185,7 +186,8 @@ void OgreSystem::handleUIReady() {
 }
 
 void OgreSystem::handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom) {
-    SILOG(ogre, fatal, "UI requesting viewport resize to (" << left << ", " << top << ") - (" << right << ", " << bottom << ").");
+    if (mPrimaryCamera)
+        mPrimaryCamera->setViewportDimensions(left, top, right, bottom);
 }
 
 void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
@@ -212,9 +214,13 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
             mPrimaryCamera->reparent(mesh);
         }
         else {
-            ProxyCamera* cam = new ProxyCamera(this, mesh);
+            assert(mOverlayCamera == NULL);
+            mOverlayCamera = new Camera(this, getOverlaySceneManager(), "overlay_camera");
+            mOverlayCamera->attach("", 0, 0, Vector4f(0, 0, 0, 0), 1);
+
+            ProxyCamera* cam = new ProxyCamera(this, getSceneManager(), mesh);
             cam->initialize();
-            cam->attach("", 0, 0, mBackgroundColor);
+            cam->attach("", 0, 0, mBackgroundColor, 0);
             attachCamera("", cam);
             // Only store as primary camera now because doing it earlier loops back
             // to detachCamera, which then *removes* it as primary camera. It does
@@ -394,8 +400,8 @@ bool OgreSystem::renderOneFrame(Task::LocalTime t, Duration frameTime) {
         // HACK: WebViewManager is static, but points to a RenderTarget! If OgreRenderer dies, we will crash.
         static bool webViewInitialized = false;
         if(!webViewInitialized) {
-            if (mPrimaryCamera) {
-                WebViewManager::getSingleton().setDefaultViewport(mPrimaryCamera->getViewport());
+            if (mOverlayCamera) {
+                WebViewManager::getSingleton().setDefaultViewport(mOverlayCamera->getViewport());
                 webViewInitialized = true;
             }
             // else, keep waiting for a camera to appear (may require connecting to a space).

@@ -86,9 +86,10 @@ sirikata.ui.window = function(selector, params) {
     }
 
     real_params.parent = '#left-dock';
-    var old_resize = real_params.resize;
-    real_params.sizeupdate = function(event, ui) {
-        if (old_resize) old_resize(event, ui);
+    real_params.startDockUpdate = function() {
+        sirikata.ui.window._recomputeViewport();
+    };
+    real_params.resize = function() {
         sirikata.ui.window._recomputeViewport();
     };
     this._ui = win_data.dockablewindow(real_params);
@@ -98,17 +99,44 @@ sirikata.ui.window = function(selector, params) {
 // what the size of the valid 'viewport' currently is, effectively the
 // rectangular region not covered by UI elements. This obviously does
 // not include floating elements, only the menu + docks.
-sirikata.ui.window._recomputeViewport = function() {
+sirikata.ui.window._recomputeViewport = function(added, removed) {
     var dock_wid = 0;
-    $('#left-dock').children(':visible').each(function() {
-                                        if ($(this).width() > dock_wid) dock_wid = $(this).width();
-                                    });
+    // FIXME the update logic is off here. We should use
+    // $('#left-dock').children(':visible') but in order to get this
+    // right we need to deal with the added/removed docked item. So
+    // instead, we just look for any docked items and have the
+    // dockable windows invoke startDockUpdate after setting up the
+    // classes so that all the docked windows will be labelled. Note
+    // that this requires that there only be ONE dock.
+    $('.ui-dockablewindow-docked :visible').each(function() {
+                                           if ($(this).width() > dock_wid && this !== removed) dock_wid = $(this).width();
+                                       });
+    if (added && $(added).width() > dock_wid) dock_wid = $(added).width();
+
     var tot_wid = $(window).width();
     var tot_height = $(window).height();
     // FIXME get rid of menu height as well as the dock
     // setViewport(left, top, right, bottom)
     sirikata.event('__setViewport', dock_wid.toString(), (0).toString(), tot_wid.toString(), tot_height.toString());
+
+    // Also set the dock's width since we can't easily get it to hide
+    // with nothing in it but cover the full height of the screen when
+    // something is in it using only CSS. Or at least I can't figure
+    // out how...
+    $('#left-dock').width(dock_wid);
 };
+
+$(document).ready(
+    function() {
+        $(window).resize(function() {
+                             sirikata.ui.window._recomputeViewport();
+                         }
+                        );
+
+        $('#left-dock').height( $(window).height() - 20);
+        $('#left-dock').width(0);
+    }
+);
 
 sirikata.ui.window.prototype.show = function() {
     this._ui.dockablewindow('open');

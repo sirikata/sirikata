@@ -49,11 +49,12 @@ private:
     Quaternion mLastGoalOrientation;
     BoundingSphere3f mLastGoalBounds;
 public:
-    ProxyCamera(OgreRenderer *scene, ProxyEntity* follow);
+    ProxyCamera(OgreRenderer *scene, Ogre::SceneManager* scenemgr, ProxyEntity* follow);
     ~ProxyCamera();
 
     ProxyEntity* following() const;
 
+    virtual bool haveGoal() { return true; }
     virtual Vector3d getGoalPosition();
     virtual Quaternion getGoalOrientation();
     virtual BoundingSphere3f getGoalBounds();

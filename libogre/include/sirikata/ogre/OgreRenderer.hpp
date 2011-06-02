@@ -95,6 +95,10 @@ public:
         return mSceneManager;
     }
 
+    Ogre::SceneManager* getOverlaySceneManager() {
+        return mOverlaySceneManager;
+    }
+
     Ogre::RenderTarget* getRenderTarget() {
         return mRenderTarget;
     }
@@ -206,6 +210,7 @@ public:
 
     SDLInputManager *mInputManager;
     Ogre::SceneManager *mSceneManager;
+    Ogre::SceneManager *mOverlaySceneManager;
     bool mOgreOwnedRenderWindow;
 
     Ogre::RenderTarget *mRenderTarget;

@@ -54,6 +54,7 @@ public:
 
 protected:
     OgreRenderer *const mScene;
+    Ogre::SceneManager* mOgreSceneManager;
     Ogre::Camera* mOgreCamera;
     Ogre::SceneNode *mSceneNode;
 
@@ -63,22 +64,25 @@ protected:
     Mode mMode;
     Vector3d mOffset;
 
+    float32 mViewportLeft, mViewportTop, mViewportRight, mViewportBottom;
 public:
-    Camera(OgreRenderer *scene, const String& name);
+    Camera(OgreRenderer *scene, Ogre::SceneManager* scenemgr, const String& name);
     virtual ~Camera();
 
     // Require an additional initialize call in order to use virtual functions
     // for position, orientation
     void initialize();
 
-    virtual Vector3d getGoalPosition() = 0;
-    virtual Quaternion getGoalOrientation() = 0;
-    virtual BoundingSphere3f getGoalBounds() = 0;
+    virtual bool haveGoal() { return false; }
+    virtual Vector3d getGoalPosition() { return Vector3d(); }
+    virtual Quaternion getGoalOrientation() { return Quaternion(); }
+    virtual BoundingSphere3f getGoalBounds() { return BoundingSphere3f(); }
 
     void attach (const String&renderTargetName,
         uint32 width,
         uint32 height,
-        Vector4f back_color);
+        Vector4f back_color,
+        int zorder);
 
     void detach();
 
@@ -92,6 +96,9 @@ public:
     Ogre::Camera* getOgreCamera() {
         return mOgreCamera;
     }
+
+    void setViewportDimensions(int32 left, int32 top, int32 right, int32 bottom);
+    void setViewportDimensions(float32 left, float32 top, float32 right, float32 bottom);
 
     virtual void setMode(Mode m);
 
