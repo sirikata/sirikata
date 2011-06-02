@@ -30,10 +30,42 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
 
 
 
+v8::Handle<v8::Value> strToUint16Str(const String& toSerialize)
+{
+    uint16* toStoreArray = new uint16[toSerialize.size()];
+
+    for (String::size_type s=0; s < toSerialize.size(); ++s)
+        toStoreArray[s] = (uint16)(toSerialize[s]);
+
+    v8::Handle<v8::Value> returner = v8::String::New(toStoreArray,toSerialize.size());
+
+    delete toStoreArray;
+    return returner;
+}
+
+
+String uint16StrToStr(v8::Handle<v8::String> toDeserialize)
+{
+    uint16* toReadArray = new uint16[toDeserialize->Length()];
+    char* binArray = new char[toDeserialize->Length()];
+    
+    toDeserialize->Write(toReadArray,0, toDeserialize->Length());
+
+    for (int s=0; s < toDeserialize->Length(); ++s)
+        binArray[s] = (char)(toReadArray[s]);
+
+    String returner (binArray, toDeserialize->Length());
+
+    delete toReadArray;
+    delete binArray;
+    return returner;
+}
+
+
+
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)
 {
     v8::String::Utf8Value str(toDecode);
-
     //can decode string
     if (*str)
     {

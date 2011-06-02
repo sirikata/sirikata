@@ -150,13 +150,11 @@ bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver
 
 v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeserialize)
 {
-    MemoryReference membod(toDeserialize);
     Sirikata::JS::Protocol::JSMessage js_msg;
-    bool parsed = js_msg.ParseFromArray(membod.data(), membod.size());
+    bool parsed = js_msg.ParseFromString(toDeserialize);
 
     if (!parsed)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error deserializing string.")));
-
 
     v8::Local<v8::Object> obj = v8::Object::New();
     bool deserializedSuccess = JSSerializer::deserializeObject(jsObjScript, js_msg,obj);

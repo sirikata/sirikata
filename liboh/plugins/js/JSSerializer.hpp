@@ -42,6 +42,8 @@ typedef ObjectMap::iterator ObjectMapIter;
 typedef std::map<int32, LoopedObjPointer> FixupMap;
 typedef FixupMap::iterator FixupMapIter;
 
+void debug_printSerialized(Sirikata::JS::Protocol::JSMessage jm, String prepend);
+
 
 class JSSerializer
 {

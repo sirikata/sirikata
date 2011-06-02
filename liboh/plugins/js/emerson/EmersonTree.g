@@ -1528,15 +1528,7 @@ propertyName
 	: Identifier {  APP((const char*)$Identifier.text->chars); }
 	| StringLiteral
           {
-              if (insideWhenPred)
-              {
-                  std::string escapedSequence = emerson_escapeSingleQuotes((const char*) $StringLiteral.text->chars);
-                  APP((const char*) escapedSequence.c_str());
-              }
-              else
-              {
-                  APP((const char*)$StringLiteral.text->chars);  
-              }
+             APP((const char*)$StringLiteral.text->chars);  
           }
 	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;
@@ -1549,22 +1541,17 @@ literal
 	| StringLiteral
           {
               const char* input = (const char*)$StringLiteral.text->chars;
-              if (insideWhenPred)
-              {
-                  std::string escapedSequence = emerson_escapeSingleQuotes(input);
-                  input = escapedSequence.c_str();
-              }
+              int len = $StringLiteral.text->size;
               char firstChar = *input;
               if(firstChar == '@')
               {
-                std::string str_input = input;
+                std::string str_input(input,len);
                 str_input = str_input.substr(1, str_input.size() -2);
                 std::string escaped = emerson_escapeMultiline(str_input.c_str());
                 APP("\"");
                 APP(escaped.c_str());
                 APP("\"");
               }
-              
               else APP((const char*)$StringLiteral.text->chars);
         
         }

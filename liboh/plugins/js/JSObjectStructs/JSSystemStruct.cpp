@@ -37,7 +37,6 @@ v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& p
 }
 
 
-
 JSSystemStruct::~JSSystemStruct()
 {
 }

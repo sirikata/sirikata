@@ -253,7 +253,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getPosition()
 {
     String errorMsg;
     if (! passErrorChecks(errorMsg,"getPosition"))
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str(), errorMsg.size())));
 
 
     v8::Handle<v8::Context>curContext = v8::Context::GetCurrent();
@@ -264,7 +264,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getTransTime()
 {
     String errorMsg;
     if (! passErrorChecks(errorMsg,"getTransTime"))
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str())));
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMsg.c_str(),errorMsg.size())));
 
 
     uint64 transTime = mLocation.updateTime().raw();

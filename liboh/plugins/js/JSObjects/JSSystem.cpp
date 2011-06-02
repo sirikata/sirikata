@@ -77,19 +77,28 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
+
 v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
 {
+    v8::HandleScope handle_scope;
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling serialize.  Must pass in at least one argument to be serialized.")));
 
     if (!args[0]->IsObject())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must pass in an *object* to serialize.")));
 
-    v8::HandleScope handle_scope;
     Local<v8::Object> v8Object = args[0]->ToObject();
-    String serializedObject = JSSerializer::serializeObject(v8Object);
+    String stringifiedObject = JSSerializer::serializeObject(v8Object);
+    
+    String errorMessage = "Error decoding error message when serializing object";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
-    return v8::String::New(serializedObject.c_str());
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    v8::Handle<v8::Value> returner = strToUint16Str(stringifiedObject);
+    
+    return handle_scope.Close(returner);
 }
 
 v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
@@ -97,23 +106,25 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
     v8::HandleScope handle_scope;
 
     if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling deserialize.  Must pass in a string to be deserialized.")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling deserialize.  Must pass in an object to be deserialized.")));
 
-    String errMsg = "Error.  Must pass in a *string* to deserialize.";
-    String decodedVal;
-    bool strDecoded = decodeString(args[0], decodedVal, errMsg);
 
-    if (! strDecoded)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+    if (! args[0]->IsString())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling deserialize.  First argument to deserialize should be string")));
 
-    errMsg = "Error decoding system struct when deserializing. ";
+
+    String serString = uint16StrToStr(args[0]->ToString());
+
+    String errMsg = "Error decoding system struct when deserializing. ";
     JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
 
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
-    return jssys->deserializeObject(decodedVal);
+    return jssys->deserializeObject(serString);
 }
+
+
 
 
 //address of visible watching;

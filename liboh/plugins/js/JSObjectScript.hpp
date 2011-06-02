@@ -97,7 +97,6 @@ public:
     //connection and disconnection events.
     void handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres);
 
-
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx);
 
 

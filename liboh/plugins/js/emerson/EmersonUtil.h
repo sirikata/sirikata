@@ -15,14 +15,15 @@ extern "C" {
 
 
 pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree);
-char* emerson_compile(const char* em_script_str);
-char* emerson_compile(const char* em_script_str, FILE* dbg);
-char* emerson_compile(const char*, int& errorNum);
-char* emerson_compile(const char*, int& errorNum, FILE* dbg);
+
+bool emerson_compile(const char* em_script_str,std::string& toCompileTo);
+bool emerson_compile(const char* em_script_str,std::string& toCompileTo, FILE* dbg);
+bool emerson_compile(const char*,std::string& toCompileTo, int& errorNum);
+bool emerson_compile(const char*,std::string& toCompileTo, int& errorNum, FILE* dbg);
 
 typedef void (*EmersonErrorFuncType)(struct ANTLR3_BASE_RECOGNIZER_struct*, pANTLR3_UINT8*);
-char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, EmersonErrorFuncType error_cb);
-char* emerson_compile(std::string _originalFile, const char* em_script_str, int& errorNum, EmersonErrorFuncType error_cb, FILE* dbg);
+bool emerson_compile(std::string _originalFile,const char* em_script_str,std::string& toCompileTo, int& errorNum, EmersonErrorFuncType error_cb);
+bool emerson_compile(std::string _originalFile, const char* em_script_str,std::string& toCompileTo, int& errorNum, EmersonErrorFuncType error_cb, FILE* dbg);
 
 
 /*
