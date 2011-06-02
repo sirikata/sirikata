@@ -37,11 +37,6 @@ v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& p
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::serializeObject(const String& toSerialize)
-{
-    return associatedContext->serializeObject(toSerialize);
-}
-
 JSSystemStruct::~JSSystemStruct()
 {
 }

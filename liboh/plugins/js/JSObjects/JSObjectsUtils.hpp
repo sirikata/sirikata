@@ -28,9 +28,11 @@ void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMe
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 
 
-v8::Handle<v8::Value> createSerializedObject(const String& toSerialize, JSContextStruct* ctx);
-bool serializedObjToString(v8::Handle<v8::Value> serializedVal,String& result,  String& errMsg);
+v8::Handle<v8::Value> utilSerialize(const String& toSerialize);
 
+
+String uint16StrToStr(v8::Handle<v8::String> toDeserialize);
+v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 
 /**
    @param toConvert v8::Handle<v8::Value> that we will try to decode as a uint32

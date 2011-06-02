@@ -53,11 +53,6 @@ v8::Handle<v8::Value> JSContextStruct::restorePresence(PresStructRestoreParams& 
     return jsObjScript->restorePresence(psrp,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::serializeObject(const String& toSerialize)
-{
-    return createSerializedObject(toSerialize,this);
-}
-
 
 //performs the initialization and population of util object, system object,
 //and system object's presences array.
