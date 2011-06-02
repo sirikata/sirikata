@@ -36,6 +36,31 @@
  * on. Therefore, the sirikata global object already exists.
  */
 
+// This provides a dummy implementation of the basic utilities. This is
+// incredibly useful for debugging -- it allows you to run within a normal
+// browser and use their development tools.
+if (typeof(sirikata) === "undefined") {
+    sirikata = {};
+    __sirikata = sirikata;
+    sirikata.version = {
+        major: 0,
+        minor: 0,
+        revision: 0,
+        commit: 'a000000000000000000000',
+        string: '0.0.0'
+    };
+    sirikata.__event = function() {
+        if (console && console.log && typeof(console.log) === "function") {
+            console.log.apply(console, arguments);
+        }
+    };
+    sirikata.event = function() {
+        var args = [];
+        for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
+        sirikata.__event.apply(this, args);
+    };
+}
+
 /** Log data to the console. The first parameter should be a log
  * level, i.e. 'fatal', 'error', 'warn', 'debug', 'info', etc. The
  * remaining arguments are converted to strings and printed, separated
