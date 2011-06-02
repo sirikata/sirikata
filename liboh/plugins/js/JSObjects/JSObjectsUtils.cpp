@@ -28,12 +28,129 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
     return true;
 }
 
+v8::Handle<v8::Value> createSerializedObject(const String& toSerialize, JSContextStruct* ctx)
+{
+    v8::HandleScope handleScope;
+    v8::Context::Scope context_scope(ctx->mContext);
+
+    v8::Local<v8::Object> returner = v8::Object::New();
+    returner->Set(v8::String::New("length"), v8::Integer::New(toSerialize.size()));
+    v8::Local<v8::Array> dataArray = v8::Array::New();
+
+    uint32 compressedData = 0;
+    String::size_type s = 0;
+    for ( ; s + 4 < toSerialize.size(); s+=4)
+    {
+        compressedData  = 0;
+        compressedData  = htonl(((uint32)toSerialize[s+3])  << 24);
+        compressedData += htonl(((uint32)toSerialize[s+2])  << 16);
+        compressedData += htonl(((uint32)toSerialize[s+1])  <<  8);
+        compressedData += htonl((uint32)toSerialize[s]);
+        dataArray->Set(v8::Uint32::New(s/4), v8::Uint32::New(compressedData));
+    }
+
+    if (toSerialize.size() % 4 != 0)
+    {
+        compressedData = 0;
+        for (; s < toSerialize.size(); ++s)
+            compressedData += htonl(((uint32)toSerialize[s]) << (s*8));
+        
+
+        
+        dataArray->Set(v8::Uint32::New(dataArray->Length()), v8::Uint32::New(compressedData));
+    }
+
+    returner->Set(v8::String::New("data"), dataArray);
+    return handleScope.Close(returner);
+}
+
+bool serializedObjToString(v8::Handle<v8::Value> serializedVal,String& result,  String& errMsg)
+{
+    if (!serializedVal->IsObject())
+    {
+        errMsg += "Error in serializedObjToString.  Must pass in an object.";
+        return false;
+    }
+
+    v8::Handle<v8::Object> serializedObj = serializedVal->ToObject();
+
+    //check object fields
+    if (! serializedObj->Has(v8::String::New("data")))
+    {
+        errMsg += "Error in serializedObjToString.  Passed in object must have data field.";
+        return false;
+    }
+
+    v8::Handle<v8::Value> datVal = serializedObj->Get(v8::String::New("data"));
+    if (! datVal->IsArray())
+    {
+        errMsg += "Error in serializedObjToString.  Passed in object must have a data field that's an array.";
+        return false;
+    }
+
+    v8::Handle<v8::Array> dataArray = v8::Handle<v8::Array>::Cast(datVal);
+
+    
+    if (! serializedObj->Has(v8::String::New("length")))
+    {
+        errMsg += "Error in serializedObjToString.  Passed in object must have length field.";
+        return false;
+    }
+
+
+    INLINE_DECODE_UINT_32(serializedObj->Get(v8::String::New("length")), len);
+    if (len == 0)
+    {
+        errMsg += "No data";
+        return false;
+    }
+
+    if (len > (dataArray->Length()*4))
+    {
+        errMsg += "Mismatched lengths in serializedObjToString";
+        return false;
+    }
+    
+    char* toCopyTo    = new char[len];
+    int toCopyToIndex = 0;
+    
+    for (uint32 s = 0; s < dataArray->Length(); ++s)
+    {
+        uint32 newVal;
+        bool decodeSuccessful = decodeUint32(dataArray->Get(v8::Uint32::New(s)), newVal,errMsg);
+        if (! decodeSuccessful)
+        {
+            delete toCopyTo;
+            return false;
+        }
+
+        newVal = ntohl(newVal);
+
+        for (int t = 0; t < sizeof(uint32); ++t)
+        {
+            //earliest characters are in the high order bits of the uint32.
+            //left shift clears out higher-order bytes, and right-shift moves
+            //range back so that bytes-of interest are in lower 8.
+            toCopyTo[toCopyToIndex] = (char)((newVal<<(24 - t*8))>>24);
+            ++toCopyToIndex;
+        
+            if (toCopyToIndex >= len)
+                break;
+        }
+    }
+
+    result = String(toCopyTo, len);
+    return true;
+}
+
+
+
+
 
 
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage)
 {
     v8::String::Utf8Value str(toDecode);
-
     //can decode string
     if (*str)
     {

@@ -59,7 +59,6 @@ namespace Sirikata {
 namespace JS {
 
 
-
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
     return new JSObjectScriptManager(arguments);
 }
@@ -144,7 +143,6 @@ void JSObjectScriptManager::createTemplates()
     createContextTemplate();
     createContextGlobalTemplate();
 }
-
 
 
 /*

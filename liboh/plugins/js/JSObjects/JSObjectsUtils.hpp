@@ -27,6 +27,27 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMessage);
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 
+
+v8::Handle<v8::Value> createSerializedObject(const String& toSerialize, JSContextStruct* ctx);
+bool serializedObjToString(v8::Handle<v8::Value> serializedVal,String& result,  String& errMsg);
+
+
+/**
+   @param toConvert v8::Handle<v8::Value> that we will try to decode as a uint32
+   @param whereWriteTo should be the name of the uint32 that we want to decode
+   the uint32 to.  Shouldn't already be declared.  Gets declared in the
+   following #define.
+ */
+#define INLINE_DECODE_UINT_32(toConvert,whereWriteTo)     \
+    uint32 whereWriteTo; \
+    { \
+        String _errMsg;                                                 \
+        if (! decodeUint32(toConvert,whereWriteTo,_errMsg))             \
+            JSLOG(error, "error.  cannot decode the uint32 in INLINE_DECODE_UINT_32"); \
+    }
+
+
+
 /**
    @param toConvert is a v8::Handle<v8::Value> that we are trying to read as a
    string

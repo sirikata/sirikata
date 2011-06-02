@@ -58,7 +58,9 @@ struct JSContextStruct : public JSSuspendable
 
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing,VisAddParams* addParams);
 
+    v8::Handle<v8::Value> serializeObject(const String& toSerialize);
 
+    
     //creates a new jseventhandlerstruct and wraps it in a js object
     //registers the jseventhandlerstruct both with this context and
     //jsobjectscript

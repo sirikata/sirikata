@@ -413,7 +413,6 @@ bool JSObjectScript::deRegisterPosAndMeshListener(SpaceObjectReference* sporef, 
 }
 
 
-
 //this is the callback that fires when proximateObject no longer receives
 //updates from loc (ie the object in the world associated with proximate object
 //is outside of querier's standing query registered to pinto).
@@ -1331,14 +1330,11 @@ void JSObjectScript::handleCommunicationMessageNewProto (const ODP::Endpoint& sr
     v8::Context::Scope context_scope(mContext->mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
 
-
     v8::Handle<v8::Object> msgSender = getMessageSender(src,dst);
     //try deserialization
 
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
-
-
 
     if (! parsed)
     {
