@@ -504,8 +504,9 @@ public:
             pass->setSpecular(ColourValue(1,1,1,1));
         }
         for (size_t i=0;i<mMat->textures.size();++i) {
-            if (mMat->textures[i].affecting==MaterialEffectInfo::Texture::OPACITY&&
-                (mMat->textures[i].uri.length()||mMat->textures[i].color.w<1.0)){
+            if (mMat->textures[i].affecting==MaterialEffectInfo::Texture::OPACITY &&
+                (mMat->textures[i].uri.length() > 0 ||
+                    (mMat->textures[i].uri.length() == 0 && mMat->textures[i].color.w<1.0))) {
                 useAlpha=true;
                 break;
             }
