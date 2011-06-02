@@ -195,6 +195,23 @@ void OgreSystem::windowResized(Ogre::RenderWindow *rw) {
     mMouseHandler->windowResized(rw->getWidth(), rw->getHeight());
 }
 
+bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, float32* oy) {
+    // x and y come in as [-1, 1], get it to [0,1] to match the normal viewport
+    x = (x + 1.0f)/2.0f;
+    y = (y + 1.0f)/2.0f;
+    // Subtract out the offset to the subframe
+    x -= mPrimaryCamera->getViewport()->getLeft();
+    y -= mPrimaryCamera->getViewport()->getTop();
+    // And scale to make the new [0-1] range fit in the correct sized
+    // box
+    x /= mPrimaryCamera->getViewport()->getWidth();
+    y /= mPrimaryCamera->getViewport()->getHeight();
+    // And convert back to [-1, 1] as we set the output values
+    *ox = x * 2.f - 1.f;
+    *oy = y * 2.f - 1.f;
+    return !(*ox < -1.f || *ox > 1.f || *oy < -1.f || *ox > 1.f);
+}
+
 OgreSystem::~OgreSystem() {
     decrefcount();
     destroyMouseHandler();

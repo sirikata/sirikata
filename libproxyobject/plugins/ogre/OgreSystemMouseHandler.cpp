@@ -671,8 +671,11 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         MouseHoverEventPtr mouse_hover_ev (std::tr1::dynamic_pointer_cast<MouseHoverEvent>(inputev));
         if (mouse_hover_ev) {
             event_data["msg"] = Invokable::asAny(String("mouse-hover"));
-            event_data["x"] = Invokable::asAny(mouse_hover_ev->mX);
-            event_data["y"] = Invokable::asAny(mouse_hover_ev->mY);
+            float32 x, y;
+            bool valid = mParent->translateToDisplayViewport(mouse_hover_ev->mX, mouse_hover_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
             fillModifiers(event_data, getCurrentModifiers());
         }
     }
@@ -682,8 +685,11 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         if (mouse_press_ev) {
             event_data["msg"] = Invokable::asAny(String("mouse-press"));
             event_data["button"] = Invokable::asAny((int32)mouse_press_ev->mButton);
-            event_data["x"] = Invokable::asAny(mouse_press_ev->mX);
-            event_data["y"] = Invokable::asAny(mouse_press_ev->mY);
+            float32 x, y;
+            bool valid = mParent->translateToDisplayViewport(mouse_press_ev->mX, mouse_press_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
             fillModifiers(event_data, getCurrentModifiers());
         }
     }
@@ -693,8 +699,11 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         if (mouse_release_ev) {
             event_data["msg"] = Invokable::asAny(String("mouse-release"));
             event_data["button"] = Invokable::asAny((int32)mouse_release_ev->mButton);
-            event_data["x"] = Invokable::asAny(mouse_release_ev->mX);
-            event_data["y"] = Invokable::asAny(mouse_release_ev->mY);
+            float32 x, y;
+            bool valid = mParent->translateToDisplayViewport(mouse_release_ev->mX, mouse_release_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
             fillModifiers(event_data, getCurrentModifiers());
         }
     }
@@ -704,8 +713,11 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         if (mouse_click_ev) {
             event_data["msg"] = Invokable::asAny(String("mouse-click"));
             event_data["button"] = Invokable::asAny((int32)mouse_click_ev->mButton);
-            event_data["x"] = Invokable::asAny(mouse_click_ev->mX);
-            event_data["y"] = Invokable::asAny(mouse_click_ev->mY);
+            float32 x, y;
+            bool valid = mParent->translateToDisplayViewport(mouse_click_ev->mX, mouse_click_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
             fillModifiers(event_data, getCurrentModifiers());
         }
     }
@@ -715,8 +727,11 @@ void OgreSystemMouseHandler::delegateEvent(InputEventPtr inputev) {
         if (mouse_drag_ev) {
             event_data["msg"] = Invokable::asAny(String("mouse-drag"));
             event_data["button"] = Invokable::asAny((int32)mouse_drag_ev->mButton);
-            event_data["x"] = Invokable::asAny(mouse_drag_ev->mX);
-            event_data["y"] = Invokable::asAny(mouse_drag_ev->mY);
+            float32 x, y;
+            bool valid = mParent->translateToDisplayViewport(mouse_drag_ev->mX, mouse_drag_ev->mY, &x, &y);
+            if (!valid) return;
+            event_data["x"] = Invokable::asAny(x);
+            event_data["y"] = Invokable::asAny(y);
             event_data["dx"] = Invokable::asAny(mouse_drag_ev->deltaX());
             event_data["dy"] = Invokable::asAny(mouse_drag_ev->deltaY());
             fillModifiers(event_data, getCurrentModifiers());

@@ -161,6 +161,12 @@ public:
 
 
     virtual void windowResized(Ogre::RenderWindow *rw);
+    // Converts from the full window coordinates into coordinates for
+    // the actual display viewport (i.e. excluding the overlay
+    // regions). Note that these might be negative or greater than the
+    // width of the viewport, in which case the return value will be
+    // false.
+    bool translateToDisplayViewport(float32 x, float32 y, float32* ox, float32* oy);
 
     virtual void poll();
 
