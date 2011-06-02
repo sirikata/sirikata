@@ -3,7 +3,7 @@
 #define __SIRIKATA_JS_TIMER_STRUCT_HPP__
 
 #include "../JSUtil.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "JSContextStruct.hpp"
 #include <v8.h>
 #include <sirikata/core/network/IOTimer.hpp>
@@ -18,7 +18,7 @@ struct JSTimerStruct : public JSSuspendable
 {
 
 
-    JSTimerStruct(JSObjectScript*jsobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared);
+    JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared);
     
     ~JSTimerStruct();
 
@@ -34,7 +34,7 @@ struct JSTimerStruct : public JSSuspendable
 
     v8::Handle<v8::Value> struct_getAllData();
     
-    JSObjectScript* jsObjScript;
+    EmersonScript* emerScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
     Sirikata::Network::DeadlineTimer* mDeadlineTimer;

@@ -21,6 +21,7 @@ namespace JS {
 
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
+class EmersonScript;
 class JSPresenceStruct;
 class JSTimerStruct;
 class JSUtilObjStruct;
@@ -147,7 +148,7 @@ struct JSContextStruct : public JSSuspendable
 
     //Adds the following presence to the presence array associated with the
     //system object that is associated with this context.
-    v8::Persistent<v8::Object> addToPresencesArray(JSPresenceStruct* jspres);
+    v8::Persistent<v8::Object> addToPresencesArray(JSPresenceStruct* jspres,EmersonScript* emerscript);
 
     v8::Handle<v8::Value> clearConservePres(std::vector<JSPresenceStruct*>& jspresVec);
 
@@ -225,8 +226,11 @@ private:
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
     }
 
-
-
+#define CHECK_EMERSON_SCRIPT_ERROR(emerScriptName,errorIn,whatToCast)             \
+    EmersonScript* emerScriptName = dynamic_cast<EmersonScript*> (whatToCast); \
+    if (emerScriptName == NULL)\
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must not be in headless mode to run " #errorIn  )));
+    
 
 }; //end class
 

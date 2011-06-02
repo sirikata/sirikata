@@ -5,7 +5,6 @@
 #include "JSSystemStruct.hpp"
 #include "JSContextStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
-#include "../JSObjectScript.hpp"
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"

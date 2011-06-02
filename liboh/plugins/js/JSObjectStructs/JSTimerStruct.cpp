@@ -1,6 +1,6 @@
 
 #include "../JSUtil.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "JSTimerStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include <v8.h>
@@ -15,9 +15,9 @@ namespace JS {
 
 
 
-JSTimerStruct::JSTimerStruct(JSObjectScript*jsobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared)
+JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared)
  :JSSuspendable(),
-  jsObjScript(jsobj),
+  emerScript(eobj),
   cb(callback),
   jsContStruct(jscont),
   mDeadlineTimer(NULL),
@@ -37,7 +37,7 @@ JSTimerStruct::JSTimerStruct(JSObjectScript*jsobj,Duration dur,v8::Persistent<v8
     
     if (contID != jscont->getContextID())
     {
-        jsobj->registerFixupSuspendable(this,contID);
+        eobj->registerFixupSuspendable(this,contID);
     }
     else
     {
@@ -165,11 +165,9 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 
 void JSTimerStruct::evaluateCallback(const boost::system::error_code& error)
 {
-    //if (error != boost::asio::error::operation_aborted)
     if (! error )
-    {
-        jsObjScript->handleTimeoutContext(cb,jsContStruct);
-    }
+        emerScript->handleTimeoutContext(cb,jsContStruct);
+
 }
 
 

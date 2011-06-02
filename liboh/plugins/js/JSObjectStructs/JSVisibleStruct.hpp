@@ -13,7 +13,7 @@ namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
-class JSObjectScript;
+class EmersonScript;
 
 struct JSVisibleStruct : public JSPositionListener
 {
@@ -34,7 +34,7 @@ public:
 
 private:
 
-    JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams);
+    JSVisibleStruct(EmersonScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams);
 
 
     //these notifiers should only be called by the friend class JSVisibleStructMonitor

@@ -12,7 +12,6 @@ namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
-class JSObjectScript;
 class JSContextStruct;
 class JSEventHandlerStruct;
 class JSPresenceStruct;

@@ -34,6 +34,7 @@
 
 #include "JSObjectScriptManager.hpp"
 #include "JSObjectScript.hpp"
+#include "EmersonScript.hpp"
 
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
@@ -432,7 +433,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
 {
-    JSObjectScript* new_script = new JSObjectScript(ho, args, this);
+    EmersonScript* new_script = new EmersonScript(ho, args, this);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;
@@ -444,11 +445,6 @@ void JSObjectScriptManager::destroyObjectScript(ObjectScript*toDestroy){
     delete toDestroy;
 }
 
-//DEBUG FUNCTION.
-void JSObjectScriptManager::testPrint()
-{
-    std::cout<<"\n\nTest print for js object script manager\n\n";
-}
 
 } // namespace JS
 } // namespace JS

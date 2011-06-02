@@ -10,14 +10,13 @@ namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
-class JSObjectScript;
 class JSContextStruct;
 class JSVisibleStruct;
 class JSPresenceStruct;
 
 struct JSUtilStruct
 {
-    JSUtilStruct(JSContextStruct* jscont, JSObjectScript* jsObj);
+    JSUtilStruct(JSContextStruct* jscont);
     ~JSUtilStruct();
 
     static JSUtilStruct* decodeUtilStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -25,12 +24,8 @@ struct JSUtilStruct
     v8::Handle<v8::Value> struct_createVec3(Vector3d& toCreate );
 
 private:
-
-
-
     //associated data
     JSContextStruct* associatedContext;
-    JSObjectScript* associatedObjScr;
 };
 
 

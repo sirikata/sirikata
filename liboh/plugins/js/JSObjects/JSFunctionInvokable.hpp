@@ -13,17 +13,17 @@ namespace Sirikata
 
 namespace JS
 {
-  class JSObjectScript;
+class EmersonScript;
   class JSFunctionInvokable : public Invokable
   {
     public:
-    JSFunctionInvokable(v8::Persistent<v8::Function> _function, JSObjectScript* _script)
+    JSFunctionInvokable(v8::Persistent<v8::Function> _function, EmersonScript* _script)
     : function_(_function), script_(_script){}
 
     boost::any invoke(std::vector<boost::any>& params);
     private:
     v8::Persistent<v8::Function> function_;
-    JSObjectScript* script_;
+      EmersonScript* script_;
   };
 
 }

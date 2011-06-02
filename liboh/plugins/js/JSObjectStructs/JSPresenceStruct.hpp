@@ -52,7 +52,7 @@ struct PresStructRestoreParams
 
 
 //need to forward-declare this so that can reference this inside
-class JSObjectScript;
+class EmersonScript;
 class JSPositionListener;
 
 //note: only position and isConnected will actually set the flag of the watchable
@@ -60,14 +60,14 @@ struct JSPresenceStruct : public JSPositionListener,
                           public JSSuspendable
 {
     //isConnected is false using this: have no sporef.
-    JSPresenceStruct(JSObjectScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken);
+    JSPresenceStruct(EmersonScript* parent,v8::Handle<v8::Function> onConnected,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken);
 
     //Already have a sporef (ie, turn an entity in the world that wasn't built
     //for scripting into one that is)
-    JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
+    JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
 
     //restoration constructor
-    JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont);
+    JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont);
 
     virtual void fixupSuspendable()
     {}

@@ -4,7 +4,7 @@
 
 
 #include "JSFunctionInvokable.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "JSInvokableUtil.hpp"
 #include "JSObjectsUtils.hpp"
 

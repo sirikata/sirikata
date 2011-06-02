@@ -1,7 +1,7 @@
 
 #include <v8.h>
 #include "JSPresenceStruct.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "../JSSerializer.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
@@ -14,8 +14,8 @@ namespace JS {
 
 
 //this constructor is called when the presence associated
-JSPositionListener::JSPositionListener(JSObjectScript* script, VisAddParams* addParams)
- : jsObjScript(script),
+JSPositionListener::JSPositionListener(EmersonScript* script, VisAddParams* addParams)
+ : emerScript(script),
    sporefToListenTo(NULL),
    sporefToListenFrom(NULL),
    hasRegisteredListener(false)
@@ -117,7 +117,7 @@ bool JSPositionListener::registerAsPosAndMeshListener()
         return false;
     }
 
-    hasRegisteredListener = jsObjScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds,&mMesh,&mPhysics);
+    hasRegisteredListener = emerScript->registerPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this,&mLocation,&mOrientation,&mBounds,&mMesh,&mPhysics);
 
     return hasRegisteredListener;
 }
@@ -132,7 +132,7 @@ void JSPositionListener::deregisterAsPosAndMeshListener()
     hasRegisteredListener =false;
 
     if (sporefToListenTo != NULL)
-        jsObjScript->deRegisterPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this);
+        emerScript->deRegisterPosAndMeshListener(sporefToListenTo,sporefToListenFrom,this,this);
 
 }
 
@@ -170,7 +170,7 @@ void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation,
     if (sporefToListenFrom != NULL)
     {
         if (*sporefToListenFrom != SpaceObjectReference::null())
-            jsObjScript->checkForwardUpdate(*sporefToListenFrom,newLocation,newOrient,newBounds);
+            emerScript->checkForwardUpdate(*sporefToListenFrom,newLocation,newOrient,newBounds);
     }
 
 }
@@ -204,7 +204,7 @@ void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& n
     if (sporefToListenFrom != NULL)
     {
         if (*sporefToListenFrom != SpaceObjectReference::null())
-            jsObjScript->checkForwardUpdateMesh(*sporefToListenFrom,proxy,newMesh);
+            emerScript->checkForwardUpdateMesh(*sporefToListenFrom,proxy,newMesh);
     }
 }
 
@@ -214,7 +214,7 @@ void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale )
     if (sporefToListenFrom != NULL)
     {
         if (*sporefToListenFrom != SpaceObjectReference::null())
-            jsObjScript->checkForwardUpdate(*sporefToListenFrom,mLocation,mOrientation,mBounds);
+            emerScript->checkForwardUpdate(*sporefToListenFrom,mLocation,mOrientation,mBounds);
     }
 }
 
@@ -226,7 +226,7 @@ void JSPositionListener::onSetPhysics (ProxyObjectPtr proxy, const String& newph
 
 Vector3f JSPositionListener::getPosition()
 {
-    return mLocation.position(jsObjScript->getHostedTime());
+    return mLocation.position(emerScript->getHostedTime());
 }
 Vector3f JSPositionListener::getVelocity()
 {
@@ -240,7 +240,7 @@ Quaternion JSPositionListener::getOrientationVelocity()
 
 Quaternion JSPositionListener::getOrientation()
 {
-    return mOrientation.position(jsObjScript->getHostedTime());
+    return mOrientation.position(emerScript->getHostedTime());
 }
 
 

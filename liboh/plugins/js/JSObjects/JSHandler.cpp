@@ -4,6 +4,7 @@
 #include "JSHandler.hpp"
 #include "../JSObjectStructs/JSEventHandlerStruct.hpp"
 #include "JSFields.hpp"
+#include "../EmersonScript.hpp"
 #include <v8.h>
 
 namespace Sirikata {
@@ -17,7 +18,7 @@ v8::Handle<v8::Value> _printContents(const v8::Arguments& args)
 {
     //get the target object whose context owns it.
     //and the pattern and the callback associated with this
-    JSObjectScript* caller;
+    EmersonScript* caller;
     JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
@@ -50,7 +51,7 @@ v8::Handle<v8::Value> getAllData(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> _suspend(const v8::Arguments& args)
 {
-    JSObjectScript* caller;
+    EmersonScript* caller;
     JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
@@ -67,7 +68,7 @@ v8::Handle<v8::Value> _suspend(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> _resume(const v8::Arguments& args)
 {
-    JSObjectScript* caller;
+    EmersonScript* caller;
     JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
@@ -84,7 +85,7 @@ v8::Handle<v8::Value> _resume(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> _isSuspended(const v8::Arguments& args)
 {
-    JSObjectScript* caller;
+    EmersonScript* caller;
     JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
@@ -100,7 +101,7 @@ v8::Handle<v8::Value> _isSuspended(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> _clear(const v8::Arguments& args)
 {
-    JSObjectScript* caller;
+    EmersonScript* caller;
     JSEventHandlerStruct* handler;
     readHandler(args,caller,handler);
 
@@ -134,7 +135,7 @@ void setNullHandler(const v8::Arguments& args)
 //utility function for working with handler objects.  pass in args for a
 //call, get back the jsobjectscript that called it, and the matching pattern and
 //callback function that are associated with the handler objects.
-void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandlerStruct*& hand)
+void readHandler(const v8::Arguments& args, EmersonScript*& caller, JSEventHandlerStruct*& hand)
 {
    v8::Local<v8::Object> mHand = args.This();
 
@@ -149,7 +150,7 @@ void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHand
            v8::Handle<v8::Object>::Cast(mHand->GetPrototype())->GetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD)
        );
    void* ptr = wrapJSObj->Value();
-   caller = static_cast<JSObjectScript*>(ptr);
+   caller = static_cast<EmersonScript*>(ptr);
 
 
    //grabs the internal pattern

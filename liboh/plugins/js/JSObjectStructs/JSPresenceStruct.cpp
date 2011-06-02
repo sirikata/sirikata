@@ -1,7 +1,7 @@
 
 #include <v8.h>
 #include "JSPresenceStruct.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "../JSSerializer.hpp"
 #include "../JSLogging.hpp"
 #include "../JSObjects/JSVec3.hpp"
@@ -10,12 +10,13 @@
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
 
+
 namespace Sirikata {
 namespace JS {
 
 
 //this constructor is called when the presence associated
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent, NULL),
    JSSuspendable(),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
@@ -31,7 +32,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, v8::Handle<v8::Functi
 }
 
 
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
    mContID(ctx->getContextID()),
@@ -47,7 +48,7 @@ JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent, const SpaceObjectRefe
     JSPositionListener::registerAsPosAndMeshListener();
 }
 
-JSPresenceStruct::JSPresenceStruct(JSObjectScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
    isConnected(false),
@@ -187,7 +188,7 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 //when doing disconnecting call his
 v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
-    jsObjScript->requestDisconnect(this);
+    emerScript->requestDisconnect(this);
 
     if (isConnected)
         deregisterAsPosAndMeshListener();
@@ -235,7 +236,7 @@ void JSPresenceStruct::callConnectedCallback()
 {
     if (hasConnectedCallback)
     {
-        jsObjScript->handlePresCallback(mOnConnectedCallback,mContext,this);
+        emerScript->handlePresCallback(mOnConnectedCallback,mContext,this);
     }
 
     if (mContext != NULL)
@@ -256,13 +257,13 @@ void JSPresenceStruct::clearPreviousConnectedCB()
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOrientation)
 {
-    jsObjScript->setOrientationFunction(sporefToListenTo,newOrientation);
+    emerScript->setOrientationFunction(sporefToListenTo,newOrientation);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion newOrientationVel)
 {
-    jsObjScript->setOrientationVelFunction(sporefToListenTo,newOrientationVel);
+    emerScript->setOrientationVelFunction(sporefToListenTo,newOrientationVel);
     return v8::Undefined();
 }
 
@@ -270,28 +271,28 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion new
 
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
-    jsObjScript->setQueryAngleFunction(sporefToListenTo, new_qa);
+    emerScript->setQueryAngleFunction(sporefToListenTo, new_qa);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {
-    jsObjScript->setVisualScaleFunction(sporefToListenTo, new_scale);
+    emerScript->setVisualScaleFunction(sporefToListenTo, new_scale);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 {
-    jsObjScript->setPositionFunction(sporefToListenTo, newPos);
+    emerScript->setPositionFunction(sporefToListenTo, newPos);
     return v8::Undefined();
 }
 
 
 v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
-    return jsObjScript->getPhysicsFunction(sporefToListenTo);
+    return emerScript->getPhysicsFunction(sporefToListenTo);
 }
 v8::Handle<v8::Value> JSPresenceStruct::setPhysicsFunction(const String& phy) {
-    jsObjScript->setPhysicsFunction(sporefToListenTo, phy);
+    emerScript->setPhysicsFunction(sporefToListenTo, phy);
     return v8::Undefined();
 }
 
@@ -334,7 +335,7 @@ void JSPresenceStruct::disconnectCalledFromObjScript()
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {
-    jsObjScript->setVisualFunction(sporefToListenTo, urilocation);
+    emerScript->setVisualFunction(sporefToListenTo, urilocation);
     return v8::Undefined();
 }
 
@@ -342,7 +343,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 //returns this presence as a visible object.
 v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
 {
-    return jsObjScript->presToVis(this,mContext);
+    return emerScript->presToVis(this,mContext);
 }
 
 
@@ -353,10 +354,10 @@ v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
 v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
-    JSInvokableObject::JSInvokableObjectInt* invokableObj = jsObjScript->runSimulation(*sporefToListenTo,simname);
+    JSInvokableObject::JSInvokableObjectInt* invokableObj = emerScript->runSimulation(*sporefToListenTo,simname);
 
-    v8::Local<v8::Object> tmpObj = jsObjScript->manager()->mInvokableObjectTemplate->NewInstance();
-    tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(jsObjScript));
+    v8::Local<v8::Object> tmpObj = emerScript->manager()->mInvokableObjectTemplate->NewInstance();
+    tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(emerScript));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
     tmpObj->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
     return tmpObj;
@@ -366,7 +367,7 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt, bool canEval)
 {
     JSContextStruct* dummy;
-    return jsObjScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,dummy);
+    return emerScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,dummy);
 }
 
 
@@ -403,7 +404,7 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVe
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling setVelocity on presence.  The presence is not connected to any space, and therefore has no velocity to set.")));
 
 
-    jsObjScript->setVelocityFunction(sporefToListenTo,newVel);
+    emerScript->setVelocityFunction(sporefToListenTo,newVel);
     return v8::Undefined();
 }
 

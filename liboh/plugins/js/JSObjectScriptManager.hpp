@@ -66,8 +66,6 @@ public:
     v8::Persistent<v8::ObjectTemplate>   mSystemTemplate;
     v8::Persistent<v8::ObjectTemplate>   mTimerTemplate;
     v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
-    
-    void testPrint();
 
 private:
 

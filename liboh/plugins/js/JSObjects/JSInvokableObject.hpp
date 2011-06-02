@@ -13,7 +13,7 @@ namespace Sirikata
 {
 namespace JS
 {
-  class JSObjectScript;
+  class EmersonScript;
 
 namespace JSInvokableObject
 {
@@ -25,9 +25,7 @@ class JSInvokableObjectInt : public Invokable
   JSInvokableObjectInt(Invokable* _invokable) : invokable_(_invokable){}
 
   Invokable* invokable() const {return invokable_;}
-//  JSObjectScript* script() const {return script_;}
   void invokableIs(Invokable* _invokable) {invokable_=_invokable;}
-//  void scriptIs(JSObjectScript* _script) {script_=_script;}
   
   boost::any invoke(std::vector<boost::any>& params);
 
@@ -35,12 +33,12 @@ class JSInvokableObjectInt : public Invokable
   private:
 
   Invokable* invokable_;
-//  JSObjectScript* script_;
+
 
 };
 
 v8::Handle<v8::Value> invoke(const v8::Arguments& args);
-bool decodeJSInvokableObject(v8::Handle<v8::Value>, JSObjectScript*&, JSInvokableObject::JSInvokableObjectInt*&);
+bool decodeJSInvokableObject(v8::Handle<v8::Value>, EmersonScript*&, JSInvokableObject::JSInvokableObjectInt*&);
 
 
 }
