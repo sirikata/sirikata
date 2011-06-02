@@ -482,7 +482,7 @@ $.widget("ui.dockablewindow", {
 
                 self.uiDockableWindow.resizable({
                         cancel: '.ui-dockablewindow-content',
-                        containment: 'parent',
+                        containment: (self.options.docked ? 'parent' : 'document'),
                         alsoResize: self.element,
                         maxWidth: options.maxWidth,
                         maxHeight: options.maxHeight,
