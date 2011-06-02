@@ -504,8 +504,15 @@ public:
             pass->setSpecular(ColourValue(1,1,1,1));
         }
         for (size_t i=0;i<mMat->textures.size();++i) {
+            // NOTE: We're currently disabling using alpha when the
+            // texture is specified for OPACITY because we're not
+            // handling it in the code below, leading to artifacts as
+            // it seemingly uses random segments of memory for the
+            // alpha values (maybe because it tries reading them from
+            // some texture other texture that doesn't specify
+            // alpha?).
             if (mMat->textures[i].affecting==MaterialEffectInfo::Texture::OPACITY &&
-                (mMat->textures[i].uri.length() > 0 ||
+                (/*mMat->textures[i].uri.length() > 0 ||*/
                     (mMat->textures[i].uri.length() == 0 && mMat->textures[i].color.w<1.0))) {
                 useAlpha=true;
                 break;
