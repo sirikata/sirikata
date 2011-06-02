@@ -26,7 +26,7 @@
 
 // Note that we continue to use these classes so we get theming for free
 var uiDockableWindowClasses =
-        'ui-dialog ' +
+        'ui-dockablewindow ' +
         'ui-widget ' +
         'ui-widget-content ' +
         'ui-corner-all ';
@@ -38,6 +38,8 @@ $.widget("ui.dockablewindow", {
                 closeOnEscape: true,
                 closeText: 'close',
                 dialogClass: '',
+                docked: false,
+                dockText: 'dock',
                 draggable: true,
                 hide: null,
                 height: 'auto',
@@ -83,7 +85,7 @@ $.widget("ui.dockablewindow", {
                         titleId = $.ui.dockablewindow.getTitleId(self.element),
 
                         uiDockableWindow = (self.uiDockableWindow = $('<div></div>'))
-                                .appendTo(self.options.parent)
+                                .appendTo(self._getParent())
                                 .hide()
                                 .addClass(uiDockableWindowClasses + options.dialogClass)
                                 .css({
@@ -111,13 +113,13 @@ $.widget("ui.dockablewindow", {
                                 .show()
                                 .removeAttr('title')
                                 .addClass(
-                                        'ui-dialog-content ' +
+                                        'ui-dockablewindow-content ' +
                                         'ui-widget-content')
                                 .appendTo(uiDockableWindow),
 
                         uiDockableWindowTitlebar = (self.uiDockableWindowTitlebar = $('<div></div>'))
                                 .addClass(
-                                        'ui-dialog-titlebar ' +
+                                        'ui-dockablewindow-titlebar ' +
                                         'ui-widget-header ' +
                                         'ui-corner-all ' +
                                         'ui-helper-clearfix'
@@ -126,7 +128,7 @@ $.widget("ui.dockablewindow", {
 
                         uiDockableWindowTitlebarClose = $('<a href="#"></a>')
                                 .addClass(
-                                        'ui-dialog-titlebar-close ' +
+                                        'ui-dockablewindow-titlebar-close ' +
                                         'ui-corner-all'
                                 )
                                 .attr('role', 'button')
@@ -158,8 +160,43 @@ $.widget("ui.dockablewindow", {
                                 .text(options.closeText)
                                 .appendTo(uiDockableWindowTitlebarClose),
 
+
+                        uiDockableWindowTitlebarDock = $('<a href="#"></a>')
+                                .addClass(
+                                        'ui-dockablewindow-titlebar-dock ' +
+                                        'ui-corner-all'
+                                )
+                                .attr('role', 'button')
+                                .hover(
+                                        function() {
+                                                uiDockableWindowTitlebarDock.addClass('ui-state-hover');
+                                        },
+                                        function() {
+                                                uiDockableWindowTitlebarDock.removeClass('ui-state-hover');
+                                        }
+                                )
+                                .focus(function() {
+                                        uiDockableWindowTitlebarDock.addClass('ui-state-focus');
+                                })
+                                .blur(function() {
+                                        uiDockableWindowTitlebarDock.removeClass('ui-state-focus');
+                                })
+                                .click(function(event) {
+                                        self.toggleDock(event);
+                                        return false;
+                                })
+                                .appendTo(uiDockableWindowTitlebar),
+
+                        uiDockableWindowTitlebarDockText = (self.uiDockableWindowTitlebarDockText = $('<span></span>'))
+                                .addClass(
+                                        'ui-icon ' +
+                                        'ui-icon-pin-s'
+                                )
+                                .text(options.dockText)
+                                .appendTo(uiDockableWindowTitlebarDock),
+
                         uiDockableWindowTitle = $('<span></span>')
-                                .addClass('ui-dialog-title')
+                                .addClass('ui-dockablewindow-title')
                                 .attr('id', titleId)
                                 .html(title)
                                 .prependTo(uiDockableWindowTitlebar);
@@ -173,13 +210,6 @@ $.widget("ui.dockablewindow", {
 
                 uiDockableWindowTitlebar.find("*").add(uiDockableWindowTitlebar).disableSelection();
 
-                if (options.draggable && $.fn.draggable) {
-                        self._makeDraggable();
-                }
-                if (options.resizable && $.fn.resizable) {
-                        self._makeResizable();
-                }
-
                 self._createButtons(options.buttons);
                 self._isOpen = false;
 
@@ -189,6 +219,8 @@ $.widget("ui.dockablewindow", {
         },
 
         _init: function() {
+            this._updateDock();
+
                 if ( this.options.autoOpen ) {
                         this.open();
                 }
@@ -204,7 +236,7 @@ $.widget("ui.dockablewindow", {
                 self.element
                         .unbind('.dialog')
                         .removeData('dialog')
-                        .removeClass('ui-dialog-content ui-widget-content')
+                        .removeClass('ui-dockablewindow-content ui-widget-content')
                         .hide().appendTo('body');
                 self.uiDockableWindow.remove();
 
@@ -230,7 +262,7 @@ $.widget("ui.dockablewindow", {
                 if (self.overlay) {
                         self.overlay.destroy();
                 }
-                self.uiDockableWindow.unbind('keypress.ui-dialog');
+                self.uiDockableWindow.unbind('keypress.ui-dockablewindow');
 
                 self._isOpen = false;
 
@@ -248,7 +280,7 @@ $.widget("ui.dockablewindow", {
                 // adjust the maxZ to allow other modal dialogs to continue to work (see #4309)
                 if (self.options.modal) {
                         maxZ = 0;
-                        $('.ui-dialog').each(function() {
+                        $('.ui-dockablewindow').each(function() {
                                 if (this !== self.uiDockableWindow[0]) {
                                         maxZ = Math.max(maxZ, $(this).css('z-index'));
                                 }
@@ -303,7 +335,7 @@ $.widget("ui.dockablewindow", {
 
                 self.overlay = options.modal ? new $.ui.dockablewindow.overlay(self) : null;
                 if (uiDockableWindow.next().length) {
-                        uiDockableWindow.appendTo(self.options.parent);
+                        uiDockableWindow.appendTo(this._getParent());
                 }
                 self._size();
                 self._position(options.position);
@@ -312,7 +344,7 @@ $.widget("ui.dockablewindow", {
 
                 // prevent tabbing out of modal dialogs
                 if (options.modal) {
-                        uiDockableWindow.bind('keypress.ui-dialog', function(event) {
+                        uiDockableWindow.bind('keypress.ui-dockablewindow', function(event) {
                                 if (event.keyCode !== $.ui.keyCode.TAB) {
                                         return;
                                 }
@@ -334,7 +366,7 @@ $.widget("ui.dockablewindow", {
                 // set focus to the first tabbable element in the content area or the first button
                 // if there are no tabbable elements, set focus on the dialog itself
                 $(self.element.find(':tabbable').get().concat(
-                        uiDockableWindow.find('.ui-dialog-buttonpane :tabbable').get().concat(
+                        uiDockableWindow.find('.ui-dockablewindow-buttonpane :tabbable').get().concat(
                                 uiDockableWindow.get()))).eq(0).focus();
 
                 self._isOpen = true;
@@ -348,16 +380,16 @@ $.widget("ui.dockablewindow", {
                         hasButtons = false,
                         uiDockableWindowButtonPane = $('<div></div>')
                                 .addClass(
-                                        'ui-dialog-buttonpane ' +
+                                        'ui-dockablewindow-buttonpane ' +
                                         'ui-widget-content ' +
                                         'ui-helper-clearfix'
                                 ),
                         uiButtonSet = $( "<div></div>" )
-                                .addClass( "ui-dialog-buttonset" )
+                                .addClass( "ui-dockablewindow-buttonset" )
                                 .appendTo( uiDockableWindowButtonPane );
 
                 // if we already have a button pane, remove it
-                self.uiDockableWindow.find('.ui-dialog-buttonpane').remove();
+                self.uiDockableWindow.find('.ui-dockablewindow-buttonpane').remove();
 
                 if (typeof buttons === 'object' && buttons !== null) {
                         $.each(buttons, function() {
@@ -397,12 +429,12 @@ $.widget("ui.dockablewindow", {
                 }
 
                 self.uiDockableWindow.draggable({
-                        cancel: '.ui-dialog-content, .ui-dialog-titlebar-close',
-                        handle: '.ui-dialog-titlebar',
+                        cancel: '.ui-dockablewindow-content, .ui-dockablewindow-titlebar-dock, .ui-dockablewindow-titlebar-close',
+                        handle: '.ui-dockablewindow-titlebar',
                         containment: 'parent',
                         start: function(event, ui) {
                                 heightBeforeDrag = options.height === "auto" ? "auto" : $(this).height();
-                                $(this).height($(this).height()).addClass("ui-dialog-dragging");
+                                $(this).height($(this).height()).addClass("ui-dockablewindow-dragging");
                                 self._trigger('dragStart', event, filteredUi(ui));
                         },
                         drag: function(event, ui) {
@@ -411,11 +443,20 @@ $.widget("ui.dockablewindow", {
                         stop: function(event, ui) {
                                 options.position = [ui.position.left - doc.scrollLeft(),
                                         ui.position.top - doc.scrollTop()];
-                                $(this).removeClass("ui-dialog-dragging").height(heightBeforeDrag);
+                                $(this).removeClass("ui-dockablewindow-dragging").height(heightBeforeDrag);
                                 self._trigger('dragStop', event, filteredUi(ui));
                                 $.ui.dockablewindow.overlay.resize();
                         }
                 });
+
+            this._isDraggable = true;
+        },
+
+        _unmakeDraggable: function() {
+            if (this._isDraggable) {
+                this._isDraggable = false;
+                this.uiDockableWindow.draggable('destroy');
+            }
         },
 
         _makeResizable: function(handles) {
@@ -440,7 +481,7 @@ $.widget("ui.dockablewindow", {
                 }
 
                 self.uiDockableWindow.resizable({
-                        cancel: '.ui-dialog-content',
+                        cancel: '.ui-dockablewindow-content',
                         containment: 'parent',
                         alsoResize: self.element,
                         maxWidth: options.maxWidth,
@@ -449,14 +490,14 @@ $.widget("ui.dockablewindow", {
                         minHeight: self._minHeight(),
                         handles: resizeHandles,
                         start: function(event, ui) {
-                                $(this).addClass("ui-dialog-resizing");
+                                $(this).addClass("ui-dockablewindow-resizing");
                                 self._trigger('resizeStart', event, filteredUi(ui));
                         },
                         resize: function(event, ui) {
                                 self._trigger('resize', event, filteredUi(ui));
                         },
                         stop: function(event, ui) {
-                                $(this).removeClass("ui-dialog-resizing");
+                                $(this).removeClass("ui-dockablewindow-resizing");
                                 options.height = $(this).height();
                                 options.width = $(this).width();
                                 self._trigger('resizeStop', event, filteredUi(ui));
@@ -465,6 +506,51 @@ $.widget("ui.dockablewindow", {
                 })
                 .css('position', position)
                 .find('.ui-resizable-se').addClass('ui-icon ui-icon-grip-diagonal-se');
+        },
+
+        _getParent: function() {
+            if (this.options.docked)
+                return this.options.parent;
+            else
+                return document.body;
+        },
+
+        toggleDock: function() {
+            this._setOption('docked', !this.options.docked);
+        },
+
+        _updateDock: function() {
+            // Make sure we have classes setup properly
+            this.uiDockableWindow.removeClass("ui-dockablewindow-docked ui-dockablewindow-undocked");
+            if (this.options.docked) {
+                this.uiDockableWindow.addClass("ui-dockablewindow-docked");
+                this._setOption('width', $(this._getParent()).width());
+            }
+            else
+                this.uiDockableWindow.addClass("ui-dockablewindow-undocked");
+
+            // NOTE: This is critical! The dragger ends up setting the
+            // position attribute directly and if we don't clear it,
+            // then it will get stuck in absolute positioning.
+            this.uiDockableWindow.css('position', '');
+
+            // Make sure we've got parents setup properly for drag + resize
+            if (this.options.draggable && $.fn.draggable) {
+                this._unmakeDraggable();
+                // Only re-enable if they are undocked.
+                if (!this.options.docked)
+                    this._makeDraggable();
+            }
+            if (this.options.resizable && $.fn.resizable) {
+                this._makeResizable();
+            }
+
+            // Reparent and update position
+            if (self.overlay) {
+                self.overlay.appendTo(this._getParent());
+            }
+            this.uiDockableWindow.appendTo(this._getParent());
+            this._position(this.options.position);
         },
 
         _minHeight: function() {
@@ -478,9 +564,11 @@ $.widget("ui.dockablewindow", {
         },
 
         _position: function(position) {
-            // Only position if we're working over the entire window rather than in a parent container
-            if (this.options.parent !== document.body)
+            // If we're working within a parent container, handle this differently than normal dialogs
+            if (this._getParent() !== document.body) {
+                this.uiDockableWindow.css({ top: 0, left: 0 });
                 return;
+            }
 
                 var myAt = [],
                         offset = [0, 0],
@@ -534,7 +622,8 @@ $.widget("ui.dockablewindow", {
                 var self = this,
                         uiDockableWindow = self.uiDockableWindow,
                         isResizable = uiDockableWindow.is(':data(resizable)'),
-                        resize = false;
+                        resize = false,
+                        docked = false;
 
                 switch (key) {
                         //handling of deprecated beforeclose (vs beforeClose) option
@@ -558,17 +647,21 @@ $.widget("ui.dockablewindow", {
                                 break;
                         case "disabled":
                                 if (value) {
-                                        uiDockableWindow.addClass('ui-dialog-disabled');
+                                        uiDockableWindow.addClass('ui-dockablewindow-disabled');
                                 } else {
-                                        uiDockableWindow.removeClass('ui-dialog-disabled');
+                                        uiDockableWindow.removeClass('ui-dockablewindow-disabled');
                                 }
+                                break;
+                        case "docked":
+                                docked = true;
                                 break;
                         case "draggable":
                                 if (value) {
                                         self._makeDraggable();
                                 } else {
-                                        uiDockableWindow.draggable('destroy');
+                                        self._unmakeDraggable();
                                 }
+                                self.options.draggable = value;
                                 break;
                         case "height":
                                 resize = true;
@@ -618,7 +711,7 @@ $.widget("ui.dockablewindow", {
                                 break;
                         case "title":
                                 // convert whatever was passed in o a string, for html() to not throw up
-                                $(".ui-dialog-title", self.uiDockableWindowTitlebar).html("" + (value || '&#160;'));
+                                $(".ui-dockablewindow-title", self.uiDockableWindowTitlebar).html("" + (value || '&#160;'));
                                 break;
                         case "width":
                                 resize = true;
@@ -629,10 +722,12 @@ $.widget("ui.dockablewindow", {
                 if (resize) {
                         self._size();
                 }
+            if (docked)
+                self._updateDock();
         },
 
         _size: function() {
-                /* If the user has resized the dialog, the .ui-dialog and .ui-dialog-content
+                /* If the user has resized the dialog, the .ui-dockablewindow and .ui-dockablewindow-content
                  * divs will both have width and height set, so we need to reset them
                  */
                 var options = this.options,
@@ -687,7 +782,7 @@ $.extend($.ui.dockablewindow, {
                         this.uuid += 1;
                         id = this.uuid;
                 }
-                return 'ui-dialog-title-' + id;
+                return 'ui-dockablewindow-title-' + id;
         },
 
         overlay: function(dockablewindow) {
@@ -735,7 +830,7 @@ $.extend($.ui.dockablewindow.overlay, {
                 }
 
                 var $el = (this.oldInstances.pop() || $('<div></div>').addClass('ui-widget-overlay'))
-                        .appendTo(self.options.parent)
+                        .appendTo(this._getParent())
                         .css({
                                 width: this.width(),
                                 height: this.height()

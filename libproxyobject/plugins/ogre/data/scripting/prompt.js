@@ -244,7 +244,8 @@ var editHistoryForward = function() {
 		    "Close Tab": closePrompt
 		},
 		close: dialogClosed,
-                position: 'left'
+                position: 'left',
+                docked: true
 	    }
         );
 
