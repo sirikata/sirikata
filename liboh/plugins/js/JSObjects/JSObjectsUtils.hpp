@@ -27,10 +27,6 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMessage);
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 
-
-v8::Handle<v8::Value> utilSerialize(const String& toSerialize);
-
-
 String uint16StrToStr(v8::Handle<v8::String> toDeserialize);
 v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 

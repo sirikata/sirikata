@@ -23,7 +23,6 @@ function restoreFrom(filename)
     // system.prettyprint(deserializedGraph);
     // system.print('\n\n---2\n');
     
-    
     //performs recursive restoration.
     var ptrsToFix = [];
     fixReferences(deserializedGraph,ptrsToFix);
@@ -77,9 +76,6 @@ function fixReferences(rootToFix, ptrsToFix)
  */
 function fixupObjectSerial(objToFix,ptrsToFix)
 {
-    system.print('\n\ndebug: In objectserial\n\n');
-    system.prettyprint(objToFix);
-    
     if (!(std.persist.ID_FIELD_STRING in objToFix))
         throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';      
 
@@ -111,14 +107,9 @@ function fixupObjectSerial(objToFix,ptrsToFix)
         var fieldValue = std.persist.getValueFromPropValPair(objToFix[s]);
         var indexValue = std.persist.getPropFromPropValPair (objToFix[s]);
 
-
-        system.print('\nPrinting field value\n');
-        system.prettyprint();
-
         
         if (std.persist.checkObjectSerial(fieldValue) == std.persist.OBJECT_POINTER_SERIAL)
         {
-            system.print('\n\nDEBUG: got an object pointer\n\n');
             //register the field, s, of localCopy to be fixed up.
             registerFixupObjectPointer(fieldValue,indexValue, localCopy,ptrsToFix);                  
         }

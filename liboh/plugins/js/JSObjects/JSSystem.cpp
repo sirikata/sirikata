@@ -108,16 +108,16 @@ v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args)
     v8::Handle<v8::Value> strToWriteVal    = args[0];
     v8::Handle<v8::Value> fileToWriteToVal = args[1];
 
-    String errMsg = "Error in debug_fileWrite.  Could not decode argument as string.  ";
-    String strToWrite,filename;
-    bool strDecode = decodeString(strToWriteVal,strToWrite,errMsg);
-    if (!strDecode)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
+    if (! strToWriteVal->IsString())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in fileWrite, first argument (string) should be a string.")));
 
-    strDecode = decodeString(fileToWriteToVal,filename,errMsg);
+
+    String strToWrite =  uint16StrToStr(strToWriteVal->ToString());
+    String errMsg = "Error in debug_fileWrite.  Could not decode argument as string.  ";
+    String filename;
+    bool strDecode = decodeString(fileToWriteToVal,filename,errMsg);
     if (!strDecode)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
-    
 
     errMsg = "Error decoding system struct when calling fileWrite. ";
     JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);

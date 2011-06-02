@@ -54,22 +54,19 @@ function checkpointPartialPersist(objToPersistFrom, filename)
 
     var serialized = system.serialize(shadowTree);
 
-    system.print('\n\nDEBUG\n');
-    system.prettyprint(shadowTree);
-    system.print('\n\n---\n');
+    // system.print('\n\nDEBUG\n');
+    // system.prettyprint(shadowTree);
+    // system.print('\n\n---\n');
 
-    var deser = system.deserialize(serialized);
-    system.print('\n\nDEBUG2\n');
-    system.prettyprint(deser);
-    system.print('\n\n---2\n');
+    // var deser = system.deserialize(serialized);
+    // system.print('\n\nDEBUG2\n');
+    // system.prettyprint(deser);
+    // system.print('\n\n---2\n');
     
     
     //save the file out to disk.
     var fName = typeof(filename) == 'undefined' ? 'testFile.em.bu' : filename;
     system.__debugFileWrite(serialized, fName);
-
-    
-
 }
 
 

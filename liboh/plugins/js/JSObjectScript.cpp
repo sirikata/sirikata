@@ -329,10 +329,15 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
     char* readBuf = new char[size];
     fRead.read(readBuf,size);
 
-    v8::Handle<v8::Value> returner = v8::String::New(readBuf,size);
+    String interString(readBuf,size);
+
+    v8::Handle<v8::Value> returner = strToUint16Str(interString);
     delete readBuf;
     return returner;
 }
+
+
+v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,const String& filename)
