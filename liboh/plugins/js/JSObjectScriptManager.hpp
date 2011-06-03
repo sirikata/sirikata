@@ -39,8 +39,12 @@
 
 #include <v8.h>
 
+
+
 namespace Sirikata {
 namespace JS {
+
+class JSObjectScript;
 
 class JSObjectScriptManager : public ObjectScriptManager {
 public:
@@ -52,6 +56,8 @@ public:
     virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
+    JSObjectScript* createHeadless(const String& args);
+    
     OptionSet* getOptions() const { return mOptions; }
     String defaultScript() const;
 

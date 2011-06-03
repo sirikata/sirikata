@@ -431,6 +431,15 @@ JSObjectScriptManager::~JSObjectScriptManager()
 {
 }
 
+
+
+JSObjectScript* JSObjectScriptManager::createHeadless(const String& args)
+{
+    JSObjectScript* new_script = new JSObjectScript(this);
+    new_script->initialize(args);
+    return new_script;
+}
+
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
 {
     EmersonScript* new_script = new EmersonScript(ho, args, this);
