@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_OGRE_ASSET_DOWNLOAD_TASK_HPP_
 #define _SIRIKATA_OGRE_ASSET_DOWNLOAD_TASK_HPP_
 
-#include <sirikata/ogre/resourceManager/ResourceDownloadTask.hpp>
+#include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
@@ -97,7 +97,7 @@ private:
     Dependencies mDependencies;
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
-    typedef std::map<Transfer::URI, ResourceDownloadTaskPtr> ActiveDownloadMap;
+    typedef std::map<Transfer::URI, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
     ActiveDownloadMap mActiveDownloads;
     uint32 mRemainingDownloads; // Dependent downloads remaining.
 };

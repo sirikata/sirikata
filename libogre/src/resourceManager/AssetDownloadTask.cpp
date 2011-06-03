@@ -67,15 +67,13 @@ void AssetDownloadTask::cancel() {
 void AssetDownloadTask::downloadAssetFile() {
     assert( !mAssetURI.empty() );
 
-    ResourceDownloadTaskPtr dl = ResourceDownloadTaskPtr(
-        new ResourceDownloadTask(
-            mAssetURI, mScene->transferPool(),
-            mPriority,
-            std::tr1::bind(&AssetDownloadTask::weakAssetFileDownloaded, getWeakPtr(), _1, _2)
-        )
+    ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
+        mAssetURI, mScene->transferPool(),
+        mPriority,
+        std::tr1::bind(&AssetDownloadTask::weakAssetFileDownloaded, getWeakPtr(), _1, _2)
     );
     mActiveDownloads[mAssetURI] = dl;
-    (*dl)(dl);
+    dl->start();
 }
 void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
@@ -155,15 +153,13 @@ void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
     for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
         String texURIString = assetURIString.substr(0, assetURIString.rfind("/")+1) + (*it);
         Transfer::URI texURI(texURIString);
-        ResourceDownloadTaskPtr dl = ResourceDownloadTaskPtr(
-            new ResourceDownloadTask(
-                texURI, mScene->transferPool(),
-                mPriority,
-                std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
-            )
+        ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
+            texURI, mScene->transferPool(),
+            mPriority,
+            std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
         );
         mActiveDownloads[texURI] = dl;
-        (*dl) (dl);
+        dl->start();
     }
 }
 void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {

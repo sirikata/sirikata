@@ -32,13 +32,17 @@
 
 #include <sirikata/core/util/Thread.hpp>
 
-#include <sirikata/ogre/resourceManager/ResourceDownloadTask.hpp>
+#include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 #include <stdio.h>
 
-using namespace std;
-using namespace Sirikata::Transfer;
-
 namespace Sirikata {
+namespace Transfer {
+
+using namespace std::tr1::placeholders;
+
+ResourceDownloadTaskPtr ResourceDownloadTask::construct(const URI& uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb) {
+    return ResourceDownloadTaskPtr(SelfWeakPtr<ResourceDownloadTask>::internalConstruct(new ResourceDownloadTask(uri, transfer_pool, priority, cb)));
+}
 
 ResourceDownloadTask::ResourceDownloadTask(const Transfer::URI &uri, TransferPoolPtr transfer_pool, double priority, DownloadCallback cb)
  : mURI(uri), mTransferPool(transfer_pool), mRange(true),
@@ -68,9 +72,13 @@ void ResourceDownloadTask::mergeData(const Transfer::SparseData &dataToMerge) {
 }
 
 
-void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
-                                         std::tr1::shared_ptr<ChunkRequest> request,
-            std::tr1::shared_ptr<const DenseData> response)
+void ResourceDownloadTask::chunkFinishedWeak(ResourceDownloadTaskWPtr thiswptr, ChunkRequestPtr request, DenseDataPtr response) {
+    ResourceDownloadTaskPtr thisptr(thiswptr.lock());
+    if (thisptr) thisptr->chunkFinished(request, response);
+}
+
+void ResourceDownloadTask::chunkFinished(ChunkRequestPtr request,
+    std::tr1::shared_ptr<const DenseData> response)
 {
     // Nothing to do with no callback
     if (!cb) return;
@@ -83,9 +91,13 @@ void ResourceDownloadTask::chunkFinished(std::tr1::shared_ptr<ResourceDownloadTa
     }
 }
 
-void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<ResourceDownloadTask> thisptr,
-                                            std::tr1::shared_ptr<MetadataRequest> request,
-                                            std::tr1::shared_ptr<RemoteFileMetadata> response)
+void ResourceDownloadTask::metadataFinishedWeak(ResourceDownloadTaskWPtr thiswptr, MetadataRequestPtr request, RemoteFileMetadataPtr response) {
+    ResourceDownloadTaskPtr thisptr(thiswptr.lock());
+    if (thisptr) thisptr->metadataFinished(request, response);
+}
+
+void ResourceDownloadTask::metadataFinished(MetadataRequestPtr request,
+                                            RemoteFileMetadataPtr response)
 {
   if (response != NULL) {
 
@@ -94,7 +106,7 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<ResourceDownloa
 
     TransferRequestPtr req(new Transfer::ChunkRequest(mURI, *response,
                                                       response->getChunkList().front(), mPriority,
-                                                      std::tr1::bind(&ResourceDownloadTask::chunkFinished, this, thisptr, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+                                                      std::tr1::bind(&ResourceDownloadTask::chunkFinishedWeak, getWeakPtr(), _1, _2)));
 
     mTransferPool->addRequest(req);
   }
@@ -104,15 +116,16 @@ void ResourceDownloadTask::metadataFinished(std::tr1::shared_ptr<ResourceDownloa
   }
 }
 
-void ResourceDownloadTask::operator() ( std::tr1::shared_ptr<ResourceDownloadTask> thisptr)
+void ResourceDownloadTask::start()
 {
   mStarted = true;
 
   TransferRequestPtr req(
-     new MetadataRequest(mURI, mPriority, std::tr1::bind(
-                                                         &ResourceDownloadTask::metadataFinished, this, thisptr, std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
+      new MetadataRequest(mURI, mPriority,
+          std::tr1::bind(&ResourceDownloadTask::metadataFinishedWeak, getWeakPtr(), _1, _2)));
 
  mTransferPool->addRequest(req);
 }
 
+} // namespace Transfer
 } // namespace Sirikata

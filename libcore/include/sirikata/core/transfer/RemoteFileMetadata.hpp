@@ -128,6 +128,7 @@ public:
 	}
 
 };
+typedef std::tr1::shared_ptr<RemoteFileMetadata> RemoteFileMetadataPtr;
 
 }
 }

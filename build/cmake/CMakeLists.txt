@@ -1051,6 +1051,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/TransferHandlers.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferPool.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
+        ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp
@@ -1188,7 +1189,6 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchiveFactory.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchivePlugin.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/ReplacingDataStream.cpp
-  ${LIBOGRE_SOURCE_DIR}/resourceManager/ResourceDownloadTask.cpp
   ${LIBOGRE_SOURCE_DIR}/Camera.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
