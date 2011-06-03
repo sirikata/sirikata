@@ -175,6 +175,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
 
+    mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
     mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
     mSystemTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSSystem::root_registerHandler));
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));

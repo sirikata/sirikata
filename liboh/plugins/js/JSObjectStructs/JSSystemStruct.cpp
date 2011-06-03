@@ -53,6 +53,11 @@ v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserial
     return associatedContext->deserializeObject(toDeserialize);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::checkHeadless()
+{
+    return associatedContext->checkHeadless();
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom)
 {

@@ -789,6 +789,22 @@ v8::Handle<v8::Object> EmersonScript::makeEventHandlerObject(JSEventHandlerStruc
 }
 
 
+//takes the c++ object jspres, creates a new visible object out of it, if we
+//don't already have a c++ visible object associated with it (if we do, use
+//that one), wraps that c++ object in v8, and returns it as a v8 object to
+//user
+v8::Persistent<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
+{
+    bool isVis = true;
+    VisAddParams vap(&isVis);
+
+
+    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),&vap);
+
+    return createVisiblePersistent(jsvis, jscont->mContext);
+}
+
+
 
 JSPresenceStruct*  EmersonScript::addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token)
 {

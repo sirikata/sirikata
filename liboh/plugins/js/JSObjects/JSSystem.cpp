@@ -124,6 +124,22 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
     return jssys->deserializeObject(serString);
 }
 
+v8::Handle<v8::Value> root_headless(const v8::Arguments& args)
+{
+    
+    if (args.Length() != 0)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error checking headless.  Takes no arguments.")));
+
+    String errMsg = "Error decoding system struct when checking headless. ";
+    JSSystemStruct* jssys  = JSSystemStruct::decodeSystemStruct(args.This(),errMsg);
+
+    if (jssys == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
+    
+
+    return jssys->checkHeadless();
+}
+
 
 
 

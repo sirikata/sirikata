@@ -54,15 +54,6 @@ using namespace Emerson;
 extern pANTLR3_UINT8* EmersonParserTokenNames;
 extern EmersonInfo* _emersonInfo;
 
-void myRecoverFromMismatchedSet(struct ANTLR3_BASE_RECOGNIZER_struct* _recognizer, pANTLR3_BITSET_LIST _follow)
-{
-}
-
-
-void* myRecoverFromMismatchedToken(struct ANTLR3_BASE_RECOGNIZER_struct* _recognizer, ANTLR3_UINT32 _ttype, pANTLR3_BITSET_LIST _follow)
-{
-    return NULL;
-}
 
 
 void myDisplayRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recognizer, pANTLR3_UINT8* tokenNames)

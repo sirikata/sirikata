@@ -93,6 +93,15 @@ void JSContextStruct::createContextObjects()
 
 }
 
+v8::Handle<v8::Value>  JSContextStruct::checkHeadless()
+{
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return v8::Boolean::New(false);
+
+    return v8::Boolean::New(true);
+}
+
 
 v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
 {

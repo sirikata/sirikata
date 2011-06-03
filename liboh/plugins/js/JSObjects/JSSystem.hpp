@@ -30,6 +30,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args);
 v8::Handle<v8::Value> createVisFromAddress(const v8::Handle<v8::Value>& addressFor);
 v8::Handle<v8::Value> createVisFromFull(const v8::Arguments& args);
 
+v8::Handle<v8::Value> root_headless(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);
 v8::Handle<v8::Value> root_require(const v8::Arguments& args);

@@ -46,6 +46,7 @@ system.require('std/core/bind.em');
 
 system.require('std/shim/system.em');
 system.require('std/shim/class.em');
+
 system.require('std/shim/presence.em');
 system.require('std/shim/visible.em');
 system.require('std/shim/vec3.em');

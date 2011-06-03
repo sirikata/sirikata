@@ -53,6 +53,8 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value>  struct_suspendContext();
     v8::Handle<v8::Value>  struct_resumeContext();
 
+    v8::Handle<v8::Value>  checkHeadless();
+    
     //returns an object that contains the system/system object associated with
     //this context
     v8::Handle<v8::Object> struct_getSystem();
