@@ -274,10 +274,7 @@ v8::Local<v8::Object> EmersonScript::createVisibleObject(JSVisibleStruct* jsvis,
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
-
-    //v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
-
-    return returner;
+    return handle_scope.Close(returner);
 }
 
 //attempts to make a new jsvisible struct...may be returned an existing one.
