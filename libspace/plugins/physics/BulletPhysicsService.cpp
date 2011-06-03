@@ -208,67 +208,32 @@ void BulletPhysicsService::setOrientation(const UUID& uuid, const TimedMotionQua
     notifyLocalOrientationUpdated( uuid, locinfo.aggregate, neworient );
 }
 
-void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
+MeshdataPtr BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
+    volatile bool finishedLoading = false;
+    MeshdataPtr retrievedMesh;
+    Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
+        Transfer::URI(meshURI), mTransferPool, 1.0,
+        std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, &finishedLoading, &retrievedMesh)
+    );
+    mMeshDownloads[uuid] = dl;
+    dl->start();
 
-	meshLoaded = false;
-	getMetadata(meshURI, uuid);
-	//FIXME: Busy waiting is bad.
-	//Waiting for meshes to be retrieved from CDN
-	while(!meshLoaded) {};
+    //FIXME: Busy waiting is bad.
+    //Waiting for meshes to be retrieved from CDN
+    while(!finishedLoading) {};
 
-    std::string t = retrievedMesh->uri;
-    BULLETLOG(detailed, "This mesh was retrieved from the CDN: " << t[0]);
+    if (retrievedMesh)
+        BULLETLOG(detailed, "This mesh was retrieved from the CDN: " << retrievedMesh->uri);
+    return retrievedMesh;
 }
 
-void BulletPhysicsService::getMetadata(const std::string meshURI, const UUID uuid) {
-	Transfer::TransferRequestPtr req(
-                                       new Transfer::MetadataRequest( Transfer::URI(meshURI), 1.0, std::tr1::bind(
-                                       &BulletPhysicsService::metadataFinished, this, uuid, meshURI,
-                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-    mTransferPool->addRequest(req);
+void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, volatile bool* finished, MeshdataPtr* retrievedMesh) {
+    if (request && response)
+        *retrievedMesh = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+    // Always set this to let the main thread continue
+    *finished = true;
 }
 
-void BulletPhysicsService::metadataFinished(const UUID uuid, std::string meshName,
-                                          std::tr1::shared_ptr<Transfer::MetadataRequest> request,
-                                          std::tr1::shared_ptr<Transfer::RemoteFileMetadata> response) {
-	if (response != NULL) {
-    const Transfer::RemoteFileMetadata metadata = *response;
-
-    Transfer::TransferRequestPtr req(new Transfer::ChunkRequest(response->getURI(), metadata,
-                                               response->getChunkList().front(), 1.0,
-                                             std::tr1::bind(&BulletPhysicsService::chunkFinished, this, uuid, meshName,
-                                                              std::tr1::placeholders::_1,
-                                                              std::tr1::placeholders::_2) ) );
-
-    mTransferPool->addRequest(req);
-  }
-  else {
-    Transfer::TransferRequestPtr req(new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
-                                       &BulletPhysicsService::metadataFinished, this, uuid, meshName,
-                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-    mTransferPool->addRequest(req);
-  }
-}
-
-void BulletPhysicsService::chunkFinished(const UUID uuid, std::string meshName,
-                                       std::tr1::shared_ptr<Transfer::ChunkRequest> request,
-                                       std::tr1::shared_ptr<const Transfer::DenseData> response)
-{
-	if (response != NULL) {
-        retrievedMesh = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
-        meshLoaded = true;
-    }
-    else {
-     Transfer::TransferRequestPtr req(
-                                       new Transfer::MetadataRequest( Transfer::URI(meshName), 1.0, std::tr1::bind(
-                                       &BulletPhysicsService::metadataFinished, this, uuid, meshName,
-                                       std::tr1::placeholders::_1, std::tr1::placeholders::_2)));
-
-     mTransferPool->addRequest(req);
-	}
-}
 void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
     LocationMap::iterator it = mLocations.find(uuid);
 
@@ -381,7 +346,7 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     BoundingBox3f3f bbox = BoundingBox3f3f::null();
 	double mesh_rad = 0;
 	//getting the mesh
-	getMesh(msh, uuid);
+	MeshdataPtr retrievedMesh = getMesh(msh, uuid);
 	Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
 	uint32 indexInstance; Matrix4x4f transformInstance;
 	//loop through the instances, expand the bounding box and find the radius

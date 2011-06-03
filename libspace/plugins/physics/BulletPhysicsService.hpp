@@ -39,6 +39,7 @@
 #include <sirikata/mesh/ModelsSystemFactory.hpp>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 
 namespace Sirikata {
 
@@ -130,13 +131,11 @@ public:
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length);
 
-    void getMesh(const std::string, const UUID);
-
-	void getMetadata(const std::string, const UUID);
-
-	void metadataFinished(const UUID, std::string, std::tr1::shared_ptr<Transfer::MetadataRequest>, std::tr1::shared_ptr<Transfer::RemoteFileMetadata>);
-
-	void chunkFinished(const UUID, std::string, std::tr1::shared_ptr<Transfer::ChunkRequest>, std::tr1::shared_ptr<const Transfer::DenseData>);
+    MeshdataPtr getMesh(const std::string, const UUID);
+    // The last two get set in this callback, indicating that the
+    // transfer finished (whether or not it was successful) and the
+    // resulting data.
+    void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, volatile bool* finished, MeshdataPtr* retrievedMesh);
 
 protected:
     struct LocationInfo {
@@ -155,6 +154,9 @@ protected:
 
     typedef std::tr1::unordered_set<UUID, UUID::Hasher> UUIDSet;
     UUIDSet physicsUpdates;
+
+    typedef std::tr1::unordered_map<UUID, Transfer::ResourceDownloadTaskPtr, UUID::Hasher> MeshDownloadMap;
+    MeshDownloadMap mMeshDownloads;
 
 private:
 
@@ -181,10 +183,6 @@ private:
 	Transfer::TransferMediator *mTransferMediator;
 
 	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-
-	//at some point, replace with something better (semaphores, polling, etc.)
-	bool meshLoaded;
-	MeshdataPtr retrievedMesh;
 
 	//can probably combine with LocationInfo and LocationMap
 	typedef std::tr1::unordered_map<UUID, BulletPhysicsPointerData, UUID::Hasher> PhysicsPointerMap;
