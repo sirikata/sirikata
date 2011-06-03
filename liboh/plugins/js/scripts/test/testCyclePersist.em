@@ -19,9 +19,9 @@ checkpointPartialPersist(toPersist,fName);
 
 
 //restoring object from file
-restoreFrom(fName);
+var newCopy = restoreFrom(fName);
 system.print('\nAfter restore\n');
-system.prettyprint(toPersist);
+system.prettyprint(newCopy);
 
 
 // //deleting cycle
@@ -29,10 +29,7 @@ delete toPersist.c;
 system.print('\nAfter delete\n');
 system.prettyprint(toPersist);
 
-// //restoring object from file
-restoreFrom(fName);
-
 
 // //re-printing object.
 system.print('\nAfter second restore\n');
-system.prettyprint(toPersist);
+system.prettyprint(newCopy);

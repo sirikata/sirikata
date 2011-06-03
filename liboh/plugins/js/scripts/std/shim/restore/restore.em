@@ -10,148 +10,142 @@ if (typeof(std.persist) === 'undefined')
 
  @param {String} name of file to read a serialized object graph in
  from.
+
+ @return {Object} Returns a copy of the object that had been put into persistent storage 
  */
 function restoreFrom(filename)
 {
-    var serializedGraph = system.__debugFileRead(filename);
-    var deserializedGraph = system.deserialize(serializedGraph);
-
-    //system.prettyprint(deserializedGraph);
-    // return deserializedGraph;
-
-    // system.print('\n\nDEBUG2\n');
-    // system.prettyprint(deserializedGraph);
-    // system.print('\n\n---2\n');
-    
-    //performs recursive restoration.
-    var ptrsToFix = [];
-    fixReferences(deserializedGraph,ptrsToFix);
-    performPtrFinalFixups(ptrsToFix);
+    return restoreFromAndGetNames(filename)[0];
 }
 
+
 /**
- @param rootToFix An object that is in serialized form.
- @param {array} ptrsToFix Each record of array corresponds to one
- fixup operation to perform with pointers at end of deserialization.
- (A fixup operation occurs when we encounter an object pointer type in
- the serialized tree.)  Perform all these fixups at end in
- performPtrFinalFixups.
- 
- Takes serialized object and changes an entities present state to
- reflect updates.
+  @param {String} name of file to read a serialized object graph in
+ from.
+
+ @return {Array} Returns an array.  First index is the copy of the object that had been put into persistent storage.  Second index is a name service that you can use to name and identify objects in the restored subgraph.
  */
-function fixReferences(rootToFix, ptrsToFix)
+function restoreFromAndGetNames(keyName)
+{
+    var nameService = new std.persist.NameService();
+    var ptrsToFix = [];
+    var returner = fixReferences(keyName, keyname,ptrsToFix,nameService);
+    performPtrFinalFixups(ptrsToFix,nameService);
+    return [returner,nameService];
+}
+
+
+function tripletIsValueType(triplet)
+{
+    if ((typeof(triplet) !== 'object') || (!(length in triplet)) || (triplet.length != 3))
+        throw 'Error in checkTripletIsValueType.  Requires triplet to be passed in';
+
+    if (typeof(triplet[2]) !== 'object')
+        return true;
+
+    return false;
+}
+
+
+/**
+ fixReferences opens the keyName table, and returns an object whose
+ subgraph is rooted at the object with id ptrId. Note: all objects the
+ root object references may not be linked to correctly.  Need to call
+ performPtrFinalFixups on ptrsToFix after running this function.
+ 
+ @param {keyName}, Passed to the backend.  This is the table to
+ access.
+ 
+ @param {int}, ptrId, Each object has a unique id.  ptrId is the
+ identifier for the object that we should be fixing references for (in
+ the keyName table).
+
+ @param {array} ptrsToFix is an array that tracks all objects that we
+ will need to fixup the references too.  See performFixupPtr function.
+
+ @param nameService can be used to lookup the ids for objects that
+ we've already re-read.
+
+ @return {object} Returns an object whose subgraph is rooted at the
+ object with id ptrId. 
+
+ 
+ */
+function fixReferences(keyName, ptrId,ptrsToFix,nameService)
 {
     var returner = { };
 
-    switch(std.persist.checkObjectSerial(rootToFix))
+    var unfixedObj = std.persist.Backend.read(keyName,ptrId);
+
+    var id = unfixedObj['mID'];
+    if (nameService.lookupObject(id) != nameService.DNE)
+        throw "Error.  Called fixReferences on an object I've already visited";
+
+    nameService.insertObjectWithName(returner,id);
+    
+
+    //run through all the fields in unfixedObj.  If the field is a
+    //value type, point returner to the new field right away.  If the
+    //field is an object type and we have a copy of that object, then
+    //point returner to that new object right away.  If the field is
+    //an object type and we do not have a copy of that object, then
+    //register returner to be fixed-up with the new pointer later.
+    for (var s in unfixedObj)
     {
-        case std.persist.NOT_OBJECT:
-        throw 'Error in fixReferences of restore.  Should only be fixing references for an object';
-        break;
+        var index = unfixedObj[s][0];
+        
+        if (tripletIsValueType(unfixedObj[s]))
+            returner[index] = unfixedObj[s][1];
+        else
+        {
 
-        case std.persist.OBJECT_SERIAL:
-        returner = fixupObjectSerial(rootToFix,ptrsToFix);
-        break;
-
-        case std.persist.OBJECT_POINTER_SERIAL:
-        throw 'Error.  Should not directly receive an object pointer in fixReferences.';
-        break;
-
-        case std.persist.SPECIAL_OBJECT:
-        returner = fixupSpecialObject(rootToFix,ptrsToFix);
-        break;
-
-        default:
-        throw 'Error in fixReferences of restore.em.  Unknown return value from std.persist.checkObjectSerial.';
+            if ((unfixedObj[s][2]) == 'null')
+                returner[index] = null;
+            else
+            {
+                var ptrId  = unfixedObj[s][1];
+                var ptrObj = nameService.lookupObject(ptrId);
+                if (ptrObj != nameService.DNE)
+                {
+                    //already have the object.  just link to it.
+                    returner[index] = ptrObj;
+                }
+                else
+                {
+                    //will have to register this pointer to be fixed up
+                    registerFixupObjectPointer( ptrId ,index,returner,ptrsToFix);
+                    fixReferences(keyName,ptrId,ptrsToFix,nameService);
+                }
+            }
+        }
     }
-
     return returner;
 }
 
-/**
- @param A basic object in serialized form (ie it isn't a "special"
- object [such as system, presence, etc], and it isn't a pointer to
- another object.
- */
-function fixupObjectSerial(objToFix,ptrsToFix)
-{
-    if (!(std.persist.ID_FIELD_STRING in objToFix))
-        throw 'Error in fixupObjectSerial.  Do not have id associated with passed in argument.';      
-
-
-    var objID = objToFix[std.persist.ID_FIELD_STRING];
-
-    var localCopy =  nameService.lookupObject(objID);
-
-    if (localCopy == nameService.DNE)
-        throw 'Error in fixupObjectSerial.  Object should exist in the name service.';
-
-
-    //temporarily copy old fields of local object to separate object.
-    //Then delete them from local object
-    var oldLocalFields = { };
-    for (var s in localCopy)
-        oldLocalFields[s] = localCopy[s];
-
-    for (var s in oldLocalFields)
-        delete localCopy[s];
-
-    
-    for (var s in objToFix)
-    {
-        //ignore the serialization metadata when deserializing the object
-        if ((s == std.persist.ID_FIELD_STRING) || (s == std.persist.TYPE_FIELD_STRING) || (s == std.persist.NO_RESTORE_STRING) || (s == std.persist.POINTER_FIELD_STRING) || (s== 'prototype') || (s == std.persist.NON_RESTORE_MAX_NOT_PERSISTED))
-            continue;
-        
-        var fieldValue = std.persist.getValueFromPropValPair(objToFix[s]);
-        var indexValue = std.persist.getPropFromPropValPair (objToFix[s]);
-
-        
-        if (std.persist.checkObjectSerial(fieldValue) == std.persist.OBJECT_POINTER_SERIAL)
-        {
-            //register the field, s, of localCopy to be fixed up.
-            registerFixupObjectPointer(fieldValue,indexValue, localCopy,ptrsToFix);                  
-        }
-        else if ((typeof (fieldValue) == "object") &&(fieldValue != null))
-        {
-            //finish copying data for remaining references
-            var newObj = fixReferences(fieldValue,ptrsToFix);     
-            //in case scripter had deleted field associated with this object....this will re-populate
-            localCopy[indexValue] = newObj;
-        }
-        else
-        {
-            //copy value types to local
-            localCopy[indexValue] = fieldValue;
-        }
-    }
-    return localCopy;
-}
-
-
-
-
 
 /**
- @param object pointer to point localCopyToPointTo
+ @param {int} ptrId.  The unique name of the object that should be
+ referenced by calling localCopyToPoint[index]
  @param index of the local object to perform fixup on.
  @param {object} localCopyToPoint localCopyToPoint[index] should be the new
  object pointer
  @param {array} allToFix an array.  Push the above three arguments onto that
- array (as an array).  After rest of deserialization occurs, final
- step is to call performFinalFixups with this array as an argument.
- performPtrFinalFixups traverses array, and points localCopyToPoint[index]
- to the objects described by objPtrToFix.
+ array (as an array).
+
+ After rest of deserialization occurs, final step is to call
+ performFinalFixups with this array as an argument.
+ performPtrFinalFixups traverses array, and points
+ localCopyToPoint[index] to the objects described by objPtrToFix.
  */
-function registerFixupObjectPointer(objPtrToFix, index, localCopyToPoint, allToFix)
+function registerFixupObjectPointer(ptrId, index, localCopyToPoint, allToFix)
 {
-    allToFix.push([localCopyToPoint, objPtrToFix,index]);
+    allToFix.push([ptrId, index,localCopyToPoint]);
 }
+
 
 /**
  @param {array} allToFix array.  Each element has three values. [0]
- localObjToPoint, [1] objPtrToFix, [2] index.  
+ ptrId, [1] index, [2] localCopyToPoint.  
 
  Runs through array generated by calls to registerFixupObjectPointer,
  and individually performs fixups for each one.
@@ -159,40 +153,28 @@ function registerFixupObjectPointer(objPtrToFix, index, localCopyToPoint, allToF
  @see registerFixupObjectPointer
  @see fixSinglePtr
  */
-function performPtrFinalFixups(allToFix)
+function performPtrFinalFixups(allToFix,nameService)
 {
     for (var s in allToFix)
-        fixSinglePtr(allToFix[s][0],allToFix[s][1],allToFix[s][2]);
+        fixSinglePtr(allToFix[s][0],allToFix[s][1],allToFix[s][2],nameService);
 }
 
 /**
- localObjToPoint[index] should end up pointing to the object represented
- by objPtrToFix.
+ locaCopyToPoint[index] should end up pointing to the object represented
+ by the lookup into nameService of ptrId
 
  @see registerFixupObjectPointer
  @see fixSinglePtr
  */
-function fixSinglePtr(localObjToPoint, objPtrToFix,index)
+function fixSinglePtr(ptrId, index,localCopyToPoint,nameService)
 {
-    if ((typeof(objPtrToFix) != 'object') || (objPtrToFix == null))
+    if ((typeof(localCopyToPoint) != 'object') || (localCopyToPoint== null))
         throw 'Error in fixSinglePtr.  Should not have received non-obect or null ptr record.';
 
-    if (std.persist.checkObjectSerial(objPtrToFix) != std.persist.OBJECT_POINTER_SERIAL)
-        throw 'Error in fixSinglePtr.  Should not have received non-pointer record to point to.';
+    var fixedObj = nameService.lookupObject(ptrId);
+    if (fixedObj == nameService.DNE)
+        throw 'Error in fixSinglePtr.  Have no record of object that you are trying to point to.';
 
-    //lookup local object
-    var localToPointTo = nameService.lookupObject(objPtrToFix[std.persist.POINTER_FIELD_STRING]);
-    if (localToPointTo == nameService.DNE)
-        throw 'Error in fixSinglePtr.  Have no record of object with name: ' + objPtrToFix[std.persist.POINTER_FIELD_STRING].toString();
-    
-    //perform fix    
-    localObjToPoint[index] = localToPointTo;
+    localCopyToPoint[index] = fixedObj;
 }
 
-
-/**
- */
-function fixupSpecialObject(rootToFix,ptrsToFix)
-{
-   throw 'Error.  Not currently handling cases of deserializing special objects (eg. timers, visibles, etc.)' ;
-}

@@ -29,44 +29,31 @@ function checkpoint(presenceEntries)
  @param {optional} filename. String representing the name of the file to
  save this persistent object into.
  */
-function checkpointPartialPersist(objToPersistFrom, filename)
+function checkpointPartialPersist(objToPersistFrom, keyName)
 {
     if ((objToPersistFrom == null) || (typeof(objToPersistFrom) != 'object'))
         throw 'Error.  Can only checkpoint objects.';
-    
-    var shadowTree      = new std.persist.NonRestorable();
 
+    std.persist.Backend.writeSequence(keyName);
+    
     //after call to markAndBranch, markedObjectMap will contain all
     //objects that were reachable from the root object
     //objToPersistFrom.
-    var markedObjectMap = new std.persist.NonRestorable();
-
-    //add myself to markedObjectMap before beginning.
-    var rootID = mark(objToPersistFrom, markedObjectMap);
-    shadowTree[std.persist.ID_FIELD_STRING] = rootID;
-
+    var markedObjectMap = {};
+    var nameService = new std.persist.NameService();
+    
+    //add root object to markedObjectMap before beginning.
+    mark(objToPersistFrom, markedObjectMap,nameService);
     //recursively traverse objet graph.
-    markAndBranch(objToPersistFrom, shadowTree,markedObjectMap);
+    markAndBranch(objToPersistFrom, markedObjectMap,nameService);
 
+    
     //log the subtree of objects reachable from objToPersistFrom in
-    //nameService
+    //nameService;
     nameService.enterSubtreeObjects(objToPersistFrom, markedObjectMap);
-
-    var serialized = system.serialize(shadowTree);
-
-    // system.print('\n\nDEBUG\n');
-    // system.prettyprint(shadowTree);
-    // system.print('\n\n---\n');
-
-    // var deser = system.deserialize(serialized);
-    // system.print('\n\nDEBUG2\n');
-    // system.prettyprint(deser);
-    // system.print('\n\n---2\n');
     
-    
-    //save the file out to disk.
-    var fName = typeof(filename) == 'undefined' ? 'testFile.em.bu' : filename;
-    system.__debugFileWrite(serialized, fName);
+    std.persist.Backend.flush();
+    return nameService;
 }
 
 
@@ -99,7 +86,7 @@ function checkMarked(objToCheck, markedObjects)
  (through nameService).
 
  */
-function mark(objToMark, markedObjects)
+function mark(objToMark, markedObjects,nameService)
 {
     if (checkMarked(objToMark,markedObjects))
         throw 'Error.  Asking to mark object that\'s already been marked';
@@ -115,116 +102,79 @@ function mark(objToMark, markedObjects)
 
 /**
  @param objGraphCatalog This is the root of the object graph that we have not yet copied to shadowTree
- @param shadowTree: This is the serialized version of the object graph.  We progressively add to it.
  @param markedObjects is a map of objects that we have already cataloged.  Keys are object references.  Values are unique names associated with each object given by nameService.
  */
-function markAndBranch(objGraphCatalog, shadowTree, markedObjects)
+function markAndBranch(objGraphCatalog, markedObjects,nameService)
 {
-    if (std.persist.checkNonRestorable(objGraphCatalog))
-        return;
 
     //set a type for this object;
     if (std.persist.checkSystem(objGraphCatalog))
     {
-        processSystem(objGraphCatalog,shadowTree,markedObjects);
+        processSystem(objGraphCatalog,markedObjects,nameService);
         return;
     }
     if (std.persist.checkPresence(objGraphCatalog))
     {
-        processPresence(objGraphCatalog,shadowTree,markedObjects);
+        processPresence(objGraphCatalog,markedObjects,nameService);
         return;            
     }
     if (std.persist.checkTimer(objGraphCatalog))
     {
-        processTimer(objGraphCatalog,shadowTree,markedObjects);
+        processTimer(objGraphCatalog,markedObjects,nameService);
         return;
     }
     if (std.persist.checkVisible(objGraphCatalog))
     {
-        processVisible(objGraphCatalog,shadowTree,markedObjects);
+        processVisible(objGraphCatalog,markedObjects,nameService);
         return;
     }
     if (std.persist.checkPresenceEntry(objGraphCatalog))
     {
-        processPresenceEntry(objGraphCatalog,shadowTree,markedObjects);
+        processPresenceEntry(objGraphCatalog,markedObjects,nameService);
         return;
     }
     if (std.persist.checkFunctionObject(objGraphCatalog))
     {
-        processFunction(objGraphCatalog,shadowTree,markedObjects);
+        processFunction(objGraphCatalog,markedObjects,nameService);
         return;
     }
 
+    var record = new std.Persist.Record(objGraphCatalog,nameService);
     
     for (var s in objGraphCatalog)
     {
         // check typeof s;
         // lkjs;
         if (typeof(objGraphCatalog[s]) != 'object')
-            pushValueType(objGraphCatalog,s,shadowTree);
+            record.pushValueType(std.persist.wrapPropValPair(s,objGraphCatalog[s]));
         else
-            interHandler(objGraphCatalog,shadowTree,s,markedObjects);
+            record.pushObjType(interHandler(objGraphCatalog,s,markedObjects,nameService));
     }
+    std.persist.Backend.addRecord(record);
 }
+
 
 
 /**
  @param {object} objGraphCatalog the local copy of the object whose field we're trying to persist.
- @param index: the name of the field of the local copy of the object we're trying to persist.
- @param {object} shadowTree: the serialized tree of the local object that we're trying to copy.
+ @param field: the name of the field of the local copy of the object we're trying to persist.
  */
-function pushValueType(objGraphCatalog,index,shadowTree)
-{
-    std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(index,objGraphCatalog[index]));
-}
-
-/**
-
- */
-function interHandler(objGraphCatalog,shadowTree,field,markedObjects)
+function interHandler(objGraphCatalog,field,markedObjects,nameService)
 {
     //check if got null object.
     if (objGraphCatalog[field] == null)
-    {
-        std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(field,null));
-        return;
-    }
-    
-    if (std.persist.checkNonRestorable(objGraphCatalog))
-        return;
+        return std.persist.wrapPropValPair(field,null);
     
     var theMark = checkMarked(objGraphCatalog[field],markedObjects);
-    var valToPush = new std.persist.NonRestorable();
     if (theMark == null)
     {
         //may want to do special things here to determine if it is a special object;
         //means that we have not already tagged this object
-        valToPush[std.persist.ID_FIELD_STRING]       =  mark(objGraphCatalog[field],markedObjects);
-        var index = std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(field,valToPush));
-        // markAndBranch(objGraphCatalog[field],valToPush,markedObjects);
-        markAndBranch(objGraphCatalog[field],shadowTree[index],markedObjects);
-
-        //clean up lkjs;
-        // shadowTree[field] = new std.persist.NonRestorable();
-        // shadowTree[field][std.persist.ID_FIELD_STRING] =  mark(objGraphCatalog[field],markedObjects);
-        // markAndBranch(objGraphCatalog[field],shadowTree[field],markedObjects);
+        theMark =  mark(objGraphCatalog[field],markedObjects,nameService);
+        markAndBranch(objGraphCatalog[field],markedObjects,nameService);
     }
-    else
-    {
-        //is marked.  create pointer for it.
-        valToPush[std.persist.TYPE_FIELD_STRING]     = std.persist.POINTER_OBJECT_TYPE_STRING;
-        valToPush[std.persist.POINTER_FIELD_STRING]  = theMark;
-        std.persist.nonRestorePush(shadowTree,std.persist.wrapPropValPair(field, valToPush));
-
-        
-        // shadowTree[field] = new std.persist.NonRestorable();
-        // shadowTree[field][std.persist.TYPE_FIELD_STRING]     = std.persist.POINTER_OBJECT_TYPE_STRING;
-        // shadowTree[field][std.persist.POINTER_FIELD_STRING]  = theMark;
-    }
+    return std.persist.wrapPropValPair(field,theMark);
 }
-
-
-
 
 
 /**
@@ -233,8 +183,10 @@ function interHandler(objGraphCatalog,shadowTree,field,markedObjects)
  @param shadowTree: This is the serialized version of the object graph.  We progressively add to it.
  @param markedObjects is a map of objects that we have already cataloged.  Index of map is the object.  Points to the id of that object.
  */
-function processSystem(objGraphCatalog, shadowTree, markedObjects)
+function processSystem(objGraphCatalog, shadowTree, markedObjects,nameService)
 {
+    throw 'Error with sys object since change';
+    
     if (!std.persist.checkSystem(objGraphCatalog))
         throw 'Error in process system.  First argument must be a system object.';
 
@@ -255,7 +207,7 @@ function processSystem(objGraphCatalog, shadowTree, markedObjects)
         shadowTree.selfMap[std.persist.TYPE_FIELD_STRING] = std.persist.SELF_MAP_OBJECT_STRING;
         
         //go down each branch
-        processSelfMap(sysData.selfMap,shadowTree.selfMap,markedObjects);
+        processSelfMap(sysData.selfMap,shadowTree.selfMap,markedObjects,nameService);
     }
     else
     {
@@ -271,14 +223,15 @@ function processSystem(objGraphCatalog, shadowTree, markedObjects)
  @param sMap should be the selfMap pointed at by system.
  @see processSystem
  */
-function processSelfMap(sMap,shadowTree,markedObjects)
+function processSelfMap(sMap,shadowTree,markedObjects,nameService)
 {
+    throw 'Error with self map since change';
     for (s in sMap)
     {
         if (s == system.__NULL_TOKEN__)
             continue;
 
-        interHandler(sMap,shadowTree,s,markedObjects);
+        interHandler(sMap,shadowTree,s,markedObjects,nameService);
     }
 }
 
@@ -287,8 +240,10 @@ function processSelfMap(sMap,shadowTree,markedObjects)
  @param pEntry should be a PresenceEntry.  If it is not, throws exception.
  @see processSystem
  */
-function  processPresenceEntry(pEntry,shadowTree, markedObjects)
+function  processPresenceEntry(pEntry,shadowTree, markedObjects,nameService)
 {
+    throw 'Error with presenceEntry since change';
+    
     if (std.persist.checkPresenceEntry(pEntry))
         throw 'Error processing presence entry.  First arg passed in must be a presence entry';
 
@@ -298,10 +253,10 @@ function  processPresenceEntry(pEntry,shadowTree, markedObjects)
     
     shadowTree.sporef  = pEntry.sporef;
 
-    interHandler(pEntry, shadowTree,'presObj',markedObjects);
-    interHandler(pEntry, shadowTree,'proxResultSet',markedObjects);
-    interHandler(pEntry, shadowTree,'proxAddCB',markedObjects);
-    interHandler(pEntry, shadowTree,'proxRemCB',markedObjects);
+    interHandler(pEntry, shadowTree,'presObj',markedObjects,nameService);
+    interHandler(pEntry, shadowTree,'proxResultSet',markedObjects,nameService);
+    interHandler(pEntry, shadowTree,'proxAddCB',markedObjects,nameService);
+    interHandler(pEntry, shadowTree,'proxRemCB',markedObjects,nameService);
 }
 
 
@@ -310,8 +265,10 @@ function  processPresenceEntry(pEntry,shadowTree, markedObjects)
  Called to tree-ify a function object.  Write now, not capturing the closure, just calling toString on function.  Ugh.
  @see processSystem
  */
-function processFunction(func,shadowTree,markedObjects)
+function processFunction(func,shadowTree,markedObjects,nameService)
 {
+    throw 'Error with function since change';
+    
     if (! std.persist.checkFunctionObject(func))
         throw 'Error processing function.  First arg passed in must be a function';
 
@@ -326,8 +283,10 @@ function processFunction(func,shadowTree,markedObjects)
  Called to tree-ify a presence object.
   @see processSystem
  */
-function processPresence(pres,shadowTree,markedObjects)
+function processPresence(pres,shadowTree,markedObjects,nameService)
 {
+    throw 'Error with processPresence since change';
+    
     if (! std.persist.checkPresence(pres))
         throw 'Error processing presence.  First arg passed in must be a presence.';
 
@@ -355,20 +314,22 @@ function processPresence(pres,shadowTree,markedObjects)
     shadowTree.contextId = tmp.data.contextId;
     shadowTree.isConnected = tmp.data.isConnected;
 
-    interHandler(tmp.data,shadowTree, 'connectedCallback', markedObjects);
+    interHandler(tmp.data,shadowTree, 'connectedCallback', markedObjects,nameService);
     shadowTree.isSuspended = tmp.data.isSuspended;
     shadowTree.suspendedVelocity = tmp.data.suspendedVelocity;
     shadowTree.suspendedOrientationVelocity = tmp.data.suspendedOrientationVelocity;
-    interHandler(tmp.data,shadowTree, 'proxAddedCallback', markedObjects);
-    interHandler(tmp.data,shadowTree, 'proxRemovedCallback', markedObjects);
+    interHandler(tmp.data,shadowTree, 'proxAddedCallback', markedObjects,nameService);
+    interHandler(tmp.data,shadowTree, 'proxRemovedCallback', markedObjects,nameService);
 }
 
 
 /**
  Called to tree-ify a timer object
  */
-function processTimer(timer,shadowTree,markedObjects)
+function processTimer(timer,shadowTree,markedObjects,nameService)
 {
+    throw 'Error with processTimer since change';
+    
     if (! std.persist.checkTimer(timer))
         throw 'Error processing timer.  First arg passed in must be a timer.';
 
@@ -389,7 +350,7 @@ function processTimer(timer,shadowTree,markedObjects)
     if (shadowTree.isCleared)
         shadowTree.callback = null;
     else
-        interHandler(tmp.data,shadowTree,'callback',markedObjects);
+        interHandler(tmp.data,shadowTree,'callback',markedObjects,nameService);
     
 }
 
@@ -398,8 +359,10 @@ function processTimer(timer,shadowTree,markedObjects)
 /**
  Called to tree-ify a visible object
  */
-function processVisible(vis, shadowTree,markedObjects)
+function processVisible(vis, shadowTree,markedObjects,nameService)
 {
+    throw 'Error with processVisible since change';
+    
     if (! std.persist.checkVisible(vis))
         throw 'Error processing visible.  First argument passed in must be a visible.';
 

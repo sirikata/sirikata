@@ -72,6 +72,7 @@
 #include "JSVisibleStructMonitor.hpp"
 
 
+
 using namespace v8;
 using namespace std;
 namespace Sirikata {
@@ -257,6 +258,27 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
 {
 }
 
+
+v8::Handle<v8::Value> JSObjectScript::backendFlush(const UUID& seqKey, JSContextStruct* jscont)
+{
+    bool returner = mBackend.flush(seqKey);
+    return v8::Boolean::New(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::backendWrite(const UUID& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont)
+{
+    bool returner = mBackend.write(seqKey,id,toWrite);
+    return v8::Boolean::New(returner);
+}
+
+
+v8::Handle<v8::Value> JSObjectScript::backendCreateEntry(const String& prepend, JSContextStruct* jscont)
+{
+    UUID returner = mBackend.createEntry(prepend);
+    String uidStr = returner.toString();
+    return v8::String::New(uidStr.c_str(), uidStr.size());
+}
+ 
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 {

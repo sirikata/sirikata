@@ -53,7 +53,7 @@
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSVisibleStructMonitor.hpp"
 #include "JSEntityCreateInfo.hpp"
-
+#include "JSBackend/JSFileBackend.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -99,7 +99,12 @@ public:
      */
     v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont);
 
+    v8::Handle<v8::Value> backendFlush(const UUID& seqKey,JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendWrite(const UUID& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendCreateEntry(const String& prepend, JSContextStruct* jscont);
+ 
 
+    
     Handle<v8::Context> context() { return mContext->mContext;}
 
     bool isRootContext(JSContextStruct* jscont);
@@ -209,7 +214,8 @@ protected:
     ContIDToSuspMap toFixup;
 
     JSObjectScriptManager* mManager;
-
+    JSFileBackend mBackend;
+    
 };
 
 } // namespace JS

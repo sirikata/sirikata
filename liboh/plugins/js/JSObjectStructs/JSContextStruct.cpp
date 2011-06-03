@@ -43,6 +43,20 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //taken care of in the createContext function of this class.
 }
 
+v8::Handle<v8::Value> JSContextStruct::backendFlush(const UUID& seqKey)
+{
+    return jsObjScript->backendFlush(seqKey,this);
+}
+v8::Handle<v8::Value> JSContextStruct::backendWrite(const UUID& seqKey, const String& id, const String& toWrite)
+{
+    return jsObjScript->backendWrite(seqKey,id,toWrite,this);
+}
+v8::Handle<v8::Value> JSContextStruct::backendCreateEntry(const String& prepend)
+{
+    return jsObjScript->backendWrite(prepend,this);
+}
+
+
 v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {
     return jsObjScript->debug_fileWrite(strToWrite,filename);

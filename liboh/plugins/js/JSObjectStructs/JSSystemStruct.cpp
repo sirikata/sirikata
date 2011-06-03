@@ -27,6 +27,20 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 {
 }
 
+v8::Handle<v8::Value> JSSystemStruct::backendFlush(const UUID& seqKey)
+{
+    return associatedContext->backendFlush(seqKey);
+}
+v8::Handle<v8::Value> JSSystemStruct::backendWrite(const UUID& seqKey, const String& id, const String& toWrite)
+{
+    return associatedContext->backendWrite(seqKey,id,toWrite);
+}
+v8::Handle<v8::Value> JSSystemStruct::backendCreateEntry(const String& prepend)
+{
+    return associatedContext->backendWrite(prepend);
+}
+    
+
 v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {
     return associatedContext->debug_fileWrite(strToWrite,filename);

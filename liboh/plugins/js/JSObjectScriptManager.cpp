@@ -194,6 +194,13 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
+
+    mSystemTemplate->Set(v8::String::New("backendCreateEntry"),v8::FunctionTemplate::New(JSSystem::backendCreateEntry));
+    mSystemTemplate->Set(v8::String::New("backendWrite"),v8::FunctionTemplate::New(JSSystem::backendWrite));
+    mSystemTemplate->Set(v8::String::New("backendFlush"),v8::FunctionTemplate::New(JSSystem::backendFlush));
+
+
+    
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
     //check what permissions fake root is loaded with

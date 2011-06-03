@@ -61,6 +61,12 @@ struct JSContextStruct : public JSSuspendable
 
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing,VisAddParams* addParams);
 
+
+
+    v8::Handle<v8::Value> backendFlush(const UUID& seqKey);
+    v8::Handle<v8::Value> backendWrite(const UUID& seqKey, const String& id, const String& toWrite);
+    v8::Handle<v8::Value> backendCreateEntry(const String& prepend);
+ 
     
     //creates a new jseventhandlerstruct and wraps it in a js object
     //registers the jseventhandlerstruct both with this context and

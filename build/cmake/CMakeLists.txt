@@ -1989,6 +1989,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSBackend/JSFileBackend.cpp
   ${EMERSON_SOURCES}
   )
 IF(V8_FOUND)

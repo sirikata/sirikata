@@ -77,6 +77,70 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
+lkjs;
+v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling createEntry.  Require 1 argument: a string to prepend")));
+
+    INLINE_STR_CONV_ERROR(args[0],backendCreateEntry,1,prepend);
+
+    //decode system object
+    errorMessage = "Error decoding error message when backedCreatingEntry";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    
+    return jsfake->backendCreateEntry(prepend);
+}
+
+
+v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
+{
+    if (args.Length() != 3)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 3 argument: a sequence key (string), an id (string), and a string to write (string)")));
+
+    
+    INLINE_STR_CONV_ERROR(args[0],backendWrite,1,seqKeyAsString);
+    INLINE_STR_CONV_ERROR(args[1],backendWrite,2,id);
+    INLINE_STR_CONV_ERROR(args[2],backendWrite,3,toWrite);
+
+    UUID seqKey (seqKeyAsString);
+    
+    //decode system object
+    errorMessage = "Error decoding error message when backendWriting";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->backendWrite(seqKey,id,toWrite);
+}
+
+
+v8::Handle<v8::Value> backendFlush(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 1 argument: a sequence key (string).")));
+
+    
+    INLINE_STR_CONV_ERROR(args[0],backendWrite,1,seqKeyAsString);
+
+    UUID seqKey (seqKeyAsString);
+    
+    //decode system object
+    errorMessage = "Error decoding error message when backendFlushing";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->backendFlush(seqKey);
+}
+
+
 
 v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args)
 {

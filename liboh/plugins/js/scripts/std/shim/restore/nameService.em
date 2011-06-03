@@ -3,48 +3,47 @@ if (typeof(std.persist) === 'undefined')
 
 
 
+
 /*Create a separate namespace for name service;*/
-(function()
- {
-
-     /**
-      Keys are object references; values are unique integers
-      ("names").
-      */
-     var objectsToNames  =  {  };
+std.persist.NameService = function()
+{
+    /**
+     Keys are object references; values are unique integers
+     ("names").
+     */
+    var objectsToNames  =  {  };
      
-     /**
-      Keys are integers ("names") each unique to a single object.
-      Values are object references
-      */
-     var namesToObjects  = {  };
+    /**
+     Keys are integers ("names") each unique to a single object.
+     Values are object references
+     */
+    var namesToObjects  = {  };
 
-     /**
-      Keys are object references.  Values are single objects that
-      contain the references and names for every object that is
-      reachable from that object.  Not all objects that are stored in
-      objectsToNames and namesToObjects will have entries in
-      hierarchyMap.  Just those that were the roots for a request to
-      persist.
-      */
-     var hierarchyMap    = {  };
+    /**
+     Keys are object references.  Values are single objects that
+     contain the references and names for every object that is
+     reachable from that object.  Not all objects that are stored in
+     objectsToNames and namesToObjects will have entries in
+     hierarchyMap.  Just those that were the roots for a request to
+     persist.
+     */
+    var hierarchyMap    = {  };
 
-     
+
      var whichNameOn = 0;
-     
-     nameService = {};
-     
+
+
      /**
       Does Not Exist.  
       Returned when maps calling lookup on do not have a record for
       the index searching for.
       */
-     nameService.DNE = -1;
+     this.DNE = -1;
 
      /**
       Prints all objects that we're responsible for and their names 
       */
-     nameService.__debugPrint = function ()
+     this.__debugPrint = function ()
      {
          for (var s in namesToObjects)
          {
@@ -52,36 +51,36 @@ if (typeof(std.persist) === 'undefined')
              system.print(s);
          }
      };
-     
+
      /**
       @param name to lookup.  (name will be an integer starting at
       zero).
       @returns if object exists, returns the object.  If it does not,
       returns DNE
       */
-     nameService.lookupObject = function(name)
+     this.lookupObject = function(name)
      {
          if (name in namesToObjects)
              return namesToObjects[name];
 
-         return nameService.DNE;
+         return this.DNE;
      };
-     
+
      /**
       @param obj to lookup name of.  (name will be an integer starting
       at zero).
       @returns if object exists, returns the object.  If it does not,
       returns DNE
       */
-     nameService.lookupName = function (obj)
+     this.lookupName = function (obj)
      {
          if (obj in objectsToNames)
              return objectsToNames[obj];
 
-         return nameService.DNE;
+         return this.DNE;
      };
 
-     
+
      /**
       @param objIndex object reference to index into hierarchyMap
       @param markedMap contains a map indexed on object references
@@ -89,48 +88,67 @@ if (typeof(std.persist) === 'undefined')
       @throw Throws an exception if the object that we're entering a
       markedMap for does not have an entry in objectsToNames.
       */
-     nameService.enterSubtreeObjects = function (objIndex, markedMap)
+      this.enterSubtreeObjects = function (objIndex, markedMap)
+      {
+          if (this.lookupName(objIndex) == this.DNE)
+              throw 'Error.  Not tracking this object in nameService when calling enterMarkedMap';
+
+          hierarchyMap[objIndex] = markedMap; //marked map includes current object
+      };
+
+
+      /**
+       Checks hierarchyMap to see if objIndex has an entry in it that
+       contains all the objects that are in its subtree.  If it does,
+       returns subtree.  If it does not, returns DNE.
+
+       @param objIndex object refernce to index into hierarchyMap
+       @returns DNE if have no record for objIndex in hierarchyMap.
+       Returns a map containing all the object references (as keys) and
+       names (as values) of the objects reachable from this object.
+       */
+     this.lookupSubtreeObjects = function(objIndex)
      {
-         if (nameService.lookupName(objIndex) == nameService.DNE)
-             throw 'Error.  Not tracking this object in nameService when calling enterMarkedMap';
-         
-         hierarchyMap[objIndex] = markedMap; //marked map includes current object
-     };
+          if (objIndex in hierarchyMap)
+              return hierarchyMap[objIndex];
+
+          return this.DNE;
+      };
 
 
-     /**
-      Checks hierarchyMap to see if objIndex has an entry in it that
-      contains all the objects that are in its subtree.  If it does,
-      returns subtree.  If it does not, returns DNE.
-      
-      @param objIndex object refernce to index into hierarchyMap
-      @returns DNE if have no record for objIndex in hierarchyMap.
-      Returns a map containing all the object references (as keys) and
-      names (as values) of the objects reachable from this object.
-      */
-     nameService.lookupSubtreeObjects = function(objIndex)
+      /**
+       @param objToInsert into name service.
+       @return Returns the name for the object.
+       */
+      this.insertObject = function (objToInsert)
+      {
+          var ind = this.lookupName(objToInsert);
+          if (ind != this.DNE)
+              return ind;
+
+          objectsToNames[objToInsert] = whichNameOn;
+          namesToObjects[whichNameOn] = objToInsert;
+
+          return whichNameOn++;
+      };
+
+
+    /**
+     @param objToInsert into name service
+     @param nameToUse.  How to index into the new name in the service.
+
+     Note.  If nameToUse is greater than or equal to which name to
+     insert into next, we increase the value for which name to insert
+     into next to avoid possible collisions.
+     */
+     this.insertObjectWithName = function (objToInsert,nameToUse)
      {
-         if (objIndex in hierarchyMap)
-             return hierarchyMap[objIndex];
+         objectsToNames[objToInsert] = nameToUse;
+         namesToObjects[nameToUse]    = objToInsert;
 
-         return nameService.DNE;
+         if (nameToUse >= whichNameOn)
+             whichNameOn = nameToUse + 1;
      };
+    
      
-     
-     /**
-      @param objToInsert into name service.
-      @return Returns the name for the object.
-      */
-     nameService.insertObject = function (objToInsert)
-     {
-         var ind = nameService.lookupName(objToInsert);
-         if (ind != nameService.DNE)
-             return ind;
-
-         objectsToNames[objToInsert] = whichNameOn;
-         namesToObjects[whichNameOn] = objToInsert;
-
-         return whichNameOn++;
-     };
-     
- })();
+ };
