@@ -45,12 +45,12 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
 
 v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {
-    jsObjScript->debug_fileWrite(strToWrite,filename);
+    return jsObjScript->debug_fileWrite(strToWrite,filename);
 }
 
 v8::Handle<v8::Value> JSContextStruct::debug_fileRead(const String& filename)
 {
-    jsObjScript->debug_fileRead(filename);
+    return jsObjScript->debug_fileRead(filename);
 }
 
 uint32 JSContextStruct::getContextID()
@@ -341,7 +341,10 @@ JSContextStruct::~JSContextStruct()
 
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
 {
-
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return;
+    
     //check whether should evaluate any further callbacks.
     if (getIsSuspended() || getIsCleared())
         return;

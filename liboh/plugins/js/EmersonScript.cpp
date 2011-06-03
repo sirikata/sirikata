@@ -234,33 +234,43 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
         return;
     }
 
-    //now see if must issue callback for this object's going out of scope
-    if ( !iter->second->mOnProxRemovedEventHandler.IsEmpty() && !iter->second->mOnProxRemovedEventHandler->IsUndefined() && !iter->second->mOnProxRemovedEventHandler->IsNull())
+    if (mContext->proxRemovedFunc.IsEmpty())
     {
-        JSVisibleStruct* jsvis =  checkVisStructExists(proximateObject->getObjectReference(),querier);
-        if (jsvis == NULL)
-        {
-            JSLOG(error, "Error in notifyProximateGone of JSObjectScript.  Before receiving a notification that an object is no longer visible, should have received a notification that it was originally visible.  Error on object: "<<proximateObject->getObjectReference()<<" for querier: "<<querier<<".  Aborting call now.");
-            return;
-        }
-
-
-        //jswrap the object
-        //should be in context from createVisibleObject call
-        v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext->mContext);
-
-        v8::HandleScope handle_scope;
-        v8::Context::Scope context_scope(mContext->mContext);
-        TryCatch try_catch;
-
-        int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { outOfRangeObject };
-        //FIXME: Potential memory leak: when will removedProxObj's
-        //SpaceObjectReference field be garbage collected and deleted?
-        JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
-        invokeCallback(mContext, iter->second->mOnProxRemovedEventHandler, argc, argv);
+        JSLOG(info,"No proximity removal function");
+        return;
     }
+
+    JSVisibleStruct* jsvis =  checkVisStructExists(proximateObject->getObjectReference(),querier);
+    if (jsvis == NULL)
+    {
+        JSLOG(error, "Error in notifyProximateGone of JSObjectScript.  Before receiving a notification that an object is no longer visible, should have received a notification that it was originally visible.  Error on object: "<<proximateObject->getObjectReference()<<" for querier: "<<querier<<".  Aborting call now.");
+        return;
+    }
+
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext->mContext);
+
+    //jswrap the object
+    //should be in context from createVisibleObject call
+    v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext->mContext);
+
+    TryCatch try_catch;
+
+    int argc = 2;
+    String sporefVisTo = iter->first.toString();
+    v8::Handle<v8::Value> argv[2] = { outOfRangeObject, v8::String::New( sporefVisTo.c_str()  ) };
+
+    //FIXME: Potential memory leak: when will removedProxObj's
+    //SpaceObjectReference field be garbage collected and deleted?
+    JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
+    invokeCallback(mContext,mContext->proxRemovedFunc,argc,argv);
+
+    if (try_catch.HasCaught()) {
+        printException(try_catch);
+    }
+
 }
+
 
 
 //creates a js object associated with the jsvisiblestruct
@@ -349,12 +359,13 @@ void EmersonScript::printMPresences()
     std::cout<<"\n\n";
 }
 
+
+
 //Gets called by notifier when PINTO states that proximateObject originally
 //satisfies the solid angle query registered by querier
 void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
-
 
     bool isVis = true;
     VisAddParams vap(&isVis);
@@ -368,23 +379,34 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
         return;
     }
 
-    //check callbacks
-    if ( !iter->second->mOnProxAddedEventHandler.IsEmpty() && !iter->second->mOnProxAddedEventHandler->IsUndefined() && !iter->second->mOnProxAddedEventHandler->IsNull())
+    if (mContext->proxAddedFunc.IsEmpty())
     {
-        v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(jsvis, mContext->mContext);
+        JSLOG(debug,"No prox added func to execute");
+        return;
+    }
 
-        v8::HandleScope handle_scope;
-        v8::Context::Scope context_scope(mContext->mContext);
-        TryCatch try_catch;
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(jsvis, mContext->mContext);
 
-        int argc = 1;
-        v8::Handle<v8::Value> argv[1] = { newVisibleObj };
-        //FIXME: Potential memory leak: when will newAddrObj's
-        //SpaceObjectReference field be garbage collected and deleted?
-        JSLOG(info,"Issuing user callback for proximate object.");
-        invokeCallback(mContext, iter->second->mOnProxAddedEventHandler, argc, argv);
+    v8::Context::Scope context_scope(mContext->mContext);
+    TryCatch try_catch;
+
+    int argc = 2;
+    String sporefVisTo = iter->first.toString();
+    v8::Handle<v8::Value> argv[2] = { newVisibleObj, v8::String::New( sporefVisTo.c_str()  ) };
+
+    
+    //FIXME: Potential memory leak: when will newAddrObj's
+    //SpaceObjectReference field be garbage collected and deleted?
+    JSLOG(info,"Issuing user callback for proximate object.");
+    invokeCallback(mContext,mContext->proxAddedFunc, argc, argv);
+
+    
+    if (try_catch.HasCaught()) {
+        printException(try_catch);
     }
 }
+
 
 
 JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const SpaceObjectReference& sporef, const String& simname)

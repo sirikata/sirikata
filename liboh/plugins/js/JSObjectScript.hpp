@@ -59,6 +59,7 @@ namespace Sirikata {
 namespace JS {
 
 
+void printException(v8::TryCatch& try_catch);
 
 class JSObjectScript : public ObjectScript
 {

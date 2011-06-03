@@ -77,6 +77,9 @@ using namespace std;
 namespace Sirikata {
 namespace JS {
 
+
+
+
 namespace {
 
 String exceptionAsString(v8::TryCatch& try_catch) {
@@ -114,10 +117,7 @@ String exceptionAsString(v8::TryCatch& try_catch) {
     return os.str();
 }
 
-void printException(v8::TryCatch& try_catch) {
-    String eas = exceptionAsString(try_catch);
-    JSLOG(error, "Uncaught exception:\n" << eas);
-}
+
 
 /** Note that this return value isn't guaranteed to return anything. If an
  *  exception occurs, it will be left empty. This is due to a quirk in the way
@@ -156,6 +156,13 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
 }
 
 }
+
+void printException(v8::TryCatch& try_catch) {
+    String eas = exceptionAsString(try_catch);
+    JSLOG(error, "Uncaught exception:\n" << eas);
+}
+
+
 
 JSObjectScript::EvalContext::EvalContext()
  : currentScriptDir(),
@@ -244,70 +251,6 @@ void JSObjectScript::initialize(const String& args)
 }
 
 
-
-// JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
-//  : contIDTracker(0),
-//    mManager(jMan)
-// {
-
-//     OptionValue* init_script;
-//     InitializeClassOptions(
-//         "jsobjectscript", this,
-//         // Default value allows us to use std libs in the build tree, starting
-//         // from build/cmake
-//         init_script = new OptionValue("init-script","",OptionValueType<String>(),"Script to run on startup."),
-//         NULL
-//     );
-
-//     OptionSet* options = OptionSet::getOptions("jsobjectscript", this);
-//     options->parse(args);
-
-//     // By default, our eval context has:
-//     // 1. Empty currentScriptDir, indicating it should only use explicitly
-//     //    specified search paths.
-//     mEvalContextStack.push(EvalContext());
-
-//     v8::HandleScope handle_scope;
-
-//     mHandlingEvent = false;
-//     SpaceObjectReference sporef = SpaceObjectReference::null();
-//     mContext = new JSContextStruct(this,NULL,&sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate,contIDTracker);
-//     mContStructMap[contIDTracker] = mContext;
-//     ++contIDTracker;
-
-
-//     String script_contents = init_script->as<String>();
-//     if (script_contents.empty()) {
-//         JSLOG(info,"Importing default script.");
-//         import(mManager->defaultScript(),NULL);
-//         mContext->struct_setScript("system.require('" + mManager->defaultScript() + "');");
-//     }
-//     else {
-//         JSLOG(info,"Have an initial script to execute.  Executing.");
-//         EvalContext& ctx = mEvalContextStack.top();
-//         EvalContext new_ctx(ctx);
-//         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
-//         protectedEval(script_contents, &origin, new_ctx,mContext);
-//         mContext->struct_setScript(script_contents);
-//     }
-
-//     // Subscribe for session events
-//     mParent->addListener((SessionEventListener*)this);
-//     // And notify the script of existing ones
-//     HostedObject::SpaceObjRefVec spaceobjrefs;
-//     mParent->getSpaceObjRefs(spaceobjrefs);
-//     if (spaceobjrefs.size() > 1)
-//         JSLOG(fatal,"Error: Connected to more than one space.  Only enabling scripting for one space.");
-
-//     //default connections.
-//     for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++)
-//         onConnected(mParent, *space_it, HostedObject::DEFAULT_PRESENCE_TOKEN);
-
-
-//     mParent->getObjectHost()->persistEntityState(String("scene.persist"));
-
-// }
-
 JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
  :  contIDTracker(0),
     mManager(jMan)
@@ -335,9 +278,6 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
     delete readBuf;
     return returner;
 }
-
-
-v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,const String& filename)
