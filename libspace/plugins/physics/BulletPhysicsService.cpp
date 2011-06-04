@@ -208,30 +208,25 @@ void BulletPhysicsService::setOrientation(const UUID& uuid, const TimedMotionQua
     notifyLocalOrientationUpdated( uuid, locinfo.aggregate, neworient );
 }
 
-MeshdataPtr BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid) {
-    volatile bool finishedLoading = false;
-    MeshdataPtr retrievedMesh;
+void BulletPhysicsService::getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb) {
     Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
         Transfer::URI(meshURI), mTransferPool, 1.0,
-        std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, &finishedLoading, &retrievedMesh)
+        std::tr1::bind(&BulletPhysicsService::getMeshCallback, this, _1, _2, cb)
     );
     mMeshDownloads[uuid] = dl;
     dl->start();
-
-    //FIXME: Busy waiting is bad.
-    //Waiting for meshes to be retrieved from CDN
-    while(!finishedLoading) {};
-
-    if (retrievedMesh)
-        BULLETLOG(detailed, "This mesh was retrieved from the CDN: " << retrievedMesh->uri);
-    return retrievedMesh;
 }
 
-void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, volatile bool* finished, MeshdataPtr* retrievedMesh) {
-    if (request && response)
-        *retrievedMesh = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
-    // Always set this to let the main thread continue
-    *finished = true;
+void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb) {
+    // This callback can come in on a separate thread (e.g. from a tranfer
+    // thread) so make sure we get it back on the main thread.
+    if (request && response) {
+        MeshdataPtr mesh = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+        mContext->mainStrand->post(std::tr1::bind(cb, mesh));
+    }
+    else {
+        mContext->mainStrand->post(std::tr1::bind(cb, MeshdataPtr()));
+    }
 }
 
 void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
@@ -336,43 +331,76 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
         BULLETLOG(detailed,"Error in objTreatment initialization!");
     }
 
-	//initialize the world transformation
-	Matrix4x4f worldTransformation = Matrix4x4f::identity();
+    // Once we've got all the data, we can fill in some values in our
+    // permanent storage
+    newObjData.mass = mass;
+
+    // We may need the mesh in order to continue. We need it only if:
+    // treatment != ignore (see above check) && bounds != sphere.
+    if (objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
+        // Invoke directly since we have all the data we need
+        updatePhysicsWorldWithMesh(uuid, MeshdataPtr());
+    }
+    else {
+        getMesh(msh, uuid,
+            std::tr1::bind(&BulletPhysicsService::updatePhysicsWorldWithMesh, this, uuid, _1)
+        );
+    }
+}
+
+void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh) {
+    LocationMap::iterator it = mLocations.find(uuid);
+    LocationInfo& locinfo = it->second;
+    PhysicsPointerMap::iterator it2 = BulletPhysicsPointers.find(uuid);
+    BulletPhysicsPointerData& newObjData = it2->second;
+
+    // Spheres can be handled trivially
+    if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
+        newObjData.objShape = new btSphereShape(locinfo.bounds.radius());
+        BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
+        addRigidBody(uuid, locinfo, newObjData);
+        return;
+    }
+
+    // Other types require processing the retrieved mesh.
+
+    //initialize the world transformation
+    Matrix4x4f worldTransformation = Matrix4x4f::identity();
 
     /***Let's now find the bounding box for the entire object, which is needed for re-scaling purposes.
 	* Supposedly the system scales every mesh down to a unit sphere and then scales up by the scale factor
 	* from the scene file. We try to emulate this behavior here, but this should really be on the CDN side
 	* (we retrieve the precomputed bounding box as well as the mesh) ***/
     BoundingBox3f3f bbox = BoundingBox3f3f::null();
-	double mesh_rad = 0;
-	//getting the mesh
-	MeshdataPtr retrievedMesh = getMesh(msh, uuid);
-	Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
-	uint32 indexInstance; Matrix4x4f transformInstance;
-	//loop through the instances, expand the bounding box and find the radius
-	while(geoIter.next(&indexInstance, &transformInstance)) {
-		GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);
-		BoundingBox3f3f inst_bnds;
-		double rad = 0;
-		geoInst->computeTransformedBounds(retrievedMesh, transformInstance, &inst_bnds, &rad);
-		if (bbox == BoundingBox3f3f::null())
-			bbox = inst_bnds;
-		else
-			bbox.mergeIn(inst_bnds);
-		mesh_rad = std::max(mesh_rad, rad);
-	}
-        BULLETLOG(detailed, "bbox: " << bbox);
-	Vector3f diff = bbox.max() - bbox.min();
+    double mesh_rad = 0;
+
+    // Mesh should be available in retrievedMesh. If it isn't
+    Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
+    uint32 indexInstance; Matrix4x4f transformInstance;
+    //loop through the instances, expand the bounding box and find the radius
+    while(geoIter.next(&indexInstance, &transformInstance)) {
+        GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);
+        BoundingBox3f3f inst_bnds;
+        double rad = 0;
+        geoInst->computeTransformedBounds(retrievedMesh, transformInstance, &inst_bnds, &rad);
+        if (bbox == BoundingBox3f3f::null())
+            bbox = inst_bnds;
+        else
+            bbox.mergeIn(inst_bnds);
+        mesh_rad = std::max(mesh_rad, rad);
+    }
+    BULLETLOG(detailed, "bbox: " << bbox);
+    Vector3f diff = bbox.max() - bbox.min();
 
     //objBBox enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
-    if(objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
-		double scalingFactor = locinfo.bounds.radius()/mesh_rad;
-                BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
-		newObjData.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
-	}
-	//do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
-	else if(objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
+    if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
+        double scalingFactor = locinfo.bounds.radius()/mesh_rad;
+        BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
+        newObjData.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
+    }
+    //do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
+    else if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
 		//we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
 		worldTransformation = worldTransformation * Matrix4x4f::scale((float) locinfo.bounds.radius()/mesh_rad);
 		//reset the instance iterator for a second round
@@ -432,34 +460,30 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 		//btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
 		newObjData.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
 	}
-	//FIXME bug somewhere else? bnds.radius()/mesh_rad should be the correct radius, but it is not...
-	else if(objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
+	//FIXME bug somewhere else? bnds.radius()/mesh_rad should be
+	//the correct radius, but it is not...
 
-		newObjData.objShape = new btSphereShape(locinfo.bounds.radius());
-                BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
-	}
-	else {
-            BULLETLOG(detailed, "Error in objBBox initialization!");
-	}
+    addRigidBody(uuid, locinfo, newObjData);
+}
+
+void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo, BulletPhysicsPointerData& objdata) {
     //register the motion state (callbacks) for Bullet
-    newObjData.objMotionState = new SirikataMotionState(this, uuid);
+    objdata.objMotionState = new SirikataMotionState(this, uuid);
 
     //set a placeholder for the inertial vector
-	btVector3 objInertia(0,0,0);
-	//calculate the inertia
-	newObjData.objShape->calculateLocalInertia(mass,objInertia);
-	//make a constructionInfo object
-	btRigidBody::btRigidBodyConstructionInfo objRigidBodyCI(mass, newObjData.objMotionState, newObjData.objShape, objInertia);
+    btVector3 objInertia(0,0,0);
+    //calculate the inertia
+    objdata.objShape->calculateLocalInertia(objdata.mass,objInertia);
+    //make a constructionInfo object
+    btRigidBody::btRigidBodyConstructionInfo objRigidBodyCI(objdata.mass, objdata.objMotionState, objdata.objShape, objInertia);
     //CREATE: make the rigid body
-    newObjData.objRigidBody = new btRigidBody(objRigidBodyCI);
-    //newObjData.objRigidBody->setRestitution(0.5);
+    objdata.objRigidBody = new btRigidBody(objRigidBodyCI);
+    //objdata.objRigidBody->setRestitution(0.5);
     //set initial velocity
     Vector3f objVelocity = locinfo.location.velocity();
-    //newObjData.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
+    //objdata.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
     //add to the dynamics world
-    dynamicsWorld->addRigidBody(newObjData.objRigidBody);
-
-    /*END: Bullet Physics Code*/
+    dynamicsWorld->addRigidBody(objdata.objRigidBody);
 }
 
 void BulletPhysicsService::removeLocalObject(const UUID& uuid) {

@@ -81,6 +81,7 @@ struct BulletPhysicsPointerData {
 	btRigidBody* objRigidBody;
 	bulletObjTreatment objTreatment;
 	bulletObjBBox objBBox;
+    float32 mass;
 }; // struct BulletPhysicsPointerData
 
 using namespace Mesh;
@@ -131,11 +132,12 @@ public:
 
     virtual void locationUpdate(UUID source, void* buffer, uint32 length);
 
-    MeshdataPtr getMesh(const std::string, const UUID);
+    typedef std::tr1::function<void(MeshdataPtr)> MeshdataParsedCallback;
+    void getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb);
     // The last two get set in this callback, indicating that the
     // transfer finished (whether or not it was successful) and the
     // resulting data.
-    void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, volatile bool* finished, MeshdataPtr* retrievedMesh);
+    void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
 
 protected:
     struct LocationInfo {
@@ -161,6 +163,13 @@ protected:
 private:
 
     void updatePhysicsWorld(const UUID& uuid);
+    // This continues the work of updatePhysicsWorld once the mesh has
+    // been retrieved.
+    void updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh);
+
+    // This does the work of actually adding the rigid body to the
+    // bullet simulation.
+    void addRigidBody(const UUID& uuid, LocationInfo& locinfo, BulletPhysicsPointerData& objdata);
 
     //Bullet Dynamics World Vars
     btBroadphaseInterface* broadphase;
