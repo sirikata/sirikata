@@ -17,6 +17,7 @@
 #include "../JSObjects/JSVec3.hpp"
 #include "JS_JSMessage.pbj.hpp"
 #include "../JSSerializer.hpp"
+#include "../EmersonScript.hpp"
 
 
 namespace Sirikata {
@@ -50,7 +51,8 @@ uint32 JSContextStruct::getContextID()
 
 v8::Handle<v8::Value> JSContextStruct::restorePresence(PresStructRestoreParams& psrp)
 {
-    return jsObjScript->restorePresence(psrp,this);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,restorePresence,jsObjScript);
+    return emerScript->restorePresence(psrp,this);
 }
 
 
@@ -80,7 +82,7 @@ void JSContextStruct::createContextObjects()
     //populates internal jscontextstruct field
     systemObj = v8::Persistent<v8::Object>::New(system_obj);
 
-    JSUtilStruct* mUtil = new JSUtilStruct(this,jsObjScript);
+    JSUtilStruct* mUtil = new JSUtilStruct(this);
     Local<Object> util_obj = Local<Object>::Cast(global_proto->Get(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME)));
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
@@ -91,10 +93,20 @@ void JSContextStruct::createContextObjects()
 
 }
 
+v8::Handle<v8::Value>  JSContextStruct::checkHeadless()
+{
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return v8::Boolean::New(false);
+
+    return v8::Boolean::New(true);
+}
+
 
 v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
 {
-    return jsObjScript->createVisiblePersistent(sporefWatching, addParams, mContext);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,create_vis,jsObjScript);
+    return emerScript->createVisiblePersistent(sporefWatching, addParams, mContext);
 }
 
 
@@ -107,7 +119,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_createVec3(Vector3d& toCreate)
 
 v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl)
 {
-    jsObjScript->sendMessageToEntity( jspl->getToListenTo(), jspres->getSporef(), serialized_message);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendMessage,jsObjScript);
+    emerScript->sendMessageToEntity( jspl->getToListenTo(), jspres->getSporef(), serialized_message);
 
     return v8::Undefined();
 }
@@ -157,7 +170,9 @@ v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeseria
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error deserializing string.")));
 
     v8::Local<v8::Object> obj = v8::Object::New();
-    bool deserializedSuccess = JSSerializer::deserializeObject(jsObjScript, js_msg,obj);
+
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
+    bool deserializedSuccess = JSSerializer::deserializeObject(emerScript, js_msg,obj);
     if (!deserializedSuccess)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
 
@@ -186,7 +201,8 @@ bool JSContextStruct::hasPresence(const SpaceObjectReference& sporef)
 //sOrigin inside of this context.
 v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents, ScriptOrigin* sOrigin)
 {
-    return jsObjScript->eval(native_contents, sOrigin,this);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,eval,jsObjScript);
+    return emerScript->eval(native_contents, sOrigin,this);
 }
 
 /*
@@ -199,7 +215,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_setReset()
     //jsobjscript will chcek if this is the root context.  If it is, returns
     //undefined, and schedules reset (eventually calling rootReset).  If it is
     //not, throws an error.
-    return jsObjScript->requestReset(this);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,reset,jsObjScript);
+    return emerScript->requestReset(this);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_getScript()
@@ -264,19 +281,16 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 
 
     //re-load presences
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,reset,jsObjScript);
     for (JSPresVecIter iter = jspresVec.begin(); iter != jspresVec.end(); ++iter)
     {
-        jsObjScript->resetPresence(*iter);
+        emerScript->resetPresence(*iter);
         struct_registerSuspendable   (*iter);
         checkContextConnectCallback(*iter);
     }
 
     return v8::Undefined();
 }
-
-
-
-
 
 JSContextStruct::~JSContextStruct()
 {
@@ -295,7 +309,7 @@ JSContextStruct::~JSContextStruct()
 }
 
 
-v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct* jspres)
+v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct* jspres,EmersonScript* emerScript)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
@@ -306,7 +320,7 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
     uint32 new_pos = presences_array->Length();
 
     // Create the object for the new presence
-    v8::Local<v8::Object> js_pres =jsObjScript->wrapPresence(jspres,&(mContext));
+    v8::Local<v8::Object> js_pres =emerScript->wrapPresence(jspres,&(mContext));
 
     // Insert into the presences array
     presences_array->Set(v8::Number::New(new_pos), js_pres);
@@ -318,24 +332,31 @@ v8::Persistent<v8::Object> JSContextStruct::addToPresencesArray(JSPresenceStruct
 
 void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
 {
-    addToPresencesArray(jspres);
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return;
+    addToPresencesArray(jspres,emerScript);
 
     //check whether should evaluate any further callbacks.
     if (getIsSuspended() || getIsCleared())
         return;
 
     if (hasOnConnectedCallback)
-        jsObjScript->handlePresCallback(cbOnConnected,this,jspres);
+        emerScript->handlePresCallback(cbOnConnected,this,jspres);
 }
 
 
 void JSContextStruct::checkContextDisconnectCallback(JSPresenceStruct* jspres)
 {
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return;
+    
     if (getIsSuspended() || getIsCleared())
         return;
 
     if (hasOnDisconnectedCallback)
-        jsObjScript->handlePresCallback(cbOnDisconnected,this,jspres);
+        emerScript->handlePresCallback(cbOnDisconnected,this,jspres);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist)
@@ -477,8 +498,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot call sendHome from a context that has already been cleared.")) );
     }
 
-
-    jsObjScript->sendMessageToEntity(mHomeObject,associatedPresence->getSporef(),toSend);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendHome,jsObjScript);
+    emerScript->sendMessageToEntity(mHomeObject,associatedPresence->getSporef(),toSend);
     return v8::Undefined();
 }
 
@@ -548,12 +569,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,  v8::
 {
     //the timer that's created automatically registers as a suspendable with
     //this context.
-    return jsObjScript->create_timeout(period, cb, this);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,createTimeout,jsObjScript);
+    return emerScript->create_timeout(period, cb, this);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared)
 {
-    return jsObjScript->create_timeout(period,cb, contID, timeRemaining, isSuspended,isCleared,this);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,createTimeout,jsObjScript);
+    return emerScript->create_timeout(period,cb, contID, timeRemaining, isSuspended,isCleared,this);
 }
 
 
@@ -601,12 +624,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference
 
 v8::Handle<v8::Value> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn)
 {
-    return jsObjScript->create_presence(newMesh,initFunc,this, poser, spaceToCreateIn);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,createPresence,jsObjScript);
+    return emerScript->create_presence(newMesh,initFunc,this, poser, spaceToCreateIn);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci)
 {
-    jsObjScript->create_entity(eci);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,createEntity,jsObjScript);
+    emerScript->create_entity(eci);
     return v8::Undefined();
 }
 
@@ -622,8 +647,9 @@ v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const Patt
     //a suspendable.
     JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this,issusp);
 
-    jsObjScript->registerHandler(new_handler);
-    return jsObjScript->makeEventHandlerObject(new_handler,this);
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,makeEventHandler,jsObjScript);
+    emerScript->registerHandler(new_handler);
+    return emerScript->makeEventHandlerObject(new_handler,this);
 }
 
 

@@ -9,6 +9,7 @@
 #include "JSObjectStructs/JSSystemStruct.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectScript.hpp"
+#include "EmersonScript.hpp"
 #include "JSLogging.hpp"
 #include "JSObjects/JSObjectsUtils.hpp"
 
@@ -130,7 +131,7 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
     return ;
   }
 
-  JSObjectScript* jsObjectScript     =           vstruct->jsObjScript;
+  EmersonScript* emerScript     =           vstruct->emerScript;
   SpaceObjectReference* sporef       =      vstruct->sporefToListenTo;
   SpaceObjectReference* sporefVisTo  =    vstruct->sporefToListenFrom;
 
@@ -490,7 +491,7 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
 
 
 
-bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
+bool JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
         
     v8::HandleScope handle_scope;
@@ -501,7 +502,7 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
     //if can't handle first stage of deserialization, don't even worry about
     //fixups
     labeledObjs[jsmessage.msg_id()] = deserializeTo;
-    if (! deserializeObjectInternal(jsObjScript, jsmessage,deserializeTo, labeledObjs,toFixUp))
+    if (! deserializeObjectInternal(emerScript, jsmessage,deserializeTo, labeledObjs,toFixUp))
         return false;
 
     //return whether fixups worked or not.
@@ -511,7 +512,7 @@ bool JSSerializer::deserializeObject( JSObjectScript* jsObjScript, Sirikata::JS:
 
 
 
-bool JSSerializer::deserializeObjectInternal( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo, ObjectMap& labeledObjs,FixupMap& toFixUp)
+bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo, ObjectMap& labeledObjs,FixupMap& toFixUp)
 {
 
     //check if there is a typeid field and what is the value for it
@@ -574,7 +575,7 @@ bool JSSerializer::deserializeObjectInternal( JSObjectScript* jsObjScript, Sirik
       }
       v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
 
-      deserializeTo = jsObjScript->createVisibleObject(visibleObj,visibleTo,NULL, ctx);  //create
+      deserializeTo = emerScript->createVisibleObject(visibleObj,visibleTo,NULL, ctx);  //create
                                                                                           //the
                                                                                           //vis
                                                                                           //obj
@@ -611,7 +612,7 @@ bool JSSerializer::deserializeObjectInternal( JSObjectScript* jsObjScript, Sirik
         {
             v8::Handle<v8::Object> intDesObj = v8::Object::New();
             Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
-            JSSerializer::deserializeObjectInternal(jsObjScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
+            JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
             val = intDesObj;
             labeledObjs[jsvalue.o_value().msg_id()] = intDesObj;
         }
@@ -620,14 +621,14 @@ bool JSSerializer::deserializeObjectInternal( JSObjectScript* jsObjScript, Sirik
             v8::Handle<v8::Array> intDesArr = v8::Array::New();
             v8::Handle<v8::Object> intDesObj(intDesArr);
             Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.a_value();
-            JSSerializer::deserializeObjectInternal(jsObjScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
+            JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
             val = intDesObj;
             labeledObjs[jsvalue.a_value().msg_id()] = intDesObj;
         }
         else if(jsvalue.has_f_value())
         {
             v8::HandleScope handle_scope;
-            val = jsObjScript->functionValue(jsvalue.f_value().f_value());
+            val = emerScript->functionValue(jsvalue.f_value().f_value());
             //add the function to already-labeled objects
             labeledObjs[jsvalue.f_value().func_id()] = v8::Handle<v8::Object>::Cast(val);
         }

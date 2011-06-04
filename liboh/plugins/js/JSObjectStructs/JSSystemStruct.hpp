@@ -12,7 +12,6 @@ namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
-class JSObjectScript;
 class JSContextStruct;
 class JSEventHandlerStruct;
 class JSPresenceStruct;
@@ -37,6 +36,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canProx();
     v8::Handle<v8::Value> struct_canImport();
 
+    v8::Handle<v8::Value> checkHeadless();
+
+    
     v8::Handle<v8::Value> struct_canCreatePres();
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();

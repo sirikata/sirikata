@@ -121,6 +121,14 @@ if(system == undefined)
       };
 
 
+     /**
+      @return Returns true if you are running in headless mode.  Returns false otherwise.
+      */
+     system.isHeadless = function()
+     {
+         return baseSystem.headless();
+     };
+
      /** @function
       @param string space and object id of a visible object.  
       

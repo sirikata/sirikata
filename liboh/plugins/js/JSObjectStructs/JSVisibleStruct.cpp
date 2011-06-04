@@ -1,6 +1,6 @@
 
 #include "JSVisibleStruct.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "JSPresenceStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "../JSLogging.hpp"
@@ -10,7 +10,7 @@ namespace Sirikata {
 namespace JS {
 
 
-JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams)
+JSVisibleStruct::JSVisibleStruct(EmersonScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams)
  : JSPositionListener(parent,addParams),
    stillVisible(new bool(false))
 {
@@ -28,7 +28,7 @@ JSVisibleStruct::JSVisibleStruct(JSObjectScript* parent, const SpaceObjectRefere
 JSVisibleStruct::~JSVisibleStruct()
 {
     //do not delete jsObjScript: someone else is responsible for that.
-    jsObjScript->deRegisterVisibleStruct(this);
+    emerScript->deRegisterVisibleStruct(this);
     delete stillVisible;
 }
 

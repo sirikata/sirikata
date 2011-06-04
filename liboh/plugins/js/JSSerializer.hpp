@@ -6,6 +6,7 @@
 #include <string>
 #include "JS_JSMessage.pbj.hpp"
 #include "JSObjectScript.hpp"
+#include "EmersonScript.hpp"
 #include <vector>
 #include <map>
 
@@ -71,12 +72,12 @@ class JSSerializer
     static bool deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& toFixUp);
 
 
-    static bool deserializeObjectInternal( JSObjectScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo, ObjectMap& labeledObjs,FixupMap& toFixUp);
+    static bool deserializeObjectInternal( EmersonScript* jsObjScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo, ObjectMap& labeledObjs,FixupMap& toFixUp);
 
 
 public:
     static std::string serializeObject(v8::Local<v8::Value> v8Val,int32 toStamp = 0);
-    static bool deserializeObject(JSObjectScript*, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo);
+    static bool deserializeObject(EmersonScript*, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo);
 
 
 };

@@ -2,6 +2,7 @@
 
 #include "../JSUtil.hpp"
 #include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include <v8.h>
 
 
@@ -18,7 +19,7 @@ v8::Handle<v8::Value> _clear(const v8::Arguments& args);
 v8::Handle<v8::Value> getAllData(const v8::Arguments& args);
 
 
-void readHandler(const v8::Arguments& args, JSObjectScript*& caller, JSEventHandlerStruct*& hand);
+void readHandler(const v8::Arguments& args, EmersonScript*& caller, JSEventHandlerStruct*& hand);
 v8::Handle<v8::Value> makeEventHandler(JSObjectScript* target_script, JSEventHandlerStruct* evHand);
 void setNullHandler(const v8::Arguments& args);
 

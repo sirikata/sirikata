@@ -3,7 +3,6 @@
 #include "JSUtilStruct.hpp"
 #include "JSContextStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
-#include "../JSObjectScript.hpp"
 #include "JSPresenceStruct.hpp"
 #include "JSUtilStruct.hpp"
 
@@ -11,9 +10,8 @@ namespace Sirikata{
 namespace JS{
 
 
-JSUtilStruct::JSUtilStruct ( JSContextStruct* jscont, JSObjectScript* jsObj)
- : associatedContext(jscont),
-   associatedObjScr(jsObj)
+JSUtilStruct::JSUtilStruct ( JSContextStruct* jscont)
+ : associatedContext(jscont)
 {
 }
 

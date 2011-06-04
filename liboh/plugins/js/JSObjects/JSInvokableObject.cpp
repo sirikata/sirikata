@@ -1,5 +1,5 @@
 #include "JSInvokableObject.hpp"
-#include "../JSObjectScript.hpp"
+#include "../EmersonScript.hpp"
 #include "JSFields.hpp"
 #include "JSFunctionInvokable.hpp"
 #include "JSInvokableUtil.hpp"
@@ -17,8 +17,8 @@ namespace JSInvokableObject
 v8::Handle<v8::Value> invoke(const v8::Arguments& args)
 {
  /* Decode the args array and send the call to the internal object  */
-  JSObjectScript* caller;
-  JSInvokableObjectInt* invokableObj;
+    EmersonScript* caller;
+    JSInvokableObjectInt* invokableObj;
 
   bool decoded = decodeJSInvokableObject(args.This(), caller, invokableObj);
   assert(decoded);
@@ -58,12 +58,12 @@ boost::any JSInvokableObjectInt::invoke(std::vector<boost::any> &params)
   return invokable_->invoke(params);
 }
 
-bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, JSObjectScript*& jsObjScript, JSInvokableObjectInt*& simObj)
+bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, EmersonScript*& emerScript, JSInvokableObjectInt*& simObj)
 {
 
    if ((!senderVal->IsObject()) || (senderVal->IsUndefined()))
     {
-        jsObjScript = NULL;
+        emerScript = NULL;
         simObj = NULL;
         return false;
     }
@@ -81,9 +81,9 @@ bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, JSObjectScript*& j
     wrapJSObj = v8::Local<v8::External>::Cast(sender->GetInternalField(JSINVOKABLE_OBJECT_JSOBJSCRIPT_FIELD));
 
     void* ptr = wrapJSObj->Value();
-    jsObjScript = static_cast<JSObjectScript*>(ptr);
+    emerScript = static_cast<EmersonScript*>(ptr);
 
-    if (jsObjScript == NULL)
+    if (emerScript == NULL)
     {
         simObj = NULL;
         return false;
@@ -96,7 +96,7 @@ bool decodeJSInvokableObject(v8::Handle<v8::Value> senderVal, JSObjectScript*& j
 
     if(!simObj)
     {
-      jsObjScript = NULL;
+      emerScript = NULL;
       return false;
     }
 

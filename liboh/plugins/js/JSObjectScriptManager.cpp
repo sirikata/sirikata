@@ -34,6 +34,7 @@
 
 #include "JSObjectScriptManager.hpp"
 #include "JSObjectScript.hpp"
+#include "EmersonScript.hpp"
 
 #include "JSObjects/JSVec3.hpp"
 #include "JSObjects/JSQuaternion.hpp"
@@ -174,6 +175,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->SetInternalFieldCount(SYSTEM_TEMPLATE_FIELD_COUNT);
 
 
+    mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
     mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
     mSystemTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSSystem::root_registerHandler));
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
@@ -430,9 +432,18 @@ JSObjectScriptManager::~JSObjectScriptManager()
 {
 }
 
+
+
+JSObjectScript* JSObjectScriptManager::createHeadless(const String& args)
+{
+    JSObjectScript* new_script = new JSObjectScript(this);
+    new_script->initialize(args);
+    return new_script;
+}
+
 ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
 {
-    JSObjectScript* new_script = new JSObjectScript(ho, args, this);
+    EmersonScript* new_script = new EmersonScript(ho, args, this);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;
@@ -444,11 +455,6 @@ void JSObjectScriptManager::destroyObjectScript(ObjectScript*toDestroy){
     delete toDestroy;
 }
 
-//DEBUG FUNCTION.
-void JSObjectScriptManager::testPrint()
-{
-    std::cout<<"\n\nTest print for js object script manager\n\n";
-}
 
 } // namespace JS
 } // namespace JS

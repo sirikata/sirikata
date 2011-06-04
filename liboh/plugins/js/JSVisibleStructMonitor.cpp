@@ -2,7 +2,7 @@
 #include "JSObjectStructs/JSPositionListener.hpp"
 #include "JSLogging.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
-
+#include "EmersonScript.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -177,12 +177,12 @@ JSVisibleStruct* JSVisibleStructMonitor::checkWatchingWithFrom(const SpaceObject
 //whatsVisible and toWhom sporefs.  If it does, returns that visible struct.
 //if it does not, creates a new visible struct, registers it with the monitor,
 //and returns it.
-JSVisibleStruct* JSVisibleStructMonitor::createVisStruct(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& visibleTo, VisAddParams* addParams)
+JSVisibleStruct* JSVisibleStructMonitor::createVisStruct(EmersonScript* emerscript, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& visibleTo, VisAddParams* addParams)
 {
     if (visibleTo == SpaceObjectReference::null())
-        return createVisStructFromNone(jsobjscript,whatsVisible);
+        return createVisStructFromNone(emerscript,whatsVisible);
 
-    return createVisStructFromHaveListeners(jsobjscript,whatsVisible,visibleTo, addParams);
+    return createVisStructFromHaveListeners(emerscript,whatsVisible,visibleTo, addParams);
 }
 
 
@@ -192,7 +192,7 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStruct(JSObjectScript* jsobjsc
 //presence with sporef toWhom.  If we do, then return it.  If we don't, create it.
 //When creating it, check to see if we should notify any jsvisiblestructs in
 //listenFromNoneMap to update their visibility
-JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(JSObjectScript* jsobjscript,const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, VisAddParams* addParams)
+JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(EmersonScript* emerscript,const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom, VisAddParams* addParams)
 {
 
     //check mObjectsToFollow if already have a jsvisiblestruct with that is
@@ -213,7 +213,7 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(JSObje
     }
 
     //do not already have a visible struct.  create a new one.
-    JSVisibleStruct* returner = new JSVisibleStruct(jsobjscript,whatsVisible,toWhom,addParams);
+    JSVisibleStruct* returner = new JSVisibleStruct(emerscript,whatsVisible,toWhom,addParams);
 
     
     //actually insert the visible struct into our maps
@@ -235,7 +235,7 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromHaveListeners(JSObje
 //otherwise, creates a new one, looks through mObjectsToFollow to determine if
 //this new jsvisiblestruct should be visible, provides an update for it if
 //it should, and returns it.
-JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromNone(JSObjectScript* jsobjscript, const SpaceObjectReference& whatsVisible)
+JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromNone(EmersonScript* emerscript, const SpaceObjectReference& whatsVisible)
 {
     //already have a jsvisiblestruct that is watching whatsVisible, but has no
     //associated presence watching from.  Return this jsvisiblestruct.
@@ -246,7 +246,7 @@ JSVisibleStruct* JSVisibleStructMonitor::createVisStructFromNone(JSObjectScript*
         
     //do not already have a jsvisiblestruct that is watching whatsvisible.
     //Creating a new one.
-    JSVisibleStruct* returner = new JSVisibleStruct(jsobjscript,whatsVisible, SpaceObjectReference::null(),NULL);
+    JSVisibleStruct* returner = new JSVisibleStruct(emerscript,whatsVisible, SpaceObjectReference::null(),NULL);
     //add to map.
     listenFromNoneMap[whatsVisible] = returner;
     

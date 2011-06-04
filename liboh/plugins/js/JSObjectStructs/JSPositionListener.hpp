@@ -11,7 +11,7 @@ namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
-class JSObjectScript;
+class EmersonScript;
 
 struct VisAddParams
 {
@@ -52,7 +52,7 @@ struct JSPositionListener : public PositionListener,
 {
     friend class JSSerializer;
 
-    JSPositionListener(JSObjectScript* script, VisAddParams* addParams);
+    JSPositionListener(EmersonScript* script, VisAddParams* addParams);
     ~JSPositionListener();
 
     //objToListenTo for presence objects contains the sporef following
@@ -103,7 +103,7 @@ struct JSPositionListener : public PositionListener,
 
 protected:
     //data
-    JSObjectScript*                jsObjScript;
+    EmersonScript*                  emerScript;
     SpaceObjectReference*     sporefToListenTo;
     SpaceObjectReference*   sporefToListenFrom;
 

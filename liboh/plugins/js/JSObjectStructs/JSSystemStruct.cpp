@@ -5,7 +5,6 @@
 #include "JSSystemStruct.hpp"
 #include "JSContextStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
-#include "../JSObjectScript.hpp"
 #include "JSEventHandlerStruct.hpp"
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
@@ -52,6 +51,11 @@ v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReferen
 v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserialize)
 {
     return associatedContext->deserializeObject(toDeserialize);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::checkHeadless()
+{
+    return associatedContext->checkHeadless();
 }
 
 
