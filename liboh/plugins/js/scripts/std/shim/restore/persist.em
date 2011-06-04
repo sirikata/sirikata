@@ -36,46 +36,26 @@ function checkpointPartialPersist(objToPersistFrom, keyName)
     
     std.persist.Backend.writeSequence(keyName);
     
-    //after call to markAndBranch, markedObjectMap will contain all
+    //after call to markAndBranch, name service will contain all
     //objects that were reachable from the root object
     //objToPersistFrom.
-    var markedObjectMap = {};
     var nameService = new std.persist.NameService();
     
-    //add root object to markedObjectMap before beginning.
-    mark(objToPersistFrom, markedObjectMap,nameService);
+    //add root object to nameService
+    mark(objToPersistFrom, nameService);
     //recursively traverse objet graph.
-    markAndBranch(objToPersistFrom, markedObjectMap,nameService);
-
-    
-    //log the subtree of objects reachable from objToPersistFrom in
-    //nameService;
-    nameService.enterSubtreeObjects(objToPersistFrom, markedObjectMap);
+    markAndBranch(objToPersistFrom,nameService);
     
     std.persist.Backend.flush();
     return nameService;
 }
 
 
-/**
- @param value/object to check if it has been marked.
- @return returns name of object if value passed in is an object that
- has been marked.  Returns null otherwise
- */
-function checkMarked(objToCheck, markedObjects)
-{
-    return (objToCheck in markedObjects) ? markedObjects[objToCheck] : null ;
-}
-
 
 /**
  @param objToMark if it's an object (and not null), then it logs the
  object as reachable from the object that we're persisting (ie, puts
  it in markedObjects map).
-
- @param markedObjects Map.  Keys are object references and values are
- names (unique ids provided by nameService).  Contains all objects
- that are reachable from the object that we're persisting.
  
  @exception Throws an exception if the object that we're supposed to
  mark has already been marked.
@@ -86,16 +66,14 @@ function checkMarked(objToCheck, markedObjects)
  (through nameService).
 
  */
-function mark(objToMark, markedObjects,nameService)
+function mark(objToMark,nameService)
 {
-    if (checkMarked(objToMark,markedObjects))
-        throw 'Error.  Asking to mark object that\'s already been marked';
-
     if (typeof(objToMark) != 'object')
         throw 'Error.  Asking to mark a non-object: '+objToMark.toString();            
 
+    system.print('\nMarking\n');
+    
     var name = nameService.insertObject(objToMark);
-    markedObjects[objToMark] = name;
     return name;
 }
 
@@ -104,41 +82,8 @@ function mark(objToMark, markedObjects,nameService)
  @param objGraphCatalog This is the root of the object graph that we have not yet copied to shadowTree
  @param markedObjects is a map of objects that we have already cataloged.  Keys are object references.  Values are unique names associated with each object given by nameService.
  */
-function markAndBranch(objGraphCatalog, markedObjects,nameService)
+function markAndBranch(objGraphCatalog, nameService)
 {
-
-    //set a type for this object;
-    if (std.persist.checkSystem(objGraphCatalog))
-    {
-        processSystem(objGraphCatalog,markedObjects,nameService);
-        return;
-    }
-    if (std.persist.checkPresence(objGraphCatalog))
-    {
-        processPresence(objGraphCatalog,markedObjects,nameService);
-        return;            
-    }
-    if (std.persist.checkTimer(objGraphCatalog))
-    {
-        processTimer(objGraphCatalog,markedObjects,nameService);
-        return;
-    }
-    if (std.persist.checkVisible(objGraphCatalog))
-    {
-        processVisible(objGraphCatalog,markedObjects,nameService);
-        return;
-    }
-    if (std.persist.checkPresenceEntry(objGraphCatalog))
-    {
-        processPresenceEntry(objGraphCatalog,markedObjects,nameService);
-        return;
-    }
-    if (std.persist.checkFunctionObject(objGraphCatalog))
-    {
-        processFunction(objGraphCatalog,markedObjects,nameService);
-        return;
-    }
-
     var record = new std.persist.Record(objGraphCatalog,nameService);
     
     for (var s in objGraphCatalog)
@@ -148,7 +93,9 @@ function markAndBranch(objGraphCatalog, markedObjects,nameService)
         if (typeof(objGraphCatalog[s]) != 'object')
             record.pushValueType(std.persist.wrapPropValPair(s,objGraphCatalog[s]));
         else
-            record.pushObjType(interHandler(objGraphCatalog,s,markedObjects,nameService));
+            record.pushObjType(interHandler(objGraphCatalog,s,nameService));                
+
+
     }
     std.persist.Backend.addRecord(record);
 }
@@ -159,19 +106,26 @@ function markAndBranch(objGraphCatalog, markedObjects,nameService)
  @param {object} objGraphCatalog the local copy of the object whose field we're trying to persist.
  @param field: the name of the field of the local copy of the object we're trying to persist.
  */
-function interHandler(objGraphCatalog,field,markedObjects,nameService)
+function interHandler(objGraphCatalog,field,nameService)
 {
     //check if got null object.
     if (objGraphCatalog[field] == null)
         return std.persist.wrapPropValPair(field,null);
+
     
-    var theMark = checkMarked(objGraphCatalog[field],markedObjects);
-    if (theMark == null)
+    var theMark = nameService.lookupName(objGraphCatalog[field]);
+    if (nameService.lookupObject(theMark) == objGraphCatalog)
+        system.print('\nIt equals the catalog \n');
+    else if (nameService.lookupObject(theMark) == objGraphCatalog[field])
+    system.print('\nIt equals the field\n');
+    
+    if (theMark == nameService.DNE)
     {
+        system.print('\nDEBUG: got into recursive case\n');
         //may want to do special things here to determine if it is a special object;
         //means that we have not already tagged this object
-        theMark =  mark(objGraphCatalog[field],markedObjects,nameService);
-        markAndBranch(objGraphCatalog[field],markedObjects,nameService);
+        theMark =  mark(objGraphCatalog[field],nameService);
+        markAndBranch(objGraphCatalog[field],nameService);
     }
     return std.persist.wrapPropValPair(field,theMark);
 }

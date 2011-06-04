@@ -45,11 +45,14 @@ std.persist.NameService = function()
       */
      this.__debugPrint = function ()
      {
+         system.print('\nPrinting in name service\'s debug print\n');
          for (var s in namesToObjects)
          {
              system.print('\n');
              system.print(s);
+             system.print(namesToObjects[s]);
          }
+         system.print('\nDone\n');
      };
 
      /**
@@ -75,7 +78,13 @@ std.persist.NameService = function()
      this.lookupName = function (obj)
      {
          if (obj in objectsToNames)
-             return objectsToNames[obj];
+         {
+             system.print('\nprinting lookup\n');
+             system.prettyprint(obj);
+             system.prettyprint(namesToObjects[objectsToNames[obj]]);
+             return objectsToNames[obj];                 
+         }
+
 
          return this.DNE;
      };
@@ -124,7 +133,10 @@ std.persist.NameService = function()
       {
           var ind = this.lookupName(objToInsert);
           if (ind != this.DNE)
-              return ind;
+          {
+              system.print('\nAlready had inserted object\n');
+              return ind;                  
+          }
 
           objectsToNames[objToInsert] = whichNameOn;
           namesToObjects[whichNameOn] = objToInsert;
