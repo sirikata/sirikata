@@ -6,48 +6,51 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
 
 
 
-std.persist.BackendService = function(prependkey)
+function BackendService(prependKey)
 {
-    var mPrependKey = prependKey;
+    
+    this.mPrependKey = prependKey;
 
-    var sequenceKey = null;
-    var recsToWrite = [];
+    this.sequenceKey = null;
+    this.recsToWrite = [];
 
     this.writeSequence = function(keyName)
     {
-        sequenceKey = system.backendCreateEntry(prependKey+keyName);
+        this.sequenceKey = system.backendCreateEntry(this.mPrependKey+keyName);
     };
 
 
     this.flush = function()
     {
-        for (var s in recsToWrite)
+        for (var s in this.recsToWrite)
         {
-            var id  = recsToWrite[s].getID();
-            var rec = recsToWrite[s].generateRecordObject();
+            var id  = this.recsToWrite[s].getID();
+            var rec = this.recsToWrite[s].generateRecordObject();
             var serRec = system.serialize(rec);
-            system.backendWrite(sequenceKey,id,serRec);
+            system.backendWrite(this.sequenceKey,id,serRec);
         }
         
-        system.backendFlush(sequenceKey);
-        sequenceKey = null;
-        recsToWrite = [];
+        system.backendFlush(this.sequenceKey);
+        this.sequenceKey = null;
+        this.recsToWrite = [];
     };
 
     this.addRecord = function(rec)
     {
-        recsToWrite.push(rec);
+        this.recsToWrite.push(rec);
     };
 
     this.read = function (keyName,ptrId)
     {
-        var val = system.backendRead(prependKey+keyName,ptrId);
+        var val = system.backendRead(this.mPrependKey+keyName,ptrId.toString());
         if (val == null)
             throw 'Erorr in read.  No record pointed to with those names';
 
-        
         var returner = system.deserialize(val);
         return returner;
     };
-};
+}
+
+std.persist.Backend = new BackendService('bftmTest');
+
 

@@ -97,7 +97,39 @@ bool JSFileBackend::flush(const UUID& seqKey)
     outstandingWrites.clear();
     return true;
 }
+
+bool JSFileBackend::read(const String& prepend, const String& idToReadFrom, String& toReadTo)
+{
+    boost::filesystem::create_directory(boost::filesystem::path(prepend));
+    boost::filesystem::path path (prepend);
+    boost::filesystem::path suffix (idToReadFrom);
+    path = path / suffix;
     
+    if (! boost::filesystem::exists(path))
+        return false;
+
+    String fileToRead = prepend + "/" + idToReadFrom;
+
+    std::cout<<"\n\nDEBUG: writing to "<<fileToRead<<"\n\n";
+    
+    std::ifstream fRead(fileToRead.c_str(), std::ios::binary | std::ios::in);
+    std::ifstream::pos_type begin, end;
+
+    begin = fRead.tellg();
+    fRead.seekg(0,std::ios::end);
+    end   = fRead.tellg();
+    fRead.seekg(0,std::ios::beg);
+
+    std::ifstream::pos_type size = end-begin;
+    char* readBuf = new char[size];
+    fRead.read(readBuf,size);
+
+    String interString(readBuf,size);
+    delete readBuf;
+    toReadTo = interString;
+    return true;
+}
+
 
 }//end namespace JS
 }//end namespace Sirikata

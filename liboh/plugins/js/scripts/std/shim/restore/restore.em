@@ -13,9 +13,9 @@ if (typeof(std.persist) === 'undefined')
 
  @return {Object} Returns a copy of the object that had been put into persistent storage 
  */
-function restoreFrom(filename)
+function restoreFrom(filename,id)
 {
-    return restoreFromAndGetNames(filename)[0];
+    return restoreFromAndGetNames(filename,id)[0];
 }
 
 
@@ -25,11 +25,11 @@ function restoreFrom(filename)
 
  @return {Array} Returns an array.  First index is the copy of the object that had been put into persistent storage.  Second index is a name service that you can use to name and identify objects in the restored subgraph.
  */
-function restoreFromAndGetNames(keyName)
+function restoreFromAndGetNames(keyName,id)
 {
     var nameService = new std.persist.NameService();
     var ptrsToFix = [];
-    var returner = fixReferences(keyName, keyname,ptrsToFix,nameService);
+    var returner = fixReferences(keyName, id,ptrsToFix,nameService);
     performPtrFinalFixups(ptrsToFix,nameService);
     return [returner,nameService];
 }
@@ -37,8 +37,13 @@ function restoreFromAndGetNames(keyName)
 
 function tripletIsValueType(triplet)
 {
-    if ((typeof(triplet) !== 'object') || (!(length in triplet)) || (triplet.length != 3))
-        throw 'Error in checkTripletIsValueType.  Requires triplet to be passed in';
+    if ((typeof(triplet) !== 'object') || (!('length' in triplet)) || (triplet.length != 3))
+    {
+        system.print('\nAbout to exception\n');
+        system.prettyprint(triplet);
+        throw 'Error in checkTripletIsValueType.  Requires triplet to be passed in';            
+    }
+
 
     if (typeof(triplet[2]) !== 'object')
         return true;
@@ -92,6 +97,9 @@ function fixReferences(keyName, ptrId,ptrsToFix,nameService)
     //register returner to be fixed-up with the new pointer later.
     for (var s in unfixedObj)
     {
+        if (s == 'mID')
+            continue;
+        
         var index = unfixedObj[s][0];
         
         if (tripletIsValueType(unfixedObj[s]))
@@ -103,7 +111,7 @@ function fixReferences(keyName, ptrId,ptrsToFix,nameService)
                 returner[index] = null;
             else
             {
-                var ptrId  = unfixedObj[s][1];
+                var ptrIdInner  = unfixedObj[s][1];
                 var ptrObj = nameService.lookupObject(ptrId);
                 if (ptrObj != nameService.DNE)
                 {
@@ -113,8 +121,8 @@ function fixReferences(keyName, ptrId,ptrsToFix,nameService)
                 else
                 {
                     //will have to register this pointer to be fixed up
-                    registerFixupObjectPointer( ptrId ,index,returner,ptrsToFix);
-                    fixReferences(keyName,ptrId,ptrsToFix,nameService);
+                    registerFixupObjectPointer( ptrIdInner ,index,returner,ptrsToFix);
+                    fixReferences(keyName,ptrIdInner,ptrsToFix,nameService);
                 }
             }
         }

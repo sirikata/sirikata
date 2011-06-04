@@ -37,9 +37,12 @@ v8::Handle<v8::Value> JSSystemStruct::backendWrite(const UUID& seqKey, const Str
 }
 v8::Handle<v8::Value> JSSystemStruct::backendCreateEntry(const String& prepend)
 {
-    return associatedContext->backendWrite(prepend);
+    return associatedContext->backendCreateEntry(prepend);
 }
-    
+v8::Handle<v8::Value> JSSystemStruct::backendRead(const String& prepend, const String& id)
+{
+    return associatedContext->backendRead(prepend,id);
+}
 
 v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {

@@ -156,6 +156,25 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          return system._selfMap;
      };
      
+
+     //backend manipulations
+     system.backendCreateEntry = function()
+     {
+         return baseSystem.backendCreateEntry.apply(baseSystem, arguments);
+     };
+     system.backendWrite = function()
+     {
+         return baseSystem.backendWrite.apply(baseSystem, arguments);
+     };
+     system.backendFlush = function()
+     {
+         return baseSystem.backendFlush.apply(baseSystem, arguments);
+     };
+     system.backendRead = function()
+     {
+         return baseSystem.backendRead.apply(baseSystem, arguments);
+     };
+
      
       //data
       system._selfMap = { };

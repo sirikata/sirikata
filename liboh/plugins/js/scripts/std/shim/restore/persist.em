@@ -33,7 +33,7 @@ function checkpointPartialPersist(objToPersistFrom, keyName)
 {
     if ((objToPersistFrom == null) || (typeof(objToPersistFrom) != 'object'))
         throw 'Error.  Can only checkpoint objects.';
-
+    
     std.persist.Backend.writeSequence(keyName);
     
     //after call to markAndBranch, markedObjectMap will contain all
@@ -139,7 +139,7 @@ function markAndBranch(objGraphCatalog, markedObjects,nameService)
         return;
     }
 
-    var record = new std.Persist.Record(objGraphCatalog,nameService);
+    var record = new std.persist.Record(objGraphCatalog,nameService);
     
     for (var s in objGraphCatalog)
     {

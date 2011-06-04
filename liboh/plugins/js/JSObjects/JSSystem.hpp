@@ -39,6 +39,7 @@ v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args);
 v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args);
 v8::Handle<v8::Value> backendWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> backendFlush(const v8::Arguments& args);
+v8::Handle<v8::Value> backendRead(const v8::Arguments& args);
 
 //end backend functions
 

@@ -9,7 +9,7 @@ if (typeof(std.persist) === 'undefined')
 /*Create a separate namespace for name service;*/
 std.persist.Record = function(objectRecordOf, nameService)
 {
-    var mID = nameService.lookupName(objRecordOf);
+    var mID = nameService.lookupName(objectRecordOf);
     if (mID == nameService.DNE)
         throw 'Error in Record constructor.  Require object passed in to be named in nameService';
 
@@ -41,7 +41,7 @@ std.persist.Record = function(objectRecordOf, nameService)
         for (var s in valueRecords)
         {
             var prop  = std.persist.getPropFromPropValPair(valueRecords[s]);
-            var val   = std.persist.getValFromPropValPair(valueRecords[s]);
+            var val   = std.persist.getValueFromPropValPair(valueRecords[s]);
             returner[index] = [prop, val.toString(), typeof(val)];
             ++index;
         }
@@ -49,7 +49,7 @@ std.persist.Record = function(objectRecordOf, nameService)
         for (var s in objRecords)
         {
             var prop = std.persist.getPropFromPropValPair(objRecords[s]);
-            var val  = std.persist.getValFromPropValPair(objRecords[s]);
+            var val  = std.persist.getValueFromPropValPair(objRecords[s]);
             if (val == null)
             {
                 returner[index] = [prop,"null", "null"];

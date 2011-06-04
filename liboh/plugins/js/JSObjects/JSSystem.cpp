@@ -16,6 +16,9 @@
 #include <sirikata/core/util/SpaceObjectReference.hpp>
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/oh/HostedObject.hpp>
+
 
 namespace Sirikata {
 namespace JS {
@@ -77,7 +80,7 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
-lkjs;
+
 v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -86,7 +89,7 @@ v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
     INLINE_STR_CONV_ERROR(args[0],backendCreateEntry,1,prepend);
 
     //decode system object
-    errorMessage = "Error decoding error message when backedCreatingEntry";
+    String errorMessage = "Error decoding error message when backedCreatingEntry";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
@@ -105,18 +108,41 @@ v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
     
     INLINE_STR_CONV_ERROR(args[0],backendWrite,1,seqKeyAsString);
     INLINE_STR_CONV_ERROR(args[1],backendWrite,2,id);
-    INLINE_STR_CONV_ERROR(args[2],backendWrite,3,toWrite);
 
-    UUID seqKey (seqKeyAsString);
+    if (! args[2]->IsString())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in backendWrite, third argument (string) should be a string.")));
+
+    String toWrite =  uint16StrToStr(args[2]->ToString());
+    
+    UUID seqKey (seqKeyAsString,UUID::HumanReadable());
     
     //decode system object
-    errorMessage = "Error decoding error message when backendWriting";
+    String errorMessage = "Error decoding error message when backendWriting";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
     return jsfake->backendWrite(seqKey,id,toWrite);
+}
+
+v8::Handle<v8::Value> backendRead(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendRead.  Require 2 arguments: an entry to read (string), an id (string)")));
+
+    
+    INLINE_STR_CONV_ERROR(args[0],backendRead,1,keyName);
+    INLINE_STR_CONV_ERROR(args[1],backendRead,2,id);
+
+    //decode system object
+    String errorMessage = "Error decoding error message when backendReading";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->backendRead(keyName,id);
 }
 
 
@@ -126,12 +152,12 @@ v8::Handle<v8::Value> backendFlush(const v8::Arguments& args)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 1 argument: a sequence key (string).")));
 
     
-    INLINE_STR_CONV_ERROR(args[0],backendWrite,1,seqKeyAsString);
+    INLINE_STR_CONV_ERROR(args[0],backendFlush,1,seqKeyAsString);
 
-    UUID seqKey (seqKeyAsString);
+    UUID seqKey (seqKeyAsString,UUID::HumanReadable());
     
     //decode system object
-    errorMessage = "Error decoding error message when backendFlushing";
+    String errorMessage = "Error decoding error message when backendFlushing";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)

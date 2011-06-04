@@ -276,9 +276,21 @@ v8::Handle<v8::Value> JSObjectScript::backendCreateEntry(const String& prepend, 
 {
     UUID returner = mBackend.createEntry(prepend);
     String uidStr = returner.toString();
+    
     return v8::String::New(uidStr.c_str(), uidStr.size());
 }
- 
+
+v8::Handle<v8::Value> JSObjectScript::backendRead(const String& prepend, const String& id, JSContextStruct* jscont)
+{
+    String toReadTo;
+    bool readSucceed = mBackend.read(prepend,id,toReadTo);
+
+    if (!readSucceed)
+        return v8::Null();
+
+    return strToUint16Str(toReadTo);
+}
+
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 {

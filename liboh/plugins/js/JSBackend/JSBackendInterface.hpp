@@ -21,6 +21,7 @@ public:
     virtual bool write(const UUID& seqKey, const String& idToWriteTo, const String& strToWrite)=0;
     virtual bool flush(const UUID& seqKey)=0;
 
+    virtual bool read(const String& prepend, const String& idToReadFrom, String& toReadTo) = 0;
     
 };
 

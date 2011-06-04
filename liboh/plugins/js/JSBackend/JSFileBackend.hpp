@@ -20,7 +20,8 @@ public:
     virtual UUID createEntry(const String& prepend);
     virtual bool write(const UUID& seqKey, const String& idToWriteTo, const String& strToWrite);
     virtual bool flush(const UUID& seqKey);
-
+    virtual bool read(const String& prepend, const String& idToReadFrom, String& toReadTo);
+    
 private:
     std::map<UUID,String> idsToFolderNames;
     std::map<UUID, std::map<String,String> > outstandingWrites;

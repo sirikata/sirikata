@@ -198,6 +198,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("backendCreateEntry"),v8::FunctionTemplate::New(JSSystem::backendCreateEntry));
     mSystemTemplate->Set(v8::String::New("backendWrite"),v8::FunctionTemplate::New(JSSystem::backendWrite));
     mSystemTemplate->Set(v8::String::New("backendFlush"),v8::FunctionTemplate::New(JSSystem::backendFlush));
+    mSystemTemplate->Set(v8::String::New("backendRead"),v8::FunctionTemplate::New(JSSystem::backendRead));
 
 
     

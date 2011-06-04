@@ -15,11 +15,13 @@ system.prettyprint(toPersist);
 
 //performing persist
 var fName = 'btestPartialPersist.em.bu';
-checkpointPartialPersist(toPersist,fName);
+var nameServe = checkpointPartialPersist(toPersist,fName);
 
+
+var id = nameServe.lookupName(toPersist);
 
 //restoring object from file
-var newCopy = restoreFrom(fName);
+var newCopy = restoreFrom(fName,id);
 system.print('\nAfter restore\n');
 system.prettyprint(newCopy);
 

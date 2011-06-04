@@ -53,8 +53,14 @@ v8::Handle<v8::Value> JSContextStruct::backendWrite(const UUID& seqKey, const St
 }
 v8::Handle<v8::Value> JSContextStruct::backendCreateEntry(const String& prepend)
 {
-    return jsObjScript->backendWrite(prepend,this);
+    return jsObjScript->backendCreateEntry(prepend,this);
 }
+
+v8::Handle<v8::Value> JSContextStruct::backendRead(const String& prepend, const String& id)
+{
+    return jsObjScript->backendRead(prepend,id,this);
+}
+
 
 
 v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
