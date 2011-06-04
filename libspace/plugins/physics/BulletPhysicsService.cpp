@@ -355,7 +355,8 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
     BulletPhysicsPointerData& newObjData = it2->second;
 
     // Spheres can be handled trivially
-    if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_SPHERE) {
+    if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_SPHERE ||
+        !retrievedMesh) {
         newObjData.objShape = new btSphereShape(locinfo.bounds.radius());
         BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
         addRigidBody(uuid, locinfo, newObjData);
