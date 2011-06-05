@@ -17,6 +17,7 @@ public:
     JSFileBackend();
     virtual ~JSFileBackend();
 
+    virtual bool clearEntry (const String& prepend);
     virtual UUID createEntry(const String& prepend);
     virtual bool write(const UUID& seqKey, const String& idToWriteTo, const String& strToWrite);
     virtual bool flush(const UUID& seqKey);

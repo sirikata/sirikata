@@ -175,6 +175,11 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          return baseSystem.backendRead.apply(baseSystem, arguments);
      };
 
+     system.backendClearEntry = function()
+     {
+         return baseSystem.backendClearEntry.apply(baseSystem,arguments);
+     };
+     
      
       //data
       system._selfMap = { };

@@ -17,6 +17,7 @@ namespace JSSystem {
 
 v8::Handle<v8::Value> sendMessage (const v8::Arguments& args);
 
+
 v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canRecvMessage(const v8::Arguments& args);
 v8::Handle<v8::Value> root_canProx(const v8::Arguments& args);
@@ -40,6 +41,8 @@ v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args);
 v8::Handle<v8::Value> backendWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> backendFlush(const v8::Arguments& args);
 v8::Handle<v8::Value> backendRead(const v8::Arguments& args);
+v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args);
+
 
 //end backend functions
 

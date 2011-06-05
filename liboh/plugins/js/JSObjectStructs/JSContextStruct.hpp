@@ -67,7 +67,7 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> backendWrite(const UUID& seqKey, const String& id, const String& toWrite);
     v8::Handle<v8::Value> backendCreateEntry(const String& prepend);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id);
-
+    v8::Handle<v8::Value> backendClearEntry(const String& prepend);
 
     
     

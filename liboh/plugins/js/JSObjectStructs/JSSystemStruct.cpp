@@ -39,6 +39,11 @@ v8::Handle<v8::Value> JSSystemStruct::backendCreateEntry(const String& prepend)
 {
     return associatedContext->backendCreateEntry(prepend);
 }
+v8::Handle<v8::Value> JSSystemStruct::backendClearEntry(const String& prepend)
+{
+    return associatedContext->backendClearEntry(prepend);
+}
+
 v8::Handle<v8::Value> JSSystemStruct::backendRead(const String& prepend, const String& id)
 {
     return associatedContext->backendRead(prepend,id);

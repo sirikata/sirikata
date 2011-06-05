@@ -102,6 +102,7 @@ public:
     v8::Handle<v8::Value> backendFlush(const UUID& seqKey,JSContextStruct* jscont);
     v8::Handle<v8::Value> backendWrite(const UUID& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendCreateEntry(const String& prepend, JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendClearEntry(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id, JSContextStruct* jscont);
     
     

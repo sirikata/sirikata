@@ -80,6 +80,23 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
+v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling clearEntry.  Require 1 argument: a string to prepend")));
+
+    INLINE_STR_CONV_ERROR(args[0],backendClearEntry,1,prepend);
+
+    //decode system object
+    String errorMessage = "Error decoding error message when backedClearEntry";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    
+    return jsfake->backendClearEntry(prepend);
+}
 
 v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
 {

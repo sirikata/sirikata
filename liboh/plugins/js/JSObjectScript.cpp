@@ -271,6 +271,11 @@ v8::Handle<v8::Value> JSObjectScript::backendWrite(const UUID& seqKey, const Str
     return v8::Boolean::New(returner);
 }
 
+v8::Handle<v8::Value> JSObjectScript::backendClearEntry(const String& prepend, JSContextStruct* jscont)
+{
+    bool returner = mBackend.clearEntry(prepend);
+    return v8::Boolean::New(returner);
+}
 
 v8::Handle<v8::Value> JSObjectScript::backendCreateEntry(const String& prepend, JSContextStruct* jscont)
 {

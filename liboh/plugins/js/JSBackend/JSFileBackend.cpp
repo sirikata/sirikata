@@ -98,6 +98,36 @@ bool JSFileBackend::flush(const UUID& seqKey)
     return true;
 }
 
+
+
+bool JSFileBackend::clearEntry (const String& prepend)
+{
+    //remove the folder from maps
+    for(std::map<UUID,String>::iterator iter= idsToFolderNames.begin(); iter != idsToFolderNames.end(); ++iter)
+    {
+        if (iter->second == prepend)
+        {
+            UUID toRemove = iter->first;
+            idsToFolderNames.erase(iter);
+
+            //clear outstanding writes
+            std::map<UUID,std::map<String,String> >::iterator outstandingIter = outstandingWrites.find(toRemove);
+            if (outstandingIter != outstandingWrites.end())
+                outstandingWrites.erase(outstandingIter);
+
+            break;
+        }
+    }        
+
+    
+    boost::filesystem::path path (prepend);
+    if (! boost::filesystem::exists(path))
+        return false;
+
+    boost::filesystem::remove(path);
+    return true;
+}
+
 bool JSFileBackend::read(const String& prepend, const String& idToReadFrom, String& toReadTo)
 {
     boost::filesystem::create_directory(boost::filesystem::path(prepend));
@@ -108,7 +138,7 @@ bool JSFileBackend::read(const String& prepend, const String& idToReadFrom, Stri
     if (! boost::filesystem::exists(path))
         return false;
 
-    String fileToRead = prepend + "/" + idToReadFrom;
+    String fileToRead = path.string();
     
     std::ifstream fRead(fileToRead.c_str(), std::ios::binary | std::ios::in);
     std::ifstream::pos_type begin, end;
