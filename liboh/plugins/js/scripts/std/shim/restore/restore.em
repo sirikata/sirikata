@@ -35,6 +35,15 @@ function restoreFromAndGetNames(keyName,id)
 }
 
 
+/**
+ @param {array} triplet Array containing three values.  Indices of
+ array follow:
+   0 : index
+   1 : value to set to/object pointer/'null'
+   2 : type record
+
+ @return {boolean} Returns true if the value in this object is a value type
+ */
 function tripletIsValueType(triplet)
 {
     if ((typeof(triplet) !== 'object') || (!('length' in triplet)) || (triplet.length != 3))
@@ -44,8 +53,7 @@ function tripletIsValueType(triplet)
         throw 'Error in checkTripletIsValueType.  Requires triplet to be passed in';            
     }
 
-
-    if (typeof(triplet[2]) !== 'object')
+    if (triplet[2] != 'object')
         return true;
 
     return false;
@@ -101,18 +109,18 @@ function fixReferences(keyName, ptrId,ptrsToFix,nameService)
             continue;
         
         var index = unfixedObj[s][0];
-        
+
+        //sets to value type
         if (tripletIsValueType(unfixedObj[s]))
             returner[index] = unfixedObj[s][1];
         else
         {
-
             if ((unfixedObj[s][2]) == 'null')
                 returner[index] = null;
             else
             {
                 var ptrIdInner  = unfixedObj[s][1];
-                var ptrObj = nameService.lookupObject(ptrId);
+                var ptrObj = nameService.lookupObject(ptrIdInner);
                 if (ptrObj != nameService.DNE)
                 {
                     //already have the object.  just link to it.

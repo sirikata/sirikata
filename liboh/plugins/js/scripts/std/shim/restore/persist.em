@@ -71,8 +71,6 @@ function mark(objToMark,nameService)
     if (typeof(objToMark) != 'object')
         throw 'Error.  Asking to mark a non-object: '+objToMark.toString();            
 
-    system.print('\nMarking\n');
-    
     var name = nameService.insertObject(objToMark);
     return name;
 }
@@ -111,17 +109,10 @@ function interHandler(objGraphCatalog,field,nameService)
     //check if got null object.
     if (objGraphCatalog[field] == null)
         return std.persist.wrapPropValPair(field,null);
-
     
     var theMark = nameService.lookupName(objGraphCatalog[field]);
-    if (nameService.lookupObject(theMark) == objGraphCatalog)
-        system.print('\nIt equals the catalog \n');
-    else if (nameService.lookupObject(theMark) == objGraphCatalog[field])
-    system.print('\nIt equals the field\n');
-    
     if (theMark == nameService.DNE)
     {
-        system.print('\nDEBUG: got into recursive case\n');
         //may want to do special things here to determine if it is a special object;
         //means that we have not already tagged this object
         theMark =  mark(objGraphCatalog[field],nameService);

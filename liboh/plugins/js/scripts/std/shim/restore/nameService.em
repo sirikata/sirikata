@@ -11,7 +11,7 @@ std.persist.NameService = function()
      Keys are object references; values are unique integers
      ("names").
      */
-    var objectsToNames  =  {  };
+    // var objectsToNames  =  {  };
      
     /**
      Keys are integers ("names") each unique to a single object.
@@ -77,14 +77,11 @@ std.persist.NameService = function()
       */
      this.lookupName = function (obj)
      {
-         if (obj in objectsToNames)
+         for (var s in namesToObjects)
          {
-             system.print('\nprinting lookup\n');
-             system.prettyprint(obj);
-             system.prettyprint(namesToObjects[objectsToNames[obj]]);
-             return objectsToNames[obj];                 
+             if (obj == namesToObjects[s])
+                 return s;
          }
-
 
          return this.DNE;
      };
@@ -118,6 +115,7 @@ std.persist.NameService = function()
        */
      this.lookupSubtreeObjects = function(objIndex)
      {
+         throw 'Error in lookupSubtreeObjects';
           if (objIndex in hierarchyMap)
               return hierarchyMap[objIndex];
 
@@ -138,9 +136,7 @@ std.persist.NameService = function()
               return ind;                  
           }
 
-          objectsToNames[objToInsert] = whichNameOn;
           namesToObjects[whichNameOn] = objToInsert;
-
           return whichNameOn++;
       };
 
@@ -155,7 +151,6 @@ std.persist.NameService = function()
      */
      this.insertObjectWithName = function (objToInsert,nameToUse)
      {
-         objectsToNames[objToInsert] = nameToUse;
          namesToObjects[nameToUse]    = objToInsert;
 
          if (nameToUse >= whichNameOn)

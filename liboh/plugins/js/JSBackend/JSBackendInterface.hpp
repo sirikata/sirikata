@@ -18,6 +18,8 @@ public:
     virtual ~JSBackendInterface(){};
 
     virtual UUID createEntry(const String& prepend)=0;
+//    virtual bool clearEntry (const String& prepend)=0;
+    
     virtual bool write(const UUID& seqKey, const String& idToWriteTo, const String& strToWrite)=0;
     virtual bool flush(const UUID& seqKey)=0;
 

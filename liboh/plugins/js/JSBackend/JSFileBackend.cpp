@@ -109,8 +109,6 @@ bool JSFileBackend::read(const String& prepend, const String& idToReadFrom, Stri
         return false;
 
     String fileToRead = prepend + "/" + idToReadFrom;
-
-    std::cout<<"\n\nDEBUG: writing to "<<fileToRead<<"\n\n";
     
     std::ifstream fRead(fileToRead.c_str(), std::ios::binary | std::ios::in);
     std::ifstream::pos_type begin, end;
