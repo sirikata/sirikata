@@ -505,7 +505,13 @@ void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo)
     //locinfo.objRigidBody->setRestitution(0.5);
     //set initial velocity
     Vector3f objVelocity = locinfo.location.velocity();
-    //locinfo.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
+    locinfo.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
+    Quaternion objAngVelocity = locinfo.orientation.velocity();
+    Vector3f angvel_axis;
+    float32 angvel_angle;
+    objAngVelocity.toAngleAxis(angvel_angle, angvel_axis);
+    Vector3f angvel = angvel_axis.normal() * angvel_angle;
+    locinfo.objRigidBody->setAngularVelocity(btVector3(angvel.x, angvel.y, angvel.z));
     //add to the dynamics world
     dynamicsWorld->addRigidBody(locinfo.objRigidBody);
 }
