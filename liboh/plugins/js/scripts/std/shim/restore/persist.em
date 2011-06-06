@@ -4,8 +4,88 @@ if (typeof(std.persist) === 'undefined')
 
 
 (function ()
-{
+ {
 
+
+     /* Type constants */
+     //use this as an index to retrieve the type of local objects
+     var GET_TYPE_STRING                   =            '__getType';
+    
+
+     //set the type field of an object to this if have a loop.
+     var SYSTEM_TYPE_STRING                =               'system';
+     var PRESENCE_OBJECT_TYPE_STRING       =             'presence';
+     var VISIBLE_TYPE_STRING               =              'visible';
+     var TIMER_TYPE_STRING                 =                'timer';
+     var PRESENCE_ENTRY_TYPE_STRING        =        'presenceEntry';
+     var FUNCTION_OBJECT_TYPE_STRING       =   'funcObjectAsString';
+     
+    
+
+    
+    /**
+     @param obj to check if it is a system object
+     @return true if system object.  false otherwise
+     */
+    var checkSystem = function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == SYSTEM_TYPE_STRING);
+        
+        return false;
+    };
+
+    /**
+     @param obj to check if it is a presence object
+     @return true if presence object.  false otherwise
+     */
+    var checkPresence = function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == PRESENCE_TYPE_STRING);
+        
+        return false;
+    };
+
+    /**
+     @param obj to check if it is a visible object
+     @return true if visible object.  false otherwise
+     */
+    var checkVisible = function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == VISIBLE_TYPE_STRING);
+        
+        return false;
+    };
+
+    /**
+     @param obj to check if it is a timer object
+     @return true if timer object.  false otherwise
+     */
+    var checkTimer = function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == TIMER_TYPE_STRING);
+
+        return false;
+    };
+
+    
+    /**
+     @param obj to check if it is a PresenceEntry object
+     @return true if PresenceEntry object.  false otherwise
+     */
+    var checkPresenceEntry = function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == PRESENCE_ENTRY_TYPE_STRING);
+        
+        return false;
+    };
+
+
+    
    /**
     @param objToMark if it's an object (and not null), then it logs the
     object as reachable from the object that we're persisting (ie, puts

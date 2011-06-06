@@ -1,7 +1,7 @@
 system.require('std/shim/restore/persistService.em');
 
 //performing persist
-var fName = 'btestPartialPersist.em.bu';
+var fName = 'btestPartialPersist3.em.bu';
 var id = 0;
 
 //restoring object from file
