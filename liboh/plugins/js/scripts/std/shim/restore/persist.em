@@ -33,8 +33,9 @@ function checkpointPartialPersist(objToPersistFrom, keyName)
 {
     if ((objToPersistFrom == null) || (typeof(objToPersistFrom) != 'object'))
         throw 'Error.  Can only checkpoint objects.';
-    
-    std.persist.Backend.writeSequence(keyName);
+
+    var backendWrite = new ObjectWriter(keyName);
+
     
     //after call to markAndBranch, name service will contain all
     //objects that were reachable from the root object
@@ -44,9 +45,9 @@ function checkpointPartialPersist(objToPersistFrom, keyName)
     //add root object to nameService
     mark(objToPersistFrom, nameService);
     //recursively traverse objet graph.
-    markAndBranch(objToPersistFrom,nameService);
-    
-    std.persist.Backend.flush();
+    markAndBranch(objToPersistFrom,nameService,backendWrite);
+
+    backendWrite.flush();
     return nameService;
 }
 
@@ -80,7 +81,7 @@ function mark(objToMark,nameService)
  @param objGraphCatalog This is the root of the object graph that we have not yet copied to shadowTree
  @param markedObjects is a map of objects that we have already cataloged.  Keys are object references.  Values are unique names associated with each object given by nameService.
  */
-function markAndBranch(objGraphCatalog, nameService)
+function markAndBranch(objGraphCatalog, nameService,backendWrite)
 {
     var record = new std.persist.Record(objGraphCatalog,nameService);
     
@@ -91,11 +92,10 @@ function markAndBranch(objGraphCatalog, nameService)
         if (typeof(objGraphCatalog[s]) != 'object')
             record.pushValueType(std.persist.wrapPropValPair(s,objGraphCatalog[s]));
         else
-            record.pushObjType(interHandler(objGraphCatalog,s,nameService));                
-
+            record.pushObjType(interHandler(objGraphCatalog,s,nameService,backendWrite));
 
     }
-    std.persist.Backend.addRecord(record);
+    backendWrite.addRecord(record);
 }
 
 
@@ -104,7 +104,7 @@ function markAndBranch(objGraphCatalog, nameService)
  @param {object} objGraphCatalog the local copy of the object whose field we're trying to persist.
  @param field: the name of the field of the local copy of the object we're trying to persist.
  */
-function interHandler(objGraphCatalog,field,nameService)
+function interHandler(objGraphCatalog,field,nameService,backendWrite)
 {
     //check if got null object.
     if (objGraphCatalog[field] == null)
@@ -116,7 +116,7 @@ function interHandler(objGraphCatalog,field,nameService)
         //may want to do special things here to determine if it is a special object;
         //means that we have not already tagged this object
         theMark =  mark(objGraphCatalog[field],nameService);
-        markAndBranch(objGraphCatalog[field],nameService);
+        markAndBranch(objGraphCatalog[field],nameService,backendWrite);
     }
     return std.persist.wrapPropValPair(field,theMark);
 }

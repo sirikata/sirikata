@@ -41,11 +41,17 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> checkHeadless();
 
-    v8::Handle<v8::Value> backendFlush(const UUID& seqKey);
-    v8::Handle<v8::Value> backendWrite(const UUID& seqKey, const String& id, const String& toWrite);
+    v8::Handle<v8::Value> backendFlush(const String& seqKey);
+    v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite);
     v8::Handle<v8::Value> backendCreateEntry(const String& prepend);
     v8::Handle<v8::Value> backendClearEntry(const String& prepend);
+    v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id);
+
+    v8::Handle<v8::Value> backendHaveEntry(const String& prepend);
+    v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend);
+    v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken);
+
     
     v8::Handle<v8::Value> struct_canCreatePres();
     v8::Handle<v8::Value> struct_canCreateEnt();

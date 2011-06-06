@@ -6,20 +6,19 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
 
 
 
-function BackendService(prependKey)
+/**
+ Clears anything that's already stored in the entry prependKey
+ */
+function ObjectWriter(entryName)
 {
-    
-    this.mPrependKey = prependKey;
-
-    this.sequenceKey = null;
+    this.mEntryName = entryName;
     this.recsToWrite = [];
 
-    this.writeSequence = function(keyName)
-    {
-        this.sequenceKey = system.backendCreateEntry(this.mPrependKey+keyName);
-    };
-
-
+    if (system.backendHaveEntry(this.mEntryName))
+        system.backendClearEntry(this.mEntryName);
+    
+    system.backendCreateEntry(this.mEntryName);
+    
     this.flush = function()
     {
         for (var s in this.recsToWrite)
@@ -27,11 +26,10 @@ function BackendService(prependKey)
             var id  = this.recsToWrite[s].getID();
             var rec = this.recsToWrite[s].generateRecordObject();
             var serRec = system.serialize(rec);
-            system.backendWrite(this.sequenceKey,id,serRec);
+            system.backendWrite(this.mEntryName,id,serRec);
         }
         
-        system.backendFlush(this.sequenceKey);
-        this.sequenceKey = null;
+        system.backendFlush(this.mEntryName);
         this.recsToWrite = [];
     };
 
@@ -39,18 +37,16 @@ function BackendService(prependKey)
     {
         this.recsToWrite.push(rec);
     };
-
-    this.read = function (keyName,ptrId)
-    {
-        var val = system.backendRead(this.mPrependKey+keyName,ptrId.toString());
-        if (val == null)
-            throw 'Erorr in read.  No record pointed to with those names';
-
-        var returner = system.deserialize(val);
-        return returner;
-    };
 }
 
-std.persist.Backend = new BackendService('bftmTest');
+function readObject(entryName,itemName)
+{
+    var val = system.backendRead(entryName,itemName.toString());
+    if (val == null)
+        throw 'Erorr in read.  No record pointed to with those names';
+
+    var returner = system.deserialize(val);
+    return returner;
+}
 
 

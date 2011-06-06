@@ -6,131 +6,172 @@
 namespace Sirikata{
 namespace JS{
 
+//Events
+
+//Write data contained in file
+void FileBackendWriteItem::processEvent()
+{
+    boost::filesystem::path path (folderName);
+    boost::filesystem::path suffix (fileName);
+    path = path / suffix;
+
+    String fileToWrite = path.string();
+    std::ofstream fWriter (fileToWrite.c_str(),  std::ios::out | std::ios::binary);
+        
+    for (String::size_type s = 0; s < toWrite.size(); ++s)
+    {
+        char toWriteChar = toWrite[s];
+        fWriter.write(&toWriteChar,sizeof(toWriteChar));
+    }
+
+    fWriter.flush();
+    fWriter.close();
+}
+
+//Deletes item if it exists
+void FileBackendClearItem::processEvent()
+{
+    boost::filesystem::path path (folderName);
+    boost::filesystem::path suffix (fileName);
+    path = path / suffix;
+
+     if (! boost::filesystem::exists(path))
+         return;
+
+     boost::filesystem::remove(path);
+ }
+
+
+
 
 
 JSFileBackend::JSFileBackend()
 {
 }
 
+
+/**
+   Frees memory associated with all outstanding events that have not been
+   flushed.  DOES NOT FLUSH EVENTS.
+ */
 JSFileBackend::~JSFileBackend()
 {
+    std::vector<String> allEntries;
+    for (OutEventsIter iter = unflushedEvents.begin(); iter != unflushedEvents.end(); ++iter)
+        allEntries.push_back(iter->first);
+
+    for (std::vector<String>::iterator strIter = allEntries.begin(); strIter != allEntries.end(); ++strIter)
+        clearOutstanding(*strIter);
 }
 
 
-/**
-   @param {string} prepend.  The name of a folder to create in our file system.
-   @return {uuid} Token used to identify this folder.  It is passed back to
-   whatever calls createEntry.
 
-   During writes and reads, scripter must pass token back to the FileBackend to
-   be able to write to files in this folder.
- */
-UUID JSFileBackend::createEntry(const String & prepend)
+JSBackendInterface::JSBackendCreateCode JSFileBackend::createEntry(const String & prepend)
 {
+    if (haveUnflushedEvents(prepend))
+        return JSBackendInterface::BACKEND_CREATE_FAIL_HAVE_UNFLUSHED;
+    
+    if (haveEntry(prepend))
+        return JSBackendInterface::BACKEND_CREATE_FAIL_EXISTS;
+
     boost::filesystem::create_directory(boost::filesystem::path(prepend));
-    UUID returner = UUID::random();
-    idsToFolderNames[returner] = prepend;
-    return returner;
+
+    return JSBackendInterface::BACKEND_CREATE_SUCCESS;
 }
 
 
-/**
-   Queues writes to the file named idToWriteTo that is in the folder
-   corresponding to the String mapped to in the map idsToFolderNames.  Writes
-   will not be committed until flush command.  Note, if issue this command
-   multiple times with the same seqKey and idToWriteTo, will only process the
-   last when calling flush.
 
-   @param {uuid} seqKey.  Used to identify folder to write the file into.
-   (Created by call to createEntry.)
-   @param{String} idToWriteTo.  The filename to write to in the folder.
-   @param{String} strToWrite.  What should actually be written into that file
-   pointed at in idToWriteTo.
-
-   @return {bool} returns true if write is queued (ie if have foldername
-   corresponding to seqKey).  Otherwise, returns false
-   
- */
-bool JSFileBackend::write(const UUID& seqKey, const String& idToWriteTo, const String& strToWrite)
+bool JSFileBackend::haveEntry(const String& prepend)
 {
-    std::map<UUID,String>::iterator seqFinder = idsToFolderNames.find(seqKey);
-    if (seqFinder == idsToFolderNames.end())
-        return false;
+    return boost::filesystem::exists(boost::filesystem::path(prepend));
+}
 
-    outstandingWrites[seqKey][idToWriteTo] = strToWrite;
+
+bool JSFileBackend::haveUnflushedEvents(const String& prepend)
+{
+    OutEventsIter iter = unflushedEvents.find(prepend);
+    return (iter !=  unflushedEvents.end());
+}
+    
+
+bool JSFileBackend::clearItem(const String& prependToken,const String& itemID)
+{
+    if(! haveUnflushedEvents(prependToken))
+        if (! haveEntry(prependToken))
+            return false;
+
+    FileBackendClearItem* fbci = new FileBackendClearItem(prependToken, itemID);
+    unflushedEvents[prependToken].push_back(fbci);
     return true;
 }
 
 
-/**
-   Flushes all outstanding writes contained in outstandingWrites, and resets
-   outstandingWrites to be empty.
-
-   @return {bool} returns true if the seqKey matches a valid folder to write
-   to.  Returns false otherwise.
- */
-bool JSFileBackend::flush(const UUID& seqKey)
+bool JSFileBackend::write(const String & prependToken, const String& idToWriteTo, const String& strToWrite)
 {
-    std::map<UUID,String>::iterator seqFinder = idsToFolderNames.find(seqKey);
-    if (seqFinder == idsToFolderNames.end())
+    if(! haveUnflushedEvents(prependToken))
+        if (! haveEntry(prependToken))
+            return false;
+
+    FileBackendWriteItem* fbw = new FileBackendWriteItem(prependToken,idToWriteTo,strToWrite);
+    unflushedEvents[prependToken].push_back(fbw);
+    return true;
+}
+
+
+bool JSFileBackend::flush(const String& prependToken)
+{
+    if(! haveUnflushedEvents(prependToken))
+        if (! haveEntry(prependToken))
+            return false;
+
+    std::vector<FileBackendEvent*> fbeVec = unflushedEvents[prependToken];
+    for (FileEventVecIter iter = fbeVec.begin(); iter != fbeVec.end(); ++iter)
+        (*iter)->processEvent();
+
+    clearOutstanding(prependToken);
+
+    return true;
+}
+
+
+bool JSFileBackend::clearOutstanding(const String& prependToken)
+{
+    if(! haveUnflushedEvents(prependToken))
         return false;
-
-    String folderName = seqFinder->second;
-    std::map<String,String> toWrite = outstandingWrites[seqKey];
-
-    for (std::map<String,String>::iterator iter = toWrite.begin(); iter != toWrite.end(); ++iter)
+    
+    OutEventsIter unflushedIter =  unflushedEvents.find(prependToken);
+    
+    FileEventVec fev = unflushedIter->second;
+    for (FileEventVecIter fevIter = fev.begin(); fevIter != fev.end(); ++fevIter)
     {
-        String fileToWrite = folderName + '/' + iter->first;
-        std::ofstream fWriter (fileToWrite.c_str(),  std::ios::out | std::ios::binary);
-        String strToWrite = iter->second;
-        
-        for (String::size_type s = 0; s < strToWrite.size(); ++s)
-        {
-            char toWrite = strToWrite[s];
-            fWriter.write(&toWrite,sizeof(toWrite));
-        }
-
-        fWriter.flush();
-        fWriter.close();
+        FileBackendEvent* fbe = *fevIter;
+        delete fbe;
+        *fevIter = NULL;
     }
 
-    outstandingWrites.clear();
+    unflushedEvents.erase(unflushedIter);
+    
     return true;
 }
 
 
-
-bool JSFileBackend::clearEntry (const String& prepend)
+bool JSFileBackend::clearEntry (const String& prependToken)
 {
     //remove the folder from maps
-    for(std::map<UUID,String>::iterator iter= idsToFolderNames.begin(); iter != idsToFolderNames.end(); ++iter)
-    {
-        if (iter->second == prepend)
-        {
-            UUID toRemove = iter->first;
-            idsToFolderNames.erase(iter);
-
-            //clear outstanding writes
-            std::map<UUID,std::map<String,String> >::iterator outstandingIter = outstandingWrites.find(toRemove);
-            if (outstandingIter != outstandingWrites.end())
-                outstandingWrites.erase(outstandingIter);
-
-            break;
-        }
-    }        
+    bool outstandingCleared = clearOutstanding(prependToken);
+    
+    boost::filesystem::path path (prependToken);
+    if (! boost::filesystem::exists(path))
+        return outstandingCleared || false;
 
     
-    boost::filesystem::path path (prepend);
-    if (! boost::filesystem::exists(path))
-        return false;
-
-    boost::filesystem::remove(path);
+    boost::filesystem::remove_all(path);
     return true;
 }
+
 
 bool JSFileBackend::read(const String& prepend, const String& idToReadFrom, String& toReadTo)
 {
-    boost::filesystem::create_directory(boost::filesystem::path(prepend));
     boost::filesystem::path path (prepend);
     boost::filesystem::path suffix (idToReadFrom);
     path = path / suffix;

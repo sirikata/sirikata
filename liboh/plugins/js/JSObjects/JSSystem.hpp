@@ -42,6 +42,12 @@ v8::Handle<v8::Value> backendWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> backendFlush(const v8::Arguments& args);
 v8::Handle<v8::Value> backendRead(const v8::Arguments& args);
 v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args);
+v8::Handle<v8::Value> backendClearItem(const v8::Arguments& args);
+
+v8::Handle<v8::Value> backendHaveEntry(const v8::Arguments& args);
+v8::Handle<v8::Value> backendHaveUnflushedEvents(const v8::Arguments& args);
+v8::Handle<v8::Value> backendClearOutstanding(const v8::Arguments& args);
+
 
 
 //end backend functions

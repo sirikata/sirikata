@@ -99,12 +99,17 @@ public:
      */
     v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont);
 
-    v8::Handle<v8::Value> backendFlush(const UUID& seqKey,JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendWrite(const UUID& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendFlush(const String& seqKey,JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendCreateEntry(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendClearEntry(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id, JSContextStruct* jscont);
-    
+    v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName, JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendHaveEntry(const String& prepend, JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend, JSContextStruct* jscont);
+    v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken, JSContextStruct* jscont);
+
+
     
     Handle<v8::Context> context() { return mContext->mContext;}
 

@@ -80,6 +80,27 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
+
+
+v8::Handle<v8::Value> backendClearItem(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling clearEntry.  Require 2 arguments: a string to prepend, and an item to delete.")));
+
+    INLINE_STR_CONV_ERROR(args[0],backendClearItem,1,prepend);
+    INLINE_STR_CONV_ERROR(args[1],backendClearItem,2,item);
+    
+    //decode system object
+    String errorMessage = "Error decoding error message when backedClearItem";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+    
+    return jsfake->backendClearItem(prepend,item);
+}
+
+
 v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args)
 {
     if (args.Length() != 1)
@@ -93,10 +114,10 @@ v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args)
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
     
     return jsfake->backendClearEntry(prepend);
 }
+
 
 v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
 {
@@ -117,13 +138,14 @@ v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
 }
 
 
+
 v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
 {
     if (args.Length() != 3)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 3 argument: a sequence key (string), an id (string), and a string to write (string)")));
 
     
-    INLINE_STR_CONV_ERROR(args[0],backendWrite,1,seqKeyAsString);
+    INLINE_STR_CONV_ERROR(args[0],backendWrite,1,prepend);
     INLINE_STR_CONV_ERROR(args[1],backendWrite,2,id);
 
     if (! args[2]->IsString())
@@ -131,7 +153,6 @@ v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
 
     String toWrite =  uint16StrToStr(args[2]->ToString());
     
-    UUID seqKey (seqKeyAsString,UUID::HumanReadable());
     
     //decode system object
     String errorMessage = "Error decoding error message when backendWriting";
@@ -140,7 +161,7 @@ v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->backendWrite(seqKey,id,toWrite);
+    return jsfake->backendWrite(prepend,id,toWrite);
 }
 
 v8::Handle<v8::Value> backendRead(const v8::Arguments& args)
@@ -163,15 +184,15 @@ v8::Handle<v8::Value> backendRead(const v8::Arguments& args)
 }
 
 
+
 v8::Handle<v8::Value> backendFlush(const v8::Arguments& args)
 {
     if (args.Length() != 1)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 1 argument: a sequence key (string).")));
 
     
-    INLINE_STR_CONV_ERROR(args[0],backendFlush,1,seqKeyAsString);
+    INLINE_STR_CONV_ERROR(args[0],backendFlush,1,entryName);
 
-    UUID seqKey (seqKeyAsString,UUID::HumanReadable());
     
     //decode system object
     String errorMessage = "Error decoding error message when backendFlushing";
@@ -180,8 +201,63 @@ v8::Handle<v8::Value> backendFlush(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->backendFlush(seqKey);
+    return jsfake->backendFlush(entryName);
 }
+
+
+v8::Handle<v8::Value> backendHaveEntry(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendHaveEntry.  Require 1 argument: a sequence key (string).")));
+
+    
+    INLINE_STR_CONV_ERROR(args[0],backendHaveEntry,1,entryName);
+    
+    //decode system object
+    String errorMessage = "Error decoding error message when backendHaveEntry-ing";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->backendHaveEntry(entryName);    
+}
+
+v8::Handle<v8::Value> backendHaveUnflushedEvents(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendHaveUnflushedEvents.  Require 1 argument: a sequence key (string).")));
+    
+    INLINE_STR_CONV_ERROR(args[0],backendFlush,1,entryName);
+    
+    //decode system object
+    String errorMessage = "Error decoding error message when backendHaveUnflushedEvents-ing";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->backendHaveUnflushedEvents(entryName);        
+}
+
+v8::Handle<v8::Value> backendClearOutstanding(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendClearOutstanding.  Require 1 argument: a sequence key (string).")));
+    
+    INLINE_STR_CONV_ERROR(args[0],backendFlush,1,entryName);
+    
+    //decode system object
+    String errorMessage = "Error decoding error message when backendClearOutstanding-ing";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->backendClearOutstanding(entryName);        
+}
+
+
 
 
 

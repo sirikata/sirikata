@@ -88,7 +88,7 @@ function fixReferences(keyName, ptrId,ptrsToFix,nameService)
 {
     var returner = { };
 
-    var unfixedObj = std.persist.Backend.read(keyName,ptrId);
+    var unfixedObj = readObject(keyName,ptrId);
 
     var id = unfixedObj['mID'];
     if (nameService.lookupObject(id) != nameService.DNE)

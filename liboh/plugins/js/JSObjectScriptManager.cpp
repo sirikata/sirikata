@@ -194,13 +194,18 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
-
     mSystemTemplate->Set(v8::String::New("backendCreateEntry"),v8::FunctionTemplate::New(JSSystem::backendCreateEntry));
     mSystemTemplate->Set(v8::String::New("backendClearEntry"),v8::FunctionTemplate::New(JSSystem::backendClearEntry));
+    mSystemTemplate->Set(v8::String::New("backendClearItem"), v8::FunctionTemplate::New(JSSystem::backendClearItem));
     mSystemTemplate->Set(v8::String::New("backendWrite"),v8::FunctionTemplate::New(JSSystem::backendWrite));
     mSystemTemplate->Set(v8::String::New("backendFlush"),v8::FunctionTemplate::New(JSSystem::backendFlush));
     mSystemTemplate->Set(v8::String::New("backendRead"),v8::FunctionTemplate::New(JSSystem::backendRead));
+    mSystemTemplate->Set(v8::String::New("backendHaveEntry"),v8::FunctionTemplate::New(JSSystem::backendHaveEntry));
+    mSystemTemplate->Set(v8::String::New("backendHaveUnflushedEvents"),v8::FunctionTemplate::New(JSSystem::backendHaveUnflushedEvents));
+    mSystemTemplate->Set(v8::String::New("backendClearOutstanding"),v8::FunctionTemplate::New(JSSystem::backendClearOutstanding));
+    mSystemTemplate->Set(v8::String::New("backendClearEntry"),v8::FunctionTemplate::New(JSSystem::backendClearEntry));
 
+    
 
     
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));

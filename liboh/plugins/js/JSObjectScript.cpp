@@ -259,17 +259,24 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::backendFlush(const UUID& seqKey, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::backendFlush(const String& seqKey, JSContextStruct* jscont)
 {
     bool returner = mBackend.flush(seqKey);
     return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::backendWrite(const UUID& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::backendClearItem(const String& prepend, const String& itemName,JSContextStruct* jscont)
+{
+    bool returner = mBackend.clearItem(prepend,itemName);
+    return v8::Boolean::New(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::backendWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont)
 {
     bool returner = mBackend.write(seqKey,id,toWrite);
     return v8::Boolean::New(returner);
 }
+
 
 v8::Handle<v8::Value> JSObjectScript::backendClearEntry(const String& prepend, JSContextStruct* jscont)
 {
@@ -277,12 +284,11 @@ v8::Handle<v8::Value> JSObjectScript::backendClearEntry(const String& prepend, J
     return v8::Boolean::New(returner);
 }
 
+
 v8::Handle<v8::Value> JSObjectScript::backendCreateEntry(const String& prepend, JSContextStruct* jscont)
 {
-    UUID returner = mBackend.createEntry(prepend);
-    String uidStr = returner.toString();
-    
-    return v8::String::New(uidStr.c_str(), uidStr.size());
+    JSBackendInterface::JSBackendCreateCode jsbackCode = mBackend.createEntry(prepend);
+    return v8::Number::New((int) jsbackCode);
 }
 
 v8::Handle<v8::Value> JSObjectScript::backendRead(const String& prepend, const String& id, JSContextStruct* jscont)
@@ -295,6 +301,25 @@ v8::Handle<v8::Value> JSObjectScript::backendRead(const String& prepend, const S
 
     return strToUint16Str(toReadTo);
 }
+
+v8::Handle<v8::Value> JSObjectScript::backendHaveEntry(const String& prepend, JSContextStruct* jscont)
+{
+    bool returner = mBackend.haveEntry(prepend);
+    return v8::Boolean::New(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::backendHaveUnflushedEvents(const String& prepend, JSContextStruct* jscont)
+{
+    bool returner = mBackend.haveUnflushedEvents(prepend);
+    return v8::Boolean::New(returner);
+}
+
+v8::Handle<v8::Value> JSObjectScript::backendClearOutstanding(const String& prependToken, JSContextStruct* jscont)
+{
+    bool returner = mBackend.clearOutstanding(prependToken);
+    return v8::Boolean::New(returner);
+}
+
 
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)

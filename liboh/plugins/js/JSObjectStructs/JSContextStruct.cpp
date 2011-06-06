@@ -43,14 +43,21 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //taken care of in the createContext function of this class.
 }
 
-v8::Handle<v8::Value> JSContextStruct::backendFlush(const UUID& seqKey)
+v8::Handle<v8::Value> JSContextStruct::backendFlush(const String& seqKey)
 {
     return jsObjScript->backendFlush(seqKey,this);
 }
-v8::Handle<v8::Value> JSContextStruct::backendWrite(const UUID& seqKey, const String& id, const String& toWrite)
+v8::Handle<v8::Value> JSContextStruct::backendWrite(const String& seqKey, const String& id, const String& toWrite)
 {
     return jsObjScript->backendWrite(seqKey,id,toWrite,this);
 }
+
+v8::Handle<v8::Value> JSContextStruct::backendClearItem(const String& prepend, const String& itemName)
+{
+    return jsObjScript->backendClearItem(prepend,itemName,this);
+}
+
+
 v8::Handle<v8::Value> JSContextStruct::backendCreateEntry(const String& prepend)
 {
     return jsObjScript->backendCreateEntry(prepend,this);
@@ -64,6 +71,19 @@ v8::Handle<v8::Value> JSContextStruct::backendClearEntry(const String& prepend)
 v8::Handle<v8::Value> JSContextStruct::backendRead(const String& prepend, const String& id)
 {
     return jsObjScript->backendRead(prepend,id,this);
+}
+
+v8::Handle<v8::Value> JSContextStruct::backendHaveEntry(const String& prepend)
+{
+    return jsObjScript->backendHaveEntry(prepend,this);
+}
+v8::Handle<v8::Value> JSContextStruct::backendHaveUnflushedEvents(const String& prepend)
+{
+    return jsObjScript->backendHaveUnflushedEvents(prepend,this);
+}
+v8::Handle<v8::Value> JSContextStruct::backendClearOutstanding(const String& prependToken)
+{
+    return jsObjScript->backendClearOutstanding(prependToken,this);
 }
 
 

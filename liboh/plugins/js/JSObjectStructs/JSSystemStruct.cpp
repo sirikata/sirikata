@@ -27,14 +27,20 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 {
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendFlush(const UUID& seqKey)
+v8::Handle<v8::Value> JSSystemStruct::backendFlush(const String& seqKey)
 {
     return associatedContext->backendFlush(seqKey);
 }
-v8::Handle<v8::Value> JSSystemStruct::backendWrite(const UUID& seqKey, const String& id, const String& toWrite)
+v8::Handle<v8::Value> JSSystemStruct::backendWrite(const String& seqKey, const String& id, const String& toWrite)
 {
     return associatedContext->backendWrite(seqKey,id,toWrite);
 }
+
+v8::Handle<v8::Value> JSSystemStruct::backendClearItem(const String& prepend, const String& itemName)
+{
+    return associatedContext->backendClearItem(prepend,itemName);
+}
+
 v8::Handle<v8::Value> JSSystemStruct::backendCreateEntry(const String& prepend)
 {
     return associatedContext->backendCreateEntry(prepend);
@@ -48,6 +54,24 @@ v8::Handle<v8::Value> JSSystemStruct::backendRead(const String& prepend, const S
 {
     return associatedContext->backendRead(prepend,id);
 }
+
+
+v8::Handle<v8::Value> JSSystemStruct::backendHaveEntry(const String& prepend)
+{
+    return associatedContext->backendHaveEntry(prepend);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::backendHaveUnflushedEvents(const String& prepend)
+{
+    return associatedContext->backendHaveUnflushedEvents(prepend);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::backendClearOutstanding(const String& prependToken)
+{
+    return associatedContext->backendClearOutstanding(prependToken);
+}
+
+
 
 v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {
