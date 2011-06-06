@@ -47,6 +47,26 @@ namespace Sirikata {
 typedef float float_t;
 #endif
 
+
+BulletPhysicsService::LocationInfo::LocationInfo()
+ : location(),
+   orientation(),
+   bounds(),
+   mesh(),
+   physics(),
+   local(),
+   aggregate(),
+   isFixed(true),
+   objTreatment(BULLET_OBJECT_TREATMENT_IGNORE),
+   objBBox(BULLET_OBJECT_BOUNDS_SPHERE),
+   mass(1.f),
+   objShape(NULL),
+   objMotionState(NULL),
+   objRigidBody(NULL)
+{
+}
+
+
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : LocationService(ctx, update_policy)
 {
@@ -273,14 +293,6 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     // FIXME always clean out previous data!
     if (phy.empty()) return;
 
-    //We need to store the pointers to the bullet objects we create to delete them later
-    PhysicsPointerMap::iterator it2 = BulletPhysicsPointers.find(uuid);
-    if(it2 == BulletPhysicsPointers.end()) {
-        BulletPhysicsPointers[uuid] = BulletPhysicsPointerData();
-        it2 = BulletPhysicsPointers.find(uuid);
-    }
-    BulletPhysicsPointerData& newObjData = it2->second;
-
     // Parsing stage
     using namespace boost::property_tree;
     ptree pt;
@@ -293,8 +305,8 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
         return;
     }
 
-    bulletObjTreatment& objTreatment = newObjData.objTreatment;
-    bulletObjBBox& objBBox = newObjData.objBBox;
+    bulletObjTreatment& objTreatment = locinfo.objTreatment;
+    bulletObjBBox& objBBox = locinfo.objBBox;
 
     //setting mass to 1 for no good reason
     btScalar mass = pt.get("mass", 1);
@@ -333,7 +345,7 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
     // Once we've got all the data, we can fill in some values in our
     // permanent storage
-    newObjData.mass = mass;
+    locinfo.mass = mass;
 
     // We may need the mesh in order to continue. We need it only if:
     // treatment != ignore (see above check) && bounds != sphere.
@@ -351,15 +363,13 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, MeshdataPtr retrievedMesh) {
     LocationMap::iterator it = mLocations.find(uuid);
     LocationInfo& locinfo = it->second;
-    PhysicsPointerMap::iterator it2 = BulletPhysicsPointers.find(uuid);
-    BulletPhysicsPointerData& newObjData = it2->second;
 
     // Spheres can be handled trivially
-    if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_SPHERE ||
+    if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_SPHERE ||
         !retrievedMesh) {
-        newObjData.objShape = new btSphereShape(locinfo.bounds.radius());
+        locinfo.objShape = new btSphereShape(locinfo.bounds.radius());
         BULLETLOG(detailed, "sphere radius: " << locinfo.bounds.radius());
-        addRigidBody(uuid, locinfo, newObjData);
+        addRigidBody(uuid, locinfo);
         return;
     }
 
@@ -395,13 +405,13 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
 
     //objBBox enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
-    if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
+    if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT) {
         double scalingFactor = locinfo.bounds.radius()/mesh_rad;
         BULLETLOG(detailed, "bbox half extents: " << fabs(diff.x/2)*scalingFactor << ", " << fabs(diff.y/2)*scalingFactor << ", " << fabs(diff.z/2)*scalingFactor);
-        newObjData.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
+        locinfo.objShape = new btBoxShape(btVector3(fabs((diff.x/2)*scalingFactor), fabs((diff.y/2)*scalingFactor), fabs((diff.z/2)*scalingFactor)));
     }
     //do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
-    else if(newObjData.objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
+    else if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
 		//we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
 		worldTransformation = worldTransformation * Matrix4x4f::scale((float) locinfo.bounds.radius()/mesh_rad);
 		//reset the instance iterator for a second round
@@ -459,32 +469,32 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
                 BULLETLOG(detailed, "bounds radius: " << mesh_rad);
                 BULLETLOG(detailed, "Num of triangles in mesh: " << meshToConstruct->getNumTriangles());
 		//btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
-		newObjData.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
+		locinfo.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
 	}
 	//FIXME bug somewhere else? bnds.radius()/mesh_rad should be
 	//the correct radius, but it is not...
 
-    addRigidBody(uuid, locinfo, newObjData);
+    addRigidBody(uuid, locinfo);
 }
 
-void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo, BulletPhysicsPointerData& objdata) {
+void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo) {
     //register the motion state (callbacks) for Bullet
-    objdata.objMotionState = new SirikataMotionState(this, uuid);
+    locinfo.objMotionState = new SirikataMotionState(this, uuid);
 
     //set a placeholder for the inertial vector
     btVector3 objInertia(0,0,0);
     //calculate the inertia
-    objdata.objShape->calculateLocalInertia(objdata.mass,objInertia);
+    locinfo.objShape->calculateLocalInertia(locinfo.mass,objInertia);
     //make a constructionInfo object
-    btRigidBody::btRigidBodyConstructionInfo objRigidBodyCI(objdata.mass, objdata.objMotionState, objdata.objShape, objInertia);
+    btRigidBody::btRigidBodyConstructionInfo objRigidBodyCI(locinfo.mass, locinfo.objMotionState, locinfo.objShape, objInertia);
     //CREATE: make the rigid body
-    objdata.objRigidBody = new btRigidBody(objRigidBodyCI);
-    //objdata.objRigidBody->setRestitution(0.5);
+    locinfo.objRigidBody = new btRigidBody(objRigidBodyCI);
+    //locinfo.objRigidBody->setRestitution(0.5);
     //set initial velocity
     Vector3f objVelocity = locinfo.location.velocity();
-    //objdata.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
+    //locinfo.objRigidBody->setLinearVelocity(btVector3(objVelocity.x, objVelocity.y, objVelocity.z));
     //add to the dynamics world
-    dynamicsWorld->addRigidBody(objdata.objRigidBody);
+    dynamicsWorld->addRigidBody(locinfo.objRigidBody);
 }
 
 void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
@@ -493,35 +503,29 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     assert( mLocations[uuid].local == true );
     assert( mLocations[uuid].aggregate == false );
 
-    mLocations.erase(uuid);
-
-    // Remove from the list of local objects
-    CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
-    notifyLocalObjectRemoved(uuid, false);
-
     // FIXME we might want to give a grace period where we generate a replica if one isn't already there,
     // instead of immediately removing all traces of the object.
     // However, this needs to be handled carefully, prefer updates from another server, and expire
     // automatically.
 
+    LocationInfo& locinfo = mLocations[uuid];
+
     /*BEGIN: Bullet Physics Code*/
-    if(BulletPhysicsPointers.find(uuid) == BulletPhysicsPointers.end()) {
-		return;
-	}
 
-    PhysicsPointerMap::iterator it = BulletPhysicsPointers.find(uuid);
-    BulletPhysicsPointerData * objPointers = &(it->second);
+    if (locinfo.objRigidBody)
+        dynamicsWorld->removeRigidBody(locinfo.objRigidBody);
 
-    if (objPointers->objRigidBody)
-        dynamicsWorld->removeRigidBody(objPointers->objRigidBody);
-
-    delete objPointers->objShape;
-	delete objPointers->objMotionState;
-	delete objPointers->objRigidBody;
-
-    BulletPhysicsPointers.erase(uuid);
+    delete locinfo.objShape;
+    delete locinfo.objMotionState;
+    delete locinfo.objRigidBody;
 
     /*END: Bullet Physics Code*/
+
+    mLocations.erase(uuid);
+
+    // Remove from the list of local objects
+    CONTEXT_SPACETRACE(serverObjectEvent, mContext->id(), mContext->id(), uuid, false, TimedMotionVector3f());
+    notifyLocalObjectRemoved(uuid, false);
 }
 
 void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {

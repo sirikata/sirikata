@@ -65,24 +65,6 @@ enum bulletObjBBox {
 	BULLET_OBJECT_BOUNDS_SPHERE
 };
 
-//this struct helps us delete objects and their physics data
-struct BulletPhysicsPointerData {
-	BulletPhysicsPointerData() {
-		objShape = NULL;
-		objMotionState = NULL;
-		objRigidBody = NULL;
-
-		//FIXME: get rid of these when the physics details don't need to be hardcoded
-		objTreatment = BULLET_OBJECT_TREATMENT_IGNORE;
-		objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
-	}
-	btCollisionShape * objShape;
-	SirikataMotionState* objMotionState;
-	btRigidBody* objRigidBody;
-	bulletObjTreatment objTreatment;
-	bulletObjBBox objBBox;
-    float32 mass;
-}; // struct BulletPhysicsPointerData
 
 using namespace Mesh;
 /** Standard location service, which functions entirely based on location
@@ -141,6 +123,9 @@ public:
 
 protected:
     struct LocationInfo {
+	LocationInfo();
+
+        // Regular location info that we need to maintain for all objects
         TimedMotionVector3f location;
         TimedMotionQuaternion orientation;
         BoundingSphere3f bounds;
@@ -148,7 +133,16 @@ protected:
         String physics;
         bool local;
         bool aggregate;
+
+        // Bullet specific data. First some basic properties:
         bool isFixed;
+	bulletObjTreatment objTreatment;
+	bulletObjBBox objBBox;
+        float32 mass;
+        // And then some implementation data:
+	btCollisionShape * objShape;
+	SirikataMotionState* objMotionState;
+	btRigidBody* objRigidBody;
     };
     typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
 
@@ -169,7 +163,7 @@ private:
 
     // This does the work of actually adding the rigid body to the
     // bullet simulation.
-    void addRigidBody(const UUID& uuid, LocationInfo& locinfo, BulletPhysicsPointerData& objdata);
+    void addRigidBody(const UUID& uuid, LocationInfo& locinfo);
 
     //Bullet Dynamics World Vars
     btBroadphaseInterface* broadphase;
@@ -193,10 +187,6 @@ private:
 
 	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
 
-	//can probably combine with LocationInfo and LocationMap
-	typedef std::tr1::unordered_map<UUID, BulletPhysicsPointerData, UUID::Hasher> PhysicsPointerMap;
-
-	PhysicsPointerMap BulletPhysicsPointers;
 
 	bool firstCube;
 
