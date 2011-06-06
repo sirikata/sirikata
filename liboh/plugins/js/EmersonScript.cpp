@@ -88,7 +88,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, JSObjectScr
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
 {
     JSObjectScript::initialize(args);
-    
+
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
     // And notify the script of existing ones
@@ -262,7 +262,7 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 
     //FIXME: Potential memory leak: when will removedProxObj's
     //SpaceObjectReference field be garbage collected and deleted?
-    JSLOG(info,"Issuing user callback for proximate object gone.  Argument passed");
+    JSLOG(detailed,"Issuing user callback for proximate object gone.  Argument passed");
     invokeCallback(mContext,mContext->proxRemovedFunc,argc,argv);
 
     if (try_catch.HasCaught()) {
@@ -395,13 +395,13 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
     String sporefVisTo = iter->first.toString();
     v8::Handle<v8::Value> argv[2] = { newVisibleObj, v8::String::New( sporefVisTo.c_str()  ) };
 
-    
+
     //FIXME: Potential memory leak: when will newAddrObj's
     //SpaceObjectReference field be garbage collected and deleted?
-    JSLOG(info,"Issuing user callback for proximate object.");
+    JSLOG(detailed,"Issuing user callback for proximate object.");
     invokeCallback(mContext,mContext->proxAddedFunc, argc, argv);
 
-    
+
     if (try_catch.HasCaught()) {
         printException(try_catch);
     }

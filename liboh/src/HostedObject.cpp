@@ -109,7 +109,7 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
     if (sim != NULL)
     {
-        HO_LOG(info, "Adding simulation to context");
+        HO_LOG(detailed, "Adding simulation to context");
         mContext->add(sim);
     }
     return sim;
@@ -270,7 +270,7 @@ void HostedObject::initializeScript(const String& script, const String& args)
         return;
     }
 
-    SILOG(oh,debug,"[HO] Creating a script object for object");
+    SILOG(oh,detailed,"[HO] Creating a script object for object");
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
@@ -433,7 +433,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //receive the scripting signal for the first time, that means that we create
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
-    HO_LOG(warning,"Connected object " << obj << " to space " << space << " waiting on notice");
+    HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
 
 }
 
@@ -455,7 +455,7 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, Pre
             std::tr1::bind(&HostedObject::handleProximitySubstream, this, spaceobj, _1, _2)
         );
     }
-    HO_LOG(warning,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
+    HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
 }
 
@@ -800,7 +800,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             SpaceObjectReference removed_obj_ref(spaceobj.space(),
                 ObjectReference(removal.object()));
             if (mPresenceData->find(removed_obj_ref) != mPresenceData->end()) {
-                SILOG(oh,info,"Ignoring self removal from proximity results.");
+                SILOG(oh,detailed,"Ignoring self removal from proximity results.");
             }
             else {
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);

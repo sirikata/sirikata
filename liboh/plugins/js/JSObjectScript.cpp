@@ -237,12 +237,12 @@ void JSObjectScript::initialize(const String& args)
 
     String script_contents = init_script->as<String>();
     if (script_contents.empty()) {
-        JSLOG(info,"Importing default script.");
+        JSLOG(detailed,"Importing default script.");
         import(mManager->defaultScript(),NULL);
         mContext->struct_setScript("system.require('" + mManager->defaultScript() + "');");
     }
     else {
-        JSLOG(info,"Have an initial script to execute.  Executing.");
+        JSLOG(detailed,"Have an initial script to execute.  Executing.");
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
@@ -858,8 +858,7 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
     {
         if (iter->second.find(full_filename.string()) != iter->second.end())
         {
-        //JSLOG(detailed, " Skipping already imported file: " << filename);
-        JSLOG(debug, " Skipping already imported file: " << filename);
+        JSLOG(detailed, " Skipping already imported file: " << filename);
         return v8::Undefined();
         }
     }

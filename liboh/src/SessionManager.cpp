@@ -111,7 +111,7 @@ SessionManager::InternalConnectedCallback& SessionManager::ObjectConnections::ge
 ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObjectReference& sporef_obj, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& mesh, const String& phy, bool do_cb) {
     if (mObjectInfo[sporef_obj].connectingTo != NullServerID) { // We were connecting to a server
         ServerID connectedTo = mObjectInfo[sporef_obj].connectingTo;
-        OH_LOG(debug,"Successfully connected " << sporef_obj << " to space node " << connectedTo);
+        OH_LOG(detailed,"Successfully connected " << sporef_obj << " to space node " << connectedTo);
         mObjectInfo[sporef_obj].connectedTo = connectedTo;
         mObjectInfo[sporef_obj].connectingTo = NullServerID;
         mObjectServerMap[connectedTo].push_back(sporef_obj);
@@ -124,7 +124,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
 	ci.bounds = bnds;
 	ci.mesh = mesh;
 	ci.physics = phy;
-	
+
         if (do_cb) {
             mObjectInfo[sporef_obj].connectedCB(parent->mSpace, sporef_obj.object(), connectedTo, ci);
         }
@@ -148,7 +148,7 @@ ServerID SessionManager::ObjectConnections::handleConnectSuccess(const SpaceObje
         ServerID migratedFrom = mObjectInfo[sporef_obj].connectedTo;
         ServerID migratedTo = mObjectInfo[sporef_obj].migratingTo;
 
-        OH_LOG(debug,"Successfully migrated " << sporef_obj << " to space node " << migratedTo);
+        OH_LOG(detailed,"Successfully migrated " << sporef_obj << " to space node " << migratedTo);
         mObjectInfo[sporef_obj].connectedTo = migratedTo;
         mObjectInfo[sporef_obj].migratingTo = NullServerID;
         mObjectServerMap[migratedTo].push_back(sporef_obj);
@@ -647,7 +647,7 @@ void SessionManager::setupSpaceConnection(ServerID server, SpaceNodeConnection::
 
     conn->connect();
 
-    OH_LOG(debug,"Trying to connect to " << addy.toString());
+    OH_LOG(detailed,"Trying to connect to " << addy.toString());
 }
 
 void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::ConnectionStatus status,
@@ -660,10 +660,10 @@ void SessionManager::handleSpaceConnection(const Sirikata::Network::Stream::Conn
         return;
     SpaceNodeConnection* conn = conn_it->second;
 
-    OH_LOG(debug,"Handling space connection event...");
+    OH_LOG(detailed,"Handling space connection event...");
 
     if (status == Sirikata::Network::Stream::Connected) {
-        OH_LOG(debug,"Successfully connected to " << sid);
+        OH_LOG(detailed,"Successfully connected to " << sid);
 
         // Try to setup time syncing if it isn't on yet.
         if (mTimeSyncClient == NULL) {
@@ -816,7 +816,7 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
         }
         else if (conn_resp.response() == Sirikata::Protocol::Session::ConnectResponse::Redirect) {
             ServerID redirected = conn_resp.redirect();
-            OH_LOG(debug,"Object connection for " << sporef_obj << " redirected to " << redirected);
+            OH_LOG(detailed,"Object connection for " << sporef_obj << " redirected to " << redirected);
             // Get a connection to request
             getSpaceConnection(
                 redirected,
@@ -885,7 +885,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
-    OH_LOG(debug, "SST object-space connect callback for " << spaceobj.toString() << " : " << err << "\n");
+    OH_LOG(detailed, "SST object-space connect callback for " << spaceobj.toString() << " : " << err << "\n");
 
     if (err != SST_IMPL_SUCCESS) {
         // retry creating an SST stream from the space server to object 'obj'.

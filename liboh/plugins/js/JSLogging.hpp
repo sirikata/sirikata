@@ -35,6 +35,6 @@
 
 #include <sirikata/oh/Platform.hpp>
 
-#define JSLOG(level, msg) SILOG(js, level, "[JS] " << msg)
+#define JSLOG(level, msg) SILOG(js, level, msg)
 
 #endif //_SIRIKATA_JS_LOGGING_HPP_
