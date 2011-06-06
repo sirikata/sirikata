@@ -196,7 +196,6 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      };
 
      
-
      
       //data
       system._selfMap = { };

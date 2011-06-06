@@ -24,7 +24,7 @@ var nameServe = checkpointPartialPersist(toPersist,fName);
 var id = nameServe.lookupName(toPersist);
 
 //restoring object from file
-var newCopy = restoreFrom(fName,id);
+var newCopy = std.persist.restoreFrom(fName,id);
 system.print('\nAfter restore\n');
 system.prettyprint(newCopy);
 
