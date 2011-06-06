@@ -17,8 +17,8 @@ system.print('\ncycled graph\n');
 system.prettyprint(toPersist);
 
 //performing persist
-var fName = 'btestPartialPersist.em.bu';
-var nameServe = checkpointPartialPersist(toPersist,fName);
+var fName = 'btestPartialPersist2.em.bu';
+var nameServe = std.persist.checkpointPartialPersist(toPersist,fName);
 
 
 var id = nameServe.lookupName(toPersist);
