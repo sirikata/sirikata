@@ -282,6 +282,10 @@ void BulletPhysicsService::addLocalObject(const UUID& uuid, const TimedMotionVec
     updatePhysicsWorld(uuid);
 }
 
+#define DEFAULT_TREATMENT BULLET_OBJECT_TREATMENT_IGNORE
+#define DEFAULT_BOUNDS BULLET_OBJECT_BOUNDS_SPHERE
+#define DEFAULT_MASS 1.f
+
 void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     LocationMap::iterator it = mLocations.find(uuid);
     LocationInfo& locinfo = it->second;
@@ -290,37 +294,50 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
 
     /*BEGIN: Bullet Physics Code*/
 
-    // FIXME always clean out previous data!
-    if (phy.empty()) return;
+    // Default values
+    bulletObjTreatment objTreatment = DEFAULT_TREATMENT;
+    bulletObjBBox objBBox = DEFAULT_BOUNDS;
+    btScalar mass = DEFAULT_MASS;
 
-    // Parsing stage
-    using namespace boost::property_tree;
-    ptree pt;
-    try {
-        std::stringstream phy_json(phy);
-        read_json(phy_json, pt);
+    if (!phy.empty()) {
+        // Parsing stage
+        using namespace boost::property_tree;
+        ptree pt;
+        try {
+            std::stringstream phy_json(phy);
+            read_json(phy_json, pt);
+        }
+        catch(json_parser::json_parser_error exc) {
+            BULLETLOG(error, "Error parsing physics properties: " << phy << " (" << exc.what() << ")");
+            return;
+        }
+
+        String objTreatmentString = pt.get("treatment", String("ignore"));
+        if (objTreatmentString == "static") objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
+        if (objTreatmentString == "dynamic") objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+
+        String objBBoxString = pt.get("bounds", String("sphere"));
+        if (objBBoxString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
+        if (objBBoxString == "triangles") objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
+
+        mass = pt.get("mass", DEFAULT_MASS);
     }
-    catch(json_parser::json_parser_error exc) {
-        BULLETLOG(error, "Error parsing physics properties: " << phy << " (" << exc.what() << ")");
+
+    // Check if anything has changed.
+    if (locinfo.objTreatment == objTreatment &&
+        locinfo.objBBox == objBBox &&
+        locinfo.mass == mass)
         return;
-    }
 
-    bulletObjTreatment& objTreatment = locinfo.objTreatment;
-    bulletObjBBox& objBBox = locinfo.objBBox;
+    // Clear out previous state from the simulation.
+    removeRigidBody(uuid, locinfo);
 
-    //setting mass to 1 for no good reason
-    btScalar mass = pt.get("mass", 1);
+    // Store updated info
+    locinfo.objTreatment = objTreatment;
+    locinfo.objBBox = objBBox;
+    locinfo.mass = mass;
 
-    String objTreatmentString = pt.get("treatment", String("ignore"));
-    objTreatment = BULLET_OBJECT_TREATMENT_IGNORE;
-    if (objTreatmentString == "static") objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
-    if (objTreatmentString == "dynamic") objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
-
-    String objBBoxString = pt.get("bounds", String("sphere"));
-    objBBox = BULLET_OBJECT_BOUNDS_SPHERE;
-    if (objBBoxString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
-    if (objBBoxString == "triangles") objBBox = BULLET_OBJECT_BOUNDS_PER_TRIANGLE;
-
+    // And then proceed to add the new simulated object into bullet
 
     //objTreatment enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
@@ -333,7 +350,7 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
         //this is a variable in loc structure that sets the item to be static
         locinfo.isFixed = true;
         //if the mass is 0, Bullet treats the object as static
-        mass = 0;
+        locinfo.mass = 0;
     }
     else if(objTreatment == BULLET_OBJECT_TREATMENT_DYNAMIC) {
         BULLETLOG(detailed, "This mesh will move: " << msh[0]);
@@ -342,10 +359,6 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     else {
         BULLETLOG(detailed,"Error in objTreatment initialization!");
     }
-
-    // Once we've got all the data, we can fill in some values in our
-    // permanent storage
-    locinfo.mass = mass;
 
     // We may need the mesh in order to continue. We need it only if:
     // treatment != ignore (see above check) && bounds != sphere.
@@ -497,6 +510,19 @@ void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo)
     dynamicsWorld->addRigidBody(locinfo.objRigidBody);
 }
 
+void BulletPhysicsService::removeRigidBody(const UUID& uuid, LocationInfo& locinfo) {
+    if (locinfo.objRigidBody) {
+        dynamicsWorld->removeRigidBody(locinfo.objRigidBody);
+
+        delete locinfo.objShape;
+        locinfo.objShape = NULL;
+        delete locinfo.objMotionState;
+        locinfo.objMotionState = NULL;
+        delete locinfo.objRigidBody;
+        locinfo.objRigidBody = NULL;
+    }
+}
+
 void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // Remove from mLocations, but save the cached state
     assert( mLocations.find(uuid) != mLocations.end() );
@@ -509,17 +535,7 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     // automatically.
 
     LocationInfo& locinfo = mLocations[uuid];
-
-    /*BEGIN: Bullet Physics Code*/
-
-    if (locinfo.objRigidBody)
-        dynamicsWorld->removeRigidBody(locinfo.objRigidBody);
-
-    delete locinfo.objShape;
-    delete locinfo.objMotionState;
-    delete locinfo.objRigidBody;
-
-    /*END: Bullet Physics Code*/
+    removeRigidBody(uuid, locinfo);
 
     mLocations.erase(uuid);
 

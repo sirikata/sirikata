@@ -164,6 +164,9 @@ private:
     // This does the work of actually adding the rigid body to the
     // bullet simulation.
     void addRigidBody(const UUID& uuid, LocationInfo& locinfo);
+    // This clears a rigid body from the bullet simulation, and clears
+    // the associated state in the LocationInfo.
+    void removeRigidBody(const UUID& uuid, LocationInfo& locinfo);
 
     //Bullet Dynamics World Vars
     btBroadphaseInterface* broadphase;
