@@ -544,6 +544,41 @@ void BulletPhysicsService::removeLocalObject(const UUID& uuid) {
     notifyLocalObjectRemoved(uuid, false);
 }
 
+void BulletPhysicsService::updateBulletFromObject(const UUID& uuid, btTransform& worldTrans) {
+    Vector3f objPosition = currentPosition(uuid);
+    Quaternion objOrient = currentOrientation(uuid);
+    worldTrans = btTransform(
+        btQuaternion(objOrient.x,objOrient.y,objOrient.z,objOrient.w),
+        btVector3(objPosition.x,objPosition.y,objPosition.z)
+    );
+}
+
+void BulletPhysicsService::updateObjectFromBullet(const UUID& uuid, const btTransform& worldTrans) {
+    assert(isFixed(uuid) == false);
+
+    LocationInfo& locinfo = mLocations[uuid];
+
+    btVector3 pos = worldTrans.getOrigin();
+    btVector3 vel = locinfo.objRigidBody->getLinearVelocity();
+    TimedMotionVector3f newLocation(context()->simTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), Vector3f(vel.x(), vel.y(), vel.z())));
+    setLocation(uuid, newLocation);
+
+    btQuaternion rot = worldTrans.getRotation();
+    btVector3 angvel = locinfo.objRigidBody->getAngularVelocity();
+    Vector3f angvel_siri(angvel.x(), angvel.y(), angvel.z());
+    float angvel_angle = angvel_siri.normalizeThis();
+    TimedMotionQuaternion newOrientation(
+        context()->simTime(),
+        MotionQuaternion(
+            Quaternion(rot.x(), rot.y(), rot.z(), rot.w()),
+            Quaternion(angvel_siri, angvel_angle)
+        )
+    );
+    setOrientation(uuid, newOrientation);
+
+    physicsUpdates.insert(uuid);
+}
+
 void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
     // Aggregates get randomly assigned IDs -- if there's a conflict either we
     // got a true conflict (incredibly unlikely) or somebody (prox/query

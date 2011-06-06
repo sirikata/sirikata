@@ -121,6 +121,10 @@ public:
     // resulting data.
     void getMeshCallback(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr response, MeshdataParsedCallback cb);
 
+
+    void updateBulletFromObject(const UUID& uuid, btTransform& worldTrans);
+    void updateObjectFromBullet(const UUID& uuid, const btTransform& worldTrans);
+
 protected:
     struct LocationInfo {
 	LocationInfo();
@@ -207,27 +211,11 @@ public:
     }
 
     virtual void getWorldTransform(btTransform &worldTrans) const {
-        Vector3f objPosition = ptrToService->currentPosition(mUUID);
-        Quaternion objOrient = ptrToService->currentOrientation(mUUID);
-        worldTrans = btTransform(
-            btQuaternion(objOrient.x,objOrient.y,objOrient.z,objOrient.w),
-            btVector3(objPosition.x,objPosition.y,objPosition.z)
-        );
+        ptrToService->updateBulletFromObject(mUUID, worldTrans);
     }
 
     virtual void setWorldTransform(const btTransform &worldTrans) {
-        assert(ptrToService->isFixed(mUUID) == false);
-
-        btVector3 pos = worldTrans.getOrigin();
-        TimedMotionVector3f newLocation(ptrToService->context()->simTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), Vector3f(0, 0, 0)));
-        ptrToService->setLocation(mUUID, newLocation);
-
-        btQuaternion rot = worldTrans.getRotation();
-        TimedMotionQuaternion newOrientation(ptrToService->context()->simTime(), MotionQuaternion(Quaternion(rot.x(), rot.y(), rot.z(), rot.w()), Quaternion::identity()));
-        ptrToService->setOrientation(mUUID, newOrientation);
-
-
-        ptrToService->physicsUpdates.insert(mUUID);
+        ptrToService->updateObjectFromBullet(mUUID, worldTrans);
     }
 
 protected:
