@@ -176,7 +176,7 @@ bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& e
         
         ANTLR3_STRING_struct* mString = treePsr->program(treePsr);
         char* intermediate = (char*)mString->chars;
-        int sizeCode = mString->size;
+        int sizeCode = mString->len;
         toCompileTo = std::string(intermediate,sizeCode);
         returner = true;
         
