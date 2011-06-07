@@ -49,6 +49,7 @@
 
 #include "JS_JSMessage.pbj.hpp"
 #include "JSObjects/JSPresence.hpp"
+#include "JSObjects/JSGlobal.hpp"
 #include "JSObjects/JSFields.hpp"
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSSystemNames.hpp"
@@ -281,8 +282,12 @@ void JSObjectScriptManager::createContextGlobalTemplate()
     v8::HandleScope handle_scope;
     // And we expose some functionality directly
     mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+    mContextGlobalTemplate->SetInternalFieldCount(CONTEXT_GLOBAL_TEMPLATE_FIELD_COUNT);
+    
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME),mSystemTemplate);
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
+
+    mContextGlobalTemplate->Set(v8::String::New("__checkResources8_8_3_1__"), v8::FunctionTemplate::New(JSGlobal::checkResources));
 }
 
 

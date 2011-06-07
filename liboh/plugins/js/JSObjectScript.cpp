@@ -132,6 +132,7 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
 
     TryCatch try_catch;
 
+    
     Handle<Value> result;
     if (target != NULL && !(*target)->IsNull() && !(*target)->IsUndefined()) {
         JSLOG(insane,"ProtectedJSCallback with target given.");
@@ -143,11 +144,15 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
 
     if (try_catch.HasCaught())
     {
+        
         printException(try_catch);
         if (exc != NULL)
             *exc = exceptionAsString(try_catch);
+
+
         return v8::Handle<v8::Value>();
     }
+
 
     return result;
 }
@@ -253,8 +258,10 @@ void JSObjectScript::initialize(const String& args)
 
 
 JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan)
- :  contIDTracker(0),
-    mManager(jMan)
+ : mResourceCounter(0),
+   mNestedEvalCounter(0),
+   contIDTracker(0),
+   mManager(jMan)
 {
 }
 
@@ -371,14 +378,22 @@ void JSObjectScript::printExceptionToScript(JSContextStruct* ctx, const String& 
     int argc = 1;
     v8::Handle<v8::Value> argv[1] = { v8::String::New(exc.c_str(), exc.size()) };
 
+    preEvalOps();
     ProtectedJSCallbackFull(ctx->mContext, &sysobj, printfunc, argc, argv, NULL);
+    postEvalOps();
 }
 
 v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
     String exc;
+    preEvalOps();
     v8::Handle<v8::Value> retval = ProtectedJSCallbackFull(ctx->mContext, target, cb, argc, argv, &exc);
+    postEvalOps();
     if (retval.IsEmpty())
+    {
+        preEvalOps();
         printExceptionToScript(ctx, exc);
+        postEvalOps();
+    }
     return retval;
 }
 
@@ -439,6 +454,8 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     TryCatch try_catch;
 
+    preEvalOps();
+    
     // Special casing emerson compilation
     v8::Handle<v8::String> source;
 #ifdef EMERSON_COMPILE
@@ -446,7 +463,10 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         String em_script_str_new = em_script_str;
 
         if(em_script_str.empty())
+        {
+            postEvalOps();
             return v8::Undefined();
+        }
 
         if(em_script_str.at(em_script_str.size() -1) != '\n')
         {
@@ -474,6 +494,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
             }
         }
         catch(EmersonParserException e) {
+            postEvalOps();
             return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
         }
     }
@@ -491,6 +512,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         uncaught = "Uncaught exception " + uncaught + "\nwhen trying to run script: "+ em_script_str;
         JSLOG(error, uncaught);
         printException(try_catch);
+        postEvalOps();
         return try_catch.ReThrow();
     }
 
@@ -499,6 +521,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         v8::String::Utf8Value error(try_catch.Exception());
         std::string msg = std::string("Compile error: ") + std::string(*error);
         JSLOG(error, msg);
+        postEvalOps();
         return v8::ThrowException( v8::Exception::Error(v8::String::New(msg.c_str())) );
     }
 
@@ -509,6 +532,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
     if (try_catch2.HasCaught()) {
         printException(try_catch2);
+        postEvalOps();
         return try_catch2.ReThrow();
     }
 
@@ -518,6 +542,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         JSLOG(detailed, "Script result: " << *ascii);
     }
 
+    postEvalOps();
     return result;
 }
 
@@ -582,6 +607,18 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     return compileFuncResult;
 }
 
+v8::Handle<v8::Value> JSObjectScript::checkResources()
+{
+    ++mResourceCounter;
+    
+    if (mResourceCounter > EMERSON_RESOURCE_THRESHOLD)
+        return v8::Boolean::New(false);
+
+    
+    return v8::Boolean::New(true);
+}
+
+
 /*
   This function grabs the string associated with cb, and recompiles it in the
   context ctx.  It then calls the newly recompiled function from within ctx with
@@ -613,7 +650,8 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-
+    preEvalOps();
+    
     v8::Handle<v8::Value> result;
     bool targetGiven = false;
     if (target!=NULL)
@@ -636,12 +674,30 @@ v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<
     if (try_catch.HasCaught()) {
         JSLOG(error,"Error in executeJSFunctionInContext");
         printException(try_catch);
+        postEvalOps();
         return try_catch.Exception();
     }
 
+    postEvalOps();
     return result;
 }
 
+
+void JSObjectScript::preEvalOps()
+{
+    if (mNestedEvalCounter < 0)
+        JSLOG(error, "Error in preEvalOps.  Should never indicate that we have executed negative evals");
+    
+    if (mNestedEvalCounter == 0)
+        mResourceCounter =0;
+
+    ++mNestedEvalCounter;
+}
+
+void JSObjectScript::postEvalOps()
+{
+    --mNestedEvalCounter;
+}
 
 
 /*

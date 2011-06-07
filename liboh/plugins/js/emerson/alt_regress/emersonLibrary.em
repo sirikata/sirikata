@@ -1,4 +1,11 @@
 
+function __checkResources8_8_3_1__()
+{
+    return true;
+}
+
+
+
 util = {    };
 
 util.Vec3 = function (x,y,z)

@@ -55,6 +55,8 @@
 #include "JSEntityCreateInfo.hpp"
 #include "JSBackend/JSFileBackend.hpp"
 
+#define EMERSON_RESOURCE_THRESHOLD 10000
+
 namespace Sirikata {
 namespace JS {
 
@@ -109,6 +111,23 @@ public:
     v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken, JSContextStruct* jscont);
 
+    /**
+       We want to ensure that no sandboxes have while(1) loops.  Roughly, the
+       way we do this is that our compiler inserts a lot of calls to
+       checkResources.  If checkResources returns false, then we throw an
+       uncatch-able error.  
+
+       Using a stupid implementation for checkResources.  Every time that we
+       call eval, and are not currently executing code/handling an event, then
+       we set mResourceCounter to zero.  Every interleaving call to
+       checkResources increments mResourceCounter.  If mResourceCounter ever
+       gets above a threshold value, the next checkResources call returns false,
+       causing the script to throw an uncatchable error.
+       
+       @return {v8::Boolean} Returns true if still have adequate resources to
+       continue computation.  Returns false otherwise.
+     */
+    v8::Handle<v8::Value> checkResources();
 
     
     Handle<v8::Context> context() { return mContext->mContext;}
@@ -138,6 +157,36 @@ public:
 
 protected:
 
+    /**
+       @see checkResources
+     */
+    int32 mResourceCounter;
+    /**
+       We want to keep track of whether we're in
+       an eval loop or not.  If we are, then mNestedEvalCounter keeps track of
+       how many levels of evals we're in.  Ie, if we call eval and from inside
+       that eval, call eval again, then we're mNestedEvalCounter should be 2.
+       If we are outside of all evals, then mNestedEvalCounter should be zero.
+    */
+    int32 mNestedEvalCounter;
+
+    /**
+       Each time before we call an eval function into v8, we first call
+       preEvalOps.  preEvalOps sets up mResourceCounter and mNestedEvalCounter
+       before calling eval/run/call.  (It increments mNestedEvalCounter and if
+       this eval isn't called from inside another eval, then we set
+       mResourceCounter to zero.)
+     */
+    void preEvalOps();
+
+    /**
+       Decrements mNestedEvalCounter.  Used for bookkeeping so that we can keep
+       track of what level of eval nesting we're in.
+     */
+    void postEvalOps();
+
+
+    
     // Each context has an id that is assigned from this variable.
     uint32 contIDTracker;
     std::map<uint32,JSContextStruct*> mContStructMap;

@@ -1971,6 +1971,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSGlobal.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSVisibleStructMonitor.cpp

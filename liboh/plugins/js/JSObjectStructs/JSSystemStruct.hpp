@@ -39,6 +39,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canProx();
     v8::Handle<v8::Value> struct_canImport();
 
+    v8::Handle<v8::Value> checkResources();
+    
     v8::Handle<v8::Value> checkHeadless();
 
     v8::Handle<v8::Value> backendFlush(const String& seqKey);

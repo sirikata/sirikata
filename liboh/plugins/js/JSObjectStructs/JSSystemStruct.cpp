@@ -72,6 +72,11 @@ v8::Handle<v8::Value> JSSystemStruct::backendClearOutstanding(const String& prep
 }
 
 
+v8::Handle<v8::Value> JSSystemStruct::checkResources()
+{
+    return v8::Boolean::New(true);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {

@@ -26,6 +26,22 @@ options
     #include <antlr3.h>
     #include "Util.h"
     #define APP(s)  program_string->append(program_string, s);
+
+    
+    #define CHECK_RESOURCES()               \
+    {                                       \
+    APP("(function()\n");                   \
+    APP("{ \n");                            \
+    APP("var tmp = function()\n");          \
+    APP("{\n");                             \
+    APP("return this;");                    \
+    APP("};");                              \
+    APP("var tmpGlobal = tmp();");          \
+    APP("if (! tmpGlobal.__checkResources8_8_3_1__())"); \
+    APP("throw '__resource_error__';");     \
+    APP("})();");                           \
+    }
+
     
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
@@ -85,6 +101,10 @@ functionDeclaration
                 APP(" )");
                 APP("\n{\n");
               }
+              //for resource checks
+              {
+                 CHECK_RESOURCES();
+              }
               functionBody
               {
                 APP("\n}");
@@ -111,6 +131,10 @@ functionExpression
                APP("  )");
                APP("\n{\n");
              }
+             //for resource checks
+             {
+                 CHECK_RESOURCES();
+             }
              functionBody
              {
                APP("\n}");
@@ -131,6 +155,7 @@ formalParameterList
       )
   ;
  
+
 
 functionBody
 	: sourceElements
@@ -299,9 +324,13 @@ doWhileStatement
             DO
             {
                 APP(" do ");  						  
-            }    
-	        statement
+                //resource checking
+                APP("{\n");
+                CHECK_RESOURCES();
+            }
+            statement
             {
+                APP("\n}\n");
                 APP("while ( " );      
             }
             expression 
@@ -320,8 +349,14 @@ whileStatement
             expression 
             {
                 APP(" ) "); 
+                //resource checking
+                APP("{\n");
+                CHECK_RESOURCES();
             }
             statement
+            {
+                APP("\n}\n");
+            }
         )
 	;
 	
@@ -342,8 +377,14 @@ forStatement
             (^(FORITER expression))?  
             {
                 APP(" ) ");
+                //resource checking
+                APP("{\n");
+                CHECK_RESOURCES();
             }
             statement
+            {
+                APP("\n}\n");
+            }
         )
 	;
 	
@@ -366,9 +407,15 @@ forInStatement
         expression 
         {
             APP(" ) ");
+            //resource checking
+            APP("{\n");
+            CHECK_RESOURCES();
         }
         statement
-    )
+        {
+            APP("\n}\n");
+        }
+        )
 	;
 	
 forInStatementInitialiserPart
@@ -626,6 +673,7 @@ catchBlock
                 APP(" {  \n");
                 APP(" if ( system.__isResetting() ) \n { \n");
                 APP("throw '__resetting__';\n}\n");
+                CHECK_RESOURCES();
             }
             statementBlock
             {

@@ -139,11 +139,18 @@ void JSContextStruct::createContextObjects()
     v8::Context::Scope context_scope(mContext);
 
     v8::Local<v8::Object> global_obj = mContext->Global();
+        
+        
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
     // itself.
     v8::Handle<v8::Object> global_proto = v8::Handle<v8::Object>::Cast(global_obj->GetPrototype());
 
+    global_proto->SetInternalField(CONTEXT_GLOBAL_JSOBJECT_SCRIPT_FIELD, v8::External::New(jsObjScript));
+    global_proto->SetInternalField(TYPEID_FIELD, v8::External::New(new String(CONTEXT_GLOBAL_TYPEID_STRING)));
+
+    
+    
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
