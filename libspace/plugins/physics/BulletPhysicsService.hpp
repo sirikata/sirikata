@@ -125,6 +125,9 @@ public:
     void updateBulletFromObject(const UUID& uuid, btTransform& worldTrans);
     void updateObjectFromBullet(const UUID& uuid, const btTransform& worldTrans);
 
+    // Callback invoked each time bullet performs an internal tick
+    // (may be finer granularity than we request).
+    void internalTickCallback();
 protected:
     struct LocationInfo {
 	LocationInfo();
@@ -153,6 +156,11 @@ protected:
 	LocationMap mLocations;
 
     typedef std::tr1::unordered_set<UUID, UUID::Hasher> UUIDSet;
+    // Which objects have dynamic physical simulation and need to be
+    // sanity checked at each tick.
+    UUIDSet mDynamicPhysicsObjects;
+    // Objects which have outstanding updates to location information
+    // from the physics engine.
     UUIDSet physicsUpdates;
 
     typedef std::tr1::unordered_map<UUID, Transfer::ResourceDownloadTaskPtr, UUID::Hasher> MeshDownloadMap;

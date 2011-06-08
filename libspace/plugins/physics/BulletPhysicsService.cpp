@@ -66,6 +66,12 @@ BulletPhysicsService::LocationInfo::LocationInfo()
 {
 }
 
+namespace {
+void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep) {
+    BulletPhysicsService *bps = static_cast<BulletPhysicsService*>(world->getWorldUserInfo());
+    bps->internalTickCallback();
+}
+}
 
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : LocationService(ctx, update_policy)
@@ -79,16 +85,10 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
 
 	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
 
+        dynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this, false);
+
 	dynamicsWorld->setGravity(btVector3(0,-1,0));
 
-	//this stuff is from the beginner program, for a ground plane
-        /*
-	btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),0);
-	btDefaultMotionState* groundMotionState = new btDefaultMotionState(btTransform(btQuaternion(0,0,0,1), btVector3(0,-50,0)));
-	btRigidBody::btRigidBodyConstructionInfo groundRigidBodyCI(0, groundMotionState, groundShape, btVector3(0,0,0));
-	btRigidBody* groundRigidBody = new btRigidBody(groundRigidBodyCI);
-	dynamicsWorld->addRigidBody(groundRigidBody);
-        */
 
 	mTimer.start();
 
@@ -514,6 +514,9 @@ void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo)
     locinfo.objRigidBody->setAngularVelocity(btVector3(angvel.x, angvel.y, angvel.z));
     //add to the dynamics world
     dynamicsWorld->addRigidBody(locinfo.objRigidBody);
+    // And if its dynamic, make sure its in our list of objects to
+    // track for sanity checking
+    mDynamicPhysicsObjects.insert(uuid);
 }
 
 void BulletPhysicsService::removeRigidBody(const UUID& uuid, LocationInfo& locinfo) {
@@ -526,6 +529,10 @@ void BulletPhysicsService::removeRigidBody(const UUID& uuid, LocationInfo& locin
         locinfo.objMotionState = NULL;
         delete locinfo.objRigidBody;
         locinfo.objRigidBody = NULL;
+
+        UUIDSet::iterator dynamic_obj_it = mDynamicPhysicsObjects.find(uuid);
+        if (dynamic_obj_it != mDynamicPhysicsObjects.end())
+            mDynamicPhysicsObjects.erase(dynamic_obj_it);
     }
 }
 
@@ -583,6 +590,34 @@ void BulletPhysicsService::updateObjectFromBullet(const UUID& uuid, const btTran
     setOrientation(uuid, newOrientation);
 
     physicsUpdates.insert(uuid);
+}
+
+
+namespace {
+
+void capLinearVelocity(btRigidBody* rb, float32 max_speed) {
+    btVector3 vel = rb->getLinearVelocity();
+    float32 speed = vel.length();
+    if (speed > max_speed)
+        rb->setLinearVelocity( vel * (max_speed / speed) );
+}
+
+void capAngularVelocity(btRigidBody* rb, float32 max_speed) {
+    btVector3 vel = rb->getAngularVelocity();
+    float32 speed = vel.length();
+    if (speed > max_speed)
+        rb->setAngularVelocity( vel * (max_speed / speed) );
+}
+
+}
+
+void BulletPhysicsService::internalTickCallback() {
+    for(UUIDSet::iterator id_it = mDynamicPhysicsObjects.begin(); id_it != mDynamicPhysicsObjects.end(); id_it++) {
+        LocationInfo& locinfo = mLocations[*id_it];
+        assert(locinfo.objRigidBody != NULL);
+        capLinearVelocity(locinfo.objRigidBody, 100);
+        capAngularVelocity(locinfo.objRigidBody, 4*3.14159);
+    }
 }
 
 void BulletPhysicsService::addLocalAggregateObject(const UUID& uuid, const TimedMotionVector3f& loc, const TimedMotionQuaternion& orient, const BoundingSphere3f& bnds, const String& msh, const String& phy) {
