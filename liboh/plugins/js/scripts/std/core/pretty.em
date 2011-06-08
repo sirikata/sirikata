@@ -70,7 +70,15 @@ std.core.pretty = function(obj) {
             return Object.getOwnPropertyNames(obj);
     };
     var longObject = function(obj) {
-        return (objectFields(obj).length > 3);
+        var fields = objectFields(obj);
+        if (fields.length > 3)
+            return true;
+        
+        for(var f in fields)
+            if(typeof(obj[fields[f]]) === 'object')
+                return true;
+        
+        return false;
     };
 
     var checkVisited = function  (obj)
@@ -79,7 +87,7 @@ std.core.pretty = function(obj) {
         {
             if (visited[s][0] === obj)
             {
-                return visited[s][1];
+                return s;
             }
         }
         return null;
@@ -92,13 +100,13 @@ std.core.pretty = function(obj) {
     while(obj_stack.length != 0) {
         var cur = obj_stack.pop();
 
-        visited.push([cur.obj,numPrint]);
+        visited.push([cur.obj,numPrint,output.length]);
         ++numPrint;
         
         // Check if we need to start this object
         if (cur.idx == -1) {
             // Start the object
-            output += '#'+(numPrint-1) +':{';
+            output += '{';
             indent += ' ';
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
         }
@@ -117,7 +125,7 @@ std.core.pretty = function(obj) {
             // And process this one, possibly triggering recursion
             var key = objectFields(cur.obj)[cur.idx];
             var child = cur.obj[key];
-            output += '#' + (numPrint-1) + ':' + key + ': ';
+            output += key + ': ';
             if (typeof(child) === "object" && child !== null) {
 
 
@@ -125,7 +133,19 @@ std.core.pretty = function(obj) {
                 var visitedIndex = checkVisited(child);
                 if (visitedIndex != null)
                 {
-                    output += indent + '<circ ref. see #'+ visitedIndex.toString() + ' >';
+					var entry = visited[visitedIndex];
+					if(entry[2] != -1)
+					{
+						var tag = '<#' + entry[1].toString() + '>';
+						output = output.slice(0, entry[2]) + tag +
+								output.slice(entry[2]);
+						for(var i in visited)
+							if(visited[i][2] > entry[2])
+								visited[i][2] += tag.length;
+						visited[visitedIndex][2] = -1;
+					}
+					
+					output += '<#'+ entry[1].toString() + '>';
                     continue;
                 }
                 
