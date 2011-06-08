@@ -181,6 +181,9 @@ if (typeof(std.persist) === 'undefined')
      */ 
      std.persist.restoreFrom  = function(filename,id)
      {
+         if (typeof(id) == 'undefined')
+             id = 0;
+         
          return std.persist.restoreFromAndGetNames(filename,id)[0];
      };
 

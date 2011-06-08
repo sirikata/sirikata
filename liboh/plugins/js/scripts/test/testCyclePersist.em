@@ -17,14 +17,14 @@ system.print('\ncycled graph\n');
 system.prettyprint(toPersist);
 
 //performing persist
-var fName = 'btestPartialPersist3.em.bu';
+var fName = 'btestPartialPersist4.em.bu';
 var nameServe = std.persist.checkpointPartialPersist(toPersist,fName);
 
 
 var id = nameServe.lookupName(toPersist);
 
 //restoring object from file
-var newCopy = std.persist.restoreFrom(fName,id);
+var newCopy = std.persist.restoreFrom(fName);
 system.print('\nAfter restore\n');
 system.prettyprint(newCopy);
 
