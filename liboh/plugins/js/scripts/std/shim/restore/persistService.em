@@ -1,10 +1,100 @@
 
-
-
 if (typeof(std) === "undefined") /** @namespace */ std = {};
 
 
-std.persist = {
+(function()
+{
+     /* Type constants */
+     //use this as an index to retrieve the type of local objects
+     var GET_TYPE_STRING                   =            '__getType';
+    
+    std.persist = {
+
+     //set the type field of an object to this if have a loop.
+     SYSTEM_TYPE_STRING            :               'system',
+     PRESENCE_OBJECT_TYPE_STRING   :             'presence',
+     VISIBLE_TYPE_STRING           :              'visible',
+     TIMER_TYPE_STRING             :                'timer',
+     PRESENCE_ENTRY_TYPE_STRING    :        'presenceEntry',
+     FUNCTION_OBJECT_TYPE_STRING   :   'funcObjectAsString',
+     BASIC_OBJECT_TYPE_STRING      :          'basicObject',
+
+
+        
+        
+    /**
+     @param obj to check if it is a system object
+     @return true if system object.  false otherwise
+     */
+    checkSystem : function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == std.persist.SYSTEM_TYPE_STRING);
+        
+        return false;
+    },
+
+    /**
+     @param obj to check if it is a function object
+     @return true if function object.  false otherwise
+     */
+    checkFunction : function (obj)
+    {
+        if (typeof(obj) == 'function')
+            return true;
+        return false;
+    },
+
+        
+    /**
+     @param obj to check if it is a presence object
+     @return true if presence object.  false otherwise
+     */
+    checkPresence : function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == std.persist.PRESENCE_OBJECT_TYPE_STRING);
+        
+        return false;
+    },
+
+    /**
+     @param obj to check if it is a visible object
+     @return true if visible object.  false otherwise
+     */
+    checkVisible : function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == std.persist.VISIBLE_TYPE_STRING);
+        
+        return false;
+    },
+
+    /**
+     @param obj to check if it is a timer object
+     @return true if timer object.  false otherwise
+     */
+    checkTimer : function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == std.persist.TIMER_TYPE_STRING);
+
+        return false;
+    },
+
+    
+    /**
+     @param obj to check if it is a PresenceEntry object
+     @return true if PresenceEntry object.  false otherwise
+     */
+    checkPresenceEntry : function (obj)
+    {
+        if (GET_TYPE_STRING in obj)
+            return (obj[GET_TYPE_STRING]() == std.persist.PRESENCE_ENTRY_TYPE_STRING);
+        
+        return false;
+    },
+
 
     
     getValueFromPropValPair : function (obj)
@@ -59,9 +149,8 @@ std.persist = {
 
         return false;
     }
-    
-    
-};
+    };
+    })();
 
 
 system.require('std/shim/restore/nameService.em');

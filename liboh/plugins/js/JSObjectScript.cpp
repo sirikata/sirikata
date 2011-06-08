@@ -239,7 +239,6 @@ void JSObjectScript::initialize(const String& args)
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
-
     String script_contents = init_script->as<String>();
     if (script_contents.empty()) {
         JSLOG(detailed,"Importing default script.");

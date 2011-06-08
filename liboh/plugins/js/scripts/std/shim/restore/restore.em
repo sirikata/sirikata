@@ -5,7 +5,62 @@ if (typeof(std.persist) === 'undefined')
 (function()
  {
 
+     /**
+      Each element of this array contains the unique id given to the
+      presence object when it was being persisted.  And each element
+      correpsonds to a presence that is trying to be restored in the
+      world.
+      */
+     var allPresStillRest = [];
 
+     var mRestoring = false;
+     
+     function registerPresenceStillRestoring(presObjID)
+     {
+         allPresStillRest.push([objToFix,index,presObjID]);
+     }
+
+     /**
+      Each restored presence has an onConnected callback.  The
+      onConnected callback should be generated from this afterRestored
+      function.  All that the callback does is update the nameService
+      that we're using with the new presence object and removes this
+      presence from the list of presences that we are restoring that
+      are still waiting to be connected (in allPresStillRest).
+
+      Second stage of restoration (fixing up pointers to other
+      objects) waits until all presences have been connected (polls
+      allPresStillRest to see if have zero length).
+
+      @param {int} presObjID, unique name that was given to presence
+      before restore.  (ie name that goes into nameService.)
+
+      @param nameService nameService used during restoration.
+      */
+     function afterRestored(presObjID,nameService)
+     {
+         var returner = function()
+         {
+             var toRemove = [];
+             for (var s in allPresStillRest)
+             {
+                 //keeps track of all indices to remove from
+                 //allPresStillRest
+                 toRemove.push(s);
+             }
+
+             //insert the presence into nameService;
+             nameService.insertObjectWithName(system.self,presObjID);
+
+             
+             toRemove.reverse();
+             for (var s in toRemove)
+                 delete allPresStillRest[ toRemove[s]  ];
+         };
+         return returner;
+     }
+
+     
     /**
      @param {array} triplet Array containing three values.  Indices of
      array follow:
@@ -13,9 +68,10 @@ if (typeof(std.persist) === 'undefined')
        1 : value to set to/object pointer/'null'
        2 : type record
 
-     @return {boolean} Returns true if the value in this object is a value type
+     @return {boolean} Returns true if the value in this object is a
+     value type
      */
-    var tripletIsValueType = function (triplet)
+    function tripletIsValueType (triplet)
     {
         if ((typeof(triplet) !== 'object') || (!('length' in triplet)) || (triplet.length != 3))
         {
@@ -44,7 +100,7 @@ if (typeof(std.persist) === 'undefined')
       performPtrFinalFixups traverses array, and points
       localCopyToPoint[index] to the objects described by objPtrToFix.
       */
-     var registerFixupObjectPointer = function (ptrId, index, localCopyToPoint, allToFix)
+     function registerFixupObjectPointer(ptrId, index, localCopyToPoint, allToFix)
      {
          allToFix.push([ptrId, index,localCopyToPoint]);
      };
@@ -56,7 +112,7 @@ if (typeof(std.persist) === 'undefined')
       @see registerFixupObjectPointer
       @see fixSinglePtr
       */
-     var fixSinglePtr = function (ptrId, index,localCopyToPoint,nameService)
+     function fixSinglePtr (ptrId, index,localCopyToPoint,nameService)
      {
          if ((typeof(localCopyToPoint) != 'object') || (localCopyToPoint== null))
              throw 'Error in fixSinglePtr.  Should not have received non-obect or null ptr record.';
@@ -80,7 +136,7 @@ if (typeof(std.persist) === 'undefined')
       @see registerFixupObjectPointer
       @see fixSinglePtr
       */
-     var performPtrFinalFixups = function(allToFix,nameService)
+     function performPtrFinalFixups(allToFix,nameService)
      {
          for (var s in allToFix)
              fixSinglePtr(allToFix[s][0],allToFix[s][1],allToFix[s][2],nameService);
@@ -95,7 +151,7 @@ if (typeof(std.persist) === 'undefined')
       root object references may not be linked to correctly.  Need to call
       performPtrFinalFixups on ptrsToFix after running this function.
 
-      @param {keyName}, Passed to the backend.  This is the table to
+      @param {keyName}, Passed to the backend.  This is the entry to
       access.
 
       @param {int}, ptrId, Each object has a unique id.  ptrId is the
@@ -112,19 +168,100 @@ if (typeof(std.persist) === 'undefined')
       object with id ptrId. 
 
       */
-     var fixReferences = function (keyName, ptrId,ptrsToFix,nameService)
+     function fixReferences(keyName, ptrId,ptrsToFix,nameService)
      {
-         var returner = { };
-
          var unfixedObj = readObject(keyName,ptrId);
 
          var id = unfixedObj['mID'];
          if (nameService.lookupObject(id) != nameService.DNE)
              throw "Error.  Called fixReferences on an object I've already visited";
 
+
+
+         var type = unfixedObj['type'];
+         if (type == std.persist.FUNCTION_OBJECT_TYPE_STRING)
+             return restoreFunction(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
+         if (type == std.persist.PRESENCE_OBJECT_TYPE_STRING)
+             return restorePresence(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
+         if (type == std.persist.BASIC_OBJECT_TYPE_STRING)
+             return restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
+
+         throw 'Error in fixReferences.  Do not have any other types in the system to restore from.';
+     }
+
+     /**
+      For keyName,ptrId,ptrsToFix, and nameService, @see fixReferences.
+
+      unfixedPres has all the data that you would get from a call to
+      getAllData on a presence.
+      
+      */
+     function restorePresence(keyName,unfixedPres,ptrId,ptrsToFix,nameService)
+     {
+         var id = unfixedPres['mID'];
+         var onConnectCB = afterRestored(id,nameService);
+
+         
+         system.restorePresence(unfixedPres.sporef,
+                                unfixedPres.pos,
+                                unfixedPres.vel,
+                                unfixedPres.posTime,
+                                unfixedPres.orient,
+                                unfixedPres.orientVel,
+                                unfixedPres.orientTime,
+                                unfixedPres.mesh,
+                                unfixedPres.scale,
+                                unfixedPres.isCleared ,
+                                unfixedPres.contextId,
+                                unfixedPres.isConnected,
+                                onConnectCB,  //onConnected callback.
+                                unfixedPres.isSuspended,
+                                unfixedPres.suspendedVelocity,
+                                unfixedPres.suspendedOrientationVelocity
+                               );
+         //tells the system that we have begun trying to restore this
+         //presence, and not to continue with later stages of
+         //restoration (fixing looped object pointers) until the
+         //system has connected this presence.
+         registerPresenceStillRestoring(presObjID);
+         return null;
+     }
+     
+
+     
+     /**
+      For keyName,ptrId,ptrsToFix, and nameService, @see fixReferences.
+
+      unfixedFunc right now just has one field: 'funcField' with the
+      text of the function that we're creating.
+      */
+     function restoreFunction(keyName,unfixedFunc,ptrId,ptrsToFix,nameService)
+     {
+         var id = unfixedFunc['mID'];
+         
+         if (! ('funcField' in unfixedFunc))
+             throw 'Error restoring function.  Restoring object does not have funcField.';
+
+         var returner = eval(unfixedFunc['funcField']);
          nameService.insertObjectWithName(returner,id);
+         return returner;
+     }
 
 
+     /**
+      For keyName, ptrId,ptrsToFix, and nameService, @see fixReferences.
+
+      @param unfixedObj is the object that we get back from reading
+      from reading from backend.  It is a basic object (not a
+      function, presence, system obj, etc.).  This function runs
+      through all of its fields and registers them to be fixed up.
+      
+      */
+     function restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService)
+     {
+         var returner = { };
+         var id = unfixedObj['mID'];
+         nameService.insertObjectWithName(returner,id);
          //run through all the fields in unfixedObj.  If the field is a
          //value type, point returner to the new field right away.  If the
          //field is an object type and we have a copy of that object, then
@@ -133,7 +270,7 @@ if (typeof(std.persist) === 'undefined')
          //register returner to be fixed-up with the new pointer later.
          for (var s in unfixedObj)
          {
-             if (s == 'mID')
+             if ((s == 'mID') || (s == 'type'))
                  continue;
 
              var index = unfixedObj[s][0];
@@ -188,18 +325,84 @@ if (typeof(std.persist) === 'undefined')
      };
 
      /**
-      @param {String} name of file to read a serialized object graph in
-      from.
+      @param {String} name of file to read a serialized object graph
+      in from.
 
-      @return {Array} Returns an array.  First index is the copy of the object that had been put into persistent storage.  Second index is a name service that you can use to name and identify objects in the restored subgraph.
+      @return {Array} Returns an array.  First index is the copy of
+      the object that had been put into persistent storage.  Second
+      index is a name service that you can use to name and identify
+      objects in the restored subgraph.
       */
      std.persist.restoreFromAndGetNames = function (keyName,id)
      {
+         if (std.persist.inRestore())
+             throw 'Error, cannot request additional restores when in middle of current restore.  Check back later.';
+         
          var nameService = new std.persist.NameService();
          var ptrsToFix = [];
          var returner = fixReferences(keyName, id,ptrsToFix,nameService);
          performPtrFinalFixups(ptrsToFix,nameService);
          return [returner,nameService];
+     };
+
+     /**
+      Returns true if we're in the middle of a restore operation.
+      Otherwise, returns false.
+      */
+     std.persist.inRestore = function()
+     {
+         return mRestoring;
+     };
+     
+     /**
+      This function should be used if the object graph that you are
+      trying to restore has presences in it, and you need to wait for
+      the system to actually connect these presences.
+
+      @param cb Takes in three parameters, first is restored obj graph
+      (if pres failure, all presences become null objs.), second
+      boolean for success (ie true if eveything restored
+      appropriately, and space allowed new presences to reconnect,
+      false otherwise), the third is the nameService that we used.
+      */
+     std.persist.restoreFromAndGetNamesAsync = function (keyName,id,cb)
+     {
+
+         if (std.persist.inRestore())
+             throw 'Error, cannot request additional restores when in middle of current restore.  Check back later.';
+         mRestoring = true;
+         
+         var nameService = new std.persist.NameService();
+         var ptrsToFix = [];
+         var returner = fixReferences(keyName, id,ptrsToFix,nameService);
+         if (allPresStillRest.length == 0)
+         {
+             performPtrFinalFixups(ptrsToFix,nameService);
+             mRestoring = false;
+             cb(returner,true,nameService);
+             return;
+         }
+
+         //if we haven't restored all presences after five seconds, then we're just not going to.         
+         var restoreCheckback = function()
+         {
+             // means that we were trying to restore a presence;
+             // should just return that presence instead;
+             if (returner == null)
+             {
+                 var tRet = nameService.lookupObject(id);
+                 if (tRet != nameService.DNE)
+                     returner = tRet;
+             }
+             performPtrFinalFixups(ptrsToFix,nameService);
+             mRestoring = false;
+             allPresStillRest = [];
+             if (allPresStillRest.length == 0)
+                 cb(returner,true,nameService);
+             else
+                 cb(returner,false,nameService);
+         };
+         system.timeout(5,restoreCheckback);
      };
      
      

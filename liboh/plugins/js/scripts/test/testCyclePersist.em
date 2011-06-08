@@ -17,7 +17,7 @@ system.print('\ncycled graph\n');
 system.prettyprint(toPersist);
 
 //performing persist
-var fName = 'btestPartialPersist4.em.bu';
+var fName = 'cycledGraphNoPres';
 var nameServe = std.persist.checkpointPartialPersist(toPersist,fName);
 
 

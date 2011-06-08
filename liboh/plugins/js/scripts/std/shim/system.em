@@ -157,6 +157,20 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      };
      
 
+     // /**
+     //  @param {presence} presToGet.  Presence object for the presence
+     //  that we want to grab the presenceEntry for.
+      
+     //  @return Returns the presenceEntry associated with presToGet, or
+     //  returns null if it doesn't exist.
+     //  */
+     // system.getPresenceEntry = function (presToGet)
+     // {
+     //     
+     //     
+     // };
+     
+     
      //backend manipulations
      system.backendCreateEntry = function()
      {

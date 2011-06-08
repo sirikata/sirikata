@@ -896,7 +896,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
 
 
-
     if (*psrp.mIsConnected)
     {
         mParent->connect(psrp.mSporef->space(),

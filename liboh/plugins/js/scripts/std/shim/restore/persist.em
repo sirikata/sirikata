@@ -7,84 +7,6 @@ if (typeof(std.persist) === 'undefined')
  {
 
 
-     /* Type constants */
-     //use this as an index to retrieve the type of local objects
-     var GET_TYPE_STRING                   =            '__getType';
-    
-
-     //set the type field of an object to this if have a loop.
-     var SYSTEM_TYPE_STRING                =               'system';
-     var PRESENCE_OBJECT_TYPE_STRING       =             'presence';
-     var VISIBLE_TYPE_STRING               =              'visible';
-     var TIMER_TYPE_STRING                 =                'timer';
-     var PRESENCE_ENTRY_TYPE_STRING        =        'presenceEntry';
-     var FUNCTION_OBJECT_TYPE_STRING       =   'funcObjectAsString';
-     
-    
-
-    
-    /**
-     @param obj to check if it is a system object
-     @return true if system object.  false otherwise
-     */
-    var checkSystem = function (obj)
-    {
-        if (GET_TYPE_STRING in obj)
-            return (obj[GET_TYPE_STRING]() == SYSTEM_TYPE_STRING);
-        
-        return false;
-    };
-
-    /**
-     @param obj to check if it is a presence object
-     @return true if presence object.  false otherwise
-     */
-    var checkPresence = function (obj)
-    {
-        if (GET_TYPE_STRING in obj)
-            return (obj[GET_TYPE_STRING]() == PRESENCE_TYPE_STRING);
-        
-        return false;
-    };
-
-    /**
-     @param obj to check if it is a visible object
-     @return true if visible object.  false otherwise
-     */
-    var checkVisible = function (obj)
-    {
-        if (GET_TYPE_STRING in obj)
-            return (obj[GET_TYPE_STRING]() == VISIBLE_TYPE_STRING);
-        
-        return false;
-    };
-
-    /**
-     @param obj to check if it is a timer object
-     @return true if timer object.  false otherwise
-     */
-    var checkTimer = function (obj)
-    {
-        if (GET_TYPE_STRING in obj)
-            return (obj[GET_TYPE_STRING]() == TIMER_TYPE_STRING);
-
-        return false;
-    };
-
-    
-    /**
-     @param obj to check if it is a PresenceEntry object
-     @return true if PresenceEntry object.  false otherwise
-     */
-    var checkPresenceEntry = function (obj)
-    {
-        if (GET_TYPE_STRING in obj)
-            return (obj[GET_TYPE_STRING]() == PRESENCE_ENTRY_TYPE_STRING);
-        
-        return false;
-    };
-
-
     
    /**
     @param objToMark if it's an object (and not null), then it logs the
@@ -110,31 +32,89 @@ if (typeof(std.persist) === 'undefined')
     };
 
 
+     /**
+      Will run through all the fields in dataObj and attach them to this record.
+      */
+     function runFields(dataObj,record,nameService,backendWrite,interFunc)
+     {
+         for (var s in dataObj)
+         {
+            if ((typeof(dataObj[s]) == 'object') || (typeof(dataObj[s]) == 'function'))
+                record.pushObjType(interFunc(dataObj,s,nameService,backendWrite,interFunc));
+            else  //assumes it's a value type
+                record.pushValueType(std.persist.wrapPropValPair(s,dataObj[s]));
+         }
+     }
+     
+   /**
+    Called to tree-ify a presence object.
+     @see processSystem
+    */
+   function processPresence(pres,nameService,backendWrite,interFunc)
+   {
+       if (! std.persist.checkPresence(pres))
+           throw 'Error processing presence.  First arg passed in must be a presence.';
+
+
+       var allData = pres.getAllData();
+       var record = new std.persist.Record(pres,nameService);
+       //runs all data field
+       runFields(allData,nameService,backendWrite,interFunc);
+       backendWrite.addRecord(record);
+   }
+
+     /**
+      Will need to fix this later to actually capture the closure.
+      For now, just calls toString on function, and hopes for the
+      best.
+      */
+     function processFunction(func,nameService,backendWrite,interFunc)
+     {
+         if (! std.persist.checkFunction(func))
+             throw 'Error processing function.  First arg passed in must be a function.';
+
+         //for now, just pushing the text of the function to the backend record.
+         var record = new std.persist.Record(func,nameService);
+         record.pushValueType(std.persist.wrapPropValPair('funcField',func.toString()));
+         backendWrite.addRecord(record);
+     }
+     
+     
     /**
-     @param objGraphCatalog This is the root of the object graph that we have not yet copied to shadowTree
-     @param markedObjects is a map of objects that we have already cataloged.  Keys are object references.  Values are unique names associated with each object given by nameService.
+     @param objGraphCatalog This is the root of the object graph that
+     we have not yet copied to shadowTree
+     
+     @param markedObjects is a map of objects that we have already
+     cataloged.  Keys are object references.  Values are unique names
+     associated with each object given by nameService.
      */
     var markAndBranch= function(objGraphCatalog, nameService,backendWrite,interFunc)
     {
-        var record = new std.persist.Record(objGraphCatalog,nameService);
-
-        for (var s in objGraphCatalog)
+        if (std.persist.checkPresence (objGraphCatalog))
         {
-            // check typeof s;
-            // lkjs;
-            if (typeof(objGraphCatalog[s]) != 'object')
-                record.pushValueType(std.persist.wrapPropValPair(s,objGraphCatalog[s]));
-            else
-                record.pushObjType(interFunc(objGraphCatalog,s,nameService,backendWrite,interFunc));
-
+            processPresence(objGraphCatalog,nameService,backendWrite,interFunc);
+            return;
         }
+        if (std.persist.checkFunction(objGraphCatalog))
+        {
+            processFunction(objGraphCatalog,nameService,backendWrite,interFunc);
+            return;
+        }
+        
+        
+        //actually runs through all the fields of the objGraphCatalog
+        var record = new std.persist.Record(objGraphCatalog,nameService);
+        runFields(objGraphCatalog,record,nameService,backendWrite,interFunc);
         backendWrite.addRecord(record);
     };
 
 
    /**
-    @param {object} objGraphCatalog the local copy of the object whose field we're trying to persist.
-    @param field: the name of the field of the local copy of the object we're trying to persist.
+    @param {object} objGraphCatalog the local copy of the object whose
+    field we're trying to persist.
+
+    @param field: the name of the field of the local copy of the
+    object we're trying to persist.
     */
     var interHandler = function (objGraphCatalog,field,nameService,backendWrite,interFunc)
     {
@@ -165,6 +145,10 @@ if (typeof(std.persist) === 'undefined')
         std.persist.checkpointPartialPersist(globalObj);
     };
 
+
+     
+     
+     
    /**
     Currently, only call checkpointPartialPersist on objects that do not
     point back to global object.  Call toString on functions, and aren't
@@ -196,7 +180,14 @@ if (typeof(std.persist) === 'undefined')
        backendWrite.flush();
        return nameService;
    };
-    
+
+     // std.persist.partialPersistPresence = function(presToPersistFrom,keyName)
+     // {
+     //     lkjs;
+         
+     //     lkjs;
+     // };
+     
 }
 )();
 
