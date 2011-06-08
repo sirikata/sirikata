@@ -52,11 +52,11 @@ function() {
      *  the presence and which underlying graphics system to use, but
      *  this class takes care of defining all other UI and interaction.
      */
-    std.graphics.DefaultGraphics = function(pres, name) {
+    std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this));
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this, cb));
     };
-    std.graphics.DefaultGraphics.prototype.finishInit = function(gfx) {
+    std.graphics.DefaultGraphics.prototype.finishInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
         this._cameraMode = 'first';
 
@@ -167,6 +167,9 @@ function() {
         ];
 
         this._binding.addBindings(bindings);
+
+        if (cb && typeof(cb) === "function")
+            cb(this);
     };
 
     /** @function */
