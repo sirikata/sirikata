@@ -101,6 +101,7 @@ public:
     void setViewportDimensions(float32 left, float32 top, float32 right, float32 bottom);
 
     virtual void setMode(Mode m);
+    Mode getMode() const { return mMode; }
 
     void setOffset(Vector3d offset) {
         mOffset = offset;

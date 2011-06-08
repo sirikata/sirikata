@@ -344,7 +344,7 @@ ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbO
         if (!foundEntity) continue;
         ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
         if (!ourEntity) continue;
-        if (ourEntity->id() == mPresenceID.toString()) continue;
+        if (ourEntity->id() == mPresenceID.toString() && mPrimaryCamera->getMode() == ProxyCamera::FirstPerson) continue;
 
         RayTraceResult rtr(result.distance,result.movable);
         bool passed=aabbOnly&&result.distance > 0;
