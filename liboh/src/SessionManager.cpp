@@ -202,11 +202,16 @@ void SessionManager::ObjectConnections::handleUnderlyingDisconnect(ServerID sid,
     if (server_it == mObjectServerMap.end())
         return;
 
+    // We need to be careful invoking the callbacks for these. Since
+    // the callbacks may make calls back to us, we need to make sure
+    // we have a copy of all the data we need.
     typedef std::vector<SpaceObjectReference> SporefVector;
-    const SporefVector& sporef_objects = server_it->second;
+    // NOTE: Copy so iterators stay valid
+    SporefVector sporef_objects = server_it->second;
 
     for(SporefVector::const_iterator sporef_obj_it = sporef_objects.begin(); sporef_obj_it != sporef_objects.end(); sporef_obj_it++) {
         SpaceObjectReference sporef_obj = *sporef_obj_it;
+        assert(mObjectInfo.find(sporef_obj) != mObjectInfo.end());
         mObjectInfo[sporef_obj].disconnectedCB(mObjectInfo[sporef_obj].connectedAs, Disconnect::Forced);
         parent->mObjectDisconnectedCallback(sporef_obj, Disconnect::Forced);
     }
