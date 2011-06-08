@@ -45,9 +45,15 @@ function() {
      *  A Movable listens for requests from other objects to move and
      *  applies them to itself. This allows objects to control each
      *  other, e.g. for a client to move objects in the world.
+     *
+     *  An optional parameter, only_self, allows you to restrict
+     *  requests to only yourself. This is useful to let you unify
+     *  controls via this interface (for others and yourself), but not
+     *  expose this interface to others -- for example on your own
+     *  avatar.
      */
-    std.movement.Movable = function() {
-        var moveRequestHandler = std.core.bind(this._handleRequest, this);
+    std.movement.Movable = function(only_self) {
+        var moveRequestHandler = std.core.bind(this._handleRequest, this, only_self);
         moveRequestHandler <- new util.Pattern("request", "movable");
 
         // Set up a bunch of handlers based on request name so we can
@@ -65,7 +71,10 @@ function() {
         };
     };
 
-    std.movement.Movable.prototype._handleRequest = function(msg, sender) {
+    std.movement.Movable.prototype._handleRequest = function(only_self, msg, sender) {
+        if (only_self && !sender.checkEqual(system.self))
+            return;
+
         var handler = this._handlers[msg.action];
         if (handler)
             handler(msg, sender);

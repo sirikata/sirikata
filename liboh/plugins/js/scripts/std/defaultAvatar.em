@@ -33,10 +33,12 @@
 
 // A sane, simple, default. Only includes functionality from libraries.
 system.require('std/script/scriptable.em');
+system.require('std/movement/movable.em');
 system.require('std/graphics/default.em');
 
 
 scriptable = new std.script.Scriptable();
+movable = new std.movement.Movable(true); // Self only
 system.onPresenceConnected(
     function(pres) {
         simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
