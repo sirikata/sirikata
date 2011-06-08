@@ -28,20 +28,28 @@ options
     #define APP(s)  program_string->append(program_string, s);
 
     
-    #define CHECK_RESOURCES()               \
-    {                                       \
-    APP("(function()\n");                   \
-    APP("{ \n");                            \
-    APP("var tmp = function()\n");          \
-    APP("{\n");                             \
-    APP("return this;");                    \
-    APP("};");                              \
-    APP("var tmpGlobal = tmp();");          \
-    APP("if (! tmpGlobal.__checkResources8_8_3_1__())"); \
-    APP("throw '__resource_error__';");     \
-    APP("})();");                           \
+    // #define CHECK_RESOURCES()               \
+    // {                                       \
+    // APP("(function()\n");                   \
+    // APP("{ \n");                            \
+    // APP("var tmp = function()\n");          \
+    // APP("{\n");                             \
+    // APP("return this;");                    \
+    // APP("};");                              \
+    // APP("var tmpGlobal = tmp();");          \
+    // APP("if (! tmpGlobal.__checkResources8_8_3_1__())"); \
+    // APP("throw '__resource_error__';");     \
+    // APP("})();");                           \
+    // }
+
+    #define CHECK_RESOURCES()                 \
+    {                                         \
+    APP("\nif ( ! __checkResources8_8_3_1__() )\n");  \
+    APP("{ \nthrow '__resource_error__'; \n}\n");   \
     }
 
+
+    
     
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
@@ -450,6 +458,7 @@ breakStatement
                 APP((const char*)$Identifier.text->chars);
             }
         )?
+
         )
 	;
 
