@@ -109,6 +109,8 @@ bool decodeSporef(v8::Handle<v8::Value> toDecode, SpaceObjectReference& sporef, 
     }
     catch (std::invalid_argument& ia)
     {
+        std::cout<<"\n\nDEBUG: This is sporef string: "<<sporefStr<<"\n\n";
+        
         errorMessage += "  Could not convert string to sporef when decoding sporef.";
         return false;
     }

@@ -24,8 +24,8 @@ if (typeof(std.persist) === 'undefined')
     */
     var mark = function(objToMark,nameService)
     {
-        if (typeof(objToMark) != 'object')
-            throw 'Error.  Asking to mark a non-object: '+objToMark.toString();            
+        if ((typeof(objToMark) != 'object') && (typeof(objToMark) != 'function'))            
+            throw 'Error.  Asking to mark a non-object: '+ objToMark.toString();            
         
         var name = nameService.insertObject(objToMark);
         return name;
@@ -59,7 +59,7 @@ if (typeof(std.persist) === 'undefined')
        var allData = pres.getAllData();
        var record = new std.persist.Record(pres,nameService);
        //runs all data field
-       runFields(allData,nameService,backendWrite,interFunc);
+       runFields(allData,record,nameService,backendWrite,interFunc);
        backendWrite.addRecord(record);
    }
 
@@ -180,14 +180,6 @@ if (typeof(std.persist) === 'undefined')
        backendWrite.flush();
        return nameService;
    };
-
-     // std.persist.partialPersistPresence = function(presToPersistFrom,keyName)
-     // {
-     //     lkjs;
-         
-     //     lkjs;
-     // };
-     
 }
 )();
 

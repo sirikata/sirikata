@@ -189,6 +189,23 @@ if (typeof(std.persist) === 'undefined')
          throw 'Error in fixReferences.  Do not have any other types in the system to restore from.';
      }
 
+
+     function getValueField(unfixedObj,fieldName)
+     {
+         system.print('\n\nGot into getValueField\n\n');
+         for (var s in unfixedObj)
+         {
+             if ((s == 'mID') || (s == 'type'))
+                 continue;
+
+             var propValTypeTriple = unfixedObj[s];
+             if (propValTypeTriple[0] == fieldName)
+                 return propValTypeTriple[1];
+
+         }
+         throw 'Error in getValueField.  Have no field named: '+ fieldName;
+     }
+     
      /**
       For keyName,ptrId,ptrsToFix, and nameService, @see fixReferences.
 
@@ -202,23 +219,27 @@ if (typeof(std.persist) === 'undefined')
          var onConnectCB = afterRestored(id,nameService);
 
          
-         system.restorePresence(unfixedPres.sporef,
-                                unfixedPres.pos,
-                                unfixedPres.vel,
-                                unfixedPres.posTime,
-                                unfixedPres.orient,
-                                unfixedPres.orientVel,
-                                unfixedPres.orientTime,
-                                unfixedPres.mesh,
-                                unfixedPres.scale,
-                                unfixedPres.isCleared ,
-                                unfixedPres.contextId,
-                                unfixedPres.isConnected,
-                                onConnectCB,  //onConnected callback.
-                                unfixedPres.isSuspended,
-                                unfixedPres.suspendedVelocity,
-                                unfixedPres.suspendedOrientationVelocity
-                               );
+         system.restorePresence(
+             getValueField(unfixedPres,'sporef'),
+             getValueField(unfixedPres,'pos'),
+             getValueField(unfixedPres,'vel'),
+             getValueField(unfixedPres,'posTime'),
+             getValueField(unfixedPres,'orient'),
+             getValueField(unfixedPres,'orientVel'),         
+
+             getValueField(unfixedPres,'orientTime'),
+             getValueField(unfixedPres,'mesh'),
+             getValueField(unfixedPres,'scale'),
+             getValueField(unfixedPres,'isCleared'),
+             getValueField(unfixedPres,'contextId'),
+             getValueField(unfixedPres,'isConnected'),
+             onConnectCB, //onConnected callback is being overwritten with ours
+             getValueField(unfixedPres,'isSuspended'),
+             getValueField(unfixedPres,'mesh'),
+             getValueField(unfixedPres,'suspendedVelocity'),
+             getValueField(unfixedPres,'suspendedOrientationVelocity')
+         );
+         
          //tells the system that we have begun trying to restore this
          //presence, and not to continue with later stages of
          //restoration (fixing looped object pointers) until the
