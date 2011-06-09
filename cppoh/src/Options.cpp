@@ -44,7 +44,7 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"cppoh.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,nvtt,common-filters,csvfactory,scripting-js,simplecamera",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,nvtt,common-filters,csvfactory,restoreObjFactory,scripting-js,simplecamera",Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
