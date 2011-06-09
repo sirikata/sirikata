@@ -57,6 +57,14 @@ util.Quaternion.prototype.add = function(rhs) {
     return new util.Quaternion(this.x + rhs.x, this.y + rhs.y, this.z + rhs.z, this.w + rhs.w);
 };
 
+/** @function
+ @return {string} type of this object ("quat");
+ */
+util.Quaternion.prototype.__getType = function()
+{
+    return 'quat';
+};
+
 /** @function 
 @return quaternion difference of the two quaternions
 */

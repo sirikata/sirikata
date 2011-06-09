@@ -40,6 +40,13 @@ if(util.Vec3 == undefined)
 
 
 
+/** @function
+ @return {string} type of this object ("vec3");
+ */
+util.Vec3.prototype.__getType = function()
+{
+    return 'vec3';
+};
 
 /** @function 
   @return negation of this vector

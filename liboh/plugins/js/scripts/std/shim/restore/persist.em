@@ -45,6 +45,42 @@ if (typeof(std.persist) === 'undefined')
                 record.pushValueType(std.persist.wrapPropValPair(s,dataObj[s]));
          }
      }
+
+     /**
+      Called to tree-ify a vec3 object.
+      @see processSystem
+      */
+     function processVec3(v3,nameService,backendWrite,interFunc)
+     {
+         if (! std.persist.checkVec3(v3))
+             throw 'Error processing vec3.  First argument passed in must be a vec3';
+
+         var record = new std.persist.Record(v3,nameService);
+         record.pushValueType(std.persist.wrapPropValPair('x',v3.x));
+         record.pushValueType(std.persist.wrapPropValPair('y',v3.y));
+         record.pushValueType(std.persist.wrapPropValPair('z',v3.z));
+         backendWrite.addRecord(record);
+     }
+
+     /**
+      Called to tree-ify a quaternion object.
+      @see processSystem
+      */
+     function processQuat(quat,nameService,backendWrite,interFunc)
+     {
+         if (! std.persist.checkQuat(quat))
+             throw 'Error processing quat.  First argument passed in must be a quat';
+
+         var record = new std.persist.Record(quat,nameService);
+         record.pushValueType(std.persist.wrapPropValPair('x',quat.x));
+         record.pushValueType(std.persist.wrapPropValPair('y',quat.y));
+         record.pushValueType(std.persist.wrapPropValPair('z',quat.z));
+         record.pushValueType(std.persist.wrapPropValPair('w',quat.w));
+         backendWrite.addRecord(record);
+     }
+
+     
+
      
    /**
     Called to tree-ify a presence object.
@@ -100,6 +136,18 @@ if (typeof(std.persist) === 'undefined')
             processFunction(objGraphCatalog,nameService,backendWrite,interFunc);
             return;
         }
+        if (std.persist.checkVec3(objGraphCatalog))
+        {
+            processVec3(objGraphCatalog,nameService,backendWrite,interFunc);
+            return;
+        }
+        if (std.persist.checkQuat(objGraphCatalog))
+        {
+            processQuat(objGraphCatalog,nameService,backendWrite,interFunc);
+            return;
+        }
+        
+        
         
         
         //actually runs through all the fields of the objGraphCatalog

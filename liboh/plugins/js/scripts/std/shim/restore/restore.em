@@ -60,6 +60,50 @@ if (typeof(std.persist) === 'undefined')
          return returner;
      }
 
+
+     function checkIsTriplet(toCheck)
+     {
+         if ((typeof(toCheck) !== 'object') || (!('length' in toCheck)) || (toCheck.length != 3))
+             return false;
+
+         return true;
+     } 
+     
+     function tripletGetIndexName(triplet)
+     {
+         if (!checkIsTriplet(triplet))
+         {
+             system.prettyprint(triplet);
+             throw 'Error in tripletGetIndexName.  Requires triplet to be passed in';                             
+         }
+
+         return triplet[0];
+     }
+
+     function tripletGetValue(triplet)
+     {
+         if (!checkIsTriplet(triplet))
+             throw 'Error in tripletGetValue.  Requires triplet to be passed in';
+
+         var type = tripletGetType(triplet);
+         if (type == 'number')
+             return parseFloat(triplet[1]);
+         if (type == 'string')
+             return triplet[1];
+         if (type == 'boolean')
+             return (triplet[1] == 'true');
+         
+         
+         return triplet[1];         
+     }
+
+     function tripletGetType(triplet)
+     {
+         if (!checkIsTriplet(triplet))
+             throw 'Error in tripletGetType.  Requires triplet to be passed in';            
+         return triplet[2];         
+     }
+     
      
     /**
      @param {array} triplet Array containing three values.  Indices of
@@ -73,14 +117,19 @@ if (typeof(std.persist) === 'undefined')
      */
     function tripletIsValueType (triplet)
     {
-        if ((typeof(triplet) !== 'object') || (!('length' in triplet)) || (triplet.length != 3))
-        {
-            system.print('\nAbout to exception\n');
-            system.prettyprint(triplet);
+        if (! checkIsTriplet(triplet))
             throw 'Error in checkTripletIsValueType.  Requires triplet to be passed in';            
-        }
 
-        if (triplet[2] != 'object')
+        var tripType = tripletGetType(triplet);
+
+        if ((tripType != 'object') && (tripType != 'function') &&
+            (tripType!=std.persist.SYSTEM_TYPE_STRING) &&
+            (tripType!=std.persist.PRESENCE_OBJECT_TYPE_STRING) &&
+            (tripType!=std.persist.VISIBLE_TYPE_STRING) &&
+            (tripType!=std.persist.TIMER_TYPE_STRING) &&
+            (tripType!=std.persist.PRESENCE_ENTRY_TYPE_STRING) &&
+            (tripType!=std.persist.FUNCTION_OBJECT_TYPE_STRING) &&
+            (tripType!=std.persist.BASIC_OBJECT_TYPE_STRING))
             return true;
 
         return false;
@@ -177,7 +226,6 @@ if (typeof(std.persist) === 'undefined')
              throw "Error.  Called fixReferences on an object I've already visited";
 
 
-
          var type = unfixedObj['type'];
          if (type == std.persist.FUNCTION_OBJECT_TYPE_STRING)
              return restoreFunction(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
@@ -185,23 +233,82 @@ if (typeof(std.persist) === 'undefined')
              return restorePresence(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
          if (type == std.persist.BASIC_OBJECT_TYPE_STRING)
              return restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-
+         if (type == std.persist.VEC_TYPE_STRING)
+             return restoreVec3Object(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
+         if (type == std.persist.QUAT_TYPE_STRING)
+             return restoreQuatObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
+         
+         
          throw 'Error in fixReferences.  Do not have any other types in the system to restore from.';
      }
 
+     /**
+      @see fixReferencs for arguments.
+      Returns a new vec3.
+      */
+     function restoreVec3Object(keyName, unfixedObj,ptrId,ptrsToFix,nameService)
+     {
+         //lkjs: may want some check here.
+         var x = getValueField(unfixedObj,'x');
+         var y = getValueField(unfixedObj,'y');
+         var z = getValueField(unfixedObj,'z');
+         system.print('\n');
+         system.print(x);
+         system.print('\n');
+         system.print(y);
+         system.print('\n');
+         system.print(z);
+         system.print('\n');
+         var returner = new util.Vec3(x,y,z);
+         nameService.insertObjectWithName(returner,ptrId);
+         return returner;
+     }
 
+     /**
+      @see fixReferencs for arguments.
+      Returns a new quaternion.
+      */
+     function restoreQuatObject(keyName, unfixedObj,ptrId,ptrsToFix,nameService)
+     {
+         var x = getValueField(unfixedObj,'x');
+         var y = getValueField(unfixedObj,'y');
+         var z = getValueField(unfixedObj,'z');
+         var w = getValueField(unfixedObj,'w');
+
+         var returner = new util.Quaternion(x,y,z,w);
+         nameService.insertObjectWithName(returner,ptrId);
+         return returner;
+     }
+     
+
+     /**
+      @param unfixedObj Is an object that is read in directly from the
+      backend.  It has three types of fields: 1) triplets, 2) mID (obj
+      id), 3) type (obj type).
+      
+      @param Field name that we're looking for in one of the triplets.
+
+      @return returns the value of the triplet associated with
+      filedName
+
+      @throw Throws an error if fieldName does not exist as a field in
+      any of unfixedObj's triplets.
+      
+      This function runs through all the triplets in unfixedObj, and
+      returns the value of the triplet that matches the field.
+      */
      function getValueField(unfixedObj,fieldName)
      {
-         system.print('\n\nGot into getValueField\n\n');
          for (var s in unfixedObj)
          {
              if ((s == 'mID') || (s == 'type'))
                  continue;
 
              var propValTypeTriple = unfixedObj[s];
-             if (propValTypeTriple[0] == fieldName)
-                 return propValTypeTriple[1];
-
+             
+             var tripFieldName = tripletGetIndexName(unfixedObj[s]);
+             if (tripFieldName == fieldName)
+                 return tripletGetValue(propValTypeTriple);
          }
          throw 'Error in getValueField.  Have no field named: '+ fieldName;
      }
@@ -218,27 +325,50 @@ if (typeof(std.persist) === 'undefined')
          var id = unfixedPres['mID'];
          var onConnectCB = afterRestored(id,nameService);
 
+         var pToFix = [];
+         var toRestoreFrom = restoreBasicObject(keyName,unfixedPres,ptrId,pToFix,nameService);
+
+         //perform the fixups for the objects that this presence was
+         //trying to point to.  (Eg. pos object, vel obj, etc.)
+         performPtrFinalFixups(pToFix,nameService);
+
+         system.print('\n\n');
+         system.print(typeof(toRestoreFrom.pos));
+         system.print('\n\n');
+         system.print(toRestoreFrom.pos.x);
+         system.print('\n\n');
+         system.print(toRestoreFrom.pos.y);
+         system.print('\n\n');
+         system.print(toRestoreFrom.pos.z);
+         system.print('\n\n');
+         system.print(toRestoreFrom.pos.length);
+         system.print('\n\n');
+         
+         system.prettyprint(toRestoreFrom.pos);
+         // system.prettyprint(toRestoreFrom.pos);
+         // system.prettyprint(toRestoreFrom.vel);
+         // system.prettyprint(toRestoreFrom.posTime);
          
          system.restorePresence(
-             getValueField(unfixedPres,'sporef'),
-             getValueField(unfixedPres,'pos'),
-             getValueField(unfixedPres,'vel'),
-             getValueField(unfixedPres,'posTime'),
-             getValueField(unfixedPres,'orient'),
-             getValueField(unfixedPres,'orientVel'),         
-
-             getValueField(unfixedPres,'orientTime'),
-             getValueField(unfixedPres,'mesh'),
-             getValueField(unfixedPres,'scale'),
-             getValueField(unfixedPres,'isCleared'),
-             getValueField(unfixedPres,'contextId'),
-             getValueField(unfixedPres,'isConnected'),
-             onConnectCB, //onConnected callback is being overwritten with ours
-             getValueField(unfixedPres,'isSuspended'),
-             getValueField(unfixedPres,'mesh'),
-             getValueField(unfixedPres,'suspendedVelocity'),
-             getValueField(unfixedPres,'suspendedOrientationVelocity')
+             toRestoreFrom.sporef,
+             toRestoreFrom.pos,
+             toRestoreFrom.vel,
+             toRestoreFrom.posTime,
+             toRestoreFrom.orient,
+             toRestoreFrom.orientVel,
+             toRestoreFrom.orientTime,
+             toRestoreFrom.mesh,
+             toRestoreFrom.scale,
+             toRestoreFrom.isCleared,
+             toRestoreFrom.contextId,
+             toRestoreFrom.isConnected,
+             onConnectCB,
+             toRestoreFrom.isSuspended,
+             toRestoreFrom.suspendedVelocity,
+             toRestoreFrom.suspendedOrientationVelocity
          );
+
+         
          
          //tells the system that we have begun trying to restore this
          //presence, and not to continue with later stages of
@@ -259,11 +389,27 @@ if (typeof(std.persist) === 'undefined')
      function restoreFunction(keyName,unfixedFunc,ptrId,ptrsToFix,nameService)
      {
          var id = unfixedFunc['mID'];
-         
-         if (! ('funcField' in unfixedFunc))
-             throw 'Error restoring function.  Restoring object does not have funcField.';
 
-         var returner = eval(unfixedFunc['funcField']);
+         //FIXME: lkjs;  GROSS!
+         var funcTriple = unfixedFunc[0];
+
+         
+         var index = tripletGetIndexName(funcTriple);
+         if (index != 'funcField')
+             throw 'Error restoring function.  Restoring object does not have funcField.';                 
+
+         var funcAsString = tripletGetValue(funcTriple);
+
+         var returner = null;
+         try
+         {
+             returner = eval(funcAsString);
+         }
+         catch (excep)
+         {
+             system.print('ERROR: Error in restoreFunction.  Trying to restore a function with faulty syntax.');
+             returner = function(){};
+         }
          nameService.insertObjectWithName(returner,id);
          return returner;
      }
@@ -294,18 +440,18 @@ if (typeof(std.persist) === 'undefined')
              if ((s == 'mID') || (s == 'type'))
                  continue;
 
-             var index = unfixedObj[s][0];
+             var index = tripletGetIndexName(unfixedObj[s]);
 
              //sets to value type
              if (tripletIsValueType(unfixedObj[s]))
-                 returner[index] = unfixedObj[s][1];
+                 returner[index] = tripletGetValue(unfixedObj[s]);
              else
              {
-                 if ((unfixedObj[s][2]) == 'null')
+                 if ((tripletGetType(unfixedObj[s])) == 'null')
                      returner[index] = null;
                  else
                  {
-                     var ptrIdInner  = unfixedObj[s][1];
+                     var ptrIdInner  = tripletGetValue(unfixedObj[s]);
                      var ptrObj = nameService.lookupObject(ptrIdInner);
                      if (ptrObj != nameService.DNE)
                      {

@@ -18,8 +18,33 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
      PRESENCE_ENTRY_TYPE_STRING    :        'presenceEntry',
      FUNCTION_OBJECT_TYPE_STRING   :   'funcObjectAsString',
      BASIC_OBJECT_TYPE_STRING      :          'basicObject',
+     VEC_TYPE_STRING               :                 'vec3',
+     QUAT_TYPE_STRING              :                 'quat',
 
+        
+        /**
+         @param obj to check if it is a vec object
+         @return true if is vec object false otherwise
+         */
+        checkVec3 : function (obj)
+        {
+            if (GET_TYPE_STRING in obj)
+                return (obj[GET_TYPE_STRING]() == std.persist.VEC_TYPE_STRING);
 
+            return false;
+        },
+
+        /**
+         @param obj to check if it is a quat object
+         @return true if is quat object false otherwise
+         */
+        checkQuat : function (obj)
+        {
+            if (GET_TYPE_STRING in obj)
+                return (obj[GET_TYPE_STRING]() == std.persist.QUAT_TYPE_STRING);
+
+            return false;
+        },
         
         
     /**
