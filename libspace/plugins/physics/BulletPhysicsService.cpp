@@ -82,7 +82,7 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     dispatcher = new btCollisionDispatcher(collisionConfiguration);
     solver = new btSequentialImpulseConstraintSolver;
     dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-    dynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this, false);
+    dynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this);
     dynamicsWorld->setGravity(btVector3(0,-1,0));
 
     mLastTime = mContext->simTime();
