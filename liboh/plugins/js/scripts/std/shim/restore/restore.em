@@ -17,7 +17,7 @@ if (typeof(std.persist) === 'undefined')
      
      function registerPresenceStillRestoring(presObjID)
      {
-         allPresStillRest.push([objToFix,index,presObjID]);
+         allPresStillRest.push(presObjID);
      }
 
      /**
@@ -222,7 +222,10 @@ if (typeof(std.persist) === 'undefined')
          var unfixedObj = readObject(keyName,ptrId);
 
          var id = unfixedObj['mID'];
-         if (nameService.lookupObject(id) != nameService.DNE)
+         if (id != ptrId)
+             throw 'Error: ptrId and object id must be identical';
+         
+         if (nameService.lookupObject(ptrId) != nameService.DNE)
              throw "Error.  Called fixReferences on an object I've already visited";
 
 
@@ -252,13 +255,6 @@ if (typeof(std.persist) === 'undefined')
          var x = getValueField(unfixedObj,'x');
          var y = getValueField(unfixedObj,'y');
          var z = getValueField(unfixedObj,'z');
-         system.print('\n');
-         system.print(x);
-         system.print('\n');
-         system.print(y);
-         system.print('\n');
-         system.print(z);
-         system.print('\n');
          var returner = new util.Vec3(x,y,z);
          nameService.insertObjectWithName(returner,ptrId);
          return returner;
@@ -322,8 +318,8 @@ if (typeof(std.persist) === 'undefined')
       */
      function restorePresence(keyName,unfixedPres,ptrId,ptrsToFix,nameService)
      {
-         var id = unfixedPres['mID'];
-         var onConnectCB = afterRestored(id,nameService);
+//         var id = unfixedPres['mID'];
+         var onConnectCB = afterRestored(ptrId,nameService);
 
          var pToFix = [];
          var toRestoreFrom = restoreBasicObject(keyName,unfixedPres,ptrId,pToFix,nameService);
@@ -332,22 +328,6 @@ if (typeof(std.persist) === 'undefined')
          //trying to point to.  (Eg. pos object, vel obj, etc.)
          performPtrFinalFixups(pToFix,nameService);
 
-         system.print('\n\n');
-         system.print(typeof(toRestoreFrom.pos));
-         system.print('\n\n');
-         system.print(toRestoreFrom.pos.x);
-         system.print('\n\n');
-         system.print(toRestoreFrom.pos.y);
-         system.print('\n\n');
-         system.print(toRestoreFrom.pos.z);
-         system.print('\n\n');
-         system.print(toRestoreFrom.pos.length);
-         system.print('\n\n');
-         
-         system.prettyprint(toRestoreFrom.pos);
-         // system.prettyprint(toRestoreFrom.pos);
-         // system.prettyprint(toRestoreFrom.vel);
-         // system.prettyprint(toRestoreFrom.posTime);
          
          system.restorePresence(
              toRestoreFrom.sporef,
@@ -374,7 +354,7 @@ if (typeof(std.persist) === 'undefined')
          //presence, and not to continue with later stages of
          //restoration (fixing looped object pointers) until the
          //system has connected this presence.
-         registerPresenceStillRestoring(presObjID);
+         registerPresenceStillRestoring(ptrId);
          return null;
      }
      
@@ -388,8 +368,6 @@ if (typeof(std.persist) === 'undefined')
       */
      function restoreFunction(keyName,unfixedFunc,ptrId,ptrsToFix,nameService)
      {
-         var id = unfixedFunc['mID'];
-
          //FIXME: lkjs;  GROSS!
          var funcTriple = unfixedFunc[0];
 
@@ -410,7 +388,7 @@ if (typeof(std.persist) === 'undefined')
              system.print('ERROR: Error in restoreFunction.  Trying to restore a function with faulty syntax.');
              returner = function(){};
          }
-         nameService.insertObjectWithName(returner,id);
+         nameService.insertObjectWithName(returner,ptrId);
          return returner;
      }
 
@@ -427,8 +405,7 @@ if (typeof(std.persist) === 'undefined')
      function restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService)
      {
          var returner = { };
-         var id = unfixedObj['mID'];
-         nameService.insertObjectWithName(returner,id);
+         nameService.insertObjectWithName(returner,ptrId);
          //run through all the fields in unfixedObj.  If the field is a
          //value type, point returner to the new field right away.  If the
          //field is an object type and we have a copy of that object, then
@@ -520,6 +497,17 @@ if (typeof(std.persist) === 'undefined')
      {
          return mRestoring;
      };
+
+
+     /**
+      @see std.persist.restoreFromAndGetNamesAsync
+      */
+     std.persist.restoreFromAsync = function (keyName,cb)
+     {
+         return std.persist.restoreFromAndGetNamesAsync(keyName,0,cb);
+     };
+     
+
      
      /**
       This function should be used if the object graph that you are
