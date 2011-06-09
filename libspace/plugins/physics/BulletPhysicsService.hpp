@@ -74,9 +74,7 @@ class BulletPhysicsService : public LocationService {
 	friend class SirikataMotionState;
 public:
     BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
-    // FIXME add constructor which can add all the objects being simulated to mLocations
-
-	virtual ~BulletPhysicsService();
+    virtual ~BulletPhysicsService();
 
     virtual bool contains(const UUID& uuid) const;
     virtual TrackingType type(const UUID& uuid) const;
@@ -151,9 +149,9 @@ protected:
 	SirikataMotionState* objMotionState;
 	btRigidBody* objRigidBody;
     };
-    typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
 
-	LocationMap mLocations;
+    typedef std::tr1::unordered_map<UUID, LocationInfo, UUID::Hasher> LocationMap;
+    LocationMap mLocations;
 
     typedef std::tr1::unordered_set<UUID, UUID::Hasher> UUIDSet;
     // Which objects have dynamic physical simulation and need to be
@@ -182,29 +180,18 @@ private:
 
     //Bullet Dynamics World Vars
     btBroadphaseInterface* broadphase;
+    btDefaultCollisionConfiguration* collisionConfiguration;
+    btCollisionDispatcher* dispatcher;
+    btSequentialImpulseConstraintSolver* solver;
+    btDiscreteDynamicsWorld* dynamicsWorld;
 
-	btDefaultCollisionConfiguration* collisionConfiguration;
+    Time mLastTime;
 
-	btCollisionDispatcher* dispatcher;
+    //load meshes to create appropriate bounding volumes
+    ModelsSystem* mModelsSystem;
 
-	btSequentialImpulseConstraintSolver* solver;
-
-	btDiscreteDynamicsWorld* dynamicsWorld;
-
-	btRigidBody*  fallRigidBody;
-
-	Timer mTimer;
-
-	//load meshes to create appropriate bounding volumes
-	ModelsSystem* mModelsSystem;
-
-	Transfer::TransferMediator *mTransferMediator;
-
-	std::tr1::shared_ptr<Transfer::TransferPool> mTransferPool;
-
-
-	bool firstCube;
-
+    Transfer::TransferMediator *mTransferMediator;
+    Transfer::TransferPoolPtr mTransferPool;
 }; // class BulletPhysicsService
 
 class SirikataMotionState : public btMotionState {

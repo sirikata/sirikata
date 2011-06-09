@@ -76,32 +76,22 @@ void bulletPhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep
 BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy)
  : LocationService(ctx, update_policy)
 {
-	broadphase = new btDbvtBroadphase();
 
-	collisionConfiguration = new btDefaultCollisionConfiguration();
-	dispatcher = new btCollisionDispatcher(collisionConfiguration);
+    broadphase = new btDbvtBroadphase();
+    collisionConfiguration = new btDefaultCollisionConfiguration();
+    dispatcher = new btCollisionDispatcher(collisionConfiguration);
+    solver = new btSequentialImpulseConstraintSolver;
+    dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
+    dynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this, false);
+    dynamicsWorld->setGravity(btVector3(0,-1,0));
 
-	solver = new btSequentialImpulseConstraintSolver;
+    mLastTime = mContext->simTime();
 
-	dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration);
-
-        dynamicsWorld->setInternalTickCallback(bulletPhysicsInternalTickCallback, (void*)this, false);
-
-	dynamicsWorld->setGravity(btVector3(0,-1,0));
-
-
-	mTimer.start();
-
-	mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
-
+    mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
+    mTransferPool = mTransferMediator->registerClient("BulletPhysics");
 
-    static char x = '1';
-    mTransferPool = mTransferMediator->registerClient("BulletPhysics_"+x);
-    x++;
-
-	firstCube = true;
-	BULLETLOG(detailed, "Service Loaded");
+    BULLETLOG(detailed, "Service Loaded");
 }
 
 BulletPhysicsService::~BulletPhysicsService(){
@@ -134,11 +124,12 @@ LocationService::TrackingType BulletPhysicsService::type(const UUID& uuid) const
 void BulletPhysicsService::service() {
 	//get the time elapsed between calls to this service and
 	//move the simulation forward by that amount
-	Duration delTime = mTimer.elapsed();
-	float simForwardTime = delTime.toMilliseconds() / 1000.0f;
-	mTimer.start();
+    Time now = mContext->simTime();
+    Duration delTime = now - mLastTime;
+    mLastTime = now;
+    float simForwardTime = delTime.toMilliseconds() / 1000.0f;
 
-    dynamicsWorld->stepSimulation(simForwardTime, 10);
+    dynamicsWorld->stepSimulation(simForwardTime);
 
     for(UUIDSet::iterator i = physicsUpdates.begin(); i != physicsUpdates.end(); i++) {
         LocationMap::iterator it = mLocations.find(*i);
