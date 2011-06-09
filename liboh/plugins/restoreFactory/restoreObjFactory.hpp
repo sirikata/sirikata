@@ -38,7 +38,7 @@
 #include <vector>
 #include <list>
 #include <sirikata/proxyobject/SimulationFactory.hpp>
-#include "../csvfactory/CSVObjectFactory.hpp"
+//#include "../csvfactory/CSVObjectFactory.hpp"
 
 
 namespace Sirikata {

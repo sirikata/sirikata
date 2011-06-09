@@ -78,13 +78,13 @@ void RestoreObjFactory::generate()
 
 void RestoreObjFactory::parseEntArgs(String toParse)
 {
-    CSVObjectFactory::StringList allParts = CSVObjectFactory::sepCommas(toParse);
-
-    for (CSVObjectFactory::StringList::iterator iter = allParts.begin(); iter != allParts.end(); ++iter)
-    {
-        if ((iter->size() != 0) && (mIncompleteEnts.size() < mMaxObjects))
-            mIncompleteEnts.push(*iter);
-    }
+    // CSVObjectFactory::StringList allParts = CSVObjectFactory::sepCommas(toParse);
+    // for (CSVObjectFactory::StringList::iterator iter = allParts.begin(); iter != allParts.end(); ++iter)
+    // {
+    //     if ((iter->size() != 0) && (mIncompleteEnts.size() < mMaxObjects))
+    //         mIncompleteEnts.push(*iter);
+    // }
+    mIncompleteEnts.push(toParse);
 }
 
 
