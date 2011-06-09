@@ -547,7 +547,10 @@ if (typeof(std.persist) === 'undefined')
              {
                  var tRet = nameService.lookupObject(id);
                  if (tRet != nameService.DNE)
+                 {
                      returner = tRet;
+                     system.changeSelf(returner.toString());
+                 }
              }
              performPtrFinalFixups(ptrsToFix,nameService);
              mRestoring = false;

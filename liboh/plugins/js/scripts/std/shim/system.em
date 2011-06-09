@@ -135,6 +135,8 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
           this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd,null,null);
       };
 
+     
+     
      system.printSelfMap = function()
      {
          __system.print('\nPrinting self map\n');
@@ -149,7 +151,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          __system.print('\n\n');
      };
      
-      system.__NULL_TOKEN__ = 'null';
+     system.__NULL_TOKEN__ = 'null';
 
      system.getAllData = function()
      {
@@ -169,7 +171,14 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      //     
      //     
      // };
-     
+
+     /**
+      @param {string} toChangeTo.  The sporef of the presence that we want to change self to.
+      */
+     system.changeSelf  = function(toChangeTo)
+     {
+         system.__setBehindSelf(system._selfMap[toChangeTo].presObj);
+     };
      
      //backend manipulations
      system.backendCreateEntry = function()
@@ -361,7 +370,10 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
        */
       system.timeout = function (/**Number*/period, /**function*/callback, /**uint32*/contextId, /**double*/timeRemaining,/**bool*/isSuspended, /**bool*/isCleared)
       {
-          var selfKey = (this.self == null )? this.__NULL_TOKEN__ : this.self.toString();
+          var selfKey = this.__NULL_TOKEN__;
+          if ((this.self != null ) && (this.self != system))
+              selfKey =  this.self.toString();
+          
           var wrappedFunction = this.__wrapTimeout(callback,selfKey);
           if (typeof(isCleared) == 'undefined')
               return baseSystem.timeout(period,wrappedFunction);
@@ -715,7 +727,6 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
             if ((typeof(position) == 'undefined') || (position === null))
                 position = this.self.getPosition();
 
-
             baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback),position,space);
         };
 
@@ -955,6 +966,10 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
       system.onPresenceConnected(undefined);
       system.onPresenceDisconnected(undefined);
 
+     //populates self with basic system object.
+     system.addToSelfMap(null);
+     
+     
   })();
 
 
