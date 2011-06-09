@@ -86,12 +86,16 @@ function() {
             system.print('Close\n'); // FIXME
         }
         else if (evt == 'ExecScript') {
+
+
             // ExecScript Command Value
             var target = this._scriptedObjects[objid];
             if (!target) {
                 system.prettyprint('Received ExecScript UI event for unknown object:' + objid);
                 return;
             }
+
+            
             var request = {
                 request : 'script',
                 script : val

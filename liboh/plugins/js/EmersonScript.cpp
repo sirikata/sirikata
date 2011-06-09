@@ -685,7 +685,6 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     mHandlingEvent = true;
 
 
-
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
         if (mResetting)

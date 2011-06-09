@@ -82,7 +82,10 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     if (mContID != jscont->getContextID())
         parent->registerFixupSuspendable(this,mContID);
     else
+    {
         mContext = jscont;
+        mContext->struct_registerSuspendable(this);
+    }
 
     //if we were not connected before, then we will not request the space to go
     //through the rest of its connection procedure, which means that we should
