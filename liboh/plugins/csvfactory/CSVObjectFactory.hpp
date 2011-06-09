@@ -46,11 +46,35 @@ namespace Sirikata {
 /** CSVObjectFactory generates objects from an input CSV file. */
 class CSVObjectFactory : public ObjectFactory {
 public:
+    typedef std::vector<String> StringList;
+    
     CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate);
     virtual ~CSVObjectFactory() {}
 
     virtual void generate();
 
+
+    /**
+       @param a string that may have multiple commas
+       
+       @return A vector. Each element in this vector contains a
+       string unit.  A string unit is any text that was separated by a comma
+       that was not enclosed within quotations.  (Or text that appeared without
+       a comma at all.)  Examples below.
+
+       input: a,b
+       returns: <a,b>
+       input: b
+       returns: <b>
+       input: "a,b",c
+       returns: <"a,b",c>
+
+       (note: "somethign,a",
+       
+       The vector is ordered so that the lower the index the earlier the string
+       appeared on the line.
+     */
+    static CSVObjectFactory::StringList sepCommas(String toSep);
 
 private:
     // Connects one batch of objects and sets up another callback for more
