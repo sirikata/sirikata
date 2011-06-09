@@ -147,6 +147,17 @@ function() {
         return < cam_info.position.x, cam_info.position.y, cam_info.position.z >;
     };
 
+    /** Gets the camera's current orientation. Note that this can be different from
+     *  the position of the presence it is attached to because it may be in 3rd
+     *  person mode. Useful if you need to figure out something based on the
+     *  display, e.g. how a click on a particular x,y screen coordinate should
+     *  map to the world.
+     */
+    std.graphics.Graphics.prototype.cameraOrientation = function() {
+        var cam_info = this.camera();
+        return new util.Quaternion(cam_info.orientation.x, cam_info.orientation.y, cam_info.orientation.z, cam_info.orientation.w);
+    };
+
     /** Compute a vector indicating the direction a particular point in the
      *  camera's viewport points. (x,y) should be in the range (-1,-1)-(1,1),
      *  the same as the values provided by mouse click and drag events.  If no
@@ -154,7 +165,7 @@ function() {
      *  as cameraDirection(0,0).
      */
     std.graphics.Graphics.prototype.cameraDirection = function(x, y) {
-        var orient = this.presence.getOrientation();
+        var orient = this.cameraOrientation();
 
         if (!x && !y)
             return orient.zAxis().neg();

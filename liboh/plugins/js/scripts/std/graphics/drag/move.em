@@ -70,7 +70,7 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
 
             if (!lastClickAxis) return;
 
-            var moveVector = this._dragPoint.sub( this._graphics.presence.getPosition() );
+            var moveVector = this._dragPoint.sub( this._graphics.cameraPosition() );
             var moveDistance = moveVector.dot(centerAxis);
             var start = lastClickAxis.scale(moveDistance);
             var end = clickAxis.scale(moveDistance);

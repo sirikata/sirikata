@@ -716,6 +716,14 @@ boost::any OgreSystem::getCamera(vector<boost::any>& params) {
     camera_pos["z"] = Invokable::asAny(pos.z);
     camera_info["position"] = Invokable::asAny(camera_pos);
 
+    Invokable::Dict camera_orient;
+    Quaternion orient = mPrimaryCamera->getOrientation();
+    camera_orient["x"] = Invokable::asAny(orient.x);
+    camera_orient["y"] = Invokable::asAny(orient.y);
+    camera_orient["z"] = Invokable::asAny(orient.z);
+    camera_orient["w"] = Invokable::asAny(orient.w);
+    camera_info["orientation"] = Invokable::asAny(camera_orient);
+
     return Invokable::asAny(camera_info);
 }
 
