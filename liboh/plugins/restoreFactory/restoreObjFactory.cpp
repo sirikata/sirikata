@@ -69,7 +69,7 @@ void RestoreObjFactory::generate()
     }
 
     parseEntArgs(fullFile);
-    
+
     fp.close();
     execEnts();
     return;
@@ -103,7 +103,7 @@ void RestoreObjFactory::execEnts()
         mIncompleteEnts.pop();
 
         HostedObjectPtr ent;
-        ent = mOH->createObject(UUID::null(), &scriptType, &argToExec);
+        ent = mOH->createObject(UUID::random(), &scriptType, &argToExec);
     }
 
     if (!mIncompleteEnts.empty())

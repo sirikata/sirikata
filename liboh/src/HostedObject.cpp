@@ -71,8 +71,9 @@ namespace Sirikata {
 
 
 
-HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName)
+HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID & _id)
  : mContext(ctx),
+   mID(_id),
    mObjectHost(parent),
    mObjectScript(NULL),
    mPresenceData(new PresenceDataMap),

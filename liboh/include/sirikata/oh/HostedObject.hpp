@@ -83,6 +83,7 @@ protected:
 
 //------- Members
     ObjectHostContext* mContext;
+    const UUID mID;
 
   public:
      struct EntityState
@@ -148,13 +149,23 @@ private:
      * strings.  Invalid values are equivalent to passing NULL, since no scripts
      * can be instantiated -- there is no fallback to the default if you
      * explicitly specify a script type and options.
+     *
+     * \param _id A unique identifier for this object within this object
+     * host. You can specify it at construction so that objects can be restored
+     * from permanent storage.  You should always specify a non-null value, even
+     * if you need to manually allocate a new random identifier.
      */
-    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
     virtual ~HostedObject();
 
+    /** Get a unique identifier for this object on this object host. This is for
+     *  internal use only -- it has nothing to do with any space or presences in
+     *  the space. It is *not* a public value.
+     */
+    const UUID& id() const;
 
 private:
 //------- Private member functions:
