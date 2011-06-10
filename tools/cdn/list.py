@@ -34,7 +34,8 @@
 #     dump - dumps the raw json result
 #
 
-import json
+try: import json
+except ImportError: import simplejson as json
 import sys
 import urllib2
 
