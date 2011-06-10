@@ -31,7 +31,7 @@ function sendCData(msgToSend)
 
 
 
-bMessageHandler <- {'bField':: };
+bMessageHandler << {'bField':: };
 
 
 function cMessageHandler(msg,sender)
@@ -42,7 +42,7 @@ function cMessageHandler(msg,sender)
         
 }
 
-cMessageHandler <- { 'cField' ::};
+cMessageHandler << { 'cField' ::};
 
 function cInitializer(myMaster)
 {
@@ -69,7 +69,7 @@ function cInitializer(myMaster)
             msg -> otherVis;
         };
 
-        processMasterMessage <- {'sporef'::} <- masterVis;
+        processMasterMessage << {'sporef'::} << masterVis;
 
         
         var msg = {'cField': "c's_registration"};
@@ -98,7 +98,7 @@ function bInitializer(myMaster)
         };
 
         
-        onMessageReceipt <- {'sporef'::};
+        onMessageReceipt << {'sporef'::};
 
                 
         system.print('\n\nIn b.  This is my position: '  + system.self.getPosition().toString());

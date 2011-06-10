@@ -27,7 +27,7 @@ function test_msg_handler(msg, sender)
 
 
 system.print("\n\nconnected\n\n"); 
-test_msg_handler <- new util.Pattern("name", "test");
+test_msg_handler << new util.Pattern("name", "test");
 
 
 

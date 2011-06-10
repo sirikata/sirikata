@@ -12,27 +12,27 @@ j = 32;
 
 function test()
 {
-  a <- b;
+  a << b;
   
   print("\nPassed 1\n");
   
-  m(i) <- b;
+  m(i) << b;
   
   print("\nPassed 2\n");
 
-  a <- b <- c;
+  a << b << c;
 
   print("\nPassed 3\n");
 
-  m(i) <- b <- c;
+  m(i) << b << c;
 
   print("\nPassed 4\n");
 
-  a <- b <- m(i);
+  a << b << m(i);
   
   print("\nPassed 5\n");
 
-  m(i) <- b <- m(j);
+  m(i) << b << m(j);
 
   print("\nPassed 6\n");
 

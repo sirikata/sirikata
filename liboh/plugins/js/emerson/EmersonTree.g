@@ -938,9 +938,6 @@ scope
                 | MOD_ASSIGN          { $assignmentExpression::op = " \%= ";  }
                 | ADD_ASSIGN          { $assignmentExpression::op = " += ";  } 
                 | SUB_ASSIGN          { $assignmentExpression::op = " -= ";  } 
-                | LEFT_SHIFT_ASSIGN   { $assignmentExpression::op = " <<= "; }
-                | RIGHT_SHIFT_ASSIGN  { $assignmentExpression::op = " >>= "; }
-                | TRIPLE_SHIFT_ASSIGN { $assignmentExpression::op = "  >>>= "; }
                 | AND_ASSIGN          { $assignmentExpression::op = " &= "; }
                 | EXP_ASSIGN          { $assignmentExpression::op  = " ^= "; }
                 | OR_ASSIGN           { $assignmentExpression::op = " |= "; } 
@@ -973,9 +970,6 @@ scope
 					| MOD_ASSIGN         { $assignmentExpressionNoIn::op = " \%= ";  }
 					| ADD_ASSIGN         { $assignmentExpressionNoIn::op = " += ";  } 
 					| SUB_ASSIGN         { $assignmentExpressionNoIn::op = " -= ";  } 
-					|LEFT_SHIFT_ASSIGN   { $assignmentExpressionNoIn::op = " <<= "; }
-					|RIGHT_SHIFT_ASSIGN  { $assignmentExpressionNoIn::op = " >>= "; }
-					|TRIPLE_SHIFT_ASSIGN { $assignmentExpressionNoIn::op = "  >>>= "; }
 					|AND_ASSIGN          { $assignmentExpressionNoIn::op = " &= "; }
 					|EXP_ASSIGN          { $assignmentExpressionNoIn::op  = " ^= "; }
 					|OR_ASSIGN           { $assignmentExpressionNoIn::op = " |= "; } 
@@ -1075,7 +1069,7 @@ propertyReferenceSuffix
 	;
 	
 assignmentOperator
-	: ASSIGN|MULT_ASSIGN|DIV_ASSIGN | MOD_ASSIGN| ADD_ASSIGN | SUB_ASSIGN|LEFT_SHIFT_ASSIGN|RIGHT_SHIFT_ASSIGN|TRIPLE_SHIFT_ASSIGN|AND_ASSIGN|EXP_ASSIGN|OR_ASSIGN
+	: ASSIGN|MULT_ASSIGN|DIV_ASSIGN | MOD_ASSIGN| ADD_ASSIGN | SUB_ASSIGN|AND_ASSIGN|EXP_ASSIGN|OR_ASSIGN
 	;
 
 
@@ -1216,7 +1210,7 @@ scope
   const char* op;
 }
 
-	: shiftExpression 
+	: additiveExpression 
 	| 
 	^(
 	   relationalOps 
@@ -1226,7 +1220,7 @@ scope
 				  APP($relationalExpression::op );
 				  APP(" ");
 				}
-				shiftExpression
+				additiveExpression
 			) 
 	;
 
@@ -1244,7 +1238,7 @@ scope
   const char* op;
 }
 
-	: shiftExpression 
+	: additiveExpression 
 	| 	^(
 	     relationalOpsNoIn
 						relationalExpressionNoIn
@@ -1253,33 +1247,11 @@ scope
 						  APP($relationalExpressionNoIn::op);
 						  APP(" ");
 						}
-						shiftExpression
+						additiveExpression
 				)
 	   
 	;
 
-shiftOps
-: LEFT_SHIFT  {$shiftExpression::op = "<<" ;}
-| RIGHT_SHIFT { $shiftExpression::op = ">>" ;} 
-| TRIPLE_SHIFT { $shiftExpression::op = ">>>"; }
-;
-
-shiftExpression
-scope
-{
- const char* op; 
-}
-	: additiveExpression
-	| ^(shiftOps 
-	    e=shiftExpression 
-					 {
-						  APP(" ");
-						  APP($shiftExpression::op);
-						  APP(" ");
-						}
-					additiveExpression
-					)
- ;	
 
 
 
@@ -1424,7 +1396,7 @@ vectorLiteral
         
 vectorLiteralField
         : ternaryExpression
-        | shiftExpression
+        | additiveExpression    
         | NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
         | callExpression
         | memberExpression

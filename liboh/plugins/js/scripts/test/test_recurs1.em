@@ -30,7 +30,7 @@ function proxAddedCallback(new_addr_obj)
   test_msg.sender = system.Self;
   test_msg.f = function(x) { system.print("\n\n Hello " + x +"\n\n") ;};
   test_msg.g = function(x) { system.print("\n\n Hello Hello" + x +"\n\n") ;};
-  reply_handler <- new util.Pattern("name", "reply") <- new_addr_obj;
+  reply_handler << new util.Pattern("name", "reply") << new_addr_obj;
   test_msg -> new_addr_obj;
   system.print("MESSAGE SENT");
 }

@@ -24,7 +24,7 @@ function toExecute()
         system.print("\n\n");
     };
     
-    callbacker <- new util.Pattern("msg", "msg");
+    callbacker << new util.Pattern("msg", "msg");
 
     system.print("\n\n");
     system.print("Setting callback now");

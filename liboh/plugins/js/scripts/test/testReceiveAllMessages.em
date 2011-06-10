@@ -7,7 +7,7 @@ system.print("\nThis function makes it so that an entity will receive and print 
 //tells the system that any message received should trigger
 //the allMessagesCallback handler.  (See testReceiveMessage
 //for an example of how to match messages more precisely.)
-allMessagesCallback <- new util.Pattern();
+allMessagesCallback << new util.Pattern();
 
 
 msgReceived = 3;

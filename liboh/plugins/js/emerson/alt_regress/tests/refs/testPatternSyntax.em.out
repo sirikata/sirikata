@@ -14,6 +14,9 @@ Registered handler
 1
 
 function handler(msg, sender) {
+    if (!__checkResources8_8_3_1__()) {
+        throw "__resource_error__";
+    }
     print("\n\nGot into handler\n\n");
 }
 
@@ -40,6 +43,9 @@ Registered handler
 2
 
 function handler(msg, sender) {
+    if (!__checkResources8_8_3_1__()) {
+        throw "__resource_error__";
+    }
     print("\n\nGot into handler\n\n");
 }
 
@@ -76,6 +82,9 @@ Registered handler
 3
 
 function handler(msg, sender) {
+    if (!__checkResources8_8_3_1__()) {
+        throw "__resource_error__";
+    }
     print("\n\nGot into handler\n\n");
 }
 
@@ -102,6 +111,9 @@ Registered handler
 4
 
 function handler(msg, sender) {
+    if (!__checkResources8_8_3_1__()) {
+        throw "__resource_error__";
+    }
     print("\n\nGot into handler\n\n");
 }
 

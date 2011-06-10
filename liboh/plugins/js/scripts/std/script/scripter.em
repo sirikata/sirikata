@@ -63,12 +63,12 @@ function() {
         // Listen for replies
         var scriptReplyPattern = new util.Pattern("reply", "script");
         var scriptReplyHandler = std.core.bind(this._handleScriptReply, this);
-        scriptReplyHandler <- scriptReplyPattern;
+        scriptReplyHandler << scriptReplyPattern;
 
         // Listen for print events
         var printPattern = new util.Pattern("request", "print");
         var printHandler = std.core.bind(this._handlePrint, this);
-        printHandler <- printPattern;
+        printHandler << printPattern;
     };
 
     ns.Scripter.prototype.script = function(target) {

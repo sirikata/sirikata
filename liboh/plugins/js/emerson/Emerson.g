@@ -64,9 +64,6 @@ tokens
     MOD_ASSIGN;
     ADD_ASSIGN;
     SUB_ASSIGN;
-    LEFT_SHIFT_ASSIGN;
-    RIGHT_SHIFT_ASSIGN;
-    TRIPLE_SHIFT_ASSIGN;
     AND_ASSIGN;
     EXP_ASSIGN;
     OR_ASSIGN;
@@ -85,9 +82,6 @@ tokens
     GREATER_THAN_EQUAL;
     INSTANCE_OF;
     IN;
-    LEFT_SHIFT;
-    RIGHT_SHIFT;
-    TRIPLE_SHIFT;
     ADD_OP;
     SUB;
     MULT;
@@ -381,8 +375,8 @@ memAndCallExpression
         
 
 msgRecvStatement
-        : e1=memAndCallExpression LTERM* '<''-' LTERM* e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
-        | e1=memAndCallExpression LTERM* '<''-' LTERM* e2=leftHandSideExpression LTERM* '<''-' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
+        : e1=memAndCallExpression LTERM* '<<' LTERM* e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
+        | e1=memAndCallExpression LTERM* '<<' LTERM* e2=leftHandSideExpression LTERM* '<<' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
         ;
 
 // expressions
@@ -467,7 +461,7 @@ propertyReferenceSuffix
 
         
 assignmentOperator
-	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)| '<<=' -> ^(LEFT_SHIFT_ASSIGN)| '>>=' -> ^(RIGHT_SHIFT_ASSIGN)| '>>>=' -> ^(TRIPLE_SHIFT_ASSIGN)| '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
+	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)|  '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
 	;
 
 ternaryExpression
@@ -560,7 +554,7 @@ relationalOps
 
 
 relationalExpression
-        : (shiftExpression -> shiftExpression )(LTERM* relationalOps LTERM* shiftExpression -> ^(relationalOps $relationalExpression shiftExpression))* 
+        : (additiveExpression -> additiveExpression )(LTERM* relationalOps LTERM* additiveExpression -> ^(relationalOps $relationalExpression additiveExpression))* 
         ;
 
 relationalOpsNoIn
@@ -571,25 +565,15 @@ relationalOpsNoIn
 | 'instanceof' -> ^(INSTANCE_OF)
 ;
 
-relationalExpressionNoIn
-	: (shiftExpression -> shiftExpression) (LTERM* relationalOpsNoIn LTERM* shiftExpression -> ^(relationalOpsNoIn $relationalExpressionNoIn shiftExpression ))*
-	;
-
-shiftOps
-:'<<' -> ^(LEFT_SHIFT)
-| '>>'-> ^(RIGHT_SHIFT)
-| '>>>' -> ^(TRIPLE_SHIFT)
-;
-
-shiftExpression
-    : (additiveExpression -> additiveExpression)(LTERM* shiftOps LTERM* additiveExpression -> ^(shiftOps $shiftExpression additiveExpression) )*
-    ;	
-
-
 addOps
 : '+' -> ^(ADD_OP)
 | '-' -> ^(SUB)
 ;
+
+
+relationalExpressionNoIn
+        : (additiveExpression -> additiveExpression) (LTERM* relationalOpsNoIn LTERM* additiveExpression -> ^(relationalOpsNoIn $relationalExpressionNoIn additiveExpression ))*
+	;
 
 
 additiveExpression
@@ -652,7 +636,7 @@ vectorLiteral
 
 vectorLiteralField
         : (ternaryExpression ) => ternaryExpression
-        | shiftExpression 
+        | additiveExpression
         | NumericLiteral
         | callExpression 
         | memberExpression

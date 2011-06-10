@@ -59,7 +59,7 @@ system.onPresenceConnected( function(pres) {
       chat = simulator.invoke("createWindowFile", "chat_terminal", "chat/prompt.html");
       chat.invoke("bind", "eventname", onChatMsgReceived);
       p = new util.Pattern("chat");
-      onChatFromNeighbor <- p ;
+      onChatFromNeighbor << p ;
     }
     else
     {

@@ -51,7 +51,7 @@ std.graphics.Chat = system.Class.extend(
                               }, this)
             );
             var p  = new util.Pattern("name", "get_protocol");
-            std.core.bind(this.onTestMessage, this) <- p;
+            std.core.bind(this.onTestMessage, this) << p;
             this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this));
         },
 
@@ -86,7 +86,7 @@ std.graphics.Chat = system.Class.extend(
 
             this._chat_group.push(sender);
             var p = new util.Pattern("chat");
-            std.core.bind(this.onChatFromNeighbor, this) <- p <- sender;
+            std.core.bind(this.onChatFromNeighbor, this) << p << sender;
         },
 
         // Handler for prox events so we can check for other chat clients.
@@ -98,7 +98,7 @@ std.graphics.Chat = system.Class.extend(
 
             //also register a callback
             var p = new util.Pattern("protocol", "chat");
-            std.core.bind(this.handleNewChatNeighbor, this) <- p <- new_addr_obj;
+            std.core.bind(this.handleNewChatNeighbor, this) << p << new_addr_obj;
             test_msg -> new_addr_obj;
         },
 

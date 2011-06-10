@@ -54,7 +54,7 @@ function() {
      */
     std.movement.Movable = function(only_self) {
         var moveRequestHandler = std.core.bind(this._handleRequest, this, only_self);
-        moveRequestHandler <- new util.Pattern("request", "movable");
+        moveRequestHandler << new util.Pattern("request", "movable");
 
         // Set up a bunch of handlers based on request name so we can
         // easily dispatch them

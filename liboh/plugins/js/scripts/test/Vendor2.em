@@ -34,7 +34,7 @@ function handleMarket(msg, sender)
     print("\n\nGot a new market\n\n");
 
     var p  = new util.Pattern("name", "get_books");
-		handleBookRequest <- p ;
+		handleBookRequest << p ;
 		
 		bannerObj -> MARKET_CHANNEL;
 
@@ -51,7 +51,7 @@ function proxAddedCallback(new_addr_obj)
   
   //also register a callback
   var p = new util.Pattern("protocol", "Market");
-  handleMarket <- p <- new_addr_obj;
+  handleMarket << p << new_addr_obj;
   test_msg -> new_addr_obj;
 }
 

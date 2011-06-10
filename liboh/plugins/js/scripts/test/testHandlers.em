@@ -85,13 +85,13 @@ function msgHandler(msg,msgFrom)
 {
     if (addKnownArray(msgFrom))
     {
-        knownMsgHandler <- new util.Pattern() <- msgFrom;
+        knownMsgHandler << new util.Pattern() <- msgFrom;
         system.print("\nadding a new communicator\n");
         return;
     }
 }
 
-msgHandler <- new util.Pattern();
+msgHandler << new util.Pattern();
 
 
 function sendToAllSeen()

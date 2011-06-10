@@ -64,12 +64,12 @@ function handleProtocolMessage(msg, sender)
 
 
 /* React to the advertisements */
-advReactor <- [new util.Pattern("name", "advertisement"), new util.Pattern("banner")];
+advReactor << [new util.Pattern("name", "advertisement"), new util.Pattern("banner")];
 
 /* React to the subscriptions */
-subscriptionReactor <- [new util.Pattern("name", "subscribe"), new util.Pattern("pattern")];
+subscriptionReactor << [new util.Pattern("name", "subscribe"), new util.Pattern("pattern")];
 
-handleProtocolMessage <- new util.Pattern("name", "get_protocol");
+handleProtocolMessage << new util.Pattern("name", "get_protocol");
 
 
 

@@ -5,9 +5,9 @@ function handler(msg, sender)
 }
 
 
-handler <- { 'a': : };
-handler <- {::};
-handler <- [{::},{'a':'b':'c'}];
-handler <- { 'm':  : 'wo'};
+handler << { 'a': : };
+handler << {::};
+handler << [{::},{'a':'b':'c'}];
+handler << { 'm':  : 'wo'};
 
 
