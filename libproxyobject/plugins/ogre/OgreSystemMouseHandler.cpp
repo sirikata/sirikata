@@ -518,7 +518,8 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
    mLastRenderStatsTime(Task::LocalTime::now()),
-   mNewQueryAngle(0.f)
+   mNewQueryAngle(0.f),
+   mUIReady(false)
 {
     mLastHitCount=0;
     mLastHitX=0;
@@ -572,6 +573,10 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
 
 void OgreSystemMouseHandler::setDelegate(Invokable* del) {
     mDelegate = del;
+}
+
+void OgreSystemMouseHandler::uiReady() {
+    mUIReady = true;
 }
 
 Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
@@ -841,8 +846,10 @@ void OgreSystemMouseHandler::windowResized(uint32 w, uint32 h) {
 }
 
 void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
-    fpsUpdateTick(t);
-    renderStatsUpdateTick(t);
+    if (mUIReady) {
+        fpsUpdateTick(t);
+        renderStatsUpdateTick(t);
+    }
 
     ensureUI();
 }

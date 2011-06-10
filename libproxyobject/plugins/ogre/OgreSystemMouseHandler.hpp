@@ -57,6 +57,9 @@ public:
     void alert(const String& title, const String& text);
     void tick(const Task::LocalTime& t);
 
+    // Invoked when the main UI components are ready
+    void uiReady();
+
     void setDelegate(Invokable* del);
 
     // FIXME no reason for this to be in this class.
@@ -156,6 +159,8 @@ private:
     // responses. *Not* used for receiving scripting requests, so it is randomly
     // selected.
     ODP::Port* mScriptingRequestPort;
+
+    bool mUIReady;
 };
 
 
