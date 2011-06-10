@@ -1,41 +1,55 @@
+/*  Sirikata
+ *  Storage.hpp
+ *
+ *  Copyright (c) 2010, Stanford University
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
-#ifndef __JS_BACKEND_INTERFACE_HPP__
-#define __JS_BACKEND_INTERFACE_HPP__
+#ifndef __SIRIKATA_OH_STORAGE_HPP__
+#define __SIRIKATA_OH_STORAGE_HPP__
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/oh/HostedObject.hpp>
+#include <sirikata/core/util/Factory.hpp>
 
+namespace Sirikata {
+namespace OH {
 
-
-namespace Sirikata{
-namespace JS{
-
-
-class JSBackendInterface
-{
+/** Represents a backing store for persistent object storage. Each object is
+ *  assigned an identifier which maps to a 'bucket' of values in the backing
+ *  store, keeping each object isolated. Within that bucket, objects can write
+ *  to keys, specified as strings.
+ */
+class SIRIKATA_OH_EXPORT Storage {
 public:
-    enum JSBackendCreateCode{
-        BACKEND_CREATE_FAIL_HAVE_UNFLUSHED,
-        BACKEND_CREATE_FAIL_EXISTS,
-        BACKEND_CREATE_SUCCESS
-    };
-    
-    virtual ~JSBackendInterface(){};
 
-
-    /**
-       @param {string} newEntryName.  The name of an entry to create in our
-       backend.
-
-       @return {JSBackendCreateCode} Returns
-       JSBackendInterface::FAIL_HAVE_UNFINISHED if have pending events for this
-       entry.  If don't have pending events for this entry, but the entry
-       already exists on the system, returns JSBackendInterface::FAIL_EXISTS.
-       Otherwise, returns JSBackendInterface::SUCCESS and creates an entry for
-       this string token.
-    */
-    virtual JSBackendInterface::JSBackendCreateCode createEntry(const String & newEntryName) = 0;
+    virtual ~Storage() {};
 
     /**
        @param {String} entryName token to check if already have in our backend.
@@ -53,7 +67,7 @@ public:
     */
     virtual bool haveUnflushedEvents(const String& entryName) = 0;
 
-    
+
    /**
       @param{String} entryName, name of the entry in the backend.
       @param {String} itemName, name of the item in the entry.
@@ -65,7 +79,7 @@ public:
    */
     virtual bool clearItem(const String& entryName,const String& itemName) = 0;
 
-    
+
     /**
        Queues writes to the item named by entryName:itemName.  Writes
        will not be committed until flush command.  Note, if issue this command
@@ -73,7 +87,7 @@ public:
        last when calling flush.
 
        @param {String} entryName.  Used to identify the entry in the backend to
-       write to.  
+       write to.
        @param{String} itemName.  The name of the item to write to in the backend.
        @param{String} strToWrite.  What should actually be written into that item
 
@@ -87,7 +101,7 @@ public:
        Flushes all outstanding events (writes and removes) from pending queue.
        Resets pending queue as well.
 
-       
+
        @return {bool} returns true if the entryName matches a valid folder to write
        to.  Returns false otherwise.
     */
@@ -95,7 +109,7 @@ public:
 
     /**
        @param {string} entryName.  Name of entry to remove all pending events for.
-       
+
        @return {bool} Returns true if have pending events for entryName.  Otherwise,
        returns false.
 
@@ -106,7 +120,7 @@ public:
 
     /**
        @param {String} entryName.  Name of entry to be removed from backend.
-       
+
        @return {bool} returns true if have entry to clear.  Otherwise returns false.
     */
     virtual bool clearEntry (const String& entryName) = 0;
@@ -125,13 +139,19 @@ public:
        item was successful.  Returns false otherwise.
      */
     virtual bool read(const String& entryName, const String& itemName, String& toReadTo) = 0;
-
-
 };
 
-}//end namespace JS
-}//end namespace Sirikata
 
-#endif
+class SIRIKATA_OH_EXPORT StorageFactory
+    : public AutoSingleton<StorageFactory>,
+      public Factory2<Storage*, ObjectHostContext*, const String&>
+{
+public:
+    static StorageFactory& getSingleton();
+    static void destroy();
+};
 
+} //end namespace OH
+} //end namespace Sirikata
 
+#endif //__SIRIKATA_OH_STORAGE_HPP__

@@ -1241,6 +1241,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/ObjectHostContext.cpp
                   ${LIBOH_SOURCE_DIR}/PerPresenceData.cpp
                   ${LIBOH_SOURCE_DIR}/Trace.cpp
+                  ${LIBOH_SOURCE_DIR}/Storage.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)
@@ -1990,7 +1991,6 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSInvokableObject.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSSystem.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSFunctionInvokable.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSBackend/JSFileBackend.cpp
   ${EMERSON_SOURCES}
   )
 IF(V8_FOUND)
@@ -2030,7 +2030,21 @@ ADD_PLUGIN_TARGET(csvfactory
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} csvfactory)
 
 
-##plugin for populating from restoreObjFactory (as alternative to csvFactory).
+SET(LIBOH_PLUGIN_FILE_DIR ${LIBOH_PLUGIN_DIR}/file)
+SET(LIBOH_PLUGIN_FILE_SOURCES
+ ${LIBOH_PLUGIN_FILE_DIR}/FileStorage.cpp
+ ${LIBOH_PLUGIN_FILE_DIR}/PluginInterface.cpp
+    )
+ADD_PLUGIN_TARGET(oh-file
+                    SOURCES ${LIBOH_PLUGIN_FILE_SOURCES}
+                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
+                    TARGET_LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+                    LIBRARIES ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB}
+		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
+		    )
+SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} oh-file)
+
+
 SET(LIBOH_PLUGIN_RESTOREOBJFACTORY_DIR ${LIBOH_PLUGIN_DIR}/restoreFactory)
 SET(LIBOH_PLUGIN_RESTOREOBJFACTORY_SOURCES
  ${LIBOH_PLUGIN_RESTOREOBJFACTORY_DIR}/restoreObjFactory.cpp

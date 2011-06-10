@@ -13,11 +13,6 @@ function ObjectWriter(entryName)
 {
     this.mEntryName = entryName;
     this.recsToWrite = [];
-
-    if (system.backendHaveEntry(this.mEntryName))
-        system.backendClearEntry(this.mEntryName);
-    
-    system.backendCreateEntry(this.mEntryName);
     
     this.flush = function()
     {
@@ -48,5 +43,3 @@ function readObject(entryName,itemName)
     var returner = system.deserialize(val);
     return returner;
 }
-
-

@@ -89,14 +89,14 @@ v8::Handle<v8::Value> backendClearItem(const v8::Arguments& args)
 
     INLINE_STR_CONV_ERROR(args[0],backendClearItem,1,prepend);
     INLINE_STR_CONV_ERROR(args[1],backendClearItem,2,item);
-    
+
     //decode system object
     String errorMessage = "Error decoding error message when backedClearItem";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-    
+
     return jsfake->backendClearItem(prepend,item);
 }
 
@@ -114,29 +114,9 @@ v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args)
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-    
+
     return jsfake->backendClearEntry(prepend);
 }
-
-
-v8::Handle<v8::Value> backendCreateEntry(const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling createEntry.  Require 1 argument: a string to prepend")));
-
-    INLINE_STR_CONV_ERROR(args[0],backendCreateEntry,1,prepend);
-
-    //decode system object
-    String errorMessage = "Error decoding error message when backedCreatingEntry";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    
-    return jsfake->backendCreateEntry(prepend);
-}
-
 
 
 v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
@@ -144,7 +124,7 @@ v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
     if (args.Length() != 3)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 3 argument: a sequence key (string), an id (string), and a string to write (string)")));
 
-    
+
     INLINE_STR_CONV_ERROR(args[0],backendWrite,1,prepend);
     INLINE_STR_CONV_ERROR(args[1],backendWrite,2,id);
 
@@ -152,8 +132,8 @@ v8::Handle<v8::Value> backendWrite(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in backendWrite, third argument (string) should be a string.")));
 
     String toWrite =  uint16StrToStr(args[2]->ToString());
-    
-    
+
+
     //decode system object
     String errorMessage = "Error decoding error message when backendWriting";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -169,7 +149,7 @@ v8::Handle<v8::Value> backendRead(const v8::Arguments& args)
     if (args.Length() != 2)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendRead.  Require 2 arguments: an entry to read (string), an id (string)")));
 
-    
+
     INLINE_STR_CONV_ERROR(args[0],backendRead,1,keyName);
     INLINE_STR_CONV_ERROR(args[1],backendRead,2,id);
 
@@ -190,10 +170,10 @@ v8::Handle<v8::Value> backendFlush(const v8::Arguments& args)
     if (args.Length() != 1)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendWrite.  Require 1 argument: a sequence key (string).")));
 
-    
+
     INLINE_STR_CONV_ERROR(args[0],backendFlush,1,entryName);
 
-    
+
     //decode system object
     String errorMessage = "Error decoding error message when backendFlushing";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -210,9 +190,9 @@ v8::Handle<v8::Value> backendHaveEntry(const v8::Arguments& args)
     if (args.Length() != 1)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendHaveEntry.  Require 1 argument: a sequence key (string).")));
 
-    
+
     INLINE_STR_CONV_ERROR(args[0],backendHaveEntry,1,entryName);
-    
+
     //decode system object
     String errorMessage = "Error decoding error message when backendHaveEntry-ing";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -220,16 +200,16 @@ v8::Handle<v8::Value> backendHaveEntry(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->backendHaveEntry(entryName);    
+    return jsfake->backendHaveEntry(entryName);
 }
 
 v8::Handle<v8::Value> backendHaveUnflushedEvents(const v8::Arguments& args)
 {
     if (args.Length() != 1)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendHaveUnflushedEvents.  Require 1 argument: a sequence key (string).")));
-    
+
     INLINE_STR_CONV_ERROR(args[0],backendFlush,1,entryName);
-    
+
     //decode system object
     String errorMessage = "Error decoding error message when backendHaveUnflushedEvents-ing";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -237,16 +217,16 @@ v8::Handle<v8::Value> backendHaveUnflushedEvents(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->backendHaveUnflushedEvents(entryName);        
+    return jsfake->backendHaveUnflushedEvents(entryName);
 }
 
 v8::Handle<v8::Value> backendClearOutstanding(const v8::Arguments& args)
 {
     if (args.Length() != 1)
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling backendClearOutstanding.  Require 1 argument: a sequence key (string).")));
-    
+
     INLINE_STR_CONV_ERROR(args[0],backendFlush,1,entryName);
-    
+
     //decode system object
     String errorMessage = "Error decoding error message when backendClearOutstanding-ing";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -254,7 +234,7 @@ v8::Handle<v8::Value> backendClearOutstanding(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->backendClearOutstanding(entryName);        
+    return jsfake->backendClearOutstanding(entryName);
 }
 
 
@@ -323,7 +303,7 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
 
     Local<v8::Object> v8Object = args[0]->ToObject();
     String stringifiedObject = JSSerializer::serializeObject(v8Object);
-    
+
     String errorMessage = "Error decoding error message when serializing object";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
@@ -332,7 +312,7 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
 
 
     v8::Handle<v8::Value> returner = strToUint16Str(stringifiedObject);
-    
+
     return handle_scope.Close(returner);
 }
 
@@ -404,7 +384,7 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 
 v8::Handle<v8::Value> root_headless(const v8::Arguments& args)
 {
-    
+
     if (args.Length() != 0)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error checking headless.  Takes no arguments.")));
 
@@ -413,7 +393,7 @@ v8::Handle<v8::Value> root_headless(const v8::Arguments& args)
 
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
-    
+
 
     return jssys->checkHeadless();
 }
@@ -854,7 +834,7 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
 v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if (args.Length() != 16)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 16 arguments")));
 

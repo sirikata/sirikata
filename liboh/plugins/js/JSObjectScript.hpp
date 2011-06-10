@@ -53,7 +53,7 @@
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSVisibleStructMonitor.hpp"
 #include "JSEntityCreateInfo.hpp"
-#include "JSBackend/JSFileBackend.hpp"
+#include <sirikata/oh/Storage.hpp>
 
 #define EMERSON_RESOURCE_THRESHOLD 10000
 
@@ -69,21 +69,21 @@ class JSObjectScript : public ObjectScript
 public:
 
 
-    JSObjectScript(JSObjectScriptManager* jMan);
+    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage);
     virtual ~JSObjectScript();
 
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
-    
+
 
     v8::Handle<v8::Value> executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv);
 
-    
+
     //this function returns a context with
     v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,bool canEval, JSContextStruct*& internalContextField);
 
     void initialize(const String& args);
-    
+
     /** Print the given string to the current output. */
     void print(const String& str);
 
@@ -103,7 +103,6 @@ public:
 
     v8::Handle<v8::Value> backendFlush(const String& seqKey,JSContextStruct* jscont);
     v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendCreateEntry(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendClearEntry(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id, JSContextStruct* jscont);
     v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName, JSContextStruct* jscont);
@@ -115,7 +114,7 @@ public:
        We want to ensure that no sandboxes have while(1) loops.  Roughly, the
        way we do this is that our compiler inserts a lot of calls to
        checkResources.  If checkResources returns false, then we throw an
-       uncatch-able error.  
+       uncatch-able error.
 
        Using a stupid implementation for checkResources.  Every time that we
        call eval, and are not currently executing code/handling an event, then
@@ -123,13 +122,13 @@ public:
        checkResources increments mResourceCounter.  If mResourceCounter ever
        gets above a threshold value, the next checkResources call returns false,
        causing the script to throw an uncatchable error.
-       
+
        @return {v8::Boolean} Returns true if still have adequate resources to
        continue computation.  Returns false otherwise.
      */
     v8::Handle<v8::Value> checkResources();
 
-    
+
     Handle<v8::Context> context() { return mContext->mContext;}
 
     bool isRootContext(JSContextStruct* jscont);
@@ -186,7 +185,7 @@ protected:
     void postEvalOps();
 
 
-    
+
     // Each context has an id that is assigned from this variable.
     uint32 contIDTracker;
     std::map<uint32,JSContextStruct*> mContStructMap;
@@ -269,8 +268,8 @@ protected:
     ContIDToSuspMap toFixup;
 
     JSObjectScriptManager* mManager;
-    JSFileBackend mBackend;
-    
+    OH::Storage* mStorage;
+
 };
 
 } // namespace JS

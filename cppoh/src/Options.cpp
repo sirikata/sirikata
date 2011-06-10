@@ -44,7 +44,7 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_CONFIG_FILE,"cppoh.cfg",Sirikata::OptionValueType<String>(),"Configuration file to load."))
 
-        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,nvtt,common-filters,csvfactory,restoreObjFactory,scripting-js,simplecamera",Sirikata::OptionValueType<String>(),"Plugin list to load."))
+        .addOption(new OptionValue(OPT_OH_PLUGINS,"weight-exp,weight-sqr,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,nvtt,common-filters,csvfactory,restoreObjFactory,oh-file,scripting-js,simplecamera",Sirikata::OptionValueType<String>(),"Plugin list to load."))
         .addOption(new OptionValue(OPT_OH_PLUGIN_SEARCH_PATHS,"",Sirikata::OptionValueType<String>(),"Colon separated list of paths to search for plugins."))
 
         .addOption(new OptionValue("ohid", "1", Sirikata::OptionValueType<ObjectHostID>(), "Object host ID for this server"))
@@ -62,6 +62,10 @@ void InitCPPOHOptions() {
 
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
+
+        .addOption(new OptionValue(OPT_OBJECT_STORAGE,"file",OptionValueType<String>(),"Type of object storage to instantiate"))
+        .addOption(new OptionValue(OPT_OBJECT_STORAGE_OPTS,"--dir=storage",OptionValueType<String>(),"Options to pass to object storage constructor"))
+
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"--init-script=system.import('std/default.em');",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
         ;

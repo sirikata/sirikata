@@ -57,12 +57,6 @@ v8::Handle<v8::Value> JSContextStruct::backendClearItem(const String& prepend, c
     return jsObjScript->backendClearItem(prepend,itemName,this);
 }
 
-
-v8::Handle<v8::Value> JSContextStruct::backendCreateEntry(const String& prepend)
-{
-    return jsObjScript->backendCreateEntry(prepend,this);
-}
-
 v8::Handle<v8::Value> JSContextStruct::backendClearEntry(const String& prepend)
 {
     return jsObjScript->backendClearEntry(prepend,this);
@@ -139,8 +133,8 @@ void JSContextStruct::createContextObjects()
     v8::Context::Scope context_scope(mContext);
 
     v8::Local<v8::Object> global_obj = mContext->Global();
-        
-        
+
+
     // NOTE: See v8 bug 162 (http://code.google.com/p/v8/issues/detail?id=162)
     // The template actually generates the root objects prototype, not the root
     // itself.
@@ -149,8 +143,8 @@ void JSContextStruct::createContextObjects()
     global_proto->SetInternalField(CONTEXT_GLOBAL_JSOBJECT_SCRIPT_FIELD, v8::External::New(jsObjScript));
     global_proto->SetInternalField(TYPEID_FIELD, v8::External::New(new String(CONTEXT_GLOBAL_TYPEID_STRING)));
 
-    
-    
+
+
     // And we add an internal field to the system object as well to make it
     // easier to find the pointer in different calls. Note that in this case we
     // don't use the prototype -- non-global objects work as we would expect.
@@ -396,7 +390,7 @@ void JSContextStruct::checkContextConnectCallback(JSPresenceStruct* jspres)
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
     if (emerScript == NULL)
         return;
-    
+
     //check whether should evaluate any further callbacks.
     if (getIsSuspended() || getIsCleared())
         return;
@@ -411,7 +405,7 @@ void JSContextStruct::checkContextDisconnectCallback(JSPresenceStruct* jspres)
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
     if (emerScript == NULL)
         return;
-    
+
     if (getIsSuspended() || getIsCleared())
         return;
 

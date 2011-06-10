@@ -80,7 +80,7 @@ namespace JS {
 
 
 EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
- : JSObjectScript(jMan),
+ : JSObjectScript(jMan, ho->getObjectHost()->getStorage()),
    mHandlingEvent(false),
    mResetting(false),
    mParent(ho),

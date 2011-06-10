@@ -178,7 +178,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("registerProxAddedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxAddedHandler));
     mSystemTemplate->Set(v8::String::New("registerProxRemovedHandler"),v8::FunctionTemplate::New(JSSystem::root_proxRemovedHandler));
-    
+
 
     mSystemTemplate->Set(v8::String::New("headless"),v8::FunctionTemplate::New(JSSystem::root_headless));
     mSystemTemplate->Set(v8::String::New("__debugFileWrite"),v8::FunctionTemplate::New(JSSystem::debug_fileWrite));
@@ -195,7 +195,6 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
-    mSystemTemplate->Set(v8::String::New("backendCreateEntry"),v8::FunctionTemplate::New(JSSystem::backendCreateEntry));
     mSystemTemplate->Set(v8::String::New("backendClearEntry"),v8::FunctionTemplate::New(JSSystem::backendClearEntry));
     mSystemTemplate->Set(v8::String::New("backendClearItem"), v8::FunctionTemplate::New(JSSystem::backendClearItem));
     mSystemTemplate->Set(v8::String::New("backendWrite"),v8::FunctionTemplate::New(JSSystem::backendWrite));
@@ -206,9 +205,9 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("backendClearOutstanding"),v8::FunctionTemplate::New(JSSystem::backendClearOutstanding));
     mSystemTemplate->Set(v8::String::New("backendClearEntry"),v8::FunctionTemplate::New(JSSystem::backendClearEntry));
 
-    
 
-    
+
+
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
 
     //check what permissions fake root is loaded with
@@ -283,7 +282,7 @@ void JSObjectScriptManager::createContextGlobalTemplate()
     // And we expose some functionality directly
     mContextGlobalTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
     mContextGlobalTemplate->SetInternalFieldCount(CONTEXT_GLOBAL_TEMPLATE_FIELD_COUNT);
-    
+
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::SYSTEM_OBJECT_NAME),mSystemTemplate);
     mContextGlobalTemplate->Set(v8::String::New(JSSystemNames::UTIL_OBJECT_NAME), mUtilTemplate);
 
@@ -340,7 +339,7 @@ void JSObjectScriptManager::createVisibleTemplate()
     proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
     proto_t->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSVisible::getType));
 
-    
+
     // For instance templates
     v8::Local<v8::ObjectTemplate> instance_t = mVisibleTemplate->InstanceTemplate();
     instance_t->SetInternalFieldCount(VISIBLE_FIELD_COUNT);
@@ -401,7 +400,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("setScale"),v8::FunctionTemplate::New(JSPresence::setScale));
   proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
-  
+
   //for restore-ability.
   proto_t->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSPresence::getAllData));
 
@@ -462,7 +461,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 JSObjectScript* JSObjectScriptManager::createHeadless(const String& args)
 {
-    JSObjectScript* new_script = new JSObjectScript(this);
+    JSObjectScript* new_script = new JSObjectScript(this, NULL);
     new_script->initialize(args);
     return new_script;
 }

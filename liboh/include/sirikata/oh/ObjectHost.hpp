@@ -60,6 +60,9 @@ typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
 typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
+namespace OH {
+class Storage;
+}
 
 class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
 
@@ -68,6 +71,8 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     typedef std::tr1::unordered_map<SpaceID,SessionManager*,SpaceID::Hasher> SpaceSessionManagerMap;
 
     typedef std::tr1::unordered_map<SpaceObjectReference, HostedObjectPtr, SpaceObjectReference::Hasher> HostedObjectMap;
+
+    OH::Storage* mStorage;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -125,6 +130,10 @@ public:
 
     // Space API - Provide info for ObjectHost to communicate with spaces
     void addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap);
+
+    // Get and set the storage backend to use for persistent object storage.
+    void setStorage(OH::Storage* storage) { mStorage = storage; }
+    OH::Storage* getStorage() { return mStorage; }
 
     // Primary HostedObject API
 

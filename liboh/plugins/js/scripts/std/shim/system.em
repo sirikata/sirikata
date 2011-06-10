@@ -202,12 +202,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      {
          return baseSystem.backendClearEntry.apply(baseSystem,arguments);
      };
-     
-     system.backendHaveEntry = function()
-     {
-         return baseSystem.backendHaveEntry.apply(baseSystem,arguments);
-     };
-     
+          
      system.backendHaveUnflushedEvents = function()
      {
          return baseSystem.backendHaveUnflushedEvents.apply(baseSystem,arguments);

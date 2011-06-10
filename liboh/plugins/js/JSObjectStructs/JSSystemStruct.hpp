@@ -32,7 +32,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
-    
+
     //regular members
     v8::Handle<v8::Value> struct_canSendMessage();
     v8::Handle<v8::Value> struct_canRecvMessage();
@@ -40,12 +40,11 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canImport();
 
     v8::Handle<v8::Value> checkResources();
-    
+
     v8::Handle<v8::Value> checkHeadless();
 
     v8::Handle<v8::Value> backendFlush(const String& seqKey);
     v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite);
-    v8::Handle<v8::Value> backendCreateEntry(const String& prepend);
     v8::Handle<v8::Value> backendClearEntry(const String& prepend);
     v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id);
@@ -54,7 +53,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend);
     v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken);
 
-    
+
     v8::Handle<v8::Value> struct_canCreatePres();
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
@@ -95,18 +94,18 @@ struct JSSystemStruct
     //calls eval on the system's context associated with this system.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
-    
+
     v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl);
-        
+
     v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
-    
+
 
     //create a timer that will fire in dur seconds from now, that will bind the
     //this parameter to target and that will fire the callback cb.
     v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
 
     v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
-    
+
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
     v8::Handle<v8::Value> struct_reset();
@@ -116,8 +115,8 @@ private:
     //associated data
     JSContextStruct* associatedContext;
     bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt,canEval;
-    
-    
+
+
 };
 
 

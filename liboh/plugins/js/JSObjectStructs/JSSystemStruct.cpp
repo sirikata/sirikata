@@ -41,10 +41,6 @@ v8::Handle<v8::Value> JSSystemStruct::backendClearItem(const String& prepend, co
     return associatedContext->backendClearItem(prepend,itemName);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendCreateEntry(const String& prepend)
-{
-    return associatedContext->backendCreateEntry(prepend);
-}
 v8::Handle<v8::Value> JSSystemStruct::backendClearEntry(const String& prepend)
 {
     return associatedContext->backendClearEntry(prepend);
@@ -97,7 +93,7 @@ v8::Handle<v8::Value> JSSystemStruct::proxRemovedHandlerCallallback(v8::Handle<v
 {
     return associatedContext->proxRemovedHandlerCallallback(cb);
 }
-    
+
 
 
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)

@@ -54,7 +54,7 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value>  struct_resumeContext();
 
     v8::Handle<v8::Value>  checkHeadless();
-    
+
     //returns an object that contains the system/system object associated with
     //this context
     v8::Handle<v8::Object> struct_getSystem();
@@ -65,7 +65,6 @@ struct JSContextStruct : public JSSuspendable
 
     v8::Handle<v8::Value> backendFlush(const String& seqKey);
     v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite);
-    v8::Handle<v8::Value> backendCreateEntry(const String& prepend);
     v8::Handle<v8::Value> backendRead(const String& prepend, const String& id);
     v8::Handle<v8::Value> backendClearEntry(const String& prepend);
     v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName);
@@ -75,8 +74,8 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend);
     v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken);
 
-    
-    
+
+
     //creates a new jseventhandlerstruct and wraps it in a js object
     //registers the jseventhandlerstruct both with this context and
     //jsobjectscript
@@ -85,7 +84,7 @@ struct JSContextStruct : public JSSuspendable
     //create presence with mesh associated with string newMesh, and initFunction
     //to be called when presence is connected
     v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn);
-    
+
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 
@@ -95,13 +94,13 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
-    
+
     v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
-    
+
     v8::Handle<v8::Value> struct_rootReset();
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
-    
+
     //when add a handler, timer, when inside of context, want to register them.
     //That way, when call suspend on context and resume on context, can
     //suspend/resume them.
@@ -152,13 +151,13 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
 
     v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
-    
+
     //Tries to eval the emerson code in native_contents that came from origin
     //sOrigin inside of this context.
     v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
     v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl);
-    
+
 
     //register cb_persist as the default handler that gets thrown
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
@@ -179,8 +178,8 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> proxAddedHandlerCallallback(v8::Handle<v8::Function>cb);
     v8::Handle<v8::Value> proxRemovedHandlerCallallback(v8::Handle<v8::Function>cb);
 
-    
-    
+
+
     JSPresenceStruct* getAssociatedPresenceStruct()
     {
         return associatedPresence;
@@ -189,10 +188,10 @@ struct JSContextStruct : public JSSuspendable
     v8::Persistent<v8::Function>proxAddedFunc;
     v8::Persistent<v8::Function>proxRemovedFunc;
 
-    
+
 private:
     uint32 mContextID;
-    
+
     //runs through suspendable map to check if have a presence in this sandbox
     //matching sporef
     bool hasPresence(const SpaceObjectReference& sporef);
@@ -241,8 +240,8 @@ private:
     //is suspended/resumed
     SuspendableMap associatedSuspendables;
 
-    
-    
+
+
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \
     String fname (funcName);               \
@@ -256,7 +255,7 @@ private:
     EmersonScript* emerScriptName = dynamic_cast<EmersonScript*> (whatToCast); \
     if (emerScriptName == NULL)\
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must not be in headless mode to run " #errorIn  )));
-    
+
 
 }; //end class
 
