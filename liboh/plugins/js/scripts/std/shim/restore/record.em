@@ -31,8 +31,10 @@ if (typeof(std.persist) === 'undefined')
 
         if (std.persist.checkQuat(objToGetTypeOf))
             return std.persist.QUAT_TYPE_STRING;
-        
-        
+
+        if (std.persist.checkVisible(objToGetTypeOf))
+            return std.persist.VISIBLE_TYPE_STRING;
+
         return std.persist.BASIC_OBJECT_TYPE_STRING;
     }
     

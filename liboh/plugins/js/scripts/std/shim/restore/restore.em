@@ -240,11 +240,43 @@ if (typeof(std.persist) === 'undefined')
              return restoreVec3Object(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
          if (type == std.persist.QUAT_TYPE_STRING)
              return restoreQuatObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-         
-         
+         if (type == std.persist.VISIBLE_TYPE_STRING)
+             return restoreVisibleObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
+                  
          throw 'Error in fixReferences.  Do not have any other types in the system to restore from.';
      }
 
+     /**
+      @see fixReferences for arguments
+      Returns a new visible object.
+      */
+     function restoreVisibleObject(keyName, visRecord,ptrId,ptrsToFix,nameService)
+     {
+         var pToFix = [];
+         var toRestoreFrom = restoreBasicObject(keyName,visRecord,ptrId,pToFix,nameService);
+
+         //perform the fixups for the objects that this presence was
+         //trying to point to.  (Eg. pos object, vel obj, etc.)
+         performPtrFinalFixups(pToFix,nameService);
+
+         var returner = system.createVisible(
+             toRestoreFrom.sporef,
+             toRestoreFrom.sporefFrom,
+             toRestoreFrom.pos,
+             toRestoreFrom.vel,
+             toRestoreFrom.posTime,
+             toRestoreFrom.orient,
+             toRestoreFrom.orientVel,
+             toRestoreFrom.orientTime,
+             toRestoreFrom.pos,
+             toRestoreFrom.scale,
+             toRestoreFrom.mesh,
+             toRestoreFrom.physics
+         );
+
+         return returner;
+     }
+     
      /**
       @see fixReferencs for arguments.
       Returns a new vec3.

@@ -5,8 +5,6 @@ if (typeof(std.persist) === 'undefined')
 
 (function ()
  {
-
-
     
    /**
     @param objToMark if it's an object (and not null), then it logs the
@@ -79,6 +77,23 @@ if (typeof(std.persist) === 'undefined')
          backendWrite.addRecord(record);
      }
 
+
+   /**
+    Called to tree-ify a visible object.
+     @see processSystem
+    */
+   function processVisible(vis,nameService,backendWrite,interFunc)
+   {
+       if (! std.persist.checkVisible(vis))
+           throw 'Error processing visible.  First arg passed in must be a visible.';
+
+
+       var allData = vis.getAllData();
+       var record = new std.persist.Record(vis,nameService);
+       //runs all data field
+       runFields(allData,record,nameService,backendWrite,interFunc);
+       backendWrite.addRecord(record);
+   }
      
 
      
@@ -144,6 +159,11 @@ if (typeof(std.persist) === 'undefined')
         if (std.persist.checkQuat(objGraphCatalog))
         {
             processQuat(objGraphCatalog,nameService,backendWrite,interFunc);
+            return;
+        }
+        if (std.persist.checkVisible(objGraphCatalog))
+        {
+            processVisible(objGraphCatalog,nameService,backendWrite,interFunc);
             return;
         }
         

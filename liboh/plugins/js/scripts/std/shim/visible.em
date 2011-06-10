@@ -188,5 +188,13 @@
          return this.__prettyPrintFieldsData__;
      };
 
+     /** @function
+      @return {string} type of this object ("visible");
+      */
+     visible.prototype.__getType = function()
+     {
+         return  'visible';
+     };
+     
 
 })();
