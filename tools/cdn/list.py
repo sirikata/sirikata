@@ -31,6 +31,7 @@
 #  -a action - The type of action to generate output for
 #     download - download the contents of the asset
 #     meerkat - the meerkat link, used for accessing via the TransferMediator
+#     dump - dumps the raw json result
 #
 
 import json
@@ -59,6 +60,8 @@ def grab_list(url, num, value, model_type, action):
             new_items = [ download_url  + '/' + x['metadata']['types'][model_type][value] for x in models_js ]
         elif action == 'meerkat':
             new_items = [ meerkat_url + x['base_path'] + '/' + model_type + '/' + x['version_num'] + '/' + x['base_name'] for x in models_js ]
+        elif action == 'dump':
+            new_items = models_js
 
         all_items.extend(new_items)
 
