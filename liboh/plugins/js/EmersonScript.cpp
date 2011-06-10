@@ -490,7 +490,7 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
 
 void EmersonScript::create_entity(EntityCreateInfo& eci)
 {
-    HostedObjectPtr obj = mParent->getObjectHost()->createObject(UUID::random(), &eci.scriptType, &eci.scriptOpts);
+    HostedObjectPtr obj = mParent->getObjectHost()->createObject(&eci.scriptType, &eci.scriptOpts);
 
     obj->connect(eci.space,
         eci.loc,

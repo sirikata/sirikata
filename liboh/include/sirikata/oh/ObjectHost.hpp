@@ -123,7 +123,22 @@ public:
     /// The ObjectHost must be destroyed after all HostedObject instances.
     ~ObjectHost();
 
-    virtual HostedObjectPtr createObject(const UUID &uuid, const String* script_type, const String* script_opts);
+    /** Create an object with the specified script. This version allows you to
+     *  specify the unique identifier manually, so it should only be used if you
+     *  need an exact ID, e.g. if you are restoring an object.
+     *
+     *  \param _id a unique identifier for this object. Only use this
+     *  \param script_type type of script to instantiate, e.g. 'js'
+     *  \param script_opts options to pass to the created script
+     */
+    virtual HostedObjectPtr createObject(const UUID &_id, const String* script_type, const String* script_opts);
+    /** Create an object with the specified script. The object will be
+     *  automatically assigned a unique identifier.
+     *
+     *  \param script_type type of script to instantiate, e.g. 'js'
+     *  \param script_opts options to pass to the created script
+     */
+    virtual HostedObjectPtr createObject(const String* script_type, const String* script_opts);
 
     virtual const String& defaultScriptType() const = 0;
     virtual const String& defaultScriptOptions() const = 0;

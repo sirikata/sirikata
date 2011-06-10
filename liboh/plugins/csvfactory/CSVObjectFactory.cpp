@@ -75,7 +75,7 @@ int32 countQuotes(const String& str) {
 CSVObjectFactory::StringList CSVObjectFactory::sepCommas(String line)
 {
     CSVObjectFactory::StringList line_parts;
-    
+
     int last_comma = -1;
     String::size_type next_comma = 0;
     while(next_comma != String::npos) {
@@ -291,11 +291,18 @@ void CSVObjectFactory::generate()
                 }
 
                 HostedObjectPtr obj;
-                UUID objid_val = (objid_idx == -1 ? UUID::random() : UUID(objid, UUID::HumanReadable()));
                 String* script_type_val = (scriptType == "" ? NULL : &scriptType);
                 String* script_opts_val = (scriptType == "" ? NULL : &scriptOpts);
 
-                obj = mOH->createObject(objid_val, script_type_val, script_opts_val);
+                if (objid_idx != -1) {
+                    obj = mOH->createObject(
+                        UUID(objid, UUID::HumanReadable()),
+                        script_type_val, script_opts_val
+                    );
+                }
+                else {
+                    obj = mOH->createObject(script_type_val, script_opts_val);
+                }
 
                 ObjectConnectInfo oci;
                 oci.object = obj;
