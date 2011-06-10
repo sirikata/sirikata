@@ -93,23 +93,27 @@ public:
     FileStorage(ObjectHostContext* ctx, const String& dir);
     ~FileStorage();
 
-    virtual bool haveEntry(const String& prepend);
-    virtual bool haveUnflushedEvents(const String& prepend);
-    virtual bool clearItem(const String& prependToken,const String& itemID);
-    virtual bool write(const String & prependToken, const String& idToWriteTo, const String& strToWrite);
-    virtual bool flush(const String& prependToken);
-    virtual bool clearOutstanding(const String& prependToken);
-    virtual bool clearEntry (const String& prepend);
-    virtual bool read(const String& prepend, const String& idToReadFrom, String& toReadTo);
+    virtual void beginTransaction(const Bucket& bucket);
+    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0);
+
+    virtual bool haveEntry(const Bucket& bucket, const String& prepend);
+    virtual bool clearItem(const Bucket& bucket, const String& prependToken,const String& itemID);
+    virtual bool write(const Bucket& bucket, const String & prependToken, const String& idToWriteTo, const String& strToWrite);
+    virtual bool clearEntry (const Bucket& bucket, const String& prepend);
+    virtual bool read(const Bucket& bucket, const String& prepend, const String& idToReadFrom, String& toReadTo);
 
 private:
 
-    boost::filesystem::path getStoragePath(const String& prefix);
-    boost::filesystem::path getStoragePath(const String& prefix, const String& id);
+    bool haveUnflushedEvents(const Bucket& bucket);
+    bool clearOutstanding(const Bucket& bucket);
+
+    boost::filesystem::path getStoragePath(const Bucket& bucket);
+    boost::filesystem::path getStoragePath(const Bucket& bucket, const String& prefix);
+    boost::filesystem::path getStoragePath(const Bucket& bucket, const String& prefix, const String& id);
 
     typedef std::vector<FileStorageEvent*> FileEventVec;
     typedef FileEventVec::iterator FileEventVecIter;
-    typedef std::map<String,std::vector<FileStorageEvent*> > OutstandingEvents;
+    typedef std::map<Bucket,std::vector<FileStorageEvent*> > OutstandingEvents;
     typedef OutstandingEvents::iterator OutEventsIter;
 
     ObjectHostContext* mContext;

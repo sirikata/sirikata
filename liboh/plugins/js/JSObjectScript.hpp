@@ -69,7 +69,7 @@ class JSObjectScript : public ObjectScript
 public:
 
 
-    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage);
+    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, const UUID& internal_id);
     virtual ~JSObjectScript();
 
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
@@ -101,14 +101,15 @@ public:
      */
     v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont);
 
-    v8::Handle<v8::Value> backendFlush(const String& seqKey,JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendClearEntry(const String& prepend, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendRead(const String& prepend, const String& id, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendHaveEntry(const String& prepend, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend, JSContextStruct* jscont);
-    v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken, JSContextStruct* jscont);
+
+    v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> storageWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageClearEntry(const String& prepend, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageRead(const String& prepend, const String& id, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageClearItem(const String& prepend, const String& itemName, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageHaveEntry(const String& prepend, JSContextStruct* jscont);
+
 
     /**
        We want to ensure that no sandboxes have while(1) loops.  Roughly, the
@@ -155,6 +156,12 @@ public:
 
 
 protected:
+
+    // Object host internal identifier for the object associated with
+    // this script. We copy this information here because this base
+    // class is used for emheadless, which can't get the identifier
+    // from the HostedObjectPtr.
+    UUID mInternalID;
 
     /**
        @see checkResources
@@ -270,6 +277,8 @@ protected:
     JSObjectScriptManager* mManager;
     OH::Storage* mStorage;
 
+
+    void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success);
 };
 
 } // namespace JS

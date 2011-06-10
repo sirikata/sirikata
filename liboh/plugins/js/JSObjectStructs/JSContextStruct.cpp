@@ -43,43 +43,38 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
     //taken care of in the createContext function of this class.
 }
 
-v8::Handle<v8::Value> JSContextStruct::backendFlush(const String& seqKey)
+v8::Handle<v8::Value> JSContextStruct::storageBeginTransaction()
 {
-    return jsObjScript->backendFlush(seqKey,this);
+    return jsObjScript->storageBeginTransaction(this);
 }
-v8::Handle<v8::Value> JSContextStruct::backendWrite(const String& seqKey, const String& id, const String& toWrite)
+v8::Handle<v8::Value> JSContextStruct::storageCommit(v8::Handle<v8::Function> cb)
 {
-    return jsObjScript->backendWrite(seqKey,id,toWrite,this);
+    return jsObjScript->storageCommit(this, cb);
 }
-
-v8::Handle<v8::Value> JSContextStruct::backendClearItem(const String& prepend, const String& itemName)
+v8::Handle<v8::Value> JSContextStruct::storageWrite(const String& seqKey, const String& id, const String& toWrite)
 {
-    return jsObjScript->backendClearItem(prepend,itemName,this);
-}
-
-v8::Handle<v8::Value> JSContextStruct::backendClearEntry(const String& prepend)
-{
-    return jsObjScript->backendClearEntry(prepend,this);
+    return jsObjScript->storageWrite(seqKey,id,toWrite,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::backendRead(const String& prepend, const String& id)
+v8::Handle<v8::Value> JSContextStruct::storageClearItem(const String& prepend, const String& itemName)
 {
-    return jsObjScript->backendRead(prepend,id,this);
+    return jsObjScript->storageClearItem(prepend,itemName,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::backendHaveEntry(const String& prepend)
+v8::Handle<v8::Value> JSContextStruct::storageClearEntry(const String& prepend)
 {
-    return jsObjScript->backendHaveEntry(prepend,this);
-}
-v8::Handle<v8::Value> JSContextStruct::backendHaveUnflushedEvents(const String& prepend)
-{
-    return jsObjScript->backendHaveUnflushedEvents(prepend,this);
-}
-v8::Handle<v8::Value> JSContextStruct::backendClearOutstanding(const String& prependToken)
-{
-    return jsObjScript->backendClearOutstanding(prependToken,this);
+    return jsObjScript->storageClearEntry(prepend,this);
 }
 
+v8::Handle<v8::Value> JSContextStruct::storageRead(const String& prepend, const String& id)
+{
+    return jsObjScript->storageRead(prepend,id,this);
+}
+
+v8::Handle<v8::Value> JSContextStruct::storageHaveEntry(const String& prepend)
+{
+    return jsObjScript->storageHaveEntry(prepend,this);
+}
 
 
 v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)

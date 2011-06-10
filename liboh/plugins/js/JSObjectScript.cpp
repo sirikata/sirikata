@@ -256,8 +256,9 @@ void JSObjectScript::initialize(const String& args)
 }
 
 
-JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage)
- : mResourceCounter(0),
+JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, const UUID& internal_id)
+ : mInternalID(internal_id),
+   mResourceCounter(0),
    mNestedEvalCounter(0),
    contIDTracker(0),
    mManager(jMan),
@@ -266,41 +267,63 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::backendFlush(const String& seqKey, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageBeginTransaction(JSContextStruct* jscont) {
+    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+    mStorage->beginTransaction(mInternalID);
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSObjectScript::storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->flush(seqKey);
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1);
+    }
+    mStorage->commitTransaction(mInternalID, wrapped_cb);
+    return v8::Undefined();
+}
+
+void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext->mContext);
+    TryCatch try_catch;
+
+    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+
+    int argc = 1;
+    v8::Handle<v8::Value> argv[1] = { js_success };
+    invokeCallback(jscont, cb, argc, argv);
+}
+
+v8::Handle<v8::Value> JSObjectScript::storageClearItem(const String& prepend, const String& itemName,JSContextStruct* jscont)
+{
+    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+    bool returner = mStorage->clearItem(mInternalID, prepend,itemName);
     return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::backendClearItem(const String& prepend, const String& itemName,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->clearItem(prepend,itemName);
-    return v8::Boolean::New(returner);
-}
-
-v8::Handle<v8::Value> JSObjectScript::backendWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont)
-{
-    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->write(seqKey,id,toWrite);
+    bool returner = mStorage->write(mInternalID, seqKey,id,toWrite);
     return v8::Boolean::New(returner);
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::backendClearEntry(const String& prepend, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageClearEntry(const String& prepend, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->clearEntry(prepend);
+    bool returner = mStorage->clearEntry(mInternalID, prepend);
     return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::backendRead(const String& prepend, const String& id, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageRead(const String& prepend, const String& id, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
     String toReadTo;
-    bool readSucceed = mStorage->read(prepend,id,toReadTo);
+    bool readSucceed = mStorage->read(mInternalID, prepend,id,toReadTo);
 
     if (!readSucceed)
         return v8::Null();
@@ -308,30 +331,13 @@ v8::Handle<v8::Value> JSObjectScript::backendRead(const String& prepend, const S
     return strToUint16Str(toReadTo);
 }
 
-v8::Handle<v8::Value> JSObjectScript::backendHaveEntry(const String& prepend, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageHaveEntry(const String& prepend, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
-    bool returner = mStorage->haveEntry(prepend);
+    bool returner = mStorage->haveEntry(mInternalID, prepend);
     return v8::Boolean::New(returner);
 }
-
-v8::Handle<v8::Value> JSObjectScript::backendHaveUnflushedEvents(const String& prepend, JSContextStruct* jscont)
-{
-    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-
-    bool returner = mStorage->haveUnflushedEvents(prepend);
-    return v8::Boolean::New(returner);
-}
-
-v8::Handle<v8::Value> JSObjectScript::backendClearOutstanding(const String& prependToken, JSContextStruct* jscont)
-{
-    if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-
-    bool returner = mStorage->clearOutstanding(prependToken);
-    return v8::Boolean::New(returner);
-}
-
 
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)

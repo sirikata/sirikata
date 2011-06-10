@@ -195,15 +195,13 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
 
-    mSystemTemplate->Set(v8::String::New("backendClearEntry"),v8::FunctionTemplate::New(JSSystem::backendClearEntry));
-    mSystemTemplate->Set(v8::String::New("backendClearItem"), v8::FunctionTemplate::New(JSSystem::backendClearItem));
-    mSystemTemplate->Set(v8::String::New("backendWrite"),v8::FunctionTemplate::New(JSSystem::backendWrite));
-    mSystemTemplate->Set(v8::String::New("backendFlush"),v8::FunctionTemplate::New(JSSystem::backendFlush));
-    mSystemTemplate->Set(v8::String::New("backendRead"),v8::FunctionTemplate::New(JSSystem::backendRead));
-    mSystemTemplate->Set(v8::String::New("backendHaveEntry"),v8::FunctionTemplate::New(JSSystem::backendHaveEntry));
-    mSystemTemplate->Set(v8::String::New("backendHaveUnflushedEvents"),v8::FunctionTemplate::New(JSSystem::backendHaveUnflushedEvents));
-    mSystemTemplate->Set(v8::String::New("backendClearOutstanding"),v8::FunctionTemplate::New(JSSystem::backendClearOutstanding));
-    mSystemTemplate->Set(v8::String::New("backendClearEntry"),v8::FunctionTemplate::New(JSSystem::backendClearEntry));
+    mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
+    mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));
+    mSystemTemplate->Set(v8::String::New("storageClearEntry"),v8::FunctionTemplate::New(JSSystem::storageClearEntry));
+    mSystemTemplate->Set(v8::String::New("storageClearItem"), v8::FunctionTemplate::New(JSSystem::storageClearItem));
+    mSystemTemplate->Set(v8::String::New("storageWrite"),v8::FunctionTemplate::New(JSSystem::storageWrite));
+    mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
+    mSystemTemplate->Set(v8::String::New("storageHaveEntry"),v8::FunctionTemplate::New(JSSystem::storageHaveEntry));
 
 
 
@@ -461,7 +459,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 JSObjectScript* JSObjectScriptManager::createHeadless(const String& args)
 {
-    JSObjectScript* new_script = new JSObjectScript(this, NULL);
+    JSObjectScript* new_script = new JSObjectScript(this, NULL, UUID::random());
     new_script->initialize(args);
     return new_script;
 }

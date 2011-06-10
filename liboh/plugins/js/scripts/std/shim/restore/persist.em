@@ -226,8 +226,11 @@ if (typeof(std.persist) === 'undefined')
     persistent subtree of this object.
     @param {optional} filename. String representing the name of the file to
     save this persistent object into.
+
+    @param {optional} cb. Callback of the form function(bool success)
+           which is invoked when operation completes.
     */
-    std.persist.checkpointPartialPersist = function (objToPersistFrom, keyName)
+    std.persist.checkpointPartialPersist = function (objToPersistFrom, keyName, cb)
     {
         if ((objToPersistFrom == null) || (typeof(objToPersistFrom) != 'object'))
             throw 'Error.  Can only checkpoint objects.';
@@ -245,8 +248,7 @@ if (typeof(std.persist) === 'undefined')
        //recursively traverse objet graph.
        markAndBranch(objToPersistFrom,nameService,backendWrite,interHandler);
 
-       backendWrite.flush();
-       return nameService;
+       backendWrite.flush(cb);
    };
 }
 )();
@@ -454,6 +456,3 @@ if (typeof(std.persist) === 'undefined')
    //     for (var s in tmp.data)
    //         shadowTree[s] = tmp.data[s];
    // }
-
-
-

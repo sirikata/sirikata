@@ -36,20 +36,15 @@ v8::Handle<v8::Value> root_headless(const v8::Arguments& args);
 v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args);
 
-//backend functions
-v8::Handle<v8::Value> backendWrite(const v8::Arguments& args);
-v8::Handle<v8::Value> backendFlush(const v8::Arguments& args);
-v8::Handle<v8::Value> backendRead(const v8::Arguments& args);
-v8::Handle<v8::Value> backendClearEntry(const v8::Arguments& args);
-v8::Handle<v8::Value> backendClearItem(const v8::Arguments& args);
-
-v8::Handle<v8::Value> backendHaveEntry(const v8::Arguments& args);
-v8::Handle<v8::Value> backendHaveUnflushedEvents(const v8::Arguments& args);
-v8::Handle<v8::Value> backendClearOutstanding(const v8::Arguments& args);
-
-
-
-//end backend functions
+//storage functions
+v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args);
+v8::Handle<v8::Value> storageCommit(const v8::Arguments& args);
+v8::Handle<v8::Value> storageWrite(const v8::Arguments& args);
+v8::Handle<v8::Value> storageRead(const v8::Arguments& args);
+v8::Handle<v8::Value> storageClearEntry(const v8::Arguments& args);
+v8::Handle<v8::Value> storageClearItem(const v8::Arguments& args);
+v8::Handle<v8::Value> storageHaveEntry(const v8::Arguments& args);
+//end storage functions
 
 
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);

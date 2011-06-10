@@ -183,39 +183,29 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          system.__setBehindSelf(system._selfMap[toChangeTo].presObj);
      };
      
-     //backend manipulations
-     system.backendCreateEntry = function()
+     //storage manipulations
+     system.storageBeginTransaction = function()
      {
-         return baseSystem.backendCreateEntry.apply(baseSystem, arguments);
+         return baseSystem.storageBeginTransaction.apply(baseSystem, arguments);
      };
-     system.backendWrite = function()
+     system.storageCommit = function()
      {
-         return baseSystem.backendWrite.apply(baseSystem, arguments);
-     };
-     system.backendFlush = function()
-     {
-         return baseSystem.backendFlush.apply(baseSystem, arguments);
-     };
-     system.backendRead = function()
-     {
-         return baseSystem.backendRead.apply(baseSystem, arguments);
+         return baseSystem.storageCommit.apply(baseSystem, arguments);
      };
 
-     system.backendClearEntry = function()
+     system.storageWrite = function()
      {
-         return baseSystem.backendClearEntry.apply(baseSystem,arguments);
+         return baseSystem.storageWrite.apply(baseSystem, arguments);
      };
-          
-     system.backendHaveUnflushedEvents = function()
+     system.storageRead = function()
      {
-         return baseSystem.backendHaveUnflushedEvents.apply(baseSystem,arguments);
-     };
-
-     system.backendClearOutstanding = function()
-     {
-         return baseSystem.backendClearOutstanding.apply(baseSystem,arguments);
+         return baseSystem.storageRead.apply(baseSystem, arguments);
      };
 
+     system.storageClearEntry = function()
+     {
+         return baseSystem.storageClearEntry.apply(baseSystem,arguments);
+     };
      
      
       //data

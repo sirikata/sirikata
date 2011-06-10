@@ -27,45 +27,40 @@ JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receiv
 {
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendFlush(const String& seqKey)
-{
-    return associatedContext->backendFlush(seqKey);
-}
-v8::Handle<v8::Value> JSSystemStruct::backendWrite(const String& seqKey, const String& id, const String& toWrite)
-{
-    return associatedContext->backendWrite(seqKey,id,toWrite);
+v8::Handle<v8::Value> JSSystemStruct::storageBeginTransaction() {
+    return associatedContext->storageBeginTransaction();
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendClearItem(const String& prepend, const String& itemName)
+v8::Handle<v8::Value> JSSystemStruct::storageCommit(v8::Handle<v8::Function> cb)
 {
-    return associatedContext->backendClearItem(prepend,itemName);
+    return associatedContext->storageCommit(cb);
+}
+v8::Handle<v8::Value> JSSystemStruct::storageWrite(const String& seqKey, const String& id, const String& toWrite)
+{
+    return associatedContext->storageWrite(seqKey,id,toWrite);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendClearEntry(const String& prepend)
+v8::Handle<v8::Value> JSSystemStruct::storageClearItem(const String& prepend, const String& itemName)
 {
-    return associatedContext->backendClearEntry(prepend);
+    return associatedContext->storageClearItem(prepend,itemName);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendRead(const String& prepend, const String& id)
+v8::Handle<v8::Value> JSSystemStruct::storageClearEntry(const String& prepend)
 {
-    return associatedContext->backendRead(prepend,id);
+    return associatedContext->storageClearEntry(prepend);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::storageRead(const String& prepend, const String& id)
+{
+    return associatedContext->storageRead(prepend,id);
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::backendHaveEntry(const String& prepend)
+v8::Handle<v8::Value> JSSystemStruct::storageHaveEntry(const String& prepend)
 {
-    return associatedContext->backendHaveEntry(prepend);
+    return associatedContext->storageHaveEntry(prepend);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::backendHaveUnflushedEvents(const String& prepend)
-{
-    return associatedContext->backendHaveUnflushedEvents(prepend);
-}
-
-v8::Handle<v8::Value> JSSystemStruct::backendClearOutstanding(const String& prependToken)
-{
-    return associatedContext->backendClearOutstanding(prependToken);
-}
 
 
 v8::Handle<v8::Value> JSSystemStruct::checkResources()

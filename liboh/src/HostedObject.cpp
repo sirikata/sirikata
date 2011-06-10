@@ -122,6 +122,9 @@ HostedObject::~HostedObject() {
     delete mPresenceData;
 }
 
+const UUID& HostedObject::id() const {
+    return mID;
+}
 
 void HostedObject::destroy()
 {

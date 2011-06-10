@@ -14,17 +14,21 @@ system.prettyprint(toPersist);
 
 //performing persist
 var fName = 'btestPartialPersist.em.bu';
-checkpointPartialPersist(toPersist,fName);
+checkpointPartialPersist(
+    toPersist,fName,
+    function(success) {
+        if (!success) return;
 
-//removing a field from toPersist object (to see if it'll come back
-//when restore).
-delete toPersist.a;
-system.print('\nAfter delete\n');
-system.prettyprint(toPersist);
+        //removing a field from toPersist object (to see if it'll come back
+        //when restore).
+        delete toPersist.a;
+        system.print('\nAfter delete\n');
+        system.prettyprint(toPersist);
 
-//restoring object from file
-restoreFrom(fName);
+        //restoring object from file
+        restoreFrom(fName);
 
-
-//re-printing object.
-system.prettyprint(toPersist);
+        //re-printing object.
+        system.prettyprint(toPersist);
+    }
+);

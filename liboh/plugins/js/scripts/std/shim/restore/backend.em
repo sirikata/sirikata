@@ -13,18 +13,19 @@ function ObjectWriter(entryName)
 {
     this.mEntryName = entryName;
     this.recsToWrite = [];
-    
-    this.flush = function()
+
+    this.flush = function(cb)
     {
+        system.storageBeginTransaction();
         for (var s in this.recsToWrite)
         {
             var id  = this.recsToWrite[s].getID();
             var rec = this.recsToWrite[s].generateRecordObject();
             var serRec = system.serialize(rec);
-            system.backendWrite(this.mEntryName,id,serRec);
+            system.storageWrite(this.mEntryName,id,serRec);
         }
-        
-        system.backendFlush(this.mEntryName);
+
+        system.storageCommit(cb);
         this.recsToWrite = [];
     };
 
@@ -36,7 +37,7 @@ function ObjectWriter(entryName)
 
 function readObject(entryName,itemName)
 {
-    var val = system.backendRead(entryName,itemName.toString());
+    var val = system.storageRead(entryName,itemName.toString());
     if (val == null)
         throw 'Erorr in read.  No record pointed to with those names';
 
