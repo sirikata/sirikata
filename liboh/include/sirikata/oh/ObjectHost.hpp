@@ -215,9 +215,6 @@ public:
     /// DEPRECATED
     ProxyManager *getProxyManager(const SpaceID&space) const;
 
-
-    void persistEntityState(const String&);
-
   private:
     // Session Management Implementation
     void handleObjectConnected(const SpaceObjectReference& sporef_internalID, ServerID server);

@@ -85,33 +85,7 @@ protected:
     ObjectHostContext* mContext;
     const UUID mID;
 
-  public:
-     struct EntityState
-     {
-       public:
-
-         String objType;
-         String subType;
-         String name;
-         Vector3d pos;
-         Quaternion orient;
-         Vector3f vel;
-         Vector3f rot;
-         float angular_speed;
-         String mesh;
-         String physics;
-         float scale;
-         String objectID;
-         String script_type;
-         String script_opts;
-         void persistToFile(std::ofstream&);
-
-     };
-     typedef struct EntityState EntityState;
-
   private:
-    //SpaceSet mSpaces;
-
 
     ObjectHost *mObjectHost;
     ObjectScript *mObjectScript;
@@ -400,9 +374,6 @@ public:
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
 
-    public:
-    HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);
-    void persistToFile(std::ofstream& file);
 };
 
 
