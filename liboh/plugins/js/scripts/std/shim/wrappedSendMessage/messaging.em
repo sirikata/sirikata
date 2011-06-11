@@ -144,10 +144,15 @@ if (typeof(std.messaging) != 'undefined')
      @param {MessageReceiverPair} mrp.  The paired message to send and
      receiver to send that message to.
      */
-    std.messaging.MessageReceiverSender = function(sender,mrp)
+    std.messaging.MessageReceiverSender = function(sender,mrp, seqNo)
     {
         if (!(checkIsPresence(sender) && checkIsMessageReceiverPair(mrp)))
             throw 'Error constructing MessageReceiverSender object.  Requires sender to be presence and mrp to be a messagereceiverpair object.';
+
+        if (typeof(seqNo) != 'number')
+            this.oldSeqNo = null;
+        else
+            this.oldSeqNo = seqNo;
         
         this.mrp = mrp;
         this.sender = sender;
@@ -161,8 +166,7 @@ if (typeof(std.messaging) != 'undefined')
      */
     function callSendMessageReceiverPair(mrp,responseArray)
     {
-        throw '\n\nDEBUG: error, should not have proceeded to this call\n\n';
-        
+                
         var mrs = new std.messaging.MessageReceiverSender(system.self,mrp);
         return callSendMessageReceiverSender(mrs,responseArray);
     }
@@ -199,7 +203,10 @@ if (typeof(std.messaging) != 'undefined')
                 throw 'Error: Third arg in response array must be a function';
         }
 
-        return std.messaging.sendMessage(mrs.mrp.msg, mrs.mrp.receiver,mrs.sender,respFunc,timeToWait,noRespFunc);
+        if (mrs.oldSeqNo != null)
+            mrs.oldSeqNo +=1;
+        
+        return std.messaging.sendMessage(mrs.mrp.msg, mrs.mrp.receiver,mrs.sender,respFunc,timeToWait,noRespFunc, mrs.oldSeqNo);
     }
     
     /**
@@ -407,21 +414,19 @@ if (typeof(std.messaging) != 'undefined')
      de-registering the onResp handler and triggering the onNoResp function.
      @param {function} onNoResp.  A function to execute if timeToWait seconds
      have gone by and we haven't received a response to our message.
-     @param {object} (optional) oldMsg.  The message that sendder received from
-     receiver.  If provided, msg will be a response to oldMsg (will have next
+     @param {number} (optional) oldMsgSeqNo.  The sequence number for
+     the message that that sender received from receiver.  If
+     provided, msg will be a response to oldMsg (will have next
      seqNo).
 
      @return {ClearObject} Returns an object whose methods can be used to call
      "clear", which aborts listening for the response to the message.
 
      */
-    std.messaging.sendMessage = function (msg,receiver,sender, onResp, timeToWait,onNoResp, oldMsg)
+    std.messaging.sendMessage = function (msg,receiver,sender, onResp, timeToWait,onNoResp, oldMsgSeqNo)
     {
-        if ('seqNo' in msg)
-            throw 'Error.  Will not accept a messasge to send that already has a sequence number.';
-        
-        if ((typeof(oldMsg) != 'undefined') && ('seqNo' in oldMsg) &&(typeof(oldMsg.seqNo) == 'number'))
-                msg.seqNo = oldMsg.seqNo + 1;  //generate the seqNo as a response to previous message.
+        if (typeof(oldMsgSeqNo) == 'number')
+            msg.seqNo = oldMsgSeqNo + 1;  //generate the seqNo as a response to previous message.
         else
             msg.seqNo = genSeqNumber(sender,receiver); //generate freshSeqNo.
 
@@ -431,9 +436,30 @@ if (typeof(std.messaging) != 'undefined')
         var recString = receiver.toString();
         var senderString = sender.toString();
         var seqNo = msg.seqNo;
+
+        
+        system.print('\nDEBUG: this is seqNo:\n');
+        system.prettyprint(oldMsgSeqNo);
+        system.print('\n\n');
+        
         var wrapOnResp = function(msgRec,sndr)
         {
             cancelOpenHandler(recString,senderString,seqNo);
+            
+            //calling makeReply generates a new MessageReceiverSender
+            //object.  Can use this object to send additional
+            //messages.
+            msgRec.makeReply = function(newMsg)
+            {
+                var mrp = new MessageReceiverPair(newMsg,sndr);
+                var oldSeqNo = null;
+                if (('seqNo' in msgRec) && (typeof(msgRec.seqNo) == 'number'))
+                    oldSeqNo = msgRec.seqNo;
+
+                system.print('\nDEBUG: Generating a new message receiver sender holding oldSeqNo ' + oldSeqNo.toString() + '\n');
+                return new std.messaging.MessageReceiverSender(system.self,mrp,oldSeqNo);
+            };
+
             onResp(msgRec,sndr);
         };
 
