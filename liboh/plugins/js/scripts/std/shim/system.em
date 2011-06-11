@@ -328,6 +328,10 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
           var returner = function (msg,sender,receiver)
           {
               system.__setBehindSelf(system._selfMap[receiver].presObj);
+              std.messaging.seqNumManager.updateSeqNumberOnReceivedMessage(system.self,sender,msg);
+//              std.messaging.seqNumManager.updateSeqNumberOnReceivedMessage(system.self,sender,streamID,newMsg.seqNo);
+              msg.makeReply = std.messaging.makeReply(msg,sender);
+              
               toCallback(msg,sender,receiver);
           };
           return std.core.bind(returner,this);

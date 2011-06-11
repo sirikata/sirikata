@@ -1,7 +1,5 @@
 
 
-system.import('std/shim/wrappedSendMessage/messaging.em');
-
 
 var numMsgsSent = 0;
 var MAX_MESSAGES  = 10;
@@ -24,8 +22,10 @@ function onResp(msg,sender)
         't': '1'
     };
     if (numMsgsSent < MAX_MESSAGES)
-        std.messaging.sendMessage(newMsg,sender,system.self,onResp,TIME_TO_WAIT, onNoResp, msg.seqNo);
-    
+    {
+        var reply = msg.makeReply(newMsg);
+        var cancelable = std.messaging.sendSyntax(reply,[onResp,TIME_TO_WAIT,onNoResp]);
+    }
 }
 
 
@@ -37,7 +37,11 @@ function proxAddedCB(newVis)
         'basic':'b'
     };
 
-    std.messaging.sendMessage(testMsg, newVis,system.self,onResp,TIME_TO_WAIT, onNoResp);
+    var msgReceiverPair =   std.messaging.sendSyntax (testMsg,newVis);
+    var msgRecSender    =   new std.messaging.MessageReceiverSender(system.self,msgReceiverPair);
+    var cancelable      =   std.messaging.sendSyntax(msgRecSender,[onResp,TIME_TO_WAIT,onNoResp]);
+    
+    // std.messaging.sendMessage(testMsg, newVis,system.self,onResp,TIME_TO_WAIT, onNoResp);
 }
 
 

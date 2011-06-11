@@ -8,6 +8,8 @@ if (typeof(std.messaging) != 'undefined')
     throw 'Error.  Already included messaging library.  Aborting instead of re-including.';
 
 
+
+
 /**
  General idea: We want to support message pattern where we send a message as
  well as wait for a response for some time.  If we receive response within that
@@ -16,25 +18,37 @@ if (typeof(std.messaging) != 'undefined')
  response" callback.
  */
 
-
 (function()
 {
     var DEFAULT_TIME_TO_WAIT = 5;
     
     std.messaging ={};
-
+    system.require('std/shim/wrappedSendMessage/seqNumManager.em');
+    
     /**
      @param {object} msgToSend.  An object that we want to send to
      receiver.
      @param{visible} receiver.  A visible that we want to receive the
      message;
+     @param {number} optional.  A number identifying what stream 
      */
-    function MessageReceiverPair(msgToSend,receiver)
+    function MessageReceiverPair(msgToSend,receiver, streamID)
     {
         this.msg = msgToSend;
         this.receiver = receiver;
+        if (typeof(streamID) == 'undefined')
+            this.streamID  = generateNewStreamID();
+        else
+            this.streamID = streamID;
     }
 
+    var uniqueIDIndex = 0;
+    function generateNewStreamID()
+    {
+        return uniqueIDIndex ++;
+    }
+    
+    
     /**
      @param {any} toCheck is any variable.
      @return {bool} Returns true if toCheck is a visible object.  Otherwise, returns false.
@@ -144,15 +158,10 @@ if (typeof(std.messaging) != 'undefined')
      @param {MessageReceiverPair} mrp.  The paired message to send and
      receiver to send that message to.
      */
-    std.messaging.MessageReceiverSender = function(sender,mrp, seqNo)
+    std.messaging.MessageReceiverSender = function(sender,mrp)
     {
         if (!(checkIsPresence(sender) && checkIsMessageReceiverPair(mrp)))
             throw 'Error constructing MessageReceiverSender object.  Requires sender to be presence and mrp to be a messagereceiverpair object.';
-
-        if (typeof(seqNo) != 'number')
-            this.oldSeqNo = null;
-        else
-            this.oldSeqNo = seqNo;
         
         this.mrp = mrp;
         this.sender = sender;
@@ -206,7 +215,7 @@ if (typeof(std.messaging) != 'undefined')
         if (mrs.oldSeqNo != null)
             mrs.oldSeqNo +=1;
         
-        return std.messaging.sendMessage(mrs.mrp.msg, mrs.mrp.receiver,mrs.sender,respFunc,timeToWait,noRespFunc, mrs.oldSeqNo);
+        return std.messaging.sendMessage(mrs.mrp.msg, mrs.mrp.receiver,mrs.sender,respFunc,timeToWait,noRespFunc, mrs.mrp.streamID);
     }
     
     /**
@@ -265,45 +274,6 @@ if (typeof(std.messaging) != 'undefined')
         
         throw 'Error in sender syntax.  Require either that: 1) lhs must be senderReceiverPair and rhs must contain message handling code; or 2) lhs must be object and rhs must be visible.  Aborting.';
     };
-
-    
-    //FIXME: May want to build in some form of garbage collection for
-    //the seqNumMap;
-
-    //This keeps track of what sequence number we're on for each
-    //sender, receiver pair.  Its keys are the sender.toString() +
-    //receiver.toString().  Its values are the sequence number that
-    //you should send on your next message.
-    var seqNumMap = { };
-
-
-    /**
-     @param sender is the local presence that is going to send the
-     message.
-     @param receiver is the external presence (visible) that is
-     supposed to receive the message.
-
-     @return Returns a sequence number that we have not yet used for
-     this connection.
-     */
-    function genSeqNumber(sender, receiver)
-    {
-        var key = sender.toString() + '--' + receiver.toString();
-
-        if (!(key in seqNumMap))
-            seqNumMap[key] = 0;
-
-        var returner = seqNumMap[key];
-        
-        //this is a heuristic.  The basic idea is that if you send
-        //more than one new message to a receiver, you don't want to
-        //have the listening handlers that you set up overlap.
-        //Roughly, putting 10 here says that all handlers for an alternate
-        //stream will be closed by the time that you've sent 10
-        //messages back and forth.  Note: may want to expand it.
-        seqNumMap[key]+= 10;
-        return returner;
-    }
 
 
     /**
@@ -401,7 +371,20 @@ if (typeof(std.messaging) != 'undefined')
         delete openHandlers[key];
     }
 
+    
+    std.messaging.makeReply = function(oldMsg,sndr)
+    {
+        var streamID = -1;
+        if (typeof(oldMsg.streamID) == 'number')
+            streamID = oldMsg.streamID;
 
+        var returner = function(newMsg)
+        {
+            var mrp = new MessageReceiverPair(newMsg,sndr,streamID);
+            return new std.messaging.MessageReceiverSender(system.self,mrp);
+        };
+        return returner;
+    };
 
     /**
      @param {object} msg.  Message we want to send to receiver from sender
@@ -414,22 +397,18 @@ if (typeof(std.messaging) != 'undefined')
      de-registering the onResp handler and triggering the onNoResp function.
      @param {function} onNoResp.  A function to execute if timeToWait seconds
      have gone by and we haven't received a response to our message.
-     @param {number} (optional) oldMsgSeqNo.  The sequence number for
-     the message that that sender received from receiver.  If
-     provided, msg will be a response to oldMsg (will have next
-     seqNo).
+
+     @param {number} streamID.  The id for the stream that we are sending 
 
      @return {ClearObject} Returns an object whose methods can be used to call
      "clear", which aborts listening for the response to the message.
 
      */
-    std.messaging.sendMessage = function (msg,receiver,sender, onResp, timeToWait,onNoResp, oldMsgSeqNo)
+    std.messaging.sendMessage = function (msg,receiver,sender, onResp, timeToWait,onNoResp, streamID)
     {
-        if (typeof(oldMsgSeqNo) == 'number')
-            msg.seqNo = oldMsgSeqNo + 1;  //generate the seqNo as a response to previous message.
-        else
-            msg.seqNo = genSeqNumber(sender,receiver); //generate freshSeqNo.
-
+        msg.seqNo =     std.messaging.seqNumManager.getSeqNumber(sender,receiver,streamID);
+        msg.streamID = streamID;
+        
         //actually send the message.
         system.sendMessage(sender,msg,receiver);
 
@@ -437,10 +416,7 @@ if (typeof(std.messaging) != 'undefined')
         var senderString = sender.toString();
         var seqNo = msg.seqNo;
 
-        
-        system.print('\nDEBUG: this is seqNo:\n');
-        system.prettyprint(oldMsgSeqNo);
-        system.print('\n\n');
+        system.print('\nDEBUG: sending a message with seqNo: ' + seqNo.toString() + '\n\n');
         
         var wrapOnResp = function(msgRec,sndr)
         {
@@ -449,17 +425,12 @@ if (typeof(std.messaging) != 'undefined')
             //calling makeReply generates a new MessageReceiverSender
             //object.  Can use this object to send additional
             //messages.
-            msgRec.makeReply = function(newMsg)
-            {
-                var mrp = new MessageReceiverPair(newMsg,sndr);
-                var oldSeqNo = null;
-                if (('seqNo' in msgRec) && (typeof(msgRec.seqNo) == 'number'))
-                    oldSeqNo = msgRec.seqNo;
-
-                system.print('\nDEBUG: Generating a new message receiver sender holding oldSeqNo ' + oldSeqNo.toString() + '\n');
-                return new std.messaging.MessageReceiverSender(system.self,mrp,oldSeqNo);
-            };
-
+            // msgRec.makeReply = function(newMsg)
+            // {
+            //     var mrp = new MessageReceiverPair(newMsg,sndr,streamID);
+            //     return new std.messaging.MessageReceiverSender(system.self,mrp);
+            // };
+            
             onResp(msgRec,sndr);
         };
 
