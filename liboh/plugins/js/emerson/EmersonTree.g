@@ -173,7 +173,6 @@ functionBody
 // statements
 statement
     : noOpStatement
-    | msgRecvStatement    
     | msgSendStatement
     | statementBlock
     | variableStatement
@@ -187,7 +186,6 @@ statement
     | switchStatement
     | labelledStatement
     | throwStatement
-    | whenStatement
     | tryStatement
     ;   
 
@@ -589,70 +587,7 @@ throwStatement
        )
     ;
 
-whenStatement
-    : ^(WHEN
-        {
-            APP(" util.create_when( ");
-            insideWhenPred = true;
-            APP(" [ util.create_quoted('");
-        }
-        whenPred
-        {
-            //FIXME: potential problem if last statement in array is
-            //dollar syntax.
-            APP("')],\n");
 
-            insideWhenPred = false;
-            //open function for callback
-            APP("function(){ ");
-              
-        }
-        functionBody
-        {
-            //close function for callback
-            APP(" }");
-            //close create_when
-            APP(");");
-        }
-    )
-    ;
-
-    
-whenPred
-    : ^(WHEN_PRED
-        expression
-    )
-    ;
-
-whenCheckedListFirst
-    : ^(WHEN_CHECKED_LIST_FIRST
-        {
-        }
-        expression
-        {
-            //expression will automatically fill in correct values here
-        }
-        (whenCheckedListSubsequent
-        {
-        })?
-    )
-    ;    
-
-
-whenCheckedListSubsequent
-    : ^(WHEN_CHECKED_LIST_SUBSEQUENT
-        {
-            APP(",");
-        }
-        expression
-        {
-            //expression will automatically fill in correct values here
-        }
-        (whenCheckedListSubsequent
-        {
-        })*
-        )
-    ;
         
 
 tryStatement
@@ -950,42 +885,42 @@ scope
                 APP(" ");
             }
             conditionalExpression
-            //expression
-						 	
            )
           ;
-	
-assignmentExpressionNoIn
 
+
+          
+assignmentExpressionNoIn
 scope
 {
   const char* op;
 }
-	: ^(COND_EXPR_NOIN conditionalExpressionNoIn)
- | ^(
-	    (
-					ASSIGN               { $assignmentExpressionNoIn::op = " = ";    }
-					|MULT_ASSIGN         { $assignmentExpressionNoIn::op = " *= ";  }
-					|DIV_ASSIGN          { $assignmentExpressionNoIn::op = " /= ";  }
-					| MOD_ASSIGN         { $assignmentExpressionNoIn::op = " \%= ";  }
-					| ADD_ASSIGN         { $assignmentExpressionNoIn::op = " += ";  } 
-					| SUB_ASSIGN         { $assignmentExpressionNoIn::op = " -= ";  } 
-					|AND_ASSIGN          { $assignmentExpressionNoIn::op = " &= "; }
-					|EXP_ASSIGN          { $assignmentExpressionNoIn::op  = " ^= "; }
-					|OR_ASSIGN           { $assignmentExpressionNoIn::op = " |= "; } 
-					)
-     
-					leftHandSideExpression
-     {
-					  APP(" ");
-					  APP($assignmentExpressionNoIn::op);
-					  APP(" ");
-					}
+        : ^(COND_EXPR_NOIN conditionalExpressionNoIn)
+        | ^(
+          (
+            ASSIGN        { $assignmentExpressionNoIn::op = " = ";    }
+            | MULT_ASSIGN { $assignmentExpressionNoIn::op = " *= ";   }
+            | DIV_ASSIGN  { $assignmentExpressionNoIn::op = " /= ";   }
+            | MOD_ASSIGN  { $assignmentExpressionNoIn::op = " \%= ";  }
+            | ADD_ASSIGN  { $assignmentExpressionNoIn::op = " += ";   } 
+            | SUB_ASSIGN  { $assignmentExpressionNoIn::op = " -= ";   } 
+            | AND_ASSIGN  { $assignmentExpressionNoIn::op = " &= ";   }
+            | EXP_ASSIGN  { $assignmentExpressionNoIn::op  = " ^= ";  }
+            | OR_ASSIGN   { $assignmentExpressionNoIn::op = " |= ";   } 
+           )
+           
+           leftHandSideExpression
+           {                                  
+                 APP(" ");
+                 APP($assignmentExpressionNoIn::op);
+                 APP(" ");
+           }
 
-					conditionalExpressionNoIn
-   )
-	;
-	
+           conditionalExpressionNoIn
+           )
+       ;
+
+       
 leftHandSideExpression
 	: callExpression
 	| newExpression
@@ -995,8 +930,8 @@ newExpression
 	: memberExpression
 	| ^( NEW newExpression)
 	;
-	
-
+        
+        
 propertyReferenceSuffix1
 : Identifier { APP((const char*)$Identifier.text->chars);} 
 ;
@@ -1117,11 +1052,13 @@ ternaryExpressionNoIn
 conditionalExpression
 	: ternaryExpression
         | logicalORExpression
+        | msgRecvStatement        
 	;
 
 conditionalExpressionNoIn
 	: ternaryExpressionNoIn
         | logicalORExpressionNoIn
+        | msgRecvStatement        
 	;        
 
 

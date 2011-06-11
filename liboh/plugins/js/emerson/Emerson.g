@@ -167,8 +167,7 @@ functionBody
 // statements
 statement
 	: noOpStatement
-        | (msgRecvStatement) => msgRecvStatement
-      	| (msgSendStatement) => msgSendStatement    
+      	| msgSendStatement
         | statementBlock
 	| variableStatement
 	| emptyStatement
@@ -182,7 +181,6 @@ statement
        	| switchStatement   
 	| labelledStatement
 	| throwStatement
-        | whenStatement
 	| tryStatement
 	;
 	
@@ -236,24 +234,7 @@ expressionStatement
 	: expression (LTERM | ';') -> expression
 	;
 
-whenStatement
-//    : 'when' LTERM* '(' LTERM* expression LTERM* ')' LTERM* 'check' whenCheckedListFirst LTERM* s1=statement -> ^(WHEN expression whenCheckedListFirst $s1)
-    : 'when' LTERM* '(' LTERM* whenPred LTERM* ')' LTERM* functionBody -> ^(WHEN whenPred functionBody)
-    ;
 
-
-//note: right now, this rule is very simple: it just takes in an expression.
-whenPred
-    : expression -> ^(WHEN_PRED expression)
-    ;
-
-whenCheckedListFirst
-    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)? ->    ^(WHEN_CHECKED_LIST_FIRST $s1 $s2?)
-    ;
-
-whenCheckedListSubsequent
-    : s1=expression LTERM* (',' LTERM* s2=whenCheckedListSubsequent)* -> ^(WHEN_CHECKED_LIST_SUBSEQUENT $s1 $s2*)
-    ;
 
 
 ifStatement
@@ -387,19 +368,20 @@ expression
 	
 expressionNoIn
         : assignmentExpressionNoIn  -> ^(EXPR_LIST assignmentExpressionNoIn)
-        | conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)    
+        | conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
         ;
 
-//lkjs;
+
 assignmentExpression
         : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpression ->  ^(assignmentOperator  leftHandSideExpression conditionalExpression)
         ;
-	
+        
 assignmentExpressionNoIn
-        : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression conditionalExpressionNoIn ) 
+        : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression conditionalExpressionNoIn )
         ;
 
-
+        
+        
 leftHandSideExpression
 	: callExpression -> callExpression
 	| newExpression -> newExpression
@@ -472,16 +454,18 @@ ternaryExpressionNoIn
         : logicalORExpressionNoIn LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP logicalORExpressionNoIn $expr1 $expr2)
         ;
 
-
+//lkjs;
 conditionalExpression
 	: ternaryExpression
-        | logicalORExpression -> logicalORExpression 
+        | logicalORExpression -> logicalORExpression
+        | msgRecvStatement        
 	;
 
-
+//lkjs;
 conditionalExpressionNoIn
 	: ternaryExpressionNoIn
         | logicalORExpressionNoIn -> logicalORExpressionNoIn
+        | msgRecvStatement        
 	;
 
 
