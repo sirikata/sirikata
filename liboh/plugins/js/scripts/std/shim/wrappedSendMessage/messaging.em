@@ -211,9 +211,6 @@ if (typeof(std.messaging) != 'undefined')
             if (typeof(noRespFunc) != 'function')
                 throw 'Error: Third arg in response array must be a function';
         }
-
-        if (mrs.oldSeqNo != null)
-            mrs.oldSeqNo +=1;
         
         return std.messaging.sendMessage(mrs.mrp.msg, mrs.mrp.receiver,mrs.sender,respFunc,timeToWait,noRespFunc, mrs.mrp.streamID);
     }
@@ -416,21 +413,10 @@ if (typeof(std.messaging) != 'undefined')
         var senderString = sender.toString();
         var seqNo = msg.seqNo;
 
-        system.print('\nDEBUG: sending a message with seqNo: ' + seqNo.toString() + '\n\n');
         
         var wrapOnResp = function(msgRec,sndr)
         {
             cancelOpenHandler(recString,senderString,seqNo);
-            
-            //calling makeReply generates a new MessageReceiverSender
-            //object.  Can use this object to send additional
-            //messages.
-            // msgRec.makeReply = function(newMsg)
-            // {
-            //     var mrp = new MessageReceiverPair(newMsg,sndr,streamID);
-            //     return new std.messaging.MessageReceiverSender(system.self,mrp);
-            // };
-            
             onResp(msgRec,sndr);
         };
 
@@ -440,7 +426,7 @@ if (typeof(std.messaging) != 'undefined')
             onNoResp();
         };
         
-        var respHandler    = system.registerHandler(wrapOnResp,{'seqNo': msg.seqNo+1: }, receiver );
+        var respHandler    = system.registerHandler(wrapOnResp,[{'seqNo': msg.seqNo+1: }, {'streamID':streamID:}], receiver );
         var onNoRespTimeout = null;
         if (timeToWait != null)
             onNoRespTimeout = system.timeout(timeToWait,wrapOnNoResp);
