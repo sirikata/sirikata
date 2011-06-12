@@ -148,24 +148,52 @@ if (typeof(std.messaging) != 'undefined')
         return MessageReceiverSender(sender,mrp);
     };
 
-    
+    lkjs;
     /**
-     presence : mrp;
-     returns this object
-     (note: can use msg>> recevier to construct mrp);
+     a : b >> c
+
+     @param {presence} a
+     @param {MessageReceiver} b
+     @param {Array} c
+
+     @return {ClearableObject}
      
-     @param {presence} sender: presence sending the message from.
-     @param {MessageReceiverPair} mrp.  The paired message to send and
-     receiver to send that message to.
+     -------
+     @param {presence} a
+     @param {object} b (message)
+     @param {visible} c (to send message to)
+
+     @return {MessageReceiverSender}
+     
      */
-    std.messaging.MessageReceiverSender = function(sender,mrp)
+    std.messaging.parseTriple = function(a,b,c)
     {
-        if (!(checkIsPresence(sender) && checkIsMessageReceiverPair(mrp)))
-            throw 'Error constructing MessageReceiverSender object.  Requires sender to be presence and mrp to be a messagereceiverpair object.';
+        //first case in above docs
+        if (checkIsMessageReceiverPair(b))
+            return std.messaging.sendSyntax(std.messaging.MessageReceiverSender(a, b), c);
+
+        return std.messaging.MessageReceiverSender(a, std.messaging.MessageReceiverPair(b,c));
         
-        this.mrp = mrp;
-        this.sender = sender;
     };
+
+    
+    // /**
+    //  presence : mrp;
+    //  returns this object
+    //  (note: can use msg>> recevier to construct mrp);
+     
+    //  @param {presence} sender: presence sending the message from.
+    //  @param {MessageReceiverPair} mrp.  The paired message to send and
+    //  receiver to send that message to.
+    //  */
+    // std.messaging.MessageReceiverSender = function(sender,mrp)
+    // {
+    //     if (!(checkIsPresence(sender) && checkIsMessageReceiverPair(mrp)))
+    //         throw 'Error constructing MessageReceiverSender object.  Requires sender to be presence and mrp to be a messagereceiverpair object.';
+        
+    //     this.mrp = mrp;
+    //     this.sender = sender;
+    // };
 
     /**
      Turns message receiver pair into a message receiver sender object

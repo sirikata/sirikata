@@ -62,6 +62,7 @@ std.graphics.Chat = system.Class.extend(
         // Send a message to all current members of the chat group
         sendAll: function(msg) {
             for(var i = 0; i < this._chat_group.length; i++) {
+                
                 msg -> this._chat_group[i];
             }
         },

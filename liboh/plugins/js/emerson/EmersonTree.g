@@ -173,7 +173,6 @@ functionBody
 // statements
 statement
     : noOpStatement
-    | msgSendStatement
     | statementBlock
     | variableStatement
     | expressionStatement
@@ -184,7 +183,6 @@ statement
     | returnStatement
     | withStatement
     | switchStatement
-    | labelledStatement
     | throwStatement
     | tryStatement
     ;   
@@ -484,16 +482,6 @@ withStatement
     )
     ;
 
-labelledStatement
-    : ^( LABEL 
-        Identifier 
-        {
-            APP((const char*)$Identifier.text->chars);
-            APP(" : \n");
-        }
-        statement
-        )
-	;
 	
 switchStatement
     : ^(
@@ -641,123 +629,6 @@ finallyBlock
            )
         ;
 
-msgSendStatement
-        : ^(MESSAGE_SEND_WITHOUT_SENDER
-            {
-                APP("system.sendMessage(system.self," );
-            }
-            leftHandSideExpression
-            {
-                //message to send
-                APP(",");
-            }
-            leftHandSideExpression
-            {
-                //recipient
-            }
-            (
-               {
-                    //optional what to do in case of failure
-                    APP(",");
-               }
-               memberExpression
-            )*
-            {
-                APP(" )");
-            }
-          )
-       |  ^(MESSAGE_SEND_WITH_SENDER
-            {
-                APP("system.sendMessage(");
-            }
-            leftHandSideExpression
-            {
-                //sender
-                APP(",");
-            }
-                        leftHandSideExpression
-            {
-                //message to send
-                APP(",");
-            }
-            leftHandSideExpression
-            {
-                //recipient
-            }
-            (
-               {
-                    //optional what to do in case of failure
-                    APP(",");
-               }
-               memberExpression
-            )*
-            {
-                APP(" )");
-            }
-          )
-      ;
-
-// msgSendStatement
-// scope{
-//         pANTLR3_STRING prev_program_string;
-// 	unsigned int  prev_program_len;
-// 	char* firstExprString;
-// 	char* secondExprString;
-//         pANTLR3_STRING init_program_string;
-
-// }
-//  : ^(
-//      MESSAGE_SEND 
-//      /* A little hack for the things to work */
-//      {
-//           /* Save the program string here */
-//           $msgSendStatement::prev_program_string = program_string;
-//           /* length of the program string */
-//           $msgSendStatement::prev_program_len = $msgSendStatement::prev_program_string->len;
-//           pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
-//           $msgSendStatement::init_program_string = factory->newRaw(factory);
-//           $msgSendStatement::init_program_string->setS($msgSendStatement::init_program_string, program_string);
-//       }
-//       leftHandSideExpression 
-//       {
-//           unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-//           unsigned int  new_program_len = program_string->len;
-//           $msgSendStatement::firstExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-//           memset($msgSendStatement::firstExprString, 0, (new_program_len - prev_program_len + 1));
-//           memcpy($msgSendStatement::firstExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len) );
-						 
-//           $msgSendStatement::prev_program_len = new_program_len; 
-//           //APP(".sendMessage( ");
-//       }
-//       leftHandSideExpression 
-//       {
-//           unsigned int prev_program_len = $msgSendStatement::prev_program_len;
-//           unsigned int new_program_len = program_string->len;
-//           $msgSendStatement::secondExprString = (char*)(malloc(new_program_len - prev_program_len + 1) );
-//           memset($msgSendStatement::secondExprString, 0, new_program_len - prev_program_len + 1);
-//           memcpy($msgSendStatement::secondExprString, (char*)(program_string->chars) + prev_program_len, (new_program_len - prev_program_len));
-
-//           pANTLR3_STRING init_program_string = $msgSendStatement::init_program_string;
-//           init_program_string->append(init_program_string, $msgSendStatement::secondExprString);
-//           init_program_string->append(init_program_string, ".sendMessage( ");
-//           init_program_string->append(init_program_string, $msgSendStatement::firstExprString);
-
-//           program_string->setS(program_string, init_program_string); 
-
-//        }      				
-//        (
-//           {
-//             APP(", ");
-//           }
-//           memberExpression
-//           {
-//           }	
-//        )?
-//        {
-//           APP(" ) ");
-//        }
-//        )
-//        ;
 
 memAndCallExpression
 : memberExpression
@@ -847,9 +718,10 @@ finallyClause
 				)
 	;
 
+
 // expressions
 expression
-	: ^(EXPR_LIST assignmentExpression)
+        : ^(EXPR_LIST assignmentExpression)
         | ^(COND_EXPR conditionalExpression)
 	;
 	
@@ -1049,17 +921,171 @@ ternaryExpressionNoIn
            )
         ;
 
+
+
+msgSenderConstruct
+        :  logicalORExpression
+        | ^(SENDER_MRP
+            { 
+                APP("std.messaging.sendSyntax(");
+            }
+            msgSenderConstruct
+            {
+                APP(",");
+            }
+            logicalORExpression 
+            {
+                APP(")");
+            }
+           )
+        | ^(SENDER_CREATE_MRP
+           {
+              APP("std.messaging.parseTriple(");
+           }
+           msgSenderConstruct
+           {
+                APP(",");
+           }
+           logicalORExpression 
+           {
+                APP(",");
+           }
+           logicalORExpression 
+           {
+                APP(")");
+           }
+          )
+       | ^(SENDER_CREATE_MRP_AND_SEND
+           {
+              // p : a >> b >> c;
+              // sendSyntax(  messageReceiverSender(p, sendSyntax(a,b) )  , c)
+              APP("std.messaging.sendSyntax(");
+              APP("std.messaging.MessageReceiverSender(");
+           }
+           msgSenderConstruct
+           {
+              APP(",");
+              APP(" std.messaging.sendSyntax( ");
+           }
+           logicalORExpression
+           {
+              APP(",");
+           }
+           logicalORExpression
+           {
+              APP(")"); //closes internal sendSyntax
+              APP(")"); //closes internal messageReceiverSender
+              APP(",");
+           }
+           logicalORExpression
+           {
+              APP(")"); //closes external sendSyntax
+           }
+          )
+       | ^(SEND_CREATE_MRP
+           {
+              APP("std.messaging.sendSyntax(");
+           }
+           msgSenderConstruct
+           {
+              APP(",");
+           }
+           logicalORExpression
+           {
+              APP(")");
+           }
+          )
+       ;
+
+msgSenderConstructNoIn
+        :  logicalORExpressionNoIn
+        | ^(SENDER_MRP_NO_IN
+            { 
+                APP("std.messaging.sendSyntax(");
+            }
+            msgSenderConstructNoIn
+            {
+                APP(",");
+            }
+            logicalORExpressionNoIn
+            {
+                APP(")");
+            }
+           )
+        | ^(SENDER_CREATE_MRP_NO_IN
+           {
+              APP("std.messaging.parseTriple(");
+           }
+           msgSenderConstructNoIn
+           {
+                APP(",");
+           }
+           logicalORExpressionNoIn
+           {
+                APP(",");
+           }
+           logicalORExpressionNoIn
+           {
+                APP(")");
+           }
+          )
+       | ^(SENDER_CREATE_MRP_AND_SEND_NO_IN
+           {
+              // p : a >> b >> c;
+              // sendSyntax(  messageReceiverSender(p, sendSyntax(a,b) )  , c)
+              APP("std.messaging.sendSyntax(");
+              APP("std.messaging.MessageReceiverSender(");
+           }
+           msgSenderConstructNoIn
+           {
+              APP(",");
+              APP(" std.messaging.sendSyntax( ");
+           }
+           logicalORExpressionNoIn
+           {
+              APP(",");
+           }
+           logicalORExpressionNoIn
+           {
+              APP(")"); //closes internal sendSyntax
+              APP(")"); //closes internal messageReceiverSender
+              APP(",");
+           }
+           logicalORExpressionNoIn
+           {
+              APP(")"); //closes external sendSyntax
+           }
+          )
+       | ^(SEND_CREATE_MRP_NO_IN
+           {
+              APP("std.messaging.sendSyntax(");
+           }
+           msgSenderConstructNoIn
+           {
+              APP(",");
+           }
+           logicalORExpressionNoIn
+           {
+              APP(")");
+           }
+          )
+       ;
+
+
+       
+        
 conditionalExpression
 	: ternaryExpression
-        | logicalORExpression
-        | msgRecvStatement        
+        | msgRecvStatement
+        | msgSenderConstruct
 	;
 
+        
 conditionalExpressionNoIn
 	: ternaryExpressionNoIn
-        | logicalORExpressionNoIn
-        | msgRecvStatement        
-	;        
+        | msgSenderConstructNoIn
+        | msgRecvStatement
+        ;
 
 
 logicalANDExpression

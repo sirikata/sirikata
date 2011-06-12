@@ -109,9 +109,6 @@ tokens
     COND_EXPR_NOIN;
     TERNARYOP;
     EMPTY_FUNC_BODY;
-    MESSAGE_SEND;
-    MESSAGE_SEND_WITHOUT_SENDER;
-    MESSAGE_SEND_WITH_SENDER;
     MESSAGE_RECV;
     PAREN;
     PATTERN_LITERAL;
@@ -121,7 +118,17 @@ tokens
     VALUE;
     PROTO;
     VERBATIM;
+    SENDER_MRP;
+    SENDER_CREATE_MRP;
+    SENDER_CREATE_MRP_AND_SEND;
+    SEND_CREATE_MRP;
+    SENDER_MRP_NO_IN;
+    SENDER_CREATE_MRP_NO_IN;
+    SENDER_CREATE_MRP_AND_SEND_NO_IN;
+    SEND_CREATE_MRP_NO_IN;
 }
+        
+
 
 @header
 {
@@ -167,7 +174,6 @@ functionBody
 // statements
 statement
 	: noOpStatement
-      	| msgSendStatement
         | statementBlock
 	| variableStatement
 	| emptyStatement
@@ -179,7 +185,6 @@ statement
 	| returnStatement
 	| withStatement
        	| switchStatement   
-	| labelledStatement
 	| throwStatement
 	| tryStatement
 	;
@@ -235,8 +240,6 @@ expressionStatement
 	;
 
 
-
-
 ifStatement
     : 'if' LTERM* '(' LTERM* expression LTERM* ')' LTERM* s1=statement (LTERM* 'else' LTERM* s2=statement)? -> ^(IF expression $s1 $s2?)
     ;
@@ -290,9 +293,6 @@ withStatement
 	: 'with' LTERM* '(' LTERM* expression LTERM* ')' LTERM* statement -> ^(WITH expression statement)
 	;
 
-labelledStatement
-	: Identifier LTERM* ':' LTERM* statement -> ^( LABEL Identifier statement)
-	;
 	
 switchStatement
 	: 'switch' LTERM* '(' LTERM* expression LTERM* ')' LTERM* caseBlock -> ^(SWITCH expression caseBlock)
@@ -341,11 +341,6 @@ finallyBlock
         : 'finally' LTERM*  statementBlock  -> ^(FINALLY statementBlock)
         ;
 
-
-msgSendStatement
-        : sender=leftHandSideExpression LTERM* ':' LTERM*  e1=leftHandSideExpression LTERM* '->' e2=leftHandSideExpression LTERM* ( '->' LTERM* memberExpression LTERM*)* ';'    -> ^(MESSAGE_SEND_WITH_SENDER $sender $e1 $e2 memberExpression*)
-        | e1=leftHandSideExpression LTERM* '->' e2=leftHandSideExpression LTERM* ( '->' LTERM* memberExpression LTERM*)* ';'    -> ^(MESSAGE_SEND_WITHOUT_SENDER $e1 $e2 memberExpression*) 
-        ;
         
 
 memAndCallExpression
@@ -365,7 +360,7 @@ expression
         : assignmentExpression ->  ^(EXPR_LIST assignmentExpression)
         | conditionalExpression -> ^(COND_EXPR conditionalExpression)
         ;
-	
+
 expressionNoIn
         : assignmentExpressionNoIn  -> ^(EXPR_LIST assignmentExpressionNoIn)
         | conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
@@ -457,18 +452,40 @@ ternaryExpressionNoIn
 //lkjs;
 conditionalExpression
 	: ternaryExpression
-        | logicalORExpression -> logicalORExpression
-        | msgRecvStatement        
+        | msgRecvStatement
+        | msgSenderConstruct -> msgSenderConstruct
 	;
 
+        
 //lkjs;
 conditionalExpressionNoIn
 	: ternaryExpressionNoIn
-        | logicalORExpressionNoIn -> logicalORExpressionNoIn
+        | msgSenderConstructNoIn -> msgSenderConstructNoIn
+//        | logicalORExpressionNoIn -> logicalORExpressionNoIn
         | msgRecvStatement        
 	;
 
 
+msgSenderConstruct
+        : (e1=logicalORExpression -> logicalORExpression)
+          ( LTERM* ':' LTERM* e2=logicalORExpression LTERM* '>>' LTERM* e3=logicalORExpression LTERM* '>>' LTERM* e4=logicalORExpression -> ^(SENDER_CREATE_MRP_AND_SEND $msgSenderConstruct $e2 $e3 $e4))?
+          (LTERM* ':' LTERM* e5=logicalORExpression LTERM* '>>' LTERM* e6=logicalORExpression -> ^(SENDER_CREATE_MRP $msgSenderConstruct $e5 $e6) )?
+          (LTERM* ':' LTERM* e7=logicalORExpression   -> ^(SENDER_MRP $msgSenderConstruct $e7 ) )?
+          (LTERM* '>>' e8=logicalORExpression ->^(SEND_CREATE_MRP $msgSenderConstruct $e8) )?
+        ;
+
+
+msgSenderConstructNoIn
+        : (e1=logicalORExpressionNoIn -> logicalORExpressionNoIn)
+          ( LTERM* ':' LTERM* e2=logicalORExpressionNoIn LTERM* '>>' LTERM* e3=logicalORExpressionNoIn LTERM* '>>' LTERM* e4=logicalORExpressionNoIn -> ^(SENDER_CREATE_MRP_AND_SEND_NO_IN $msgSenderConstructNoIn $e2 $e3 $e4))?
+          (LTERM* ':' LTERM* e5=logicalORExpressionNoIn LTERM* '>>' LTERM* e6=logicalORExpressionNoIn -> ^(SENDER_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e5 $e6) )?
+          (LTERM* ':' LTERM* e7=logicalORExpressionNoIn   -> ^(SENDER_MRP_NO_IN $msgSenderConstructNoIn $e7 ) )?
+          (LTERM* '>>' e8=logicalORExpressionNoIn ->^(SEND_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e8) )?
+        ;
+
+        
+
+        
 logicalORExpression
 	: (logicalANDExpression -> logicalANDExpression)(LTERM* '||' LTERM* logicalANDExpression -> ^(OR $logicalORExpression logicalANDExpression) )*
 	;
