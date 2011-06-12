@@ -100,7 +100,8 @@ function() {
                 request : 'script',
                 script : val
             };
-            request -> target;
+
+            request >> target >> [];
         }
     };
 

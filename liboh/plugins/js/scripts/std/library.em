@@ -51,7 +51,7 @@ function broadcast(msg)
     if(addressable[i] != Self)
     {
       print("Sedning to " + addressable[i]);
-      msg -> addressable[i];
+      msg >> addressable[i] >>[];
     }
   }
 

@@ -173,6 +173,7 @@ functionBody
 // statements
 statement
     : noOpStatement
+    | switchStatement
     | statementBlock
     | variableStatement
     | expressionStatement
@@ -182,7 +183,6 @@ statement
     | breakStatement
     | returnStatement
     | withStatement
-    | switchStatement
     | throwStatement
     | tryStatement
     ;   
@@ -501,9 +501,6 @@ switchStatement
        )
 	;
 	
-// caseBlock
-//     : (caseClause)* (defaultClause*)? (caseClause*)?
-//     ;
 
 caseBlock
     : ^(CASE_BLOCK
@@ -515,12 +512,55 @@ caseBlock
     ;
 
     
+// caseClause
+//     : ^( CASE
+//         {
+//             APP("case ");
+//         }
+//         expression
+//         {
+//             APP(":");
+//         }
+//         statementList?
+//         caseClause?
+//         )
+//     | ^( CASE
+//         {
+//             APP("case ");
+//         }
+//         expression
+//         {
+//             APP(":");
+//         }
+//         statementList?
+//         defaultClause
+//        )
+//     ;
+
+
+
+// caseClauseSeenDefault
+//     : ^( CASE
+//         {
+//             APP("case ");
+//         }
+//         expression
+//         {
+//             APP(":");
+//         }
+//         statementList?
+//         caseClauseSeenDefault?
+//         )
+//     ;
+
+
+
 caseClause
     : ^( CASE
         {
             APP("case ");
         }
-        expression
+        ternaryExpression
         {
             APP(":");
         }
@@ -531,7 +571,7 @@ caseClause
         {
             APP("case ");
         }
-        expression
+        ternaryExpression
         {
             APP(":");
         }
@@ -539,7 +579,24 @@ caseClause
         defaultClause
        )
     ;
-	
+
+
+
+caseClauseSeenDefault
+    : ^( CASE
+        {
+            APP("case ");
+        }
+        ternaryExpression
+        {
+            APP(":");
+        }
+        statementList?
+        caseClauseSeenDefault?
+        )
+    ;
+
+    
 defaultClause
     :^(DEFAULT
         {
@@ -548,20 +605,6 @@ defaultClause
         statementList?
         caseClauseSeenDefault?
       )
-    ;
-
-caseClauseSeenDefault
-    : ^( CASE
-        {
-            APP("case ");
-        }
-        expression
-        {
-            APP(":");
-        }
-        statementList?
-        caseClauseSeenDefault?
-        )
     ;
 
 
@@ -635,61 +678,6 @@ memAndCallExpression
 | callExpression 
 ;
 
-msgRecvStatement
- : ^(
-      MESSAGE_RECV
-      {
-        APP("system.registerHandler( ");
-      }
-      memAndCallExpression
-      {
-        APP(", ");
-      } 
-      leftHandSideExpression
-
-    )
-
-    {
-      APP(", null) ");  // No sender case
-    }
-   
- |^(
-    MESSAGE_RECV
-    {
-      APP("system.registerHandler( ");
-    }
-    memAndCallExpression
-    {
-            APP(", ");
-    } 
-    leftHandSideExpression
-    {
-      APP(", ");
-    }
-    memAndCallExpression
-   )
-   {
-      APP(") "); // Case with sender
-   }
-
- |^(
-      MESSAGE_RECV
-      {
-        APP("system.registerHandler( ");
-      }
-      callExpression
-      {
-        APP(", ");
-      } 
-      leftHandSideExpression
-
-    )
-
-    {
-      APP(", null) ");  // No sender case
-    }
-
-;
 
 catchClause
 	: ^(CATCH 
@@ -721,15 +709,17 @@ finallyClause
 
 // expressions
 expression
-        : ^(EXPR_LIST assignmentExpression)
-        | ^(COND_EXPR conditionalExpression)
+        : ^(EXPR assignmentExpression)
+//        | ^(COND_EXPR conditionalExpression)
 	;
 	
 expressionNoIn
-	: ^(EXPR_LIST assignmentExpressionNoIn)
-        | ^(COND_EXPR_NOIN conditionalExpressionNoIn)
+	: ^(EXPR_NO_IN  assignmentExpressionNoIn)
+//        | ^(COND_EXPR_NOIN conditionalExpressionNoIn)
 	;
-	
+//lkjs;	
+
+//lkjs;
 
 assignmentExpression
 scope
@@ -737,7 +727,8 @@ scope
   const char* op;
 }
 
-        : ^(
+        : conditionalExpression
+        | ^(
             (
                 ASSIGN                { $assignmentExpression::op = " = ";    }
                 | MULT_ASSIGN         { $assignmentExpression::op = " *= ";  }
@@ -756,7 +747,7 @@ scope
                 APP($assignmentExpression::op);
                 APP(" ");
             }
-            conditionalExpression
+            assignmentExpression
            )
           ;
 
@@ -767,7 +758,7 @@ scope
 {
   const char* op;
 }
-        : ^(COND_EXPR_NOIN conditionalExpressionNoIn)
+        : conditionalExpressionNoIn
         | ^(
           (
             ASSIGN        { $assignmentExpressionNoIn::op = " = ";    }
@@ -788,7 +779,7 @@ scope
                  APP(" ");
            }
 
-           conditionalExpressionNoIn
+           assignmentExpressionNoIn
            )
        ;
 
@@ -879,52 +870,51 @@ assignmentOperator
 	: ASSIGN|MULT_ASSIGN|DIV_ASSIGN | MOD_ASSIGN| ADD_ASSIGN | SUB_ASSIGN|AND_ASSIGN|EXP_ASSIGN|OR_ASSIGN
 	;
 
-
-
-ternaryExpression
-        : ^(TERNARYOP
-            {
-                APP( " ( ");
-            }
-            logicalORExpression
-            {
-                APP( " ) ? ( ");
-            }
-            expression
-            {
-                APP(" ) : ( ");
-            }
-            expression
-            {
-                APP(" ) " );
-            }
-           )
+conditionalExpressionNoIn
+        : msgRecvConstructNoIn
         ;
 
-ternaryExpressionNoIn
-        : ^(TERNARYOP
+conditionalExpression
+        : msgRecvConstruct
+        ;
+        
+msgRecvConstruct
+        : msgSenderConstruct
+        | ^(MESSAGE_RECV_AND_SENDER
             {
-                APP( " ( ");
+               APP("system.registerHandler( ");
             }
-            logicalORExpressionNoIn
+            msgRecvConstruct
             {
-                APP( " ) ? ( ");
+                APP(",");
             }
-            expressionNoIn
+            msgSenderConstruct
             {
-                APP(" ) : ( ");
+                APP(",");
             }
-            expressionNoIn
+            msgSenderConstruct
             {
-                APP(" ) " );
+                APP(")");
             }
            )
-        ;
-
+        | ^(MESSAGE_RECV_NO_SENDER
+            {
+               APP("system.registerHandler( ");
+            }
+            msgRecvConstruct
+            {
+                APP(",");
+            }
+            msgSenderConstruct
+            {
+                APP(", null)");
+            }
+           )
+         ;
 
 
 msgSenderConstruct
-        :  logicalORExpression
+        :  ternaryExpression
         | ^(SENDER_MRP
             { 
                 APP("std.messaging.sendSyntax(");
@@ -933,7 +923,7 @@ msgSenderConstruct
             {
                 APP(",");
             }
-            logicalORExpression 
+            ternaryExpression 
             {
                 APP(")");
             }
@@ -946,11 +936,11 @@ msgSenderConstruct
            {
                 APP(",");
            }
-           logicalORExpression 
+           ternaryExpression 
            {
                 APP(",");
            }
-           logicalORExpression 
+           ternaryExpression 
            {
                 APP(")");
            }
@@ -967,17 +957,17 @@ msgSenderConstruct
               APP(",");
               APP(" std.messaging.sendSyntax( ");
            }
-           logicalORExpression
+           ternaryExpression
            {
               APP(",");
            }
-           logicalORExpression
+           ternaryExpression
            {
               APP(")"); //closes internal sendSyntax
               APP(")"); //closes internal messageReceiverSender
               APP(",");
            }
-           logicalORExpression
+           ternaryExpression
            {
               APP(")"); //closes external sendSyntax
            }
@@ -990,15 +980,76 @@ msgSenderConstruct
            {
               APP(",");
            }
-           logicalORExpression
+           ternaryExpression
            {
               APP(")");
            }
           )
        ;
 
+
+         
+ternaryExpression
+        : logicalORExpression
+        | ^(TERNARYOP
+            {
+                APP( " ( ");
+            }
+            ternaryExpression
+            {
+                APP( " ) ? ( ");
+            }
+            logicalORExpression
+            {
+                APP(" ) : ( ");
+            }
+            logicalORExpression
+            {
+                APP(" ) " );
+            }
+           )
+        ;
+
+         
+msgRecvConstructNoIn
+        : msgSenderConstructNoIn
+        | ^(MESSAGE_RECV_AND_SENDER_NO_IN
+            {
+               APP("system.registerHandler( ");
+            }
+            msgRecvConstructNoIn
+            {
+                APP(",");
+            }
+            msgSenderConstructNoIn
+            {
+                APP(",");
+            }
+            msgSenderConstructNoIn
+            {
+                APP(")");
+            }
+           )
+        | ^(MESSAGE_RECV_NO_SENDER_NO_IN
+            {
+               APP("system.registerHandler( ");
+            }
+            msgRecvConstructNoIn
+            {
+                APP(",");
+            }
+            msgSenderConstructNoIn
+            {
+                APP(", null)");
+            }
+           )
+         ;
+
+         
+
+
 msgSenderConstructNoIn
-        :  logicalORExpressionNoIn
+        :  ternaryExpressionNoIn
         | ^(SENDER_MRP_NO_IN
             { 
                 APP("std.messaging.sendSyntax(");
@@ -1007,7 +1058,7 @@ msgSenderConstructNoIn
             {
                 APP(",");
             }
-            logicalORExpressionNoIn
+            ternaryExpressionNoIn
             {
                 APP(")");
             }
@@ -1020,11 +1071,11 @@ msgSenderConstructNoIn
            {
                 APP(",");
            }
-           logicalORExpressionNoIn
+           ternaryExpressionNoIn
            {
                 APP(",");
            }
-           logicalORExpressionNoIn
+           ternaryExpressionNoIn
            {
                 APP(")");
            }
@@ -1041,17 +1092,17 @@ msgSenderConstructNoIn
               APP(",");
               APP(" std.messaging.sendSyntax( ");
            }
-           logicalORExpressionNoIn
+           ternaryExpressionNoIn
            {
               APP(",");
            }
-           logicalORExpressionNoIn
+           ternaryExpressionNoIn
            {
               APP(")"); //closes internal sendSyntax
               APP(")"); //closes internal messageReceiverSender
               APP(",");
            }
-           logicalORExpressionNoIn
+           ternaryExpressionNoIn
            {
               APP(")"); //closes external sendSyntax
            }
@@ -1064,7 +1115,7 @@ msgSenderConstructNoIn
            {
               APP(",");
            }
-           logicalORExpressionNoIn
+           ternaryExpressionNoIn
            {
               APP(")");
            }
@@ -1072,20 +1123,28 @@ msgSenderConstructNoIn
        ;
 
 
-       
-        
-conditionalExpression
-	: ternaryExpression
-        | msgRecvStatement
-        | msgSenderConstruct
-	;
-
-        
-conditionalExpressionNoIn
-	: ternaryExpressionNoIn
-        | msgSenderConstructNoIn
-        | msgRecvStatement
+ternaryExpressionNoIn
+        : logicalORExpressionNoIn
+        | ^(TERNARYOP_NO_IN
+            {
+                APP( " ( ");
+            }
+            ternaryExpressionNoIn
+            {
+                APP( " ) ? ( ");
+            }
+            logicalORExpressionNoIn
+            {
+                APP(" ) : ( ");
+            }
+            logicalORExpressionNoIn
+            {
+                APP(" ) " );
+            }
+           )
         ;
+
+
 
 
 logicalANDExpression
@@ -1358,8 +1417,7 @@ vectorLiteral
 
         
 vectorLiteralField
-        : ternaryExpression
-        | additiveExpression    
+        : additiveExpression
         | NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
         | callExpression
         | memberExpression

@@ -63,7 +63,7 @@ std.graphics.Chat = system.Class.extend(
         sendAll: function(msg) {
             for(var i = 0; i < this._chat_group.length; i++) {
                 
-                msg -> this._chat_group[i];
+                msg >> this._chat_group[i] >> [];
             }
         },
 
@@ -100,13 +100,13 @@ std.graphics.Chat = system.Class.extend(
             //also register a callback
             var p = new util.Pattern("protocol", "chat");
             std.core.bind(this.handleNewChatNeighbor, this) << p << new_addr_obj;
-            test_msg -> new_addr_obj;
+            test_msg >> new_addr_obj >> [];
         },
 
         // Reply to probes for what protocols we support.
         onTestMessage: function(msg, sender) {
             var reply = { "protocol": "chat" };
-            reply -> sender;
+            reply >> sender >> [];
         }
 
     }

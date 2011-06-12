@@ -104,12 +104,13 @@ tokens
     FUNC_DECL;
     FUNC_EXPR;
     ARGLIST;
-    EXPR_LIST;
-    COND_EXPR;
-    COND_EXPR_NOIN;
     TERNARYOP;
+    TERNARYOP_NO_IN;         
     EMPTY_FUNC_BODY;
-    MESSAGE_RECV;
+    MESSAGE_RECV_NO_SENDER_NO_IN;
+    MESSAGE_RECV_AND_SENDER_NO_IN;
+    MESSAGE_RECV_NO_SENDER;
+    MESSAGE_RECV_AND_SENDER;
     PAREN;
     PATTERN_LITERAL;
     NAME_VALUE_PROTO;
@@ -117,6 +118,8 @@ tokens
     NAME;
     VALUE;
     PROTO;
+    EXPR;
+    EXPR_NO_IN;
     VERBATIM;
     SENDER_MRP;
     SENDER_CREATE_MRP;
@@ -127,7 +130,6 @@ tokens
     SENDER_CREATE_MRP_AND_SEND_NO_IN;
     SEND_CREATE_MRP_NO_IN;
 }
-        
 
 
 @header
@@ -174,6 +176,7 @@ functionBody
 // statements
 statement
 	: noOpStatement
+        | (switchStatement) => switchStatement
         | statementBlock
 	| variableStatement
 	| emptyStatement
@@ -184,7 +187,6 @@ statement
 	| breakStatement
 	| returnStatement
 	| withStatement
-       	| switchStatement   
 	| throwStatement
 	| tryStatement
 	;
@@ -304,20 +306,24 @@ caseBlock
         |  '{' LTERM* def=defaultClause LTERM* '}' -> ^(CASE_BLOCK $def)
         ;
 
-
+        
+        
 caseClause
-	:'case' LTERM* expression LTERM* ':' LTERM* statementList? LTERM* defaultClause -> ^( CASE expression statementList? defaultClause)
-        | 'case' LTERM* expression LTERM* ':' LTERM* statementList? LTERM* caseClause? -> ^( CASE expression statementList? caseClause?)
+	:'case' LTERM* e1=ternaryExpression LTERM* ':' LTERM* statementList? LTERM* defaultClause -> ^( CASE $e1 statementList? defaultClause)
+        | 'case' LTERM* e1=ternaryExpression LTERM* ':' LTERM* statementList? LTERM* caseClause? -> ^( CASE $e1 statementList? caseClause?)
 	; 
-	
+
 defaultClause
 	: 'default' LTERM* ':' LTERM* statementList? LTERM* caseClauseSeenDefault? -> ^(DEFAULT statementList? caseClauseSeenDefault?)
 	;
-        
+
         
 caseClauseSeenDefault
-        : 'case' LTERM* expression LTERM* ':' LTERM* statementList? LTERM* caseClauseSeenDefault? -> ^( CASE expression statementList? caseClauseSeenDefault?)
+        : 'case' LTERM* e1=ternaryExpression LTERM* ':' LTERM* statementList? LTERM* caseClauseSeenDefault? -> ^( CASE $e1 statementList? caseClauseSeenDefault?)
         ;
+
+        
+        
         
 throwStatement
 	: 'throw' expression (LTERM | ';') -> ^(THROW expression)
@@ -350,29 +356,24 @@ memAndCallExpression
 
         
 
-msgRecvStatement
-        : e1=memAndCallExpression LTERM* '<<' LTERM* e2=leftHandSideExpression (LTERM | ';' ) -> ^(MESSAGE_RECV $e1 $e2)
-        | e1=memAndCallExpression LTERM* '<<' LTERM* e2=leftHandSideExpression LTERM* '<<' e3=memAndCallExpression (LTERM | ';') -> ^(MESSAGE_RECV $e1 $e2 $e3)
-        ;
-
 // expressions
 expression
-        : assignmentExpression ->  ^(EXPR_LIST assignmentExpression)
-        | conditionalExpression -> ^(COND_EXPR conditionalExpression)
+        : assignmentExpression  -> ^(EXPR assignmentExpression)
         ;
 
 expressionNoIn
-        : assignmentExpressionNoIn  -> ^(EXPR_LIST assignmentExpressionNoIn)
-        | conditionalExpressionNoIn -> ^(COND_EXPR_NOIN conditionalExpressionNoIn)
+        : assignmentExpressionNoIn -> ^(EXPR_NO_IN assignmentExpressionNoIn)
         ;
 
 
 assignmentExpression
-        : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpression ->  ^(assignmentOperator  leftHandSideExpression conditionalExpression)
+        : conditionalExpression
+        | leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpression ->  ^(assignmentOperator  leftHandSideExpression assignmentExpression)
         ;
         
 assignmentExpressionNoIn
-        : leftHandSideExpression LTERM* assignmentOperator LTERM* conditionalExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression conditionalExpressionNoIn )
+        : conditionalExpressionNoIn
+        | leftHandSideExpression LTERM* assignmentOperator LTERM* assignmentExpressionNoIn ->  ^(assignmentOperator leftHandSideExpression assignmentExpressionNoIn )
         ;
 
         
@@ -441,50 +442,55 @@ assignmentOperator
 	: '=' -> ^(ASSIGN)| '*=' -> ^(MULT_ASSIGN)| '/=' -> ^(DIV_ASSIGN) | '%=' -> ^(MOD_ASSIGN)| '+=' -> ^(ADD_ASSIGN)| '-=' -> ^(SUB_ASSIGN)|  '&='-> ^(AND_ASSIGN)| '^='-> ^(EXP_ASSIGN) | '|=' -> ^(OR_ASSIGN)
 	;
 
+        
+conditionalExpression
+        : msgRecvConstruct -> msgRecvConstruct
+        ;
+        
+msgRecvConstruct
+        : (msgSenderConstruct -> msgSenderConstruct)
+          ( LTERM* '<<' LTERM* e2=msgSenderConstruct '<<' e3=msgSenderConstruct -> ^(MESSAGE_RECV_AND_SENDER $msgRecvConstruct $e2 $e3))?
+          ( LTERM* '<<' LTERM* e4=msgSenderConstruct -> ^(MESSAGE_RECV_NO_SENDER $msgRecvConstruct $e4 ))?
+        ;
+
+msgSenderConstruct
+        : (e1=ternaryExpression -> ternaryExpression)
+          ( LTERM* '#' LTERM* e2=ternaryExpression LTERM* '>>' LTERM* e3=ternaryExpression LTERM* '>>' LTERM* e4=ternaryExpression -> ^(SENDER_CREATE_MRP_AND_SEND $msgSenderConstruct $e2 $e3 $e4))?
+          (LTERM* '#' LTERM* e5=ternaryExpression LTERM* '>>' LTERM* e6=ternaryExpression -> ^(SENDER_CREATE_MRP $msgSenderConstruct $e5 $e6) )?
+          (LTERM* '#' LTERM* e7=ternaryExpression   -> ^(SENDER_MRP $msgSenderConstruct $e7 ) )?
+          (LTERM* '>>' e8=ternaryExpression ->^(SEND_CREATE_MRP $msgSenderConstruct $e8) )*
+        ;
+
+        
 ternaryExpression
-        : logicalORExpression LTERM* '?' LTERM* expr1=expression LTERM* ':' LTERM* expr2=expression -> ^(TERNARYOP logicalORExpression $expr1 $expr2)
+        : (logicalORExpression -> logicalORExpression) (LTERM* '?' LTERM* expr1=logicalORExpression LTERM* ':' LTERM* expr2=logicalORExpression -> ^(TERNARYOP $ternaryExpression $expr1 $expr2))?
+        ;
+
+
+conditionalExpressionNoIn
+        : msgRecvConstructNoIn
+        ;
+
+        
+msgRecvConstructNoIn
+        : (msgSenderConstructNoIn -> msgSenderConstructNoIn)
+          ( LTERM* '<<' LTERM* e2=msgSenderConstructNoIn '<<' e3=msgSenderConstructNoIn -> ^(MESSAGE_RECV_AND_SENDER_NO_IN $msgRecvConstructNoIn $e2 $e3))?
+          ( e4=msgSenderConstructNoIn LTERM* '<<' LTERM* e5=msgSenderConstructNoIn -> ^(MESSAGE_RECV_NO_SENDER_NO_IN $msgRecvConstructNoIn $e4 $e5 ))?
+        ;
+        
+
+msgSenderConstructNoIn
+        : (e1=ternaryExpressionNoIn -> ternaryExpressionNoIn)
+          ( LTERM* '#' LTERM* e2=ternaryExpressionNoIn LTERM* '>>' LTERM* e3=ternaryExpressionNoIn LTERM* '>>' LTERM* e4=ternaryExpressionNoIn -> ^(SENDER_CREATE_MRP_AND_SEND_NO_IN $msgSenderConstructNoIn $e2 $e3 $e4))?
+          (LTERM* '#' LTERM* e5=ternaryExpressionNoIn LTERM* '>>' LTERM* e6=ternaryExpressionNoIn -> ^(SENDER_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e5 $e6) )?
+          (LTERM* '#' LTERM* e7=ternaryExpressionNoIn   -> ^(SENDER_MRP_NO_IN $msgSenderConstructNoIn $e7 ) )?
+          (LTERM* '>>' e8=ternaryExpressionNoIn ->^(SEND_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e8) )*
         ;
 
 ternaryExpressionNoIn
-        : logicalORExpressionNoIn LTERM* '?' LTERM* expr1=expressionNoIn LTERM* ':' LTERM* expr2=expressionNoIn -> ^(TERNARYOP logicalORExpressionNoIn $expr1 $expr2)
+        : (logicalORExpressionNoIn -> logicalORExpressionNoIn) (LTERM* '?' LTERM* expr1=logicalORExpressionNoIn LTERM* ':' LTERM* expr2=logicalORExpressionNoIn -> ^(TERNARYOP_NO_IN $ternaryExpressionNoIn $expr1 $expr2))?
         ;
-
-//lkjs;
-conditionalExpression
-	: ternaryExpression
-        | msgRecvStatement
-        | msgSenderConstruct -> msgSenderConstruct
-	;
-
         
-//lkjs;
-conditionalExpressionNoIn
-	: ternaryExpressionNoIn
-        | msgSenderConstructNoIn -> msgSenderConstructNoIn
-//        | logicalORExpressionNoIn -> logicalORExpressionNoIn
-        | msgRecvStatement        
-	;
-
-
-msgSenderConstruct
-        : (e1=logicalORExpression -> logicalORExpression)
-          ( LTERM* ':' LTERM* e2=logicalORExpression LTERM* '>>' LTERM* e3=logicalORExpression LTERM* '>>' LTERM* e4=logicalORExpression -> ^(SENDER_CREATE_MRP_AND_SEND $msgSenderConstruct $e2 $e3 $e4))?
-          (LTERM* ':' LTERM* e5=logicalORExpression LTERM* '>>' LTERM* e6=logicalORExpression -> ^(SENDER_CREATE_MRP $msgSenderConstruct $e5 $e6) )?
-          (LTERM* ':' LTERM* e7=logicalORExpression   -> ^(SENDER_MRP $msgSenderConstruct $e7 ) )?
-          (LTERM* '>>' e8=logicalORExpression ->^(SEND_CREATE_MRP $msgSenderConstruct $e8) )?
-        ;
-
-
-msgSenderConstructNoIn
-        : (e1=logicalORExpressionNoIn -> logicalORExpressionNoIn)
-          ( LTERM* ':' LTERM* e2=logicalORExpressionNoIn LTERM* '>>' LTERM* e3=logicalORExpressionNoIn LTERM* '>>' LTERM* e4=logicalORExpressionNoIn -> ^(SENDER_CREATE_MRP_AND_SEND_NO_IN $msgSenderConstructNoIn $e2 $e3 $e4))?
-          (LTERM* ':' LTERM* e5=logicalORExpressionNoIn LTERM* '>>' LTERM* e6=logicalORExpressionNoIn -> ^(SENDER_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e5 $e6) )?
-          (LTERM* ':' LTERM* e7=logicalORExpressionNoIn   -> ^(SENDER_MRP_NO_IN $msgSenderConstructNoIn $e7 ) )?
-          (LTERM* '>>' e8=logicalORExpressionNoIn ->^(SEND_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e8) )?
-        ;
-
-        
-
         
 logicalORExpression
 	: (logicalANDExpression -> logicalANDExpression)(LTERM* '||' LTERM* logicalANDExpression -> ^(OR $logicalORExpression logicalANDExpression) )*
@@ -620,7 +626,7 @@ unaryExpression
 
 primaryExpression
 	: 'this'
-        | vectorLiteral 
+        | (vectorLiteral) => vectorLiteral
 	| Identifier
         | dollarExpression
 	| literal
@@ -635,9 +641,9 @@ vectorLiteral
         ;
 
 
+//lkjs;
 vectorLiteralField
-        : (ternaryExpression ) => ternaryExpression
-        | additiveExpression
+        : additiveExpression
         | NumericLiteral
         | callExpression 
         | memberExpression

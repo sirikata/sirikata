@@ -83,7 +83,7 @@ function() {
             request : 'movable',
             action : 'setPosition',
             position : pos
-        } -> this._remote;
+        } >> this._remote >> [];
     };
     /** @function */
     std.movement.MovableRemote.prototype.move = function(dir) {
@@ -91,7 +91,7 @@ function() {
             request : 'movable',
             action : 'setVelocity',
             velocity : dir
-        } -> this._remote;
+        } >> this._remote >>[];
     };
 
     /** @function */
@@ -100,7 +100,7 @@ function() {
             request : 'movable',
             action : 'setOrientation',
             orient : orient
-        } -> this._remote;
+        } >> this._remote >> [];
     };
 
     /** @function */
@@ -109,7 +109,7 @@ function() {
             request : 'movable',
             action : 'setRotationalVelocity',
             orientvel : orientvel
-        } -> this._remote;
+        } >> this._remote >> [];
     };
     /** @function */
     std.movement.MovableRemote.prototype.setScale = function(scale) {
@@ -117,7 +117,7 @@ function() {
             request : 'movable',
             action : 'setScale',
             scale : scale
-        } -> this._remote;
+        } >> this._remote >> [];
     };
 
     /** @function */
@@ -126,7 +126,7 @@ function() {
             request : 'movable',
             action : 'setPhysics',
             physics : phy
-        } -> this._remote;
+        } >> this._remote >>[];
     };
     
     /** @function */
@@ -134,7 +134,7 @@ function() {
         {
             request : 'movable',
             action : 'stop'
-        } -> this._remote;
+        } >> this._remote >> [];
     };
 
 })();

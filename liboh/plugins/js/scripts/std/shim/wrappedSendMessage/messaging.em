@@ -142,13 +142,13 @@ if (typeof(std.messaging) != 'undefined')
         this.mrp = mrp;
         this.sender = sender;
     }
-
+    
     std.messaging.MessageReceiverSender = function(sender,mrp)
     {
-        return MessageReceiverSender(sender,mrp);
+        return new MessageReceiverSender(sender,mrp);
     };
 
-    lkjs;
+
     /**
      a : b >> c
 
@@ -203,7 +203,6 @@ if (typeof(std.messaging) != 'undefined')
      */
     function callSendMessageReceiverPair(mrp,responseArray)
     {
-                
         var mrs = new std.messaging.MessageReceiverSender(system.self,mrp);
         return callSendMessageReceiverSender(mrs,responseArray);
     }
@@ -321,9 +320,9 @@ if (typeof(std.messaging) != 'undefined')
      @return Returns a key contructed from these three values that can be used
      to access the respHandler and onNoRespTimer stored in openHandlers.
      */
-    function generateKey(recString,senderString,seqNo)
+    function generateKey(recString,senderString,seqNo,streamID)
     {
-        return recString + '---' + senderString + '|||' + seqNo.toString();
+        return recString + '---' + senderString + '|||' + seqNo.toString() + '*****' + streamID.toString();
     }
 
     /**
@@ -342,11 +341,10 @@ if (typeof(std.messaging) != 'undefined')
      Registers the key generated from recString,senderString,seqNo with value of
      a two-long array containing handles to the respHandler and onNoRespTimer.
      */
-    function addOpenHandler(recString,senderString, seqNo,respHandler,onNoRespTimer)
+    function addOpenHandler(recString,senderString, seqNo,streamID,respHandler,onNoRespTimer)
     {
-        var key = generateKey(recString,senderString,seqNo);
+        var key = generateKey(recString,senderString,seqNo,streamID);
         openHandlers[key] = [respHandler,onNoRespTimer];
-
         return new ClearObject(key);
     }
 
@@ -380,9 +378,9 @@ if (typeof(std.messaging) != 'undefined')
      generated from recString,senderString, and seqNo.  It also removes the key
      from openHandlers.
      */
-    function cancelOpenHandler(recString,senderString,seqNo)
+    function cancelOpenHandler(recString,senderString,seqNo,streamID)
     {
-        var key = generateKey(recString,senderString,seqNo);
+        var key = generateKey(recString,senderString,seqNo,streamID);
         if (! (key in openHandlers))
             throw 'Error in successResponse.  Do not have key ' + key + ' in openHandlers.';
 
@@ -433,7 +431,8 @@ if (typeof(std.messaging) != 'undefined')
     {
         msg.seqNo =     std.messaging.seqNumManager.getSeqNumber(sender,receiver,streamID);
         msg.streamID = streamID;
-        
+
+
         //actually send the message.
         system.sendMessage(sender,msg,receiver);
 
@@ -444,13 +443,13 @@ if (typeof(std.messaging) != 'undefined')
         
         var wrapOnResp = function(msgRec,sndr)
         {
-            cancelOpenHandler(recString,senderString,seqNo);
+            cancelOpenHandler(recString,senderString,seqNo,streamID);
             onResp(msgRec,sndr);
         };
 
         var wrapOnNoResp = function()
         {
-            cancelOpenHandler(recString,senderString,seqNo);
+            cancelOpenHandler(recString,senderString,seqNo,streamID);
             onNoResp();
         };
         
@@ -459,7 +458,7 @@ if (typeof(std.messaging) != 'undefined')
         if (timeToWait != null)
             onNoRespTimeout = system.timeout(timeToWait,wrapOnNoResp);
 
-        return addOpenHandler(recString,senderString,seqNo,respHandler,onNoRespTimeout);
+        return addOpenHandler(recString,senderString,seqNo,streamID,respHandler,onNoRespTimeout);
         
     };
     

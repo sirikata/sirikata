@@ -134,7 +134,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
       //self declarations
       system.addToSelfMap= function(toAdd)
       {
-          var selfKey = (toAdd == null)? this.__NULL_TOKEN__: toAdd.toString();
+          var selfKey = (toAdd == null) ? this.__NULL_TOKEN__ : toAdd.toString();
           this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd,null,null);
       };
 

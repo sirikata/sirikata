@@ -493,12 +493,17 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         emerson_init();
 
         JSLOG(insane, " Input Emerson script = \n" <<em_script_str_new);
+
         try {
             int em_compile_err = 0;
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
-            String js_script_str;
 
+            String js_script_str;
             bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), js_script_str,em_compile_err, handleEmersonRecognitionError);
+
+            // std::cout<<"\n\nDEBUGGING: original script: "<< em_script_str<<"\n\n-----------\n\n";
+            // std::cout<<"js_script_str: "<<js_script_str<<"\n\n";
+            
             if (successfullyCompiled)
             {
                 JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
@@ -512,6 +517,8 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         }
         catch(EmersonParserException e) {
             postEvalOps();
+
+            assert(false);
             return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
         }
     }

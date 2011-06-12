@@ -457,7 +457,7 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
     {
-        JSLOG(info,"Strangeness in registerSuspendable of JSContextStruct.  Trying to re-register a suspendable with the context that was already registered.  Unlikely to be an error, but thought I should mention it.");
+        JSLOG(insane,"Strangeness in registerSuspendable of JSContextStruct.  Trying to re-register a suspendable with the context that was already registered.  Unlikely to be an error, but thought I should mention it.");
         return;
     }
     associatedSuspendables[toRegister] = 1;

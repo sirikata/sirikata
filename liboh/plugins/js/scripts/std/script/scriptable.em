@@ -81,7 +81,7 @@ function() {
             value : result,
             exception : excep
         };
-        retmsg -> sender;
+        retmsg >> sender >> [];
     };
 
     ns.Scriptable.prototype._handlePrint = function() {
@@ -91,7 +91,7 @@ function() {
             request: 'print',
             print: (arguments.length == 1 ? arguments[0] : arguments)
         };
-        print_msg -> this._printer;
+        print_msg >> this._printer >> [];
 
     };
 
