@@ -13,7 +13,7 @@
 #include "../JSEntityCreateInfo.hpp"
 #include "../JSUtil.hpp"
 #include <sirikata/core/util/Vector3.hpp>
-
+#include <sirikata/oh/Storage.hpp>
 
 
 namespace Sirikata {
@@ -65,9 +65,9 @@ struct JSContextStruct : public JSSuspendable
 
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
-    v8::Handle<v8::Value> storageWrite(const String& seqKey, const String& id, const String& toWrite);
-    v8::Handle<v8::Value> storageRead(const String& prepend, const String& id);
-    v8::Handle<v8::Value> storageErase(const String& prepend, const String& itemName);
+    v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite);
+    v8::Handle<v8::Value> storageRead(const OH::Storage::Key& key);
+    v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key);
 
 
 

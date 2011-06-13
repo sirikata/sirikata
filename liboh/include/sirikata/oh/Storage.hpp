@@ -87,15 +87,14 @@ public:
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0) = 0;
 
    /**
-      @param{String} entryName, name of the entry in the backend.
-      @param {String} itemName, name of the item in the entry.
+      @param {Key} key the key to erase
       @return {bool} Returns true if have the entry in the backend.  Otherwise,
       returns false.
 
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
    */
-    virtual bool erase(const Bucket& bucket, const String& entryName,const String& itemName) = 0;
+    virtual bool erase(const Bucket& bucket, const Key& key) = 0;
 
 
     /**
@@ -104,22 +103,16 @@ public:
        multiple times with the same entryName:itemName, will only process the
        last when calling flush.
 
-       @param {String} entryName.  Used to identify the entry in the backend to
-       write to.
-       @param{String} itemName.  The name of the item to write to in the backend.
-       @param{String} strToWrite.  What should actually be written into that item
-
+       @param {Key} key the key to erase
+       @param{String} value What should be written into that item
 
        @return {bool} returns true if write is queued (ie if have the entry in the
        backend).  Otherwise, returns false
     */
-    virtual bool write(const Bucket& bucket, const String & entryName, const String& itemName, const String& strToWrite) = 0;
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value) = 0;
 
     /**
-       @param {String} entryName.  Will read from item named entryName:itemName
-       from backend.
-       @param {String} itemName.  Will read from item named entryName:itemName
-       from backend.
+       @param {Key} key the key to erase
        @param {String} toReadTo.  Returns data from entryName:itemName by
        reference to this parameter.
 
@@ -127,7 +120,7 @@ public:
        named entryName and itemName, respectively and the read operation on that
        item was successful.  Returns false otherwise.
      */
-    virtual bool read(const Bucket& bucket, const String& entryName, const String& itemName, String& toReadTo) = 0;
+    virtual bool read(const Bucket& bucket, const Key& key, String& toReadTo) = 0;
 };
 
 

@@ -120,11 +120,10 @@ v8::Handle<v8::Value> storageCommit(const v8::Arguments& args)
 
 v8::Handle<v8::Value> storageErase(const v8::Arguments& args)
 {
-    if (args.Length() != 2)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling erase.  Require 2 arguments: a string to prepend, and an item to delete.")));
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling erase.  Require 1 arguments: an item to delete.")));
 
-    INLINE_STR_CONV_ERROR(args[0],storageErase,1,prepend);
-    INLINE_STR_CONV_ERROR(args[1],storageErase,2,item);
+    INLINE_STR_CONV_ERROR(args[0],storageErase,1,key);
 
     //decode system object
     String errorMessage = "Error decoding error message when storageErase";
@@ -133,23 +132,22 @@ v8::Handle<v8::Value> storageErase(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageErase(prepend,item);
+    return jsfake->storageErase(key);
 }
 
 
 v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
 {
-    if (args.Length() != 3)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageWrite.  Require 3 argument: a sequence key (string), an id (string), and a string to write (string)")));
+    if (args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageWrite.  Require 2 arguments: a key (string), and a string to write (string)")));
 
 
-    INLINE_STR_CONV_ERROR(args[0],storageWrite,1,prepend);
-    INLINE_STR_CONV_ERROR(args[1],storageWrite,2,id);
+    INLINE_STR_CONV_ERROR(args[0],storageWrite,1,key);
 
-    if (! args[2]->IsString())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in storageWrite, third argument (string) should be a string.")));
+    if (! args[1]->IsString())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in storageWrite, second argument (string) should be a string.")));
 
-    String toWrite =  uint16StrToStr(args[2]->ToString());
+    String toWrite =  uint16StrToStr(args[1]->ToString());
 
 
     //decode system object
@@ -159,17 +157,16 @@ v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageWrite(prepend,id,toWrite);
+    return jsfake->storageWrite(key,toWrite);
 }
 
 v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
 {
-    if (args.Length() != 2)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageRead.  Require 2 arguments: an entry to read (string), an id (string)")));
+    if (args.Length() != 1)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageRead.  Require 1 argument: an key (string)")));
 
 
-    INLINE_STR_CONV_ERROR(args[0],storageRead,1,keyName);
-    INLINE_STR_CONV_ERROR(args[1],storageRead,2,id);
+    INLINE_STR_CONV_ERROR(args[0],storageRead,1,key);
 
     //decode system object
     String errorMessage = "Error decoding error message when storageReading";
@@ -178,7 +175,7 @@ v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageRead(keyName,id);
+    return jsfake->storageRead(key);
 }
 
 

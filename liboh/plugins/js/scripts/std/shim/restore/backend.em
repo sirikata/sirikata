@@ -5,11 +5,17 @@ if (typeof(std.persist) === 'undefined')
 if (typeof(std) === "undefined") /** @namespace */ std = {};
 
 
+(function() {
+
+     var keyName = function(name, subname) {
+         // Generate a key name for a sub-part of this object graph.
+         return name + '.' + subname;
+     };
 
 /**
  Clears anything that's already stored in the entry prependKey
  */
-function ObjectWriter(entryName)
+ObjectWriter = function(entryName)
 {
     this.mEntryName = entryName;
     this.recsToWrite = [];
@@ -22,7 +28,7 @@ function ObjectWriter(entryName)
             var id  = this.recsToWrite[s].getID();
             var rec = this.recsToWrite[s].generateRecordObject();
             var serRec = system.serialize(rec);
-            system.storageWrite(this.mEntryName,id,serRec);
+            system.storageWrite(keyName(this.mEntryName, id),serRec);
         }
 
         system.storageCommit(cb);
@@ -33,14 +39,16 @@ function ObjectWriter(entryName)
     {
         this.recsToWrite.push(rec);
     };
-}
+};
 
-function readObject(entryName,itemName)
+readObject = function(entryName,itemName)
 {
-    var val = system.storageRead(entryName,itemName.toString());
+    var val = system.storageRead(keyName(entryName,itemName.toString()));
     if (val == null)
         throw 'Erorr in read.  No record pointed to with those names';
 
     var returner = system.deserialize(val);
     return returner;
-}
+};
+
+})();

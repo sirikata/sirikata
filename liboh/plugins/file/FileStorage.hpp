@@ -95,19 +95,17 @@ public:
 
     virtual void beginTransaction(const Bucket& bucket);
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0);
-    virtual bool erase(const Bucket& bucket, const String& prependToken,const String& itemID);
-    virtual bool write(const Bucket& bucket, const String & prependToken, const String& idToWriteTo, const String& strToWrite);
-    virtual bool read(const Bucket& bucket, const String& prepend, const String& idToReadFrom, String& toReadTo);
+    virtual bool erase(const Bucket& bucket, const Key& key);
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value);
+    virtual bool read(const Bucket& bucket, const Key& key, String& toReadTo);
 
 private:
 
-    bool haveEntry(const Bucket& bucket, const String& prepend);
     bool haveUnflushedEvents(const Bucket& bucket);
     bool clearOutstanding(const Bucket& bucket);
 
     boost::filesystem::path getStoragePath(const Bucket& bucket);
-    boost::filesystem::path getStoragePath(const Bucket& bucket, const String& prefix);
-    boost::filesystem::path getStoragePath(const Bucket& bucket, const String& prefix, const String& id);
+    boost::filesystem::path getStoragePath(const Bucket& bucket, const Key& key);
 
     typedef std::vector<FileStorageEvent*> FileEventVec;
     typedef FileEventVec::iterator FileEventVecIter;

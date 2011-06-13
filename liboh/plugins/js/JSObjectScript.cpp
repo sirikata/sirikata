@@ -296,27 +296,27 @@ void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persiste
     invokeCallback(jscont, cb, argc, argv);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageErase(const String& prepend, const String& itemName,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->erase(mInternalID, prepend,itemName);
+    bool returner = mStorage->erase(mInternalID, key);
     return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageWrite(const OH::Storage::Key& key, const String& toWrite, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->write(mInternalID, seqKey,id,toWrite);
+    bool returner = mStorage->write(mInternalID, key, toWrite);
     return v8::Boolean::New(returner);
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::storageRead(const String& prepend, const String& id, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
     String toReadTo;
-    bool readSucceed = mStorage->read(mInternalID, prepend,id,toReadTo);
+    bool readSucceed = mStorage->read(mInternalID, key, toReadTo);
 
     if (!readSucceed)
         return v8::Null();

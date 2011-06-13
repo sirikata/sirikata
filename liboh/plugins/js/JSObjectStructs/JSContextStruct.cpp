@@ -51,19 +51,19 @@ v8::Handle<v8::Value> JSContextStruct::storageCommit(v8::Handle<v8::Function> cb
 {
     return jsObjScript->storageCommit(this, cb);
 }
-v8::Handle<v8::Value> JSContextStruct::storageWrite(const String& seqKey, const String& id, const String& toWrite)
+v8::Handle<v8::Value> JSContextStruct::storageWrite(const OH::Storage::Key& key, const String& toWrite)
 {
-    return jsObjScript->storageWrite(seqKey,id,toWrite,this);
+    return jsObjScript->storageWrite(key,toWrite,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::storageErase(const String& prepend, const String& itemName)
+v8::Handle<v8::Value> JSContextStruct::storageErase(const OH::Storage::Key& key)
 {
-    return jsObjScript->storageErase(prepend,itemName,this);
+    return jsObjScript->storageErase(key,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::storageRead(const String& prepend, const String& id)
+v8::Handle<v8::Value> JSContextStruct::storageRead(const OH::Storage::Key& key)
 {
-    return jsObjScript->storageRead(prepend,id,this);
+    return jsObjScript->storageRead(key,this);
 }
 
 

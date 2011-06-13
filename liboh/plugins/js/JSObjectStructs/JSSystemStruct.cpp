@@ -35,19 +35,19 @@ v8::Handle<v8::Value> JSSystemStruct::storageCommit(v8::Handle<v8::Function> cb)
 {
     return associatedContext->storageCommit(cb);
 }
-v8::Handle<v8::Value> JSSystemStruct::storageWrite(const String& seqKey, const String& id, const String& toWrite)
+v8::Handle<v8::Value> JSSystemStruct::storageWrite(const OH::Storage::Key& key, const String& toWrite)
 {
-    return associatedContext->storageWrite(seqKey,id,toWrite);
+    return associatedContext->storageWrite(key, toWrite);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::storageErase(const String& prepend, const String& itemName)
+v8::Handle<v8::Value> JSSystemStruct::storageErase(const OH::Storage::Key& key)
 {
-    return associatedContext->storageErase(prepend,itemName);
+    return associatedContext->storageErase(key);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::storageRead(const String& prepend, const String& id)
+v8::Handle<v8::Value> JSSystemStruct::storageRead(const OH::Storage::Key& key)
 {
-    return associatedContext->storageRead(prepend,id);
+    return associatedContext->storageRead(key);
 }
 
 

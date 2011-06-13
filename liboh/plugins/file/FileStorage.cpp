@@ -93,12 +93,8 @@ boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket) {
     return mDir / bucket.toString();
 }
 
-boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const String& prefix) {
-    return mDir / bucket.toString() / prefix;
-}
-
-boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const String& prefix, const String& id) {
-    return mDir / bucket.toString() / prefix / id;
+boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const Key& key) {
+    return mDir / bucket.toString() / key;
 }
 
 void FileStorage::beginTransaction(const Bucket& bucket) {
@@ -117,12 +113,6 @@ void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& 
     if (cb) mContext->mainStrand->post(std::tr1::bind(cb, true));
 }
 
-bool FileStorage::haveEntry(const Bucket& bucket, const String& prepend)
-{
-    return boost::filesystem::exists(getStoragePath(bucket, prepend));
-}
-
-
 bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
 {
     OutEventsIter iter = unflushedEvents.find(bucket);
@@ -130,30 +120,20 @@ bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
 }
 
 
-bool FileStorage::erase(const Bucket& bucket, const String& prependToken,const String& itemID)
+bool FileStorage::erase(const Bucket& bucket, const Key& key)
 {
-    if(! haveUnflushedEvents(bucket))
-        if (! haveEntry(bucket, prependToken))
-            return false;
-
-    FileStorageClearItem* fbci = new FileStorageClearItem(getStoragePath(bucket, prependToken,itemID));
+    FileStorageClearItem* fbci = new FileStorageClearItem(getStoragePath(bucket, key));
     unflushedEvents[bucket].push_back(fbci);
     return true;
 }
 
 
-bool FileStorage::write(const Bucket& bucket, const String & prependToken, const String& idToWriteTo, const String& strToWrite)
+bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite)
 {
-    if(! haveUnflushedEvents(bucket)) {
-        if (! haveEntry(bucket, prependToken)) {
-            if (!boost::filesystem::exists(getStoragePath(bucket)))
-                boost::filesystem::create_directory(getStoragePath(bucket));
-            boost::filesystem::create_directory(getStoragePath(bucket, prependToken));
-            assert(haveEntry(bucket, prependToken));
-        }
-    }
+    if (!boost::filesystem::exists(getStoragePath(bucket)))
+        boost::filesystem::create_directory(getStoragePath(bucket));
 
-    FileStorageWriteItem* fbw = new FileStorageWriteItem(getStoragePath(bucket, prependToken,idToWriteTo),strToWrite);
+    FileStorageWriteItem* fbw = new FileStorageWriteItem(getStoragePath(bucket, key), strToWrite);
     unflushedEvents[bucket].push_back(fbw);
     return true;
 }
@@ -179,9 +159,9 @@ bool FileStorage::clearOutstanding(const Bucket& bucket)
     return true;
 }
 
-bool FileStorage::read(const Bucket& bucket, const String& prepend, const String& idToReadFrom, String& toReadTo)
+bool FileStorage::read(const Bucket& bucket, const Key& key, String& toReadTo)
 {
-    boost::filesystem::path path = getStoragePath(bucket, prepend, idToReadFrom);
+    boost::filesystem::path path = getStoragePath(bucket, key);
 
     if (! boost::filesystem::exists(path))
         return false;
