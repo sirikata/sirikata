@@ -46,10 +46,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> storageBeginTransaction();
     v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const String& seqKey, const String& id, const String& toWrite);
-    v8::Handle<v8::Value> storageClearEntry(const String& prepend);
-    v8::Handle<v8::Value> storageClearItem(const String& prepend, const String& itemName);
+    v8::Handle<v8::Value> storageErase(const String& prepend, const String& itemName);
     v8::Handle<v8::Value> storageRead(const String& prepend, const String& id);
-    v8::Handle<v8::Value> storageHaveEntry(const String& prepend);
 
 
     v8::Handle<v8::Value> struct_canCreatePres();

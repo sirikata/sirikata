@@ -95,15 +95,13 @@ public:
 
     virtual void beginTransaction(const Bucket& bucket);
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0);
-
-    virtual bool haveEntry(const Bucket& bucket, const String& prepend);
-    virtual bool clearItem(const Bucket& bucket, const String& prependToken,const String& itemID);
+    virtual bool erase(const Bucket& bucket, const String& prependToken,const String& itemID);
     virtual bool write(const Bucket& bucket, const String & prependToken, const String& idToWriteTo, const String& strToWrite);
-    virtual bool clearEntry (const Bucket& bucket, const String& prepend);
     virtual bool read(const Bucket& bucket, const String& prepend, const String& idToReadFrom, String& toReadTo);
 
 private:
 
+    bool haveEntry(const Bucket& bucket, const String& prepend);
     bool haveUnflushedEvents(const Bucket& bucket);
     bool clearOutstanding(const Bucket& bucket);
 

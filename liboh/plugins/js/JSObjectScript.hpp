@@ -105,10 +105,8 @@ public:
     v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
     v8::Handle<v8::Value> storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const String& seqKey, const String& id, const String& toWrite, JSContextStruct* jscont);
-    v8::Handle<v8::Value> storageClearEntry(const String& prepend, JSContextStruct* jscont);
     v8::Handle<v8::Value> storageRead(const String& prepend, const String& id, JSContextStruct* jscont);
-    v8::Handle<v8::Value> storageClearItem(const String& prepend, const String& itemName, JSContextStruct* jscont);
-    v8::Handle<v8::Value> storageHaveEntry(const String& prepend, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageErase(const String& prepend, const String& itemName, JSContextStruct* jscont);
 
 
     /**

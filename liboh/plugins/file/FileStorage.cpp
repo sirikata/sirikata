@@ -130,7 +130,7 @@ bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
 }
 
 
-bool FileStorage::clearItem(const Bucket& bucket, const String& prependToken,const String& itemID)
+bool FileStorage::erase(const Bucket& bucket, const String& prependToken,const String& itemID)
 {
     if(! haveUnflushedEvents(bucket))
         if (! haveEntry(bucket, prependToken))
@@ -178,22 +178,6 @@ bool FileStorage::clearOutstanding(const Bucket& bucket)
 
     return true;
 }
-
-
-bool FileStorage::clearEntry (const Bucket& bucket, const String& prependToken)
-{
-    //remove the folder from maps
-    bool outstandingCleared = clearOutstanding(bucket);
-
-    boost::filesystem::path path = getStoragePath(bucket, prependToken);
-    if (! boost::filesystem::exists(path))
-        return outstandingCleared || false;
-
-
-    boost::filesystem::remove_all(path);
-    return true;
-}
-
 
 bool FileStorage::read(const Bucket& bucket, const String& prepend, const String& idToReadFrom, String& toReadTo)
 {

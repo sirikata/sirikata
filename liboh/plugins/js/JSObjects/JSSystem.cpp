@@ -118,40 +118,22 @@ v8::Handle<v8::Value> storageCommit(const v8::Arguments& args)
     return jsfake->storageCommit(cb);
 }
 
-v8::Handle<v8::Value> storageClearItem(const v8::Arguments& args)
+v8::Handle<v8::Value> storageErase(const v8::Arguments& args)
 {
     if (args.Length() != 2)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling clearEntry.  Require 2 arguments: a string to prepend, and an item to delete.")));
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling erase.  Require 2 arguments: a string to prepend, and an item to delete.")));
 
-    INLINE_STR_CONV_ERROR(args[0],storageClearItem,1,prepend);
-    INLINE_STR_CONV_ERROR(args[1],storageClearItem,2,item);
+    INLINE_STR_CONV_ERROR(args[0],storageErase,1,prepend);
+    INLINE_STR_CONV_ERROR(args[1],storageErase,2,item);
 
     //decode system object
-    String errorMessage = "Error decoding error message when backedClearItem";
+    String errorMessage = "Error decoding error message when storageErase";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageClearItem(prepend,item);
-}
-
-
-v8::Handle<v8::Value> storageClearEntry(const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling clearEntry.  Require 1 argument: a string to prepend")));
-
-    INLINE_STR_CONV_ERROR(args[0],storageClearEntry,1,prepend);
-
-    //decode system object
-    String errorMessage = "Error decoding error message when backedClearEntry";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    return jsfake->storageClearEntry(prepend);
+    return jsfake->storageErase(prepend,item);
 }
 
 
@@ -198,25 +180,6 @@ v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
 
     return jsfake->storageRead(keyName,id);
 }
-
-v8::Handle<v8::Value> storageHaveEntry(const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageHaveEntry.  Require 1 argument: a sequence key (string).")));
-
-
-    INLINE_STR_CONV_ERROR(args[0],storageHaveEntry,1,entryName);
-
-    //decode system object
-    String errorMessage = "Error decoding error message when storageHaveEntry-ing";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    return jsfake->storageHaveEntry(entryName);
-}
-
 
 
 

@@ -201,13 +201,11 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      {
          return baseSystem.storageRead.apply(baseSystem, arguments);
      };
-
-     system.storageClearEntry = function()
+     system.storageErase = function()
      {
-         return baseSystem.storageClearEntry.apply(baseSystem,arguments);
+         return baseSystem.storageErase.apply(baseSystem, arguments);
      };
-     
-     
+
       //data
       system._selfMap = { };
 

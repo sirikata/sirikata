@@ -40,25 +40,14 @@ v8::Handle<v8::Value> JSSystemStruct::storageWrite(const String& seqKey, const S
     return associatedContext->storageWrite(seqKey,id,toWrite);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::storageClearItem(const String& prepend, const String& itemName)
+v8::Handle<v8::Value> JSSystemStruct::storageErase(const String& prepend, const String& itemName)
 {
-    return associatedContext->storageClearItem(prepend,itemName);
-}
-
-v8::Handle<v8::Value> JSSystemStruct::storageClearEntry(const String& prepend)
-{
-    return associatedContext->storageClearEntry(prepend);
+    return associatedContext->storageErase(prepend,itemName);
 }
 
 v8::Handle<v8::Value> JSSystemStruct::storageRead(const String& prepend, const String& id)
 {
     return associatedContext->storageRead(prepend,id);
-}
-
-
-v8::Handle<v8::Value> JSSystemStruct::storageHaveEntry(const String& prepend)
-{
-    return associatedContext->storageHaveEntry(prepend);
 }
 
 

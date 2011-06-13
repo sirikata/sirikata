@@ -56,24 +56,14 @@ v8::Handle<v8::Value> JSContextStruct::storageWrite(const String& seqKey, const 
     return jsObjScript->storageWrite(seqKey,id,toWrite,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::storageClearItem(const String& prepend, const String& itemName)
+v8::Handle<v8::Value> JSContextStruct::storageErase(const String& prepend, const String& itemName)
 {
-    return jsObjScript->storageClearItem(prepend,itemName,this);
-}
-
-v8::Handle<v8::Value> JSContextStruct::storageClearEntry(const String& prepend)
-{
-    return jsObjScript->storageClearEntry(prepend,this);
+    return jsObjScript->storageErase(prepend,itemName,this);
 }
 
 v8::Handle<v8::Value> JSContextStruct::storageRead(const String& prepend, const String& id)
 {
     return jsObjScript->storageRead(prepend,id,this);
-}
-
-v8::Handle<v8::Value> JSContextStruct::storageHaveEntry(const String& prepend)
-{
-    return jsObjScript->storageHaveEntry(prepend,this);
 }
 
 

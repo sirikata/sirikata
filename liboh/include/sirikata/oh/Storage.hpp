@@ -86,14 +86,6 @@ public:
     */
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0) = 0;
 
-
-    /**
-       @param {String} entryName token to check if already have in our backend.
-       @return {bool} returns true if already have an entry with this name in
-       backend.  Otherwise, returns false.
-    */
-    virtual bool haveEntry(const Bucket& bucket, const String& entryName) = 0;
-
    /**
       @param{String} entryName, name of the entry in the backend.
       @param {String} itemName, name of the item in the entry.
@@ -103,7 +95,7 @@ public:
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
    */
-    virtual bool clearItem(const Bucket& bucket, const String& entryName,const String& itemName) = 0;
+    virtual bool erase(const Bucket& bucket, const String& entryName,const String& itemName) = 0;
 
 
     /**
@@ -122,15 +114,6 @@ public:
        backend).  Otherwise, returns false
     */
     virtual bool write(const Bucket& bucket, const String & entryName, const String& itemName, const String& strToWrite) = 0;
-
-
-    /**
-       @param {String} entryName.  Name of entry to be removed from backend.
-
-       @return {bool} returns true if have entry to clear.  Otherwise returns false.
-    */
-    virtual bool clearEntry (const Bucket& bucket, const String& entryName) = 0;
-
 
     /**
        @param {String} entryName.  Will read from item named entryName:itemName

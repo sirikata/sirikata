@@ -197,11 +197,9 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
     mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));
-    mSystemTemplate->Set(v8::String::New("storageClearEntry"),v8::FunctionTemplate::New(JSSystem::storageClearEntry));
-    mSystemTemplate->Set(v8::String::New("storageClearItem"), v8::FunctionTemplate::New(JSSystem::storageClearItem));
+    mSystemTemplate->Set(v8::String::New("storageErase"), v8::FunctionTemplate::New(JSSystem::storageErase));
     mSystemTemplate->Set(v8::String::New("storageWrite"),v8::FunctionTemplate::New(JSSystem::storageWrite));
     mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
-    mSystemTemplate->Set(v8::String::New("storageHaveEntry"),v8::FunctionTemplate::New(JSSystem::storageHaveEntry));
 
 
 
