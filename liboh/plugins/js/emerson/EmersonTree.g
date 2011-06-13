@@ -999,11 +999,13 @@ ternaryExpression
             {
                 APP( " ) ? ( ");
             }
-            logicalORExpression
+            //logicalORExpression
+            assignmentExpression
             {
                 APP(" ) : ( ");
             }
-            logicalORExpression
+            //logicalORExpression
+            assignmentExpression
             {
                 APP(" ) " );
             }
@@ -1133,11 +1135,11 @@ ternaryExpressionNoIn
             {
                 APP( " ) ? ( ");
             }
-            logicalORExpressionNoIn
+            assignmentExpressionNoIn
             {
                 APP(" ) : ( ");
             }
-            logicalORExpressionNoIn
+            assignmentExpressionNoIn
             {
                 APP(" ) " );
             }
@@ -1418,6 +1420,7 @@ vectorLiteral
         
 vectorLiteralField
         : additiveExpression
+//        : ternaryExpression
         | NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
         | callExpression
         | memberExpression

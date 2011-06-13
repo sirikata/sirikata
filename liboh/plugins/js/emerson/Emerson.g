@@ -461,9 +461,9 @@ msgSenderConstruct
           (LTERM* '>>' e8=ternaryExpression ->^(SEND_CREATE_MRP $msgSenderConstruct $e8) )*
         ;
 
-        
+
 ternaryExpression
-        : (logicalORExpression -> logicalORExpression) (LTERM* '?' LTERM* expr1=logicalORExpression LTERM* ':' LTERM* expr2=logicalORExpression -> ^(TERNARYOP $ternaryExpression $expr1 $expr2))?
+        : (logicalORExpression -> logicalORExpression) (LTERM* '?' LTERM* expr1=assignmentExpression LTERM* ':' LTERM* expr2=assignmentExpression -> ^(TERNARYOP $ternaryExpression $expr1 $expr2))*
         ;
 
 
@@ -488,7 +488,7 @@ msgSenderConstructNoIn
         ;
 
 ternaryExpressionNoIn
-        : (logicalORExpressionNoIn -> logicalORExpressionNoIn) (LTERM* '?' LTERM* expr1=logicalORExpressionNoIn LTERM* ':' LTERM* expr2=logicalORExpressionNoIn -> ^(TERNARYOP_NO_IN $ternaryExpressionNoIn $expr1 $expr2))?
+        : (logicalORExpressionNoIn -> logicalORExpressionNoIn) (LTERM* '?' LTERM* expr1=assignmentExpressionNoIn LTERM* ':' LTERM* expr2=assignmentExpressionNoIn -> ^(TERNARYOP_NO_IN $ternaryExpressionNoIn $expr1 $expr2))*
         ;
         
         
@@ -640,10 +640,11 @@ vectorLiteral
         : '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
         ;
 
-
+//lkjs;
 //lkjs;
 vectorLiteralField
         : additiveExpression
+//        : ternaryExpression
         | NumericLiteral
         | callExpression 
         | memberExpression
