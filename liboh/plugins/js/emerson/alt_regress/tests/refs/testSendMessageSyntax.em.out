@@ -1,30 +1,55 @@
+In parseTriple.
 
-In system.sendMessage
+aa
 
-sender:    a
-msgObj:    oooooo  message object
-receiver:  receiver
+boooooo  message object
 
-In system.sendMessage
+creceiver
 
-sender:    I am Self!
-msgObj:    oooooo  message object
-receiver:  receiver
+sendSyntax
 
-In system.sendMessage
+aoooooo  message object
 
-sender:    a
-msgObj:    oooooo  message object
-receiver:  receiver
+breceiver
 
-In system.sendMessage
+In parseTriple.
 
-sender:    I am Self!
-msgObj:    oooooo  message object
-receiver:  receiver
+aa
 
-In system.sendMessage
+boooooo  message object
 
-sender:    a
-msgObj:    [object Object]
-receiver:  receiver
+creceiver
+
+sendSyntax
+
+aoooooo  message object
+
+breceiver
+
+In parseTriple.
+
+aa
+
+b[object Object]
+
+creceiver
+
+sendSyntax
+
+aoooooo  message object
+
+breceiver
+
+
+Message receiver sender
+
+aa
+
+b6
+
+sendSyntax
+
+a7
+
+btodo
+

@@ -94,3 +94,41 @@ system.sendMessage = function(sender, msgObj, receiver)
     print('msgObj:    ' + msgObj.toString());
     print('receiver:  ' + receiver.toString());
 };
+
+
+
+std = {
+    };
+
+std.messaging = {
+    };
+
+std.messaging.counter = 0;
+std.messaging.parseTriple = function(a,b,c)
+{
+    ++std.messaging.counter;
+    print('In parseTriple.\n');
+    print('a' + a.toString() + '\n');
+    print('b' + b.toString() + '\n');
+    print('c' + c.toString() + '\n');
+    return std.messaging.counter;
+};
+
+std.messaging.sendSyntax = function (a, b)
+{
+    ++std.messaging.counter;
+    print('sendSyntax\n');
+    print('a' + a.toString() + '\n');
+    print('b' + b.toString() + '\n');
+    return std.messaging.counter;
+};
+  
+
+std.messaging.MessageReceiverSender = function(a,b)
+{
+    ++std.messaging.counter;
+    print('\nMessage receiver sender\n');
+    print('a' + a.toString() + '\n');
+    print('b' + b.toString() + '\n');
+    return std.messaging.counter;
+};
