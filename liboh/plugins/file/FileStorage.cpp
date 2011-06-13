@@ -81,84 +81,90 @@ FileStorage::FileStorage(ObjectHostContext* ctx, const String& dir)
  */
 FileStorage::~FileStorage()
 {
-    std::vector<String> allEntries;
+    std::vector<Bucket> allEntries;
     for (OutEventsIter iter = unflushedEvents.begin(); iter != unflushedEvents.end(); ++iter)
         allEntries.push_back(iter->first);
 
-    for (std::vector<String>::iterator strIter = allEntries.begin(); strIter != allEntries.end(); ++strIter)
+    for (std::vector<Bucket>::iterator strIter = allEntries.begin(); strIter != allEntries.end(); ++strIter)
         clearOutstanding(*strIter);
 }
 
-boost::filesystem::path FileStorage::getStoragePath(const String& prefix) {
-    return mDir / prefix;
+boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket) {
+    return mDir / bucket.toString();
 }
 
-boost::filesystem::path FileStorage::getStoragePath(const String& prefix, const String& id) {
-   return mDir / prefix / id;
+boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const String& prefix) {
+    return mDir / bucket.toString() / prefix;
 }
 
-bool FileStorage::haveEntry(const String& prepend)
+boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const String& prefix, const String& id) {
+    return mDir / bucket.toString() / prefix / id;
+}
+
+void FileStorage::beginTransaction(const Bucket& bucket) {
+}
+
+void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb) {
+    if(! haveUnflushedEvents(bucket))
+        if (cb) mContext->mainStrand->post(std::tr1::bind(cb, false));
+
+    std::vector<FileStorageEvent*> fbeVec = unflushedEvents[bucket];
+    for (FileEventVecIter iter = fbeVec.begin(); iter != fbeVec.end(); ++iter)
+        (*iter)->processEvent();
+
+    clearOutstanding(bucket);
+
+    if (cb) mContext->mainStrand->post(std::tr1::bind(cb, true));
+}
+
+bool FileStorage::haveEntry(const Bucket& bucket, const String& prepend)
 {
-    return boost::filesystem::exists(getStoragePath(prepend));
+    return boost::filesystem::exists(getStoragePath(bucket, prepend));
 }
 
 
-bool FileStorage::haveUnflushedEvents(const String& prepend)
+bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
 {
-    OutEventsIter iter = unflushedEvents.find(prepend);
+    OutEventsIter iter = unflushedEvents.find(bucket);
     return (iter !=  unflushedEvents.end());
 }
 
 
-bool FileStorage::clearItem(const String& prependToken,const String& itemID)
+bool FileStorage::clearItem(const Bucket& bucket, const String& prependToken,const String& itemID)
 {
-    if(! haveUnflushedEvents(prependToken))
-        if (! haveEntry(prependToken))
+    if(! haveUnflushedEvents(bucket))
+        if (! haveEntry(bucket, prependToken))
             return false;
 
-    FileStorageClearItem* fbci = new FileStorageClearItem(getStoragePath(prependToken,itemID));
-    unflushedEvents[prependToken].push_back(fbci);
+    FileStorageClearItem* fbci = new FileStorageClearItem(getStoragePath(bucket, prependToken,itemID));
+    unflushedEvents[bucket].push_back(fbci);
     return true;
 }
 
 
-bool FileStorage::write(const String & prependToken, const String& idToWriteTo, const String& strToWrite)
+bool FileStorage::write(const Bucket& bucket, const String & prependToken, const String& idToWriteTo, const String& strToWrite)
 {
-    if(! haveUnflushedEvents(prependToken)) {
-        if (! haveEntry(prependToken)) {
-            boost::filesystem::create_directory(getStoragePath(prependToken));
-            assert(haveEntry(prependToken));
+    if(! haveUnflushedEvents(bucket)) {
+        if (! haveEntry(bucket, prependToken)) {
+            if (!boost::filesystem::exists(getStoragePath(bucket)))
+                boost::filesystem::create_directory(getStoragePath(bucket));
+            boost::filesystem::create_directory(getStoragePath(bucket, prependToken));
+            assert(haveEntry(bucket, prependToken));
         }
     }
 
-    FileStorageWriteItem* fbw = new FileStorageWriteItem(getStoragePath(prependToken,idToWriteTo),strToWrite);
-    unflushedEvents[prependToken].push_back(fbw);
+    FileStorageWriteItem* fbw = new FileStorageWriteItem(getStoragePath(bucket, prependToken,idToWriteTo),strToWrite);
+    unflushedEvents[bucket].push_back(fbw);
     return true;
 }
 
 
-bool FileStorage::flush(const String& prependToken)
+bool FileStorage::clearOutstanding(const Bucket& bucket)
 {
-    if(! haveUnflushedEvents(prependToken))
-        if (! haveEntry(prependToken))
-            return false;
-
-    std::vector<FileStorageEvent*> fbeVec = unflushedEvents[prependToken];
-    for (FileEventVecIter iter = fbeVec.begin(); iter != fbeVec.end(); ++iter)
-        (*iter)->processEvent();
-
-    clearOutstanding(prependToken);
-
-    return true;
-}
-
-
-bool FileStorage::clearOutstanding(const String& prependToken)
-{
-    if(! haveUnflushedEvents(prependToken))
+    if(! haveUnflushedEvents(bucket))
         return false;
 
-    OutEventsIter unflushedIter =  unflushedEvents.find(prependToken);
+    OutEventsIter unflushedIter =  unflushedEvents.find(bucket);
 
     FileEventVec fev = unflushedIter->second;
     for (FileEventVecIter fevIter = fev.begin(); fevIter != fev.end(); ++fevIter)
@@ -174,12 +180,12 @@ bool FileStorage::clearOutstanding(const String& prependToken)
 }
 
 
-bool FileStorage::clearEntry (const String& prependToken)
+bool FileStorage::clearEntry (const Bucket& bucket, const String& prependToken)
 {
     //remove the folder from maps
-    bool outstandingCleared = clearOutstanding(prependToken);
+    bool outstandingCleared = clearOutstanding(bucket);
 
-    boost::filesystem::path path = getStoragePath(prependToken);
+    boost::filesystem::path path = getStoragePath(bucket, prependToken);
     if (! boost::filesystem::exists(path))
         return outstandingCleared || false;
 
@@ -189,9 +195,9 @@ bool FileStorage::clearEntry (const String& prependToken)
 }
 
 
-bool FileStorage::read(const String& prepend, const String& idToReadFrom, String& toReadTo)
+bool FileStorage::read(const Bucket& bucket, const String& prepend, const String& idToReadFrom, String& toReadTo)
 {
-    boost::filesystem::path path = getStoragePath(prepend, idToReadFrom);
+    boost::filesystem::path path = getStoragePath(bucket, prepend, idToReadFrom);
 
     if (! boost::filesystem::exists(path))
         return false;

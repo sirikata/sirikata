@@ -67,10 +67,12 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     //to set a prox add callback
     this.setProxAddCB = function (proxAddCB)
     {
-        if ((typeof(proxAddCB) == 'undefined')|| (proxRemCB == null))
-            this.proxAddCB  = null;
+        if ((typeof(proxAddCB) == 'undefined')|| (proxAddCB == null))
+            this.proxAddCB  = null;                
         else
-            this.proxAddCB  = std.core.bind(proxAddCB, this.presObj);        
+            this.proxAddCB  = std.core.bind(proxAddCB, this.presObj);                        
+
+
     };
     
     //to set a prox removed callback
@@ -89,6 +91,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
     //call this function when get a visible object added to prox results
     this.proxAddedEvent = function (visibleObj,visTo)
     {
+        
         //add to proxResultSet
         this.proxResultSet[visibleObj.toString()] = visibleObj;
         //trigger callback
@@ -180,39 +183,29 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          system.__setBehindSelf(system._selfMap[toChangeTo].presObj);
      };
      
-     //backend manipulations
-     system.backendCreateEntry = function()
+     //storage manipulations
+     system.storageBeginTransaction = function()
      {
-         return baseSystem.backendCreateEntry.apply(baseSystem, arguments);
+         return baseSystem.storageBeginTransaction.apply(baseSystem, arguments);
      };
-     system.backendWrite = function()
+     system.storageCommit = function()
      {
-         return baseSystem.backendWrite.apply(baseSystem, arguments);
-     };
-     system.backendFlush = function()
-     {
-         return baseSystem.backendFlush.apply(baseSystem, arguments);
-     };
-     system.backendRead = function()
-     {
-         return baseSystem.backendRead.apply(baseSystem, arguments);
+         return baseSystem.storageCommit.apply(baseSystem, arguments);
      };
 
-     system.backendClearEntry = function()
+     system.storageWrite = function()
      {
-         return baseSystem.backendClearEntry.apply(baseSystem,arguments);
+         return baseSystem.storageWrite.apply(baseSystem, arguments);
      };
-          
-     system.backendHaveUnflushedEvents = function()
+     system.storageRead = function()
      {
-         return baseSystem.backendHaveUnflushedEvents.apply(baseSystem,arguments);
-     };
-
-     system.backendClearOutstanding = function()
-     {
-         return baseSystem.backendClearOutstanding.apply(baseSystem,arguments);
+         return baseSystem.storageRead.apply(baseSystem, arguments);
      };
 
+     system.storageClearEntry = function()
+     {
+         return baseSystem.storageClearEntry.apply(baseSystem,arguments);
+     };
      
      
       //data
@@ -857,19 +850,11 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
              throw 'Error: received prox added message for presence not controlling';
      };
 
-
-     var tmpFunc =function()
-     {
-         
-     };
-     // baseSystem.registerProxAddedHandler(tmpFunc);
-     // baseSystem.registerProxRemovedHandler(tmpFunc);
-     
      baseSystem.registerProxAddedHandler(proxAddedManager);
      baseSystem.registerProxRemovedHandler(proxRemovedManager);
 
      /**
-      @presCalling this is the presence that want to register onProxAdded function fro
+      @presCalling this is the presence that want to register onProxAdded function for
       @funcToCall this is the function to call when a new presence joins presCalling's result set.
       */
       system.__sys_register_onProxAdded= function (presCalling, funcToCall)

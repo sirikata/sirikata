@@ -71,8 +71,9 @@ namespace Sirikata {
 
 
 
-HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &objectName)
+HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID & _id)
  : mContext(ctx),
+   mID(_id),
    mObjectHost(parent),
    mObjectScript(NULL),
    mPresenceData(new PresenceDataMap),
@@ -121,6 +122,9 @@ HostedObject::~HostedObject() {
     delete mPresenceData;
 }
 
+const UUID& HostedObject::id() const {
+    return mID;
+}
 
 void HostedObject::destroy()
 {
@@ -1209,113 +1213,6 @@ Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& 
     assert(proxy);
     Location currentLoc = proxy->globalLocation(currentSpaceTime(space));
     return currentLoc;
-}
-
-
-void HostedObject::persistToFile(std::ofstream& fp)
-{
-  SpaceObjRefVec ss;
-
-  getSpaceObjRefs(ss);
-
-  SpaceObjRefVec::iterator it = ss.begin();
-
-  for(; it != ss.end(); it++)
-  {
-      HostedObject::EntityState* es = getEntityState((*it).space(), (*it).object());
-      es->persistToFile(fp);
-  }
-}
-
-
-
-
-
-void HostedObject::EntityState::persistToFile(std::ofstream& fp)
-{
-   /* We need to persist the things that are not part of the state. Like the meta state definitions. so,we are writing this file over and over again */
-
-   fp << "\"" << objType << "\"" << "," << "\"" << subType << "\"" << "," << "\"" << name << "\"" << ",";
-   /* Persist each field separated by a comma */
-   /* persist the position  */
-
-	 fp << pos.x << "," << pos.y << "," << pos.z << ",";
-
-
-	 /* persist the quaternion.. How do it do it? I don't have x,y,z,w */
-	 fp << orient.x << "," << orient.y << "," << orient.z << "," << orient.w << "," ;
-
-	 /* persist the velocity */
-
-	 fp << vel.x << "," << vel.y << "," << vel.z << "," ;
-
-	 /* persist the rotation */
-
-	 fp << rot.x << "," << rot.y << "," << rot.z << ",";
-
-	 /* persist the angular speed*/
-
-	 fp << angular_speed << ",";
-
-	 /*  persist the mesh url*/
-
-	 fp << "\"" << mesh << "\""  << "," ;
-
-
-	 /* persist the scale */
-
-	 fp << scale << ",";
-
-
-	 /* persist the object id */
-
-	 fp << objectID << ",";
-
-
-	 fp << script_type << ",";
-
-
-   fp << script_opts << std::endl;
-}
-
-
-HostedObject::EntityState* HostedObject::getEntityState(const SpaceID& space, const ObjectReference& oref)
-{
-
-    HostedObject::EntityState* es = new HostedObject::EntityState();
-    ProxyObjectPtr poptr = getProxy(space, oref);
-
-
-
-    Location loc = getLocation(space, oref);
-    es->objType = "mesh";
-    es->subType = "graphiconly";
-
-    // FIXME : HostedObject does not take the name of the entity into account right now after reading from the scene file.
-    es->name = "unknown";
-    es->pos = loc.getPosition();
-    es->orient = loc.getOrientation();
-    es->vel = loc.getVelocity();
-    es->rot = loc.getAxisOfRotation();
-    es->angular_speed = loc.getAngularSpeed();
-
-
-    if (poptr == nullPtr)
-        assert (false);
-
-
-    es->mesh = poptr->getMesh().toString();
-
-    /* Get Scale from the Bounding Sphere. Scale is the radius of this sphere */
-    es->scale = poptr->getBounds().radius();
-    es->objectID = oref.toString();
-
-    if(mObjectScript)
-    {
-        es->script_type = mObjectScript->scriptType();
-        es->script_opts = mObjectScript->scriptOptions();
-    }
-    return es;
 }
 
 }

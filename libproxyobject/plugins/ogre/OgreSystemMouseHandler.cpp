@@ -169,43 +169,7 @@ void OgreSystemMouseHandler::createUIAction(const String& ui_page) {
     ui_wv->loadFile(ui_page);
 
 }
-/*
-static String convertAndEscapeJavascriptString(const String& in) {
-    String result = "'";
 
-    for(int ii = 0; ii < in.size(); ii++) {
-        switch(in[ii]) {
-          case '\n':
-            result += "\\n"; break;
-          case '\r':
-            result += "\\r"; break;
-          case '\'':
-            result += "\'"; break;
-          case '\t':
-            result += "\\t"; break;
-          default:
-            result += in[ii]; break;
-        }
-    }
-
-    result += "'";
-    return result;
-}
-
-void OgreSystemMouseHandler::handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload) {
-    Sirikata::JS::Protocol::ScriptingMessage scripting_msg;
-    bool parsed = scripting_msg.ParseFromArray(payload.data(), payload.size());
-    if (!parsed) return;
-
-
-    if (mScriptingUIWebViews.find(src.spaceObject()) == mScriptingUIWebViews.end()) return;
-    WebView* wv = mScriptingUIWebViews[src.spaceObject()];
-
-    for(int32 ii = 0; ii < scripting_msg.replies_size(); ii++) {
-        wv->evaluateJS("addMessage( " + convertAndEscapeJavascriptString(scripting_msg.replies(ii).body()) + " )");
-    }
-}
-*/
 inline Vector3f direction(Quaternion cameraAngle) {
     return -cameraAngle.zAxis();
 }
@@ -518,7 +482,7 @@ OgreSystemMouseHandler::OgreSystemMouseHandler(OgreSystem *parent)
    mLastCameraTime(Task::LocalTime::now()),
    mLastFpsTime(Task::LocalTime::now()),
    mLastRenderStatsTime(Task::LocalTime::now()),
-   mNewQueryAngle(0.f)
+   mUIReady(false)
 {
     mLastHitCount=0;
     mLastHitX=0;
@@ -572,6 +536,10 @@ OgreSystemMouseHandler::~OgreSystemMouseHandler() {
 
 void OgreSystemMouseHandler::setDelegate(Invokable* del) {
     mDelegate = del;
+}
+
+void OgreSystemMouseHandler::uiReady() {
+    mUIReady = true;
 }
 
 Input::Modifier OgreSystemMouseHandler::getCurrentModifiers() const {
@@ -841,8 +809,10 @@ void OgreSystemMouseHandler::windowResized(uint32 w, uint32 h) {
 }
 
 void OgreSystemMouseHandler::tick(const Task::LocalTime& t) {
-    fpsUpdateTick(t);
-    renderStatsUpdateTick(t);
+    if (mUIReady) {
+        fpsUpdateTick(t);
+        renderStatsUpdateTick(t);
+    }
 
     ensureUI();
 }

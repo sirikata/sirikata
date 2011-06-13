@@ -83,34 +83,9 @@ protected:
 
 //------- Members
     ObjectHostContext* mContext;
-
-  public:
-     struct EntityState
-     {
-       public:
-
-         String objType;
-         String subType;
-         String name;
-         Vector3d pos;
-         Quaternion orient;
-         Vector3f vel;
-         Vector3f rot;
-         float angular_speed;
-         String mesh;
-         String physics;
-         float scale;
-         String objectID;
-         String script_type;
-         String script_opts;
-         void persistToFile(std::ofstream&);
-
-     };
-     typedef struct EntityState EntityState;
+    const UUID mID;
 
   private:
-    //SpaceSet mSpaces;
-
 
     ObjectHost *mObjectHost;
     ObjectScript *mObjectScript;
@@ -148,13 +123,23 @@ private:
      * strings.  Invalid values are equivalent to passing NULL, since no scripts
      * can be instantiated -- there is no fallback to the default if you
      * explicitly specify a script type and options.
+     *
+     * \param _id A unique identifier for this object within this object
+     * host. You can specify it at construction so that objects can be restored
+     * from permanent storage.  You should always specify a non-null value, even
+     * if you need to manually allocate a new random identifier.
      */
-    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &uuid);
+    HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID &_id);
 
 public:
 /// Destructor: will only be called from shared_ptr::~shared_ptr.
     virtual ~HostedObject();
 
+    /** Get a unique identifier for this object on this object host. This is for
+     *  internal use only -- it has nothing to do with any space or presences in
+     *  the space. It is *not* a public value.
+     */
+    const UUID& id() const;
 
 private:
 //------- Private member functions:
@@ -389,9 +374,6 @@ public:
     void updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy);
     void sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref);
 
-    public:
-    HostedObject::EntityState* getEntityState(const SpaceID& space, const ObjectReference& oref);
-    void persistToFile(std::ofstream& file);
 };
 
 

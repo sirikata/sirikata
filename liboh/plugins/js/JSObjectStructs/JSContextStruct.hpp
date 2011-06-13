@@ -63,16 +63,13 @@ struct JSContextStruct : public JSSuspendable
 
 
 
-    v8::Handle<v8::Value> backendFlush(const String& seqKey);
-    v8::Handle<v8::Value> backendWrite(const String& seqKey, const String& id, const String& toWrite);
-    v8::Handle<v8::Value> backendRead(const String& prepend, const String& id);
-    v8::Handle<v8::Value> backendClearEntry(const String& prepend);
-    v8::Handle<v8::Value> backendClearItem(const String& prepend, const String& itemName);
-
-
-    v8::Handle<v8::Value> backendHaveEntry(const String& prepend);
-    v8::Handle<v8::Value> backendHaveUnflushedEvents(const String& prepend);
-    v8::Handle<v8::Value> backendClearOutstanding(const String& prependToken);
+    v8::Handle<v8::Value> storageBeginTransaction();
+    v8::Handle<v8::Value> storageCommit(v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> storageWrite(const String& seqKey, const String& id, const String& toWrite);
+    v8::Handle<v8::Value> storageRead(const String& prepend, const String& id);
+    v8::Handle<v8::Value> storageClearEntry(const String& prepend);
+    v8::Handle<v8::Value> storageClearItem(const String& prepend, const String& itemName);
+    v8::Handle<v8::Value> storageHaveEntry(const String& prepend);
 
 
 

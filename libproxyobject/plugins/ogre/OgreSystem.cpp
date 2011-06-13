@@ -183,6 +183,7 @@ void OgreSystem::handleUIReady() {
     // end up with more, we may need to make this just set a flag and then check
     // if all conditions are met.
     if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
+    mMouseHandler->uiReady();
 }
 
 void OgreSystem::handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom) {

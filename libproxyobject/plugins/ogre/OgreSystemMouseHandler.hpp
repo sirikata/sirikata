@@ -57,6 +57,9 @@ public:
     void alert(const String& title, const String& text);
     void tick(const Task::LocalTime& t);
 
+    // Invoked when the main UI components are ready
+    void uiReady();
+
     void setDelegate(Invokable* del);
 
     // FIXME no reason for this to be in this class.
@@ -80,8 +83,6 @@ private:
     bool recentMouseInRange(float x, float y, float *lastX, float *lastY);
 
     void createUIAction(const String& ui_page);
-
-    void handleScriptReply(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
     Task::EventResponse keyHandler(Task::EventPtr ev);
     Task::EventResponse axisHandler(Task::EventPtr ev);
@@ -116,25 +117,6 @@ private:
 
     int mWhichRayObject;
 
-    struct UIInfo {
-        UIInfo()
-         : scripting(NULL),chat(NULL)
-        {}
-
-        WebView* scripting;
-        WebView* chat;
-    };
-    typedef std::map<SpaceObjectReference, UIInfo> ObjectUIMap;
-    ObjectUIMap mObjectUIs;
-    // Currently we don't have a good way to push the space object reference to
-    // the webview because doing it too early causes it to fail since the JS in
-    // the page hasn't been executed yet.  Instead, we maintain a map so we can
-    // extract it from the webview ID.
-    typedef std::map<WebView*, ProxyObjectWPtr> ScriptingUIObjectMap;
-    ScriptingUIObjectMap mScriptingUIObjects;
-    typedef std::map<SpaceObjectReference, WebView*> ScriptingUIWebViewMap;
-    ScriptingUIWebViewMap mScriptingUIWebViews;
-
     IntersectResult mMouseDownTri;
     ProxyObjectWPtr mMouseDownObject;
     int mMouseDownSubEntity; // not dereferenced.
@@ -148,14 +130,7 @@ private:
     Task::LocalTime mLastFpsTime;
     Task::LocalTime mLastRenderStatsTime;
 
-    // To avoid too many messages, update only after a timeout
-    float mNewQueryAngle;
-    Network::IOTimerPtr mQueryAngleTimer;
-
-    // Port for sending scripting requests and receiving scripting
-    // responses. *Not* used for receiving scripting requests, so it is randomly
-    // selected.
-    ODP::Port* mScriptingRequestPort;
+    bool mUIReady;
 };
 
 

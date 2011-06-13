@@ -80,7 +80,7 @@ namespace JS {
 
 
 EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
- : JSObjectScript(jMan, ho->getObjectHost()->getStorage()),
+ : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->id()),
    mHandlingEvent(false),
    mResetting(false),
    mParent(ho),
@@ -490,7 +490,7 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
 
 void EmersonScript::create_entity(EntityCreateInfo& eci)
 {
-    HostedObjectPtr obj = mParent->getObjectHost()->createObject(UUID::random(), &eci.scriptType, &eci.scriptOpts);
+    HostedObjectPtr obj = mParent->getObjectHost()->createObject(&eci.scriptType, &eci.scriptOpts);
 
     obj->connect(eci.space,
         eci.loc,

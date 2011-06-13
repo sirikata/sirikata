@@ -41,32 +41,58 @@
 namespace Sirikata {
 namespace OH {
 
-/** Represents a backing store for persistent object storage. Each object is
- *  assigned an identifier which maps to a 'bucket' of values in the backing
- *  store, keeping each object isolated. Within that bucket, objects can write
- *  to keys, specified as strings.
+/** Represents a backing store for persistent object storage. Each
+ *  object is assigned an identifier which maps to a 'bucket' of
+ *  values in the backing store, keeping each object isolated. Within
+ *  that bucket, objects can write to keys, specified as strings.
+ *
+ *  Storage implementations *must* support transactions for atomic
+ *  commits to multiple keys. There are two modes - transactions and
+ *  single-key operations. In transactional mode, you call
+ *  beginTransaction(), call other methods to add operations to the
+ *  transaction, and finally call commit() to run the
+ *  transaction. Single-key operations are called without any
+ *  surrounding invokations of transaction methods. The implementation
+ *  can send them to be performed immediately.  Single-key operations
+ *  are really transactions, but elide the beginTransaction() and
+ *  commit() calls.
+ *
+ *  Ordering of transactions (and single-key transactions) are not
+ *  guaranteed: if you need to ensure operations happen in order you
+ *  should either batch them in a transaction or wait for the callback
+ *  for each one before processing the next.
  */
 class SIRIKATA_OH_EXPORT Storage {
 public:
+    // A storage implementation contains a set of 'buckets' which
+    // provide isolated storage for each object.
+    typedef UUID Bucket;
+
+    // Keys are arbitrary-length strings -- the namespace is flat, but
+    // it is easy to add human readable hierarchy using a separator
+    // (e.g. '.') and a bit of escaping.
+    typedef String Key;
+
+    /** CommitCallbacks are invoked */
+    typedef std::tr1::function<void(bool success)> CommitCallback;
 
     virtual ~Storage() {};
+
+    /** Begin a transaction. */
+    virtual void beginTransaction(const Bucket& bucket) = 0;
+    /** Completes a transaction and requests that it be written to
+       Flushes all outstanding events (writes and removes) from pending queue.
+       Resets pending queue as well.
+    */
+    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0) = 0;
+
 
     /**
        @param {String} entryName token to check if already have in our backend.
        @return {bool} returns true if already have an entry with this name in
        backend.  Otherwise, returns false.
     */
-    virtual bool haveEntry(const String& entryName) = 0;
-
-    /**
-       @param{String} entryName.  Name of entry to check if already have a sequence of
-       unflushed events for.
-
-       @return {bool} Returns true if there are unflushed events still pending on
-       this entry.
-    */
-    virtual bool haveUnflushedEvents(const String& entryName) = 0;
-
+    virtual bool haveEntry(const Bucket& bucket, const String& entryName) = 0;
 
    /**
       @param{String} entryName, name of the entry in the backend.
@@ -77,7 +103,7 @@ public:
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
    */
-    virtual bool clearItem(const String& entryName,const String& itemName) = 0;
+    virtual bool clearItem(const Bucket& bucket, const String& entryName,const String& itemName) = 0;
 
 
     /**
@@ -95,35 +121,15 @@ public:
        @return {bool} returns true if write is queued (ie if have the entry in the
        backend).  Otherwise, returns false
     */
-    virtual bool write(const String & entryName, const String& itemName, const String& strToWrite) = 0;
+    virtual bool write(const Bucket& bucket, const String & entryName, const String& itemName, const String& strToWrite) = 0;
 
-    /**
-       Flushes all outstanding events (writes and removes) from pending queue.
-       Resets pending queue as well.
-
-
-       @return {bool} returns true if the entryName matches a valid folder to write
-       to.  Returns false otherwise.
-    */
-    virtual bool flush(const String& entryName) = 0;
-
-    /**
-       @param {string} entryName.  Name of entry to remove all pending events for.
-
-       @return {bool} Returns true if have pending events for entryName.  Otherwise,
-       returns false.
-
-       Removes all pending events associated with entry with name entryName in
-       the backend.
-    */
-    virtual bool clearOutstanding(const String& entryName) = 0;
 
     /**
        @param {String} entryName.  Name of entry to be removed from backend.
 
        @return {bool} returns true if have entry to clear.  Otherwise returns false.
     */
-    virtual bool clearEntry (const String& entryName) = 0;
+    virtual bool clearEntry (const Bucket& bucket, const String& entryName) = 0;
 
 
     /**
@@ -138,7 +144,7 @@ public:
        named entryName and itemName, respectively and the read operation on that
        item was successful.  Returns false otherwise.
      */
-    virtual bool read(const String& entryName, const String& itemName, String& toReadTo) = 0;
+    virtual bool read(const Bucket& bucket, const String& entryName, const String& itemName, String& toReadTo) = 0;
 };
 
 

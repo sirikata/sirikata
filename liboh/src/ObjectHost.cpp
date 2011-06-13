@@ -99,6 +99,11 @@ ObjectHost::~ObjectHost()
     delete mScriptPlugins;
 }
 
+HostedObjectPtr ObjectHost::createObject(const String* script_type, const String* script_opts) {
+    // FIXME we could ensure that the random ID isn't actually in use already
+    return createObject(UUID::random(), script_type, script_opts);
+}
+
 HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String* script_type, const String* script_opts) {
     HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
     if (script_type != NULL && script_opts != NULL)
@@ -289,27 +294,5 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
     NOT_IMPLEMENTED(oh);
     return NULL;
 }
-
-
-void ObjectHost::persistEntityState( const String& filename)
-{
-    std::ofstream fp(filename.c_str());
-
-
-    fp << "\"objtype\",\"subtype\",\"name\",\"pos_x\",\"pos_y\",\"pos_z\",\"orient_x\",\"orient_y\",\"orient_z\",\"orient_w\",\"vel_x\",\"vel_y\",\"vel_z\",\"rot_axis_x\",\"rot_axis_y\",\"rot_axis_z\",\"rot_speed\",\"meshURI\",\"scale\",\"objid\",\"script_type\",\"script_options\"" << std::endl;
-
-
-
-    HostedObjectMap::iterator it = mHostedObjects.begin();
-    for( ; it != mHostedObjects.end(); it++)
-    {
-        HostedObjectPtr objPtr = (*it).second;
-        objPtr->persistToFile(fp);
-    }
-}
-
-
-
-
 
 } // namespace Sirikata

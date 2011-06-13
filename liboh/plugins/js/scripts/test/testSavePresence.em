@@ -3,4 +3,12 @@
 
 system.require('std/shim/restore/persistService.em');
 var fName = 'presToPersist';
-var nameServe = std.persist.checkpointPartialPersist(system.self,fName);
+std.persist.checkpointPartialPersist(
+    system.self,fName,
+    function(success) {
+        if (success)
+            system.print("Saving presence succeeded\n");
+        else
+            system.print("Saving presence failed\n");
+    }
+);
