@@ -121,14 +121,10 @@ tokens
     EXPR;
     EXPR_NO_IN;
     VERBATIM;
-    SENDER_MRP;
-    SENDER_CREATE_MRP;
-    SENDER_CREATE_MRP_AND_SEND;
-    SEND_CREATE_MRP;
-    SENDER_MRP_NO_IN;
-    SENDER_CREATE_MRP_NO_IN;
-    SENDER_CREATE_MRP_AND_SEND_NO_IN;
-    SEND_CREATE_MRP_NO_IN;
+    SEND_CONSTRUCT;
+    SENDER_CONSTRUCT;
+    SEND_CONSTRUCT_NO_IN;
+    SENDER_CONSTRUCT_NO_IN;     
 }
 
 
@@ -448,17 +444,20 @@ conditionalExpression
         ;
         
 msgRecvConstruct
+        : (msgConstruct -> msgConstruct)
+          ( LTERM* '<<' LTERM* e2=msgConstruct '<<' e3=msgConstruct -> ^(MESSAGE_RECV_AND_SENDER $msgRecvConstruct $e2 $e3))?
+          ( LTERM* '<<' LTERM* e4=msgConstruct -> ^(MESSAGE_RECV_NO_SENDER $msgRecvConstruct $e4 ))?
+        ;
+
+
+msgConstruct
         : (msgSenderConstruct -> msgSenderConstruct)
-          ( LTERM* '<<' LTERM* e2=msgSenderConstruct '<<' e3=msgSenderConstruct -> ^(MESSAGE_RECV_AND_SENDER $msgRecvConstruct $e2 $e3))?
-          ( LTERM* '<<' LTERM* e4=msgSenderConstruct -> ^(MESSAGE_RECV_NO_SENDER $msgRecvConstruct $e4 ))?
+          (LTERM* '>>' LTERM* e2=msgSenderConstruct -> ^(SEND_CONSTRUCT $msgConstruct $e2))*
         ;
 
 msgSenderConstruct
-        : (e1=ternaryExpression -> ternaryExpression)
-          ( LTERM* '#' LTERM* e2=ternaryExpression LTERM* '>>' LTERM* e3=ternaryExpression LTERM* '>>' LTERM* e4=ternaryExpression -> ^(SENDER_CREATE_MRP_AND_SEND $msgSenderConstruct $e2 $e3 $e4))?
-          (LTERM* '#' LTERM* e5=ternaryExpression LTERM* '>>' LTERM* e6=ternaryExpression -> ^(SENDER_CREATE_MRP $msgSenderConstruct $e5 $e6) )?
-          (LTERM* '#' LTERM* e7=ternaryExpression   -> ^(SENDER_MRP $msgSenderConstruct $e7 ) )?
-          (LTERM* '>>' e8=ternaryExpression ->^(SEND_CREATE_MRP $msgSenderConstruct $e8) )*
+        : (ternaryExpression -> ternaryExpression)
+          (LTERM* '#' LTERM* e2=ternaryExpression -> ^(SENDER_CONSTRUCT $msgSenderConstruct $e2))*
         ;
 
 
@@ -471,22 +470,26 @@ conditionalExpressionNoIn
         : msgRecvConstructNoIn
         ;
 
-        
+
 msgRecvConstructNoIn
-        : (msgSenderConstructNoIn -> msgSenderConstructNoIn)
-          ( LTERM* '<<' LTERM* e2=msgSenderConstructNoIn '<<' e3=msgSenderConstructNoIn -> ^(MESSAGE_RECV_AND_SENDER_NO_IN $msgRecvConstructNoIn $e2 $e3))?
-          ( e4=msgSenderConstructNoIn LTERM* '<<' LTERM* e5=msgSenderConstructNoIn -> ^(MESSAGE_RECV_NO_SENDER_NO_IN $msgRecvConstructNoIn $e4 $e5 ))?
+        : (msgConstructNoIn -> msgConstructNoIn)
+          ( LTERM* '<<' LTERM* e2=msgConstructNoIn '<<' e3=msgConstructNoIn -> ^(MESSAGE_RECV_AND_SENDER_NO_IN $msgRecvConstructNoIn $e2 $e3))?
+          ( e4=msgConstructNoIn LTERM* '<<' LTERM* e5=msgConstructNoIn -> ^(MESSAGE_RECV_NO_SENDER_NO_IN $msgRecvConstructNoIn $e4 $e5 ))?
         ;
         
+
+msgConstructNoIn
+        : (msgSenderConstructNoIn -> msgSenderConstructNoIn)
+          (LTERM* '>>' e2=msgSenderConstructNoIn ->^(SEND_CONSTRUCT_NO_IN $msgConstructNoIn $e2) )*        
+        ;
 
 msgSenderConstructNoIn
-        : (e1=ternaryExpressionNoIn -> ternaryExpressionNoIn)
-          ( LTERM* '#' LTERM* e2=ternaryExpressionNoIn LTERM* '>>' LTERM* e3=ternaryExpressionNoIn LTERM* '>>' LTERM* e4=ternaryExpressionNoIn -> ^(SENDER_CREATE_MRP_AND_SEND_NO_IN $msgSenderConstructNoIn $e2 $e3 $e4))?
-          (LTERM* '#' LTERM* e5=ternaryExpressionNoIn LTERM* '>>' LTERM* e6=ternaryExpressionNoIn -> ^(SENDER_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e5 $e6) )?
-          (LTERM* '#' LTERM* e7=ternaryExpressionNoIn   -> ^(SENDER_MRP_NO_IN $msgSenderConstructNoIn $e7 ) )?
-          (LTERM* '>>' e8=ternaryExpressionNoIn ->^(SEND_CREATE_MRP_NO_IN $msgSenderConstructNoIn $e8) )*
+        : (ternaryExpressionNoIn -> ternaryExpressionNoIn)
+          (LTERM* '#' e2=ternaryExpressionNoIn ->^(SENDER_CONSTRUCT_NO_IN $msgSenderConstructNoIn $e2) )*        
         ;
 
+        
+        
 ternaryExpressionNoIn
         : (logicalORExpressionNoIn -> logicalORExpressionNoIn) (LTERM* '?' LTERM* expr1=assignmentExpressionNoIn LTERM* ':' LTERM* expr2=assignmentExpressionNoIn -> ^(TERNARYOP_NO_IN $ternaryExpressionNoIn $expr1 $expr2))*
         ;

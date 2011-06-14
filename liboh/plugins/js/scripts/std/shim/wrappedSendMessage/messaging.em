@@ -24,17 +24,41 @@ if (typeof(std.messaging) != 'undefined')
     
     std.messaging ={};
     system.require('std/shim/wrappedSendMessage/seqNumManager.em');
+
+
+    /**
+     @param {presence} sender.  Which local presence to send message from.
+     @param {object} msg.  Message to send.
+     */
+    function SenderMessagePair(sender,msg)
+    {
+        this.sender = sender;
+        this.msg = msg;
+    }
+
+    std.messaging.SenderMessagePair = function(sender,msg)
+    {
+        if ((! checkIsPresence(sender)) || (typeof(msg) != 'object'))
+            throw 'Error constructing SenderMessagePair.  Require a presence and an object message';
+
+        return new SenderMessagePair(sender,msg);
+    };
     
     /**
-     @param {object} msgToSend.  An object that we want to send to
-     receiver.
-     @param{visible} receiver.  A visible that we want to receive the
-     message;
-     @param {number} optional.  A number identifying what stream 
+     @param {SenderMessagePair} smp. A SenderMessagePair object, that
+     contains fields pointing at the message to send as well as who to
+     send the message from.
+
+     @param {Visible} receiver.  An external visible that is going to
+     receive the message contained in smp.
+
+     @param {Number} streamID.  (optional) The unique id for the
+     stream of communication between sender and receiver.  (If
+     unspecified, generate one.)
      */
-    function MessageReceiverPair(msgToSend,receiver, streamID)
+    function SenderMessageReceiver(smp,receiver,streamID)
     {
-        this.msg = msgToSend;
+        this.smp = smp;
         this.receiver = receiver;
         if (typeof(streamID) == 'undefined')
             this.streamID  = generateNewStreamID();
@@ -48,6 +72,40 @@ if (typeof(std.messaging) != 'undefined')
         return uniqueIDIndex ++;
     }
     
+
+    /**
+     @param {any} Variable to check if is a MessageReceiverPair
+     object.
+     
+     @return {bool} Returns true if objToCheck is a
+     MessageReceiverPair, returns false otherwise.
+     */
+    function checkIsSenderMessagePair(objToCheck)
+    {
+        if ((typeof(objToCheck) != 'object') || (objToCheck == null))
+            return false;
+        
+        return (objToCheck.constructor.toString().indexOf('function SenderMessagePair') != -1);
+    }
+
+    /**
+     @param {any} Variable to check if is a MessageReceiverSender
+     object.
+     
+     @return {bool} Returns true if objToCheck is a
+     MessageReceiverSender, returns false otherwise.
+     */
+    function checkIsSenderMessageReceiver(objToCheck)
+    {
+        if ((typeof(objToCheck) != 'object') || (objToCheck == null))
+            return false;
+        
+        return (objToCheck.constructor.toString().indexOf('SenderMessageReceiver') != -1);
+    }
+    
+
+    
+
     
     /**
      @param {any} toCheck is any variable.
@@ -81,37 +139,6 @@ if (typeof(std.messaging) != 'undefined')
         return (toCheck.__getType() == 'presence');        
     }
     
-    /**
-     @param {any} Variable to check if is a MessageReceiverPair
-     object.
-     
-     @return {bool} Returns true if objToCheck is a
-     MessageReceiverPair, returns false otherwise.
-     */
-    function checkIsMessageReceiverPair(objToCheck)
-    {
-        if ((typeof(objToCheck) != 'object') || (objToCheck == null))
-            return false;
-        
-        return (objToCheck.constructor.toString().indexOf('function MessageReceiverPair') != -1);
-    }
-
-    /**
-     @param {any} Variable to check if is a MessageReceiverSender
-     object.
-     
-     @return {bool} Returns true if objToCheck is a
-     MessageReceiverSender, returns false otherwise.
-     */
-    function checkIsMessageReceiverSender(objToCheck)
-    {
-        if ((typeof(objToCheck) != 'object') || (objToCheck == null))
-            return false;
-        
-        return (objToCheck.constructor.toString().indexOf('MessageReceiverSender') != -1);
-    }
-
-    
     
     /**
      @param {any} toCheck.  Variable to check if it is an arrray.
@@ -125,94 +152,15 @@ if (typeof(std.messaging) != 'undefined')
         return (toCheck.constructor.toString().indexOf('Array') != -1);
     }
 
-    /**
-     presence : mrp;
-     returns this object
-     (note: can use msg>> recevier to construct mrp);
-     
-     @param {presence} sender: presence sending the message from.
-     @param {MessageReceiverPair} mrp.  The paired message to send and
-     receiver to send that message to.
-     */
-    function MessageReceiverSender(sender,mrp)
-    {
-        if (!(checkIsPresence(sender) && checkIsMessageReceiverPair(mrp)))
-            throw 'Error constructing MessageReceiverSender object.  Requires sender to be presence and mrp to be a messagereceiverpair object.';
-        
-        this.mrp = mrp;
-        this.sender = sender;
-    }
-    
-    std.messaging.MessageReceiverSender = function(sender,mrp)
-    {
-        return new MessageReceiverSender(sender,mrp);
-    };
 
 
-    /**
-     a : b >> c
-
-     @param {presence} a
-     @param {MessageReceiver} b
-     @param {Array} c
-
-     @return {ClearableObject}
-     
-     -------
-     @param {presence} a
-     @param {object} b (message)
-     @param {visible} c (to send message to)
-
-     @return {MessageReceiverSender}
-     
-     */
-    std.messaging.parseTriple = function(a,b,c)
-    {
-        //first case in above docs
-        if (checkIsMessageReceiverPair(b))
-            return std.messaging.sendSyntax(std.messaging.MessageReceiverSender(a, b), c);
-
-        return std.messaging.MessageReceiverSender(a, std.messaging.MessageReceiverPair(b,c));
-        
-    };
-
-    
-    // /**
-    //  presence : mrp;
-    //  returns this object
-    //  (note: can use msg>> recevier to construct mrp);
-     
-    //  @param {presence} sender: presence sending the message from.
-    //  @param {MessageReceiverPair} mrp.  The paired message to send and
-    //  receiver to send that message to.
-    //  */
-    // std.messaging.MessageReceiverSender = function(sender,mrp)
-    // {
-    //     if (!(checkIsPresence(sender) && checkIsMessageReceiverPair(mrp)))
-    //         throw 'Error constructing MessageReceiverSender object.  Requires sender to be presence and mrp to be a messagereceiverpair object.';
-        
-    //     this.mrp = mrp;
-    //     this.sender = sender;
-    // };
-
-    /**
-     Turns message receiver pair into a message receiver sender object
-     (using system.self as sender) and then calls down to
-     sendMessageReceiverSender, which performs additional type check
-     on responseArray and actually sends the message.
-     */
-    function callSendMessageReceiverPair(mrp,responseArray)
-    {
-        var mrs = new std.messaging.MessageReceiverSender(system.self,mrp);
-        return callSendMessageReceiverSender(mrs,responseArray);
-    }
 
     /**
      Does some basic checks on the responseArray (has 3 or less
      fields, has functions in first and last slots and a number in the
      middle, etc.
      */
-    function callSendMessageReceiverSender(mrs, responseArray)
+    function callSendSenderMessageReceiver(smr, responseArray)
     {
         if (responseArray.length > 3)
             throw 'Error: Incorrectly formatted response array.  Response array requires three arguments or fewer 1) function to call on responses to your message; 2) amount of time to wait before stop listening for response; 3) function to execute if receive no response after this time.';
@@ -238,8 +186,14 @@ if (typeof(std.messaging) != 'undefined')
             if (typeof(noRespFunc) != 'function')
                 throw 'Error: Third arg in response array must be a function';
         }
-        
-        return std.messaging.sendMessage(mrs.mrp.msg, mrs.mrp.receiver,mrs.sender,respFunc,timeToWait,noRespFunc, mrs.mrp.streamID);
+
+        return std.messaging.sendMessage(smr.smp.msg,
+                                         smr.receiver,
+                                         smr.smp.sender,
+                                         respFunc,
+                                         timeToWait,
+                                         noRespFunc,
+                                         smr.streamID);
     }
     
     /**
@@ -254,7 +208,6 @@ if (typeof(std.messaging) != 'undefined')
      object.  This object can later be used to actually send the
      message.  (eg. presToSendFrom : message_receiver_pair >> []; See
      alternate arguments to understand message_receiver_pair >> []; )
-
      
      or
 
@@ -284,18 +237,24 @@ if (typeof(std.messaging) != 'undefined')
 
      @return {ClearObject} Same as above.  @see return type for
      std.messaging.sendMessage.
+
+     a # obj >> receiver >> [];
      
      */
     std.messaging.sendSyntax = function (lhs, rhs)
     {
-        if (checkIsMessageReceiverPair(lhs) && checkIsArray(rhs))
-            return callSendMessageReceiverPair(lhs,rhs);
-        else if (checkIsMessageReceiverSender(lhs) && checkIsArray(rhs))
-            return callSendMessageReceiverSender(lhs,rhs);
+        if (checkIsSenderMessageReceiver(lhs) && checkIsArray(rhs))
+            return callSendSenderMessageReceiver(lhs,rhs);
         else if ((typeof(lhs) == 'object') && (checkIsVisible(rhs)))
-            return new MessageReceiverPair(lhs,rhs);
-        //lkjs;
-        
+        {
+            //lhs >> c ... lhs = a # b.
+            if( checkIsSenderMessagePair(lhs))
+                return new SenderMessageReceiver(lhs,rhs);
+            // b>> c (gets implicity a #
+            else
+                return (new SenderMessageReceiver  ((new SenderMessagePair(system.self,lhs)),rhs));
+        }
+
         throw 'Error in sender syntax.  Require either that: 1) lhs must be senderReceiverPair and rhs must contain message handling code; or 2) lhs must be object and rhs must be visible.  Aborting.';
     };
 
@@ -401,10 +360,11 @@ if (typeof(std.messaging) != 'undefined')
         if (typeof(oldMsg.streamID) == 'number')
             streamID = oldMsg.streamID;
 
+
         var returner = function(newMsg)
         {
-            var mrp = new MessageReceiverPair(newMsg,sndr,streamID);
-            return new std.messaging.MessageReceiverSender(system.self,mrp);
+            var smp = new SenderMessagePair(system.self,newMsg);
+            return new SenderMessageReceiver(smp, sndr,streamID);
         };
         return returner;
     };

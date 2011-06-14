@@ -879,7 +879,7 @@ conditionalExpression
         ;
         
 msgRecvConstruct
-        : msgSenderConstruct
+        : msgConstruct
         | ^(MESSAGE_RECV_AND_SENDER
             {
                APP("system.registerHandler( ");
@@ -888,11 +888,11 @@ msgRecvConstruct
             {
                 APP(",");
             }
-            msgSenderConstruct
+            msgConstruct
             {
                 APP(",");
             }
-            msgSenderConstruct
+            msgConstruct
             {
                 APP(")");
             }
@@ -905,88 +905,47 @@ msgRecvConstruct
             {
                 APP(",");
             }
-            msgSenderConstruct
+            msgConstruct
             {
                 APP(", null)");
             }
            )
          ;
 
+msgConstruct
+        : msgSenderConstruct
+        | ^(SEND_CONSTRUCT
+            {
+                APP("std.messaging.sendSyntax(");
+            }
+            msgConstruct
+            {
+                APP(",");
+            }
+            msgSenderConstruct
+            {
+                APP(")");
+            }
+           )
+        ;
+         
 
 msgSenderConstruct
         :  ternaryExpression
-        | ^(SENDER_MRP
-            { 
-                APP("std.messaging.sendSyntax(");
+        | ^(SENDER_CONSTRUCT
+            {
+                APP("std.messaging.SenderMessagePair(");
             }
             msgSenderConstruct
             {
                 APP(",");
             }
-            ternaryExpression 
+            ternaryExpression
             {
                 APP(")");
             }
            )
-        | ^(SENDER_CREATE_MRP
-           {
-              APP("std.messaging.parseTriple(");
-           }
-           msgSenderConstruct
-           {
-                APP(",");
-           }
-           ternaryExpression 
-           {
-                APP(",");
-           }
-           ternaryExpression 
-           {
-                APP(")");
-           }
-          )
-       | ^(SENDER_CREATE_MRP_AND_SEND
-           {
-              // p : a >> b >> c;
-              // sendSyntax(  messageReceiverSender(p, sendSyntax(a,b) )  , c)
-              APP("std.messaging.sendSyntax(");
-              APP("std.messaging.MessageReceiverSender(");
-           }
-           msgSenderConstruct
-           {
-              APP(",");
-              APP(" std.messaging.sendSyntax( ");
-           }
-           ternaryExpression
-           {
-              APP(",");
-           }
-           ternaryExpression
-           {
-              APP(")"); //closes internal sendSyntax
-              APP(")"); //closes internal messageReceiverSender
-              APP(",");
-           }
-           ternaryExpression
-           {
-              APP(")"); //closes external sendSyntax
-           }
-          )
-       | ^(SEND_CREATE_MRP
-           {
-              APP("std.messaging.sendSyntax(");
-           }
-           msgSenderConstruct
-           {
-              APP(",");
-           }
-           ternaryExpression
-           {
-              APP(")");
-           }
-          )
-       ;
-
+        ;
 
          
 ternaryExpression
@@ -1014,7 +973,7 @@ ternaryExpression
 
          
 msgRecvConstructNoIn
-        : msgSenderConstructNoIn
+        : msgConstructNoIn
         | ^(MESSAGE_RECV_AND_SENDER_NO_IN
             {
                APP("system.registerHandler( ");
@@ -1023,11 +982,11 @@ msgRecvConstructNoIn
             {
                 APP(",");
             }
-            msgSenderConstructNoIn
+            msgConstructNoIn
             {
                 APP(",");
             }
-            msgSenderConstructNoIn
+            msgConstructNoIn
             {
                 APP(")");
             }
@@ -1040,21 +999,37 @@ msgRecvConstructNoIn
             {
                 APP(",");
             }
-            msgSenderConstructNoIn
+            msgConstructNoIn
             {
                 APP(", null)");
             }
            )
          ;
 
-         
 
+msgConstructNoIn
+        : msgSenderConstructNoIn
+        | ^(SEND_CONSTRUCT_NO_IN
+            {
+                APP("std.messaging.sendSyntax(");
+            }
+            msgConstructNoIn
+            {
+                APP(",");
+            }
+            msgSenderConstructNoIn
+            {
+                APP(")");
+            }
+           )
+        ;
+         
 
 msgSenderConstructNoIn
         :  ternaryExpressionNoIn
-        | ^(SENDER_MRP_NO_IN
-            { 
-                APP("std.messaging.sendSyntax(");
+        | ^(SENDER_CONSTRUCT_NO_IN
+            {
+                APP("std.messaging.SenderMessagePair(");
             }
             msgSenderConstructNoIn
             {
@@ -1065,64 +1040,7 @@ msgSenderConstructNoIn
                 APP(")");
             }
            )
-        | ^(SENDER_CREATE_MRP_NO_IN
-           {
-              APP("std.messaging.parseTriple(");
-           }
-           msgSenderConstructNoIn
-           {
-                APP(",");
-           }
-           ternaryExpressionNoIn
-           {
-                APP(",");
-           }
-           ternaryExpressionNoIn
-           {
-                APP(")");
-           }
-          )
-       | ^(SENDER_CREATE_MRP_AND_SEND_NO_IN
-           {
-              // p : a >> b >> c;
-              // sendSyntax(  messageReceiverSender(p, sendSyntax(a,b) )  , c)
-              APP("std.messaging.sendSyntax(");
-              APP("std.messaging.MessageReceiverSender(");
-           }
-           msgSenderConstructNoIn
-           {
-              APP(",");
-              APP(" std.messaging.sendSyntax( ");
-           }
-           ternaryExpressionNoIn
-           {
-              APP(",");
-           }
-           ternaryExpressionNoIn
-           {
-              APP(")"); //closes internal sendSyntax
-              APP(")"); //closes internal messageReceiverSender
-              APP(",");
-           }
-           ternaryExpressionNoIn
-           {
-              APP(")"); //closes external sendSyntax
-           }
-          )
-       | ^(SEND_CREATE_MRP_NO_IN
-           {
-              APP("std.messaging.sendSyntax(");
-           }
-           msgSenderConstructNoIn
-           {
-              APP(",");
-           }
-           ternaryExpressionNoIn
-           {
-              APP(")");
-           }
-          )
-       ;
+        ;
 
 
 ternaryExpressionNoIn
