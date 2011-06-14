@@ -882,7 +882,6 @@ SET(ProtocolBuffersSourcesPublic
 )
 SET(ProtocolBuffersSourcesInternal
   # Additional internal stuff
-  ${ProtocolBuffersRoot}/Persistence
   ${ProtocolBuffersRoot}/Test
   ${ProtocolBuffersRoot}/JSMessage
   ${ProtocolBuffersRoot}/ServerProx
@@ -995,7 +994,6 @@ SET(TRACE_PBJ_CPP_FILES ${TRACE_PBJ_CPP_FILES} ${TRACE_CORE_PBJ_CPP_FILES})
 
 # For scripting
 SET(ScriptingProtocolBuffersSources
-  Persistence
   Test
   Physics
   )
@@ -1051,9 +1049,6 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/TransferPool.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
-	${LIBCORE_SOURCE_DIR}/persistence/ObjectStorage.cpp
-	${LIBCORE_SOURCE_DIR}/persistence/ReadWriteHandlerFactory.cpp
-	${LIBCORE_SOURCE_DIR}/persistence/MinitransactionHandlerFactory.cpp
 	${LIBCORE_SOURCE_DIR}/task/DependencyTask.cpp
 	${LIBCORE_SOURCE_DIR}/task/WorkQueue.cpp
 	${LIBCORE_SOURCE_DIR}/task/Time.cpp
@@ -1261,13 +1256,6 @@ SET(CPPOH_SOURCES
 
 SET(LIBCORE_PLUGIN_SKELETON_DIR ${LIBCORE_PLUGIN_DIR}/skeleton)
 SET(LIBCORE_PLUGIN_SKELETON_SOURCES ${LIBCORE_PLUGIN_SKELETON_DIR}/PluginInterface.cpp)
-
-SET(LIBCORE_PLUGIN_SQLITE_DIR ${LIBCORE_PLUGIN_DIR}/sqlite)
-SET(LIBCORE_PLUGIN_SQLITE_SOURCES
-  ${SQLite_PBJ_CPP_FILES}
-        ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLitePlugin.cpp
-        ${LIBCORE_PLUGIN_SQLITE_DIR}/SQLiteObjectStorage.cpp)
-
 
 SET(LIBCORE_PLUGIN_TCPSST_DIR ${LIBCORE_PLUGIN_DIR}/tcpsst)
 SET(LIBCORE_PLUGIN_TCPSST_SOURCES
@@ -1550,8 +1538,6 @@ libcore/test/FactoryTest.hpp
 libcore/test/FairQueueTest.hpp
 libcore/test/ListenerTest.hpp
 libcore/test/Matrix3Test.hpp
-libcore/test/MinitransactionHandlerTest.hpp
-libcore/test/ObjectStorageTest.hpp
 libcore/test/OptionValueListTest.hpp
 libcore/test/OptionTest.hpp
 libcore/test/QuaternionTest.hpp
@@ -1562,9 +1548,6 @@ libcore/test/TR1Test.hpp
 libcore/test/Vector3Test.hpp
 libcore/test/BoundingBoxTest.hpp
  )
-IF(NOT WIN32)
-SET(CXXTESTSources ${CXXTESTSources} libcore/test/ReadWriteHandlerTest.hpp libcore/test/SQLiteMinitransactionTest.hpp libcore/test/SQLiteReadWriteTest.hpp)
-ENDIF()
 #  libcore/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 	LIBRARYDIR ${CXXTESTRoot})
@@ -1577,11 +1560,6 @@ SET(TEST_SOURCES
   ${LIBCORE_DIR}/test/Test.cpp
   ${CXXTEST_CPP_FILE}
   ${Test_PBJ_CPP_FILES}
-  ${LIBCORE_DIR}/test/SQLiteMinitransactionTest.cpp
-  ${LIBCORE_DIR}/test/ObjectStorageTest.cpp
-  ${LIBCORE_DIR}/test/MinitransactionHandlerTest.cpp
-  ${LIBCORE_DIR}/test/SQLiteReadWriteTest.cpp
-  ${LIBCORE_DIR}/test/ReadWriteHandlerTest.cpp
 )
 
 
@@ -1743,15 +1721,6 @@ IF(sirikata_core_LDFLAGS)# use the core ldflags--these guys act similarly to cor
 ENDIF()
 TARGET_LINK_LIBRARIES(${SIRIKATA_SQLITE_LIB} ${SIRIKATA_CORE_LIB} ${SQLite3_LIBRARIES})
 SET_TARGET_PROPERTIES(${SIRIKATA_SQLITE_LIB} PROPERTIES ${SIRIKATA_VERSION_SETTINGS})
-
-ADD_PLUGIN_TARGET(sqlite
-                    SOURCES ${LIBCORE_PLUGIN_SQLITE_SOURCES}
-                    TARGET_LDFLAGS ${sirikata_LDFLAGS}
-                    TARGET_LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SQLITE_LIB}
-                    LIBRARIES ${SIRIKATA_CORE_LIB} ${SIRIKATA_SQLITE_LIB} ${SQLite3_LIBRARIES} ${PROTOCOLBUFFERS_LIBRARIES}
-		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
-		    )
-SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} sqlite)
 
 ENDIF()
 
