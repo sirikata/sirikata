@@ -49,7 +49,7 @@ function broadcastIt()
     {
         //send message "toBroadcast" to presence in
         //arrayOfVisibles[s].
-        toBroadcast -> arrayOfVisibles[s];            
+        toBroadcast >> arrayOfVisibles[s] >> [];            
     }
 }
 
