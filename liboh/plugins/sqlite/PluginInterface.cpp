@@ -32,60 +32,60 @@
 
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
-#include "FileStorage.hpp"
+#include "SQLiteStorage.hpp"
 
-static int filestorage_plugin_refcount = 0;
+static int sqliteoh_plugin_refcount = 0;
 
 namespace Sirikata {
 
 static void InitPluginOptions() {
-    Sirikata::InitializeClassOptions ico("filestorage",NULL,
-        new Sirikata::OptionValue("dir", "storage", Sirikata::OptionValueType<String>(), "Directory to store data to."),
+    Sirikata::InitializeClassOptions ico("sqlitestorage",NULL,
+        new Sirikata::OptionValue("db", "storage.db", Sirikata::OptionValueType<String>(), "Database file to store data to."),
         NULL);
 }
 
-static OH::Storage* createFileStorage(ObjectHostContext* ctx, const String& args) {
-    OptionSet* optionsSet = OptionSet::getOptions("filestorage",NULL);
+static OH::Storage* createSQLiteStorage(ObjectHostContext* ctx, const String& args) {
+    OptionSet* optionsSet = OptionSet::getOptions("sqlitestorage",NULL);
     optionsSet->parse(args);
 
-    String dir = optionsSet->referenceOption("dir")->as<String>();
+    String db = optionsSet->referenceOption("db")->as<String>();
 
-    return new OH::FileStorage(ctx, dir);
+    return new OH::SQLiteStorage(ctx, db);
 }
 
 } // namespace Sirikata
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
-    if (filestorage_plugin_refcount==0) {
+    if (sqliteoh_plugin_refcount==0) {
         InitPluginOptions();
         using std::tr1::placeholders::_1;
         OH::StorageFactory::getSingleton()
-            .registerConstructor("file",
-                                 std::tr1::bind(&createFileStorage, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
+            .registerConstructor("sqlite",
+                                 std::tr1::bind(&createSQLiteStorage, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
     }
-    filestorage_plugin_refcount++;
+    sqliteoh_plugin_refcount++;
 }
 
 SIRIKATA_PLUGIN_EXPORT_C int increfcount() {
-    return ++filestorage_plugin_refcount;
+    return ++sqliteoh_plugin_refcount;
 }
 SIRIKATA_PLUGIN_EXPORT_C int decrefcount() {
-    assert(filestorage_plugin_refcount>0);
-    return --filestorage_plugin_refcount;
+    assert(sqliteoh_plugin_refcount>0);
+    return --sqliteoh_plugin_refcount;
 }
 
 SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
-    if (filestorage_plugin_refcount==0) {
-        OH::StorageFactory::getSingleton().unregisterConstructor("file");
+    if (sqliteoh_plugin_refcount==0) {
+        OH::StorageFactory::getSingleton().unregisterConstructor("sqlite");
     }
 }
 
 SIRIKATA_PLUGIN_EXPORT_C const char* name() {
-    return "oh-file";
+    return "oh-sqlite";
 }
 
 SIRIKATA_PLUGIN_EXPORT_C int refcount() {
-    return filestorage_plugin_refcount;
+    return sqliteoh_plugin_refcount;
 }

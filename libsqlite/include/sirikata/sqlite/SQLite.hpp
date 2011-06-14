@@ -70,7 +70,9 @@ public:
      *  \returns a shared ptr to the database connection
      */
     SQLiteDBPtr open(const String& name);
-    static void check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg);
+    // Check and report errors in SQLite. Returns true if there was an error,
+    // false otherwise.
+    static bool check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg);
 
     static SQLite& getSingleton();
     static void destroy();

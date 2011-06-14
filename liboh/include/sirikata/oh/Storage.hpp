@@ -62,7 +62,7 @@ namespace OH {
  *  should either batch them in a transaction or wait for the callback
  *  for each one before processing the next.
  */
-class SIRIKATA_OH_EXPORT Storage {
+class SIRIKATA_OH_EXPORT Storage : public Service {
 public:
     // A storage implementation contains a set of 'buckets' which
     // provide isolated storage for each object.
@@ -83,6 +83,10 @@ public:
     typedef std::tr1::function<void(bool success, ReadSet* rs)> CommitCallback;
 
     virtual ~Storage() {};
+
+    /** Service Interface. */
+    virtual void start() {}
+    virtual void stop() {}
 
     /** Begin a transaction. */
     virtual void beginTransaction(const Bucket& bucket) = 0;

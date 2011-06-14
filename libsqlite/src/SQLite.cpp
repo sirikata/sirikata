@@ -36,20 +36,21 @@
 AUTO_SINGLETON_INSTANCE(Sirikata::SQLite);
 
 namespace Sirikata {
-void SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg)
-{
-	if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
-		std::cout << msg << " ... ";
-		if (sql_error_msg && *sql_error_msg) {
-			std::cout << *sql_error_msg;
-			sqlite3_free(*sql_error_msg);
-			*sql_error_msg = NULL;
-		}
-		else {
-			std::cout << sqlite3_errmsg(db);
-		}
-		std::cout << std::endl;
-	}
+bool SQLite::check_sql_error(sqlite3* db, int rc, char** sql_error_msg, std::string msg) {
+    if (rc != SQLITE_OK && rc != SQLITE_ROW && rc != SQLITE_DONE) {
+        std::cout << msg << " ... ";
+        if (sql_error_msg && *sql_error_msg) {
+            std::cout << *sql_error_msg;
+            sqlite3_free(*sql_error_msg);
+            *sql_error_msg = NULL;
+        }
+        else {
+            std::cout << sqlite3_errmsg(db);
+        }
+        std::cout << std::endl;
+        return true;
+    }
+    return false;
 }
 SQLiteDB::SQLiteDB(const String& name) {
     int rc;

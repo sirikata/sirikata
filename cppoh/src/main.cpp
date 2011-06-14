@@ -165,13 +165,9 @@ int main (int argc, char** argv) {
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
+    ctx->add(obj_storage);
     ctx->add(oh);
     ctx->add(sstConnMgr);
-
-
-
-
-
 
     ctx->run(1);
 
