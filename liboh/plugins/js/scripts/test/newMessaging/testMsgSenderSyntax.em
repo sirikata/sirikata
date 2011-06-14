@@ -42,6 +42,19 @@ function proxAddedCB(newVis)
     // var cancelable      =   std.messaging.sendSyntax(msgRecSender,[onResp,TIME_TO_WAIT,onNoResp]);
 
     system.self # testMsg >> newVis >> [onResp,TIME_TO_WAIT,onNoResp];
+
+    // var a =system.self # testMsg;
+    // var b = a   >> newVis >> [onResp,TIME_TO_WAIT,onNoResp];
+
+    // var a =system.self # testMsg;
+    // var b = a   >> newVis;
+    // var c = b >> [onResp,TIME_TO_WAIT,onNoResp];
+    
+
+    // var b = testMsg   >> newVis;
+    // var c = b >> [onResp,TIME_TO_WAIT,onNoResp];
+    
+
     
     // std.messaging.sendMessage(testMsg, newVis,system.self,onResp,TIME_TO_WAIT, onNoResp);
 }
