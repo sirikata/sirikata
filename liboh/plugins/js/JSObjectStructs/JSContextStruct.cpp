@@ -35,7 +35,8 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
    mSystem(new JSSystemStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
    mContGlobTempl(contGlobTempl),
    mUtil(NULL),
-   inClear(false)
+   inClear(false),
+   mInSuspendableLoop(false)
 {
     createContextObjects();
 
@@ -108,7 +109,29 @@ v8::Handle<v8::Value> JSContextStruct::proxRemovedHandlerCallallback(v8::Handle<
     return v8::Undefined();
 }
 
+/**
+   Function runs through suspendablesToDelete and deregisters them.
+   Also runs through suspendablesToAdd and adds them.  (Makes it so that we
+   don't mess up our iterators by adding to and removing from what they're
+   iterating over.)
+ */
+void JSContextStruct::flushQueuedSuspendablesToChange()
+{
+    if (mInSuspendableLoop)
+    {
+        JSLOG(error, "Error: should not be trying to flush queued suspendables until not in suspendable loop.  Aborting clearing suspendable objects");
+        return;
+    }
 
+    
+    for (SuspendableVecIter iter = suspendablesToDelete.begin(); iter != suspendablesToDelete.end(); ++iter)
+        struct_deregisterSuspendable(*iter);
+    for (SuspendableVecIter iter = suspendablesToAdd.begin(); iter != suspendablesToAdd.end(); ++iter)
+        struct_registerSuspendable(*iter);
+
+    suspendablesToDelete.clear();
+    suspendablesToAdd.clear();
+}
 
 //performs the initialization and population of util object, system object,
 //and system object's presences array.
@@ -243,15 +266,22 @@ v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeseria
 //matching sporef
 bool JSContextStruct::hasPresence(const SpaceObjectReference& sporef)
 {
+    mInSuspendableLoop = true;
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
     {
         JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (iter->first);
         if (jspres != NULL && jspres->getSporef() != NULL)
         {
             if (*(jspres->getSporef()) == sporef)
+            {
+                mInSuspendableLoop = false;
+                flushQueuedSuspendablesToChange();
                 return true;
+            }
         }
     }
+    mInSuspendableLoop = false;
+    flushQueuedSuspendablesToChange();
     return false;
 }
 
@@ -311,6 +341,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 {
     inClear = true;
     JSPresVec jspresVec;
+    mInSuspendableLoop = true;
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
     {
 
@@ -324,7 +355,10 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
             jspresVec.push_back(jspres);
     }
     associatedSuspendables.clear();
-
+    mInSuspendableLoop = false;
+    suspendablesToDelete.clear();
+    suspendablesToAdd.clear();
+    
     //get rid of previous stuff in root
     systemObj.Dispose();
     mContext.Dispose();
@@ -428,10 +462,14 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     inClear = true;
     JSLOG(insane,"Clearing a context.  Hopefully it works!");
 
+
+    mInSuspendableLoop = true;
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->clear();
+    mInSuspendableLoop = false;
+    flushQueuedSuspendablesToChange();
 
-
+    
     systemObj.Dispose();
     if (hasOnConnectedCallback)
         cbOnConnected.Dispose();
@@ -453,6 +491,12 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
         return;
     }
 
+    if (mInSuspendableLoop)
+    {
+        suspendablesToAdd.push_back(toRegister);
+        return;
+    }
+    
 
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
@@ -477,6 +521,13 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         return;
     }
 
+    if (mInSuspendableLoop)
+    {
+        suspendablesToDelete.push_back(toDeregister);
+        return;
+    }
+    
+    
     SuspendableIter iter = associatedSuspendables.find(toDeregister);
     if (iter == associatedSuspendables.end())
     {
@@ -497,10 +548,15 @@ v8::Handle<v8::Value> JSContextStruct::suspend()
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot suspend a context that has already been cleared.")) );
     }
 
+    
     JSLOG(insane,"Suspending all suspendable objects associated with context");
+    mInSuspendableLoop = true;
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->suspend();
 
+    mInSuspendableLoop = false;
+    flushQueuedSuspendablesToChange();
+    
     return JSSuspendable::suspend();
 }
 
@@ -515,9 +571,13 @@ v8::Handle<v8::Value> JSContextStruct::resume()
 
     JSLOG(insane,"Resuming all suspendable objects associated with context");
 
+    mInSuspendableLoop = true;
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->resume();
 
+    mInSuspendableLoop = false;
+    flushQueuedSuspendablesToChange();
+    
     return JSSuspendable::resume();
 }
 

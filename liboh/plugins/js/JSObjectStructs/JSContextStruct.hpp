@@ -234,8 +234,15 @@ private:
     //all associated objects that will need to be suspended/resumed if context
     //is suspended/resumed
     SuspendableMap associatedSuspendables;
-
-
+    
+    //If mInSuspendableLoop is true, doesn't actually delete any suspendable
+    //objects.  Just cues them to be deleted after we end suspendable loop.
+    bool mInSuspendableLoop;
+    SuspendableVec suspendablesToDelete;
+    SuspendableVec suspendablesToAdd;
+    
+    void flushQueuedSuspendablesToChange();
+    
 
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \

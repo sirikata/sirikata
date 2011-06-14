@@ -158,6 +158,9 @@ v8::Handle<v8::Value> JSEventHandlerStruct::resume()
 }
 v8::Handle<v8::Value> JSEventHandlerStruct::clear()
 {
+    if (jscont != NULL)
+        jscont->struct_deregisterSuspendable(this);
+
     cb.Dispose();
     sender.Dispose();
     return JSSuspendable::clear();
