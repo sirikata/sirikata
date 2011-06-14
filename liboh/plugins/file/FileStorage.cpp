@@ -37,32 +37,102 @@ namespace OH {
 
 //Events
 
-//Write data contained in file
-void FileStorageWriteItem::processEvent()
+class FileStorageEvent
 {
-    String fileToWrite = mPath.string();
-    std::ofstream fWriter (fileToWrite.c_str(),  std::ios::out | std::ios::binary);
+public:
+    FileStorageEvent(const boost::filesystem::path& path)
+     : mPath(path)
+    {}
+    virtual bool processEvent(Storage::ReadSet* rs) =0;
 
-    for (String::size_type s = 0; s < toWrite.size(); ++s)
+    virtual ~FileStorageEvent(){}
+protected:
+    const boost::filesystem::path mPath;
+};
+
+class FileStorageWriteItem : public FileStorageEvent
+{
+public:
+    FileStorageWriteItem(const boost::filesystem::path& path, const String& whatToWrite)
+     : FileStorageEvent(path),
+       toWrite(whatToWrite)
+    {}
+    virtual bool processEvent(Storage::ReadSet* rs)
     {
-        char toWriteChar = toWrite[s];
-        fWriter.write(&toWriteChar,sizeof(toWriteChar));
+        String fileToWrite = mPath.string();
+        std::ofstream fWriter (fileToWrite.c_str(),  std::ios::out | std::ios::binary);
+
+        for (String::size_type s = 0; s < toWrite.size(); ++s)
+        {
+            char toWriteChar = toWrite[s];
+            fWriter.write(&toWriteChar,sizeof(toWriteChar));
+        }
+
+        fWriter.flush();
+        fWriter.close();
+
+        return true;
     }
 
-    fWriter.flush();
-    fWriter.close();
-}
+    ~FileStorageWriteItem()
+    {}
+private:
+    String toWrite;
+};
 
-//Deletes item if it exists
-void FileStorageClearItem::processEvent()
+class FileStorageClearItem : public FileStorageEvent
 {
-     if (! boost::filesystem::exists(mPath))
-         return;
+public:
+    FileStorageClearItem(const boost::filesystem::path& path)
+     : FileStorageEvent(path)
+    {}
+    virtual bool processEvent(Storage::ReadSet* rs)
+    {
+        if (! boost::filesystem::exists(mPath))
+            return true;
 
-     boost::filesystem::remove(mPath);
- }
+        boost::filesystem::remove(mPath);
+        return true;
+    }
 
+    ~FileStorageClearItem()
+    {}
+};
 
+class FileStorageReadItem : public FileStorageEvent
+{
+public:
+    FileStorageReadItem(const boost::filesystem::path& path, const Storage::Key& key)
+     : FileStorageEvent(path),
+       mKey(key)
+    {}
+    virtual bool processEvent(Storage::ReadSet* rs)
+    {
+        if (!boost::filesystem::exists(mPath))
+            return false;
+
+        String fileToRead = mPath.string();
+        std::ifstream fRead(fileToRead.c_str(), std::ios::binary | std::ios::in);
+        std::ifstream::pos_type begin, end;
+
+        begin = fRead.tellg();
+        fRead.seekg(0,std::ios::end);
+        end   = fRead.tellg();
+        fRead.seekg(0,std::ios::beg);
+
+        std::ifstream::pos_type size = end-begin;
+        String& lhs = (*rs)[mKey];
+        lhs.resize(size);
+        fRead.read(&lhs[0],size);
+
+        return true;
+    }
+
+    ~FileStorageReadItem()
+    {}
+private:
+    Storage::Key mKey;
+};
 
 
 
@@ -98,19 +168,34 @@ boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const 
 }
 
 void FileStorage::beginTransaction(const Bucket& bucket) {
+    if (mActiveTransactions.find(bucket) == mActiveTransactions.end())
+        mActiveTransactions.insert(bucket);
 }
 
 void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb) {
-    if(! haveUnflushedEvents(bucket))
-        if (cb) mContext->mainStrand->post(std::tr1::bind(cb, false));
+    // Clear active transaction since we're finishing it
+    if (mActiveTransactions.find(bucket) != mActiveTransactions.end())
+        mActiveTransactions.erase(bucket);
 
+    ReadSet* rs = NULL;
+
+    if(!haveUnflushedEvents(bucket))
+        if (cb) mContext->mainStrand->post(std::tr1::bind(cb, false, rs));
+
+    rs = new ReadSet;
     std::vector<FileStorageEvent*> fbeVec = unflushedEvents[bucket];
+    bool success = true;
     for (FileEventVecIter iter = fbeVec.begin(); iter != fbeVec.end(); ++iter)
-        (*iter)->processEvent();
+        success = success && (*iter)->processEvent(rs);
 
     clearOutstanding(bucket);
 
-    if (cb) mContext->mainStrand->post(std::tr1::bind(cb, true));
+    if (rs->empty() || !success) {
+        delete rs;
+        rs = NULL;
+    }
+
+    if (cb) mContext->mainStrand->post(std::tr1::bind(cb, success, rs));
 }
 
 bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
@@ -120,28 +205,38 @@ bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
 }
 
 
-bool FileStorage::erase(const Bucket& bucket, const Key& key)
+bool FileStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb)
 {
     FileStorageClearItem* fbci = new FileStorageClearItem(getStoragePath(bucket, key));
     unflushedEvents[bucket].push_back(fbci);
+
+    // Run commit if this is a one-off transaction
+    if (mActiveTransactions.find(bucket) == mActiveTransactions.end())
+        commitTransaction(bucket, cb);
+
     return true;
 }
 
 
-bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite)
+bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb)
 {
     if (!boost::filesystem::exists(getStoragePath(bucket)))
         boost::filesystem::create_directory(getStoragePath(bucket));
 
     FileStorageWriteItem* fbw = new FileStorageWriteItem(getStoragePath(bucket, key), strToWrite);
     unflushedEvents[bucket].push_back(fbw);
+
+    // Run commit if this is a one-off transaction
+    if (mActiveTransactions.find(bucket) == mActiveTransactions.end())
+        commitTransaction(bucket, cb);
+
     return true;
 }
 
 
 bool FileStorage::clearOutstanding(const Bucket& bucket)
 {
-    if(! haveUnflushedEvents(bucket))
+    if(!haveUnflushedEvents(bucket))
         return false;
 
     OutEventsIter unflushedIter =  unflushedEvents.find(bucket);
@@ -159,30 +254,17 @@ bool FileStorage::clearOutstanding(const Bucket& bucket)
     return true;
 }
 
-bool FileStorage::read(const Bucket& bucket, const Key& key, String& toReadTo)
+bool FileStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb)
 {
     boost::filesystem::path path = getStoragePath(bucket, key);
 
-    if (! boost::filesystem::exists(path))
-        return false;
+    FileStorageReadItem* fbr = new FileStorageReadItem(getStoragePath(bucket, key), key);
+    unflushedEvents[bucket].push_back(fbr);
 
-    String fileToRead = path.string();
+    // Run commit if this is a one-off transaction
+    if (mActiveTransactions.find(bucket) == mActiveTransactions.end())
+        commitTransaction(bucket, cb);
 
-    std::ifstream fRead(fileToRead.c_str(), std::ios::binary | std::ios::in);
-    std::ifstream::pos_type begin, end;
-
-    begin = fRead.tellg();
-    fRead.seekg(0,std::ios::end);
-    end   = fRead.tellg();
-    fRead.seekg(0,std::ios::beg);
-
-    std::ifstream::pos_type size = end-begin;
-    char* readBuf = new char[size];
-    fRead.read(readBuf,size);
-
-    String interString(readBuf,size);
-    delete readBuf;
-    toReadTo = interString;
     return true;
 }
 

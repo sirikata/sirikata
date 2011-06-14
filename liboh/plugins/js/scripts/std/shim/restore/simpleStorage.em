@@ -26,9 +26,12 @@ if (typeof(std.simpleStorage) != 'undefined')
         std.persist.checkpointPartialPersist(newChars,mCharacteristics_field);
     };
     
-    std.simpleStorage.restoreMChars = function ()
+    std.simpleStorage.restoreMChars = function (cb)
     {
-        mChars = std.persist.restoreFrom(mCharacteristics_field);
+        std.persist.restoreFromAsync(mCharacteristics_field, function(success, obj) {
+                                         mChars = obj;
+                                         cb(success, obj);
+                                     });
     };
     
     std.simpleStorage.fullRestore = function(cb)
@@ -36,7 +39,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         if (system.self != system)
             return;  //means that we've already got a presence.
         
-        var restoredCB = function(restObjGraph,success,nServ)
+        var restoredCB = function(success, restObjGraph, nServ)
         {
             if (! success)
             {
@@ -54,8 +57,11 @@ if (typeof(std.simpleStorage) != 'undefined')
                 cb(mChars);
         };
             
-        std.simpleStorage.restoreMChars();
-        std.persist.restoreFromAsync(mSelfPres_field,restoredCB);
+        std.simpleStorage.restoreMChars(
+            function() {
+                std.persist.restoreFromAsync(mSelfPres_field,restoredCB);
+            }
+        );
     };
 
     std.simpleStorage.setRestoreScript = function (cb)

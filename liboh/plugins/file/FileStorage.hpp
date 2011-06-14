@@ -39,48 +39,7 @@
 namespace Sirikata {
 namespace OH {
 
-class FileStorageEvent
-{
-public:
-    FileStorageEvent(const boost::filesystem::path& path)
-     : mPath(path)
-    {}
-    virtual void processEvent() =0;
-
-    virtual ~FileStorageEvent(){}
-protected:
-    const boost::filesystem::path mPath;
-};
-
-class FileStorageWriteItem : public FileStorageEvent
-{
-public:
-    FileStorageWriteItem(const boost::filesystem::path& path, const String& whatToWrite)
-     : FileStorageEvent(path),
-       toWrite(whatToWrite)
-    {}
-    virtual void processEvent();
-
-
-    ~FileStorageWriteItem()
-    {}
-private:
-    String toWrite;
-};
-
-class FileStorageClearItem : public FileStorageEvent
-{
-public:
-    FileStorageClearItem(const boost::filesystem::path& path)
-     : FileStorageEvent(path)
-    {}
-    virtual void processEvent();
-
-    ~FileStorageClearItem()
-    {}
-};
-
-
+class FileStorageEvent;
 
 class FileStorage : public Storage
 {
@@ -95,9 +54,9 @@ public:
 
     virtual void beginTransaction(const Bucket& bucket);
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0);
-    virtual bool erase(const Bucket& bucket, const Key& key);
-    virtual bool write(const Bucket& bucket, const Key& key, const String& value);
-    virtual bool read(const Bucket& bucket, const Key& key, String& toReadTo);
+    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0);
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0);
+    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0);
 
 private:
 
@@ -109,12 +68,14 @@ private:
 
     typedef std::vector<FileStorageEvent*> FileEventVec;
     typedef FileEventVec::iterator FileEventVecIter;
+    typedef std::set<Bucket> ActiveTransactionsSet;
     typedef std::map<Bucket,std::vector<FileStorageEvent*> > OutstandingEvents;
     typedef OutstandingEvents::iterator OutEventsIter;
 
     ObjectHostContext* mContext;
     const boost::filesystem::path mDir; // Directory for storage
     //map of unflushed events indexed by entry (folder) name.
+    ActiveTransactionsSet mActiveTransactions;
     OutstandingEvents unflushedEvents;
 };
 

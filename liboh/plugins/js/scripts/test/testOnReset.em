@@ -17,9 +17,12 @@ function onReset()
         std.persist.checkpointPartialPersist(newChars,mCharacteristics_field);
     };
 
-    restoreMChars = function ()
+    restoreMChars = function (cb)
     {
-        mChars = std.persist.restoreFrom(mCharacteristics_field);
+        std.persist.restoreFromAsync(mCharacteristics_field, function(success, obj) {
+                                         mChars = obj;
+                                         cb(success, obj);
+                                     });
     };
     
     ( function()
@@ -27,7 +30,7 @@ function onReset()
           if (system.self != system)
               return;  //means that we've already got a presence.
           
-          var  restoredCB = function(restObjGraph,success,nServ)
+          var  restoredCB = function(success, restObjGraph, nServ)
           {
               if (! success)
               {
@@ -43,8 +46,9 @@ function onReset()
               simulator = new std.graphics.DefaultGraphics(restObjGraph,'ogregraphics');
           };
           
-          restoreMChars();
-          std.persist.restoreFromAsync(mSelfPres_field,restoredCB);
+          restoreMChars(function() {
+                            std.persist.restoreFromAsync(mSelfPres_field,restoredCB);
+                        });
       })();
 }
 
@@ -64,4 +68,3 @@ function setRestoreScript(restoreScript)
 
 
 setRestoreScript(onReset);
-

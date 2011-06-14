@@ -97,16 +97,22 @@ v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args)
     return jsfake->storageBeginTransaction();
 }
 
+namespace {
+v8::Handle<v8::Function> maybeDecodeCallbackArgument(const v8::Arguments& args, int32 idx) {
+    v8::Handle<v8::Function> cb;
+    if (args.Length() > idx) {
+        v8::Handle<v8::Value> cbVal = args[idx];
+        if (cbVal->IsFunction())
+            cb = v8::Handle<v8::Function>::Cast(cbVal);
+    }
+    return cb;
+}
+}
+
 v8::Handle<v8::Value> storageCommit(const v8::Arguments& args)
 {
     // Potentially decode a callback
-    v8::Handle<v8::Function> cb;
-    if (args.Length() > 0) {
-        v8::Handle<v8::Value> cbVal = args[0];
-        if (!cbVal -> IsFunction())
-            return v8::ThrowException( v8::Exception::Error(v8::String::New( "Error in storageCommit. Parameter should be callback function.")));
-        cb = v8::Handle<v8::Function>::Cast(cbVal);
-    }
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 0);
 
     //decode system object
     String errorMessage = "Error decoding error message when storageCommiting";
@@ -120,10 +126,11 @@ v8::Handle<v8::Value> storageCommit(const v8::Arguments& args)
 
 v8::Handle<v8::Value> storageErase(const v8::Arguments& args)
 {
-    if (args.Length() != 1)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling erase.  Require 1 arguments: an item to delete.")));
+    if (args.Length() != 1 && args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling erase.  Require 1 or 2 arguments: an item to delete and optional callback")));
 
     INLINE_STR_CONV_ERROR(args[0],storageErase,1,key);
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 1);
 
     //decode system object
     String errorMessage = "Error decoding error message when storageErase";
@@ -132,15 +139,14 @@ v8::Handle<v8::Value> storageErase(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageErase(key);
+    return jsfake->storageErase(key, cb);
 }
 
 
 v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
 {
-    if (args.Length() != 2)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageWrite.  Require 2 arguments: a key (string), and a string to write (string)")));
-
+    if (args.Length() != 2 && args.Length() != 3)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageWrite.  Require 2 or 3 arguments: a key (string), a string to write (string), and an optional callback")));
 
     INLINE_STR_CONV_ERROR(args[0],storageWrite,1,key);
 
@@ -148,7 +154,7 @@ v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in storageWrite, second argument (string) should be a string.")));
 
     String toWrite =  uint16StrToStr(args[1]->ToString());
-
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 2);
 
     //decode system object
     String errorMessage = "Error decoding error message when storageWriting";
@@ -157,16 +163,16 @@ v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageWrite(key,toWrite);
+    return jsfake->storageWrite(key,toWrite, cb);
 }
 
 v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
 {
-    if (args.Length() != 1)
-        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageRead.  Require 1 argument: an key (string)")));
-
+    if (args.Length() != 1 && args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling storageRead.  Require 1 or 2 arguments: an key (string) and optional callback")));
 
     INLINE_STR_CONV_ERROR(args[0],storageRead,1,key);
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 1);
 
     //decode system object
     String errorMessage = "Error decoding error message when storageReading";
@@ -175,7 +181,7 @@ v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->storageRead(key);
+    return jsfake->storageRead(key, cb);
 }
 
 

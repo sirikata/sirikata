@@ -104,9 +104,9 @@ public:
 
     v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
     v8::Handle<v8::Value> storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
-    v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, JSContextStruct* jscont);
-    v8::Handle<v8::Value> storageRead(const OH::Storage::Key& key, JSContextStruct* jscont);
-    v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+    v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
 
 
     /**
@@ -276,7 +276,7 @@ protected:
     OH::Storage* mStorage;
 
 
-    void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success);
+    void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs);
 };
 
 } // namespace JS

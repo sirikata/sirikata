@@ -278,50 +278,71 @@ v8::Handle<v8::Value> JSObjectScript::storageCommit(JSContextStruct* jscont, v8:
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
     OH::Storage::CommitCallback wrapped_cb = 0;
     if (!cb.IsEmpty()) {
-        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1);
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
     }
     mStorage->commitTransaction(mInternalID, wrapped_cb);
     return v8::Undefined();
 }
 
-void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success) {
+void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
     TryCatch try_catch;
 
     v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+    v8::Handle<v8::Value> js_rs = v8::Undefined();
+    if (rs && rs->size() > 0) {
+        v8::Handle<v8::Object> js_rs_obj = v8::Object::New();
+        for(OH::Storage::ReadSet::const_iterator it = rs->begin(); it != rs->end(); it++)
+            js_rs_obj->Set(v8::String::New(it->first.c_str(), it->first.size()), strToUint16Str(it->second));
+        js_rs = js_rs_obj;
+        // We own the read set.
+        delete rs;
+    }
 
-    int argc = 1;
-    v8::Handle<v8::Value> argv[1] = { js_success };
+    int argc = 2;
+    v8::Handle<v8::Value> argv[2] = { js_success, js_rs };
     invokeCallback(jscont, cb, argc, argv);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->erase(mInternalID, key);
+
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+
+    bool returner = mStorage->erase(mInternalID, key, wrapped_cb);
     return v8::Boolean::New(returner);
 }
 
-v8::Handle<v8::Value> JSObjectScript::storageWrite(const OH::Storage::Key& key, const String& toWrite, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
-    bool returner = mStorage->write(mInternalID, key, toWrite);
+
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
+
+    bool returner = mStorage->write(mInternalID, key, toWrite, wrapped_cb);
     return v8::Boolean::New(returner);
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
-    String toReadTo;
-    bool readSucceed = mStorage->read(mInternalID, key, toReadTo);
+    OH::Storage::CommitCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::storageCommitCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1, _2);
+    }
 
-    if (!readSucceed)
-        return v8::Null();
-
-    return strToUint16Str(toReadTo);
+    bool read_queue_success = mStorage->read(mInternalID, key, wrapped_cb);
+    return v8::Boolean::New(read_queue_success);
 }
 
 

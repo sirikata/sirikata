@@ -73,8 +73,14 @@ public:
     // (e.g. '.') and a bit of escaping.
     typedef String Key;
 
-    /** CommitCallbacks are invoked */
-    typedef std::tr1::function<void(bool success)> CommitCallback;
+    typedef std::tr1::unordered_map<Key, String> ReadSet;
+    /** CommitCallbacks are invoked when a response is received back
+     *  from the underlying storage system (or timeout occurs).  If
+     *  successful, the second parameter contains the values of any
+     *  read operations that were requested (or is NULL if none were
+     *  requested). If non-empty, ownership transfers to the caller.
+     */
+    typedef std::tr1::function<void(bool success, ReadSet* rs)> CommitCallback;
 
     virtual ~Storage() {};
 
@@ -88,13 +94,16 @@ public:
 
    /**
       @param {Key} key the key to erase
-      @return {bool} Returns true if have the entry in the backend.  Otherwise,
-      returns false.
+      @param {CommitCallback} cb optional commit callback which is
+                     invoked if this is a single operation transaction.
+      @return {bool} true if the erase is queued, false
+                     otherwise. Does not indicated success of actual
+                     erase operation.
 
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
    */
-    virtual bool erase(const Bucket& bucket, const Key& key) = 0;
+    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0) = 0;
 
 
     /**
@@ -105,22 +114,25 @@ public:
 
        @param {Key} key the key to erase
        @param{String} value What should be written into that item
+       @param {CommitCallback} cb optional commit callback which is
+                      invoked if this is a single operation transaction.
 
-       @return {bool} returns true if write is queued (ie if have the entry in the
-       backend).  Otherwise, returns false
+       @return {bool} true if the write is queued, false
+                     otherwise. Does not indicated success of actual
+                     write operation.
     */
-    virtual bool write(const Bucket& bucket, const Key& key, const String& value) = 0;
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0) = 0;
 
     /**
        @param {Key} key the key to erase
-       @param {String} toReadTo.  Returns data from entryName:itemName by
-       reference to this parameter.
+       @param {CommitCallback} cb optional commit callback which is
+                      invoked if this is a single operation transaction.
 
-       @return {bool} Returns true if an item and entry exist in the backend
-       named entryName and itemName, respectively and the read operation on that
-       item was successful.  Returns false otherwise.
+       @return {bool} true if the erase is queued, false
+                     otherwise. Does not indicated success of actual
+                     write operation.
      */
-    virtual bool read(const Bucket& bucket, const Key& key, String& toReadTo) = 0;
+    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0) = 0;
 };
 
 

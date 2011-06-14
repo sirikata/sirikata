@@ -41,14 +41,21 @@ ObjectWriter = function(entryName)
     };
 };
 
-readObject = function(entryName,itemName)
-{
-    var val = system.storageRead(keyName(entryName,itemName.toString()));
-    if (val == null)
-        throw 'Erorr in read.  No record pointed to with those names';
+var readObjectCallback = function(keyname, cb, success, rs) {
+    if (!success) cb(false);
 
-    var returner = system.deserialize(val);
-    return returner;
+    var returner = system.deserialize( rs[keyname]) ;
+    cb(true, returner);
+};
+readObject = function(entryName, itemName, cb)
+{
+    var keyname = keyName(entryName,itemName.toString());
+    var wrapped_cb = undefined;
+    if (cb)
+        wrapped_cb = std.core.bind(readObjectCallback, undefined, keyname, cb);
+    var queued = system.storageRead(keyname, wrapped_cb);
+    if (!queued)
+        throw 'Error queuing read request.';
 };
 
 })();

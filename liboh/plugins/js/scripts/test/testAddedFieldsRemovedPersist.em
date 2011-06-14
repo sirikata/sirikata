@@ -15,7 +15,7 @@ system.prettyprint(toPersist);
 
 //performing persist
 var fName = 'btestPartialPersist.em.bu';
-checkpointPartialPersist(
+std.persist.checkpointPartialPersist(
     toPersist,fName,
     function(success) {
         if (!success) {
@@ -27,12 +27,11 @@ checkpointPartialPersist(
         toPersist.c = 'e';
 
         //restoring object from file
-        restoreFrom(fName);
-
-
-        //re-printing object.
-        system.print('\nAfter restore\n');
-        system.prettyprint(toPersist);
+        std.persist.restoreFromAsync(fName, function(success, newCopy) {
+                                         //re-printing object.
+                                         system.print('\nAfter restore\n');
+                                         system.prettyprint(newCopy);
+                                     });
     }
 
 );

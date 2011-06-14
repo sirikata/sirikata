@@ -1,5 +1,5 @@
 if (typeof(std.persist) === 'undefined')
-    throw 'Error.  Do not import this file directly.  Only import it from persistService.em';
+    throw new Error('Error.  Do not import this file directly.  Only import it from persistService.em');
 
 
 (function()
@@ -74,7 +74,7 @@ if (typeof(std.persist) === 'undefined')
          if (!checkIsTriplet(triplet))
          {
              system.prettyprint(triplet);
-             throw 'Error in tripletGetIndexName.  Requires triplet to be passed in';                             
+             throw new Error('Error in tripletGetIndexName.  Requires triplet to be passed in');
          }
 
          return triplet[0];
@@ -83,7 +83,7 @@ if (typeof(std.persist) === 'undefined')
      function tripletGetValue(triplet)
      {
          if (!checkIsTriplet(triplet))
-             throw 'Error in tripletGetValue.  Requires triplet to be passed in';
+             throw new Error('Error in tripletGetValue.  Requires triplet to be passed in');
 
          var type = tripletGetType(triplet);
          if (type == 'number')
@@ -100,7 +100,7 @@ if (typeof(std.persist) === 'undefined')
      function tripletGetType(triplet)
      {
          if (!checkIsTriplet(triplet))
-             throw 'Error in tripletGetType.  Requires triplet to be passed in';            
+             throw new Error('Error in tripletGetType.  Requires triplet to be passed in');
          return triplet[2];         
      }
      
@@ -118,7 +118,7 @@ if (typeof(std.persist) === 'undefined')
     function tripletIsValueType (triplet)
     {
         if (! checkIsTriplet(triplet))
-            throw 'Error in checkTripletIsValueType.  Requires triplet to be passed in';            
+            throw new Error('Error in checkTripletIsValueType.  Requires triplet to be passed in');
 
         var tripType = tripletGetType(triplet);
 
@@ -164,11 +164,11 @@ if (typeof(std.persist) === 'undefined')
      function fixSinglePtr (ptrId, index,localCopyToPoint,nameService)
      {
          if ((typeof(localCopyToPoint) != 'object') || (localCopyToPoint== null))
-             throw 'Error in fixSinglePtr.  Should not have received non-obect or null ptr record.';
+             throw new Error('Error in fixSinglePtr.  Should not have received non-obect or null ptr record.');
 
          var fixedObj = nameService.lookupObject(ptrId);
          if (fixedObj == nameService.DNE)
-             throw 'Error in fixSinglePtr.  Have no record of object that you are trying to point to.';
+             throw new Error('Error in fixSinglePtr.  Have no record of object that you are trying to point to.');
 
          localCopyToPoint[index] = fixedObj;
      };
@@ -213,47 +213,62 @@ if (typeof(std.persist) === 'undefined')
       @param nameService can be used to lookup the ids for objects that
       we've already re-read.
 
-      @return {object} Returns an object whose subgraph is rooted at the
-      object with id ptrId. 
+      @param cb callback to invoke when complete. Passed success flag (boolean)
+      and, if successful, an object whose subgraph is rooted at the object with id ptrId.
 
       */
-     function fixReferences(keyName, ptrId,ptrsToFix,nameService)
+     function fixReferences(keyName, ptrId, ptrsToFix, nameService, cb)
      {
-         var unfixedObj = readObject(keyName,ptrId);
+         readObject(
+             keyName,ptrId,
+             std.core.bind(finishFixReferences, undefined, keyName, ptrId, ptrsToFix, nameService, cb) // + success, object
+         );
+     }
+
+     function finishFixReferences(keyName, ptrId, ptrsToFix, nameService, cb, success, unfixedObj) {
+         if (!success) cb(false);
 
          var id = unfixedObj['mID'];
-         if (id != ptrId)
-             throw 'Error: ptrId and object id must be identical';
-         
-         if (nameService.lookupObject(ptrId) != nameService.DNE)
-             throw "Error.  Called fixReferences on an object I've already visited";
+         if (id != ptrId) //throw 'Error: ptrId and object id must be identical';
+             cb(false);
 
+         if (nameService.lookupObject(ptrId) != nameService.DNE) // throw "Error.  Called fixReferences on an object I've already visited";
+             cb(false);
 
          var type = unfixedObj['type'];
          if (type == std.persist.FUNCTION_OBJECT_TYPE_STRING)
-             return restoreFunction(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-         if (type == std.persist.PRESENCE_OBJECT_TYPE_STRING)
-             return restorePresence(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-         if (type == std.persist.BASIC_OBJECT_TYPE_STRING)
-             return restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-         if (type == std.persist.VEC_TYPE_STRING)
-             return restoreVec3Object(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-         if (type == std.persist.QUAT_TYPE_STRING)
-             return restoreQuatObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-         if (type == std.persist.VISIBLE_TYPE_STRING)
-             return restoreVisibleObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService);
-                  
-         throw 'Error in fixReferences.  Do not have any other types in the system to restore from.';
+             restoreFunction(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb);
+         else if (type == std.persist.PRESENCE_OBJECT_TYPE_STRING)
+             restorePresence(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb);
+         else if (type == std.persist.BASIC_OBJECT_TYPE_STRING)
+             restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb);
+         else if (type == std.persist.VEC_TYPE_STRING)
+             restoreVec3Object(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb);
+         else if (type == std.persist.QUAT_TYPE_STRING)
+             restoreQuatObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb);
+         else if (type == std.persist.VISIBLE_TYPE_STRING)
+             restoreVisibleObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb);
+         else
+             throw new Error('Error in fixReferences.  Do not have any other types in the system to restore from.');
      }
 
      /**
       @see fixReferences for arguments
       Returns a new visible object.
       */
-     function restoreVisibleObject(keyName, visRecord,ptrId,ptrsToFix,nameService)
+     function restoreVisibleObject(keyName, visRecord,ptrId,ptrsToFix,nameService,cb)
      {
          var pToFix = [];
-         var toRestoreFrom = restoreBasicObject(keyName,visRecord,ptrId,pToFix,nameService);
+         restoreBasicObject(
+             keyName,visRecord,ptrId,pToFix,nameService,
+             std.core.bind(finishRestoreVisibleObject, undefined, keyname, visRecord, ptrId, pToFix, nameService, cb)
+         );
+     };
+     function finishRestoreVisibleObject(keyName, visRecord,ptrId,pToFix,nameService,cb, success, toRestoreFrom) {
+         if(!success) {
+             cb(false);
+             return;
+         }
 
          //perform the fixups for the objects that this presence was
          //trying to point to.  (Eg. pos object, vel obj, etc.)
@@ -274,14 +289,14 @@ if (typeof(std.persist) === 'undefined')
              toRestoreFrom.physics
          );
 
-         return returner;
+         cb(true, returner);
      }
      
      /**
       @see fixReferencs for arguments.
       Returns a new vec3.
       */
-     function restoreVec3Object(keyName, unfixedObj,ptrId,ptrsToFix,nameService)
+     function restoreVec3Object(keyName, unfixedObj,ptrId,ptrsToFix,nameService, cb)
      {
          //lkjs: may want some check here.
          var x = getValueField(unfixedObj,'x');
@@ -289,14 +304,14 @@ if (typeof(std.persist) === 'undefined')
          var z = getValueField(unfixedObj,'z');
          var returner = new util.Vec3(x,y,z);
          nameService.insertObjectWithName(returner,ptrId);
-         return returner;
+         cb(true, returner);
      }
 
      /**
       @see fixReferencs for arguments.
       Returns a new quaternion.
       */
-     function restoreQuatObject(keyName, unfixedObj,ptrId,ptrsToFix,nameService)
+     function restoreQuatObject(keyName, unfixedObj,ptrId,ptrsToFix,nameService, cb)
      {
          var x = getValueField(unfixedObj,'x');
          var y = getValueField(unfixedObj,'y');
@@ -305,7 +320,7 @@ if (typeof(std.persist) === 'undefined')
 
          var returner = new util.Quaternion(x,y,z,w);
          nameService.insertObjectWithName(returner,ptrId);
-         return returner;
+         cb(true, returner);
      }
      
 
@@ -338,7 +353,7 @@ if (typeof(std.persist) === 'undefined')
              if (tripFieldName == fieldName)
                  return tripletGetValue(propValTypeTriple);
          }
-         throw 'Error in getValueField.  Have no field named: '+ fieldName;
+         throw new Error('Error in getValueField.  Have no field named: '+ fieldName);
      }
      
      /**
@@ -348,18 +363,25 @@ if (typeof(std.persist) === 'undefined')
       getAllData on a presence.
       
       */
-     function restorePresence(keyName,unfixedPres,ptrId,ptrsToFix,nameService)
+     function restorePresence(keyName,unfixedPres,ptrId,ptrsToFix,nameService, cb)
      {
 //         var id = unfixedPres['mID'];
          var onConnectCB = afterRestored(ptrId,nameService);
 
          var pToFix = [];
-         var toRestoreFrom = restoreBasicObject(keyName,unfixedPres,ptrId,pToFix,nameService);
-
+         restoreBasicObject(
+             keyName,unfixedPres,ptrId,pToFix,nameService,
+             std.core.bind(finishRestorePresence, undefined, keyName, unfixedPres, ptrId, pToFix, nameService, cb) // + success, obj
+         );
+     }
+     function finishRestorePresence(keyName,unfixedPres,ptrId,pToFix,nameService, cb, success, toRestoreFrom) {
+         if(!success) {
+             cb(false);
+             return;
+         }
          //perform the fixups for the objects that this presence was
          //trying to point to.  (Eg. pos object, vel obj, etc.)
          performPtrFinalFixups(pToFix,nameService);
-
          
          system.restorePresence(
              toRestoreFrom.sporef,
@@ -379,17 +401,14 @@ if (typeof(std.persist) === 'undefined')
              toRestoreFrom.suspendedVelocity,
              toRestoreFrom.suspendedOrientationVelocity
          );
-
-         
          
          //tells the system that we have begun trying to restore this
          //presence, and not to continue with later stages of
          //restoration (fixing looped object pointers) until the
          //system has connected this presence.
          registerPresenceStillRestoring(ptrId);
-         return null;
-     }
-     
+         cb(true, null); // Not sure about this being null....
+     };
 
      
      /**
@@ -398,19 +417,19 @@ if (typeof(std.persist) === 'undefined')
       unfixedFunc right now just has one field: 'funcField' with the
       text of the function that we're creating.
       */
-     function restoreFunction(keyName,unfixedFunc,ptrId,ptrsToFix,nameService)
+     function restoreFunction(keyName,unfixedFunc,ptrId,ptrsToFix,nameService, cb)
      {
          //FIXME: lkjs;  GROSS!
          var funcTriple = unfixedFunc[0];
 
-         
          var index = tripletGetIndexName(funcTriple);
          if (index != 'funcField')
-             throw 'Error restoring function.  Restoring object does not have funcField.';                 
+             throw new Error('Error restoring function.  Restoring object does not have funcField.');
 
          var funcAsString = tripletGetValue(funcTriple);
 
          var returner = null;
+         var success = true;
          try
          {
              returner = eval(funcAsString);
@@ -419,9 +438,10 @@ if (typeof(std.persist) === 'undefined')
          {
              system.print('ERROR: Error in restoreFunction.  Trying to restore a function with faulty syntax.');
              returner = function(){};
+             success = false;
          }
          nameService.insertObjectWithName(returner,ptrId);
-         return returner;
+         cb(success, returner);
      }
 
 
@@ -434,7 +454,7 @@ if (typeof(std.persist) === 'undefined')
       through all of its fields and registers them to be fixed up.
       
       */
-     function restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService)
+     function restoreBasicObject(keyName,unfixedObj,ptrId,ptrsToFix,nameService,cb)
      {
          var returner = { };
          nameService.insertObjectWithName(returner,ptrId);
@@ -444,6 +464,21 @@ if (typeof(std.persist) === 'undefined')
          //point returner to that new object right away.  If the field is
          //an object type and we do not have a copy of that object, then
          //register returner to be fixed-up with the new pointer later.
+         
+         var unfinished_fields = 0;
+         var did_callback = false;
+         var finish_field_cb = function(success, val) {
+             if (!success && !did_callback) {
+                 did_callback = true;
+                 cb(false);
+                 return;
+             }
+             unfinished_fields -= 1;
+             if (unfinished_fields == 0) {
+                 did_callback = true;
+                 cb(true, returner);
+             }
+         };
          for (var s in unfixedObj)
          {
              if ((s == 'mID') || (s == 'type'))
@@ -471,55 +506,18 @@ if (typeof(std.persist) === 'undefined')
                      {
                          //will have to register this pointer to be fixed up
                          registerFixupObjectPointer( ptrIdInner ,index,returner,ptrsToFix);
-                         fixReferences(keyName,ptrIdInner,ptrsToFix,nameService);
+                         unfinished_fields += 1;
+                         fixReferences(keyName,ptrIdInner,ptrsToFix,nameService, std.core.bind(finish_field_cb, undefined));
                      }
                  }
              }
          }
-         return returner;
+
+         // Special case for empty objects
+         if (unfinished_fields == 0)
+             cb(true, returner);
      };
 
-
-
-     
-    /**
-     Reads in a filename as a string.  Calls deserialize on that string to
-     get back an object.  Runs through that object graph, and uses
-     nameService to restore it.
-
-     @param {String} name of file to read a serialized object graph in
-     from.
-
-     @return {Object} Returns a copy of the object that had been put into persistent storage 
-     */ 
-     std.persist.restoreFrom  = function(filename,id)
-     {
-         if (typeof(id) == 'undefined')
-             id = 0;
-         
-         return std.persist.restoreFromAndGetNames(filename,id)[0];
-     };
-
-     /**
-      @param {String} name of file to read a serialized object graph
-      in from.
-
-      @return {Array} Returns an array.  First index is the copy of
-      the object that had been put into persistent storage.  Second
-      index is a name service that you can use to name and identify
-      objects in the restored subgraph.
-      */
-     std.persist.restoreFromAndGetNames = function (keyName,id)
-     {
-         if (std.persist.inRestore())
-             throw 'Error, cannot request additional restores when in middle of current restore.  Check back later.';
-         
-         var nameService = new std.persist.NameService();
-         var ptrsToFix = [];
-         var returner = fixReferences(keyName, id,ptrsToFix,nameService);
-         performPtrFinalFixups(ptrsToFix,nameService);
-         return [returner,nameService];
-     };
 
      /**
       Returns true if we're in the middle of a restore operation.
@@ -556,17 +554,26 @@ if (typeof(std.persist) === 'undefined')
      {
 
          if (std.persist.inRestore())
-             throw 'Error, cannot request additional restores when in middle of current restore.  Check back later.';
+             throw new Error('Error, cannot request additional restores when in middle of current restore.  Check back later.');
          mRestoring = true;
          
          var nameService = new std.persist.NameService();
          var ptrsToFix = [];
-         var returner = fixReferences(keyName, id,ptrsToFix,nameService);
+         fixReferences(
+             keyName, id,ptrsToFix,nameService,
+             std.core.bind(finishRestoreFromAndGetNamesAsync, undefined, keyName, id, cb, ptrsToFix, nameService) // + success, obj
+         );
+     };
+     var finishRestoreFromAndGetNamesAsync = function (keyName,id,cb, ptrsToFix, nameService, success, returner) {
+         if (!success) {
+             cb(false);
+             return;
+         }
          if (allPresStillRest.length == 0)
          {
              performPtrFinalFixups(ptrsToFix,nameService);
              mRestoring = false;
-             cb(returner,true,nameService);
+             cb(true,returner,nameService);
              return;
          }
 
@@ -588,16 +595,12 @@ if (typeof(std.persist) === 'undefined')
              mRestoring = false;
              allPresStillRest = [];
              if (allPresStillRest.length == 0)
-                 cb(returner,true,nameService);
+                 cb(true, returner, nameService);
              else
-                 cb(returner,false,nameService);
+                 cb(false, returner, nameService);
          };
          system.timeout(5,restoreCheckback);
      };
      
      
  })();
-
-
-
-

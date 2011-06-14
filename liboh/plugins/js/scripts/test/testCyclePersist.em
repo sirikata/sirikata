@@ -28,8 +28,8 @@ std.persist.checkpointPartialPersist(
             // delete toPersist.c;
             // system.print('\nAfter delete\n');
             // system.prettyprint(toPersist);
-            
-            
+
+
             // // //re-printing object.
             // system.print('\nAfter second restore\n');
             // system.prettyprint(newCopy);
@@ -37,8 +37,10 @@ std.persist.checkpointPartialPersist(
             return;
         }
         //restoring object from file
-        var newCopy = std.persist.restoreFrom(fName);
-        system.print('\nAfter restore\n');
-        system.prettyprint(newCopy);
+        std.persist.restoreFromAsync(fName, function(success, newCopy) {
+                                         system.print('\nAfter restore\n');
+                                         system.prettyprint(success);
+                                         system.prettyprint(newCopy);
+                                     });
     }
 );

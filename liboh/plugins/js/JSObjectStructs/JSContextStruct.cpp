@@ -51,19 +51,19 @@ v8::Handle<v8::Value> JSContextStruct::storageCommit(v8::Handle<v8::Function> cb
 {
     return jsObjScript->storageCommit(this, cb);
 }
-v8::Handle<v8::Value> JSContextStruct::storageWrite(const OH::Storage::Key& key, const String& toWrite)
+v8::Handle<v8::Value> JSContextStruct::storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb)
 {
-    return jsObjScript->storageWrite(key,toWrite,this);
+    return jsObjScript->storageWrite(key,toWrite,cb,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::storageErase(const OH::Storage::Key& key)
+v8::Handle<v8::Value> JSContextStruct::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb)
 {
-    return jsObjScript->storageErase(key,this);
+    return jsObjScript->storageErase(key,cb,this);
 }
 
-v8::Handle<v8::Value> JSContextStruct::storageRead(const OH::Storage::Key& key)
+v8::Handle<v8::Value> JSContextStruct::storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb)
 {
-    return jsObjScript->storageRead(key,this);
+    return jsObjScript->storageRead(key,cb,this);
 }
 
 
