@@ -71,7 +71,9 @@ sqlite3* SQLiteDB::db() const {
     return mObjectDB;
 }
 
-
+namespace {
+boost::shared_mutex sSingletonMutex;
+}
 
 SQLite::SQLite() {
 }
@@ -80,10 +82,14 @@ SQLite::~SQLite() {
 }
 
 SQLite& SQLite::getSingleton() {
+    boost::unique_lock<boost::shared_mutex> lck(sSingletonMutex);
+
     return AutoSingleton<SQLite>::getSingleton();
 }
 
 void SQLite::destroy() {
+    boost::unique_lock<boost::shared_mutex> lck(sSingletonMutex);
+
     AutoSingleton<SQLite>::destroy();
 }
 
