@@ -61,7 +61,7 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_SIGFPE,"false",OptionValueType<bool>(),"Enable floating point exceptions"))
 
         .addOption(new OptionValue(OPT_OBJECT_FACTORY,"csv",OptionValueType<String>(),"Type of object factory to instantiate"))
-        .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"--db=scene.db",OptionValueType<String>(),"Options to pass to object factory constructor"))
+        .addOption(new OptionValue(OPT_OBJECT_FACTORY_OPTS,"",OptionValueType<String>(),"Options to pass to object factory constructor"))
 
         .addOption(new OptionValue(OPT_OBJECT_STORAGE,"sqlite",OptionValueType<String>(),"Type of object storage to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_STORAGE_OPTS,"",OptionValueType<String>(),"Options to pass to object storage constructor"))
