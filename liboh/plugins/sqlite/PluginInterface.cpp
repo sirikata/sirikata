@@ -34,6 +34,7 @@
 #include <sirikata/core/options/Options.hpp>
 #include "SQLiteStorage.hpp"
 #include "SQLitePersistedObjectSet.hpp"
+#include "SQLiteObjectFactory.hpp"
 
 static int sqliteoh_plugin_refcount = 0;
 
@@ -46,6 +47,10 @@ static void InitPluginOptions() {
 
     Sirikata::InitializeClassOptions icop("sqlitepersistedset",NULL,
         new Sirikata::OptionValue("db", "storage.db", Sirikata::OptionValueType<String>(), "Database file to store data to."),
+        NULL);
+
+    Sirikata::InitializeClassOptions icof("sqlitefactory",NULL,
+        new Sirikata::OptionValue("db", "storage.db", Sirikata::OptionValueType<String>(), "File to read objects from."),
         NULL);
 }
 
@@ -67,6 +72,15 @@ static OH::PersistedObjectSet* createSQLitePersistedObjectSet(ObjectHostContext*
     return new OH::SQLitePersistedObjectSet(ctx, db);
 }
 
+static ObjectFactory* createSQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& args) {
+    OptionSet* optionsSet = OptionSet::getOptions("sqlitefactory",NULL);
+    optionsSet->parse(args);
+
+    String dbfile = optionsSet->referenceOption("db")->as<String>();
+
+    return new SQLiteObjectFactory(ctx, oh, space, dbfile);
+}
+
 } // namespace Sirikata
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
@@ -80,6 +94,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         OH::PersistedObjectSetFactory::getSingleton()
             .registerConstructor("sqlite",
                                  std::tr1::bind(&createSQLitePersistedObjectSet, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
+        ObjectFactoryFactory::getSingleton()
+            .registerConstructor("sqlite",
+                                 std::tr1::bind(&createSQLiteObjectFactory, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3, std::tr1::placeholders::_4));
     }
     sqliteoh_plugin_refcount++;
 }
@@ -97,6 +114,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     if (sqliteoh_plugin_refcount==0) {
         OH::StorageFactory::getSingleton().unregisterConstructor("sqlite");
         OH::PersistedObjectSetFactory::getSingleton().unregisterConstructor("sqlite");
+        ObjectFactoryFactory::getSingleton().unregisterConstructor("sqlite");
     }
 }
 

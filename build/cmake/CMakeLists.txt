@@ -2019,6 +2019,7 @@ IF(SQLite3_FOUND)
   SET(LIBOH_PLUGIN_SQLITE_SOURCES
     ${LIBOH_PLUGIN_SQLITE_DIR}/SQLiteStorage.cpp
     ${LIBOH_PLUGIN_SQLITE_DIR}/SQLitePersistedObjectSet.cpp
+    ${LIBOH_PLUGIN_SQLITE_DIR}/SQLiteObjectFactory.cpp
     ${LIBOH_PLUGIN_SQLITE_DIR}/PluginInterface.cpp
     )
   ADD_PLUGIN_TARGET(oh-sqlite
