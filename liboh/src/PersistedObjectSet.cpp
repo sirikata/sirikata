@@ -1,7 +1,7 @@
 /*  Sirikata
- *  Options.hpp
+ *  PersistedObjectSet.cpp
  *
- *  Copyright (c) 2009, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,40 +30,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SIRIKATA_CPPOH_OPTIONS_HPP_
-#define _SIRIKATA_CPPOH_OPTIONS_HPP_
+#include <sirikata/oh/PersistedObjectSet.hpp>
 
-#define OPT_CONFIG_FILE          "cfg"
-
-#define OPT_OH_PLUGINS           "oh.plugins"
-#define OPT_OH_PLUGIN_SEARCH_PATHS     "oh.plugin-search"
-#define STATS_OH_TRACE_FILE     "stats.oh-trace-filename"
-#define STATS_SAMPLE_RATE    "stats.sample-rate"
-
-#define OPT_OH_OPTIONS           "objecthost"
-#define OPT_MAIN_SPACE           "mainspace"
-
-#define OPT_SIGFPE               "sigfpe"
-
-#define OPT_OBJECT_FACTORY       "object-factory"
-#define OPT_OBJECT_FACTORY_OPTS  "object-factory-opts"
-
-
-#define OPT_DEFAULT_SCRIPT_TYPE         "default-script-type"
-#define OPT_DEFAULT_SCRIPT_OPTIONS      "default-script-opts"
-
-#define OPT_OBJECT_STORAGE       "oh.storage"
-#define OPT_OBJECT_STORAGE_OPTS  "oh.storage.opts"
-
-#define OPT_OH_PERSISTENT_SET       "oh.persistentset"
-#define OPT_OH_PERSISTENT_SET_OPTS  "oh.persistentset.opts"
-
+AUTO_SINGLETON_INSTANCE(Sirikata::OH::PersistedObjectSetFactory);
 
 namespace Sirikata {
+namespace OH {
 
-void InitCPPOHOptions();
+PersistedObjectSetFactory& PersistedObjectSetFactory::getSingleton() {
+    return AutoSingleton<PersistedObjectSetFactory>::getSingleton();
+}
 
-} // namespace Sirikata
+void PersistedObjectSetFactory::destroy() {
+	AutoSingleton<PersistedObjectSetFactory>::destroy();
+}
 
-
-#endif //_SIRIKATA_CPPOH_OPTIONS_HPP_
+} // namespace OH
+} //namespace Sirikata

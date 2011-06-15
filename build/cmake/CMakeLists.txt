@@ -1237,6 +1237,7 @@ SET(LIBOH_SOURCES
                   ${LIBOH_SOURCE_DIR}/PerPresenceData.cpp
                   ${LIBOH_SOURCE_DIR}/Trace.cpp
                   ${LIBOH_SOURCE_DIR}/Storage.cpp
+                  ${LIBOH_SOURCE_DIR}/PersistedObjectSet.cpp
                    )
 
 SET(LIBMESH_PLUGIN_COLLADAMODELS_DIR ${LIBMESH_PLUGIN_DIR}/collada)
@@ -2017,6 +2018,7 @@ IF(SQLite3_FOUND)
   SET(LIBOH_PLUGIN_SQLITE_DIR ${LIBOH_PLUGIN_DIR}/sqlite)
   SET(LIBOH_PLUGIN_SQLITE_SOURCES
     ${LIBOH_PLUGIN_SQLITE_DIR}/SQLiteStorage.cpp
+    ${LIBOH_PLUGIN_SQLITE_DIR}/SQLitePersistedObjectSet.cpp
     ${LIBOH_PLUGIN_SQLITE_DIR}/PluginInterface.cpp
     )
   ADD_PLUGIN_TARGET(oh-sqlite

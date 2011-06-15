@@ -51,6 +51,10 @@ v8::Handle<v8::Value> JSSystemStruct::storageRead(const OH::Storage::Key& key, v
 }
 
 
+v8::Handle<v8::Value> JSSystemStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb) {
+    return associatedContext->setRestoreScript(key, cb);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::checkResources()
 {

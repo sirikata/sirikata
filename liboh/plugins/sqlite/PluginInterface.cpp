@@ -33,6 +33,7 @@
 #include <sirikata/oh/Platform.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include "SQLiteStorage.hpp"
+#include "SQLitePersistedObjectSet.hpp"
 
 static int sqliteoh_plugin_refcount = 0;
 
@@ -40,6 +41,10 @@ namespace Sirikata {
 
 static void InitPluginOptions() {
     Sirikata::InitializeClassOptions ico("sqlitestorage",NULL,
+        new Sirikata::OptionValue("db", "storage.db", Sirikata::OptionValueType<String>(), "Database file to store data to."),
+        NULL);
+
+    Sirikata::InitializeClassOptions icop("sqlitepersistedset",NULL,
         new Sirikata::OptionValue("db", "storage.db", Sirikata::OptionValueType<String>(), "Database file to store data to."),
         NULL);
 }
@@ -53,6 +58,15 @@ static OH::Storage* createSQLiteStorage(ObjectHostContext* ctx, const String& ar
     return new OH::SQLiteStorage(ctx, db);
 }
 
+static OH::PersistedObjectSet* createSQLitePersistedObjectSet(ObjectHostContext* ctx, const String& args) {
+    OptionSet* optionsSet = OptionSet::getOptions("sqlitepersistedset",NULL);
+    optionsSet->parse(args);
+
+    String db = optionsSet->referenceOption("db")->as<String>();
+
+    return new OH::SQLitePersistedObjectSet(ctx, db);
+}
+
 } // namespace Sirikata
 
 SIRIKATA_PLUGIN_EXPORT_C void init() {
@@ -63,6 +77,9 @@ SIRIKATA_PLUGIN_EXPORT_C void init() {
         OH::StorageFactory::getSingleton()
             .registerConstructor("sqlite",
                                  std::tr1::bind(&createSQLiteStorage, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
+        OH::PersistedObjectSetFactory::getSingleton()
+            .registerConstructor("sqlite",
+                                 std::tr1::bind(&createSQLitePersistedObjectSet, std::tr1::placeholders::_1, std::tr1::placeholders::_2));
     }
     sqliteoh_plugin_refcount++;
 }
@@ -79,6 +96,7 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy() {
     using namespace Sirikata;
     if (sqliteoh_plugin_refcount==0) {
         OH::StorageFactory::getSingleton().unregisterConstructor("sqlite");
+        OH::PersistedObjectSetFactory::getSingleton().unregisterConstructor("sqlite");
     }
 }
 

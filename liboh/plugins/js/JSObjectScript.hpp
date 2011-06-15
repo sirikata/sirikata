@@ -54,6 +54,7 @@
 #include "JSVisibleStructMonitor.hpp"
 #include "JSEntityCreateInfo.hpp"
 #include <sirikata/oh/Storage.hpp>
+#include <sirikata/oh/PersistedObjectSet.hpp>
 
 #define EMERSON_RESOURCE_THRESHOLD 10000
 
@@ -69,7 +70,7 @@ class JSObjectScript : public ObjectScript
 public:
 
 
-    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, const UUID& internal_id);
+    JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id);
     virtual ~JSObjectScript();
 
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
@@ -107,6 +108,8 @@ public:
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
     v8::Handle<v8::Value> storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
     v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
+
+    v8::Handle<v8::Value> setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb);
 
 
     /**
@@ -274,9 +277,12 @@ protected:
 
     JSObjectScriptManager* mManager;
     OH::Storage* mStorage;
+    OH::PersistedObjectSet* mPersistedObjectSet;
 
 
     void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs);
+
+    void setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success);
 };
 
 } // namespace JS

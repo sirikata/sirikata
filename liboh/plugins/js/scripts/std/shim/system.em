@@ -206,6 +206,43 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          return baseSystem.storageErase.apply(baseSystem, arguments);
      };
 
+     //restore manipulations
+     /** Set the script to execute when this object is restored after a crash.
+      *  @param{String,Function} script the script to execute when the object is restored
+      *  @param{Function} cb callback to invoke when the update finishes, taking
+      *                   one boolean parameter indicating success
+      */
+     system.setRestoreScript = function(script, cb)
+     {
+         if (typeof(script) == 'function')
+             script = script.toString();
+         if (typeof(script) !== 'string')
+             throw new TypeError('Invalid restore script type: expected String or Function.');
+
+         if (typeof(cb) !== 'undefined' && typeof(cb) !== 'function')
+             throw new TypeError('Invalid callback parameter: expected function.');
+
+         if (typeof(cb) === 'function')
+             return baseSystem.setRestoreScript.apply(baseSystem, [script, cb]);
+         else
+             return baseSystem.setRestoreScript.apply(baseSystem, [script]);
+     };
+     /** Disable restoration from storage after a crash.
+      *  @param{Function} cb callback to invoke when the update finishes, taking
+      *                   one boolean parameter indicating success
+      */
+     system.disableRestoreScript = function(cb)
+     {
+         if (typeof(cb) !== 'undefined' && typeof(cb) !== 'function')
+             throw new TypeError('Invalid callback parameter: expected function.');
+
+         if (typeof(cb) === 'function')
+             return baseSystem.setRestoreScript.apply(baseSystem, ['', cb]);
+         else
+             return baseSystem.setRestoreScript.apply(baseSystem, ['']);
+     };
+
+
       //data
       system._selfMap = { };
 

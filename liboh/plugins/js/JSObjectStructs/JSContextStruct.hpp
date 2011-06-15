@@ -70,6 +70,8 @@ struct JSContextStruct : public JSSuspendable
     v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb);
 
 
+    v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
+
 
     //creates a new jseventhandlerstruct and wraps it in a js object
     //registers the jseventhandlerstruct both with this context and
@@ -234,15 +236,15 @@ private:
     //all associated objects that will need to be suspended/resumed if context
     //is suspended/resumed
     SuspendableMap associatedSuspendables;
-    
+
     //If mInSuspendableLoop is true, doesn't actually delete any suspendable
     //objects.  Just cues them to be deleted after we end suspendable loop.
     bool mInSuspendableLoop;
     SuspendableVec suspendablesToDelete;
     SuspendableVec suspendablesToAdd;
-    
+
     void flushQueuedSuspendablesToChange();
-    
+
 
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \

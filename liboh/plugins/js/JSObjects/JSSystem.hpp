@@ -44,6 +44,7 @@ v8::Handle<v8::Value> storageRead(const v8::Arguments& args);
 v8::Handle<v8::Value> storageErase(const v8::Arguments& args);
 //end storage functions
 
+v8::Handle<v8::Value> setRestoreScript(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);
 v8::Handle<v8::Value> root_require(const v8::Arguments& args);

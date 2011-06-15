@@ -62,6 +62,7 @@ typedef Provider< ConnectionEventListener* > ConnectionEventProvider;
 
 namespace OH {
 class Storage;
+class PersistedObjectSet;
 }
 
 class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Service {
@@ -73,6 +74,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     typedef std::tr1::unordered_map<SpaceObjectReference, HostedObjectPtr, SpaceObjectReference::Hasher> HostedObjectMap;
 
     OH::Storage* mStorage;
+    OH::PersistedObjectSet* mPersistentSet;
 
     SpaceSessionManagerMap mSessionManagers;
 
@@ -151,6 +153,10 @@ public:
     // Get and set the storage backend to use for persistent object storage.
     void setStorage(OH::Storage* storage) { mStorage = storage; }
     OH::Storage* getStorage() { return mStorage; }
+
+    // Get and set the storage backend to use for the set of persistent objects.
+    void setPersistentSet(OH::PersistedObjectSet* persistentset) { mPersistentSet = persistentset; }
+    OH::PersistedObjectSet* getPersistedObjectSet() { return mPersistentSet; }
 
     // Primary HostedObject API
 

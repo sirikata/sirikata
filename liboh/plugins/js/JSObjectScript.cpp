@@ -256,13 +256,14 @@ void JSObjectScript::initialize(const String& args)
 }
 
 
-JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, const UUID& internal_id)
+JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id)
  : mInternalID(internal_id),
    mResourceCounter(0),
    mNestedEvalCounter(0),
    contIDTracker(0),
    mManager(jMan),
-   mStorage(storage)
+   mStorage(storage),
+   mPersistedObjectSet(persisted_set)
 {
 }
 
@@ -345,6 +346,38 @@ v8::Handle<v8::Value> JSObjectScript::storageRead(const OH::Storage::Key& key, v
     return v8::Boolean::New(read_queue_success);
 }
 
+void JSObjectScript::setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success) {
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext->mContext);
+    TryCatch try_catch;
+
+    v8::Handle<v8::Boolean> js_success = v8::Boolean::New(success);
+
+    int argc = 1;
+    v8::Handle<v8::Value> argv[1] = { js_success };
+    invokeCallback(jscont, cb, argc, argv);
+}
+
+v8::Handle<v8::Value> JSObjectScript::setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb) {
+    if (mPersistedObjectSet == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
+
+    OH::PersistedObjectSet::RequestCallback wrapped_cb = 0;
+    if (!cb.IsEmpty()) {
+        wrapped_cb = std::tr1::bind(&JSObjectScript::setRestoreScriptCallback, this, jscont, v8::Persistent<v8::Function>::New(cb), _1);
+    }
+
+    // FIXME we should really tack on any additional parameters we
+    // received initially here
+    String wrapped_script = "";
+    String script_type = "";
+    if (!script.empty()) {
+        script_type = "js";
+        wrapped_script = "--init-script=" + script;
+    }
+
+    mPersistedObjectSet->requestPersistedObject(mInternalID, script_type, wrapped_script, wrapped_cb);
+    return v8::Undefined();
+}
 
 v8::Handle<v8::Value> JSObjectScript::debug_fileRead(const String& filename)
 {
@@ -503,7 +536,7 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
 
             // std::cout<<"\n\nDEBUGGING: original script: "<< em_script_str<<"\n\n-----------\n\n";
             // std::cout<<"js_script_str: "<<js_script_str<<"\n\n";
-            
+
             if (successfullyCompiled)
             {
                 JSLOG(insane, " Compiled JS script = \n" <<js_script_str);

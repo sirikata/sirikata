@@ -66,6 +66,9 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_OBJECT_STORAGE,"sqlite",OptionValueType<String>(),"Type of object storage to instantiate"))
         .addOption(new OptionValue(OPT_OBJECT_STORAGE_OPTS,"",OptionValueType<String>(),"Options to pass to object storage constructor"))
 
+        .addOption(new OptionValue(OPT_OH_PERSISTENT_SET,"sqlite",OptionValueType<String>(),"Type of storage to use to store the set of persistent objects, i.e. those to be restored when the object host restarts"))
+        .addOption(new OptionValue(OPT_OH_PERSISTENT_SET_OPTS,"",OptionValueType<String>(),"Options to pass to persistent object set constructor"))
+
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"--init-script=system.import('std/default.em');",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
         ;

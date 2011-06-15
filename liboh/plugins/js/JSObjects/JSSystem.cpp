@@ -184,7 +184,22 @@ v8::Handle<v8::Value> storageRead(const v8::Arguments& args)
     return jsfake->storageRead(key, cb);
 }
 
+v8::Handle<v8::Value> setRestoreScript(const v8::Arguments& args) {
+    if (args.Length() != 1 && args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling setRestoreScript. Require 1 or 2 arguments: an script (string or function) and optional callback")));
 
+    INLINE_STR_CONV_ERROR(args[0],setRestoreScript,1,script);
+    v8::Handle<v8::Function> cb = maybeDecodeCallbackArgument(args, 1);
+
+    //decode system object
+    String errorMessage = "Error decoding error message in setRestoreScript";
+    JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    return jsfake->setRestoreScript(script, cb);
+}
 
 v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args)
 {

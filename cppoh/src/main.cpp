@@ -59,6 +59,7 @@
 #include <sirikata/oh/ObjectHostContext.hpp>
 
 #include <sirikata/oh/Storage.hpp>
+#include <sirikata/oh/PersistedObjectSet.hpp>
 #include <sirikata/oh/ObjectFactory.hpp>
 
 #ifdef __GNUC__
@@ -152,6 +153,12 @@ int main (int argc, char** argv) {
         OH::StorageFactory::getSingleton().getConstructor(objstorage_type)(ctx, objstorage_options);
     oh->setStorage(obj_storage);
 
+    String objpersistentset_type = GetOptionValue<String>(OPT_OH_PERSISTENT_SET);
+    String objpersistentset_options = GetOptionValue<String>(OPT_OH_PERSISTENT_SET_OPTS);
+    OH::PersistedObjectSet* obj_persistent_set =
+        OH::PersistedObjectSetFactory::getSingleton().getConstructor(objpersistentset_type)(ctx, objpersistentset_options);
+    oh->setPersistentSet(obj_persistent_set);
+
     String objfactory_type = GetOptionValue<String>(OPT_OBJECT_FACTORY);
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
     ObjectFactory* obj_factory = NULL;
@@ -165,13 +172,11 @@ int main (int argc, char** argv) {
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
     ctx->add(obj_storage);
+    ctx->add(obj_persistent_set);
     ctx->add(oh);
     ctx->add(sstConnMgr);
 
     ctx->run(1);
-
-    //FIXME: add back an obj.reset call
-    //obj.reset();
 
     ctx->cleanup();
     trace->prepareShutdown();
@@ -181,6 +186,7 @@ int main (int argc, char** argv) {
     //delete pd;
 
     delete obj_storage;
+    delete obj_persistent_set;
 
     SimulationFactory::destroy();
 

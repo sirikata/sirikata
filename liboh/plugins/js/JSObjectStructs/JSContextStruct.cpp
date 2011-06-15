@@ -68,6 +68,11 @@ v8::Handle<v8::Value> JSContextStruct::storageRead(const OH::Storage::Key& key, 
 }
 
 
+v8::Handle<v8::Value> JSContextStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb) {
+    return jsObjScript->setRestoreScript(this, key, cb);
+}
+
+
 v8::Handle<v8::Value>JSContextStruct::debug_fileWrite(const String& strToWrite,const String& filename)
 {
     return jsObjScript->debug_fileWrite(strToWrite,filename);
@@ -123,7 +128,7 @@ void JSContextStruct::flushQueuedSuspendablesToChange()
         return;
     }
 
-    
+
     for (SuspendableVecIter iter = suspendablesToDelete.begin(); iter != suspendablesToDelete.end(); ++iter)
         struct_deregisterSuspendable(*iter);
     for (SuspendableVecIter iter = suspendablesToAdd.begin(); iter != suspendablesToAdd.end(); ++iter)
@@ -358,7 +363,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
     mInSuspendableLoop = false;
     suspendablesToDelete.clear();
     suspendablesToAdd.clear();
-    
+
     //get rid of previous stuff in root
     systemObj.Dispose();
     mContext.Dispose();
@@ -469,7 +474,7 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     mInSuspendableLoop = false;
     flushQueuedSuspendablesToChange();
 
-    
+
     systemObj.Dispose();
     if (hasOnConnectedCallback)
         cbOnConnected.Dispose();
@@ -496,7 +501,7 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
         suspendablesToAdd.push_back(toRegister);
         return;
     }
-    
+
 
     SuspendableIter iter = associatedSuspendables.find(toRegister);
     if (iter != associatedSuspendables.end())
@@ -526,8 +531,8 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         suspendablesToDelete.push_back(toDeregister);
         return;
     }
-    
-    
+
+
     SuspendableIter iter = associatedSuspendables.find(toDeregister);
     if (iter == associatedSuspendables.end())
     {
@@ -548,7 +553,7 @@ v8::Handle<v8::Value> JSContextStruct::suspend()
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot suspend a context that has already been cleared.")) );
     }
 
-    
+
     JSLOG(insane,"Suspending all suspendable objects associated with context");
     mInSuspendableLoop = true;
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
@@ -556,7 +561,7 @@ v8::Handle<v8::Value> JSContextStruct::suspend()
 
     mInSuspendableLoop = false;
     flushQueuedSuspendablesToChange();
-    
+
     return JSSuspendable::suspend();
 }
 
@@ -577,7 +582,7 @@ v8::Handle<v8::Value> JSContextStruct::resume()
 
     mInSuspendableLoop = false;
     flushQueuedSuspendablesToChange();
-    
+
     return JSSuspendable::resume();
 }
 

@@ -202,6 +202,8 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
 
 
+    mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
+
 
 
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));
@@ -459,7 +461,7 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 JSObjectScript* JSObjectScriptManager::createHeadless(const String& args)
 {
-    JSObjectScript* new_script = new JSObjectScript(this, NULL, UUID::random());
+    JSObjectScript* new_script = new JSObjectScript(this, NULL, NULL, UUID::random());
     new_script->initialize(args);
     return new_script;
 }
