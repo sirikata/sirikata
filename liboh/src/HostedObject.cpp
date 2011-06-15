@@ -43,9 +43,6 @@
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManagerFactory.hpp>
-#include <sirikata/core/util/KnownServices.hpp>
-#include <sirikata/core/util/KnownMessages.hpp>
-#include <sirikata/core/util/KnownScriptTypes.hpp>
 
 #include <sirikata/core/util/ThreadId.hpp>
 #include <sirikata/core/util/PluginManager.hpp>
@@ -59,7 +56,6 @@
 #include <sirikata/core/network/Frame.hpp>
 #include "PerPresenceData.hpp"
 #include "Protocol_Frame.pbj.hpp"
-#include "Protocol_JSMessage.pbj.hpp"
 
 #include "Protocol_Loc.pbj.hpp"
 #include "Protocol_Prox.pbj.hpp"
@@ -485,56 +481,6 @@ void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disc
 }
 
 
-
-//returns true if this is a script init message.  returns false otherwise
-bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
-{
-    if (dst.port() != Services::LISTEN_FOR_SCRIPT_BEGIN)
-        return false;
-
-    //I don't really know what this segment of code does.  I copied it from
-    //processRPC
-    Sirikata::JS::Protocol::ScriptingInit sMessage;
-
-
-    bool parsed = sMessage.ParseFromArray(bodyData.data(),bodyData.size());
-
-    if (! parsed)
-        return false;
-
-    if (!((sMessage.has_script()) && (sMessage.has_messager())))
-    {
-        return false;
-    }
-
-    String scriptType = sMessage.script();
-    String messager   = sMessage.messager();
-
-    if (messager != KnownMessages::INIT_SCRIPT)
-        return false;
-
-    if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
-        initializeScript(scriptType,"","");
-    else if (scriptType.length()) {
-        initializeScript(scriptType,"","");
-    }
-
-    return true;
-}
-
-
-bool HostedObject::handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData)
-{
-    //if the message isn't on the create_entity port, then it's good.
-    //Otherwise, it's bad.
-    if (dst.port() != Services::CREATE_ENTITY)
-        return false;
-
-    return true;
-}
-
-
-
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
     // Convert to ODP runtime format
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
@@ -542,19 +488,6 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
 
     if (mDelegateODPService->deliver(src_ep, dst_ep, MemoryReference(msg->payload()))) {
         // if this was true, it got delivered
-
-        delete msg;
-    }
-    else if (handleScriptInitMessage(src_ep,dst_ep,MemoryReference(msg->payload())))
-    {
-        //if this was true, then that means that it was an init script command,
-        //and we dealt with it.
-        delete msg;
-    }
-    else if (handleEntityCreateMessage(src_ep,dst_ep,MemoryReference(msg->payload())))
-    {
-        //if this was true, then that means that we got a
-        //handleEntityCreateMessage, and tried to create a new entity
         delete msg;
     }
     else {

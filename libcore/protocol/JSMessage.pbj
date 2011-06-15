@@ -11,11 +11,6 @@ message StringMapProperty {
 }
 
 
-message ScriptingInit {
-    optional string script = 1;
-    optional string messager = 2;
-}
-
 message JSFunctionObject{
     required int32 func_id = 1;
     required string f_value = 2;

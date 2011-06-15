@@ -49,10 +49,6 @@
 
 #include <stdio.h>
 
-#include "Protocol_JSMessage.pbj.hpp"
-#include <sirikata/core/util/KnownMessages.hpp>
-#include <sirikata/core/util/KnownScriptTypes.hpp>
-
 using namespace std;
 
 namespace Sirikata {
@@ -518,8 +514,6 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return pick(params);
     else if (name == "bbox")
         return bbox(params);
-    else if (name == "initScript")
-        return initScript(params);
     else if (name == "camera")
         return getCamera(params);
     else if (name == "setCameraMode")
@@ -655,39 +649,6 @@ boost::any OgreSystem::bbox(vector<boost::any>& params) {
     if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
     Entity* ent = mSceneEntities.find(objid.toString())->second;
     ent->setSelected(setting);
-
-    return boost::any();
-}
-
-/**
-   This function sends out a message on KnownServices port
-   LISTEN_FOR_SCRIPT_BEGIN to the HostedObject.  Presumably, the hosted
-   object receives the message and attaches a JSObjectScript to the
-   HostedObject.
-
-   FIXME this should go away in favor of a default script loading instead.
-*/
-boost::any OgreSystem::initScript(vector<boost::any>& params) {
-    if (params.size() < 2) return boost::any();
-    if (!Invokable::anyIsObject(params[1])) return boost::any();
-
-    SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
-
-    ProxyObjectPtr obj = mViewer->presence(mPresenceID)->getProxyObject(objid);
-
-    Sirikata::JS::Protocol::ScriptingInit init_script;
-
-    // Filter out the script type from rest of args
-    //String script_type = "js"; // FIXME how to decide this?
-    init_script.set_script(ScriptTypes::JS_SCRIPT_TYPE);
-    init_script.set_messager(KnownMessages::INIT_SCRIPT);
-    String serializedInitScript;
-    init_script.SerializeToString(&serializedInitScript);
-
-    obj->sendMessage(
-        Services::LISTEN_FOR_SCRIPT_BEGIN,
-        MemoryReference(serializedInitScript.data(), serializedInitScript.length())
-    );
 
     return boost::any();
 }

@@ -164,10 +164,6 @@ public:
     ///makes a new objects with objectName startingLocation mesh and connect to some interesting space
     void initializeScript(const String& script_type, const String& args, const String& script);
 
-    bool handleScriptInitMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-    void processInitScriptMessage(MemoryReference& body);
-    bool handleScriptMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
-
     void addSimListeners(PerPresenceData& pd, const String& oh_sims,    TimeSteppedSimulation*& sim);
 
 

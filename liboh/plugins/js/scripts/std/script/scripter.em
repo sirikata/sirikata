@@ -74,7 +74,6 @@ function() {
     ns.Scripter.prototype.script = function(target) {
         if (!target) return;
 
-        this._parent.invoke("initScript", target);
         this._scriptingWindow.call('Scripter.addObject', target.toString());
         //this._scriptingWindow.show();
         system.timeout(.1, std.core.bind(this._scriptingWindow.focus, this._scriptingWindow));
