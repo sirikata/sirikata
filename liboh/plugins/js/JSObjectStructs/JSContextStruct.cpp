@@ -483,10 +483,13 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     
     
     inClear = true;
-    JSLOG(insane,"Clearing a context.  Hopefully it works!");
+    JSLOG(insane,"Clearing context.");
 
 
     mInSuspendableLoop = true;
+    //when a suspendable gets cleared, it calls deregister_suspendable of
+    //JSContextStruct directly.  All deletion is done in that method or when
+    //flushing queued methods.
     for (SuspendableIter iter = associatedSuspendables.begin(); iter != associatedSuspendables.end(); ++iter)
         iter->first->clear();
     mInSuspendableLoop = false;
@@ -533,17 +536,6 @@ void JSContextStruct::struct_registerSuspendable   (JSSuspendable* toRegister)
 
 void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
 {
-    //don't want to de-register suspendables while I'm calling clear.
-    //clear is already running through each and removing them from suspendables.
-    if (inClear)
-        return;
-
-    if (getIsCleared())
-    {
-        JSLOG(error,"Error when deregistering suspendable.  This context object was already cleared.");
-        return;
-    }
-
     if (mInSuspendableLoop)
     {
         suspendablesToDelete.push_back(toDeregister);
