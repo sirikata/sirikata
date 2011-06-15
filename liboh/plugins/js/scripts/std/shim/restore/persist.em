@@ -224,10 +224,10 @@ if (typeof(std.persist) === 'undefined')
 
     @param objToPersistFrom Must be non-null object.  Creates a
     persistent subtree of this object.
-    @param {optional} filename. String representing the name of the file to
+    @param {optional} filename String representing the name of the file to
     save this persistent object into.
 
-    @param {optional} cb. Callback of the form function(bool success)
+    @param {optional} cb Callback of the form function(bool success)
            which is invoked when operation completes.
     */
     std.persist.checkpointPartialPersist = function (objToPersistFrom, keyName, cb)

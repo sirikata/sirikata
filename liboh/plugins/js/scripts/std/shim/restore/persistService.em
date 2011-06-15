@@ -150,7 +150,7 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
     },
 
     /**
-     @param toCheck.  Variable to check if it's in the form of a propertyValuePair.
+     @param toCheck  Variable to check if it's in the form of a propertyValuePair.
      @returns true if param is in form of a propertyValuePair.  Returns false otherwise.
      */
     isPropValPair : function (toCheck)
@@ -159,7 +159,7 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
     },
     
     /**
-     @param {array} pair.  Takes an array of size two in
+     @param {array} pair Takes an array of size two in
      (corresponding to a wrappedPropValPair).  If input is not in this
      form, throws error.
      @return Object if the pair points to an object.  False otherwise.

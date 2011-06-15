@@ -163,7 +163,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      
 
      // /**
-     //  @param {presence} presToGet.  Presence object for the presence
+     //  @param {presence} presToGet  Presence object for the presence
      //  that we want to grab the presenceEntry for.
       
      //  @return Returns the presenceEntry associated with presToGet, or
@@ -176,7 +176,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      // };
 
      /**
-      @param {string} toChangeTo.  The sporef of the presence that we want to change self to.
+      @param {string} toChangeTo  The sporef of the presence that we want to change self to.
       */
      system.changeSelf  = function(toChangeTo)
      {
@@ -584,9 +584,9 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
            @description Creates a new entity based on the position and space of presence passed in.
            
            @param presence or visible.
-           @param vec3.  Position of new entity's first presence relative to first argument's position
-           @param script. Can either be a string, which will be eval-ed on new entity as soon as it's created or can be a non-closure capturing function that will be executed with next parameter as its argument.
-           @param Object.  Passed as argument to script argument if script argument is a function.
+           @param pos.  Position of new entity's first presence relative to first argument's position
+           @param script Can either be a string, which will be eval-ed on new entity as soon as it's created or can be a non-closure capturing function that will be executed with next parameter as its argument.
+           @param arg Object  Passed as argument to script argument if script argument is a function.
            @param solidAngle Solid angle that entity's new presence queries with.
            @param {optional} Mesh uri corresponding to mesh you want to use for this entity.  If undefined, defaults to self's mesh.
            @param {optional} scale Scale of new mesh. (Higher number means increase mesh's size.)  If undefined, default to self's scale.
@@ -629,8 +629,8 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
 
            @see system.canCreateEntity
            @param position (eg. new util.Vec3(0,0,0);). Corresponds to position to place new entity in world.
-           @param Script.  Can either be a string, which will be eval-ed on new entity as soon as it's created or can be a non-closure capturing function that will be executed with next parameter as its argument.
-           @param Object.  Passed as argument to script argument if script argument is a function.  Null if takes no argument.
+           @param Script Can either be a string, which will be eval-ed on new entity as soon as it's created or can be a non-closure capturing function that will be executed with next parameter as its argument.
+           @param Object Passed as argument to script argument if script argument is a function.  Null if takes no argument.
            @param solidAngle Solid angle that entity's new presence queries with.
            @param {optional} Mesh uri corresponding to mesh you want to use for this entity.  If undefined, defaults to self's mesh.
            @param {optional} scale Scale of new mesh. (Higher number means increase mesh's size.)  If undefined, default to self's scale.

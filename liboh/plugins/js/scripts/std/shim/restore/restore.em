@@ -136,7 +136,7 @@ if (typeof(std.persist) === 'undefined')
     };
 
      /**
-      @param {int} ptrId.  The unique name of the object that should be
+      @param {int} ptrId The unique name of the object that should be
       referenced by calling localCopyToPoint[index]
       @param index of the local object to perform fixup on.
       @param {object} localCopyToPoint localCopyToPoint[index] should be the new

@@ -143,7 +143,7 @@ std.persist.NameService = function()
 
     /**
      @param objToInsert into name service
-     @param nameToUse.  How to index into the new name in the service.
+     @param nameToUse How to index into the new name in the service.
 
      Note.  If nameToUse is greater than or equal to which name to
      insert into next, we increase the value for which name to insert

@@ -27,8 +27,8 @@ if (typeof(std.messaging) != 'undefined')
 
 
     /**
-     @param {presence} sender.  Which local presence to send message from.
-     @param {object} msg.  Message to send.
+     @param {presence} sender Which local presence to send message from.
+     @param {object} msg Message to send.
      */
     function SenderMessagePair(sender,msg)
     {
@@ -45,14 +45,14 @@ if (typeof(std.messaging) != 'undefined')
     };
     
     /**
-     @param {SenderMessagePair} smp. A SenderMessagePair object, that
+     @param {SenderMessagePair} smp A SenderMessagePair object, that
      contains fields pointing at the message to send as well as who to
      send the message from.
 
-     @param {Visible} receiver.  An external visible that is going to
+     @param {Visible} receiver An external visible that is going to
      receive the message contained in smp.
 
-     @param {Number} streamID.  (optional) The unique id for the
+     @param {Number} streamID (optional) The unique id for the
      stream of communication between sender and receiver.  (If
      unspecified, generate one.)
      */
@@ -141,7 +141,7 @@ if (typeof(std.messaging) != 'undefined')
     
     
     /**
-     @param {any} toCheck.  Variable to check if it is an arrray.
+     @param {any} toCheck Variable to check if it is an arrray.
      @return {bool} Returns true if toCheck is an array.  False otherwise.
      */
     function checkIsArray(toCheck)
@@ -275,7 +275,7 @@ if (typeof(std.messaging) != 'undefined')
      the message that we're sending.
      @param {string} senderString the string address representing the sender of
      the message that we're sending.
-     @param {int} seqNo. The sequence number that we're sending the message off
+     @param {int} seqNo The sequence number that we're sending the message off
      with.
 
      @return Returns a key contructed from these three values that can be used
@@ -293,7 +293,7 @@ if (typeof(std.messaging) != 'undefined')
      @param {handler} respHandler Handle to handler registered to fire when
      receive response message.
 
-     @param {timeout} onNoRespTimer.  Handle to timeout registered to fire if
+     @param {timeout} onNoRespTimer Handle to timeout registered to fire if
      haven't received a response within the proscribed time.
 
      @return {ClearObject} Returns an object whose methods can be used to call
@@ -372,18 +372,18 @@ if (typeof(std.messaging) != 'undefined')
     };
 
     /**
-     @param {object} msg.  Message we want to send to receiver from sender
-     @param {visible} receiver.  The future recipient of msg and.
-     @param {presence} sender.  The sender of msg.
-     @param {function} onResp.  A function that executes if the receiver
-     responds to the message.  The function takes two parameters: the new
+     @param {object} msg Message we want to send to receiver from sender
+     @param {visible} receiver The future recipient of msg and.
+     @param {presence} sender The sender of msg.
+     @param {function} onResp A function that executes if the receiver
+     responds to the message The function takes two parameters: the new
      message received and the sender of that message (receiver).
-     @param {float} timeToWait.  The amount of time to wait before
+     @param {float} timeToWait The amount of time to wait before
      de-registering the onResp handler and triggering the onNoResp function.
-     @param {function} onNoResp.  A function to execute if timeToWait seconds
+     @param {function} onNoResp A function to execute if timeToWait seconds
      have gone by and we haven't received a response to our message.
 
-     @param {number} streamID.  The id for the stream that we are sending 
+     @param {number} streamID The id for the stream that we are sending 
 
      @return {ClearObject} Returns an object whose methods can be used to call
      "clear", which aborts listening for the response to the message.
@@ -426,4 +426,3 @@ if (typeof(std.messaging) != 'undefined')
     
 }
 )();
-
