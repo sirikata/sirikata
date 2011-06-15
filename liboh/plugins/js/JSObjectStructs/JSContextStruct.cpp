@@ -397,12 +397,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
     return v8::Undefined();
 }
 
-
+//should have called clear before got to destructor
 JSContextStruct::~JSContextStruct()
 {
+    clear();
+
     delete mSystem;
     delete mHomeObject;
-
+    delete mUtil;
     
     if (hasOnConnectedCallback)
         cbOnConnected.Dispose();
@@ -473,6 +475,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_registerOnPresenceDisconnectedHand
 //subcontexts.
 v8::Handle<v8::Value> JSContextStruct::clear()
 {
+    if (getIsCleared())
+        return v8::Boolean::New(true);
+
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Value> returner = JSSuspendable::clear();
+    
+    
     inClear = true;
     JSLOG(insane,"Clearing a context.  Hopefully it works!");
 
@@ -492,7 +501,7 @@ v8::Handle<v8::Value> JSContextStruct::clear()
 
     mContext.Dispose();
     inClear = false;
-    return JSSuspendable::clear();
+    return handle_scope.Close(returner);
 }
 
 
@@ -541,15 +550,41 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         return;
     }
 
-
+    //remove the suspendable from our array of suspendable.s
     SuspendableIter iter = associatedSuspendables.find(toDeregister);
     if (iter == associatedSuspendables.end())
     {
         JSLOG(error,"Error when deregistering suspendable in JSContextStruct.cpp.  Trying to deregister a suspendable that the context struct had not already registered.  Likely an error.");
         return;
     }
-
     associatedSuspendables.erase(iter);
+
+    //if it's an event handler struct, we also need to ensure that it is removed
+    //from EmersonScript.  Calling emerScript->deleteHandler will kill the
+    //event handler and free its memory.  Otherwise, we can free it directly here.
+    JSEventHandlerStruct* jsev = dynamic_cast<JSEventHandlerStruct*>(toDeregister);
+    if (jsev == NULL)
+    {
+        JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (toDeregister);
+        if (jspres != NULL)
+        {
+            JSLOG(error,"Not handling clearing presence correctly.  Must fix");
+            return;
+        }
+        
+        delete toDeregister;
+    }
+    else
+    {
+        EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+        if (emerScript == NULL)
+        {
+            JSLOG(error, "should not be deregistering an event listener from headless script.");
+            return;
+        }
+        
+        emerScript->deleteHandler(jsev);
+    }
 }
 
 

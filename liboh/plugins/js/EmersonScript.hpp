@@ -181,6 +181,15 @@ public:
     void registerHandler(JSEventHandlerStruct* jsehs);
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs);
 
+
+    /**
+       Most suspendables are killed by contexts.  However, EventHandlers are
+       also stored in
+
+       All other suspendables can be killed from their context struct.
+       JSEventHandlers cannot be because we need to ensure that we're out of the
+       event loop before removing it from the list of events and killing it.
+     */    
     void deleteHandler(JSEventHandlerStruct* toDelete);
 
     void resetPresence(JSPresenceStruct* jspresStruct);
@@ -190,6 +199,7 @@ public:
 
 
     JSContextStruct* rootContext() const { return mContext; }
+
 
 
 private:
@@ -217,6 +227,9 @@ private:
     bool mKilling;
     JSEventHandlerList mQueuedHandlerEventsAdd;
     JSEventHandlerList mQueuedHandlerEventsDelete;
+
+
+    //Does not delete handler.  Removes it from the eventHandlerList.
     void removeHandler(JSEventHandlerStruct* toRemove);
 
 

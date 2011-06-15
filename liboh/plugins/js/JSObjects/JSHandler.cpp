@@ -111,7 +111,8 @@ v8::Handle<v8::Value> _clear(const v8::Arguments& args)
     //handler has not been deleted, and we need to do so now inside of
     //JSObjectScript (so can also remove from event handler vector).
     caller->deleteHandler(handler);
-    
+
+
     //set the internal field of the vector to be null
     setNullHandler(args);
     

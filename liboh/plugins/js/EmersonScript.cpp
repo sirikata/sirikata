@@ -430,8 +430,9 @@ void EmersonScript::killScript()
 {
     //lkjs;
     mContext->clear();
-    lkjs; do other clean up too;
-    
+    delete mContext;
+    // lkjs; do other clean up too;
+    // lkjs;
 }
 
 
@@ -767,7 +768,7 @@ void EmersonScript::flushQueuedHandlerEvents()
         //tried to get rid of this handler multiple times).
         if (mQueuedHandlerEventsDelete[s] != NULL)
         {
-            delete mQueuedHandlerEventsDelete[s];
+            deleteHandler(mQueuedHandlerEventsDelete[s]);
             mQueuedHandlerEventsDelete[s] = NULL;
         }
     }
@@ -796,6 +797,12 @@ void EmersonScript::removeHandler(JSEventHandlerStruct* toRemove)
 //removal and deletion later.
 void EmersonScript::deleteHandler(JSEventHandlerStruct* toDelete)
 {
+    //if the handler is already in the process of being cleared, do not
+    //something else will already delete it.  To avoid double-delete, return
+    //here.
+    if (toDelete->getIsCleared())
+        return;
+
     if (mHandlingEvent)
     {
         mQueuedHandlerEventsDelete.push_back(toDelete);
@@ -803,6 +810,7 @@ void EmersonScript::deleteHandler(JSEventHandlerStruct* toDelete)
     }
 
     removeHandler(toDelete);
+    toDelete->clear();
     delete toDelete;
     toDelete = NULL;
 }

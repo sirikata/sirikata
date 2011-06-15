@@ -181,6 +181,8 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 //when doing disconnecting call his
 v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
+
+    
     emerScript->requestDisconnect(this);
 
     if (isConnected)

@@ -105,9 +105,7 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
 
 JSTimerStruct::~JSTimerStruct()
 {
-    if (jsContStruct != NULL)
-        jsContStruct->struct_deregisterSuspendable(this);
-
+    clear();
     delete mDeadlineTimer;
 }
 
@@ -211,10 +209,14 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
 {
     if (getIsCleared())
     {
-        JSLOG(info,"Error in JSTimerStruct.  Calling clear on a timer that has already been cleared.");
+        JSLOG(insane,"In JSTimerStruct, calling clear on a timer that has already been cleared.");
         return JSSuspendable::clear();
     }
 
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Value> returner = JSSuspendable::clear();
+    
+    
     if (mDeadlineTimer != NULL)
         mDeadlineTimer->cancel();
 
@@ -223,7 +225,7 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
 
     if (! cb.IsEmpty())
         cb.Dispose();
-    return JSSuspendable::clear();
+    return handle_scope.Close(returner);
 }
 
 

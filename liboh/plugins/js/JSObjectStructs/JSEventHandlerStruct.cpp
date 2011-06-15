@@ -65,14 +65,7 @@ v8::Handle<v8::Value> JSEventHandlerStruct::getAllData()
 
 JSEventHandlerStruct::~JSEventHandlerStruct()
 {
-    if (! getIsCleared())
-    {
-        if (jscont != NULL)
-            jscont->struct_deregisterSuspendable(this);
-
-        cb.Dispose();
-        sender.Dispose();
-    }
+    clear();
 }
 
 //sender should be of type VISIBLE (see template defined in JSObjectScriptManager
@@ -156,14 +149,27 @@ v8::Handle<v8::Value> JSEventHandlerStruct::resume()
 
     return JSSuspendable::resume();
 }
+
+
+
 v8::Handle<v8::Value> JSEventHandlerStruct::clear()
 {
+    if (getIsCleared())
+    {
+        JSLOG(insane,"In JSEventHandlerStruct, calling clear on an event handler that has already been cleared.");
+        return JSSuspendable::clear();
+    }
+
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Value> returner = JSSuspendable::clear();
+    
     if (jscont != NULL)
         jscont->struct_deregisterSuspendable(this);
 
     cb.Dispose();
     sender.Dispose();
-    return JSSuspendable::clear();
+
+    return handle_scope.Close(returner);
 }
 
 
