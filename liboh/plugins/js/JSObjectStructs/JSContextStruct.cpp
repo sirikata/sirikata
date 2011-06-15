@@ -114,6 +114,13 @@ v8::Handle<v8::Value> JSContextStruct::proxRemovedHandlerCallallback(v8::Handle<
     return v8::Undefined();
 }
 
+v8::Handle<v8::Value> JSContextStruct::killEntity()
+{
+    //checks to make sure executing killEntity from a non-headless script
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,killEntity,jsObjScript);
+    return emerScript->killEntity(this);
+}
+
 /**
    Function runs through suspendablesToDelete and deregisters them.
    Also runs through suspendablesToAdd and adds them.  (Makes it so that we
@@ -390,11 +397,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
     return v8::Undefined();
 }
 
+
 JSContextStruct::~JSContextStruct()
 {
     delete mSystem;
     delete mHomeObject;
 
+    
     if (hasOnConnectedCallback)
         cbOnConnected.Dispose();
 

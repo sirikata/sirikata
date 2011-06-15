@@ -83,6 +83,11 @@ v8::Handle<v8::Value> JSSystemStruct::proxRemovedHandlerCallallback(v8::Handle<v
 }
 
 
+v8::Handle<v8::Value> JSSystemStruct::killEntity()
+{
+    return associatedContext->killEntity();
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
 {

@@ -49,7 +49,13 @@ options
     }
 
 
-    
+    #define CHECK_KILL()\
+    { \
+    APP("\nif ( system.__isKilling() )\n");  \
+    APP("{ \nthrow '__killing__'; \n}\n");   \
+    }
+
+
     
     #ifndef __SIRIKATA_INSIDE_WHEN_PRED__
     #define __SIRIKATA_INSIDE_WHEN_PRED__
@@ -649,6 +655,7 @@ catchBlock
                 APP(" if ( system.__isResetting() ) \n { \n");
                 APP("throw '__resetting__';\n}\n");
                 CHECK_RESOURCES();
+                CHECK_KILL();
             }
             statementBlock
             {
@@ -664,6 +671,8 @@ finallyBlock
                 APP(" {  \n");  
                 APP(" if ( system.__isResetting() ) \n { \n");
                 APP("throw '__resetting__';\n}\n");
+                CHECK_RESOURCES();
+                CHECK_KILL();
             }
             statementBlock
             {

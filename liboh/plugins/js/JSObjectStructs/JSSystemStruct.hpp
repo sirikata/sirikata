@@ -51,7 +51,7 @@ struct JSSystemStruct
 
 
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
-
+    v8::Handle<v8::Value> killEntity();
 
     v8::Handle<v8::Value> struct_canCreatePres();
     v8::Handle<v8::Value> struct_canCreateEnt();
@@ -114,9 +114,17 @@ private:
     //associated data
     JSContextStruct* associatedContext;
     bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt,canEval;
-
-
 };
+
+
+#define INLINE_SYSTEM_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)   \
+    JSSystemStruct* whereWriteTo;                                                   \
+    {                                                                      \
+        String _errMsg = "In " #whereError "cannot convert " #whichArg " to system struct";     \
+        whereWriteTo = JSSystemStruct::decodeSystemStruct(toConvert,_errMsg); \
+        if (whereWriteTo == NULL) \
+            return v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length())); \
+    }
 
 
 }//end namespace js

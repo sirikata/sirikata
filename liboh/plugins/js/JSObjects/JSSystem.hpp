@@ -36,6 +36,8 @@ v8::Handle<v8::Value> root_headless(const v8::Arguments& args);
 v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args);
 
+v8::Handle<v8::Value> root_killEntity(const v8::Arguments& args);
+
 //storage functions
 v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args);
 v8::Handle<v8::Value> storageCommit(const v8::Arguments& args);

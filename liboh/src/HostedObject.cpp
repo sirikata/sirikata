@@ -115,7 +115,9 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
 HostedObject::~HostedObject() {
     destroy();
-    delete mPresenceData;
+    
+    if (mPresenceData != NULL)
+        delete mPresenceData;
 }
 
 const UUID& HostedObject::id() const {
@@ -473,7 +475,6 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
 }
-
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
     notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);

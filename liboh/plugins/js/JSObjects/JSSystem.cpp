@@ -142,6 +142,14 @@ v8::Handle<v8::Value> storageErase(const v8::Arguments& args)
     return jsfake->storageErase(key, cb);
 }
 
+v8::Handle<v8::Value> root_killEntity(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    //decode the system object
+    INLINE_SYSTEM_CONV_ERROR(args.This(),killEntity,this,jssystem);
+    return handle_scope.Close(jssystem->killEntity());
+}
+
 
 v8::Handle<v8::Value> storageWrite(const v8::Arguments& args)
 {

@@ -83,9 +83,10 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
    mHandlingEvent(false),
    mResetting(false),
+   mKilling(false),
    mParent(ho),
-   mCreateEntityPort(NULL),
-   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
+   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
+   mCreateEntityPort(NULL)
 {
     JSObjectScript::initialize(args, script);
 
@@ -416,6 +417,22 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const Spac
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
 
+//requested by scripters.  
+v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
+{
+    mKilling = true;
+    return v8::Null();
+}
+
+
+//requested internally after break out of execution loop.
+void EmersonScript::killScript()
+{
+    //lkjs;
+    mContext->clear();
+    lkjs; do other clean up too;
+    
+}
 
 
 void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
@@ -687,7 +704,7 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
 
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
-        if (mResetting)
+        if ((mResetting) || (mKilling))
             break;
 
         if (mEventHandlers[s]->matches(obj,msgSender,to))
@@ -709,6 +726,9 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     if (mResetting)
         resetScript();
 
+    if (mKilling)
+        killScript();
+    
     if (!matchesSomeHandler) {
         JSLOG(info,"Message did not match any files");
     }

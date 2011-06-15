@@ -61,6 +61,7 @@ struct JSContextStruct : public JSSuspendable
 
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing,VisAddParams* addParams);
 
+    v8::Handle<v8::Value> killEntity();
 
 
     v8::Handle<v8::Value> storageBeginTransaction();

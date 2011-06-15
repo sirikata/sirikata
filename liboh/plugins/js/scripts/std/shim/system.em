@@ -122,6 +122,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
  {
      var baseSystem = __system;
      var isResetting = false;
+     var isKilling   = false;
      
      system = {};
 
@@ -261,6 +262,19 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
                             });
 
 
+
+     system.killEntity = function()
+     {
+         isKilling = true;
+         return baseSystem.killEntity.apply(baseSystem,arguments);
+     };
+
+     system.__isKilling = function()
+     {
+         return isKilling;
+     };
+     
+     
       //rest of functions
       var printhandler = undefined;
 

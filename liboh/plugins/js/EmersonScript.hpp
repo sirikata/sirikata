@@ -108,6 +108,8 @@ public:
     void killOtherPresences(JSPresVec& jspresVec);
 
 
+    v8::Handle<v8::Value> killEntity(JSContextStruct* jscont);
+
     void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody);
 
 
@@ -196,7 +198,9 @@ private:
     v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
-
+    //Called internally by script when guaranteed to be outside of handler
+    //execution loop.
+    void killScript();
 
     typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
     JSEventHandlerList mEventHandlers;
@@ -210,6 +214,7 @@ private:
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     bool mResetting;
+    bool mKilling;
     JSEventHandlerList mQueuedHandlerEventsAdd;
     JSEventHandlerList mQueuedHandlerEventsDelete;
     void removeHandler(JSEventHandlerStruct* toRemove);
@@ -225,7 +230,7 @@ private:
     HostedObject::PresenceToken incrementPresenceToken();
 
 
-    void printAllHandlers();
+    void  printAllHandlers();
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
 
     // Adds/removes presences from the javascript's system.presences array.
