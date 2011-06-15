@@ -245,8 +245,10 @@ if (typeof(std.messaging) != 'undefined')
     {
         if (checkIsSenderMessageReceiver(lhs) && checkIsArray(rhs))
             return callSendSenderMessageReceiver(lhs,rhs);
-        else if ((typeof(lhs) == 'object') && (checkIsVisible(rhs)))
+        else if ((typeof(lhs) == 'object') && ((checkIsVisible(rhs) || checkIsPresence(rhs))))
         {
+            if (checkIsPresence(rhs))
+                rhs = rhs.toVisible();
             //lhs >> c ... lhs = a # b.
             if( checkIsSenderMessagePair(lhs))
                 return new SenderMessageReceiver(lhs,rhs);
