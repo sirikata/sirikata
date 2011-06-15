@@ -39,9 +39,25 @@ BOOST_STATIC_ASSERT(Sirikata::UUID::static_size==sizeof(boost_::uuid));
 
 namespace Sirikata {
 
+static unsigned int fromHex(char a) {
+    if (a >= 0 && a <='9')
+        return a - '0';
+    if (a >= 'a' && a <= 'f')
+        return 10 + (unsigned int)(a-'a');
+    if (a >= 'A' && a <= 'F')
+        return 10 + (unsigned int)(a-'A');
+    return 0;
+}
+
 UUID::UUID(const std::string & other,HumanReadable ) {
     boost_::uuid parsed_string(other);
     mData.initialize(parsed_string.begin(),parsed_string.end());
+}
+UUID::UUID(const std::string & other, HexString) {
+    assert(other.size() == 2*static_size);
+    for(unsigned int i=0;i<static_size;++i)
+        mData[i] = fromHex(other[2*i])*16 + fromHex(other[2*i+1]);
+    assert(rawHexData() == other);
 }
 UUID::UUID(const boost_::uuid&other){
     mData.initialize(other.begin(),other.end());

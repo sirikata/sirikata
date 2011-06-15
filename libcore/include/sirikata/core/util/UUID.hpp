@@ -74,8 +74,10 @@ public:
      * Interprets the human readable UUID string using boost functions
      */
     class HumanReadable{};
+    class HexString{};
     class BinaryString{};
     UUID(const std::string&,HumanReadable);
+    UUID(const std::string&,HexString);
     UUID(const std::string&s,BinaryString ){
         mData.memcpy(s.data(),s.length());
     }
