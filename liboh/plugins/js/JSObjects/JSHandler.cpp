@@ -125,7 +125,6 @@ void setNullHandler(const v8::Arguments& args)
 
    //grabs the internal pattern
    //(which has been saved as a pointer to JSEventHandler
-   v8::Local<v8::External> wrapEventHand;
    if (mHand->InternalFieldCount() > 0)
        mHand->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD,External::New(NULL));
    else

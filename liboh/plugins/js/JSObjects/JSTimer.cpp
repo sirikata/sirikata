@@ -10,7 +10,7 @@
 #include "../JSObjectStructs/JSTimerStruct.hpp"
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/util/Random.hpp>
-
+#include "JSTimer.hpp"
 
 
 namespace Sirikata{
@@ -73,11 +73,9 @@ v8::Handle<v8::Value> clear(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Incorrect number of arguments for clear function of JSTimer.cpp.  Clear should not take in any arguments.")) );
 
     //decode associated timerstruct
-    String errorMessage = "Error in clear of JSTimer.cpp trying to decode jstimer.  ";
-    JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(args.This(),errorMessage);
-    if (jstimer == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-    
+    INLINE_DECODE_TIMER_ERROR(args.This(),clear,jstimer);
+
+    setNullTimer(args);
     return jstimer->clear();
 }
 
@@ -141,6 +139,20 @@ v8::Handle<v8::Value> isSuspended(const v8::Arguments& args)
     return jstimer->getIsSuspendedV8();
 }
 
+/**
+   Sets args.This to point to null instead of a timer object.
+ */
+void setNullTimer(const v8::Arguments& args)
+{
+    v8::Handle<v8::Object> mTimer = args.This();
+
+    //grabs the internal pattern
+    //(which has been saved as a pointer to JSTimerStruct
+    if (mTimer->InternalFieldCount() > 0)
+        mTimer->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(NULL));
+    else
+        v8::Handle<v8::Object>::Cast(mTimer->GetPrototype())->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD, External::New(NULL));
+}
 
 }//JSTimer namespace
 }//JS namespace

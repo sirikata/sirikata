@@ -58,11 +58,14 @@ v8::Handle<v8::Value> ScriptClear(const v8::Arguments& args)
     if (args.Length() != 0)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptClear of JSContext.cpp through context.  Clear takes zero arguments")));
 
-    String errorMessage = "Error decoding the context struct while calling clear in JScontext.cpp.  ";
-    JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
-    if (jscont == NULL)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+    // String errorMessage = "Error decoding the context struct while calling clear in JScontext.cpp.  ";
+    // JSContextStruct* jscont = JSContextStruct::decodeContextStruct(args.This(),errorMessage);
+    // if (jscont == NULL)
+    //     return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
+    INLINE_DECODE_CONTEXT_ERROR(args.This(),clear,jscont);
+    setNullContext(args);
+    
     return jscont->clear();
 }
 
@@ -94,6 +97,24 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
     v8::Handle<v8::Function> exec_func = v8::Handle<v8::Function>::Cast(args[0]);
     return jscontstruct->struct_executeScript(exec_func,args);
 }
+
+
+
+/**
+   Sets args.This to point to null instead of a timer object.
+ */
+void setNullContext(const v8::Arguments& args)
+{
+    v8::Handle<v8::Object> mContext = args.This();
+
+    //grabs the internal pattern
+    //(which has been saved as a pointer to JSTimerStruct
+    if (mContext->InternalFieldCount() > 0)
+        mContext->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT,External::New(NULL));
+    else
+        v8::Handle<v8::Object>::Cast(mContext->GetPrototype())->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(NULL));
+}
+
 
 
 }//jscontext namespace

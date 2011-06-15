@@ -123,7 +123,7 @@ private:
         String _errMsg = "In " #whereError "cannot convert " #whichArg " to system struct";     \
         whereWriteTo = JSSystemStruct::decodeSystemStruct(toConvert,_errMsg); \
         if (whereWriteTo == NULL) \
-            return v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length())); \
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
     }
 
 

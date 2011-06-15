@@ -40,7 +40,7 @@ v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
     {                                                                      \
         String _errMsg = "In " #whereError "cannot convert arg " #whichArg " to solid angle";     \
         if (!decodeSolidAngle(toConvert,whereWriteTo,_errMsg))                 \
-            return v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length())); \
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
     }
 
 /**
@@ -74,7 +74,7 @@ v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
     {                                                                      \
         String _errMsg = "In " #whereError "cannot convert arg " #whichArg " to string";     \
         if (!decodeString(toConvert,whereWriteTo,_errMsg))                 \
-            return v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length())); \
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
     }
 
 /**
