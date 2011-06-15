@@ -267,7 +267,7 @@ bool myisalphanum(char c) {
 }
 
 
-void HostedObject::initializeScript(const String& script, const String& args)
+void HostedObject::initializeScript(const String& script_type, const String& args, const String& script)
 {
     if (mObjectScript) {
         SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for object");
@@ -278,9 +278,9 @@ void HostedObject::initializeScript(const String& script, const String& args)
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
-    if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script)) {
+    if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(script_type)) {
         bool passed=true;
-        for (std::string::const_iterator i=script.begin(),ie=script.end();i!=ie;++i) {
+        for (std::string::const_iterator i=script_type.begin(),ie=script_type.end();i!=ie;++i) {
             if (!myisalphanum(*i)) {
                 if (*i!='-'&&*i!='_') {
                     passed=false;
@@ -288,18 +288,18 @@ void HostedObject::initializeScript(const String& script, const String& args)
             }
         }
         if (passed) {
-            mObjectHost->getScriptPluginManager()->load(script);
+            mObjectHost->getScriptPluginManager()->load(script_type);
         }
         else
         {
             SILOG(oh,debug,"[HO] Failed to create script for object because incorrect script type");
         }
     }
-    ObjectScriptManager *mgr = mObjectHost->getScriptManager(script);
+    ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
         SILOG(oh,insane,"[HO] Creating script for object with args of "<<args);
-        mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args);
-        mObjectScript->scriptTypeIs(script);
+        mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args, script);
+        mObjectScript->scriptTypeIs(script_type);
         mObjectScript->scriptOptionsIs(args);
     }
 }
@@ -424,7 +424,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle);
-    
+
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
@@ -514,9 +514,9 @@ bool HostedObject::handleScriptInitMessage(const ODP::Endpoint& src, const ODP::
         return false;
 
     if (scriptType == ScriptTypes::JS_SCRIPT_TYPE)
-        initializeScript(scriptType,"");
+        initializeScript(scriptType,"","");
     else if (scriptType.length()) {
-        initializeScript(scriptType,"");
+        initializeScript(scriptType,"","");
     }
 
     return true;
@@ -838,7 +838,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     returner->setOrientation(tmq, 0);
     returner->setBounds(bs, 0);
 
-    
+
     if(meshuri)
         returner->setMesh(meshuri, 0);
 
@@ -1130,7 +1130,7 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
     else
         SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
 
-    
+
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != SSTStreamPtr()) {

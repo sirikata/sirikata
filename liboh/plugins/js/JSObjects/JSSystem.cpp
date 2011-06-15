@@ -817,7 +817,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> suspendedVelocityArg             = args[14];
     v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[15];
     v8::Handle<v8::Value> solidAngleQueryArg               = args[16];
-    
+
     //now, it's time to decode them.
 
     String baseErrMsg = "Error in restorePresence.  Could not decode ";
@@ -903,7 +903,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 
 
     INLINE_SA_CONV_ERROR(solidAngleQueryArg,restorePresence,16,queryAngle);
-    
+
 
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
@@ -1031,8 +1031,7 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
 
     // get the script to attach from the args
     //script is a string args
-    INLINE_STR_CONV_ERROR(args[2],createEntity,2,scriptOpts);
-    scriptOpts = "--init-script="+scriptOpts;
+    INLINE_STR_CONV_ERROR(args[2],createEntity,2,scriptContents);
 
     //get the mesh to represent as
     INLINE_STR_CONV_ERROR(args[3],createEntity,3,mesh);
@@ -1066,7 +1065,8 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
     EntityCreateInfo eci;
     eci.scriptType = scriptType;
     eci.mesh = mesh;
-    eci.scriptOpts = scriptOpts;
+    eci.scriptOpts = "";
+    eci.scriptContents = scriptContents;
 
 
     eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
@@ -1122,8 +1122,7 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
 
     // get the script to attach from the args
     //script is a string args
-    INLINE_STR_CONV_ERROR(args[2],createEntNoSpace,2,scriptOpts);
-    scriptOpts = "--init-script="+scriptOpts;
+    INLINE_STR_CONV_ERROR(args[2],createEntNoSpace,2,scriptContents);
 
     //get the mesh to represent as
     INLINE_STR_CONV_ERROR(args[3],createEntNoSpace,3,mesh);
@@ -1148,7 +1147,8 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
     EntityCreateInfo eci;
     eci.scriptType = scriptType;
     eci.mesh = mesh;
-    eci.scriptOpts = scriptOpts;
+    eci.scriptOpts = "";
+    eci.scriptContents = scriptContents;
 
 
     eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);

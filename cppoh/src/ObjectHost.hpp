@@ -43,9 +43,11 @@ public:
 
     virtual const String& defaultScriptType() const;
     virtual const String& defaultScriptOptions() const;
+    virtual const String& defaultScriptContents() const;
 private:
     String mDefaultScriptType;
     String mDefaultScriptOptions;
+    String mDefaultScriptContents;
 }; // class ObjectHost
 
 

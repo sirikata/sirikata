@@ -51,7 +51,7 @@ void SQLiteObjectFactory::generate() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
     sqlite3_busy_timeout(db->db(), 1000);
 
-    String value_query = "SELECT object, script_type, script_args FROM ";
+    String value_query = "SELECT object, script_type, script_args, script_contents FROM ";
     value_query += "\"" TABLE_NAME "\"";
     int rc;
     char* remain;
@@ -73,10 +73,14 @@ void SQLiteObjectFactory::generate() {
                 (const char*)sqlite3_column_text(value_query_stmt, 2),
                 sqlite3_column_bytes(value_query_stmt, 2)
             );
+            String script_contents(
+                (const char*)sqlite3_column_text(value_query_stmt, 3),
+                sqlite3_column_bytes(value_query_stmt, 3)
+            );
 
             HostedObjectPtr obj = mOH->createObject(
                 UUID(object_str, UUID::HexString()),
-                &script_type, &script_args
+                script_type, script_args, script_contents
             );
 
             step_rc = sqlite3_step(value_query_stmt);

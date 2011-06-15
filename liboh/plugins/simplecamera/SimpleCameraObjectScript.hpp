@@ -49,7 +49,7 @@ class SimpleCameraObjectScript :
         Invokable // For input callbacks
 {
 public:
-    SimpleCameraObjectScript(HostedObjectPtr ho, const String& args);
+    SimpleCameraObjectScript(HostedObjectPtr ho, const String& args, const String& script);
     virtual ~SimpleCameraObjectScript();
 
     virtual void updateAddressable();

@@ -73,12 +73,13 @@ public:
      *         data.
      *  \param script_type the type of script the object is running, e.g. 'js'
      *         or 'python'
-     *  \param script_args arguments to the script, which usually include some
-     *         bootstrapping code to get the object back to its old (or similar
-     *         to its old) state
+     *  \param script_args arguments to the script to ensure it is in the same
+     *         state as it was originally loaded in
+     *  \param script_contents the actual script text to be executed, usually
+     *         bootstrapping code which then loads data from storage
      *  \param cb callback to invoke when the operation completes
      */
-    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, RequestCallback cb) = 0;
+    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) = 0;
 };
 
 

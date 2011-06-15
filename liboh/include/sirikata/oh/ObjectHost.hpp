@@ -134,18 +134,21 @@ public:
      *  \param _id a unique identifier for this object. Only use this
      *  \param script_type type of script to instantiate, e.g. 'js'
      *  \param script_opts options to pass to the created script
+     *  \param script_contents contents of the script, i.e. the script text to eval
      */
-    virtual HostedObjectPtr createObject(const UUID &_id, const String* script_type, const String* script_opts);
+    virtual HostedObjectPtr createObject(const UUID &_id, const String& script_type, const String& script_opts, const String& script_contents);
     /** Create an object with the specified script. The object will be
      *  automatically assigned a unique identifier.
      *
      *  \param script_type type of script to instantiate, e.g. 'js'
      *  \param script_opts options to pass to the created script
+     *  \param script_contents contents of the script, i.e. the script text to eval
      */
-    virtual HostedObjectPtr createObject(const String* script_type, const String* script_opts);
+    virtual HostedObjectPtr createObject(const String& script_type, const String& script_opts, const String& script_contents);
 
     virtual const String& defaultScriptType() const = 0;
     virtual const String& defaultScriptOptions() const = 0;
+    virtual const String& defaultScriptContents() const = 0;
 
     // Space API - Provide info for ObjectHost to communicate with spaces
     void addServerIDMap(const SpaceID& space_id, ServerIDMap* sidmap);

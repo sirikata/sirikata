@@ -53,11 +53,11 @@ public:
     JSObjectScriptManager(const Sirikata::String& arguments);
     virtual ~JSObjectScriptManager();
 
-    virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args);
+    virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args, const String& script);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
-    JSObjectScript* createHeadless(const String& args);
-    
+    JSObjectScript* createHeadless(const String& args, const String& script);
+
     OptionSet* getOptions() const { return mOptions; }
     String defaultScript() const;
 

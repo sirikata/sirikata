@@ -10,6 +10,7 @@ struct EntityCreateInfo
 {
     String scriptType;
     String scriptOpts;
+    String scriptContents;
     SpaceID spaceID;
     Location loc;
     float  scale;

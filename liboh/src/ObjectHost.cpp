@@ -101,17 +101,17 @@ ObjectHost::~ObjectHost()
     delete mScriptPlugins;
 }
 
-HostedObjectPtr ObjectHost::createObject(const String* script_type, const String* script_opts) {
+HostedObjectPtr ObjectHost::createObject(const String& script_type, const String& script_opts, const String& script_contents) {
     // FIXME we could ensure that the random ID isn't actually in use already
-    return createObject(UUID::random(), script_type, script_opts);
+    return createObject(UUID::random(), script_type, script_opts, script_contents);
 }
 
-HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String* script_type, const String* script_opts) {
+HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_type, const String& script_opts, const String& script_contents) {
     HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
-    if (script_type != NULL && script_opts != NULL)
-        ho->initializeScript(*script_type, *script_opts);
+    if (!script_type.empty())
+        ho->initializeScript(script_type, script_opts, script_contents);
     else
-        ho->initializeScript(this->defaultScriptType(), this->defaultScriptOptions());
+        ho->initializeScript(this->defaultScriptType(), this->defaultScriptOptions(), this->defaultScriptContents());
     return ho;
 }
 

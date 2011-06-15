@@ -51,6 +51,7 @@
 
 #define OPT_DEFAULT_SCRIPT_TYPE         "default-script-type"
 #define OPT_DEFAULT_SCRIPT_OPTIONS      "default-script-opts"
+#define OPT_DEFAULT_SCRIPT_CONTENTS      "default-script-contents"
 
 #define OPT_OBJECT_STORAGE       "oh.storage"
 #define OPT_OBJECT_STORAGE_OPTS  "oh.storage.opts"

@@ -44,7 +44,7 @@ namespace SimpleCamera {
 #define WORLD_SCALE 20  // Units for zoom/pan
 #define DEG2RAD 0.0174532925
 
-SimpleCameraObjectScript::SimpleCameraObjectScript(HostedObjectPtr ho, const String& args)
+SimpleCameraObjectScript::SimpleCameraObjectScript(HostedObjectPtr ho, const String& args, const String& script)
  : mParent(ho),
    mGraphics(NULL)
 {

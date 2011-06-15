@@ -150,6 +150,7 @@ void CSVObjectFactory::generate()
     int quat_vel_idx = -1;
     int script_type_idx = -1;
     int script_opts_idx = -1;
+    int script_contents_idx = -1;
     int scale_idx = -1;
     int objid_idx = -1;
     int solid_angle_idx = -1;
@@ -183,6 +184,7 @@ void CSVObjectFactory::generate()
                 if (line_parts[idx] == "rot_axis_x") quat_vel_idx = idx;
                 if (line_parts[idx] == "script_type") script_type_idx = idx;
                 if (line_parts[idx] == "script_options") script_opts_idx = idx;
+                if (line_parts[idx] == "script_contents") script_contents_idx = idx;
                 if (line_parts[idx] == "scale") scale_idx = idx;
                 if(line_parts[idx] == "objid")
                 {
@@ -245,6 +247,7 @@ void CSVObjectFactory::generate()
 
                 String scriptType = "";
                 String scriptOpts = "";
+                String scriptContents = "";
 
               	if(script_type_idx != -1)
                 {
@@ -253,6 +256,10 @@ void CSVObjectFactory::generate()
                 if(script_opts_idx != -1)
                 {
                     scriptOpts = line_parts[script_opts_idx];
+                }
+                if(script_contents_idx != -1)
+                {
+                    scriptContents = line_parts[script_contents_idx];
                 }
 
                 float scale =
@@ -291,17 +298,15 @@ void CSVObjectFactory::generate()
                 }
 
                 HostedObjectPtr obj;
-                String* script_type_val = (scriptType == "" ? NULL : &scriptType);
-                String* script_opts_val = (scriptType == "" ? NULL : &scriptOpts);
 
                 if (objid_idx != -1) {
                     obj = mOH->createObject(
                         UUID(objid, UUID::HumanReadable()),
-                        script_type_val, script_opts_val
+                        scriptType, scriptOpts, scriptContents
                     );
                 }
                 else {
-                    obj = mOH->createObject(script_type_val, script_opts_val);
+                    obj = mOH->createObject(scriptType, scriptOpts, scriptContents);
                 }
 
                 ObjectConnectInfo oci;

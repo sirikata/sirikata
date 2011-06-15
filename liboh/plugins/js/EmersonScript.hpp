@@ -67,7 +67,7 @@ class EmersonScript : public JSObjectScript,
 {
 
 public:
-    EmersonScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan);
+    EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan);
     virtual ~EmersonScript();
 
     // SessionEventListener Interface
@@ -142,7 +142,7 @@ public:
     void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
     SolidAngle getQueryAngle(const SpaceObjectReference* sporef);
 
-    
+
     v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference* sporef);
     void setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhysicsString);
 
@@ -245,7 +245,7 @@ private:
     std::map< SpaceObjectReference ,ODP::Port* >mMessagingPortMap;
     ODP::Port* mCreateEntityPort;
 
-    
+
     void callbackUnconnected(const SpaceObjectReference& name, HostedObject::PresenceToken token);
     HostedObject::PresenceToken presenceToken;
 

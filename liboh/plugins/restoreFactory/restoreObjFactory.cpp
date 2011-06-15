@@ -103,7 +103,7 @@ void RestoreObjFactory::execEnts()
         mIncompleteEnts.pop();
 
         HostedObjectPtr ent;
-        ent = mOH->createObject(&scriptType, &argToExec);
+        ent = mOH->createObject(scriptType, argToExec, "");
     }
 
     if (!mIncompleteEnts.empty())

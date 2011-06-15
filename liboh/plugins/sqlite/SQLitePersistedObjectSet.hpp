@@ -62,26 +62,11 @@ public:
     virtual void start();
     virtual void stop();
 
-    /** Request that an object be marked for persistence / restoration.  If
-     *  script_type and script_args are left blank, the restoration of the
-     *  object will be disabled (e.g. if the object is being destroyed).
-     *
-     *  \param internal_id the internal identifier used by the
-     *         HostedObject. This should always be read from the HostedObject
-     *         as it will be used to restore access to the appropriate stored
-     *         data.
-     *  \param script_type the type of script the object is running, e.g. 'js'
-     *         or 'python'
-     *  \param script_args arguments to the script, which usually include some
-     *         bootstrapping code to get the object back to its old (or similar
-     *         to its old) state
-     *  \param cb callback to invoke when the operation completes
-     */
-    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, RequestCallback cb);
+    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb);
 
 private:
     void initDB();
-    void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, RequestCallback cb);
+    void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb);
 
     ObjectHostContext* mContext;
     String mDBFilename;

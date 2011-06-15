@@ -407,7 +407,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
   proto_t->Set(v8::String::New("getQueryAngle"), v8::FunctionTemplate::New(JSPresence::getQueryAngle));
-  
+
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
@@ -459,16 +459,16 @@ JSObjectScriptManager::~JSObjectScriptManager()
 
 
 
-JSObjectScript* JSObjectScriptManager::createHeadless(const String& args)
+JSObjectScript* JSObjectScriptManager::createHeadless(const String& args, const String& script)
 {
     JSObjectScript* new_script = new JSObjectScript(this, NULL, NULL, UUID::random());
-    new_script->initialize(args);
+    new_script->initialize(args, script);
     return new_script;
 }
 
-ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args)
+ObjectScript* JSObjectScriptManager::createObjectScript(HostedObjectPtr ho, const String& args, const String& script)
 {
-    EmersonScript* new_script = new EmersonScript(ho, args, this);
+    EmersonScript* new_script = new EmersonScript(ho, args, script, this);
     if (!new_script->valid()) {
         delete new_script;
         return NULL;

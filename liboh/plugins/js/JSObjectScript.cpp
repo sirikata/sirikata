@@ -213,14 +213,12 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 
 
-void JSObjectScript::initialize(const String& args)
+void JSObjectScript::initialize(const String& args, const String& script)
 {
-    OptionValue* init_script;
     InitializeClassOptions(
         "jsobjectscript", this,
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
-        init_script = new OptionValue("init-script","",OptionValueType<String>(),"Script to run on startup."),
         NULL
     );
 
@@ -239,8 +237,7 @@ void JSObjectScript::initialize(const String& args)
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
-    String script_contents = init_script->as<String>();
-    if (script_contents.empty()) {
+    if (script.empty()) {
         JSLOG(detailed,"Importing default script.");
         import(mManager->defaultScript(),NULL);
         mContext->struct_setScript("system.require('" + mManager->defaultScript() + "');");
@@ -250,8 +247,8 @@ void JSObjectScript::initialize(const String& args)
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
-        protectedEval(script_contents, &origin, new_ctx,mContext);
-        mContext->struct_setScript(script_contents);
+        protectedEval(script, &origin, new_ctx,mContext);
+        mContext->struct_setScript(script);
     }
 }
 
@@ -368,14 +365,13 @@ v8::Handle<v8::Value> JSObjectScript::setRestoreScript(JSContextStruct* jscont, 
 
     // FIXME we should really tack on any additional parameters we
     // received initially here
-    String wrapped_script = "";
     String script_type = "";
     if (!script.empty()) {
         script_type = "js";
-        wrapped_script = "--init-script=" + script;
     }
 
-    mPersistedObjectSet->requestPersistedObject(mInternalID, script_type, wrapped_script, wrapped_cb);
+    // FIXME script_args
+    mPersistedObjectSet->requestPersistedObject(mInternalID, script_type, "", script, wrapped_cb);
     return v8::Undefined();
 }
 

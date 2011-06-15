@@ -79,7 +79,7 @@ namespace Sirikata {
 namespace JS {
 
 
-EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, JSObjectScriptManager* jMan)
+EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan)
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
    mHandlingEvent(false),
    mResetting(false),
@@ -87,7 +87,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, JSObjectScr
    mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
 {
-    JSObjectScript::initialize(args);
+    JSObjectScript::initialize(args, script);
 
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
@@ -490,7 +490,7 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
 
 void EmersonScript::create_entity(EntityCreateInfo& eci)
 {
-    HostedObjectPtr obj = mParent->getObjectHost()->createObject(&eci.scriptType, &eci.scriptOpts);
+    HostedObjectPtr obj = mParent->getObjectHost()->createObject(eci.scriptType, eci.scriptOpts, eci.scriptContents);
 
     obj->connect(eci.space,
         eci.loc,
@@ -880,8 +880,8 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     Vector3f newVel            = psrp.mTmv3f->velocity();
     Quaternion orientVel       = psrp.mTmq->velocity();
 
-    
-    
+
+
     Vector3f newAngAxis;
     float newAngVel;
     orientVel.toAngleAxis(newAngVel,newAngAxis);

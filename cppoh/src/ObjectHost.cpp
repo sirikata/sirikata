@@ -41,6 +41,7 @@ CppohObjectHost::CppohObjectHost(ObjectHostContext* ctx, Network::IOService*ioSe
 {
     mDefaultScriptType = GetOptionValue<String>(OPT_DEFAULT_SCRIPT_TYPE);
     mDefaultScriptOptions = GetOptionValue<String>(OPT_DEFAULT_SCRIPT_OPTIONS);
+    mDefaultScriptContents = GetOptionValue<String>(OPT_DEFAULT_SCRIPT_CONTENTS);
 }
 
 const String& CppohObjectHost::defaultScriptType() const {
@@ -49,6 +50,10 @@ const String& CppohObjectHost::defaultScriptType() const {
 
 const String& CppohObjectHost::defaultScriptOptions() const {
     return mDefaultScriptOptions;
+}
+
+const String& CppohObjectHost::defaultScriptContents() const {
+    return mDefaultScriptContents;
 }
 
 } // namespace Sirikata

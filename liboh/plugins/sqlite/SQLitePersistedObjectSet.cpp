@@ -69,7 +69,7 @@ void SQLitePersistedObjectSet::initDB() {
     // Create the table for this object if it doesn't exist yet
     String table_create = "CREATE TABLE IF NOT EXISTS ";
     table_create += "\"" TABLE_NAME "\"";
-    table_create += "(object TEXT PRIMARY KEY, script_type TEXT, script_args TEXT)";
+    table_create += "(object TEXT PRIMARY KEY, script_type TEXT, script_args TEXT, script_contents TEXT)";
 
     int rc;
     char* remain;
@@ -98,13 +98,13 @@ void SQLitePersistedObjectSet::stop() {
     mIOService = NULL;
 }
 
-void SQLitePersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, RequestCallback cb) {
+void SQLitePersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
     mIOService->post(
-        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, cb)
+        std::tr1::bind(&SQLitePersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb)
     );
 }
 
-void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, RequestCallback cb) {
+void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb) {
     bool success = true;
 
     int rc;
@@ -112,7 +112,7 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
     String value_insert;
     value_insert = "INSERT OR REPLACE INTO ";
     value_insert += "\"" TABLE_NAME "\"";
-    value_insert += " (object, script_type, script_args) VALUES(?, ?, ?)";
+    value_insert += " (object, script_type, script_args, script_contents) VALUES(?, ?, ?, ?)";
 
     sqlite3_stmt* value_insert_stmt;
     rc = sqlite3_prepare_v2(mDB->db(), value_insert.c_str(), -1, &value_insert_stmt, (const char**)&remain);
@@ -125,6 +125,8 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding script_type name to value insert statement");
     rc = sqlite3_bind_blob(value_insert_stmt, 3, script_args.c_str(), (int)script_args.size(), SQLITE_TRANSIENT);
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding script_args to value insert statement");
+    rc = sqlite3_bind_blob(value_insert_stmt, 4, script_contents.c_str(), (int)script_contents.size(), SQLITE_TRANSIENT);
+    success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error binding script_contents to value insert statement");
 
     int step_rc = SQLITE_OK;
     while(step_rc == SQLITE_OK) {

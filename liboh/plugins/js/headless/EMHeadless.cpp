@@ -17,11 +17,11 @@ int main (int argc, char** argv)
 
     Sirikata::JS::JSObjectScriptManager jsman("");
     std::string fileToCheck(argv[1]);
-    
-    std::string args ( "--init-script=system.import('" + fileToCheck+ "');");
-    Sirikata::JS::JSObjectScript* jsobj = jsman.createHeadless(args);
+
+    std::string args = "";
+    std::string script ( "system.import('" + fileToCheck+ "');");
+    Sirikata::JS::JSObjectScript* jsobj = jsman.createHeadless(args, script);
 
     delete jsobj;
     return 0;
 }
-

@@ -70,7 +70,8 @@ void InitCPPOHOptions() {
         .addOption(new OptionValue(OPT_OH_PERSISTENT_SET_OPTS,"",OptionValueType<String>(),"Options to pass to persistent object set constructor"))
 
         .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_TYPE,"js",OptionValueType<String>(),"If a script is not specified, this type will be instantiated automatically at object creation. If left blank, no script will be started."))
-        .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"--init-script=system.import('std/default.em');",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
+        .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_OPTIONS,"",OptionValueType<String>(),"If a script is not specified, these options will be passed to the default script type."))
+        .addOption(new OptionValue(OPT_DEFAULT_SCRIPT_CONTENTS,"system.import('std/default.em');",OptionValueType<String>(),"If a script is not specified, this script will be executed as the default."))
         ;
 }
 

@@ -48,7 +48,9 @@ class SIRIKATA_OH_EXPORT ObjectScriptManager  {
         Called by HostedObject::initializeScripted().
     */
     virtual ObjectScript *createObjectScript(HostedObjectPtr ho,
-                                             const String &args)=0;
+        const String &args,
+        const String& init_script)=0;
+
     /// Delete this ObjectScript instance.
     virtual void destroyObjectScript(ObjectScript*toDestroy)=0;
     /// Destructor: called from the plugin itself.
