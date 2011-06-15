@@ -215,7 +215,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
      system.setRestoreScript = function(script, cb)
      {
          if (typeof(script) == 'function')
-             script = script.toString();
+             script = '(' + script.toString() + ')()';
          if (typeof(script) !== 'string')
              throw new TypeError('Invalid restore script type: expected String or Function.');
 
