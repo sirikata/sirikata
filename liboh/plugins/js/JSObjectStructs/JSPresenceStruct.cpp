@@ -181,21 +181,38 @@ v8::Handle<v8::Value> JSPresenceStruct::resume()
 //when doing disconnecting call his
 v8::Handle<v8::Value> JSPresenceStruct::clear()
 {
+    if (getIsCleared())
+        return JSSuspendable::clear();
 
-    
-    emerScript->requestDisconnect(this);
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Value> returner = JSSuspendable::clear();
 
+    for (ContextVector::iterator iter = associatedContexts.begin(); iter != associatedContexts.end(); ++iter)
+        (*iter)->clear();
+    associatedContexts.clear();
+
+    clearPreviousConnectedCB();
     if (isConnected)
         deregisterAsPosAndMeshListener();
-
-
     isConnected = false;
-    //clearPreviousConnectedCB();
 
-    if (mContext != NULL)
-        mContext->checkContextDisconnectCallback(this);
+    //do not ask emerson script to delete presence here.  the context will get
+    //this presence deleted.
+    
+    mContext->struct_deregisterSuspendable(this);
+    return handle_scope.Close(returner);
+}
 
-    return JSSuspendable::clear();
+
+v8::Handle<v8::Value> JSPresenceStruct::disconnect()
+{
+    clearPreviousConnectedCB();
+    if (isConnected)
+        deregisterAsPosAndMeshListener();
+    isConnected = false;
+
+    emerScript->requestDisconnect(this);
+    return v8::Boolean::New(true);
 }
 
 
@@ -312,11 +329,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setConnectedCB(v8::Handle<v8::Function> 
 
 JSPresenceStruct::~JSPresenceStruct()
 {
-    clearPreviousConnectedCB();
-
-    for (ContextVector::iterator iter = associatedContexts.begin(); iter != associatedContexts.end(); ++iter)
-        (*iter)->presenceDied();
-
+    clear();
 }
 
 //called from jsobjectscript.

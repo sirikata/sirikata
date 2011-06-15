@@ -420,7 +420,9 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const Spac
 //requested by scripters.  
 v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
 {
-    mKilling = true;
+    if (jscont == rootContext())
+        mKilling = true;
+    
     return v8::Null();
 }
 
@@ -428,11 +430,10 @@ v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
 //requested internally after break out of execution loop.
 void EmersonScript::killScript()
 {
-    //lkjs;
     mContext->clear();
     delete mContext;
-    // lkjs; do other clean up too;
-    // lkjs;
+    mContext  = NULL;
+    mParent->destroy();
 }
 
 
@@ -492,7 +493,6 @@ void EmersonScript::callbackUnconnected(const SpaceObjectReference& name, Hosted
 //the presence associated with jspres
 void EmersonScript::requestDisconnect(JSPresenceStruct* jspres)
 {
-
     SpaceObjectReference sporef = (*(jspres->getToListenTo()));
     mParent->disconnectFromSpace(sporef.space(), sporef.object());
 }
@@ -524,10 +524,8 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
 
 EmersonScript::~EmersonScript()
 {
-    for(JSEventHandlerList::iterator handler_it = mEventHandlers.begin(); handler_it != mEventHandlers.end(); handler_it++)
-        delete *handler_it;
-
-    mEventHandlers.clear();
+    if (mContext != NULL)
+        mContext->clear();
 }
 
 
@@ -814,6 +812,43 @@ void EmersonScript::deleteHandler(JSEventHandlerStruct* toDelete)
     delete toDelete;
     toDelete = NULL;
 }
+
+
+//takes in a presence struct to remove from mPresences map.  Additionally,
+//requests the HostedObject to remove the presence.
+void EmersonScript::deletePres(JSPresenceStruct* toDelete)
+{
+
+    //remove the presence from mUnconnectedPresences
+    bool found= true;
+    while (found)
+    {
+        found = false;
+        for (PresenceVec::iterator iter = mUnconnectedPresences.begin();
+             iter != mUnconnectedPresences.end(); ++iter)
+        {
+            if (*iter == toDelete)
+            {
+                mUnconnectedPresences.erase(iter);
+                found = true;
+                break;
+            }
+        }
+    }
+
+    //remove the presence from mPresences
+    for (PresenceMapIter pIter = mPresences.begin(); pIter != mPresences.end(); ++pIter)
+    {
+        if (pIter->second == toDelete)
+        {
+            mPresences.erase(pIter);
+            break;
+        }
+    }
+    mParent->disconnectFromSpace(toDelete->getSporef()->space(),toDelete->getSporef()->object());
+    delete toDelete;
+}
+
 
 
 //This function takes in a jseventhandler, and wraps a javascript object with

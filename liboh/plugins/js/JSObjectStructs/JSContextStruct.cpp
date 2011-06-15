@@ -551,24 +551,14 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
     }
     associatedSuspendables.erase(iter);
 
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    
     //if it's an event handler struct, we also need to ensure that it is removed
     //from EmersonScript.  Calling emerScript->deleteHandler will kill the
     //event handler and free its memory.  Otherwise, we can free it directly here.
     JSEventHandlerStruct* jsev = dynamic_cast<JSEventHandlerStruct*>(toDeregister);
-    if (jsev == NULL)
+    if (jsev != NULL)
     {
-        JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (toDeregister);
-        if (jspres != NULL)
-        {
-            JSLOG(error,"Not handling clearing presence correctly.  Must fix");
-            return;
-        }
-        
-        delete toDeregister;
-    }
-    else
-    {
-        EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
         if (emerScript == NULL)
         {
             JSLOG(error, "should not be deregistering an event listener from headless script.");
@@ -576,7 +566,29 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         }
         
         emerScript->deleteHandler(jsev);
+        return;
     }
+    
+    //handle presence clear.
+    JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (toDeregister);
+    if (jspres != NULL)
+    {
+        if (emerScript == NULL)
+        {
+            JSLOG(error, "should not be deregistering an presence from a headless script.");
+            return;
+        }
+
+        emerScript->deletePres(jspres);
+        return;
+    }
+
+    
+
+    //if it's just a timer or a context, can delete without requesting
+    //Emerscript to do anything special.
+    delete toDeregister;
+
 }
 
 

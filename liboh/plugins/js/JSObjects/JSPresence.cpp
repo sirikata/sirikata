@@ -50,6 +50,7 @@ bool isPresence(v8::Handle<v8::Value> v8Val)
 }
 
 
+
 v8::Handle<v8::Value>  pres_disconnect(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -60,8 +61,8 @@ v8::Handle<v8::Value>  pres_disconnect(const v8::Arguments& args)
 
     if (jspres == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
-
-    return jspres->clear();
+    
+    return jspres->disconnect();
 }
 
 
@@ -639,6 +640,20 @@ Handle<v8::Value> setPhysics(const v8::Arguments& args)
 
     return mStruct->setPhysicsFunction(phy);
 }
+
+
+void setNullPresence(const v8::Arguments& args)
+{
+    v8::Handle<v8::Object> mPres = args.This();
+
+   //grabs the internal pattern
+   //(which has been saved as a pointer to JSEventHandler
+   if (mPres->InternalFieldCount() > 0)
+       mPres->SetInternalField(PRESENCE_FIELD_PRESENCE  ,External::New(NULL));
+   else
+       v8::Handle<v8::Object>::Cast(mPres->GetPrototype())->SetInternalField(PRESENCE_FIELD_PRESENCE, External::New(NULL));
+}
+
 
 
 } //end jspresence namespace

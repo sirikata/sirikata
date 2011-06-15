@@ -78,8 +78,10 @@ struct JSPresenceStruct : public JSPositionListener,
 
     virtual v8::Handle<v8::Value> suspend();
     virtual v8::Handle<v8::Value> resume();
+    //currently, cannot be called by scripter.
     virtual v8::Handle<v8::Value> clear();
 
+    v8::Handle<v8::Value> disconnect();
 
     static JSPresenceStruct* decodePresenceStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
 

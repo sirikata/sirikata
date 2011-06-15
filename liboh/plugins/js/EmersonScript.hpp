@@ -183,15 +183,20 @@ public:
 
 
     /**
-       Most suspendables are killed by contexts.  However, EventHandlers are
-       also stored in
+       Timers and context suspendables are killed and deleted in contexts.
+       However, EventHandlers and presences are also stored in EmersonScript,
+       and EmersonScript must be told to kill them and remove them.
 
        All other suspendables can be killed from their context struct.
        JSEventHandlers cannot be because we need to ensure that we're out of the
        event loop before removing it from the list of events and killing it.
+       And JSPresences, we need to remove from our list of presences and ask
+       hosted object to remove it.
      */    
     void deleteHandler(JSEventHandlerStruct* toDelete);
+    void deletePres(JSPresenceStruct* toDelete);
 
+    
     void resetPresence(JSPresenceStruct* jspresStruct);
 
 
