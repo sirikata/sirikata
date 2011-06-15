@@ -420,9 +420,11 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const Spac
 //requested by scripters.  
 v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
 {
-    if (jscont == rootContext())
-        mKilling = true;
-    
+    if (jscont != rootContext())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Can only killEntity from root context.")) );
+
+            
+    mKilling = true;
     return v8::Null();
 }
 

@@ -262,11 +262,18 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
                             });
 
 
-
+     /** @function
+      @throws __killEntity__  (If kill entity command is successful)
+      @throws Exception (If do not execute kill entity from root context).
+      @description Destroys the entity and all the presences and state
+      associated with it if run from the root context.  If not run
+      from root context, throws error.
+      */
      system.killEntity = function()
      {
          isKilling = true;
-         return baseSystem.killEntity.apply(baseSystem,arguments);
+         baseSystem.killEntity.apply(baseSystem,arguments);
+         throw '__killEntity__';
      };
 
      system.__isKilling = function()
