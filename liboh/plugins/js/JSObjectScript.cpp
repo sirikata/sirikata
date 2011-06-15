@@ -550,8 +550,6 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         }
         catch(EmersonParserException e) {
             postEvalOps();
-
-            assert(false);
             return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
         }
     }
