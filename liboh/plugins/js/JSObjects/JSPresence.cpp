@@ -519,6 +519,17 @@ void isConnectedSetter(v8::Local<v8::String> property, v8::Local<v8::Value> toSe
         }
 
 
+v8::Handle<v8::Value>  getQueryAngle(const v8::Arguments& args)
+{
+    String errorMessage = "Error in getQueryAngle while decoding presence.  ";
+    JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    if (mStruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return mStruct->struct_getQueryAngle();
+}
+
 /**
    @return A number indicating the scale of the presence.
 

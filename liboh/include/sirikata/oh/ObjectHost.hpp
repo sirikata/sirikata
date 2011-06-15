@@ -93,7 +93,9 @@ public:
         BoundingSphere3f bnds;
         String mesh;
         String physics;
+        SolidAngle queryAngle;
     };
+
 
     //use this function to request the object host to send a disconnect message
     //to space for object

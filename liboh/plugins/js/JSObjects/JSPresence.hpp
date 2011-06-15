@@ -46,6 +46,7 @@ v8::Handle<v8::Value>  setScale(const v8::Arguments& args);
 v8::Handle<v8::Value>  getScale(const v8::Arguments& args);
 
 v8::Handle<v8::Value>  setQueryAngle(const v8::Arguments& args);
+v8::Handle<v8::Value>  getQueryAngle(const v8::Arguments& args);
 
 v8::Handle<v8::Value>  setPhysics(const v8::Arguments& args);
 v8::Handle<v8::Value>  getPhysics(const v8::Arguments& args);

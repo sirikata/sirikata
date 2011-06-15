@@ -22,6 +22,7 @@ bool decodeTimedMotionQuat(v8::Handle<v8::Value> orientationQuat,v8::Handle<v8::
 bool decodeBoundingSphere3f(v8::Handle<v8::Value> toDecodeCenterVec, v8::Handle<v8::Value> toDecodeRadius, BoundingSphere3f& toDecodeTo, String& errMsg);
 
 bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& errMsg);
+bool decodeSolidAngle(v8::Handle<v8::Value> toDecode, SolidAngle& toDecodeTo, String& errMsg);
 
 
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMessage);
@@ -29,6 +30,18 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 
 String uint16StrToStr(v8::Handle<v8::String> toDeserialize);
 v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
+
+
+
+
+
+#define INLINE_SA_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)   \
+    SolidAngle whereWriteTo;                                                   \
+    {                                                                      \
+        String _errMsg = "In " #whereError "cannot convert arg " #whichArg " to solid angle";     \
+        if (!decodeSolidAngle(toConvert,whereWriteTo,_errMsg))                 \
+            return v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length())); \
+    }
 
 /**
    @param toConvert v8::Handle<v8::Value> that we will try to decode as a uint32

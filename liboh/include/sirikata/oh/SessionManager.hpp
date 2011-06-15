@@ -68,6 +68,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         BoundingSphere3f bounds;
         String mesh;
         String physics;
+        SolidAngle queryAngle;
     };
 
     // Callback indicating that a connection to the server was made

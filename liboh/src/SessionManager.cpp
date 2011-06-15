@@ -856,6 +856,7 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     conn_info.bounds = ci.bounds;
     conn_info.mesh = ci.mesh;
     conn_info.physics = ci.physics;
+    conn_info.queryAngle   = ci.queryAngle;
     real_cb(space, obj, conn_info);
 
     SSTStream::connectStream(

@@ -72,6 +72,15 @@ Object.defineProperty(system.__presence_constructor__.prototype, "position",
                       }
 );
 
+Object.defineProperty(system.__presence_constructor__.prototype, "queryAngle",
+                      {
+                          get: function() { return this.getQueryAngle(); },
+                          set: function() { return this.setQueryAngle.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
+
+
 Object.defineProperty(system.__presence_constructor__.prototype, "velocity",
                       {
                           get: function() { return this.getVelocity(); },
@@ -177,27 +186,26 @@ system.__presence_constructor__.prototype.__getType = function()
       {
       };
       
-      /**
-       @return Object containing all data associated with this presence.  Fields of returned object:
-            @param {string} sporef,
-            @param {vec3} pos,
-       @param {vec3} vel,
-       @param {string} posTime,
-       @param {quaternion} orient,
-       @param {quaternion} orientVel,
-       @param {string} orientTime,
-       @param {string} mesh,
-       @param {number} scale,
-       @param {boolean} isCleared ,
-       @param {uint32} contextId,
-       @param {boolean} isConnected,
-       @param {function, null} connectedCallback,
-       @param {boolean} isSuspended,
-       @param {vec3} suspendedVelocity,
-       @param {quaternion} suspendedOrientationVelocity,
-       @param {function, null} proxAddedCallback,
-       @param {function, null} proxRemovedCallback,
-       */
+
+     /**
+      @param {string} sporef,
+      @param {vec3} pos,
+      @param {vec3} vel,
+      @param {string} posTime,
+      @param {quaternion} orient,
+      @param {quaternion} orientVel,
+      @param {string} orientTime,
+      @param {string} mesh,
+      @param {number} scale,
+      @param {boolean} isCleared ,
+      @param {uint32} contextId,
+      @param {boolean} isConnected,
+      @param {function,null} connectedCallback,
+      @param {boolean} isSuspended,
+      @param {vec3} suspendedVelocity,
+      @param {quaternion} suspendedOrientationVelocity,
+      @param {float} solidAngleQuery
+      */
       presence.prototype.getAllData = function()
       {
       };
@@ -215,9 +223,9 @@ system.__presence_constructor__.prototype.__getType = function()
        @description sets the orientation of the presence to a new value
        @param newvel  The new orientation of the presence to set to
     */
-
     presence.prototype.setOrientation = function(/** util.Quaternion */ newpos){}
 
+      
 
     /**@function 
        @description Returns the orientation of the presence
@@ -274,6 +282,21 @@ system.__presence_constructor__.prototype.__getType = function()
 
     presence.prototype.getMesh = function(){}
 
+
+    /**@function
+       @description Sets the solid angle query that is issued from this presence.
+       @param newQueryAngle Pinto should return this presence prox
+       results for presences that are larger than newQueryAngle.
+    */
+    presence.prototype.setQueryAngle = function(/** float */ newQueryAngle){};
+
+    /**@function
+       @description Returns the solid angle that pinto is using to
+       provide prox results for this presence.
+    */
+    presence.prototype.getQueryAngle = function(){};
+
+      
       
       /** @function
        *  @description Returns the (decoded) physics settings of the presence.

@@ -255,6 +255,19 @@ bool decodeBoundingSphere3f(v8::Handle<v8::Value> toDecodeCenterVec, v8::Handle<
 }
 
 
+bool decodeSolidAngle(v8::Handle<v8::Value> toDecode, SolidAngle& toDecodeTo, String& errMsg)
+{
+    if (!NumericValidate(toDecode))
+    {
+        errMsg += "  Error decoding solid angle.  Passed in parameter was not of numeric type";
+        return false;
+    }
+    toDecodeTo = SolidAngle(NumericExtract(toDecode));
+    return true;
+}
+
+
+
 //returns whether the decode operation was successful or not.  if successful,
 //updates the value in decodeValue to the decoded value, errorMessage contains
 //string associated with failure if decoding fales

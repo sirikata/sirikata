@@ -212,6 +212,7 @@ void ObjectHost::connect(
     info.bnds = ci.bounds;
     info.mesh = ci.mesh;
     info.physics = ci.physics;
+    info.queryAngle   = ci.queryAngle;
     cb(space, obj, info);
 }
 

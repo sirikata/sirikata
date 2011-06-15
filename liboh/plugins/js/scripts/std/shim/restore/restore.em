@@ -286,7 +286,8 @@ if (typeof(std.persist) === 'undefined')
              toRestoreFrom.pos,
              toRestoreFrom.scale,
              toRestoreFrom.mesh,
-             toRestoreFrom.physics
+             toRestoreFrom.physics,
+             toRestoreFrom.solidAngleQuery
          );
 
          cb(true, returner);

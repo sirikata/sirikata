@@ -92,7 +92,6 @@ protected:
     typedef std::map<SpaceObjectReference, PerPresenceData> PresenceDataMap;
     PresenceDataMap *mPresenceData;
 
-
     int mNextSubscriptionID;
 
 
@@ -346,6 +345,7 @@ public:
 
     virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle);
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
+    virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
 
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
@@ -366,8 +366,8 @@ public:
 
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics);
-    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle);
+    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, const SolidAngle& queryAngle);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update

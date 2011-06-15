@@ -355,7 +355,6 @@ void HostedObject::connect(
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, token),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
     );
-
 }
 
 
@@ -416,17 +415,16 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     SpaceObjectReference self_objref(space, obj);
     if(mPresenceData->find(self_objref) == mPresenceData->end())
     {
-        PerPresenceData toInsert(this,space,obj);
         mPresenceData->insert(
-            PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj))
+            PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj,info.queryAngle))
         );
     }
 
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics);
-
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle);
+    
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
@@ -763,9 +761,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 Transfer::URI meshuri;
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
-
                 // FIXME use weak_ptr instead of raw
-                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy);
+                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max);
             }
             else {
                 // Reset so that updates from this new "session" for this proxy
@@ -834,13 +831,14 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle)
 {
-    ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri);
+    ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,queryAngle);
     returner->setLocation(tmv, 0);
     returner->setOrientation(tmq, 0);
     returner->setBounds(bs, 0);
 
+    
     if(meshuri)
         returner->setMesh(meshuri, 0);
 
@@ -853,13 +851,13 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
 //should only be called from within createProxy functions.  Otherwise, will not
 //initilize position and quaternion correctly
-ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri)
+ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri,const SolidAngle& queryAngle)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
     if (!proxy_manager)
     {
-        mPresenceData->insert(PresenceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object()) ));
+        mPresenceData->insert(PresenceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object(), queryAngle )));
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
@@ -1101,16 +1099,38 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
     return proxy_obj->getPhysics();
 }
 
+
+SolidAngle HostedObject::requestQueryAngle(const SpaceID& space, const ObjectReference& oref)
+{
+    PresenceDataMap::iterator iter = mPresenceData->find(SpaceObjectReference(space,oref));
+    if (iter == mPresenceData->end())
+    {
+        SILOG(cppoh, error, "Error in cppoh, requesting solid angle for presence that doesn't exist in your presence map.  Returning max solid angle instead.");
+        return SolidAngle::Max;
+    }
+    return iter->second.queryAngle;
+}
+
+
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
 {
     updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
 }
+
 
 void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {
     Protocol::Prox::QueryRequest request;
     request.set_query_angle(new_angle.asFloat());
     std::string payload = serializePBJMessage(request);
 
+
+    PresenceDataMap::iterator pdmIter = mPresenceData->find(SpaceObjectReference(space,oref));
+    if (pdmIter != mPresenceData->end())
+        pdmIter->second.queryAngle = new_angle;
+    else
+        SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
+
+    
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
     if (spaceStream != SSTStreamPtr()) {

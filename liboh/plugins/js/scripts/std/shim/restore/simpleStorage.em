@@ -51,7 +51,6 @@ if (typeof(std.simpleStorage) != 'undefined')
             system.require('std/script/scriptable.em');
             system.require('std/graphics/default.em');
             scriptable = new std.script.Scriptable();
-            system.self.setQueryAngle(.00001);      
             simulator = new std.graphics.DefaultGraphics(restObjGraph,'ogregraphics');
             if ((typeof(cb) != 'undefined') && (cb != null))
                 cb(mChars);

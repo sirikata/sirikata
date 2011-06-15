@@ -15,7 +15,9 @@ namespace Sirikata {
 namespace JS {
 
 
-//this constructor is called when the presence associated
+//this constructor is called when we ask the space to create a presence for us.
+//we give the space the token presenceToken, which it ships back when connection 
+//is completed.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent, NULL),
    JSSuspendable(),
@@ -31,7 +33,8 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
     mContext->struct_registerSuspendable(this);
 }
 
-
+//use this constructor if we already have a presence that is connected to the
+//space with spaceObjectRecference _sporef
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
@@ -48,6 +51,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
     JSPositionListener::registerAsPosAndMeshListener();
 }
 
+//use this constructor when we are restoring a presence.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
  : JSPositionListener(parent,NULL),
    JSSuspendable(),
@@ -62,6 +66,8 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     mMesh        = *psrp.mMesh;
     mBounds      =  BoundingSphere3f( center  ,* psrp.mScale);
 
+    mQuery       = *psrp.mQuery;
+    
     mSuspendedVelocity = *psrp.mSuspendedVelocity;
     mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
 
@@ -119,6 +125,9 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     returner->Set(v8::String::New("suspendedOrientationVelocity"),CreateJSResult(curContext,mSuspendedOrientationVelocity));
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
 
+    returner->Set(v8::String::New("solidAngleQuery"),struct_getQueryAngle());
+
+    
 
     //onConnected
     if (mOnConnectedCallback.IsEmpty())
@@ -251,11 +260,20 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion new
     return v8::Undefined();
 }
 
+SolidAngle JSPresenceStruct::getQueryAngle()
+{
+    return emerScript->getQueryAngle(sporefToListenTo);
+}
 
+v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
+{
+    return v8::Number::New(getQueryAngle().asFloat());
+}
 
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
     emerScript->setQueryAngleFunction(sporefToListenTo, new_qa);
+    mQuery = new_qa;
     return v8::Undefined();
 }
 

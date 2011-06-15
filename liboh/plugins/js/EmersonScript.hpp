@@ -138,8 +138,11 @@ public:
     void setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
     void setVisualScaleFunction(const SpaceObjectReference* sporef, float newScale);
     void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
-    void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
 
+    void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
+    SolidAngle getQueryAngle(const SpaceObjectReference* sporef);
+
+    
     v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference* sporef);
     void setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhysicsString);
 

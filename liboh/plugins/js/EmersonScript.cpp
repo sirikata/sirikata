@@ -880,6 +880,8 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     Vector3f newVel            = psrp.mTmv3f->velocity();
     Quaternion orientVel       = psrp.mTmq->velocity();
 
+    
+    
     Vector3f newAngAxis;
     float newAngVel;
     orientVel.toAngleAxis(newAngVel,newAngAxis);
@@ -902,7 +904,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
             bs,
             *psrp.mMesh,
             "",
-            SolidAngle::Max,
+            *psrp.mQuery,
             UUID::null(),
             psrp.mSporef->object(),
             presToke);
@@ -1029,6 +1031,13 @@ void EmersonScript::setPhysicsFunction(const SpaceObjectReference* sporef, const
 void EmersonScript::setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa)
 {
     mParent->requestQueryUpdate(sporef->space(), sporef->object(), sa);
+}
+
+
+SolidAngle EmersonScript::getQueryAngle(const SpaceObjectReference* sporef)
+{
+    SolidAngle returner = mParent->requestQueryAngle(sporef->space(),sporef->object());
+    return returner;
 }
 
 

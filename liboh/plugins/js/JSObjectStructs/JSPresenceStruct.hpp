@@ -13,7 +13,7 @@ namespace JS {
 
 struct PresStructRestoreParams
 {
-    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity)
+    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity, SolidAngle* sa)
         : mSporef(sporef),
           mTmv3f(tmv3f),
           mTmq(tmq),
@@ -25,7 +25,8 @@ struct PresStructRestoreParams
           mConnCallback(connCallback),
           mIsSuspended(isSuspended),
           mSuspendedVelocity(suspendedVelocity),
-          mSuspendedOrientationVelocity(suspendedOrientationVelocity)
+          mSuspendedOrientationVelocity(suspendedOrientationVelocity),
+          mQuery(sa)
     {
     }
 
@@ -41,6 +42,7 @@ struct PresStructRestoreParams
     bool* mIsSuspended;
     Vector3f* mSuspendedVelocity;
     Quaternion* mSuspendedOrientationVelocity;
+    SolidAngle* mQuery;
 };
 
 
@@ -99,6 +101,8 @@ struct JSPresenceStruct : public JSPositionListener,
 
     HostedObject::PresenceToken getPresenceToken();
 
+    SolidAngle getQueryAngle();
+    v8::Handle<v8::Value>  struct_getQueryAngle();
     v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
     v8::Handle<v8::Value>  struct_setVelocity(const Vector3f& newVel);
@@ -154,7 +158,10 @@ private:
     Vector3f   mSuspendedVelocity;
     Quaternion mSuspendedOrientationVelocity;
 
+    
     JSContextStruct* mContext;
+    SolidAngle mQuery;
+    
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();
 

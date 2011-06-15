@@ -397,13 +397,15 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("getScale"),v8::FunctionTemplate::New(JSPresence::getScale));
 
 
+
   //for restore-ability.
   proto_t->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSPresence::getAllData));
 
 
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
-
+  proto_t->Set(v8::String::New("getQueryAngle"), v8::FunctionTemplate::New(JSPresence::getQueryAngle));
+  
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));
 
