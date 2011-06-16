@@ -29,8 +29,10 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+#include <iostream>
+#include <iomanip>
 #include "JSUtil.hpp"
+#include "JSLogging.hpp"
 
 using namespace v8;
 
@@ -60,11 +62,12 @@ double NumericExtract(const Handle<Value>& val) {
         return native_val;
     }
     else if (val->IsNumber()) {
-        double native_val = val->ToNumber()->Value();
+        double native_val = val->NumberValue();
         return native_val;
     }
 
-    assert(false);
+    JSLOG(error, "Calling numeric extract on non-numeric.  Returning -1.");
+    return -1;
 }
 
 //FIXME: may need to add a vec3 versioin of CreateJSResult so that can return

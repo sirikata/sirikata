@@ -36,7 +36,8 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
     String dummyErr;
     //check if numbers
     bool isNum1, isNum2;
-    float num1,num2;
+    double num1,num2;
+    
     isNum1 = NumericValidate(args[0]);
     if (isNum1)
     {
@@ -44,10 +45,9 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
         if (! isNum2)
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minus requires two arguments of same type.  First argument is number.  Second argument is not.")) );
 
-
         num1 = NumericExtract(args[0]);
         num2 = NumericExtract(args[1]);
-
+        
         return v8::Number::New(num1-num2);
     }
 
@@ -99,7 +99,7 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
     String dummyErr;
     //check if numbers
     bool isNum1, isNum2;
-    float num1,num2;
+    double num1,num2;
     isNum1 = NumericValidate(args[0]);
     if (isNum1)
     {
