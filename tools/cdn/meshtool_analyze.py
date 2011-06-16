@@ -39,11 +39,6 @@ def compare_two(name, orig, opt, op=str):
     print name
     print '=' * len(name)
     
-    #diff = [a-b for a,b in zip(opt,orig)]
-    #percents = [float(a)/b if b!=0 else 0 for a,b in zip(diff,orig)]
-    #percents = sorted(percents)
-    #diff = sorted(diff)
-    
     print 'SUM: before: %s after: %s' % (format(op(sum(orig))), format(op(sum(opt))))
     print 'MEAN: before: %s after: %s' % (format(op(mean(orig))), format(op(mean(opt))))
     print 'MEDIAN: before: %s after: %s' % (format(op(median(orig))), format(op(median(opt))))
