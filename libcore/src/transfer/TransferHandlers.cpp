@@ -80,12 +80,26 @@ HttpNameHandler::~HttpNameHandler() {
 }
 
 void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
+    std::string dns_uri_prefix = CDN_DNS_URI_PREFIX;
+    std::string host_name = CDN_HOST_NAME;
+    Network::Address cdn_addr = mCdnAddr;
+    if (request->getURI().host() != "") {
+        host_name = request->getURI().context().hostname();
+        std::string service = request->getURI().context().service();
+        if (service == "") {
+            service = CDN_SERVICE;
+        }
+        Network::Address given_addr(host_name, service);
+        cdn_addr = given_addr;
+        dns_uri_prefix = "";
+    }
+
     std::ostringstream request_stream;
-    request_stream << "HEAD " << CDN_DNS_URI_PREFIX << request->getURI().fullpath() << " HTTP/1.1\r\n";
-    request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
+    request_stream << "HEAD " << dns_uri_prefix << request->getURI().fullpath() << " HTTP/1.1\r\n";
+    request_stream << "Host: " << host_name << "\r\n";
     request_stream << "Accept: * /*\r\n\r\n";
 
-    HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::HEAD, request_stream.str(), std::tr1::bind(
+    HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::HEAD, request_stream.str(), std::tr1::bind(
             &HttpNameHandler::request_finished, this, _1, _2, _3, request, callback));
 }
 
@@ -265,19 +279,34 @@ void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
+
+        std::string download_uri_prefix = CDN_DOWNLOAD_URI_PREFIX;
+        std::string host_name = CDN_HOST_NAME;
+        Network::Address cdn_addr = mCdnAddr;
+        if (file->getURI().host() != "") {
+            host_name = file->getURI().context().hostname();
+            std::string service = file->getURI().context().service();
+            if (service == "") {
+                service = CDN_SERVICE;
+            }
+            Network::Address given_addr(host_name, service);
+            cdn_addr = given_addr;
+            download_uri_prefix = "";
+        }
+
         std::ostringstream request_stream;
         bool chunkReq = false;
-        request_stream << "GET " << CDN_DOWNLOAD_URI_PREFIX << "/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
+        request_stream << "GET " << download_uri_prefix << "/" << file->getFingerprint().convertToHexString() << " HTTP/1.1\r\n";
         if(!chunk->getRange().goesToEndOfFile() && chunk->getRange().size() < file->getSize()) {
             chunkReq = true;
             request_stream << "Range: bytes=" << chunk->getRange().startbyte() << "-" << chunk->getRange().endbyte() << "\r\n";
         }
-        request_stream << "Host: " << CDN_HOST_NAME << "\r\n";
+        request_stream << "Host: " << host_name << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Accept-Encoding: deflate, gzip\r\n";
         request_stream << "\r\n";
 
-        HttpManager::getSingleton().makeRequest(mCdnAddr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
+        HttpManager::getSingleton().makeRequest(cdn_addr, Transfer::HttpManager::GET, request_stream.str(), std::tr1::bind(
                 &HttpChunkHandler::request_finished, this, _1, _2, _3, file, chunk, chunkReq, callback));
     }
 }
