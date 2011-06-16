@@ -405,16 +405,7 @@ JSContextStruct::~JSContextStruct()
     delete mSystem;
     delete mHomeObject;
     delete mUtil;
-    
-    if (hasOnConnectedCallback)
-        cbOnConnected.Dispose();
 
-    if (hasOnDisconnectedCallback)
-        cbOnDisconnected.Dispose();
-
-
-    if (! getIsCleared())
-        mContext.Dispose();
 }
 
 

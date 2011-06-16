@@ -207,6 +207,8 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
          return baseSystem.storageErase.apply(baseSystem, arguments);
      };
 
+
+     
      //restore manipulations
      /** Set the script to execute when this object is restored after a crash.
       *  @param{String,Function} script the script to execute when the object is restored

@@ -432,9 +432,6 @@ v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
 //requested internally after break out of execution loop.
 void EmersonScript::killScript()
 {
-    mContext->clear();
-    delete mContext;
-    mContext  = NULL;
     mParent->destroy();
 }
 
@@ -527,7 +524,19 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
 EmersonScript::~EmersonScript()
 {
     if (mContext != NULL)
+    {
+        v8::HandleScope handle_scope;
+        v8::Persistent<v8::Function>emptyCB;
+
+        //last two args as "" means that we remove the restore script from
+        //storage.
+        //setRestoreScript(mContext,"",emptyCB,"","");
+        setRestoreScript(mContext,"",emptyCB);
+        
         mContext->clear();
+        delete mContext;
+        mContext = NULL;
+    }
 }
 
 

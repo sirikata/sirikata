@@ -141,7 +141,8 @@ void SQLitePersistedObjectSet::performUpdate(const UUID& internal_id, const Stri
     rc = sqlite3_finalize(value_insert_stmt);
     success = success && !SQLite::check_sql_error(mDB->db(), rc, NULL, "Error finalizing value insert statement");
 
-    mContext->mainStrand->post(std::tr1::bind(cb, success));
+    if (cb != 0)
+        mContext->mainStrand->post(std::tr1::bind(cb, success));
 }
 
 } //end namespace OH
