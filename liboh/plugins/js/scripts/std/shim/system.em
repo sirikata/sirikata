@@ -671,11 +671,11 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
                           
               var emersonSyntaxError = function (str)
               {
-                  var toThrow = '20';
-                  var tmp = 'throw ' + toThrow + ';' + str;
+                  var toThrow = 20;
+                  var tmp = 'throw ' + toThrow.toString() + ';' + str;
                   try
                   {
-                      eval(tmp);
+                      system.eval(tmp);
                   }
                   catch (excep)
                   {
