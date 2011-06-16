@@ -5,6 +5,7 @@ import os, os.path, sys
 import cgi, urlparse
 import random, string
 import subprocess
+import time
 
 site_name = 'http://crashes.sirikata.com'
 id_file = 'data/__id'
@@ -49,6 +50,9 @@ def id_exists(id):
     id_dir = server_file('data/' + str(id))
     return os.path.exists(id_dir)
 
+def id_date(id):
+    return time.gmtime(os.path.getctime(server_file('data/' + str(id) + '/key')))
+
 def id_lookup(id):
     """Lookup all the data associated with an id."""
     if not id_exists(id): return None
@@ -61,8 +65,14 @@ def id_lookup(id):
     else:
         res ['desc'] = ''
     res['key'] = load_file(id_dir + '/key')
+    res['date'] = id_date(id)
 
     return res
+
+def id_list():
+    ids = os.listdir(server_file('data/'))
+    ids = [int(x) for x in ids if x != '__id']
+    return ids
 
 def id_link(id, text=None):
     return '<a href="' + '/status/' + str(id) + '">' + (text or str(id)) + '</a>'
@@ -122,6 +132,7 @@ def status_page(environ, start_response, id):
 
     result = []
     result += ['<h3>Report ', id_link(id), '</h3>']
+    result += ['Date: ', time.strftime("%a, %d %b %Y %H:%M:%S", dump['date']), '<br>']
     if dump['desc']:
         result += ['Description:<br><pre>', dump['desc'], '</pre>']
     for d in dump['dumps']:
@@ -175,6 +186,31 @@ def edit_page(environ, start_response, id):
     # And if nothing else, they just aren't authorized.
     return wrap_html('You can\'t edit report ' + str(id) + '.')
 
+def listing(environ, start_response):
+    status = '200 OK'
+    headers = [('Content-type', 'text/html')]
+    start_response(status, headers)
+
+    listing = id_list()
+    if not listing:
+        return wrap_html('No reports found.')
+    listing.sort()
+    listing.reverse()
+    listing = listing[:100] # Max 100 items to cap load
+
+    result = []
+    result += ['<h3>Report List</h3>']
+    result += ['<ul>']
+    for id in listing:
+        dump = id_lookup(id)
+        result += ['<li>', id_link(id), ' - ', time.strftime("%d %b %Y", dump['date'])]
+        if dump['desc']:
+            result += [': <pre>', dump['desc'], '</pre>']
+        result += ['</li>']
+    result += ['</ul>']
+
+    return wrap_html(result)
+
 def crashcollector_app(environ, start_response):
     url = environ.get("REDIRECT_TEMPLATEPAGE", environ.get("REDIRECT_URL", None))
 
@@ -186,6 +222,8 @@ def crashcollector_app(environ, start_response):
     elif url.startswith('/status/'):
         url = url.replace('/status/', '')
         return status_page(environ, start_response, int(url))
+    elif url.startswith('/listing') or url == '/':
+        return listing(environ, start_response)
 
     status = '200 OK'
     headers = [('Content-type', 'text/plain')]
