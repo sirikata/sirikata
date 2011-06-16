@@ -277,6 +277,34 @@ public:
 		return mHost;
 	}
 
+	/*
+	 * hostname getter -- without port number
+	 */
+	inline const std::string hostname() const {
+	    std::string::size_type colonPos = mHost.find(":");
+	    if (colonPos == std::string::npos) {
+	        return mHost;
+	    } else {
+	        return mHost.substr(0, colonPos);
+	    }
+	}
+
+	/*
+	 * service getter -- returns the "port" of a URI, or empty string
+	 *                   if there is none
+	 * Example:
+	 * http://www.example.com/path -> ""
+	 * meerkat://hostname.edu:8080/path -> "8080"
+	 */
+	inline const std::string service() const {
+	    std::string::size_type colonPos = mHost.find(":");
+	    if (colonPos == std::string::npos) {
+            return "";
+        } else {
+            return mHost.substr(colonPos+1);
+        }
+	}
+
 
 	inline void setHost(const std::string &host) {
 		mHost = host;
