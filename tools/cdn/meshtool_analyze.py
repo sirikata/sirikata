@@ -2,6 +2,7 @@ import csv
 import sys
 import os.path
 import math
+import locale
 
 def median(lst):
     return (lst[len(lst)/2] + lst[int(float(len(lst))/2+0.5)]) / 2.0
@@ -25,10 +26,9 @@ def humanize_bytes(bytes, precision=1):
             break
     return '%.*f %s' % (precision, bytes / factor, suffix)
 
-def make_plus(s):
-    s = str(s)
-    if s[0] != '-':
-        s = '+' + s
+def format(s):
+    if isinstance(s, int):
+        s = locale.format('%d', s, True)
     return s
 
 def format_percent(p):
@@ -39,15 +39,16 @@ def compare_two(name, orig, opt, op=str):
     print name
     print '=' * len(name)
     
-    diff = [a-b for a,b in zip(opt,orig)]
-    percents = [float(a)/b if b!=0 else 0 for a,b in zip(diff,orig)]
-    percents = sorted(percents)
-    diff = sorted(diff)
+    #diff = [a-b for a,b in zip(opt,orig)]
+    #percents = [float(a)/b if b!=0 else 0 for a,b in zip(diff,orig)]
+    #percents = sorted(percents)
+    #diff = sorted(diff)
     
-    print 'MEAN:', make_plus(op(mean(diff))), format_percent(mean(percents))
-    print 'MEDIAN:', make_plus(op(median(diff))), format_percent(median(percents))
-    print 'MIN:', make_plus(op(min(diff))), format_percent(min(percents))
-    print 'MAX:', make_plus(op(max(diff))), format_percent(max(percents))
+    print 'SUM: before: %s after: %s' % (format(op(sum(orig))), format(op(sum(opt))))
+    print 'MEAN: before: %s after: %s' % (format(op(mean(orig))), format(op(mean(opt))))
+    print 'MEDIAN: before: %s after: %s' % (format(op(median(orig))), format(op(median(opt))))
+    print 'MIN: before: %s after: %s' % (format(op(min(orig))), format(op(min(opt))))
+    print 'MAX: before: %s after: %s' % (format(op(max(orig))), format(op(max(opt))))
     print
 
 def main():
@@ -55,6 +56,7 @@ def main():
         print 'usage: python meshtool_analyze.py results.csv'
         sys.exit(1)
         
+    locale.setlocale(locale.LC_ALL, '')
     csvreader = csv.DictReader(open(sys.argv[1], 'r'), delimiter='\t')
     
     fields = {}
