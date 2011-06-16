@@ -488,11 +488,7 @@ FIND_PACKAGE(Bullet)
 
 
 IF(NOT SQLite3_ROOT)
-  IF(WIN32)
-    SET(SQLite3_ROOT ${PLATFORM_LIBS}/sqlite-3_6_16)
-  ELSE()
-    SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
-  ENDIF()
+  SET(SQLite3_ROOT ${PLATFORM_LIBS}/installed-sqlite)
 ENDIF()
 IF(NOT SQLite3_FOUND)
   FIND_PACKAGE(SQLite3)
