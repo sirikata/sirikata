@@ -66,6 +66,14 @@ def id_lookup(id):
         res ['desc'] = ''
     res['key'] = load_file(id_dir + '/key')
     res['date'] = id_date(id)
+    if os.path.exists(id_dir + '/version'):
+        res['version'] = load_file(id_dir + '/version')
+    else:
+        res['version'] = ''
+    if os.path.exists(id_dir + '/githash'):
+        res['githash'] = load_file(id_dir + '/githash')
+    else:
+        res['githash'] = ''
 
     return res
 
@@ -99,6 +107,8 @@ def report(environ, start_response):
 
     dump = post_form['dump'].value
     dump_name = post_form['dumpname'].value
+    siri_version = post_form['version'].value
+    siri_githash = post_form['githash'].value
 
     id = get_id()
     # generate a magic key that allows editing
@@ -108,6 +118,8 @@ def report(environ, start_response):
     os.makedirs(server_file(id_dir))
     save_file(id_dir + '/' + dump_name, dump)
     save_file(id_dir + '/' + 'key', magic)
+    save_file(id_dir + '/' + 'version', siri_version)
+    save_file(id_dir + '/' + 'githash', siri_githash)
 
     return [site_name + '/edit/' + str(id) + '?edit=' + magic]
 
@@ -133,6 +145,10 @@ def status_page(environ, start_response, id):
     result = []
     result += ['<h3>Report ', id_link(id), '</h3>']
     result += ['Date: ', time.strftime("%a, %d %b %Y %H:%M:%S", dump['date']), '<br>']
+    if dump['version']:
+        result += ['Version: ', dump['version'], '<br>']
+    if dump['githash']:
+        result += ['Git Revision: ', dump['githash'], '<br>']
     if dump['desc']:
         result += ['Description:<br><pre>', dump['desc'], '</pre>']
     for d in dump['dumps']:
@@ -204,6 +220,8 @@ def listing(environ, start_response):
     for id in listing:
         dump = id_lookup(id)
         result += ['<li>', id_link(id), ' - ', time.strftime("%d %b %Y", dump['date'])]
+        if dump['version']:
+            result += [' Version: ', dump['version']]
         if dump['desc']:
             result += [': <pre>', dump['desc'], '</pre>']
         result += ['</li>']
