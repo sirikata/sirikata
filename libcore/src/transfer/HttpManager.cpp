@@ -207,6 +207,16 @@ void HttpManager::handle_resolve(std::tr1::shared_ptr<HttpRequest> req, const bo
     } else {
         SILOG(transfer, error, "Failed to resolve hostname. Error = " << err.message());
         decrement_connection(req->addr);
+
+        req->mNumTries++;
+        if (req->mNumTries > 10) {
+            //This means this connection has gotten an error over 10 times. Let's stop trying
+            //TODO: this should probably be configurable
+            req->cb(std::tr1::shared_ptr<HttpResponse>(), BOOST_ERROR, boost::asio::error::host_not_found);
+        } else {
+            add_req(req);
+        }
+
         add_req(req);
         processQueue();
     }
