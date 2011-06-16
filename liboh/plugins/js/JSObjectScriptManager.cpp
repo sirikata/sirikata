@@ -75,7 +75,6 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
         import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts,../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
-        mDefaultScript = new OptionValue("default-script", "std/default.em", OptionValueType<String>(), "Default script to execute when an initial script is not specified."),
         NULL
     );
 
@@ -83,10 +82,6 @@ JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
     mOptions->parse(arguments);
 
     createTemplates(); //these templates involve vec, quat, pattern, etc.
-}
-
-String JSObjectScriptManager::defaultScript() const {
-    return mDefaultScript->as<String>();
 }
 
 /*
@@ -228,7 +223,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("getVersion"),v8::FunctionTemplate::New(JSSystem::root_getVersion));
 
     mSystemTemplate->Set(v8::String::New("killEntity"), v8::FunctionTemplate::New(JSSystem::root_killEntity));
-    
+
     //this doesn't work now.
     mSystemTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::root_scriptEval));
     mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));

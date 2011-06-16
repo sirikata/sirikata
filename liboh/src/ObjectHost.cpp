@@ -108,6 +108,16 @@ HostedObjectPtr ObjectHost::createObject(const String& script_type, const String
 
 HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_type, const String& script_opts, const String& script_contents) {
     HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
+    // NOTE: This condition has been carefully thought through. Since you can
+    // get a script into a dead state anyway, we only trigger defaults when the
+    // script type is empty. This basically covers the case where an object
+    // factory didn't request a specific script and, for simplicity, we just
+    // want to setup a default. In the case of dynamically created entities, we
+    // always respect the settings and the script_type should *always* be
+    // set. If they request a dead object, we let it through -- the object may
+    // still be useful (as it can still get automatically connected to a space
+    // and have its properties set upon connection) -- even if it will result in
+    // an object which can never execute additional scripted code.
     if (!script_type.empty())
         ho->initializeScript(script_type, script_opts, script_contents);
     else

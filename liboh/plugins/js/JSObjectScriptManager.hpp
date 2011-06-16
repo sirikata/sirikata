@@ -59,7 +59,6 @@ public:
     JSObjectScript* createHeadless(const String& args, const String& script);
 
     OptionSet* getOptions() const { return mOptions; }
-    String defaultScript() const;
 
 
     v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
@@ -98,7 +97,6 @@ private:
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
     OptionSet* mOptions;
-    OptionValue* mDefaultScript;
 };
 
 } // namespace JS

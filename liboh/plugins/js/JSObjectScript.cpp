@@ -237,12 +237,7 @@ void JSObjectScript::initialize(const String& args, const String& script)
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
-    if (script.empty()) {
-        JSLOG(detailed,"Importing default script.");
-        import(mManager->defaultScript(),NULL);
-        mContext->struct_setScript("system.require('" + mManager->defaultScript() + "');");
-    }
-    else {
+    if (!script.empty()) {
         JSLOG(detailed,"Have an initial script to execute.  Executing.");
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
@@ -864,7 +859,7 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     if (!checkResourcesCPP())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Detected a potential infinite loop in imports.  Aborting.")));
 
-    
+
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(jscont ? jscont->mContext : mContext->mContext);
 
