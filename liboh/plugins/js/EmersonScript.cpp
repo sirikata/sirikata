@@ -85,8 +85,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mResetting(false),
    mKilling(false),
    mParent(ho),
-   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
-   mCreateEntityPort(NULL)
+   mCreateEntityPort(NULL),
+   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
 {
     JSObjectScript::initialize(args, script);
 
@@ -417,13 +417,13 @@ JSInvokableObject::JSInvokableObjectInt* EmersonScript::runSimulation(const Spac
     return new JSInvokableObject::JSInvokableObjectInt(sim);
 }
 
-//requested by scripters.  
+//requested by scripters.
 v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
 {
     if (jscont != rootContext())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Can only killEntity from root context.")) );
 
-            
+
     mKilling = true;
     return v8::Null();
 }
@@ -432,6 +432,17 @@ v8::Handle<v8::Value> EmersonScript::killEntity(JSContextStruct* jscont)
 //requested internally after break out of execution loop.
 void EmersonScript::killScript()
 {
+    {
+        // Kill the persistent copy of this object since it shouldn't be
+        // restored after being explicitly killed.
+        v8::HandleScope handle_scope;
+        v8::Persistent<v8::Function>emptyCB;
+
+        //last two args as "" means that we remove the restore script from
+        //storage.
+        setRestoreScript(mContext,"",emptyCB);
+    }
+
     mParent->destroy();
 }
 
@@ -526,13 +537,6 @@ EmersonScript::~EmersonScript()
     if (mContext != NULL)
     {
         v8::HandleScope handle_scope;
-        v8::Persistent<v8::Function>emptyCB;
-
-        //last two args as "" means that we remove the restore script from
-        //storage.
-        //setRestoreScript(mContext,"",emptyCB,"","");
-        setRestoreScript(mContext,"",emptyCB);
-        
         mContext->clear();
         delete mContext;
         mContext = NULL;
@@ -738,7 +742,7 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
 
     if (mKilling)
         killScript();
-    
+
     if (!matchesSomeHandler) {
         JSLOG(info,"Message did not match any files");
     }
