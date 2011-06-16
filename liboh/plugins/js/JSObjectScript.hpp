@@ -129,7 +129,7 @@ public:
        continue computation.  Returns false otherwise.
      */
     v8::Handle<v8::Value> checkResources();
-
+    bool checkResourcesCPP();
 
     Handle<v8::Context> context() { return mContext->mContext;}
 

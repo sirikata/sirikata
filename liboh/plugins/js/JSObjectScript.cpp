@@ -659,15 +659,17 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     return compileFuncResult;
 }
 
-v8::Handle<v8::Value> JSObjectScript::checkResources()
+
+//returns true if haven't surpassed resource threshold
+bool JSObjectScript::checkResourcesCPP()
 {
     ++mResourceCounter;
+    return (mResourceCounter < EMERSON_RESOURCE_THRESHOLD);
+}
 
-    if (mResourceCounter > EMERSON_RESOURCE_THRESHOLD)
-        return v8::Boolean::New(false);
-
-
-    return v8::Boolean::New(true);
+v8::Handle<v8::Value> JSObjectScript::checkResources()
+{
+    return v8::Boolean::New(checkResourcesCPP());
 }
 
 
@@ -858,6 +860,11 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
 
 v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscont)
 {
+    //to prevent infinite cycles
+    if (!checkResourcesCPP())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Detected a potential infinite loop in imports.  Aborting.")));
+
+    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(jscont ? jscont->mContext : mContext->mContext);
 
@@ -894,7 +901,8 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
 
     mImportedFiles[jscont->getContextID()].insert( full_filename.string() );
 
-    return  protectedEval(contents, &origin, new_ctx,jscont);
+    v8::Handle<v8::Value> returner = protectedEval(contents, &origin, new_ctx,jscont);
+    return  handle_scope.Close(returner);
 }
 
 std::string* JSObjectScript::extensionize(const String filename)
