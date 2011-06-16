@@ -572,15 +572,13 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         return v8::ThrowException( v8::Exception::Error(v8::String::New(msg.c_str())) );
     }
 
-
-    TryCatch try_catch2;
     // Execute
     v8::Handle<v8::Value> result = script->Run();
 
-    if (try_catch2.HasCaught()) {
-        printException(try_catch2);
+    if (try_catch.HasCaught()) {
+        printException(try_catch);
         postEvalOps();
-        return try_catch2.ReThrow();
+        return try_catch.ReThrow();
     }
 
 
