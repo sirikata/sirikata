@@ -78,15 +78,11 @@ class SIRIKATA_EXPORT Liveness {
     struct Token {
         InternalToken mData;
 
-        Token(InternalToken t)
-            : mData(t)
-        {}
+        Token(InternalToken t);
         operator bool() const { return mData.lock(); }
     };
 
-    Liveness()
-        : mLivenessStrongToken(new int)
-    {}
+    Liveness();
 
     Token livenessToken() const { return Token(mLivenessStrongToken); }
 
