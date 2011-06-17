@@ -372,8 +372,7 @@ if (typeof(std.persist) === 'undefined')
       */
      function restorePresence(keyName,unfixedPres,ptrId,ptrsToFix,nameService, cb)
      {
-//         var id = unfixedPres['mID'];
-         var onConnectCB = afterRestored(ptrId,nameService);
+
 
          var pToFix = [];
          restoreBasicObject(
@@ -386,10 +385,22 @@ if (typeof(std.persist) === 'undefined')
              cb(false);
              return;
          }
+         
          //perform the fixups for the objects that this presence was
          //trying to point to.  (Eg. pos object, vel obj, etc.)
          performPtrFinalFixups(pToFix,nameService);
-         
+
+         for (var s in system.presences)
+         {
+             if (system.presences[s].toString() == toRestoreFrom.sporef)
+             {
+                 cb(true,system.presences[s]);
+                 return;
+             }
+         }
+
+         system.print('\n\nDEBUG: Got into presence restore.\n');
+         var onConnectCB = afterRestored(ptrId,nameService);         
          system.restorePresence(
              toRestoreFrom.sporef,
              toRestoreFrom.pos,
@@ -406,7 +417,8 @@ if (typeof(std.persist) === 'undefined')
              onConnectCB,
              toRestoreFrom.isSuspended,
              toRestoreFrom.suspendedVelocity,
-             toRestoreFrom.suspendedOrientationVelocity
+             toRestoreFrom.suspendedOrientationVelocity,
+             toRestoreFrom.solidAngleQuery
          );
          
          //tells the system that we have begun trying to restore this
@@ -559,7 +571,6 @@ if (typeof(std.persist) === 'undefined')
       */
      std.persist.restoreFromAndGetNamesAsync = function (keyName,id,cb)
      {
-
          if (std.persist.inRestore())
              throw new Error('Error, cannot request additional restores when in middle of current restore.  Check back later.');
          mRestoring = true;
@@ -571,8 +582,11 @@ if (typeof(std.persist) === 'undefined')
              std.core.bind(finishRestoreFromAndGetNamesAsync, undefined, keyName, id, cb, ptrsToFix, nameService) // + success, obj
          );
      };
+
+     
      var finishRestoreFromAndGetNamesAsync = function (keyName,id,cb, ptrsToFix, nameService, success, returner) {
          if (!success) {
+             mRestoring = false;
              cb(false);
              return;
          }
@@ -606,6 +620,7 @@ if (typeof(std.persist) === 'undefined')
              else
                  cb(false, returner, nameService);
          };
+         
          system.timeout(5,restoreCheckback);
      };
      

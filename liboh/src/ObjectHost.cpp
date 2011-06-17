@@ -122,6 +122,7 @@ HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_
         ho->initializeScript(script_type, script_opts, script_contents);
     else
         ho->initializeScript(this->defaultScriptType(), this->defaultScriptOptions(), this->defaultScriptContents());
+
     return ho;
 }
 

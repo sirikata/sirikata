@@ -51,6 +51,7 @@ void SQLiteObjectFactory::generate() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
     sqlite3_busy_timeout(db->db(), 1000);
 
+    
     String value_query = "SELECT object, script_type, script_args, script_contents FROM ";
     value_query += "\"" TABLE_NAME "\"";
     int rc;
@@ -58,7 +59,7 @@ void SQLiteObjectFactory::generate() {
     sqlite3_stmt* value_query_stmt;
     rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
     SQLite::check_sql_error(db->db(), rc, NULL, "Error preparing value query statement");
-    if (rc==SQLITE_OK) {
+    if (rc==SQLITE_OK){
         int step_rc = sqlite3_step(value_query_stmt);
         while(step_rc == SQLITE_ROW) {
             String object_str(
@@ -91,6 +92,7 @@ void SQLiteObjectFactory::generate() {
             SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
         }
     }
+
     rc = sqlite3_finalize(value_query_stmt);
     SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
 }

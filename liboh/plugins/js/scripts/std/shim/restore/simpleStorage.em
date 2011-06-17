@@ -13,10 +13,11 @@ if (typeof(std.simpleStorage) != 'undefined')
 
     var charKeyName   =    'pCharsKeyName';
     var scriptKeyName =   'pScriptKeyName';
+    var presKeyName   =     'pPresKeyName';
 
-
-    var mChars = { };
-    var mScript = {  };
+    var mChars  = { };
+    var mScript = { };
+    var mPres   = { };
     
     std.simpleStorage.setField = function(fieldName,fieldVal)
     {
@@ -24,20 +25,26 @@ if (typeof(std.simpleStorage) != 'undefined')
         std.persist.checkpointPartialPersist(mChars,charKeyName);
     };
 
-    
-    
     std.simpleStorage.readField = function(fieldName,cb,def)
     {
         std.persist.restoreFromAsync(charKeyName,
                                      function(success,val)
                                      {
                                          if ((success) && (fieldName in val))
-                                             cb(val.fieldName);
+                                         {
+                                             mChars[fieldName] = val[fieldName];
+                                             cb(val[fieldName]);
+                                         }
                                          else
                                              cb(def);
                                      });
     };
 
+    std.simpleStorage.setPresence = function (presToRestore)
+    {
+        mPres[presToRestore.toString()] =presToRestore;
+        std.persist.checkpointPartialPersist(mPres,presKeyName);
+    };
 
     std.simpleStorage.setScript = function(newScriptFunc,executeOnSet)
     {
@@ -46,7 +53,7 @@ if (typeof(std.simpleStorage) != 'undefined')
             executeOnSet = false;
         
         mScript.script = newScript;
-
+        system.setRestoreScript('system.require("std/shim/restore/simpleStorage.em");');
         
         var cbFunc = function(){ };
         if (executeOnSet)
@@ -61,9 +68,6 @@ if (typeof(std.simpleStorage) != 'undefined')
         std.persist.restoreFromAsync(scriptKeyName,
                                      function(success,val)
                                      {
-                                         system.print('\nDEBUG: in read script callback\n');
-                                         system.print(success);
-                                         system.print('\n');
                                          if ((success) && ('script' in val))
                                              cb(val.script);
                                          else
@@ -72,12 +76,22 @@ if (typeof(std.simpleStorage) != 'undefined')
     };
 
 
-    function onRestore(scriptToEval)
+    function onRestoreScript(scriptToEval)
     {
         system.eval(scriptToEval);
     };
-    //lkjs;
-    std.simpleStorage.readScript(onRestore,"");
-    
+
+
+    function onRestoreFields()
+    {
+        finishOnRestoreField();
+    }
+
+    function finishOnRestoreField()
+    {
+        std.simpleStorage.readScript(onRestoreScript,"");        
+    }
+
+    std.simpleStorage.readField('someField',onRestoreFields,null);
 })();
 
