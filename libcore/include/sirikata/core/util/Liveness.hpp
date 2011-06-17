@@ -75,7 +75,7 @@ class SIRIKATA_EXPORT Liveness {
     typedef std::tr1::weak_ptr<int> InternalToken;
 
   public:
-    struct Token {
+    struct SIRIKATA_EXPORT Token {
         InternalToken mData;
 
         Token(InternalToken t);
