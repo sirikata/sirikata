@@ -85,6 +85,22 @@ def id_list():
 def id_link(id, text=None):
     return '<a href="' + '/status/' + str(id) + '">' + (text or str(id)) + '</a>'
 
+def id_get_stackwalk(id, dump, force=False):
+    """Gets the stackwalk for a dump within a crash report. The report
+    is cached, but can be forced to regenerate using force=True."""
+    dump_file = server_file('data', str(id), dump)
+    stackwalk_file = server_file('data', str(id), dump + '.stackwalk')
+    if not force and os.path.exists(stackwalk_file):
+        return load_file(stackwalk_file)
+    bt = subprocess.Popen([server_file('minidump_stackwalk'), dump_file, server_file('symbols')], stdout=subprocess.PIPE).communicate()[0]
+    if bt:
+        save_file(stackwalk_file, bt)
+        return bt
+    return "Couldn't generate backtrace."
+
+def is_post(environ):
+    return environ['REQUEST_METHOD'].upper() == 'POST'
+
 def decode_post(environ):
     if environ['REQUEST_METHOD'].upper() != 'POST':
         return None
@@ -138,12 +154,21 @@ def status_page(environ, start_response, id):
     headers = [('Content-type', 'text/html')]
     start_response(status, headers)
 
+    # Very simple check -- if we used POST (hit button rather than
+    # normal GETting the URL) then reanalyze.
+    reanalyze = is_post(environ)
+
     dump = id_lookup(id)
     if not dump:
         return wrap_html('Report' + str(id) + ' not found.')
 
     result = []
     result += ['<h3>Report ', id_link(id), '</h3>']
+
+    result += ['<form action="/status/', str(id), '" method="POST">']
+    result += ['<input type="submit" value="Reanalyze"></input>']
+    result += ['</form>']
+
     result += ['Date: ', time.strftime("%a, %d %b %Y %H:%M:%S", dump['date']), '<br>']
     if dump['version']:
         result += ['Version: ', dump['version'], '<br>']
@@ -153,8 +178,7 @@ def status_page(environ, start_response, id):
         result += ['Description:<br><pre>', dump['desc'], '</pre>']
     for d in dump['dumps']:
         result += ['Dump: ', d, '<br>']
-        bt = subprocess.Popen([server_file('minidump_stackwalk'), server_file('data', str(id), d), server_file('symbols')], stdout=subprocess.PIPE).communicate()[0]
-        bt = bt or "Couldn't generate backtrace."
+        bt = id_get_stackwalk(id, d, force=reanalyze)
         result += ['<pre>', bt, '</pre>', '<br>']
 
     return wrap_html(result)
