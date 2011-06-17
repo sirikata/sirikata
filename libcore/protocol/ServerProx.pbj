@@ -50,11 +50,13 @@ message ServerQuery {
     optional Sirikata.Protocol.TimedMotionVector location = 2;
     optional boundingsphere3f bounds = 3;
     optional float min_angle = 4;
+    optional int32 max_count = 5;
 }
 
 // Object migration data - shipped between space nodes when object migration occurs
 message ObjectMigrationData {
     optional float min_angle = 1;
+    optional int32 max_count = 2;
 }
 
 message Container {

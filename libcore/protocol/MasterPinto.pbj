@@ -58,6 +58,7 @@ message LargestObjectUpdate {
 // aggregated query information.
 message QueryUpdate {
     optional float min_angle = 1;
+    optional int32 max_count = 2;
 }
 
 // Message to Pinto - May include Region, Max
