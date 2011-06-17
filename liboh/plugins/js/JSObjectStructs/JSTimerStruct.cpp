@@ -9,6 +9,7 @@
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include "JSSuspendable.hpp"
+#include "Util.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -20,9 +21,11 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
   emerScript(eobj),
   cb(callback),
   jsContStruct(jscont),
-  mDeadlineTimer(NULL),
+  ios(ioserve),
   timeUntil(dur.toSeconds()),
-  mTimeRemaining(timeRemaining)
+  mTimeRemaining(timeRemaining),
+  killAfterFire(false),
+  noTimerWaiting(true)
 {
     if (isCleared)
     {
@@ -30,7 +33,9 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
         return;
     }
 
-    mDeadlineTimer =new Sirikata::Network::DeadlineTimer(*ioserve);
+    //mDeadlineTimer = std::auto_ptr<Sirikata::Network::DeadlineTimer>( new
+    //Sirikata::Network::DeadlineTimer(*ioserve));
+    mDeadlineTimer = new Sirikata::Network::DeadlineTimer(*ioserve);
     if (isSuspended)
         suspend();
 
@@ -41,28 +46,92 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
     }
     else
     {
+        noTimerWaiting=false;
+        
         if (timeRemaining == 0)
             mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
         else
             mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeRemaining*1000000));
-    
-        mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
+        mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+        
 
         if (jscont != NULL)
             jscont->struct_registerSuspendable(this);
     }
 }
 
+void JSTimerStruct::timerWeakReferenceCleanup(v8::Persistent<v8::Value> containsTimer, void* otherArg)
+{
+    if (!containsTimer->IsObject())
+    {
+        JSLOG(error, "Error when cleaning up jstimer.  Received a timer to clean up that wasn't an object.");
+        return;
+    }
+
+    v8::Handle<v8::Object> timer = containsTimer->ToObject();
+
+    //check to make sure object has adequate number of fields.
+    CHECK_INTERNAL_FIELD_COUNT(timer,jstimer,TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
+
+    //delete typeId, and return if have incorrect params for type id
+    DEL_TYPEID_AND_CHECK(timer,jstimer,TIMER_TYPEID_STRING);
+
+
+    String err = "Potential error when cleaning up jstimer.  Could not decode timer struct.  Likely the timer struct was already cleared, but could be more serious.";
+    JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(timer,err);
+    if (jstimer == NULL)
+    {
+        JSLOG(insane,err);
+        return;
+    }
+
+    //asks the particular timer to free itself if it's never going to fire
+    //again, or schedule itself to be freed after will never fire again.
+    jstimer->noReference();
+}
+
+
+/**
+   Called by timerWeakReferenceCleanup and after firing timer when killAfterFire
+   is true.  Means that no Emerson objects hold references to this timer any
+   longer and that this object should either: 1) Free itself if there's no way
+   that its timer will re-fire.  2) Schedule itself to be freed after its timer
+   fires.
+
+   For case 1: the timer has already fired, and (the timer isn't suspended and
+   its context isn't suspended).
+   For case 2: just sets killAfterFire to be true.  Will re-evaluate these
+   conditions after timer actually fires.
+ */
+void JSTimerStruct::noReference()
+{
+    killAfterFire = true;
+
+    if (noTimerWaiting)
+    {
+        //check if it's suspended and its context is suspended
+        if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
+        {
+            //can kill
+            clear();
+        }
+    }
+}
+
+
+
 void JSTimerStruct::fixSuspendableToContext(JSContextStruct* toAttachTo)
 {
     jsContStruct = toAttachTo;
 
+    noTimerWaiting=false;
+    
     if (mTimeRemaining == 0)
         mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
     else
         mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(mTimeRemaining*1000000));
-    
+
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
     
     jsContStruct->struct_registerSuspendable(this);
@@ -94,6 +163,7 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
     wrapJSTimerStruct = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(TIMER_JSTIMERSTRUCT_FIELD));
     void* ptr = wrapJSTimerStruct->Value();
 
+    
     JSTimerStruct* returner;
     returner = static_cast<JSTimerStruct*>(ptr);
     if (returner == NULL)
@@ -164,8 +234,16 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 void JSTimerStruct::evaluateCallback(const boost::system::error_code& error)
 {
     if (! error )
+    {
         emerScript->handleTimeoutContext(cb,jsContStruct);
+        //means that we have no pending timer operation.
+        noTimerWaiting=true;
+    }
 
+    //if we were told to kill the timer after firing, then check kill conditions
+    //again in noReference.
+    if (killAfterFire)
+        ios->post(std::tr1::bind(&JSTimerStruct::noReference,this));
 }
 
 
@@ -178,8 +256,15 @@ v8::Handle<v8::Value> JSTimerStruct::suspend()
     }
 
     JSLOG(insane,"suspending timer");
+
+    //note, it is important that call to JSSuspendable::supsend occurs before
+    //actually cancelling the deadline timer so that we're performing correct
+    //checks for timer cleanup.
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Value>returner = JSSuspendable::suspend();
+    noTimerWaiting = true;
     mDeadlineTimer->cancel();
-    return JSSuspendable::suspend();
+    return handle_scope.Close(returner);
 }
 
 
@@ -196,7 +281,7 @@ v8::Handle<v8::Value> JSTimerStruct::resume()
 
     mDeadlineTimer->cancel();
 
-
+    noTimerWaiting=false;
     mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 
@@ -213,19 +298,20 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
         return JSSuspendable::clear();
     }
 
-    v8::HandleScope handle_scope;
-    v8::Handle<v8::Value> returner = JSSuspendable::clear();
-    
-    
-    if (mDeadlineTimer != NULL)
-        mDeadlineTimer->cancel();
 
-    if (jsContStruct != NULL)
-        jsContStruct->struct_deregisterSuspendable(this);
+    JSSuspendable::clear();
+    
+    noTimerWaiting = true;
+    mDeadlineTimer->cancel();
 
     if (! cb.IsEmpty())
         cb.Dispose();
-    return handle_scope.Close(returner);
+
+    
+    if (jsContStruct != NULL)
+        jsContStruct->struct_deregisterSuspendable(this);
+        
+    return v8::Boolean::New(true);
 }
 
 
@@ -237,7 +323,9 @@ v8::Handle<v8::Value> JSTimerStruct::struct_resetTimer(double timeInSecondsToRef
         return JSSuspendable::clear();
     }
 
+    
     mDeadlineTimer->cancel();
+    noTimerWaiting=false;
     mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeInSecondsToRefire*1000000));
     mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
 

@@ -585,11 +585,14 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     v8::HandleScope handle_scope;
 
     //create an object
-    v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
-
+    v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
+//    v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
+    
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
+    returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
+    
     return handle_scope.Close(returner);
 }
 
