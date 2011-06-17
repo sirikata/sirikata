@@ -20,6 +20,7 @@ if (typeof(std.persist) === 'undefined')
          allPresStillRest.push(presObjID);
      }
 
+     
      /**
       Each restored presence has an onConnected callback.  The
       onConnected callback should be generated from this afterRestored

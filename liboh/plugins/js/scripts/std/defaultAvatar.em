@@ -32,16 +32,35 @@
 
 
 // A sane, simple, default. Only includes functionality from libraries.
-system.require('std/script/scriptable.em');
-system.require('std/movement/movable.em');
-system.require('std/graphics/default.em');
+system.require('std/shim/restore/simpleStorage.em');
+
+std.simpleStorage.setScript(
+    function()
+    {
+        system.require('std/shim/restore/persistService.em');
+        system.require('std/script/scriptable.em');
+        system.require('std/movement/movable.em');
+        system.require('std/graphics/default.em');
+
+        
+        scriptable = new std.script.Scriptable();
+        movable = new std.movement.Movable(true); // Self only
 
 
-scriptable = new std.script.Scriptable();
-movable = new std.movement.Movable(true); // Self only
-system.onPresenceConnected(
-    function(pres) {
-        simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
-        system.onPresenceConnected(function(){});
-    }
-);
+        if (system.self == system)
+        {
+            //if do not have a connected presence
+            system.onPresenceConnected(
+                function(pres) {
+                    simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+                    system.onPresenceConnected(function(){});
+                }
+            );
+        }
+        else
+        {
+            //already have a connected presence, use it.
+            simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
+        }
+        
+    });
