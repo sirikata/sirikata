@@ -137,8 +137,16 @@ public:
 
     JSObjectScriptManager* manager() const { return mManager; }
 
-    // is_emerson controls whether this is compiled as emerson or javascript code.
-    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson);
+    // is_emerson controls whether this is compiled as emerson or
+    // javascript code.
+    // \param return_exc if true, return the exception generated (or
+    //         empty handle for none) instead of the return value. The
+    //         return value is discarded. This prevents throwing an
+    //         exception (or rethrowing a caught exception), which is
+    //         necessary if there is no JS caller higher on the
+    //         stack. Otherwise, V8 gets stuck with an uncaught
+    //         exception and fails on future V8 calls.
+    v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false);
     v8::Handle<v8::Function> functionValue(const String& em_script_str);
 
     // Print an exception "to" the script, i.e. using its system.print
@@ -261,7 +269,7 @@ protected:
     JSContextStruct* mContext;
 
 
-    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs);
+    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc = false);
 
 
     v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);

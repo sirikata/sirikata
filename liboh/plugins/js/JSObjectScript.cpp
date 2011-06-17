@@ -237,12 +237,21 @@ void JSObjectScript::initialize(const String& args, const String& script)
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
+    v8::Context::Scope context_scope(mContext->mContext);
     if (!script.empty()) {
         JSLOG(detailed,"Have an initial script to execute.  Executing.");
+
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
-        protectedEval(script, &origin, new_ctx,mContext);
+
+        v8::Handle<v8::Value> result = protectedEval(script, &origin, new_ctx, mContext, true);
+        if (!result.IsEmpty()) {
+            v8::String::Utf8Value exception(result);
+            const char* exception_string = ToCString(exception);
+            JSLOG(error,"Initial script threw an exception: " << exception_string);
+        }
+
         mContext->struct_setScript(script);
     }
 }
@@ -489,7 +498,7 @@ void handleEmersonRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recogni
 }
 
 //Will compile and run code in the context ctx whose source is em_script_str.
-v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson)
+v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc)
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
@@ -507,7 +516,10 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         if(em_script_str.empty())
         {
             postEvalOps();
-            return v8::Undefined();
+            if (return_exc)
+                return v8::Handle<v8::Value>(); // No exception
+            else
+                return v8::Undefined();
         }
 
         if(em_script_str.at(em_script_str.size() -1) != '\n')
@@ -542,7 +554,11 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         }
         catch(EmersonParserException e) {
             postEvalOps();
-            return v8::ThrowException( v8::Exception::SyntaxError(v8::String::New(e.toString().c_str())) );
+            v8::Handle<v8::Value> err = v8::Exception::SyntaxError(v8::String::New(e.toString().c_str()));
+            if (return_exc)
+                return handle_scope.Close(err);
+            else
+                return v8::ThrowException(err);
         }
     }
     else
@@ -560,7 +576,10 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         JSLOG(error, uncaught);
         printException(try_catch);
         postEvalOps();
-        return try_catch.ReThrow();
+        if (return_exc)
+            return handle_scope.Close(try_catch.Exception());
+        else
+            return try_catch.ReThrow();
     }
 
 
@@ -569,7 +588,11 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
         std::string msg = std::string("Compile error: ") + std::string(*error);
         JSLOG(error, msg);
         postEvalOps();
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(msg.c_str())) );
+        v8::Handle<v8::Value> err = v8::Exception::Error(v8::String::New(msg.c_str()));
+        if (return_exc)
+            return handle_scope.Close(err);
+        else
+            return v8::ThrowException(err);
     }
 
     // Execute
@@ -578,7 +601,10 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     if (try_catch.HasCaught()) {
         printException(try_catch);
         postEvalOps();
-        return try_catch.ReThrow();
+        if (return_exc)
+            return handle_scope.Close(try_catch.Exception());
+        else
+            return try_catch.ReThrow();
     }
 
 
@@ -588,19 +614,22 @@ v8::Handle<v8::Value>JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx
     }
 
     postEvalOps();
-    return result;
+    if (return_exc)
+        return v8::Handle<v8::Value>();
+    else
+        return result;
 }
 
 
 
 
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs)
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc)
 {
     ScopedEvalContext sec(this, new_ctx);
     if (jscs == NULL)
-        return internalEval(mContext->mContext, em_script_str, em_script_name, true);
+        return internalEval(mContext->mContext, em_script_str, em_script_name, true, return_exc);
 
-    return internalEval(jscs->mContext, em_script_str, em_script_name, true);
+    return internalEval(jscs->mContext, em_script_str, em_script_name, true, return_exc);
 }
 
 
