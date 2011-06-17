@@ -44,6 +44,7 @@
 #include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
 
 #include <sirikata/core/util/ListenerProvider.hpp>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -59,7 +60,7 @@ class SIRIKATA_OGRE_EXPORT EntityListener {
 };
 
 /** Base class for objects represented in Ogre as a mesh. */
-class SIRIKATA_OGRE_EXPORT Entity : public Provider<EntityListener*> {
+class SIRIKATA_OGRE_EXPORT Entity : public Provider<EntityListener*>, public Liveness {
 public:
     typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
     typedef std::map<String, String > TextureBindingsMap;
@@ -98,7 +99,7 @@ protected:
 
     void fixTextures();
 
-    void createMesh();
+    void createMesh(Liveness::Token alive);
 
     void init(Ogre::Entity *obj);
 

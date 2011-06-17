@@ -445,7 +445,7 @@ void Entity::processMesh(Transfer::URI const& meshFile)
         AssetDownloadTask::construct(
             mURI, getScene(), this->priority(),
             mScene->context()->mainStrand->wrap(
-                std::tr1::bind(&Entity::createMesh, this)
+                std::tr1::bind(&Entity::createMesh, this, livenessToken())
             ));
 }
 
@@ -1142,7 +1142,9 @@ bool Entity::tryInstantiateExistingMesh(const String& meshname) {
 }
 
 
-void Entity::createMesh() {
+void Entity::createMesh(Liveness::Token alive) {
+    if (!alive) return;
+
     bool usingDefault = false;
     MeshdataPtr mdptr = mAssetDownload->asset();
     if (!mdptr) {
