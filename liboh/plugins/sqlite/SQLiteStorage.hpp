@@ -108,6 +108,8 @@ private:
     bool sqlCommit();
     bool sqlRollback();
 
+
+    
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
     String mDBFilename;

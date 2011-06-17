@@ -52,7 +52,8 @@ SQLiteStorage::StorageAction::StorageAction(const StorageAction& rhs) {
 }
 
 SQLiteStorage::StorageAction::~StorageAction() {
-    delete value;
+    if (value != NULL)
+        delete value;
 }
 
 SQLiteStorage::StorageAction& SQLiteStorage::StorageAction::operator=(const StorageAction& rhs) {
@@ -288,6 +289,8 @@ SQLiteStorage::Transaction* SQLiteStorage::getTransaction(const Bucket& bucket, 
         if (is_new != NULL) *is_new = true;
         mTransactions[bucket] = new Transaction();
     }
+
+    
     return mTransactions[bucket];
 }
 
@@ -296,16 +299,20 @@ void SQLiteStorage::beginTransaction(const Bucket& bucket) {
     getTransaction(bucket);
 }
 
-void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb) {
+void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb)
+{
     Transaction* trans = getTransaction(bucket);
 
+    //can remove from mTransactions
+    mTransactions.erase(bucket);
+    
     // Short cut for empty transactions. Or maybe these should cause exceptions?
     if(trans->empty()) {
         ReadSet* rs = NULL;
         completeCommit(bucket, trans, cb, false, rs);
         return;
     }
-
+    
     mIOService->post(
         std::tr1::bind(&SQLiteStorage::executeCommit, this, bucket, trans, cb)
     );
@@ -331,18 +338,21 @@ void SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, Comm
     }
 
     if (rs->empty() || !success) {
+        success = false;
         delete rs;
         rs = NULL;
     }
 
+
     mContext->mainStrand->post(std::tr1::bind(&SQLiteStorage::completeCommit, this, bucket, trans, cb, success, rs));
 }
+
+
 
 // Complete a commit back in the main thread, cleaning it up and dispatching
 // the callback
 void SQLiteStorage::completeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, bool success, ReadSet* rs) {
-    assert( getTransaction(bucket) == trans );
-    mTransactions.erase(bucket);
+
     delete trans;
     if (cb) cb(success, rs);
 }
@@ -389,7 +399,9 @@ bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallb
 
     // Run commit if this is a one-off transaction
     if (is_new)
+    {
         commitTransaction(bucket, cb);
+    }
 
     return true;
 }

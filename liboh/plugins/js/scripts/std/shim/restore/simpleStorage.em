@@ -39,13 +39,20 @@ if (typeof(std.simpleStorage) != 'undefined')
     };
 
 
-    std.simpleStorage.setScript = function(newScriptFunc)
+    std.simpleStorage.setScript = function(newScriptFunc,executeOnSet)
     {
-        mScript.script =  "system.require('std/shim/restore/simpleStorage.em');\n";
-        mScript.script += ("(" + newScriptFunc + ")();");
+        var newScript =  ("(" + newScriptFunc + ")();");
+        if (typeof(executeOnSet) === 'undefined')
+            executeOnSet = false;
+        
+        mScript.script = newScript;
 
-        //actually write the script out.
-        std.persist.checkpointPartialPersist(mScript,scriptKeyName);
+        
+        var cbFunc = function(){ };
+        if (executeOnSet)
+            cbFunc = function(){ system.eval(newScript);  };
+
+        std.persist.checkpointPartialPersist(mScript,scriptKeyName,cbFunc);
     };
 
     
@@ -54,6 +61,9 @@ if (typeof(std.simpleStorage) != 'undefined')
         std.persist.restoreFromAsync(scriptKeyName,
                                      function(success,val)
                                      {
+                                         system.print('\nDEBUG: in read script callback\n');
+                                         system.print(success);
+                                         system.print('\n');
                                          if ((success) && ('script' in val))
                                              cb(val.script);
                                          else
@@ -66,7 +76,7 @@ if (typeof(std.simpleStorage) != 'undefined')
     {
         system.eval(scriptToEval);
     };
-
+    //lkjs;
     std.simpleStorage.readScript(onRestore,"");
     
 })();

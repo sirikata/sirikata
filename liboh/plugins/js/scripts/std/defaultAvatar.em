@@ -63,4 +63,4 @@ std.simpleStorage.setScript(
             simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
         }
         
-    });
+    }, true);

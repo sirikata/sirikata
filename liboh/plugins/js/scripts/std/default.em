@@ -44,5 +44,5 @@ std.simpleStorage.setScript(
 
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable();
-    });
+    },true);
 

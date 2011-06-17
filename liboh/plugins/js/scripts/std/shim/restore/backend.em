@@ -42,8 +42,12 @@ ObjectWriter = function(entryName)
 };
 
 var readObjectCallback = function(keyname, cb, success, rs) {
-    if (!success) cb(false);
-
+    if (!success)
+    {
+        cb(false);
+        return;
+    }
+    
     var returner = system.deserialize( rs[keyname]) ;
     cb(true, returner);
 };

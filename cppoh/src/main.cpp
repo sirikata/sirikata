@@ -163,11 +163,6 @@ int main (int argc, char** argv) {
     String objfactory_options = GetOptionValue<String>(OPT_OBJECT_FACTORY_OPTS);
     ObjectFactory* obj_factory = NULL;
 
-    if (!objfactory_type.empty())
-    {
-        obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
-        obj_factory->generate();
-    }
 
     ///////////Go go go!! start of simulation/////////////////////
     ctx->add(ctx);
@@ -176,6 +171,13 @@ int main (int argc, char** argv) {
     ctx->add(oh);
     ctx->add(sstConnMgr);
 
+    if (!objfactory_type.empty())
+    {
+        obj_factory = ObjectFactoryFactory::getSingleton().getConstructor(objfactory_type)(ctx, oh, mainSpace, objfactory_options);
+        obj_factory->generate();
+    }
+
+    
     ctx->run(1);
 
     ctx->cleanup();

@@ -286,6 +286,7 @@ v8::Handle<v8::Value> JSObjectScript::storageCommit(JSContextStruct* jscont, v8:
     return v8::Undefined();
 }
 
+
 void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs) {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);

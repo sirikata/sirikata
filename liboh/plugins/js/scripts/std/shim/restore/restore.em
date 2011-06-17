@@ -226,8 +226,13 @@ if (typeof(std.persist) === 'undefined')
          );
      }
 
+
      function finishFixReferences(keyName, ptrId, ptrsToFix, nameService, cb, success, unfixedObj) {
-         if (!success) cb(false);
+         if (!success)
+         {
+             cb(false);
+             return;
+         }
 
          var id = unfixedObj['mID'];
          if (id != ptrId) //throw 'Error: ptrId and object id must be identical';
