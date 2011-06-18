@@ -230,7 +230,7 @@ public:
     OptionValue *mParallaxShadowSteps;
     OptionValue* mModelLights; // Use model or basic lights
     OptionSet* mOptions;
-
+    std::vector<String> mSearchPaths;
     Vector4f mBackgroundColor;
     Vector3d mFloatingPointOffset;
 

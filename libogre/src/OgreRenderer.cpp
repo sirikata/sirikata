@@ -82,14 +82,19 @@ namespace {
 // This is a generic search method. It searches upwards from the current
 // directory for any of the specified files and returns the first path it finds
 // that contains one of them.
-std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_paths, bool want_dir = true, const std::string& start_path = ".", boost::filesystem::path default_ = boost::filesystem::complete(boost::filesystem::path("."))) {
+std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_paths, const std::vector<String>&searchPoints, bool want_dir = true, const std::string& start_path = ".", boost::filesystem::path default_ = boost::filesystem::complete(boost::filesystem::path("."))) {
     using namespace boost::filesystem;
 
     path start_path_path = boost::filesystem::complete(start_path);
 
-    // FIXME there probably need to be more of these, including
-    // some absolute paths of expected installation locations.
-    // It should also be possible to add some from the options.
+    for(size_t offset = 0; offset < searchPoints.size(); offset++) {
+        for(uint32 spath = 0; spath < nsearch_paths; spath++) {
+            path full = start_path_path / searchPoints[offset] / search_paths[spath];
+            if (exists(full) && (!want_dir || is_directory(full)))
+                return full.string();
+        }
+    }
+
     path search_offsets[] = {
         path("."),
         path(".."),
@@ -101,6 +106,7 @@ std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_p
         path("../../../../../../..")
     };
     uint32 nsearch_offsets = sizeof(search_offsets)/sizeof(*search_offsets);
+
 
     for(uint32 offset = 0; offset < nsearch_offsets; offset++) {
         for(uint32 spath = 0; spath < nsearch_paths; spath++) {
@@ -115,7 +121,7 @@ std::string findResource(boost::filesystem::path* search_paths, uint32 nsearch_p
 }
 
 // FIXME we really need a better way to figure out where our data is
-std::string getOgreResourcesDir() {
+std::string getOgreResourcesDir(const std::vector<String>&searchPoints) {
     using namespace boost::filesystem;
 
     // FIXME there probably need to be more of these
@@ -128,11 +134,11 @@ std::string getOgreResourcesDir() {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    return findResource(search_paths, nsearch_paths);
+    return findResource(search_paths, nsearch_paths, searchPoints);
 }
 
 // FIXME we really need a better way to figure out where our data is
-std::string getBerkeliumBinaryDir() {
+std::string getBerkeliumBinaryDir(const std::vector<String>&searchPoints) {
     using namespace boost::filesystem;
 
     // FIXME there probably need to be more of these
@@ -153,13 +159,13 @@ std::string getBerkeliumBinaryDir() {
     };
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
-    return findResource(search_paths, nsearch_paths);
+    return findResource(search_paths, nsearch_paths,searchPoints);
 }
 
-std::string getChromeResourcesDir() {
+std::string getChromeResourcesDir(const std::vector<String>&searchPoints) {
     using namespace boost::filesystem;
 
-    return (path(getOgreResourcesDir()) / "chrome").string();
+    return (path(getOgreResourcesDir(searchPoints)) / "chrome").string();
 }
 
 } // namespace
@@ -251,7 +257,6 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mSuspended(false),
    mFloatingPointOffset(0,0,0),
    mLastFrameTime(Task::LocalTime::now()),
-   mResourcesDir(getOgreResourcesDir()),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
    mNextFrameScreenshotFile("")
 {
@@ -287,7 +292,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     OptionValue*renderBufferAutoMipmap;
     OptionValue*grabCursor;
     OptionValue* backColor;
-
+    OptionValue *searchPaths;
     InitializeClassOptions("ogregraphics",this,
                            pluginFile=new OptionValue("pluginfile","",OptionValueType<String>(),"sets the file ogre should read options from."),
                            configFile=new OptionValue("configfile","ogre.cfg",OptionValueType<String>(),"sets the ogre config file for config options"),
@@ -315,14 +320,29 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            mParallaxShadowSteps=new OptionValue("parallax-shadow-steps","10",OptionValueType<int>(),"Total number of steps for shadow parallax mapping (default 10)"),
                            new OptionValue("nearplane",".125",OptionValueType<float32>(),"The min distance away you can see"),
                            new OptionValue("farplane","5000",OptionValueType<float32>(),"The max distance away you can see"),
+                           searchPaths=new OptionValue("search_path","../..",OptionValueType<String>(),"Colon separated list of places to search for Ogre data (eg ogre/data/chrome/js or ogre/data/chrome/ui)"),
                            mModelLights = new OptionValue("model-lights","false",OptionValueType<bool>(),"Whether to use a base set of lights or load lights dynamically from loaded models."),
                            backColor = new OptionValue("back-color","<.71,.785,.91,1>",OptionValueType<Vector4f>(),"Background color to clear render viewport to."),
 
                            NULL);
     bool userAccepted=true;
-
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
-
+    
+    String search_path=searchPaths->as<String>();
+    if (search_path.length()) {
+        while (true) {
+            String::size_type where=search_path.find(":");
+            if (where==String::npos) {
+                mSearchPaths.push_back(search_path);
+                break;
+            }else {
+                mSearchPaths.push_back(search_path.substr(0,where));
+                search_path=search_path.substr(where+1);
+            }
+        }
+    }
+    mResourcesDir=getOgreResourcesDir(mSearchPaths);
+    
     mBackgroundColor = backColor->as<Vector4f>();
 
     // Initialize this first so we can get it to not spit out to stderr
@@ -351,7 +371,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
             mCDNArchivePlugin = new CDNArchivePlugin;
             sRoot->installPlugin(&*mCDNArchivePlugin);
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation("", "CDN", "General");
-            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getOgreResourcesDir(), "FileSystem", "General");
+            Ogre::ResourceGroupManager::getSingleton().addResourceLocation(getOgreResourcesDir(mSearchPaths), "FileSystem", "General");
             Ogre::ResourceGroupManager::getSingleton().addResourceLocation(".", "FileSystem", "General");//FIXME get rid of this line of code: we don't want to load resources from $PWD
 
             Ogre::ResourceGroupManager::getSingleton().initialiseAllResourceGroups(); /// Although t    //just to test if the cam is setup ok ==>
@@ -474,7 +494,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     sActiveOgreScenes.push_back(this);
 
     if (with_berkelium)
-        new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(), getOgreResourcesDir());
+        new WebViewManager(0, mInputManager, getBerkeliumBinaryDir(mSearchPaths), getOgreResourcesDir(mSearchPaths));
 
     loadSystemLights();
 
@@ -515,7 +535,7 @@ bool ogreLoadPlugin(const String& _filename, const String& root = "") {
     uint32 nsearch_paths = sizeof(search_paths)/sizeof(*search_paths);
 
     path not_found;
-    path plugin_path = path(findResource(search_paths, nsearch_paths, false, root, not_found));
+    path plugin_path = path(findResource(search_paths, nsearch_paths, std::vector<String>(), false, root, not_found));
     if (plugin_path == not_found)
         return false;
 

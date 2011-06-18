@@ -85,9 +85,11 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
     ScriptManagerMap mScriptManagers;
 
     std::tr1::unordered_map<String,OptionSet*> mSpaceConnectionProtocolOptions;
-
+    ///options passed to initialization of scripts (usually path information)
+    std::map<std::string, std::string > mSimOptions;
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID, const TimedMotionVector3f&, const TimedMotionQuaternion&, const BoundingSphere3f&, const String&, const String&)> SessionConnectedCallback;
 public:
+    String getSimOptions(const String&);
     struct ConnectionInfo {
         ServerID server;
         TimedMotionVector3f loc;

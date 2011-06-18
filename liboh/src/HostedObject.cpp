@@ -366,7 +366,7 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
     }
 
     HO_LOG(info,String("[OH] Initializing ") + simName);
-    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), "");
+    sim = SimulationFactory::getSingleton().getConstructor ( simName ) ( mContext, getSharedPtr(), pd.id(), getObjectHost()->getSimOptions(simName));
     if (!sim)
     {
         HO_LOG(error,String("Unable to load ") + simName + String(" plugin. The PATH environment variable is ignored, so make sure you have copied the DLLs from dependencies/ogre/bin/ into the current directory. Sorry about this!"));

@@ -60,14 +60,17 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
     mScriptPlugins=new PluginManager;
     OptionValue *protocolOptions;
     OptionValue *scriptManagers;
+    OptionValue *simOptions;
     InitializeClassOptions ico("objecthost",this,
                            protocolOptions=new OptionValue("protocols","",OptionValueType<std::map<std::string,std::string> >(),"passes options into protocol specific libraries like \"tcpsst:{--send-buffer-size=1440 --parallel-sockets=1},udp:{--send-buffer-size=1500}\""),
                            scriptManagers=new OptionValue("scriptManagers","simplecamera:{},js:{}",OptionValueType<std::map<std::string,std::string> >(),"Instantiates script managers with specified options like \"simplecamera:{},js:{--import-paths=/path/to/scripts}\""),
+                           simOptions=new OptionValue("simOptions","ogregraphics:{}",OptionValueType<std::map<std::string,std::string> >(),"Passes initialization strings to simulations, by name"),
+
                            NULL);
 
     OptionSet* oh_options = OptionSet::getOptions("objecthost",this);
     oh_options->parse(options);
-
+    mSimOptions=simOptions->as<std::map<std::string,std::string> > ();
     {
         std::map<std::string,std::string> *options=&protocolOptions->as<std::map<std::string,std::string> > ();
         for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
@@ -308,5 +311,11 @@ ProxyManager *ObjectHost::getProxyManager(const SpaceID&space) const
     NOT_IMPLEMENTED(oh);
     return NULL;
 }
-
+String ObjectHost::getSimOptions(const String&simName){
+    std::string nam=simName;
+    std::map<std::string,std::string>::iterator where=mSimOptions.find(nam);
+    if (where==mSimOptions.end()) return String();
+    std::string retval=where->second;
+    return String(retval);
+}
 } // namespace Sirikata
