@@ -70,16 +70,23 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Siri
 JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
 {
     OptionValue* import_paths;
+    OptionValue* v8_flags_opt;
     InitializeClassOptions(
         "jsobjectscriptmanager",this,
         // Default value allows us to use std libs in the build tree, starting
         // from build/cmake
         import_paths = new OptionValue("import-paths","../../liboh/plugins/js/scripts,../share/js/scripts",OptionValueType<std::list<String> >(),"Comma separated list of paths to import files from, searched in order for the requested import."),
+        v8_flags_opt = new OptionValue("v8-flags", "", OptionValueType<String>(), "Flags to pass on to v8, e.g. for profiling."),
         NULL
     );
 
     mOptions = OptionSet::getOptions("jsobjectscriptmanager",this);
     mOptions->parse(arguments);
+
+    String v8_flags = v8_flags_opt->as<String>();
+    if (!v8_flags.empty()) {
+        v8::V8::SetFlagsFromString(v8_flags.c_str(), v8_flags.size());
+    }
 
     createTemplates(); //these templates involve vec, quat, pattern, etc.
 }
