@@ -73,12 +73,11 @@ if (typeof(std.simpleStorage) != 'undefined')
 
         //ensures this presence is added to our list of presences
         var presName = presToRestore.toString();
-        //var presName = 'a';//presToRestore.toString();        
         mPres[presName] = true;
         
-        //callback to execute if setPresence works correctly.
-        //essentially all it does is that it begins processing
-        //next presence event.
+        // //callback to execute if setPresence works correctly.
+        // //essentially all it does is that it begins processing
+        // //next presence event.
         var finishedCB = function(success)
         {
             if (!success)
@@ -91,9 +90,9 @@ if (typeof(std.simpleStorage) != 'undefined')
         
         std.persist.persistMany([[mPres,presKeyName],
                                 [presToRestore,presName]], finishedCB);
-        
-    };
 
+    };
+    
 
     std.simpleStorage.erasePresence = function (presToErase)
     {
@@ -150,11 +149,8 @@ if (typeof(std.simpleStorage) != 'undefined')
         if (queuedPresOpers.length == 0)
             return;
 
-        var nextToProcess = queuedPresOpers.length -1;
-
-        var toProcess = queuedPresOpers[nextToProcess];
-        delete queuedPresOpers.nextToProcess;
-
+        var toProcess = queuedPresOpers.pop();
+        
         if (toProcess[0] == 'add')
             std.simpleStorage.setPresence(toProcess[1]);
         else
@@ -214,12 +210,6 @@ if (typeof(std.simpleStorage) != 'undefined')
     {
         if (success)
             mPres = allPres;
-        else
-            system.print('\nFailure restoring presences\n');
-        
-        system.print('\n\nThese are all presences\n\n');
-        system.prettyprint(mPres);
-        system.print('\n\n');
         
         restorePresences();
     }
@@ -230,13 +220,7 @@ if (typeof(std.simpleStorage) != 'undefined')
     //called each time 
     function restorePresences(success,pres)
     {
-        if (typeof(success) !== 'undefined' )
-        {
-            system.print('\nThis was success: \n');
-            system.print(success);
-            system.print('\n\n');
-        }
-        system.print('\nGot into restorePresences\n\n');
+
         for (var s in mPres)
         {
             //if we've already restored this presence ignore it.

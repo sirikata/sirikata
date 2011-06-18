@@ -267,7 +267,6 @@ if (typeof(std.persist) === 'undefined')
      std.persist.persistMany = function (arrayOfObjKeyNames,cb)
      {
          var backendWrite = new ObjectWriter('default');
-         
 
          for (var s in arrayOfObjKeyNames)
          {

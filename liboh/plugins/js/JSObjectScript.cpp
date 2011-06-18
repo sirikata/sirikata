@@ -323,8 +323,6 @@ v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, 
 
 v8::Handle<v8::Value> JSObjectScript::storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
 {
-    std::cout<<"\n\nDEBUG: This is key that I'm writing: "<<key<<"\n\n";
-    
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
 
     OH::Storage::CommitCallback wrapped_cb = 0;
