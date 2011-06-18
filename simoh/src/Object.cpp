@@ -183,7 +183,7 @@ void Object::connect() {
     if (mRegisterQuery)
         mContext->objectHost->connect(
             this,
-            mQueryAngle,
+            mQueryAngle, 0,
             std::tr1::bind(&Object::handleSpaceConnection, this, _1, _2, _3),
             mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceMigration, this, _1, _2, _3) ),
 	    mContext->mainStrand->wrap( std::tr1::bind(&Object::handleSpaceStreamCreated, this) ),

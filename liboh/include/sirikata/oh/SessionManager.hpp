@@ -69,6 +69,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         String mesh;
         String physics;
         SolidAngle queryAngle;
+        uint32 queryMaxResults;
     };
 
     enum ConnectionEvent {
@@ -117,7 +118,8 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         const TimedMotionVector3f& init_loc,
         const TimedMotionQuaternion& init_orient,
         const BoundingSphere3f& init_bounds,
-        bool regquery, const SolidAngle& init_sa, const String& init_mesh, const String& init_phy,
+        bool regquery, const SolidAngle& init_sa, uint32 init_max_results,
+        const String& init_mesh, const String& init_phy,
         ConnectedCallback connect_cb, MigratedCallback migrate_cb,
         StreamCreatedCallback stream_cb, DisconnectedCallback disconnected_cb
     );
@@ -269,6 +271,7 @@ private:
         BoundingSphere3f bounds;
         bool regQuery;
         SolidAngle queryAngle;
+        uint32 queryMaxResults;
         String mesh;
         String physics;
     };

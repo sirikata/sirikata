@@ -593,8 +593,11 @@ void Server::finishAddObject(const UUID& obj_id)
     mLocationService->addLocalObject(obj_id, loc, orient, bnds, obj_mesh, obj_phy);
 
     // Register proximity query
+    uint32 query_max_results = 0;
+    if (sc.conn_msg.has_query_max_count() && sc.conn_msg.query_max_count() > 0)
+        query_max_results = sc.conn_msg.query_max_count();
     if (sc.conn_msg.has_query_angle())
-        mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()));
+        mProximity->addQuery(obj_id, SolidAngle(sc.conn_msg.query_angle()), query_max_results);
 
     // Stage the connection with the forwarder, but don't enable it until an ack is received
     mForwarder->addObjectConnection(obj_id, conn);

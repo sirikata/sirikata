@@ -361,7 +361,7 @@ void HostedObject::connect(
         const UUID&object_uuid_evidence,
         PresenceToken token)
 {
-    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, object_uuid_evidence,ObjectReference::null(),token);
+    connect(spaceID, startingLocation, meshBounds, mesh, phy, SolidAngle::Max, 0, object_uuid_evidence,ObjectReference::null(),token);
 }
 
 
@@ -374,6 +374,7 @@ void HostedObject::connect(
         const String& mesh,
         const String& phy,
         const SolidAngle& queryAngle,
+        uint32 queryMaxResults,
         const UUID&object_uuid_evidence,
         const ObjectReference& orefID,
         PresenceToken token)
@@ -403,6 +404,7 @@ void HostedObject::connect(
         mesh,
         phy,
         queryAngle,
+        queryMaxResults,
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, _2, token),
@@ -474,15 +476,14 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     if(mPresenceData->find(self_objref) == mPresenceData->end())
     {
         mPresenceData->insert(
-            PresenceDataMap::value_type(self_objref,PerPresenceData(this,space,obj,info.queryAngle))
+            PresenceDataMap::value_type(self_objref,PerPresenceData(this, space, obj, info.queryAngle, info.queryMaxResults))
         );
     }
 
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle,0);
-
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle, info.queryMaxResults, 0);
 
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
@@ -826,7 +827,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
-                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max,proxyAddSeqNo);
+                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max, 0, proxyAddSeqNo);
             }
             else {
                 // We need to handle optional values properly -- they
@@ -922,13 +923,13 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle,uint64 seqNo)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle, uint32 queryMaxResults, uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
     if (!proxy_manager)
     {
-        mPresenceData->insert(PresenceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object(), queryAngle )));
+        mPresenceData->insert(PresenceDataMap::value_type( owner_objref, PerPresenceData(this, owner_objref.space(),owner_objref.object(), queryAngle, queryMaxResults)));
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 

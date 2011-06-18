@@ -316,7 +316,8 @@ void SessionManager::stop() {
 void SessionManager::connect(
     const SpaceObjectReference& sporef_objid,
     const TimedMotionVector3f& init_loc, const TimedMotionQuaternion& init_orient, const BoundingSphere3f& init_bounds,
-    bool regQuery, const SolidAngle& init_sa, const String& init_mesh, const String& init_phy,
+    bool regQuery, const SolidAngle& init_sa, uint32 init_max_results,
+    const String& init_mesh, const String& init_phy,
     ConnectedCallback connect_cb, MigratedCallback migrate_cb,
     StreamCreatedCallback stream_created_cb, DisconnectedCallback disconn_cb
 )
@@ -338,6 +339,7 @@ void SessionManager::connect(
     ci.bounds = init_bounds;
     ci.regQuery = regQuery;
     ci.queryAngle = init_sa;
+    ci.queryMaxResults = init_max_results;
     ci.mesh = init_mesh;
     ci.physics = init_phy;
 
@@ -434,8 +436,11 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
     connect_msg.set_bounds( ci.bounds );
 
 
-   if (ci.regQuery)
-       connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+    if (ci.regQuery) {
+        connect_msg.set_query_angle( ci.queryAngle.asFloat() );
+        if (ci.queryMaxResults > 0)
+            connect_msg.set_query_max_count( ci.queryMaxResults );
+    }
 
 
 
@@ -888,6 +893,7 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     conn_info.mesh = ci.mesh;
     conn_info.physics = ci.physics;
     conn_info.queryAngle   = ci.queryAngle;
+    conn_info.queryMaxResults   = ci.queryMaxResults;
     real_cb(space, obj, conn_info);
 
     SSTStream::connectStream(

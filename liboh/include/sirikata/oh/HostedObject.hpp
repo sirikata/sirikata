@@ -253,6 +253,7 @@ public:
         const String& mesh,
         const String& physics,
         const SolidAngle& queryAngle,
+        uint32 queryMaxResults,
         const UUID&object_uuid_evidence,
         const ObjectReference& orefID,
         PresenceToken token = DEFAULT_PRESENCE_TOKEN);
@@ -383,7 +384,7 @@ public:
 
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle,uint64 seqNo);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle, uint32 queryMaxResults, uint64 seqNo);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update

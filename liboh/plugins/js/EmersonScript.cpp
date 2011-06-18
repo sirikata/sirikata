@@ -505,6 +505,7 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
         eci.mesh,
         eci.physics,
         eci.solid_angle,
+        eci.max_results,
         UUID::null(),
         ObjectReference::null()
     );
@@ -605,7 +606,6 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //timer requires a handle to its persistent object so can handle cleanup
     //correctly.
     jstimer->setPersistentObject(returner);
-
 
     return handle_scope.Close(returner);
 }
@@ -1056,6 +1056,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
             psrp.mesh,
             psrp.physics,
             psrp.query,
+            psrp.queryMaxResults,
             UUID::null(),
             psrp.sporef.object(),
             presToke
@@ -1068,7 +1069,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     v8::HandleScope handle_scope;
     return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
 }
-
 
 
 

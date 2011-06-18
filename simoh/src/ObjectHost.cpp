@@ -79,7 +79,7 @@ const ObjectHostContext* ObjectHost::context() const {
 }
 
 void ObjectHost::connect(
-    Object* obj, const SolidAngle& init_sa,
+    Object* obj, const SolidAngle& init_sa, uint32 init_max_results,
     ConnectedCallback connect_cb,
     MigratedCallback migrate_cb, StreamCreatedCallback stream_created_cb,
     DisconnectedCallback disconnected_cb
@@ -96,7 +96,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, true, init_sa, "", "",
+        sporef, init_loc, init_orient, init_bounds, true, init_sa, init_max_results, "", "",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
 	migrate_cb, stream_created_cb, disconnected_cb
     );
@@ -120,7 +120,7 @@ void ObjectHost::connect(
     SpaceObjectReference sporef(SpaceID::null(),ObjectReference(obj->uuid()));
 
     mSessionManager.connect(
-        sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, "", "",
+        sporef, init_loc, init_orient, init_bounds, false, SolidAngle::Max, 0, "", "",
 	std::tr1::bind(&ObjectHost::dispatchConnectedCallback, this, _1, _2, _3, connect_cb),
         migrate_cb, stream_created_cb, disconnected_cb
     );

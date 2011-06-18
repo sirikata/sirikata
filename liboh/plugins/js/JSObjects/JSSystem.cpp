@@ -169,7 +169,7 @@ v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
     //decode message.
     String serializedMessage = JSSerializer::serializeMessage(args[0]);
 
-    
+
     //recipeint == null implies send to parent (if it exists).
     JSContextStruct* recipient = NULL;
     if (! args[1]->IsNull())
@@ -525,7 +525,7 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str(), errMsg.length())));
-    
+
     return jssys->deserialize(serString);
 }
 
@@ -1084,8 +1084,8 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
 
-    if (args.Length() != 18)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
+    if (args.Length() != 19)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 19 arguments")));
 
 
     v8::Handle<v8::Value> mSporefArg                       = args[0];
@@ -1106,6 +1106,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> suspendedVelocityArg             = args[15];
     v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[16];
     v8::Handle<v8::Value> solidAngleQueryArg               = args[17];
+    v8::Handle<v8::Value> maxResultsQueryArg               = args[18];
 
     //now, it's time to decode them.
 
@@ -1228,6 +1229,8 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 
 
     INLINE_SA_CONV_ERROR(solidAngleQueryArg,restorePresence,16,queryAngle);
+    //FIXME INLINE_DECODE_UINT_32(maxResultsQueryArg,maxResults);
+    uint32 maxResults = 0;
 
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
@@ -1255,7 +1258,8 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         isSuspended,
         suspendedVelocity,
         suspendedOrientationVelocity,
-        queryAngle
+        queryAngle,
+        maxResults
     );
 
     return handle_scope.Close(jssys->restorePresence(restParams));
@@ -1345,6 +1349,9 @@ v8::Handle<v8::Value> root_createEntity(const v8::Arguments& args)
     eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
     eci.solid_angle = new_qa;
+    // FIXME add control for max results
+    eci.max_results = 0;
+
     eci.scale = scale;
     eci.space = toCreateIn;
 
@@ -1427,6 +1434,9 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
     eci.loc  = Location(pos,Quaternion(1,0,0,0),Vector3f(0,0,0),Vector3f(0,0,0),0.0);
 
     eci.solid_angle = new_qa;
+    // FIXME add control over max results
+    eci.max_results = 0;
+
     eci.scale = scale;
 
 

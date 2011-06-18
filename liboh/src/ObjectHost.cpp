@@ -204,6 +204,7 @@ void ObjectHost::connect(
     const String& mesh,
     const String& phy,
     const SolidAngle& init_sa,
+    uint32 init_max_results,
     ConnectedCallback connected_cb,
     MigratedCallback migrated_cb,
     StreamCreatedCallback stream_created_cb,
@@ -215,7 +216,7 @@ void ObjectHost::connect(
     Sirikata::SerializationCheck::Scoped sc(&mSessionSerialization);
 
     mSessionManagers[space]->connect(
-        sporef, loc, orient, bnds, with_query, init_sa, mesh, phy,
+        sporef, loc, orient, bnds, with_query, init_sa, init_max_results, mesh, phy,
         std::tr1::bind(&ObjectHost::wrappedConnectedCallback, this, _1, _2, _3, connected_cb),
         migrated_cb,
         stream_created_cb,
@@ -231,7 +232,8 @@ void ObjectHost::connect(
     info.bnds = ci.bounds;
     info.mesh = ci.mesh;
     info.physics = ci.physics;
-    info.queryAngle   = ci.queryAngle;
+    info.queryAngle = ci.queryAngle;
+    info.queryMaxResults = ci.queryMaxResults;
     cb(space, obj, info);
 }
 

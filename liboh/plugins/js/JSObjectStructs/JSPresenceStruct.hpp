@@ -32,7 +32,8 @@ struct PresStructRestoreParams
         const bool& _isSuspended,
         const Nullable<Vector3f>& _suspendedVelocity,
         const Nullable<Quaternion>& _suspendedOrientationVelocity,
-        const SolidAngle& _query)
+        const SolidAngle& _query,
+        uint32 max_results)
      :     sporef(_sporef),
            positionTime(_positionTime),
            position(_position),
@@ -50,7 +51,8 @@ struct PresStructRestoreParams
            isSuspended(_isSuspended),
            suspendedVelocity(_suspendedVelocity),
            suspendedOrientationVelocity(_suspendedOrientationVelocity),
-           query(_query)
+           query(_query),
+           queryMaxResults(max_results)
     {
     }
 
@@ -72,6 +74,7 @@ struct PresStructRestoreParams
     Nullable<Vector3f> suspendedVelocity;
     Nullable<Quaternion> suspendedOrientationVelocity;
     SolidAngle query;
+    uint32 queryMaxResults;
 };
 
 

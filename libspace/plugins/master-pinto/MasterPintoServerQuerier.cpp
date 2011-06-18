@@ -56,6 +56,7 @@ MasterPintoServerQuerier::MasterPintoServerQuerier(SpaceContext* ctx, const Stri
    mMaxRadius(0),
    mMaxRadiusDirty(true),
    mAggregateQuery(SolidAngle::Max),
+   mAggregateQueryMaxResults(0),
    mAggregateQueryDirty(true)
 {
     OptionSet* optionsSet = OptionSet::getOptions("space_master_pinto",NULL);
@@ -121,9 +122,10 @@ void MasterPintoServerQuerier::updateLargestObject(float max_radius) {
     mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
 }
 
-void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle) {
-    MP_LOG(debug, "Updating aggregate query angle " << min_angle);
+void MasterPintoServerQuerier::updateQuery(const SolidAngle& min_angle, uint32 max_results) {
+    MP_LOG(debug, "Updating aggregate query angle " << min_angle << " and " << max_results << " maximum results.");
     mAggregateQuery = min_angle;
+    mAggregateQueryMaxResults = max_results;
     mAggregateQueryDirty = true;
     mIOStrand->post(std::tr1::bind(&MasterPintoServerQuerier::tryServerUpdate, this));
 }
@@ -161,6 +163,7 @@ void MasterPintoServerQuerier::tryServerUpdate() {
         mAggregateQueryDirty = false;
         Sirikata::Protocol::MasterPinto::IQueryUpdate update = msg.mutable_query();
         update.set_min_angle(mAggregateQuery.asFloat());
+        update.set_max_count(mAggregateQueryMaxResults);
     }
 
     String serialized = serializePBJMessage(msg);

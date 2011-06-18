@@ -99,6 +99,7 @@ public:
         String mesh;
         String physics;
         SolidAngle queryAngle;
+        uint32 queryMaxResults;
     };
 
     //use this function to request the object host to send a disconnect message
@@ -174,6 +175,7 @@ public:
         const String& mesh,
         const String& physics,
         const SolidAngle& init_sa,
+        uint32 init_max_results,
         ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
         DisconnectedCallback disconnected_cb

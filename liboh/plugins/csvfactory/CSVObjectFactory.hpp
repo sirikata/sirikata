@@ -47,7 +47,7 @@ namespace Sirikata {
 class CSVObjectFactory : public ObjectFactory {
 public:
     typedef std::vector<String> StringList;
-    
+
     CSVObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename, int32 max_objects, int32 connect_rate);
     virtual ~CSVObjectFactory() {}
 
@@ -56,7 +56,7 @@ public:
 
     /**
        @param a string that may have multiple commas
-       
+
        @return A vector. Each element in this vector contains a
        string unit.  A string unit is any text that was separated by a comma
        that was not enclosed within quotations.  (Or text that appeared without
@@ -70,7 +70,7 @@ public:
        returns: <"a,b",c>
 
        (note: "somethign,a",
-       
+
        The vector is ordered so that the lower the index the earlier the string
        appeared on the line.
      */
@@ -92,6 +92,7 @@ private:
         BoundingSphere3f bounds;
         String mesh;
         SolidAngle query_angle;
+        uint32 query_max_results;
         String physics;
     };
     std::queue<ObjectConnectInfo> mIncompleteObjects;

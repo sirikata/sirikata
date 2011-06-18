@@ -78,7 +78,7 @@ public:
     // NOTE: The public interface is only safe to access from the main strand.
 
     /** Connect the object to the space with the given starting parameters. */
-    void connect(Object* obj, const SolidAngle& init_sa, ConnectedCallback connected_cb,
+    void connect(Object* obj, const SolidAngle& init_sa, uint32 init_max_results, ConnectedCallback connected_cb,
         MigratedCallback migrated_cb, StreamCreatedCallback stream_created_cb,
         DisconnectedCallback disconnected_cb
     );

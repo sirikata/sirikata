@@ -1146,13 +1146,16 @@ function PresenceEntry(sporef, presObj)
       @param {vec3} suspendedVelocity,
       @param {quaternion} suspendedOrientationVelocity,
       @param {float} solidAngleQuery
+      @param {uint32} queryMaxResults
       */
-     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery)
+     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery,queryMaxResults)
      {
          if (connCB != null)
              connCB = this.__wrapPresConnCB(connCB);
 
-         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
+         if (queryMaxResults === undefined) queryMaxResults = 1000000;
+
+         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery,queryMaxResults);
      };
       
       /** @deprecated Use createPresence */
