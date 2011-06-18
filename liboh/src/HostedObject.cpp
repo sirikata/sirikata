@@ -1268,13 +1268,24 @@ SolidAngle HostedObject::requestQueryAngle(const SpaceID& space, const ObjectRef
 }
 
 
+uint32 HostedObject::requestQueryMaxResults(const SpaceID& space, const ObjectReference& oref)
+{
+    PresenceDataMap::iterator iter = mPresenceData->find(SpaceObjectReference(space,oref));
+    if (iter == mPresenceData->end())
+    {
+        SILOG(cppoh, error, "Error in cppoh, requesting solid angle for presence that doesn't exist in your presence map.  Returning max solid angle instead.");
+        return 0;
+    }
+    return iter->second.queryMaxResults;
+}
+
 void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy)
 {
     updateLocUpdateRequest(space, oref, NULL, NULL, NULL, NULL, &phy);
 }
 
 
-void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {
+void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle, uint32 new_max_results) {
     if (stopped()) {
         HO_LOG(detailed,"Ignoring query update request after system stop.");
         return;
@@ -1282,15 +1293,18 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
 
     Protocol::Prox::QueryRequest request;
     request.set_query_angle(new_angle.asFloat());
+    request.set_query_max_count(new_max_results);
     std::string payload = serializePBJMessage(request);
 
 
     PresenceDataMap::iterator pdmIter = mPresenceData->find(SpaceObjectReference(space,oref));
-    if (pdmIter != mPresenceData->end())
+    if (pdmIter != mPresenceData->end()) {
         pdmIter->second.queryAngle = new_angle;
-    else
+        pdmIter->second.queryMaxResults = new_max_results;
+    }
+    else {
         SILOG(cppoh,error,"Error in cppoh, requesting solid angle update for presence that doesn't exist in your presence map.");
-
+    }
 
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     //SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, getUUID());
@@ -1307,7 +1321,7 @@ void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReferenc
 }
 
 void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReference& oref) {
-    requestQueryUpdate(space, oref, SolidAngle::Max);
+    requestQueryUpdate(space, oref, SolidAngle::Max, 0);
 }
 
 void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {

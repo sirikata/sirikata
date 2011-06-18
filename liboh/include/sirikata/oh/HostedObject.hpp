@@ -349,9 +349,10 @@ public:
     virtual const String& requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref);
     virtual void requestPhysicsUpdate(const SpaceID& space, const ObjectReference& oref, const String& phy);
 
-    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle);
+    virtual void requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle, uint32 new_max_results);
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
     virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
+    virtual uint32 requestQueryMaxResults(const SpaceID& space, const ObjectReference& oref);
 
 
 

@@ -1149,7 +1149,11 @@ void EmersonScript::setPhysicsFunction(const SpaceObjectReference sporef, const 
 //just sets the solid angle query for the object.
 void EmersonScript::setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa)
 {
-    mParent->requestQueryUpdate(sporef.space(), sporef.object(), sa);
+    mParent->requestQueryUpdate(
+        sporef.space(), sporef.object(),
+        sa,
+        mParent->requestQueryMaxResults(sporef.space(), sporef.object())
+    );
 }
 
 
