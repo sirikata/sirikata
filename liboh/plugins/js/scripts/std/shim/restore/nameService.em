@@ -38,7 +38,7 @@ std.persist.NameService = function()
       Returned when maps calling lookup on do not have a record for
       the index searching for.
       */
-     this.DNE = -1;
+     this.DNE = -99;
 
      /**
       Prints all objects that we're responsible for and their names 
