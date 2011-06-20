@@ -17,6 +17,13 @@ $LAB.setGlobalDefaults({
 	UseLocalXHR: false,
 	UseCachePreload: false
 });
+function DelayLoad(txt) {
+var f=function() {
+var el=document.getElementById("transparency")
+el.appendChild(document.createTextNode(txt));
+};
+   setTimeout(f,1000);
+}
 
 $LAB
 .script("../jquery/js/jquery-1.4.2.min.js").wait()
@@ -26,8 +33,8 @@ $LAB
 .script("../jquery_plugins/jquery.jstree.js").wait()
 .script("js/dockablewindow.js").wait() // js/ui.js requires dockablewindow
 .script("js/ui.js").wait()
-.script("js/menu.js")
-.script("js/open_file.js")
+.script("js/menu.js").wait()
+.script("js/open_file.js").wait()
 .script("js/cdn_upload.js")
 .wait(function() {
     $('#ui-box').show();
@@ -82,7 +89,6 @@ function loadModule(path) {
 </div>
 
 </div>
-
 </body>
 
 </html>
