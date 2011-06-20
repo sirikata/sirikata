@@ -157,7 +157,7 @@ if (typeof(std.simpleStorage) != 'undefined')
             std.simpleStorage.removePresence(toProcess[1]);
     }
 
-    
+
     std.simpleStorage.setScript = function(newScriptFunc,executeOnSet)
     {
         var newScript =  ("(" + newScriptFunc + ")();");

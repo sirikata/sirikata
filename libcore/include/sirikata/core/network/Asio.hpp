@@ -157,17 +157,32 @@ class SIRIKATA_EXPORT UDPResolver : public InternalUDPResolver {
     }
 };
 
-/** Simple wrapper around Boost.Asio's deadline_timer, allowing for safe,
+/** Simple wrapper around Boost.Asio's deadline_timer, allowing for error-prone,
  *  cross-platform allocation and use.  If you just want a timer that works
  *  with IOService, see IOTimer.
+ *  Do not use this class unless you are IOTimer...if you really think you want to use this class
+ *  then please email hellcatv@hotmail.com so I can talk you out of it, thank you.
  */
 class SIRIKATA_EXPORT DeadlineTimer : public boost::asio::deadline_timer {
 public:
     DeadlineTimer(IOService& io);
     DeadlineTimer(IOService* io);
-
+    virtual ~DeadlineTimer();
     IOService service() {
         return IOService(&(this->get_io_service()));
+    }
+    /**
+     * Sometimes cancels the callback. Often does nothing. Expect your function to get called
+     */
+    std::size_t cancel (boost::system::error_code &ec) {
+        return this->boost::asio::deadline_timer::cancel(ec);
+    }
+
+    /**
+     * Sometimes cancels the callback. Often does nothing. Expect your function to get called
+     */
+    std::size_t cancel () {
+        return this->boost::asio::deadline_timer::cancel();
     }
 };
 

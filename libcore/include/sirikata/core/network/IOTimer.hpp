@@ -107,6 +107,7 @@ public:
      *  have resulted when the timer expired.
      */
     void cancel();
+    Duration expiresFromNow();
 };
 
 } // namespace Network

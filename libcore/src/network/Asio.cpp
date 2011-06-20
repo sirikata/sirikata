@@ -154,12 +154,16 @@ UDPResolver::~UDPResolver()
 
 DeadlineTimer::DeadlineTimer(IOService& io)
     : boost::asio::deadline_timer(io.asioService()) {
+
 }
 
 DeadlineTimer::DeadlineTimer(IOService* io)
     : boost::asio::deadline_timer(io->asioService()) {
-}
 
+}
+DeadlineTimer::~DeadlineTimer () {
+
+}
 
 } // namespace Network
 } // namespace Sirikata

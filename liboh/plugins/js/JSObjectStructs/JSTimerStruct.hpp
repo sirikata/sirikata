@@ -26,8 +26,9 @@ struct JSTimerStruct : public JSSuspendable
 
 
     v8::Handle<v8::Value> struct_resetTimer(double timeInSecondsToRefire);
-    void evaluateCallback(const boost::system::error_code& error);
-
+private:
+    void evaluateCallback();
+public:
     virtual v8::Handle<v8::Value>suspend();
     virtual v8::Handle<v8::Value>resume();
     virtual v8::Handle<v8::Value>clear();
@@ -37,11 +38,12 @@ struct JSTimerStruct : public JSSuspendable
     EmersonScript* emerScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
+private:
     Sirikata::Network::IOService* ios;
+    Sirikata::Network::IOTimerPtr mDeadlineTimer;
+public:
 
-    Sirikata::Network::DeadlineTimer* mDeadlineTimer;
-
-    double timeUntil; //first time create timer will fire after timeUntil seconds
+    Duration timeUntil; //first time create timer will fire after timeUntil seconds
     double mTimeRemaining; //when restoring a timer, will fire in this many more
                            //seconds.
 

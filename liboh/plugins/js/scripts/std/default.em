@@ -34,15 +34,16 @@
 // A sane, simple, default. Only includes functionality from libraries.
 system.require('std/shim/restore/simpleStorage.em');
 
+
 std.simpleStorage.setScript(
     function()
     {
         system.require('std/shim/restore/persistService.em');
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
-
-
+        system.require('std/graphics/default.em');
+        
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable();
-    },true);
+    },false);
 
