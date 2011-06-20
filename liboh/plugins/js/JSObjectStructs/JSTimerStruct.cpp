@@ -22,7 +22,8 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
   cb(callback),
   jsContStruct(jscont),
   ios(ioserve),
-  timeUntil(dur.toSeconds()),
+  mDeadlineTimer(Sirikata::Network::IOTimer::create(*ioserve)),
+  timeUntil(dur),
   mTimeRemaining(timeRemaining),
   killAfterFire(false),
   noTimerWaiting(true)
@@ -33,9 +34,6 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
         return;
     }
 
-    //mDeadlineTimer = std::auto_ptr<Sirikata::Network::DeadlineTimer>( new
-    //Sirikata::Network::DeadlineTimer(*ioserve));
-    mDeadlineTimer = new Sirikata::Network::DeadlineTimer(*ioserve);
     if (isSuspended)
         suspend();
 
@@ -49,11 +47,9 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
         noTimerWaiting=false;
         
         if (timeRemaining == 0)
-            mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
+            mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
         else
-            mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeRemaining*1000000));
-
-        mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+            mDeadlineTimer->wait(Duration::microseconds(timeRemaining*1000000),std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
         
 
         if (jscont != NULL)
@@ -126,13 +122,10 @@ void JSTimerStruct::fixSuspendableToContext(JSContextStruct* toAttachTo)
     jsContStruct = toAttachTo;
 
     noTimerWaiting=false;
-    
     if (mTimeRemaining == 0)
-        mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
+        mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
     else
-        mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(mTimeRemaining*1000000));
-
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+        mDeadlineTimer->wait(Duration::microseconds(mTimeRemaining*1000000),std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
     
     jsContStruct->struct_registerSuspendable(this);
 }
@@ -176,7 +169,6 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
 JSTimerStruct::~JSTimerStruct()
 {
     clear();
-    delete mDeadlineTimer;
 }
 
 //returning all data necessary to re-generate timer
@@ -201,13 +193,13 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
     if (! isclear)
     {
         cbFunc = cb;
-        period = timeUntil;
+        period = timeUntil.toSeconds();
         if (issusp)
-            tUntil = timeUntil;
+            tUntil = timeUntil.toSeconds();
         else
         {
-            boost::posix_time::time_duration pt = mDeadlineTimer->expires_from_now();
-            tUntil = (double)(pt.total_microseconds()/1000000.);
+            Duration pt = mDeadlineTimer->expiresFromNow();
+            tUntil = pt.seconds();
         }
     }
 
@@ -231,14 +223,11 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 
 
 
-void JSTimerStruct::evaluateCallback(const boost::system::error_code& error)
+void JSTimerStruct::evaluateCallback()
 {
-    if (! error )
-    {
-        emerScript->handleTimeoutContext(cb,jsContStruct);
-        //means that we have no pending timer operation.
-        noTimerWaiting=true;
-    }
+    emerScript->handleTimeoutContext(cb,jsContStruct);
+    //means that we have no pending timer operation.
+    noTimerWaiting=true;
 
     //if we were told to kill the timer after firing, then check kill conditions
     //again in noReference.
@@ -278,12 +267,10 @@ v8::Handle<v8::Value> JSTimerStruct::resume()
         JSLOG(info,"Error in JSTimerStruct.  Trying to resume a timer object that has already been cleared.  Taking no action");
         return JSSuspendable::getIsSuspendedV8();
     }
-
     mDeadlineTimer->cancel();
 
     noTimerWaiting=false;
-    mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeUntil*1000000));
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+    mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
 
     return JSSuspendable::resume();
 }
@@ -323,11 +310,9 @@ v8::Handle<v8::Value> JSTimerStruct::struct_resetTimer(double timeInSecondsToRef
         return JSSuspendable::clear();
     }
 
-    
     mDeadlineTimer->cancel();
     noTimerWaiting=false;
-    mDeadlineTimer->expires_from_now(boost::posix_time::microseconds(timeInSecondsToRefire*1000000));
-    mDeadlineTimer->async_wait(std::tr1::bind(&JSTimerStruct::evaluateCallback,this,_1));
+    mDeadlineTimer->wait(Duration::seconds(timeInSecondsToRefire),std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
 
     return JSSuspendable::resume();
 }

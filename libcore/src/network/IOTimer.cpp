@@ -115,6 +115,8 @@ void IOTimer::setCallback(const IOCallback& cb) {
 void IOTimer::cancel() {
     mTimer->cancel();
 }
-
+Duration IOTimer::expiresFromNow() {
+    return Duration::microseconds(mTimer->expires_from_now().total_microseconds());
+}
 } // namespace Network
 } // namespace Sirikata
