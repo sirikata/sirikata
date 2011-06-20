@@ -246,7 +246,7 @@ SET(GENERATED_FILES_DIR ${BUILD_DIR}/generated)
 SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 
 SET(SirikataProtocolDirectory ${GENERATED_FILES_DIR})
-
+SET(SIRIKATA_OGRE_DATA_DIR ${TOP_LEVEL}/libproxyobject/plugins/ogre/data)
 #add-ins
 
 MACRO(VERIFY_VERSION package_name major minor subminor)
@@ -583,6 +583,11 @@ ELSE()
   SET(BERKELIUM_TARGET_BINARIES)
   SET(BERKELIUM_LIBRARIES)
   IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
+    SET(SIRIKATA_JQUERY_FILE ${SIRIKATA_OGRE_DATA_DIR}/jquery/js/jquery-1.4.2.min.js)
+    IF (EXISTS ${SIRIKATA_JQUERY_FILE})
+    ELSE()
+      MESSAGE(FATAL_ERROR "Missing jquery symlink in the ogre data directory ${SIRIKATA_JQUERY_FILE} for startup scripts and mouse handling.")
+    ENDIF()
     # This name is needed by the ADD_CHROME_APP macro
     SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
 
@@ -2570,7 +2575,7 @@ IF(OGRE_FOUND)
 
   # data for ogre, including web views
   IF(APPLE)
-    INSTALL(DIRECTORY ${TOP_LEVEL}/libproxyobject/plugins/ogre/data/
+    INSTALL(DIRECTORY ${SIRIKATA_OGRE_DATA_DIR}
       DESTINATION share/ogre/data/
       PATTERN "*/jquery" EXCLUDE
       )
