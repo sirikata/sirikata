@@ -730,7 +730,10 @@ SET(EMERSON_SOURCE_DIR ${TOP_LEVEL}/liboh/plugins/js/emerson)
 SET(STREAM_ECHO_SOURCE_DIR ${TOP_LEVEL}/tools/stream_echo)
 SET(MESH_TOOL_SOURCE_DIR ${TOP_LEVEL}/tools/meshtool)
 SET(MESH_VIEW_SOURCE_DIR ${TOP_LEVEL}/tools/meshview)
-SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test/src)
+
+SET(TEST_SOURCE_DIR ${TOP_LEVEL}/test)
+SET(TEST_LIBCORE_SOURCE_DIR ${TEST_SOURCE_DIR}/libcore)
+SET(TEST_LIBSQLITE_SOURCE_DIR ${TEST_SOURCE_DIR}/libsqlite)
 
 #plugins locations
 SET(LIBCORE_PLUGIN_DIR ${LIBCORE_DIR}/plugins)
@@ -1500,38 +1503,32 @@ SET(BENCH_SOURCES
 
 #test source files
 SET(CXXTESTSources
-libcore/test/TransferTest.hpp
-libcore/test/AnyTest.hpp
-libcore/test/AtomicTest.hpp
-#libcore/test/CacheLayerTest.hpp
-libcore/test/ExtrapolationTest.hpp
-libcore/test/FactoryTest.hpp
-libcore/test/FairQueueTest.hpp
-libcore/test/ListenerTest.hpp
-libcore/test/Matrix3Test.hpp
-libcore/test/OptionValueListTest.hpp
-libcore/test/OptionTest.hpp
-libcore/test/QuaternionTest.hpp
-libcore/test/TCPSSTCloseTest.hpp
-libcore/test/TCPSSTConnectTest.hpp
-#libcore/test/ThreadSafeQueueTest.hpp
-libcore/test/TR1Test.hpp
-libcore/test/Vector3Test.hpp
-libcore/test/BoundingBoxTest.hpp
-libsqlite/test/ThreadingTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/TransferTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/AnyTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/AtomicTest.hpp
+#${TEST_LIBCORE_SOURCE_DIR}/CacheLayerTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/ExtrapolationTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/FactoryTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/FairQueueTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/ListenerTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/Matrix3Test.hpp
+${TEST_LIBCORE_SOURCE_DIR}/OptionValueListTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/OptionTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/QuaternionTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/TCPSSTCloseTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/TCPSSTConnectTest.hpp
+#${TEST_LIBCORE_SOURCE_DIR}/ThreadSafeQueueTest.hpp
+${TEST_LIBCORE_SOURCE_DIR}/TR1Test.hpp
+${TEST_LIBCORE_SOURCE_DIR}/Vector3Test.hpp
+${TEST_LIBCORE_SOURCE_DIR}/BoundingBoxTest.hpp
+${TEST_LIBSQLITE_SOURCE_DIR}/ThreadingTest.hpp
  )
-#  libcore/test/ThreadSafeQueueTest.hpp
 ADD_CXXTEST_CPP_TARGET(CXXTEST ${CXXTESTSources}
 	LIBRARYDIR ${CXXTESTRoot})
 
-
-
-
-
 SET(TEST_SOURCES
-  ${LIBCORE_DIR}/test/Test.cpp
+  ${TEST_SOURCE_DIR}/Test.cpp
   ${CXXTEST_CPP_FILE}
-  ${Test_PBJ_CPP_FILES}
 )
 
 
@@ -2263,8 +2260,6 @@ TARGET_LINK_LIBRARIES(${BENCH_BINARY}
   ${SIRIKATA_CORE_LIB}
   ${PROTOCOLBUFFERS_LIBRARIES}
   )
-# Fixme incorporate old benchmark
-#ADD_EXECUTABLE(${BENCH_BINARY} ${TOP_LEVEL}/libcore/test/TCPSSTBenchmark.cpp)
 
 IF(CHROME_FOUND)
   IF(APPLE)
