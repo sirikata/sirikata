@@ -51,60 +51,58 @@ public:
     	bool foundTest = false;
 
     	if (singleSuite != NULL) {
-			RealWorldDescription wd;
+            TestRunner::setListener(this);
 
-			tracker().enterWorld( wd );
-			enterWorld( wd );
-			if ( wd.setUp() ) {
-				for ( SuiteDescription *sd = wd.firstSuite(); sd; sd = sd->next() )
-					if ( sd->active() && strcmp(singleSuite, sd->suiteName())==0 ) {
+            RealWorldDescription wd;
 
-						foundTest = true;
-						printf("\n\n========================================\n");
-						printf("RUNNING SINGLE SUITE\n%s\n", singleSuite);
-						printf("========================================");
+            tracker().enterWorld( wd );
+            if ( wd.setUp() ) {
+                for ( SuiteDescription *sd = wd.firstSuite(); sd; sd = sd->next() )
+                    if ( sd->active() && strcmp(singleSuite, sd->suiteName())==0 ) {
 
-			            tracker().enterSuite( *sd );
-			            enterSuite( *sd );
-			            if ( sd->setUp() ) {
-			                for ( TestDescription *td = sd->firstTest(); td; td = td->next() )
-			                    if ( td->active() ) {
+                        foundTest = true;
+                        printf("\n\n========================================\n");
+                        printf("RUNNING SINGLE SUITE\n%s\n", singleSuite);
+                        printf("========================================");
 
-			                        tracker().enterTest( *td );
-			                        enterTest( *td );
-			                        if ( td->setUp() ) {
-			                            td->run();
-			                            td->tearDown();
-			                        }
-			                        tracker().leaveTest( *td );
-			                        leaveTest( *td );
+                        tracker().enterSuite( *sd );
+                        if ( sd->setUp() ) {
+                            for ( TestDescription *td = sd->firstTest(); td; td = td->next() )
+                                if ( td->active() ) {
 
-			                    }
+                                    tracker().enterTest( *td );
+                                    if ( td->setUp() ) {
+                                        td->run();
+                                        td->tearDown();
+                                    }
+                                    tracker().leaveTest( *td );
 
-			                sd->tearDown();
-			            }
-			            tracker().leaveSuite( *sd );
+                                }
 
-					}
-				wd.tearDown();
-			}
-			tracker().leaveWorld( wd );
-			leaveWorld( wd );
+                            sd->tearDown();
+                        }
+                        tracker().leaveSuite( *sd );
 
+                    }
+                wd.tearDown();
+            }
+            tracker().leaveWorld( wd );
+
+            TestRunner::setListener(NULL);
     	}
     	if (singleSuite==NULL || !foundTest) {
-			printf("\n\n========================================\n");
-			printf("RUNNING ALL SUITES\n");
-			printf("========================================\n\n");
+            printf("\n\n========================================\n");
+            printf("RUNNING ALL SUITES\n");
+            printf("========================================\n\n");
 
-    		TestRunner::runAllTests( *this );
+            TestRunner::runAllTests( *this );
     	}
 
-		printf("\n\n========================================\n");
-		printf("SUMMARY: %d failed, %d warnings.\n",
-			tracker().failedTests(), tracker().warnings());
-		printf("========================================\n");
-		return tracker().failedTests();
+        printf("\n\n========================================\n");
+        printf("SUMMARY: %d failed, %d warnings.\n",
+            tracker().failedTests(), tracker().warnings());
+        printf("========================================\n");
+        return tracker().failedTests();
     }
 
     virtual void process_commandline(int& /*argc*/, char** /*argv*/) {}
