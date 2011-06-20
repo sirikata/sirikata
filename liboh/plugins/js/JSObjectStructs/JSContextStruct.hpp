@@ -24,7 +24,7 @@ class JSObjectScript;
 class EmersonScript;
 class JSPresenceStruct;
 class JSTimerStruct;
-class JSUtilObjStruct;
+class JSUtilStruct;
 class JSPositionListener;
 class JSSystemStruct;
 class VisAddParams;
@@ -228,7 +228,7 @@ private:
 
     //struct associated with the Emerson util object that is associated with this
     //context.
-    JSUtilObjStruct* mUtil;
+    JSUtilStruct* mUtil;
 
     //flag that is true if in the midst of a clear command.  False otherwise
     //(prevents messing up iterators in suspendable map).

@@ -34,6 +34,8 @@
 // A sane, simple, default. Only includes functionality from libraries.
 system.require('std/shim/restore/simpleStorage.em');
 
+
+
 std.simpleStorage.setScript(
     function()
     {
@@ -63,4 +65,4 @@ std.simpleStorage.setScript(
             simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
         }
         
-    }, true);
+    }, false);
