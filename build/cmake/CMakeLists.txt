@@ -502,6 +502,20 @@ IF(NOT HIREDIS_FOUND)
   FIND_PACKAGE(HiRedis)
 ENDIF()
 
+IF(NOT THRIFT_ROOT)
+  SET(THRIFT_ROOT ${PLATFORM_LIBS}/installed-thrift)
+ENDIF()
+IF(NOT THRIFT_FOUND)
+  FIND_PACKAGE(Thrift)
+ENDIF()
+
+IF(NOT LIBCASSANDRA_ROOT)
+  SET(LIBCASSANDRA_ROOT ${PLATFORM_LIBS}/installed-libcassandra)
+ENDIF()
+IF(NOT LIBCASSANDRA_FOUND)
+  FIND_PACKAGE(Libcassandra)
+ENDIF()
+
 #dependency: OpenCOLLADA
 IF(WIN32)
   SET(OpenCOLLADA_ROOT ${PLATFORM_LIBS}/installed-opencollada)
@@ -2481,6 +2495,39 @@ IF(SQLite3_ROOT)
             PATTERN "*.lib" EXCLUDE)
   ELSE()
     INSTALL(DIRECTORY ${SQLite3_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)
+  ENDIF()
+ENDIF()
+
+#install 
+IF(THRIFT_FOUND AND LIBCASSANDRA_FOUND)
+  IF(WIN32)
+    INSTALL(DIRECTORY ${THRIFT_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION bin/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.exe" EXCLUDE
+            PATTERN "*.lib" EXCLUDE)
+    INSTALL(DIRECTORY ${LIBCASSANDRA_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION bin/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.exe" EXCLUDE
+            PATTERN "*.lib" EXCLUDE)
+  ELSE()
+    INSTALL(DIRECTORY ${THRIFT_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)
+    INSTALL(DIRECTORY ${LIBCASSANDRA_ROOT}/lib/
             FILE_PERMISSIONS ${EXEC_PERMS}
             DESTINATION lib/
             #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern

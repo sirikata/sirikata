@@ -1,0 +1,73 @@
+# Find the thrift library.
+#
+# This module defines
+#  THRIFT_FOUND             - True if THRIFT was found.
+#  THRIFT_INCLUDE_DIRS      - Include directories for THRIFT headers.
+#  THRIFT_LIBRARIES         - Libraries for THRIFT.
+#
+# To specify an additional directory to search, set THRIFT_ROOT.
+#
+# Copyright (c) 2010, Ewen Cheslack-Postava
+# Based on FindSQLite3.cmake by:
+#  Copyright (c) 2006, Jaroslaw Staniek, <js@iidea.pl>
+#  Extended by Siddhartha Chaudhuri, 2008.
+#
+# Redistribution and use is allowed according to the terms of the BSD license.
+#
+
+SET(THRIFT_FOUND FALSE)
+SET(THRIFT_INCLUDE_DIRS)
+SET(THRIFT_LIBRARIES)
+
+IF(THRIFT_ROOT)
+  SET(SEARCH_PATHS
+    ${THRIFT_ROOT}
+    ${THRIFT_ROOT}/include
+    ${SEARCH_PATHS}
+    )
+ENDIF()
+
+FIND_PATH(THRIFT_INCLUDE_DIRS
+  NAMES thrift/Thrift.h
+  PATHS ${SEARCH_PATHS}
+  NO_DEFAULT_PATH)
+IF(NOT THRIFT_INCLUDE_DIRS)  # now look in system locations
+  FIND_PATH(THRIFT_INCLUDE_DIRS NAMES thrift/Thrift.h)
+ENDIF(NOT THRIFT_INCLUDE_DIRS)
+
+SET(THRIFT_LIBRARY_DIRS)
+IF(THRIFT_ROOT)
+  SET(THRIFT_LIBRARY_DIRS ${THRIFT_ROOT})
+  IF(EXISTS "${THRIFT_ROOT}/lib")
+    SET(THRIFT_LIBRARY_DIRS ${THRIFT_LIBRARY_DIRS} ${THRIFT_ROOT}/lib)
+  ENDIF()
+ENDIF()
+
+# Without system dirs
+FIND_LIBRARY(THRIFT_LIBRARY
+  NAMES thrift
+  PATHS ${THRIFT_LIBRARY_DIRS}
+  NO_DEFAULT_PATH
+  )
+IF(NOT THRIFT_LIBRARY)  # now look in system locations
+  FIND_LIBRARY(THRIFT_LIBRARY NAMES thrift)
+ENDIF(NOT THRIFT_LIBRARY)
+
+SET(THRIFT_LIBRARIES)
+IF(THRIFT_LIBRARY)
+  SET(THRIFT_LIBRARIES ${THRIFT_LIBRARY})
+ENDIF()
+
+IF(THRIFT_INCLUDE_DIRS AND THRIFT_LIBRARIES)
+  SET(THRIFT_FOUND TRUE)
+  IF(NOT THRIFT_FIND_QUIETLY)
+    MESSAGE(STATUS "Found Thrift: headers at ${THRIFT_INCLUDE_DIRS}, libraries at ${THRIFT_LIBRARY_DIRS} :: ${THRIFT_LIBRARIES}")
+  ENDIF(NOT THRIFT_FIND_QUIETLY)
+ELSE(THRIFT_INCLUDE_DIRS AND THRIFT_LIBRARIES)
+  SET(THRIFT_FOUND FALSE)
+  IF(THRIFT_FIND_REQUIRED)
+    MESSAGE(STATUS "Thrift not found")
+  ENDIF(THRIFT_FIND_REQUIRED)
+ENDIF(THRIFT_INCLUDE_DIRS AND THRIFT_LIBRARIES)
+
+MARK_AS_ADVANCED(THRIFT_INCLUDE_DIRS THRIFT_LIBRARIES)
