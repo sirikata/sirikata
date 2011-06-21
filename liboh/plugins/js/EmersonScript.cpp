@@ -191,17 +191,19 @@ bool EmersonScript::deRegisterPosAndMeshListener(SpaceObjectReference* sporef, S
     ProxyObjectPtr p;
     bool succeeded = false;
 
-    if (sporef == NULL)
-    {
-        //de-regestering pl from position listening to one of my own presences.
-        JSLOG(insane,"attempting to de-register position listener for one of my presences with sporef "<<*ownPres);
-        succeeded = mParent->getProxy(ownPres,p);
-    }
-    else
-    {
-        //de-registering pl from position listening to an arbitrary proxy object
-        JSLOG(insane,"attempting to de-register position listener for visible object with sporef "<<*sporef);
-        succeeded =  mParent->getProxyObjectFrom(ownPres,sporef,p);
+    if (ownPres != NULL) {
+        if (sporef == NULL)
+        {
+            //de-regestering pl from position listening to one of my own presences.
+            JSLOG(insane,"attempting to de-register position listener for one of my presences with sporef "<<*ownPres);
+            succeeded = mParent->getProxy(ownPres,p);
+        }
+        else
+        {
+            //de-registering pl from position listening to an arbitrary proxy object
+            JSLOG(insane,"attempting to de-register position listener for visible object with sporef "<<*sporef);
+            succeeded =  mParent->getProxyObjectFrom(ownPres,sporef,p);
+        }
     }
 
     if (succeeded)
@@ -587,12 +589,12 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //create an object
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
 //    v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
-    
+
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
     returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
-    
+
     return handle_scope.Close(returner);
 }
 
