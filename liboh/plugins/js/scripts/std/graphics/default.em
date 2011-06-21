@@ -39,6 +39,7 @@ system.require('drag/rotate.em');
 system.require('drag/scale.em');
 system.require('std/graphics/chat.em');
 system.require('std/graphics/physics.em');
+system.require('std/graphics/propertybox.em');
 
 (
 function() {
@@ -64,6 +65,7 @@ function() {
         this._scripter = new std.script.Scripter(this);
         this._chat = new std.graphics.Chat(this._pres, this._simulator);
         this._physics = new std.graphics.PhysicsProperties(this._simulator);
+        this._propertybox = new std.propertybox.PropertyBox(this);
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
@@ -82,6 +84,7 @@ function() {
         this._binding.addAction('toggleSuspend', std.core.bind(this._simulator.toggleSuspend, this._simulator));
         this._binding.addAction('scriptSelectedObject', std.core.bind(this.scriptSelectedObject, this));
         this._binding.addAction('scriptSelf', std.core.bind(this.scriptSelf, this));
+        this._binding.addAction('togglePropertyBox', std.core.bind(this.togglePropertyBox, this));
 
         this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
 
@@ -110,6 +113,7 @@ function() {
         this._binding.addAction('startScaleDrag', std.core.bind(this.startDrag, this, this._draggers.scale));
         this._binding.addAction('forwardMousePressToDragger', std.core.bind(this.forwardMousePressToDragger, this));
         this._binding.addAction('forwardMouseDragToDragger', std.core.bind(this.forwardMouseDragToDragger, this));
+        this._binding.addAction('updatePropertyBox', std.core.bind(this.updatePropertyBox, this));
         this._binding.addAction('forwardMouseReleaseToDragger', std.core.bind(this.forwardMouseReleaseToDragger, this));
         this._binding.addAction('stopDrag', std.core.bind(this.stopDrag, this));
 
@@ -132,6 +136,7 @@ function() {
 
             { key: ['button-pressed', 'c', 'ctrl' ], action: 'toggleChat' },
             { key: ['button-pressed', 'p', 'ctrl' ], action: 'togglePhysicsProperties' },
+            { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
 
             { key: ['mouse-click', 3], action: 'pickObject' },
             { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
@@ -161,6 +166,7 @@ function() {
             { key: ['mouse-press', 1, 'ctrl' ], action: 'startRotateDrag' },
             { key: ['mouse-press', 1, 'alt' ], action: 'startScaleDrag' },
             { key: ['mouse-press', 1, '*'], action: 'forwardMousePressToDragger' },
+            { key: ['mouse-press', 1, '*'], action: 'updatePropertyBox' },
             { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'stopDrag' }
@@ -206,6 +212,11 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.scriptSelf = function() {
         this._scripter.script(system.self);
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.togglePropertyBox = function() {
+        this._propertybox.TogglePropertyBox();
     };
 
     /** @function */
@@ -274,6 +285,12 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.forwardMouseDragToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
+        this._propertybox.HandleUpdateProperties(this._selected);
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.updatePropertyBox = function(evt) {
+        this._propertybox.HandleUpdateProperties(this._selected);
     };
 
     /** @function */
