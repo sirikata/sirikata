@@ -48,13 +48,16 @@ std.simpleStorage.setScript(
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable(true); // Self only
 
+        var init = function() {
+            simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
+        };
 
         if (system.self == system)
         {
             //if do not have a connected presence
             system.onPresenceConnected(
                 function(pres) {
-                    simulator = new std.graphics.DefaultGraphics(pres, 'ogregraphics');
+                    init();
                     system.onPresenceConnected(function(){});
                 }
             );
@@ -62,7 +65,7 @@ std.simpleStorage.setScript(
         else
         {
             //already have a connected presence, use it.
-            simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
+            init();
         }
         
     }, false);
