@@ -1079,13 +1079,13 @@ void WebView::onPaint(Berkelium::Window*win,
         compositeWidgets(win);
 }
 void WebView::onCrashed(Berkelium::Window*) {
-    SILOG(webview,detailed,"onCrashed");
+    SILOG(webview,fatal,"WebView crashed: " << viewName);
 }
 void WebView::onResponsive(Berkelium::Window*) {
-    SILOG(webview,detailed,"onResponsive");
+    SILOG(webview,error,"WebView unresponsive: " << viewName);
 }
 void WebView::onUnresponsive(Berkelium::Window*) {
-    SILOG(webview,detailed,"onUnresponsive");
+    SILOG(webview,error,"WebView became responsive again: " << viewName);
 }
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     std::string name;
