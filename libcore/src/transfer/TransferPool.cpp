@@ -33,6 +33,7 @@
 #include <sirikata/core/util/Standard.hh>
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferHandlers.hpp>
+#include <sirikata/core/transfer/MeerkatTransferHandler.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -40,7 +41,7 @@ namespace Transfer {
 void MetadataRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
     std::tr1::shared_ptr<MetadataRequest> casted =
       std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(req);
-    HttpNameHandler::getSingleton().resolve(casted, std::tr1::bind(
+    MeerkatNameHandler::getSingleton().resolve(casted, std::tr1::bind(
                 &MetadataRequest::execute_finished, this, _1, cb));
 }
 
@@ -48,7 +49,7 @@ void MetadataRequest::execute(std::tr1::shared_ptr<TransferRequest> req, Execute
 void ChunkRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
     std::tr1::shared_ptr<ChunkRequest> casted =
             std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(req);
-    HttpChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
+    MeerkatChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
             &ChunkRequest::execute_finished, this, _1, cb));
 }
 

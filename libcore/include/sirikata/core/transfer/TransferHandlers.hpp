@@ -34,15 +34,8 @@
 #ifndef SIRIKATA_TransferHandlers_HPP__
 #define SIRIKATA_TransferHandlers_HPP__
 
-#include <map>
-#include <queue>
-#include <string>
-#include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/transfer/RemoteFileMetadata.hpp>
-#include <sirikata/core/transfer/TransferPool.hpp>
-#include <sirikata/core/transfer/HttpManager.hpp>
-#include <boost/asio.hpp>
-#include <sirikata/core/network/Address.hpp>
+#include <sirikata/core/transfer/TransferData.hpp>
 #include <sirikata/core/transfer/DiskCacheLayer.hpp>
 #include <sirikata/core/transfer/MemoryCacheLayer.hpp>
 #include <sirikata/core/transfer/LRUPolicy.hpp>
@@ -91,50 +84,11 @@ public:
 };
 
 /*
- * Implements name lookups via HTTP
+ * Mediates access to a shared cache of chunk hashes to be used
+ * by multiple ChunkHandler implementations
  */
-class SIRIKATA_EXPORT HttpNameHandler
-    : public NameHandler, public AutoSingleton<HttpNameHandler> {
-
+class SIRIKATA_EXPORT SharedChunkCache {
 private:
-	//TODO: should get these from settings
-    const std::string CDN_HOST_NAME;
-    const std::string CDN_SERVICE;
-    const std::string CDN_DNS_URI_PREFIX;
-	const Network::Address mCdnAddr;
-
-public:
-	HttpNameHandler();
-	~HttpNameHandler();
-
-	/*
-	 * Resolves a metadata request via HTTP and calls callback when completed
-	 */
-	void resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback);
-
-	/*
-	 * Callback from HttpManager when an http request finishes
-	 */
-	void request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
-	        HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
-	        std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback);
-
-    static HttpNameHandler& getSingleton();
-    static void destroy();
-};
-
-/*
- * Implements chunk downloading via HTTP
- */
-class SIRIKATA_EXPORT HttpChunkHandler
-    : public ChunkHandler, public AutoSingleton<HttpChunkHandler> {
-
-private:
-    //TODO: should get these from settings
-    const std::string CDN_HOST_NAME;
-    const std::string CDN_SERVICE;
-    const std::string CDN_DOWNLOAD_URI_PREFIX;
-    const Network::Address mCdnAddr;
     static const unsigned int DISK_LRU_CACHE_SIZE;
     static const unsigned int MEMORY_LRU_CACHE_SIZE;
 
@@ -142,29 +96,11 @@ private:
     CachePolicy* mMemoryCachePolicy;
     std::vector<CacheLayer*> mCacheLayers;
     CacheLayer* mCache;
-
-    void cache_check_callback(const SparseData* data, std::tr1::shared_ptr<RemoteFileMetadata> file,
-            std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
-
 public:
-    HttpChunkHandler();
-    ~HttpChunkHandler();
-
-    /*
-     * Downloads the chunk referenced and calls callback when completed
-     */
-    void get(std::tr1::shared_ptr<RemoteFileMetadata> file,
-            std::tr1::shared_ptr<Chunk> chunk, ChunkCallback callback);
-
-    /*
-     * Callback from HttpManager when an http request finishes
-     */
-    void request_finished(std::tr1::shared_ptr<HttpManager::HttpResponse> response,
-            HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error,
-            std::tr1::shared_ptr<RemoteFileMetadata> file, std::tr1::shared_ptr<Chunk> chunk,
-            bool chunkReq, ChunkCallback callback);
-
-    static HttpChunkHandler& getSingleton();
+    SharedChunkCache();
+    ~SharedChunkCache();
+    CacheLayer* getCache();
+    static SharedChunkCache& getSingleton();
     static void destroy();
 };
 
