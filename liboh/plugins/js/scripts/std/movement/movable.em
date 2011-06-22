@@ -67,7 +67,8 @@ function() {
             setOrientation : std.core.bind(this._handleSetRot, this),
             setRotationalVelocity : std.core.bind(this._handleSetRotVel, this),
             setScale : std.core.bind(this._handleSetScale, this),
-            setPhysics : std.core.bind(this._handleSetPhysics, this)
+            setPhysics : std.core.bind(this._handleSetPhysics, this),
+            setMesh : std.core.bind(this._handleSetMesh, this)
         };
     };
 
@@ -116,6 +117,10 @@ function() {
 
     std.movement.Movable.prototype._handleSetPhysics = function(msg, sender) {
         system.self.physics = msg.physics;
+    };
+
+    std.movement.Movable.prototype._handleSetMesh = function(msg, sender) {
+        system.self.mesh = msg.mesh;
     };
 
 })();

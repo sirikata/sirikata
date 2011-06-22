@@ -78,6 +78,10 @@ function() {
         return this._remote.getScale();
     };
     /** @function */
+    std.movement.MovableRemote.prototype.getMesh = function() {
+        return this._remote.getMesh();
+    };
+    /** @function */
     std.movement.MovableRemote.prototype.setPosition = function(pos) {
         {
             request : 'movable',
@@ -126,6 +130,15 @@ function() {
             request : 'movable',
             action : 'setPhysics',
             physics : phy
+        } >> this._remote >>[];
+    };
+
+    /** @function */
+    std.movement.MovableRemote.prototype.setMesh = function(msh) {
+        {
+            request : 'movable',
+            action : 'setMesh',
+            mesh : msh
         } >> this._remote >>[];
     };
     
