@@ -749,7 +749,7 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
         killScript();
 
     if (!matchesSomeHandler) {
-        JSLOG(info,"Message did not match any files");
+        JSLOG(detailed,"Message did not match any handler patterns");
     }
 }
 
