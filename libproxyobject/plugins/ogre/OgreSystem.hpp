@@ -233,6 +233,9 @@ public:
 private:
     ResourceDownloadPlanner *dlPlanner;
     void instantiateAllObjects(ProxyManagerPtr pop);
+
+    typedef std::tr1::unordered_map<SpaceObjectReference, ProxyEntity*, SpaceObjectReference::Hasher> EntityMap;
+    EntityMap mEntityMap;
 };
 
 

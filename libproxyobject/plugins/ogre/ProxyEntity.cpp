@@ -43,12 +43,8 @@ ProxyEntityListener::~ProxyEntityListener() {
 
 ProxyEntity::ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo)
  : Entity(scene, ppo->getObjectReference().toString()),
-   mProxy(ppo)
+   mProxy()
 {
-    ppo->ProxyObjectProvider::addListener(this);
-    ppo->PositionProvider::addListener(this);
-    ppo->MeshProvider::addListener(this);
-
     mDestroyTimer = Network::IOTimer::create(
         mScene->context()->ioService,
         std::tr1::bind(&ProxyEntity::handleDestroyTimeout, this)
@@ -60,6 +56,21 @@ ProxyEntity::~ProxyEntity() {
 
     getProxy().ProxyObjectProvider::removeListener(this);
     getProxy().PositionProvider::removeListener(this);
+}
+
+void ProxyEntity::initializeToProxy(const ProxyObjectPtr &ppo) {
+    assert( ppo );
+    assert( !mProxy || (mProxy->getObjectReference() == ppo->getObjectReference()) );
+
+    if (mProxy) {
+        mProxy->ProxyObjectProvider::removeListener(this);
+        mProxy->PositionProvider::removeListener(this);
+        mProxy->MeshProvider::removeListener(this);
+    }
+    mProxy = ppo;
+    mProxy->ProxyObjectProvider::addListener(this);
+    mProxy->PositionProvider::addListener(this);
+    mProxy->MeshProvider::addListener(this);
 }
 
 BoundingSphere3f ProxyEntity::bounds() {
@@ -107,8 +118,11 @@ void ProxyEntity::handleDestroyTimeout() {
 }
 
 void ProxyEntity::destroyed() {
-    Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
-    delete this;
+    // FIXME this is triggered by the ProxyObjectListener interface. But we
+    //actually don't want to delete it here, we want to *maybe* mask things for
+    //awhile. For now, we just leak this, but clearly this needs to be fixed.
+    //Provider<ProxyEntityListener*>::notify(&ProxyEntityListener::proxyEntityDestroyed, this);
+    //delete this;
 }
 
 void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {

@@ -218,7 +218,13 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 {
     bool created = false;
 
-    ProxyEntity* mesh = new ProxyEntity(this,p);
+    ProxyEntity* mesh = NULL;
+    if (mEntityMap.find(p->getObjectReference()) != mEntityMap.end())
+        mesh = mEntityMap[p->getObjectReference()];
+    if (mesh == NULL)
+        mesh = new ProxyEntity(this,p);
+    mesh->initializeToProxy(p);
+    mEntityMap[p->getObjectReference()] = mesh;
     dlPlanner->addNewObject(p,mesh);
 
     bool is_viewer = (p->getObjectReference() == mPresenceID);
@@ -247,6 +253,10 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
     dlPlanner->removeObject(p);
+    // FIXME don't delete here because we want to mask proximity
+    // additions/removals that aren't due to actual connect/disconnect.
+    // See also ProxyEntity.cpp:destroy().
+    //mEntityMap.erase(p->getObjectReference());
 }
 
 

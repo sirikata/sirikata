@@ -708,9 +708,11 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
                 String* phy_ptr = (addition.has_physics() ? &phy : NULL);
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
-                // Mark as valid again
-                proxy_obj->validate();
             }
+            // Always mark the object as valid (either revalidated, or just
+            // valid for the first time)
+            if (proxy_obj) proxy_obj->validate();
+
 
             // Notify of any out of order loc updates
             OrphanLocUpdateManager::UpdateList orphan_loc_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);

@@ -58,14 +58,21 @@ class ProxyEntity
       public Provider<ProxyEntityListener*>
 {
 protected:
-    const ProxyObjectPtr mProxy;
+    ProxyObjectPtr mProxy;
     Network::IOTimerPtr mDestroyTimer;
 
     void handleDestroyTimeout();
 
 public:
+    /** NOTE that you *MUST* call initializeToProxy with the same ProxyObjectPtr
+     * immediately after. We can't completely split the construction and
+     * initialization right now because Entity expects a name at construction,
+     * but to initialize we may need some virtual functions.
+     */
     ProxyEntity(OgreRenderer *scene, const ProxyObjectPtr &ppo);
     virtual ~ProxyEntity();
+
+    void initializeToProxy(const ProxyObjectPtr &ppo);
 
     // Entity Overrides
     virtual BoundingSphere3f bounds();
@@ -84,7 +91,7 @@ public:
     static ProxyEntity *fromMovableObject(Ogre::MovableObject *obj);
 
     // PositionListener
-    void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
+    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
 
     // ProxyObjectListener
     virtual void validated();
