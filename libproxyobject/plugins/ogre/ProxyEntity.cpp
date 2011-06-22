@@ -105,6 +105,14 @@ void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const T
 
 void ProxyEntity::validated() {
     mDestroyTimer->cancel();
+
+    // Because this could be a new ProxyEntity, created after a bunch
+    // of updates have been received by the ProxyObject, we need to
+    // refresh its important data
+    updateLocation( mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds() );
+
+    // And the final step is to update the mesh, kicking off the
+    // download process.
     processMesh( mProxy->getMesh() );
 }
 

@@ -226,6 +226,9 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     mesh->initializeToProxy(p);
     mEntityMap[p->getObjectReference()] = mesh;
     dlPlanner->addNewObject(p,mesh);
+    // Force validation. In the case of existing ProxyObjects, this
+    // should trigger the download + display process
+    mesh->validated();
 
     bool is_viewer = (p->getObjectReference() == mPresenceID);
     if (is_viewer)
