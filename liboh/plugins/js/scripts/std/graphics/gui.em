@@ -72,8 +72,16 @@ function() {
                  typeof(arg) === 'number' ||
                  typeof(arg) === 'boolean')
             return arg.toString();
-        else
-            throw new TypeError("Invalid object type passed to GUI.call.");
+        else {
+            // Non-trivial type. Try to JSONify it.
+            try {
+                var arg_json = JSON.stringify(arg);
+                // And wrap in decoding call
+                return 'JSON.parse(' + Escape.escapeString(arg_json) + ')';
+            } catch (x) {
+                throw new TypeError("Invalid object type passed to GUI.call. Must be basic type (undefined, null, boolean, number, string) or JSON-encodable.");
+            }
+        }
     };
 
     /** Call a method in the GUI context. This is just a convenience
