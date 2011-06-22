@@ -61,6 +61,20 @@ if (typeof(sirikata) === "undefined") {
     };
 }
 
+(function() {
+     var stringify = function(x) {
+         if (typeof(x) === "string")
+             return x;
+         else if (x === null)
+             return 'null';
+         else if (x === undefined)
+             return 'undefined';
+         else if (typeof(x) === "number" ||
+                  typeof(x) === "boolean")
+             return x.toString();
+         else
+             return JSON.stringify(x);
+     };
 /** Log data to the console. The first parameter should be a log
  * level, i.e. 'fatal', 'error', 'warn', 'debug', 'info', etc. The
  * remaining arguments are converted to strings and printed, separated
@@ -68,9 +82,10 @@ if (typeof(sirikata) === "undefined") {
  */
 sirikata.log = function() {
     var args = [];
-    for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
+    for(var i = 0; i < arguments.length; i++) { args.push( stringify(arguments[i]) ); }
     sirikata.event.apply(this, ['__log'].concat(args));
 };
+})();
 
 /** A wrapper for UI code which sets up the environment for
  * isolation. You should generally execute all your UI code through
