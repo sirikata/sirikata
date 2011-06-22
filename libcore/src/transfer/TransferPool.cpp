@@ -34,6 +34,7 @@
 #include <sirikata/core/transfer/TransferPool.hpp>
 #include <sirikata/core/transfer/TransferHandlers.hpp>
 #include <sirikata/core/transfer/MeerkatTransferHandler.hpp>
+#include <sirikata/core/transfer/FileTransferHandler.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -41,16 +42,35 @@ namespace Transfer {
 void MetadataRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
     std::tr1::shared_ptr<MetadataRequest> casted =
       std::tr1::static_pointer_cast<MetadataRequest, TransferRequest>(req);
-    MeerkatNameHandler::getSingleton().resolve(casted, std::tr1::bind(
-                &MetadataRequest::execute_finished, this, _1, cb));
+    if (casted->getURI().proto() == "meerkat") {
+        MeerkatNameHandler::getSingleton().resolve(casted, std::tr1::bind(
+                    &MetadataRequest::execute_finished, this, _1, cb));
+    } else if (casted->getURI().proto() == "file") {
+        FileNameHandler::getSingleton().resolve(casted, std::tr1::bind(
+                    &MetadataRequest::execute_finished, this, _1, cb));
+    } else {
+        SILOG(transfer, error, "Got unknown protocol in Metadata request: " << casted->getURI().proto());
+        std::tr1::shared_ptr<RemoteFileMetadata> bad;
+        execute_finished(bad, cb);
+    }
 }
 
 
 void ChunkRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFinished cb) {
     std::tr1::shared_ptr<ChunkRequest> casted =
             std::tr1::static_pointer_cast<ChunkRequest, TransferRequest>(req);
-    MeerkatChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
-            &ChunkRequest::execute_finished, this, _1, cb));
+
+    if (casted->getMetadata().getURI().proto() == "meerkat") {
+        MeerkatChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
+                &ChunkRequest::execute_finished, this, _1, cb));
+    } else if (casted->getMetadata().getURI().proto() == "file") {
+        FileChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
+                &ChunkRequest::execute_finished, this, _1, cb));
+    } else {
+        SILOG(transfer, error, "Got unknown protocol in Chunk request: " << casted->getMetadata().getURI().proto());
+        std::tr1::shared_ptr<const DenseData> bad;
+        execute_finished(bad, cb);
+    }
 }
 
 void ChunkRequest::execute_finished(std::tr1::shared_ptr<const DenseData> response, ExecuteFinished cb) {
