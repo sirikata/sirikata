@@ -136,6 +136,7 @@ Entity::~Entity() {
     init(NULL);
     if (toDestroy) {
         getScene()->getSceneManager()->destroyEntity(toDestroy);
+        
     }
 
     OgreRenderer::SceneEntitiesMap::iterator iter =
@@ -419,6 +420,7 @@ void Entity::unloadMesh() {
     init(NULL);
     if (meshObj) {
         getScene()->getSceneManager()->destroyEntity(meshObj);
+        mOgreObject=NULL;
     }
     mReplacedMaterials.clear();
 }
@@ -1147,6 +1149,8 @@ void Entity::createMesh(Liveness::Token alive) {
 
     bool usingDefault = false;
     MeshdataPtr mdptr = mAssetDownload->asset();
+    AssetDownloadTaskPtr assetDownload(mAssetDownload);
+    mAssetDownload=AssetDownloadTaskPtr();
     if (!mdptr) {
         usingDefault = true;
         mdptr = mScene->defaultMesh();
@@ -1158,12 +1162,12 @@ void Entity::createMesh(Liveness::Token alive) {
 
     SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();
-
+    
     // If we already have it, just load the existing one
     if (tryInstantiateExistingMesh(hash)) return;
 
     if (!usingDefault) { // we currently assume no dependencies for default
-        for(AssetDownloadTask::Dependencies::const_iterator tex_it = mAssetDownload->dependencies().begin(); tex_it != mAssetDownload->dependencies().end(); tex_it++) {
+        for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
             const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
             if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
                 String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
