@@ -7,7 +7,8 @@ var window = undefined;
 
 var username = "";
 var pageScroll = function() {
-    window.scrollBy(0,1000); // horizontal and vertical scroll increments
+    // Disabled because we're not in our own WebView anymore. We need to scroll a div or something.
+    //window.scrollBy(0,1000); // horizontal and vertical scroll increments
 };
 
 var filterMessage = function(msg, node) {
@@ -33,7 +34,7 @@ var addMessage = function(msg) {
     var results_div = document.getElementById('Results');
     results_div.appendChild( new_p );
 
-    setTimeout('pageScroll()',100);
+    setTimeout(pageScroll,100);
 };
 Chat.addMessage = addMessage;
 
@@ -55,14 +56,20 @@ var runCommand = function() {
 // We track key up and key down to make shift + enter trigger a send
 var registerHotkeys = function(evt) {
     console.log('registerHotkeys');
+
+    var register_area = document.getElementById('username');
+    register_area.onkeyup = handleUsernameKeyUp;
+
     var command_area = document.getElementById('Command');
     command_area.onkeydown = handleCodeKeyDown;
     command_area.onkeyup = handleCodeKeyUp;
+};
+
+var login = function() {
+    username = document.getElementById('username').value;
 
     $('#chat-login').hide();
     $('#chat-log').show();
-
-    username = document.getElementById('username').value;
 };
 
 var shift_down = false;
@@ -72,13 +79,18 @@ var handleCodeKeyDown = function(evt) {
     if (evt.keyCode == 13 && shift_down) {
         runCommand();
         // We set a timeout because the addition of the new line occurs *after* this handler
-        setTimeout('clearCommand()',1);
+        setTimeout(clearCommand,1);
     }
 };
 
 var handleCodeKeyUp = function(evt) {
     if (evt.shiftKey)
         shift_down = false;
+};
+
+var handleUsernameKeyUp = function(evt) {
+    if (evt.keyCode == 13)
+        login();
 };
 
 var toggleVisible = function() {
@@ -116,8 +128,9 @@ Chat.toggleVisible = toggleVisible;
             }
         );
 
-        $('#chat-log').hide();
-        sirikata.ui.button('#chat-submit-name').click(registerHotkeys);
-        sirikata.ui.button('#chat-run-command').click(runCommand);
+    $('#chat-log').hide();
+    registerHotkeys();
+    sirikata.ui.button('#chat-submit-name').click(login);
+    sirikata.ui.button('#chat-run-command').click(runCommand);
 
 });

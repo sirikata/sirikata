@@ -53,6 +53,15 @@ std.graphics.Chat = system.Class.extend(
             var p  = new util.Pattern("name", "get_protocol");
             std.core.bind(this.onTestMessage, this) << p;
             this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this));
+            // This is a bad work around that digs into the
+            // implementation to get existing objects because this is
+            // all done after some async callbacks, meaning we're not
+            // getting prox events for everyone
+            var old_visibles = system._selfMap[system.self.toString()].proxResultSet;
+            for(var v in old_visibles) {
+                var vis = old_visibles[v];
+                this.proxAddedCallback(vis);
+            }
         },
 
         toggle: function() {
@@ -62,7 +71,6 @@ std.graphics.Chat = system.Class.extend(
         // Send a message to all current members of the chat group
         sendAll: function(msg) {
             for(var i = 0; i < this._chat_group.length; i++) {
-                
                 msg >> this._chat_group[i] >> [];
             }
         },
@@ -70,7 +78,7 @@ std.graphics.Chat = system.Class.extend(
         // Handles requests from the UI to send a chat messages.
         onSendChat: function(cmd, username, msg) {
             if (cmd == 'Chat' && msg)
-                this.sendAll( { username : username, chat : msg } );
+                this.sendAll( { 'username' : username, 'chat' : msg } );
         },
 
         // Handle a chat message from someone else.
@@ -80,6 +88,8 @@ std.graphics.Chat = system.Class.extend(
 
         // Handle an initial message from a new neighbor, adding them and listening for messages from them.
         handleNewChatNeighbor: function(msg, sender) {
+            if (msg.protocol != 'chat') return;
+
             for(var i = 0; i < this._chat_group.length; i++) {
                 if(this._chat_group[i].toString() == sender.toString())
                     return;
@@ -95,18 +105,18 @@ std.graphics.Chat = system.Class.extend(
             if(system.self.toString() == new_addr_obj.toString())
                 return;
 
-            var test_msg = { name : "get_protocol" };
+            this.sendIntro(new_addr_obj, 5);
+        },
 
+        sendIntro: function(new_addr_obj, retries) {
+            var test_msg = { "name" : "get_protocol" };
             //also register a callback
-            var p = new util.Pattern("protocol", "chat");
-            std.core.bind(this.handleNewChatNeighbor, this) << p << new_addr_obj;
-            test_msg >> new_addr_obj >> [];
+            test_msg >> new_addr_obj >> [std.core.bind(this.handleNewChatNeighbor, this), 2, std.core.bind(this.sendIntro, this, new_addr_obj, retries-1)];
         },
 
         // Reply to probes for what protocols we support.
         onTestMessage: function(msg, sender) {
-            var reply = { "protocol": "chat" };
-            reply >> sender >> [];
+            msg.makeReply( { "protocol": "chat" } ) >> [];
         }
 
     }
