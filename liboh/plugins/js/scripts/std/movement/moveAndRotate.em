@@ -1,5 +1,5 @@
 /*  Sirikata
- *  movement.em
+ *  movementAndRotate.em
  *
  *  Copyright (c) 2011, Ewen Cheslack-Postava
  *  All rights reserved.
@@ -75,12 +75,17 @@ std.movement.MoveAndRotate = system.Class.extend(
         rotating: function() {
             return !this._pres.orientationVel.isZero();
         },
-        move: function(vel, scaling) {
+        move: function(vel, scaling, overwrite) {
             var scaled_vel = vel.mul(scaling);
-            this._localVel = this._localVel.add(scaled_vel);
-            this._pres.velocity = this._pres.velocity.add(
-                this._pres.orientation.mul(scaled_vel)
-            );
+            if (overwrite) {
+                this._localVel = scaled_vel;
+                this._pres.velocity = this._pres.orientation.mul(scaled_vel);
+            }else {
+                this._localVel = this._localVel.add(scaled_vel);
+                this._pres.velocity = this._pres.velocity.add(
+                    this._pres.orientation.mul(scaled_vel)
+                );
+            }
             this._startReeval(true);
         },
         rotate: function(axis, angle) {

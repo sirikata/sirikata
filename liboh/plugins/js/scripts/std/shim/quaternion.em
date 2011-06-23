@@ -279,11 +279,14 @@ util.Quaternion.fromLookAt = function(direction, up) {
 
     // Compute new up vector and orient the y axis to be along that direction.
     var secondQuat;
-    if (direction != up) {
-        var left = direction.cross(up);
-        var newUp = left.cross(direction);
+    var left = direction.cross(up);
+    var newUp = left.cross(direction);
+    if (newUp.lengthSquared()>.00001||newUp.lengthSquared()<-.00001) {
         newUp = newUp.normal();
         var quatAxis = <0, 1, 0>.cross(newUp);
+        if (quatAxis.lengthSquared()<.00001) {
+            quatAxis = <1, 0, 0>.cross(newUp);
+        }
         var angle = util.acos(<0, 1, 0>.dot(newUp));
         quatAxis = quatAxis.normal();
         secondQuat = new util.Quaternion(quatAxis, angle);
