@@ -618,7 +618,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
           {
               var newSpace = pres.getSpaceID();
               var newPos = pres.getPosition() + pos;
-              this.createEntityScript(newPos,script,arg,mesh,scale,solidAngle,newSpace);
+              this.createEntityScript(newPos,script,arg,solidAngle,mesh,scale,newSpace);
           };
 
           /** @function
