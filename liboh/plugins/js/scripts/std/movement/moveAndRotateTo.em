@@ -77,6 +77,7 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
             this._callback=callback;
             this._destination=destination;
             this._destination_facing=destination_facing;
+            var thus=this;
             var pres=this._pres;
             var pos=pres.getPosition();
             var deltapos=this._destination.sub(pos);
@@ -96,7 +97,7 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
                            pres.setOrientation(destination_facing);
                            if (!doTurning)
                                pres.setPosition(destination);                           
-                           callback();
+                           callback.call(thus);
                        });
         }
     }
