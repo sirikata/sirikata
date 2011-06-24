@@ -52,13 +52,33 @@ system.__presence_constructor__.prototype.getSimulation =
 system.__presence_constructor__.prototype.onProxAdded =
 function (funcToCallback)
 {
-    system.__sys_register_onProxAdded(this,funcToCallback);
+    var cb_handle = system.__sys_register_onProxAdded(this,funcToCallback);
+    // Return a callback handle with just a clear method
+    return {
+        'clear' : std.core.bind(this._delProxAdded, this, cb_handle)
+    };
 };
 
 system.__presence_constructor__.prototype.onProxRemoved =
 function (funcToCallback)
 {
-    system.__sys_register_onProxRemoved(this,funcToCallback);
+    var cb_handle = system.__sys_register_onProxRemoved(this,funcToCallback);
+    // Return a callback handle with just a clear method
+    return {
+        'clear' : std.core.bind(this._delProxRemoved, this, cb_handle)
+    };
+};
+
+system.__presence_constructor__.prototype._delProxAdded =
+function (idToDelete)
+{
+    system.__sys_register_delProxAdded(this,idToDelete);
+};
+
+system.__presence_constructor__.prototype._delProxRemoved =
+function (idToDelete)
+{
+    system.__sys_register_delProxRemoved(this,idToDelete);
 };
 
 system.__presence_constructor__.prototype.proxResultSet = {};

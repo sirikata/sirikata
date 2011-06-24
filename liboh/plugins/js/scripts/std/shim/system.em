@@ -42,13 +42,13 @@ if(system == undefined)
   system = new Object();
 }
 
-function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
+function PresenceEntry(sporef, presObj)
 {
     this.sporef  = sporef;
     this.presObj = presObj;
-
     this.proxResultSet = {   };
-
+    this.proxAddCB = new Array();
+    this.proxRemCB = new Array();
     this.__getType = function()
     {
         return "presenceEntry";
@@ -63,52 +63,82 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
             system.print('\t' + s.toString() + '\n' );
         }
     };
-    
+
     //to set a prox add callback
     this.setProxAddCB = function (proxAddCB)
     {
-        if ((typeof(proxAddCB) == 'undefined')|| (proxAddCB == null))
-            this.proxAddCB  = null;                
+        if ((typeof(proxAddCB) == 'undefined') || (proxAddCB == null))
+            return null;
         else
-            this.proxAddCB  = std.core.bind(proxAddCB, this.presObj);                        
-
-
+	{
+	    for (var i = 0; i <= this.proxAddCB.length; i++)
+	    {
+		if ((this.proxAddCB[i] == null) || (typeof(this.proxAddCB[i]) == 'undefined'))
+		{
+		    this.proxAddCB[i] = std.core.bind(proxAddCB, this.presObj);
+		    return i;
+		}
+	    }
+	    // shouldn't reach here
+	    return null;
+	}
     };
     
     //to set a prox removed callback
     this.setProxRemCB = function (proxRemCB)
     {
         if ((typeof(proxRemCB) == 'undefined') || (proxRemCB == null))
-            this.proxRemCB  = null;
+            return null;
         else
-            this.proxRemCB  = std.core.bind(proxRemCB, this.presObj);        
-        
+	{
+	    for (var i = 0; i <= this.proxRemCB.length; i++)
+	    {
+		if ((this.proxRemCB[i] == null) || (typeof(this.proxRemCB[i]) == 'undefined'))
+		{
+		    this.proxRemCB[i] = std.core.bind(proxRemCB, this.presObj);
+		    return i;
+		}
+	    }
+	    // shouldn't reach here
+	    return null;
+	}
     };
-
-    this.setProxAddCB(proxAddCB);
-    this.setProxRemCB(proxRemCB);
+    
+    // to delete a prox added callback
+    this.delProxAddCB = function (addID)
+    {
+	if (!(typeof(this.proxAddCB[addID]) == 'undefined'))
+	    this.proxAddCB[addID] = null;
+    };
+    
+    // to delete a prox removed callback
+    this.delProxRemCB = function (remID)
+    {
+	if (!(typeof(this.proxRemCB[remID]) == 'undefined'))
+	    this.proxRemCB[remID] = null;
+    };
 
     //call this function when get a visible object added to prox results
     this.proxAddedEvent = function (visibleObj,visTo)
-    {
-        
+    {        
         //add to proxResultSet
         this.proxResultSet[visibleObj.toString()] = visibleObj;
-        //trigger callback
-        if ((typeof(this.proxAddCB) != 'undefined') && (this.proxAddCB != null))
-            this.proxAddCB(visibleObj);
+        //trigger all non-null non-undefined callbacks
+	for (var i in this.proxAddCB)
+	    if ((typeof(this.proxAddCB[i]) != 'undefined') && (this.proxAddCB[i] != null))
+		this.proxAddCB[i](visibleObj);
     };
 
     //call this function when get a visible object removed to prox results
     this.proxRemovedEvent = function (visibleObj,visTo)
     {
-        //add to proxResultSet
-
+        //remove from to proxResultSet
         delete this.proxResultSet[visibleObj.toString()];
 
-        //trigger callback
-        if ((typeof(this.proxRemCB) != 'undefined') && (this.proxRemCB != null))
-            this.proxRemCB(visibleObj);
+        //trigger all non-null non-undefined callbacks
+	for (var i in this.proxRemCB)
+	    if ((typeof(this.proxRemCB[i]) != 'undefined') && (this.proxRemCB[i] != null))
+		this.proxRemCB[i](visibleObj);
     };
     
     this.debugPrint = function(printFunc)
@@ -136,7 +166,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
       system.addToSelfMap= function(toAdd)
       {
           var selfKey = (toAdd == null) ? this.__NULL_TOKEN__ : toAdd.toString();
-          this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd,null,null);
+          this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd);
       };
 
      
@@ -924,7 +954,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
       system.__sys_register_onProxAdded= function (presCalling, funcToCall)
       {
           if (presCalling.toString()  in this._selfMap)
-              this._selfMap[presCalling.toString()].setProxAddCB(funcToCall);
+              return this._selfMap[presCalling.toString()].setProxAddCB(funcToCall);
           else
               throw 'Error: do not have a presence in map matching ' + presCalling.toString();
       };
@@ -936,11 +966,28 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
       system.__sys_register_onProxRemoved = function (presCalling, funcToCall)
       {
           if (presCalling.toString()  in this._selfMap)
-              this._selfMap[presCalling.toString()].setProxRemCB(funcToCall);
+              return this._selfMap[presCalling.toString()].setProxRemCB(funcToCall);
           else
               throw 'Error: do not have a presence in map matching ' + presCalling.toString();
       };
+	  
+	 /**
+	  @presCalling this is the presence that wants to unregister onProxAdded function
+	  @addID this is the ID number of the onProxAdded function to delete
+	  */
+	  system.__sys_register_delProxAdded = function (presCalling, addID)
+	  {
+		  this._selfMap[presCalling.toString()].delProxAddCB(addID);
+	  };
 
+	 /**
+	  @presCalling this is the presence that wants to unregister onProxRemoved function
+	  @remID this is the ID number of the onProxRemoved function to delete
+	  */
+	  system.__sys_register_delProxRemoved = function (presCalling, remID)
+	  {
+		  this._selfMap[presCalling.toString()].delProxRemCB(remID);
+	  };
 
       /** @function
        @description Library include mechanism. Calling require makes it so that system searches for file named by argument passed in. If system hasn't already executed this file, it reads file, and executes it.
