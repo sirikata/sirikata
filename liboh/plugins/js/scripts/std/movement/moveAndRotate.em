@@ -96,6 +96,15 @@ std.movement.MoveAndRotate = system.Class.extend(
             this._localOrientVel = newVel;
             this._startReeval(true);
         },
+        rotateLocalOrientation: function(orientationVelocity, overwrite) {
+            var newVel = orientationVelocity;
+            if (!overwrite) {
+                newVel=this._localOrientVel.mul(orientationVelocity);
+            }
+            this._pres.orientationVel = newVel;
+            this._localOrientVel = newVel;
+            this._startReeval(true);
+        },
         _startReeval: function(is_first) {
             this._moving = this.moving();
             this._rotating = this.rotating();
