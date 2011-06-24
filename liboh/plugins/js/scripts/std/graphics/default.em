@@ -58,9 +58,6 @@ function() {
         this._pres = pres;
         this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this, cb));
     };
-    std.graphics.DefaultGraphics.prototype.randomDestination=function() {
-        return <Math.random()*40,Math.random()*30, Math.random()*30>;
-    };
     std.graphics.DefaultGraphics.prototype.finishInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
         this._cameraMode = 'first';
@@ -228,6 +225,7 @@ function() {
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.scriptSelectedObject = function() {
+        this._presenceList.addObject(this._selected.toString(), 'Scripted');
         this._scripter.script(this._selected);
     };
 
