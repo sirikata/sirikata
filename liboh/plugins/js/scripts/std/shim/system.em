@@ -502,7 +502,14 @@ function PresenceEntry(sporef, presObj)
       };
 
       /** @function
-       @param scriptFile The Emerson file to import and execute in the current script
+       *  @description Loads a file and evaluates its contents. Note
+       *  that this version *always* imports the file, even if it was
+       *  previously imported.
+       *  @param scriptFile The Emerson file to import and execute in the current script
+       *  @throws {Exception} If the import leads to circular
+       *  dependencies, it will throw an exception. Use system.require
+       *  to include each file only once.
+       *  @see system.require
        */
       system.import = function(/** String */ scriptFile)
       {
@@ -990,9 +997,12 @@ function PresenceEntry(sporef, presObj)
 	  };
 
       /** @function
-       @description Library include mechanism. Calling require makes it so that system searches for file named by argument passed in. If system hasn't already executed this file, it reads file, and executes it.
-       @see system.import
-       @param filename The path to look for the file to include
+       *  @description Loads and evaluates a file if it has not
+       *  already been loaded.  Unlike system.import, this ensures
+       *  that each file is imported at most one time. This is usually
+       *  what you want to use.
+       *  @param filename The path to look for the file to include
+       *  @see system.import
        */
       system.require = function(/** String */ filename)
       {
