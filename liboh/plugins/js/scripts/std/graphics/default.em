@@ -31,7 +31,7 @@
  */
 
 system.require('graphics.em');
-system.require('std/movement/moveAndRotate.em');
+system.require('std/movement/pursue.em');
 system.require('std/script/scripter.em');
 system.require('inputbinding.em');
 system.require('drag/move.em');
@@ -57,6 +57,9 @@ function() {
     std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
         this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this, cb));
+    };
+    std.graphics.DefaultGraphics.prototype.randomDestination=function() {
+        return <Math.random()*40,Math.random()*30, Math.random()*30>;
     };
     std.graphics.DefaultGraphics.prototype.finishInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
@@ -175,7 +178,7 @@ function() {
             { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'stopDrag' }
         ];
-
+        
         this._binding.addBindings(bindings);
 
         if (cb && typeof(cb) === "function")

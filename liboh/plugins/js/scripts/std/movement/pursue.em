@@ -37,19 +37,23 @@ system.require('moveAndRotateTo.em');
  */
 std.movement.Pursue = std.movement.MoveAndRotateTo.extend(
     {
-        init:function(pres,update_cb, destination_visual, speed, callback, callback_distance){
+        init:function(pres,update_cb, destination_visual, speed, angular_speed, callback, callback_distance){
             this._time_quantum=.5;
             this._speed=speed;
+            this._angular_speed=angular_speed;
             this._pursue_callback=callback;
             this._callback_distance=callback_distance;
-            std.movement.MoveAndRotateTo.prototype.init.call(this,pres,undefined,undefined,speed,update_cb,'rotation');
+            std.movement.MoveAndRotateTo.prototype.init.call(this,pres,undefined,undefined,speed,angular_speed, update_cb,'rotation');
             if (destination_visual) {
-                this.follow(destination_visual,speed, callback);
+                this.follow(destination_visual,speed, angular_speed, callback);
             }
         },
-        follow:function(destination_visual, speed, callback, callback_distance) {
+        follow:function(destination_visual, speed, angular_speed, callback, callback_distance) {
            if (speed) {
                this._speed=speed;
+           }
+           if (angular_speed) {
+               this._angular_speed=angular_speed;
            }
            this._destination_visual=destination_visual;
            this._pursue_callback=callback;
@@ -57,24 +61,14 @@ std.movement.Pursue = std.movement.MoveAndRotateTo.extend(
            this.follow_step();
         },
         follow_step:function(){
-           if (!this._pres) {
-               system.print("Defunct this\n");
-               return;
-           }else if (!this._destination_visual) {
-               system.print("Defunct visual\n");
-               return;
-           }
            var dest=this._destination_visual.getPosition();
            var pos =this._pres.getPosition();
            var forward=dest.sub(pos);
            var forward_length=forward.length();
            var abort_follow=false;
-           system.print("Going from "+pos+" to "+dest+"\nIs "+forward_length+" < "+this._callback_distance);          
            if (forward_length<this._callback_distance) {
-               system.print("YES\n");          
                if (this._pursue_callback) {
                    abort_follow=this._pursue_callback.call(this);
-                   system.print(" IT IS \n"+abort_follow);          
                }else abort_follow=true;
            }
            if (!abort_follow){

@@ -39,16 +39,19 @@ system.require('moveAndRotate.em');
  */
 std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
     {
-        init:function(pres,update_cb, destination, destination_facing, speed, callback){
+        init:function(pres,update_cb, destination, destination_facing, speed, angular_speed, callback){
             this._speed=speed;
             std.movement.MoveAndRotate.prototype.init.call(this,pres,update_cb,'rotation');
             if (destination) {
-                this.goTo(destination,destination_facing,speed, callback);
+                this.goTo(destination,destination_facing,speed, angular_speed, callback);
             }
         },
-        goTo:function(destination,destination_facing, speed, callback) {
+        goTo:function(destination,destination_facing, speed, angular_speed, callback) {
            if (speed) {
                this._speed=speed;
+           }
+           if (angular_speed){
+               this._angular_speed=angular_speed;
            }
            var pos =this._pres.getPosition();
            var forward=destination.sub(pos).normal();
@@ -82,17 +85,20 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
             var pos=pres.getPosition();
             var deltapos=this._destination.sub(pos);
             var distance=deltapos.length();
-            var time = distance/this._speed;
             var inverseOrientation=pres.getOrientation().inverse();
             var rotation=inverseOrientation.mul(this._destination_facing);
+            var angle = Math.abs(rotation.angle());
+            var time = distance/this._speed;
+            if (angle/this._angular_speed>time){
+                time = angle/this._angular_speed;
+            }
             pres.setOrientationVel(rotation.scale(1.0/time));
             //this.move(deltapos.scale(this._speed/distance));
             if (doTurning) {
-                this.move(<0,0,-1>,this._speed,true);
+                this.move(<0,0,-1>,distance/time,true);
             }else {
-                this.move(inverseOrientation.mul(deltapos),this._speed/distance,true);
+                this.move(inverseOrientation.mul(deltapos),1.0/time,true);
             }
-            //system.print("At "+pos.x+" "+pos.y+" "+pos.z+" going to "+destination.x+" "+destination.y+" "+destination.z+"\n");
             system.timeout(time,function() {
                            pres.setOrientation(destination_facing);
                            if (!doTurning)
