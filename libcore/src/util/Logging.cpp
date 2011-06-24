@@ -41,7 +41,9 @@ void *Sirikata_Logging_OptionValue_moduleLevel;
 }
 namespace Sirikata { namespace Logging {
 
+extern "C" {
 std::ostream* SirikataLogStream = &std::cerr;
+}
 
 void setLogStream(std::ostream* logfs) {
     SirikataLogStream = logfs;
