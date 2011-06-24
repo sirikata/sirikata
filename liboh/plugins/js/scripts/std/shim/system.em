@@ -704,7 +704,7 @@ function PresenceEntry(sporef, presObj, proxAddCB, proxRemCB)
               if (typeof(script) == 'function')
               {
                   //var funcString = quoteEscaper(script.toString());
-                  var funcString = Escape.escapeString(script.toString(),null);
+                  var funcString = Escape.escapeString(quoteEscaper(script.toString()),null);
                   if (arg !== null)
                   {
                       var serializedArg = Escape.escapeString(this.serialize(arg), '@');
