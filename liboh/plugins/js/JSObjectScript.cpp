@@ -240,7 +240,7 @@ void JSObjectScript::initialize(const String& args, const String& script)
     v8::Context::Scope context_scope(mContext->mContext);
     if (!script.empty()) {
         JSLOG(detailed,"Have an initial script to execute.  Executing.");
-
+        
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));

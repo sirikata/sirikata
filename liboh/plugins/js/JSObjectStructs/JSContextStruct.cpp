@@ -302,9 +302,9 @@ bool JSContextStruct::hasPresence(const SpaceObjectReference& sporef)
 //sOrigin inside of this context.
 v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents, ScriptOrigin* sOrigin)
 {
-    CHECK_EMERSON_SCRIPT_ERROR(emerScript,eval,jsObjScript);
-    return emerScript->eval(native_contents, sOrigin,this);
+    return jsObjScript->eval(native_contents,sOrigin,this);
 }
+
 
 /*
   This function should be called from system object.  It initiates the reset
