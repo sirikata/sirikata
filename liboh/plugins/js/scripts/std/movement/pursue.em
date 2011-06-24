@@ -67,9 +67,11 @@ std.movement.Pursue = std.movement.MoveAndRotateTo.extend(
            var forward_length=forward.length();
            var abort_follow=false;
            if (forward_length<this._callback_distance) {
+               this.abort(true);
                if (this._pursue_callback) {
-                   abort_follow=this._pursue_callback.call(this);
-               }else abort_follow=true;
+                   this._pursue_callback.call(this);
+               }
+               abort_follow=true;
            }
            if (!abort_follow){
                forward=forward.scale(1./forward_length);

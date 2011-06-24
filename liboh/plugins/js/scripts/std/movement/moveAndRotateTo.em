@@ -76,6 +76,15 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
                });
            });
         },
+        abort:function(doClearVelocityAndAngular) {
+           if (this._moveTimer) {
+               this._moveTimer.clear();
+           }
+           if (doClearVelocityAndAngular) {
+               this._pres.setOrientationVel(util.Quaternion(0,0,0,0));
+               this._pres.setVelocity(util.Vec3(0,0,0));
+           }
+        },
         goToWaypoint:function(destination,destination_facing,doTurning,callback) {
             this._callback=callback;
             this._destination=destination;
@@ -99,7 +108,8 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
             }else {
                 this.move(inverseOrientation.mul(deltapos),1.0/time,true);
             }
-            system.timeout(time,function() {
+            this._moveTimer=system.timeout(time,function() {
+                           thus._moveTimer=null;
                            pres.setOrientation(destination_facing);
                            if (!doTurning)
                                pres.setPosition(destination);                           
