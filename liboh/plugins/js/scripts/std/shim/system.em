@@ -54,6 +54,17 @@ function PresenceEntry(sporef, presObj)
         return "presenceEntry";
     };
 
+    //returns a copy of the proximity result set that this entry is managing for its presence.
+    this.getProxResultSet = function()
+    {
+        var returner = {};
+        for (var s in this.proxResultSet)
+        {
+            returner[s] = this.proxResultSet[s];
+        }
+        return returner;
+    };
+    
     //print prox result set.
     this.printProxResultSet = function()
     {
@@ -169,8 +180,6 @@ function PresenceEntry(sporef, presObj)
           this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd);
       };
 
-     
-     
      system.printSelfMap = function()
      {
          __system.print('\nPrinting self map\n');
@@ -193,18 +202,6 @@ function PresenceEntry(sporef, presObj)
      };
      
 
-     // /**
-     //  @param {presence} presToGet  Presence object for the presence
-     //  that we want to grab the presenceEntry for.
-      
-     //  @return Returns the presenceEntry associated with presToGet, or
-     //  returns null if it doesn't exist.
-     //  */
-     // system.getPresenceEntry = function (presToGet)
-     // {
-     //     
-     //     
-     // };
 
      /**
       @param {string} toChangeTo  The sporef of the presence that we want to change self to.
@@ -913,6 +910,19 @@ function PresenceEntry(sporef, presObj)
       };
 
 
+     /** @function
+      @param {presence} presToGetSetFor The presence object whose prox result set you want this function to return.  If the presence object does not
+      @return {object} Each index of object is the identifier for a separate visible object.  The value of that index is the visible itself.
+      */
+     system.getProxSet = function (presToGetSetFor)
+     {
+         var key = presToGetSetFor.toString();
+         if (!(key in system._selfMap))
+             throw 'Error in system.getProxSet.  Do not have a presence with the identifier specified.';
+
+         return system._selfMap[key].getProxResultSet();
+     };
+     
      /**
       @param visObj is a visible object that has now moved into presence's result set
       @param presVisTo is a string that is the identifier for the presence the visible is visible to.
