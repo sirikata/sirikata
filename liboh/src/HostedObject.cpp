@@ -115,7 +115,7 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
 HostedObject::~HostedObject() {
     destroy();
-    
+
     if (mPresenceData != NULL)
         delete mPresenceData;
 }
@@ -492,7 +492,7 @@ void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::
         delete msg;
     }
     else {
-        SILOG(cppoh,debug,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
+        SILOG(cppoh,detailed,"[HO] Undelivered message from " << src_ep << " to " << dst_ep);
         delete msg;
     }
 
