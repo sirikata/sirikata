@@ -41,6 +41,20 @@ void *Sirikata_Logging_OptionValue_moduleLevel;
 }
 namespace Sirikata { namespace Logging {
 
+std::ostream* SirikataLogStream = &std::cerr;
+
+void setLogStream(std::ostream* logfs) {
+    SirikataLogStream = logfs;
+}
+
+void finishLog() {
+    SirikataLogStream->flush();
+    if (SirikataLogStream != &std::cerr) {
+        delete SirikataLogStream;
+        SirikataLogStream = &std::cerr;
+    }
+}
+
 typedef std::tr1::unordered_map<const char*, String> CapsNameMap;
 static CapsNameMap LogModuleStrings;
 

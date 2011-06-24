@@ -53,6 +53,13 @@ enum LOGGING_LEVEL {
 SIRIKATA_FUNCTION_EXPORT const String& LogModuleString(const char* base);
 SIRIKATA_FUNCTION_EXPORT const char* LogLevelString(LOGGING_LEVEL lvl, const char* lvl_as_string);
 
+// Public so the macros work efficiently instead of another call
+extern "C" SIRIKATA_EXPORT std::ostream* SirikataLogStream;
+
+
+SIRIKATA_FUNCTION_EXPORT void setLogStream(std::ostream* logfs);
+SIRIKATA_FUNCTION_EXPORT void finishLog();
+
 } }
 #if 1
 # ifdef DEBUG_ALL
@@ -74,7 +81,7 @@ SIRIKATA_FUNCTION_EXPORT const char* LogLevelString(LOGGING_LEVEL lvl, const cha
         if (SILOGP(module,lvl)) {                                       \
             std::ostringstream __log_stream;                            \
             __log_stream << value;                                      \
-            std::cerr << __log_stream.str();                            \
+            (*Sirikata::Logging::SirikataLogStream) << __log_stream.str(); \
         }                                                               \
     } while (0)
 # define SILOGBARE(module,lvl,value) SILOGNOCR(module,lvl,value << std::endl)

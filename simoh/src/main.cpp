@@ -156,5 +156,7 @@ int main(int argc, char** argv) {
 
     sync.stop();
 
+    Sirikata::Logging::finishLog();
+
     return 0;
 }

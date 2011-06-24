@@ -303,5 +303,7 @@ int main(int argc, char** argv) {
 
     plugins.gc();
 
+    Sirikata::Logging::finishLog();
+
     return 0;
 }

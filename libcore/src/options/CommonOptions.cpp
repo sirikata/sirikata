@@ -66,6 +66,7 @@ void InitOptions() {
 
         .addOption(new OptionValue("rand-seed", "0", Sirikata::OptionValueType<uint32>(), "The random seed to synchronize all servers"))
 
+        .addOption(new OptionValue(OPT_LOG_FILE, "", Sirikata::OptionValueType<String>(), "Filename to log SILOG messages to. If empty or -, uses stderr"))
         .addOption(new OptionValue(STATS_TRACE_FILE, "trace.txt", Sirikata::OptionValueType<String>(), "The filename to save the trace to"))
 
         .addOption(new OptionValue("time-server", "", Sirikata::OptionValueType<String>(), "The server to sync with"))
@@ -89,6 +90,20 @@ void InitOptions() {
 }
 
 namespace {
+void setLogOutput() {
+    String logfile = GetOptionValue<String>(OPT_LOG_FILE);
+    if (logfile != "" && logfile != "-") {
+        // Try to open the log file
+        std::ostream* logfs = new std::ofstream(logfile.c_str());
+        if (*logfs) {
+            Sirikata::Logging::setLogStream(logfs);
+            return;
+        }
+    }
+    // If that failed, go back to cerr
+    Sirikata::Logging::SirikataLogStream = &std::cerr;
+}
+
 void reportVersion() {
     bool do_version = GetOptionValue<bool>("version");
     if (!do_version) return;
@@ -106,12 +121,14 @@ void FakeParseOptions() {
 void ParseOptions(int argc, char** argv) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parse(argc, argv);
+    setLogOutput();
     reportVersion();
 }
 
 void ParseOptionsFile(const String& fname, bool required) {
     OptionSet* options = OptionSet::getOptions(SIRIKATA_OPTIONS_MODULE,NULL);
     options->parseFile(fname, required);
+    setLogOutput();
     reportVersion();
 }
 
@@ -133,6 +150,7 @@ void ParseOptions(int argc, char** argv, const String& config_file_option) {
     // avoid overwriting.
     options->parse(argc, argv, false);
 
+    setLogOutput();
     reportVersion();
 }
 

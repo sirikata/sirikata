@@ -177,7 +177,7 @@ int main (int argc, char** argv) {
         obj_factory->generate();
     }
 
-    
+
     ctx->run(1);
 
     ctx->cleanup();
@@ -206,6 +206,8 @@ int main (int argc, char** argv) {
 
     plugins.gc();
     sync.stop();
+
+    Sirikata::Logging::finishLog();
 
     return 0;
 }

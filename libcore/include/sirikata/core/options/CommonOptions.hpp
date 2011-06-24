@@ -39,6 +39,7 @@
 
 #define OPT_PLUGINS               "plugins"
 
+#define OPT_LOG_FILE                  "log-file"
 #define STATS_TRACE_FILE     "stats.trace-filename"
 #define PROFILE                    "profile"
 
