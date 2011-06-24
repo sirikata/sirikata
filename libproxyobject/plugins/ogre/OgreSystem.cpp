@@ -509,6 +509,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return createWindowFile(params);
     else if(name == "addModuleToUI")
         return addModuleToUI(params);
+    else if(name == "addTextModuleToUI")
+        return addTextModuleToUI(params);
     else if(name == "createWindowHTML")
         return createWindowHTML(params);
     else if(name == "setInputHandler")
@@ -602,6 +604,21 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
 
     // Note the ../, this is because that loadModule executes from within data/chrome
     mMouseHandler->mUIWidgetView->evaluateJS("loadModule('../" + html_url + "')");
+    Invokable* inn = mMouseHandler->mUIWidgetView;
+    return Invokable::asAny(inn);
+}
+
+boost::any OgreSystem::addTextModuleToUI(std::vector<boost::any>& params) {
+    if (params.size() != 3) return boost::any();
+    if (!anyIsString(params[1]) || !anyIsString(params[2])) return boost::any();
+
+    String window_name = anyAsString(params[1]);
+    String module_js = anyAsString(params[2]);
+
+    if (!mMouseHandler) return boost::any();
+
+    // Note that we assume escaped js
+    mMouseHandler->mUIWidgetView->evaluateJS("loadModuleText(" + module_js + ")");
     Invokable* inn = mMouseHandler->mUIWidgetView;
     return Invokable::asAny(inn);
 }

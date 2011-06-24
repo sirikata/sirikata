@@ -45,6 +45,15 @@ function loadModule(path) {
 	$LAB.script(path).wait();
 }
 
+/* This is really unsafe, but under the current model of using a
+ * single page for all UIs, its really the only way to load UIs
+ * directly from JS text delivered to us via, e.g., scripts, rather
+ * than from files.
+ */
+function loadModuleText(js_text) {
+    eval(js_text);
+}
+
 </script>
 
 </head>

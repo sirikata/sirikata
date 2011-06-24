@@ -34,6 +34,7 @@ if (typeof(std) === "undefined") std = {};
 if (typeof(std.graphics) === "undefined") std.graphics = {};
 
 system.require('gui.em');
+system.require('std/escape.em');
 
 (
 function() {
@@ -124,6 +125,13 @@ function() {
     /** Request that the given URL be added as a module in the UI. */
     std.graphics.Graphics.prototype.addGUIModule = function(name, url, cb) {
     	return new std.graphics.GUI(name, this._simulator.invoke("addModuleToUI", name, url), cb);
+    };
+
+    /** Request that the given script text be added as a module in the UI. */
+    std.graphics.Graphics.prototype.addGUITextModule = function(name, js_text, cb) {
+        // addTextModuleToUI expects pre-escaped strings
+        js_text = Escape.escapeString(js_text);
+    	return new std.graphics.GUI(name, this._simulator.invoke("addTextModuleToUI", name, js_text), cb);
     };
 
     /** Request that the given URL be presented as a widget. */
