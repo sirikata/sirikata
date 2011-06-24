@@ -49,10 +49,12 @@
 system.__presence_constructor__.prototype.getSimulation =
     system.__presence_constructor__.prototype.runSimulation;
 
+
+
 system.__presence_constructor__.prototype.onProxAdded =
-function (funcToCallback)
+function (funcToCallback,onExisting)
 {
-    var cb_handle = system.__sys_register_onProxAdded(this,funcToCallback);
+    var cb_handle = system.__sys_register_onProxAdded(this,funcToCallback,onExisting);
     // Return a callback handle with just a clear method
     return {
         'clear' : std.core.bind(this._delProxAdded, this, cb_handle)
@@ -68,6 +70,7 @@ function (funcToCallback)
         'clear' : std.core.bind(this._delProxRemoved, this, cb_handle)
     };
 };
+
 
 system.__presence_constructor__.prototype._delProxAdded =
 function (idToDelete)
@@ -302,6 +305,30 @@ system.__presence_constructor__.prototype.__getType = function()
 
     presence.prototype.getMesh = function(){}
 
+
+      /** @function
+       @description Allows a scripter to set a callback to execute
+       when visibles are added to the proximity set.  Setting
+       onExisting to true, allows scripter to set a callback for any
+       visibles added to the proximity set or that already exist in
+       the set.
+       @param {function} cb Callback function to execute on proximity events.
+       @param {bool} (optional) onExisting If true, cb will execute
+       over all existing visibles in result set as well as all future
+       visibles added to set.
+       @return {object} Can call clear on this object to de-register
+       cb.
+       */
+      presence.prototype.onProxAdded = function(){ };
+
+      /**@function
+       @description Allws a scirpter to set a callback that executes
+       when visibles are removed from the proximity set.
+       @param {function} cb Callback function to execute when visible
+       leaves this presence's proximity result set.
+       @return {object} Can call clear on this object to de-register cb.
+       */
+      presence.prototype.onProxRemoved = function(){ };
 
     /**@function
        @description Sets the solid angle query that is issued from this presence.

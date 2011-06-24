@@ -922,6 +922,8 @@ function PresenceEntry(sporef, presObj)
 
          return system._selfMap[key].getProxResultSet();
      };
+
+
      
      /**
       @param visObj is a visible object that has now moved into presence's result set
@@ -965,13 +967,34 @@ function PresenceEntry(sporef, presObj)
      baseSystem.registerProxRemovedHandler(proxRemovedManager);
 
      /**
-      @presCalling this is the presence that want to register onProxAdded function for
-      @funcToCall this is the function to call when a new presence joins presCalling's result set.
+      @presCalling this is the presence that want to register
+      onProxAdded function for
+      @funcToCall this is the function to call when a new presence
+      joins presCalling's result set.
+      @onExisting {bool} (Optional) If true, runs the prox added callback
+      funcToCall over all presences already existing in result set.
       */
-      system.__sys_register_onProxAdded= function (presCalling, funcToCall)
+      system.__sys_register_onProxAdded= function (presCalling, funcToCall,onExisting)
       {
+          if (typeof(onExisting) == 'undefined')
+              onExisting = false;
+          
           if (presCalling.toString()  in this._selfMap)
-              return this._selfMap[presCalling.toString()].setProxAddCB(funcToCall);
+          {
+              var prevSelfKey = system.self.toString();
+              var returner = this._selfMap[presCalling.toString()].setProxAddCB(funcToCall);                  
+              if (onExisting)
+              {
+                  system.__setBehindSelf( system._selfMap[presCalling.toString()].presObj);
+                  var existing = system.getProxSet(presCalling);
+                  for (var s in existing)
+                      funcToCall(existing);
+                  
+                  system.__setBehindSelf( system._selfMap[prevSelfKey].presObj);
+              }
+              
+              return returner;
+          }
           else
               throw 'Error: do not have a presence in map matching ' + presCalling.toString();
       };
