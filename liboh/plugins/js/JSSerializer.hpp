@@ -60,7 +60,7 @@ class JSSerializer
 
 
     static void serializeVisible(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
-    static void fillVisible(Sirikata::JS::Protocol::IJSMessage&, const SpaceObjectReference& listenTo, const SpaceObjectReference& listenFrom); // Reused by serializePresence
+    static void fillVisible(Sirikata::JS::Protocol::IJSMessage&, const SpaceObjectReference& listenTo);// Reused by serializePresence
     static void serializePresence(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
     static void serializeSystem(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
     static void serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs );

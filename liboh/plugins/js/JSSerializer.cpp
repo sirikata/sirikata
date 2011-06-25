@@ -131,14 +131,16 @@ void JSSerializer::serializeVisible(v8::Local<v8::Object> jsVisible, Sirikata::J
     return ;
   }
 
-  EmersonScript* emerScript     =           vstruct->emerScript;
-  SpaceObjectReference* sporef       =      vstruct->sporefToListenTo;
-  SpaceObjectReference* sporefVisTo  =    vstruct->sporefToListenFrom;
+  EmersonScript* emerScript     =           vstruct->jpp->emerScript;
+  SpaceObjectReference sporef       =      vstruct->getSporef();
 
-  fillVisible(jsmessage, *sporef, *sporefVisTo);
+  fillVisible(jsmessage, sporef);
 }
 
-void JSSerializer::fillVisible(Sirikata::JS::Protocol::IJSMessage& jsmessage, const SpaceObjectReference& listenTo, const SpaceObjectReference& listenFrom) {
+// void JSSerializer::fillVisible(Sirikata::JS::Protocol::IJSMessage& jsmessage, const SpaceObjectReference& listenTo, const SpaceObjectReference& listenFrom) {
+
+void JSSerializer::fillVisible(Sirikata::JS::Protocol::IJSMessage& jsmessage, const SpaceObjectReference& listenTo)
+{
   // serialize SpaceObjectReference
   Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
   jsf.set_name(TYPEID_FIELD_NAME);
@@ -150,10 +152,6 @@ void JSSerializer::fillVisible(Sirikata::JS::Protocol::IJSMessage& jsmessage, co
   jsf_value = jsf.mutable_value();
   jsf_value.set_s_value(listenTo.toString());
 
-  jsf = jsmessage.add_fields();
-  jsf.set_name(VISIBLE_TO_SPACEOBJREF_STRING);
-  jsf_value = jsf.mutable_value();
-  jsf_value.set_s_value(listenFrom.toString());
 }
 
 void JSSerializer::serializePresence(v8::Local<v8::Object> jsPresence, Sirikata::JS::Protocol::IJSMessage&jsmessage,int32& toStampWith,ObjectVec& allObjs)
@@ -167,8 +165,7 @@ void JSSerializer::serializePresence(v8::Local<v8::Object> jsPresence, Sirikata:
     SILOG(js, error, "Could not decode Presence in JSSerializer::serializePresence: "+ err_msg );
     return;
   }
-
-  fillVisible(jsmessage, *presStruct->getSporef(), *presStruct->getSporef());
+  fillVisible(jsmessage, presStruct->getSporef());
 }
 
 std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toStampWith)
@@ -549,7 +546,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
     if(isVisible)
     {
       SpaceObjectReference visibleObj;
-      SpaceObjectReference visibleTo;
 
       for(int i = 0; i < jsmessage.fields_size(); i++)
       {
@@ -557,13 +553,9 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
 
         if(jsf.name() == VISIBLE_SPACEOBJREF_STRING)
-        {
           visibleObj = SpaceObjectReference(jsvalue.s_value());
-        }
-      }
 
-      //visibleTo is always set to null spaceObjectReference
-      visibleTo = SpaceObjectReference::null();
+      }
 
 
       //error if not in context, won't be able to create a new v8 object.
@@ -575,11 +567,9 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       }
       v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
 
-      deserializeTo = emerScript->createVisibleObject(visibleObj,visibleTo,NULL, ctx);  //create
-                                                                                          //the
-                                                                                          //vis
-                                                                                          //obj
-                                                                                          //through objScript
+      //create the vis obj through objScript
+      deserializeTo = emerScript->createVisiblePersistent(visibleObj,NULL,ctx);  
+
       return true;
     }
 

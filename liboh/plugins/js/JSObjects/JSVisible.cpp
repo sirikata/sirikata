@@ -155,12 +155,12 @@ v8::Handle<v8::Value> getSpace(const v8::Arguments& args)
     if (jsvis == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
 
-    SpaceObjectReference* sporef = jsvis->getToListenTo();
+    SpaceObjectReference sporef = jsvis->getSporef();
 
-    if (sporef == NULL)
+    if (sporef == SpaceObjectReference::null())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  SpaceID is not defined.")));
 
-    return v8::String::New(sporef->space().toString().c_str());
+    return v8::String::New(sporef.space().toString().c_str());
 }
 
 v8::Handle<v8::Value>  getOref(const v8::Arguments& args)
@@ -174,12 +174,12 @@ v8::Handle<v8::Value>  getOref(const v8::Arguments& args)
     if (jspres == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
 
-    SpaceObjectReference* sporef = jspres->getToListenTo();
+    SpaceObjectReference sporef = jspres->getSporef();
 
-    if (sporef == NULL)
+    if (sporef == SpaceObjectReference::null())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  ObjectID is not defined.")));
 
-    return v8::String::New(sporef->object().toString().c_str());
+    return v8::String::New(sporef.object().toString().c_str());
 }
 
 
@@ -316,7 +316,7 @@ v8::Handle<v8::Value> getStillVisible(const v8::Arguments& args)
     if (jsvis == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
-    return jsvis->getStillVisible();
+    return jsvis->struct_getStillVisible();
 
 }
 
@@ -344,7 +344,7 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())));
 
 
-    return jsvis->checkEqual(jsvis2);
+    return jsvis->struct_checkEqual(jsvis2);
 }
 
 

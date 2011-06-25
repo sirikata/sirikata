@@ -33,7 +33,6 @@
 #include <sirikata/oh/Platform.hpp>
 
 #include "JSObjectScriptManager.hpp"
-#include "JSObjectScript.hpp"
 #include "EmersonScript.hpp"
 
 #include "JSObjects/JSVec3.hpp"

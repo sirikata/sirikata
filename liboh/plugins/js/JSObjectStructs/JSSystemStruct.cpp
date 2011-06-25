@@ -101,7 +101,7 @@ JSSystemStruct::~JSSystemStruct()
 
 
 
-v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,VisAddParams* addParams)
+v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,JSProxyData* addParams)
 {
     return associatedContext->struct_create_vis(sporefWatching,addParams);
 }
@@ -147,7 +147,7 @@ v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct
     //checking capability for this presence
     if(getContext()->getAssociatedPresenceStruct() != NULL)
     {
-        if (*(getContext()->getAssociatedPresenceStruct()->getToListenTo()) == *(jspres->getToListenTo()))
+        if (getContext()->getAssociatedPresenceStruct()->getSporef() == jspres->getSporef())
         {
             if (!canSend)
                 return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to send messages.")));
@@ -194,7 +194,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canEval()
 //new context will have at most as many permissions as parent context.
 //note: if presStruct is null, just means use the one that is associated with
 //this system's context
-v8::Handle<v8::Value> JSSystemStruct::struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct)
+v8::Handle<v8::Value> JSSystemStruct::struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct)
 {
     sendEveryone &= canSend;
     recvEveryone &= canRecv;

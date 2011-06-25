@@ -86,7 +86,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
         return false;
     }
 
-    SpaceObjectReference* spref1 =  jsposlist->getToListenTo();
+    SpaceObjectReference spref1 =  jsposlist->getSporef();
 
     
     //decode the expected sender
@@ -101,10 +101,10 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
             return false;
         }
 
-        SpaceObjectReference* spref2 = jsplExpectedSender->getToListenTo();
+        SpaceObjectReference spref2 = jsplExpectedSender->getSporef();
 
         //check if the senders match
-        if ( (*spref1)  != (*spref2))  //the senders do not match.  do not fire
+        if ( spref1  != spref2)  //the senders do not match.  do not fire
             return false;
     }
 

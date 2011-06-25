@@ -6,10 +6,11 @@
 
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
-
+#include "JSPositionListener.hpp"
 
 namespace Sirikata {
 namespace JS {
+
 
 struct PresStructRestoreParams
 {
@@ -50,7 +51,7 @@ struct PresStructRestoreParams
 
 //need to forward-declare this so that can reference this inside
 class EmersonScript;
-class JSPositionListener;
+
 
 //note: only position and isConnected will actually set the flag of the watchable
 struct JSPresenceStruct : public JSPositionListener,
@@ -72,7 +73,15 @@ struct JSPresenceStruct : public JSPositionListener,
     ~JSPresenceStruct();
 
 
-    void connect(const SpaceObjectReference& _sporef);
+    /**
+       @param {SpaceObjectReference} _sporef The new sporef for this object now
+       that it is connected.
+       @param {JSProxyPtr} newJPP Before this presenceStruct was connected, we
+       didn't have a sporef, and therefore, had to use an empty proxy ptr in the
+       positionlistener for this presence.  Now that we know sporef, we also
+       know the proxy ptr should set in position listener.  
+     */
+    void connect(const SpaceObjectReference& _sporef, std::tr1::shared_ptr<JSProxyData> newJPP);
     void disconnectCalledFromObjScript();
 
 
@@ -94,7 +103,7 @@ struct JSPresenceStruct : public JSPositionListener,
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
 
 
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt,bool canEval);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt,bool canEval);
 
 
     void addAssociatedContext(JSContextStruct*);
@@ -127,17 +136,9 @@ struct JSPresenceStruct : public JSPositionListener,
     v8::Handle<v8::Value>  toString()
     {
         v8::HandleScope handle_scope;
-        String sporefReturner = "Presence unconnected";
-        if (sporefToListenTo != NULL)
-            sporefReturner = sporefToListenTo->toString();
+        String sporefReturner = getSporef().toString();
         return v8::String::New(sporefReturner.c_str(), sporefReturner.length());
     }
-
-    SpaceObjectReference* getSporef()
-    {
-        return getToListenTo();
-    }
-
 
 private:
     uint32 mContID;

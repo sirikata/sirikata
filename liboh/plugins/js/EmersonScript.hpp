@@ -47,23 +47,23 @@
 
 #include "JSPattern.hpp"
 #include "JSObjectStructs/JSEventHandlerStruct.hpp"
-#include "JSObjectScriptManager.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
+#include "JSObjectStructs/JSContextStruct.hpp"
+#include "JSObjectStructs/JSVisibleStruct.hpp"
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
-#include "JSVisibleStructMonitor.hpp"
 #include "JSEntityCreateInfo.hpp"
 #include "JSObjectScript.hpp"
+#include "JSObjectScriptManager.hpp"
+#include "JSVisibleManager.hpp"
 
 namespace Sirikata {
 namespace JS {
 
 
-
-
 class EmersonScript : public JSObjectScript,
-                      public SessionEventListener,
-                      public JSVisibleStructMonitor
+                      public JSVisibleManager,
+                      public SessionEventListener
 {
 
 public:
@@ -73,6 +73,7 @@ public:
     // SessionEventListener Interface
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,HostedObject::PresenceToken token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
+    
     //called by JSPresenceStruct.  requests the parent HostedObject disconnect
     //the presence associated with jspres
     void requestDisconnect(JSPresenceStruct* jspres);
@@ -95,6 +96,7 @@ public:
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx);
 
+    
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -110,7 +112,7 @@ public:
 
     v8::Handle<v8::Value> killEntity(JSContextStruct* jscont);
 
-    void sendMessageToEntity(SpaceObjectReference* reffer, SpaceObjectReference* from, const std::string& msgBody);
+    void sendMessageToEntity(const SpaceObjectReference& reffer, const SpaceObjectReference& from, const std::string& msgBody);
 
 
     //takes the c++ object jspres, creates a new visible object out of it, if we
@@ -134,26 +136,35 @@ public:
 
 
     //handling basic datatypes for JSPresences
-    void setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString);
-    void setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec);
-    void setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec);
-    void setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
-    void setVisualScaleFunction(const SpaceObjectReference* sporef, float newScale);
-    void setOrientationVelFunction(const SpaceObjectReference* sporef, const Quaternion& quat);
+    void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
+    void setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec);
+    void setVelocityFunction(const SpaceObjectReference sporef, const Vector3f& velVec);
+    void setOrientationFunction(const SpaceObjectReference sporef, const Quaternion& quat);
+    void setVisualScaleFunction(const SpaceObjectReference sporef, float newScale);
+    void setOrientationVelFunction(const SpaceObjectReference sporef, const Quaternion& quat);
 
-    void setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa);
-    SolidAngle getQueryAngle(const SpaceObjectReference* sporef);
+    void setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa);
+    SolidAngle getQueryAngle(const SpaceObjectReference sporef);
 
 
-    v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference* sporef);
-    void setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhysicsString);
+    v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference sporef);
+    void setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhysicsString);
 
     /****Methods that return V8 wrappers for c++ objects **/
-    //attempts to make a new jsvisiblestruct if don't already have one in
-    //jsvismonitor matching visibleObj+visibleTo.  Wraps the c++ jsvisiblestruct
-    //in v8 object.
-    v8::Local<v8::Object> createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,VisAddParams* addParams, v8::Handle<v8::Context> ctx);
-    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,VisAddParams* addParams, v8::Handle<v8::Context> ctx);
+
+
+    /**
+       Creates a JSVisibleStruct and wraps it in a persistent v8 object that is
+       returned.  
+       
+       @param {SpaceObjectReference} visibleObj Will make a JSVisibleStruct out
+       of this spaceobjectreference.
+
+       @param {JSProxyData} addParams If don't have a proxy object in the world
+       with sporef visibleObj, will try to fill in JSVisibleStruct data with
+       these values (note: if NULL), fills in default values.
+     */
+    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,JSProxyData* addParams, v8::Handle<v8::Context> ctx);
 
 
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
@@ -205,12 +216,11 @@ public:
 
     JSContextStruct* rootContext() const { return mContext; }
 
-
+    HostedObjectPtr mParent;
 
 private:
 
     //wraps internal c++ jsvisiblestruct in a v8 object
-    v8::Local<v8::Object> createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
     //Called internally by script when guaranteed to be outside of handler
@@ -236,9 +246,6 @@ private:
 
     //Does not delete handler.  Removes it from the eventHandlerList.
     void removeHandler(JSEventHandlerStruct* toRemove);
-
-
-    HostedObjectPtr mParent;
 
 
     //This function returns to you the current value of present token and

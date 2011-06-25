@@ -5,31 +5,19 @@
 #include "../JSObjects/JSFields.hpp"
 #include "../JSLogging.hpp"
 #include <v8.h>
+#include "Util.hpp"
 
 namespace Sirikata {
 namespace JS {
 
-
-JSVisibleStruct::JSVisibleStruct(EmersonScript* parent, const SpaceObjectReference& whatsVisible, const SpaceObjectReference& toWhom,VisAddParams* addParams)
- : JSPositionListener(parent,addParams),
-   stillVisible(new bool(false))
+JSVisibleStruct::JSVisibleStruct(JSProxyPtr addParams)
+ : JSPositionListener(addParams)
 {
-    if ((addParams != NULL) && (addParams->mIsVisible != NULL))
-        *stillVisible = *addParams->mIsVisible;
-
-    JSPositionListener::setListenTo(&whatsVisible,&toWhom);
-
-    //only register as pos listener if still visible is true
-    *stillVisible = JSPositionListener::registerAsPosAndMeshListener();
 }
-
 
 
 JSVisibleStruct::~JSVisibleStruct()
 {
-    //do not delete jsObjScript: someone else is responsible for that.
-    emerScript->deRegisterVisibleStruct(this);
-    delete stillVisible;
 }
 
 
@@ -72,30 +60,11 @@ JSVisibleStruct* JSVisibleStruct::decodeVisible(v8::Handle<v8::Value> senderVal,
 }
 
 
-void JSVisibleStruct::notifyNotVisible()
-{
-    JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is no longer visible to "<<*sporefToListenFrom);
-
-    *stillVisible = false;
-    JSPositionListener::deregisterAsPosAndMeshListener();
-}
-
-void JSVisibleStruct::notifyVisible()
-{
-    //if you were already visible, do nothing.  you should be registered okay.
-    if (*stillVisible == false)
-    {
-        JSLOG(insane,"Visible struct for object " << *sporefToListenTo <<" is now visible to "<<*sporefToListenFrom);
-        *stillVisible = true;
-        JSPositionListener::registerAsPosAndMeshListener();
-    }
-}
-
 v8::Handle<v8::Value> JSVisibleStruct::toString()
 {
     v8::HandleScope handle_scope;  //for garbage collection.
 
-    std::string s = sporefToListenTo->toString();
+    std::string s = getSporef().toString();
     v8::Local<v8::String> ret = v8::String::New(s.c_str(), s.length());
     v8::Persistent<v8::String> pret = v8::Persistent<v8::String>::New(ret);
     return pret;
@@ -105,8 +74,8 @@ v8::Handle<v8::Value> JSVisibleStruct::toString()
 //just prints out associated space object reference, position, and whether still visible
 v8::Handle<v8::Value> JSVisibleStruct::printData()
 {
-    std::cout << "Printing Object Reference :" << sporefToListenTo->toString() << "\n";
-    std::cout << "Still visible : "<<*stillVisible<<"\n";
+    std::cout << "Printing Object Reference :" << getSporef().toString() << "\n";
+    std::cout << "Still visible : "<<getStillVisible() <<"\n";
     std::cout<<JSPositionListener::getPosition()<<"\n\n";
 
     return v8::Undefined();
@@ -114,27 +83,32 @@ v8::Handle<v8::Value> JSVisibleStruct::printData()
 
 
 
-bool JSVisibleStruct::getStillVisibleCPP()
+void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> containsVisStruct, void* otherArg)
 {
-    return *stillVisible;
+    if (!containsVisStruct->IsObject())
+    {
+        JSLOG(error, "Error when cleaning up jsvisible.  Received a visible to clean up that wasn't an object.");
+        return;
+    }
+
+    v8::Handle<v8::Object> vis = containsVisStruct->ToObject();
+
+    //check to make sure object has adequate number of fields.
+    CHECK_INTERNAL_FIELD_COUNT(vis,JSVisible,VISIBLE_FIELD_COUNT);
+
+    //delete typeId, and return if have incorrect params for type id
+    DEL_TYPEID_AND_CHECK(vis,jsvis,VISIBLE_TYPEID_STRING);
+
+    String err = "Potential error when cleaning up jsvisible.  Could not decode visible struct.";
+    JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(vis,err);
+
+    //jsvis now contains a pointer to a jsvisible struct, which we can now
+    //delete.
+    delete jsvis;
+    containsVisStruct.Dispose();
+
+    JSLOG(insane,"Freeing memory for jsvisible.");
 }
-
-
-v8::Handle<v8::Value> JSVisibleStruct::getStillVisible()
-{
-    v8::HandleScope handle_scope;  //for garbage collection.
-    return v8::Boolean::New(*stillVisible);
-}
-
-
-v8::Handle<v8::Value> JSVisibleStruct::checkEqual(JSVisibleStruct* jsvis)
-{
-    v8::HandleScope handle_scope;  //for garbage collection.
-    return v8::Boolean::New(  *sporefToListenTo == *(jsvis->getToListenTo()));
-}
-
-
-
 
 
 

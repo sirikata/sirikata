@@ -60,7 +60,6 @@
 #include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
 #include "emerson/EmersonException.h"
-#include "lexWhenPred/LexWhenPredUtil.h"
 #include "emerson/Util.h"
 #include "JSSystemNames.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
@@ -70,7 +69,7 @@
 #include "JSObjects/JSObjectsUtils.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
-#include "JSVisibleStructMonitor.hpp"
+
 
 
 using namespace v8;
@@ -81,10 +80,11 @@ namespace JS {
 
 EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan)
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
+   JSVisibleManager(this),
+   mParent(ho),
    mHandlingEvent(false),
    mResetting(false),
    mKilling(false),
-   mParent(ho),
    mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
 {
@@ -180,7 +180,7 @@ void EmersonScript::resetScript()
  */
 void EmersonScript::resetPresence(JSPresenceStruct* jspresStruct)
 {
-    mPresences[*(jspresStruct->getToListenTo())] = jspresStruct;
+    mPresences[jspresStruct->getSporef()] = jspresStruct;
 }
 
 
@@ -227,9 +227,6 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
 
-    //notifies the underlying struct associated with this object (if any exist)
-    //that the proxy object is no longer visible.
-    JSVisibleStructMonitor::checkNotifyNowNotVis(proximateObject->getObjectReference(),querier);
 
     PresenceMapIter iter = mPresences.find(querier);
     if (iter == mPresences.end())
@@ -244,19 +241,14 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
         return;
     }
 
-    JSVisibleStruct* jsvis =  checkVisStructExists(proximateObject->getObjectReference(),querier);
-    if (jsvis == NULL)
-    {
-        JSLOG(error, "Error in notifyProximateGone of JSObjectScript.  Before receiving a notification that an object is no longer visible, should have received a notification that it was originally visible.  Error on object: "<<proximateObject->getObjectReference()<<" for querier: "<<querier<<".  Aborting call now.");
-        return;
-    }
+    JSVisibleStruct* jsvis =  createVisStruct(proximateObject->getObjectReference());
 
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
 
     //jswrap the object
     //should be in context from createVisibleObject call
-    v8::Handle<v8::Object> outOfRangeObject = createVisibleObject(jsvis,mContext->mContext);
+    v8::Handle<v8::Object> outOfRangeObject = createVisiblePersistent(jsvis,mContext->mContext);
 
     TryCatch try_catch;
 
@@ -275,31 +267,9 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 
 }
 
-
-
-//creates a js object associated with the jsvisiblestruct
-//will enter and exit the context passed in to make the object before returning
-v8::Local<v8::Object> EmersonScript::createVisibleObject(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn)
+v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,JSProxyData* addParams, v8::Handle<v8::Context> ctx)
 {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctxToCreateIn);
-
-    v8::Local<v8::Object> returner = mManager->mVisibleTemplate->GetFunction()->NewInstance();
-    returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
-    returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
-
-    return handle_scope.Close(returner);
-}
-
-//attempts to make a new jsvisible struct...may be returned an existing one.
-//then wraps it as v8 object.
-v8::Persistent<v8::Object>  EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,VisAddParams* addParams, v8::Handle<v8::Context>ctx)
-{
-    SpaceObjectReference visTo = SpaceObjectReference::null();
-    if ((addParams != NULL) && (addParams->mSporefWatchingFrom != NULL))
-        visTo = * addParams->mSporefWatchingFrom;
-
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visTo,addParams);
+    JSVisibleStruct* jsvis =  createVisStruct(visibleObj,addParams);
     return createVisiblePersistent(jsvis,ctx);
 }
 
@@ -313,21 +283,12 @@ v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(JSVisibleStruc
     returner->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(jsvis));
     returner->SetInternalField(TYPEID_FIELD,v8::External::New(new String(VISIBLE_TYPEID_STRING)));
 
-
     v8::Persistent<v8::Object> returnerPers = v8::Persistent<v8::Object>::New(returner);
-
+    returnerPers.MakeWeak(NULL,&JSVisibleStruct::visibleWeakReferenceCleanup);
     return returnerPers;
 }
 
 
-
-//attempts to make a new jsvisible struct...may be returned an existing one.
-//then wraps it as v8 object.
-v8::Local<v8::Object> EmersonScript::createVisibleObject(const SpaceObjectReference& visibleObj,const SpaceObjectReference& visibleTo,VisAddParams* addParams, v8::Handle<v8::Context> ctx)
-{
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, visibleObj, visibleTo, addParams);
-    return createVisibleObject(jsvis,ctx);
-}
 
 
 //if can't find visible, will just return self object
@@ -338,18 +299,9 @@ v8::Handle<v8::Value> EmersonScript::findVisible(const SpaceObjectReference& pro
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
 
-
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::checkVisStructExists(proximateObj);
-
-    if (jsvis != NULL)
-    {
-        v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext->mContext);
-        return returnerPers;
-    }
-
-
-    //otherwise return undefined
-    return v8::Undefined();
+    JSVisibleStruct* jsvis = createVisStruct(proximateObj);
+    v8::Persistent<v8::Object> returnerPers =createVisiblePersistent(jsvis, mContext->mContext);
+    return returnerPers;
 }
 
 //debugging code to output the sporefs of all the presences that I have in mPresences
@@ -370,10 +322,7 @@ void EmersonScript::printMPresences()
 void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
-
-    bool isVis = true;
-    VisAddParams vap(&isVis);
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this, proximateObject->getObjectReference(), querier, &vap);
+    JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
 
     // Invoke user callback
     PresenceMapIter iter = mPresences.find(querier);
@@ -452,6 +401,9 @@ void EmersonScript::killScript()
 
 void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
+    //register underlying visible manager to listen for proxy creation events on hostedobjectproxymanager
+    mParent->getProxyManager(name.space(),name.object())->addListener(this);
+    
     //register for scripting messages from user
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
@@ -492,12 +444,19 @@ void EmersonScript::callbackUnconnected(const SpaceObjectReference& name, Hosted
     {
         if (token == (*iter)->getPresenceToken())
         {
+
             JSPresenceStruct* pstruct = *iter;
             mPresences[name] = pstruct;
+            //before the presence was connected, didn't have a sporef, and
+            //had to set presence's position listener with a blank proxyptr.
+            //can now set it with a real one that listens as it moves/changes in
+            //the world.
+            JSProxyPtr proxPtr  =  createProxyPtr(name, JSProxyPtr());
+
             mUnconnectedPresences.erase(iter);
             // Make sure this call is last since it invokes a callback which
             // could in turn call connect requests and modify mUnconnectedPresences.
-            pstruct->connect(name);
+            pstruct->connect(name,proxPtr);
             return;
         }
     }
@@ -509,14 +468,16 @@ void EmersonScript::callbackUnconnected(const SpaceObjectReference& name, Hosted
 //the presence associated with jspres
 void EmersonScript::requestDisconnect(JSPresenceStruct* jspres)
 {
-    SpaceObjectReference sporef = (*(jspres->getToListenTo()));
+    SpaceObjectReference sporef = (jspres->getSporef());
     mParent->disconnectFromSpace(sporef.space(), sporef.object());
 }
 
 void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
     JSPresenceStruct* jspres = findPresence(name);
-
+    //deregister underlying visible manager from listen for proxy creation events on hostedobjectproxymanager
+    mParent->getProxyManager(name.space(),name.object())->removeListener(this);
+    
     if (jspres != NULL)
         jspres->disconnectCalledFromObjScript();
 }
@@ -557,18 +518,17 @@ bool EmersonScript::valid() const
 
 
 
-
-void EmersonScript::sendMessageToEntity(SpaceObjectReference* sporef, SpaceObjectReference* from, const std::string& msgBody)
+void EmersonScript::sendMessageToEntity(const SpaceObjectReference& sporef, const SpaceObjectReference& from, const std::string& msgBody)
 {
 
-    std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(*from);
+    std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(from);
     if (iter == mMessagingPortMap.end())
     {
         JSLOG(error,"Trying to send from a sporef that does not exist");
         return;
     }
 
-    ODP::Endpoint dest (sporef->space(),sporef->object(),Services::COMMUNICATION);
+    ODP::Endpoint dest (sporef.space(),sporef.object(),Services::COMMUNICATION);
     MemoryReference toSend(msgBody);
 
     iter->second->send(dest,toSend);
@@ -673,11 +633,7 @@ v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src,
     SpaceObjectReference from(src.space(), src.object());
     SpaceObjectReference to  (dst.space(), dst.object());
 
-
-    bool isVis = false;
-    VisAddParams vap(&isVis);
-
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,from,to,&vap);
+    JSVisibleStruct* jsvis = createVisStruct(from);
     v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
 
     return returner;
@@ -869,7 +825,9 @@ void EmersonScript::deletePres(JSPresenceStruct* toDelete)
             break;
         }
     }
-    mParent->disconnectFromSpace(toDelete->getSporef()->space(),toDelete->getSporef()->object());
+
+    SpaceObjectReference sporefToDelete = toDelete->getSporef();
+    mParent->disconnectFromSpace(sporefToDelete.space(),sporefToDelete.object());
     delete toDelete;
 }
 
@@ -900,15 +858,9 @@ v8::Handle<v8::Object> EmersonScript::makeEventHandlerObject(JSEventHandlerStruc
 //user
 v8::Persistent<v8::Object> EmersonScript::presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont)
 {
-    bool isVis = true;
-    VisAddParams vap(&isVis);
-
-
-    JSVisibleStruct* jsvis = JSVisibleStructMonitor::createVisStruct(this,*(jspres->getSporef()),*(jspres->getSporef()),&vap);
-
+    JSVisibleStruct* jsvis = createVisStruct(jspres->getSporef());
     return createVisiblePersistent(jsvis, jscont->mContext);
 }
-
 
 
 JSPresenceStruct*  EmersonScript::addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token)
@@ -1050,80 +1002,76 @@ HostedObject::PresenceToken EmersonScript::incrementPresenceToken()
 }
 
 
-void EmersonScript::setOrientationVelFunction(const SpaceObjectReference* sporef,const Quaternion& quat)
+void EmersonScript::setOrientationVelFunction(const SpaceObjectReference sporef,const Quaternion& quat)
 {
-    mParent->requestOrientationVelocityUpdate(sporef->space(),sporef->object(),quat);
+    mParent->requestOrientationVelocityUpdate(sporef.space(),sporef.object(),quat);
 }
 
-
-
-
-void EmersonScript::setPositionFunction(const SpaceObjectReference* sporef, const Vector3f& posVec)
+void EmersonScript::setPositionFunction(const SpaceObjectReference sporef, const Vector3f& posVec)
 {
-    mParent->requestPositionUpdate(sporef->space(),sporef->object(),posVec);
+    mParent->requestPositionUpdate(sporef.space(),sporef.object(),posVec);
 }
-
 
 
 //velocity
-void EmersonScript::setVelocityFunction(const SpaceObjectReference* sporef, const Vector3f& velVec)
+void EmersonScript::setVelocityFunction(const SpaceObjectReference sporef, const Vector3f& velVec)
 {
-    mParent->requestVelocityUpdate(sporef->space(),sporef->object(),velVec);
+    mParent->requestVelocityUpdate(sporef.space(),sporef.object(),velVec);
 }
 
 
 
 //orientation
-void  EmersonScript::setOrientationFunction(const SpaceObjectReference* sporef, const Quaternion& quat)
+void  EmersonScript::setOrientationFunction(const SpaceObjectReference sporef, const Quaternion& quat)
 {
-    mParent->requestOrientationDirectionUpdate(sporef->space(),sporef->object(),quat);
+    mParent->requestOrientationDirectionUpdate(sporef.space(),sporef.object(),quat);
 }
 
 
 
 //scale
-void EmersonScript::setVisualScaleFunction(const SpaceObjectReference* sporef, float newscale)
+void EmersonScript::setVisualScaleFunction(const SpaceObjectReference sporef, float newscale)
 {
-    BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef->space(),sporef->object());
+    BoundingSphere3f bnds = mParent->requestCurrentBounds(sporef.space(),sporef.object());
     bnds = BoundingSphere3f(bnds.center(), newscale);
-    mParent->requestBoundsUpdate(sporef->space(),sporef->object(), bnds);
+    mParent->requestBoundsUpdate(sporef.space(),sporef.object(), bnds);
 }
 
 
 
 //mesh
 //FIXME: May want to have an error handler for this function.
-void  EmersonScript::setVisualFunction(const SpaceObjectReference* sporef, const std::string& newMeshString)
+void  EmersonScript::setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString)
 {
     //FIXME: need to also pass in the object reference
-    mParent->requestMeshUpdate(sporef->space(),sporef->object(),newMeshString);
+    mParent->requestMeshUpdate(sporef.space(),sporef.object(),newMeshString);
 }
 
 //physics
-v8::Handle<v8::Value> EmersonScript::getPhysicsFunction(const SpaceObjectReference* sporef)
+v8::Handle<v8::Value> EmersonScript::getPhysicsFunction(const SpaceObjectReference sporef)
 {
-    String curphy = mParent->requestCurrentPhysics(sporef->space(),sporef->object());
+    String curphy = mParent->requestCurrentPhysics(sporef.space(),sporef.object());
     return v8::String::New(curphy.c_str(), curphy.size());
 }
 
 //FIXME: May want to have an error handler for this function.
-void EmersonScript::setPhysicsFunction(const SpaceObjectReference* sporef, const String& newPhyString)
+void EmersonScript::setPhysicsFunction(const SpaceObjectReference sporef, const String& newPhyString)
 {
     //FIXME: need to also pass in the object reference
-    mParent->requestPhysicsUpdate(sporef->space(), sporef->object(), newPhyString);
+    mParent->requestPhysicsUpdate(sporef.space(), sporef.object(), newPhyString);
 }
 
 
 //just sets the solid angle query for the object.
-void EmersonScript::setQueryAngleFunction(const SpaceObjectReference* sporef, const SolidAngle& sa)
+void EmersonScript::setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa)
 {
-    mParent->requestQueryUpdate(sporef->space(), sporef->object(), sa);
+    mParent->requestQueryUpdate(sporef.space(), sporef.object(), sa);
 }
 
 
-SolidAngle EmersonScript::getQueryAngle(const SpaceObjectReference* sporef)
+SolidAngle EmersonScript::getQueryAngle(const SpaceObjectReference sporef)
 {
-    SolidAngle returner = mParent->requestQueryAngle(sporef->space(),sporef->object());
+    SolidAngle returner = mParent->requestQueryAngle(sporef.space(),sporef.object());
     return returner;
 }
 

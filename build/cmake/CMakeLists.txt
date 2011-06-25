@@ -1921,7 +1921,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSGlobal.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleStructMonitor.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSVisibleManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSystemStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSUtilStruct.cpp

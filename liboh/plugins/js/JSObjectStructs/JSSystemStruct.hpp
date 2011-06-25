@@ -5,19 +5,17 @@
 #include <v8.h>
 #include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
-#include "JSPositionListener.hpp"
 #include <sirikata/oh/Storage.hpp>
+#include "JSPresenceStruct.hpp"
+#include "JSContextStruct.hpp"
 
 namespace Sirikata {
 namespace JS {
 
 //need to forward-declare this so that can reference this inside
-class JSContextStruct;
 class JSEventHandlerStruct;
-class JSPresenceStruct;
-class JSPositionListener;
-class VisAddParams;
-struct PresStructRestoreParams;
+
+
 
 //Most calls in this class just go straight through into associated context to
 //make a sibling call.  Split system into intermediate layer between v8-bound
@@ -57,7 +55,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, VisAddParams* addParams);
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, JSProxyData* addParams);
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);
 
@@ -83,7 +81,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist, bool isSuspended);
 
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct);
 
     JSContextStruct* getContext();
 

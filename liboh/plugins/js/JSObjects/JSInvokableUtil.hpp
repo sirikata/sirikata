@@ -77,12 +77,12 @@ inline boost::any V8ToAny(EmersonScript* parent, v8::Handle<v8::Value> val) {
         if ( JSVisible::isVisibleObject(val) ) {
             std::string errmsg;
             JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(val,errmsg);
-            return Invokable::asAny((*jsvis->getToListenTo()));
+            return Invokable::asAny((jsvis->getSporef()));
         }
         else if ( JSPresence::isPresence(val) ) {
             std::string errmsg;
             JSPresenceStruct* jspres = JSPresenceStruct::decodePresenceStruct(val,errmsg);
-            return Invokable::asAny(*jspres->getToListenTo());
+            return Invokable::asAny(jspres->getSporef());
         }
 
         // Otherwise do normal translation

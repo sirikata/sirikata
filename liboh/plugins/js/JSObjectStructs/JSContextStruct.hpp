@@ -4,7 +4,6 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 #include <vector>
-#include "JSSystemStruct.hpp"
 #include "../JSSystemNames.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "JSSuspendable.hpp"
@@ -27,12 +26,12 @@ class JSTimerStruct;
 class JSUtilStruct;
 class JSPositionListener;
 class JSSystemStruct;
-class VisAddParams;
 struct PresStructRestoreParams;
+class JSProxyData;
 
 struct JSContextStruct : public JSSuspendable
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference* home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -59,7 +58,7 @@ struct JSContextStruct : public JSSuspendable
     //this context
     v8::Handle<v8::Object> struct_getSystem();
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing,VisAddParams* addParams);
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing,JSProxyData* addParams);
 
     v8::Handle<v8::Value> killEntity();
 
@@ -143,7 +142,7 @@ struct JSContextStruct : public JSSuspendable
     //canCreateEnt is whether have capability to create entities
     //canEval is whether have capability to call system.eval directly in context
     //creates a new context, and hangs the child into suspendables map.
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference* canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
+    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
 
     //create a timer that will fire cb in dur seconds from now,
     v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
@@ -216,7 +215,7 @@ private:
 
     //homeObject is the spaceobjectreference of an object that you can always
     //send messages to regardless of permissions
-    SpaceObjectReference* mHomeObject;
+    SpaceObjectReference mHomeObject;
 
     //a pointer to the system struct that will be used as a system-like object
     //inside of the context.

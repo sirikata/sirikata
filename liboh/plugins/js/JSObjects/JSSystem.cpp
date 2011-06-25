@@ -458,12 +458,13 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
     if (! physicsDecoded)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
+    //fixme : lkjs
 
-    bool isVisible = false;
+    // bool isVisible = false;
+    // VisAddParams vap(&sporefVisWatchingFrom,&location,&orientation,&bsph,&meshString,&physicsString,&isVisible);
+//    return jssys->struct_create_vis(sporefVisWatching,&vap);
 
-    VisAddParams vap(&sporefVisWatchingFrom,&location,&orientation,&bsph,&meshString,&physicsString,&isVisible);
-
-    return jssys->struct_create_vis(sporefVisWatching,&vap);
+    return v8::ThrowException( v8::Exception::Error(v8::String::New("In re-write of pos listener.  Need to re-work root_createVisible.")));
 }
 
 
@@ -1225,7 +1226,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 
 
     //getting who can sendTo
-    SpaceObjectReference* canSendTo = NULL;
+    SpaceObjectReference canSendTo = SpaceObjectReference::null();
     if (args[1]->IsNull())
         canSendTo = jsPresStruct->getSporef();
     else
@@ -1239,7 +1240,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
         if (jsposlist == NULL)
             return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-        canSendTo = jsposlist->getToListenTo();
+        canSendTo = jsposlist->getSporef();
     }
 
 
@@ -1286,8 +1287,6 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
     errorMessage= errorMessageBase + errorMessageWhichArg;
     if (! decodeBool(args[8],canEval, errorMessage))
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-
 
     return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,jsPresStruct);
 }

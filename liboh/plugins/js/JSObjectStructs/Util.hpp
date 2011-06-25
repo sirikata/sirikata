@@ -16,7 +16,7 @@ namespace JS{
 {\
     if(obj->InternalFieldCount() != shouldBeFieldCount)\
     {\
-        JSLOG(error, "Error when cleaning up "#struct ".  Has incorrect number of internal fields.");\
+        JSLOG(error, "Error when cleaning up " #struct ".  Has incorrect number of internal fields.");\
         return;\
     }\
 }
