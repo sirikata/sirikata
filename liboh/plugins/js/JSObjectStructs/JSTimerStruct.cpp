@@ -84,7 +84,7 @@ void JSTimerStruct::timerWeakReferenceCleanup(v8::Persistent<v8::Value> contains
 
     //asks the particular timer to free itself if it's never going to fire
     //again, or schedule itself to be freed after will never fire again.
-    jstimer->noReference();
+    jstimer->noReference(jstimer->mLiveness.livenessToken());//not async, so you can just pass the shared ptr in
 }
 
 
@@ -100,17 +100,19 @@ void JSTimerStruct::timerWeakReferenceCleanup(v8::Persistent<v8::Value> contains
    For case 2: just sets killAfterFire to be true.  Will re-evaluate these
    conditions after timer actually fires.
  */
-void JSTimerStruct::noReference()
+void JSTimerStruct::noReference(const Liveness::Token& alive)
 {
-    killAfterFire = true;
-
-    if (noTimerWaiting)
-    {
-        //check if it's suspended and its context is suspended
-        if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
+    if (alive) {
+        killAfterFire = true;
+        
+        if (noTimerWaiting)
         {
-            //can kill
+            //check if it's suspended and its context is suspended
+            if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
+            {
+                //can kill
             clear();
+            }
         }
     }
 }
@@ -225,14 +227,17 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 
 void JSTimerStruct::evaluateCallback()
 {
+    Liveness::Token token=mLiveness.livenessToken();
     emerScript->handleTimeoutContext(cb,jsContStruct);
-    //means that we have no pending timer operation.
-    noTimerWaiting=true;
-
-    //if we were told to kill the timer after firing, then check kill conditions
-    //again in noReference.
-    if (killAfterFire)
-        ios->post(std::tr1::bind(&JSTimerStruct::noReference,this));
+    if (token) {
+        //means that we have no pending timer operation.
+        noTimerWaiting=true;
+        
+        //if we were told to kill the timer after firing, then check kill conditions
+        //again in noReference.
+        if (killAfterFire)
+            ios->post(std::tr1::bind(&JSTimerStruct::noReference,this,token));
+    }
 }
 
 

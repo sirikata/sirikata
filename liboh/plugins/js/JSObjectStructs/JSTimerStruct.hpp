@@ -9,7 +9,7 @@
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include "JSSuspendable.hpp"
-
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -40,6 +40,7 @@ public:
     JSContextStruct* jsContStruct;
 private:
     Sirikata::Network::IOService* ios;
+    Liveness mLiveness;
     Sirikata::Network::IOTimerPtr mDeadlineTimer;
 public:
 
@@ -66,8 +67,11 @@ public:
        future [eg, it isn't suspended and its parent context isn't suspended]),
        then delete the timer right then and there.  Otherwise, delete it after
        it fires.  (Mark killAfterFire to be true.)
+       @param iotimer is a keepalive token to the IOTimer. 
+              If the struct is GC'd then this will no longer resolve to a 
+              shared reference and this class is dead.
      */
-    void noReference();
+    void noReference(const Liveness::Token &token);
 
     
 private:
