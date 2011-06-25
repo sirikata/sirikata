@@ -78,7 +78,6 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
               int rc;
               char* remain;
               sqlite3_stmt* value_query_stmt;
-              bool success = true;
               bool newStep = true;
               bool locked = false;
               rc = sqlite3_prepare_v2(db->db(), value_query.c_str(), -1, &value_query_stmt, (const char**)&remain);
@@ -290,7 +289,7 @@ SQLiteStorage::Transaction* SQLiteStorage::getTransaction(const Bucket& bucket, 
         mTransactions[bucket] = new Transaction();
     }
 
-    
+
     return mTransactions[bucket];
 }
 
@@ -305,14 +304,14 @@ void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback
 
     //can remove from mTransactions
     mTransactions.erase(bucket);
-    
+
     // Short cut for empty transactions. Or maybe these should cause exceptions?
     if(trans->empty()) {
         ReadSet* rs = NULL;
         completeCommit(bucket, trans, cb, false, rs);
         return;
     }
-    
+
     mIOService->post(
         std::tr1::bind(&SQLiteStorage::executeCommit, this, bucket, trans, cb)
     );
@@ -338,7 +337,6 @@ void SQLiteStorage::executeCommit(const Bucket& bucket, Transaction* trans, Comm
     }
 
     if (rs->empty() || !success) {
-        success = false;
         delete rs;
         rs = NULL;
     }

@@ -82,32 +82,43 @@ void Context::start() {
     );
 }
 
-void Context::run(uint32 nthreads) {
-    std::vector<Thread*> workerThreads;
+void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
+    mExecutionThreadsType = exthreads;
 
+    uint32 nworkers = (exthreads == IncludeOriginal ? nthreads-1 : nthreads);
     // Start workers
-    for(uint32 i = 1; i < nthreads; i++) {
-        workerThreads.push_back(
+    for(uint32 i = 1; i < nworkers; i++) {
+        mWorkerThreads.push_back(
             new Thread( std::tr1::bind(&Context::workerThread, this) )
         );
     }
 
     // Run
-    ioService->run();
-
-    // Wait for workers to finish
-    for(uint32 i = 0; i < workerThreads.size(); i++) {
-        workerThreads[i]->join();
-        delete workerThreads[i];
+    if (exthreads == IncludeOriginal) {
+        ioService->run();
+        cleanupWorkerThreads();
     }
-    workerThreads.clear();
 }
 
 void Context::workerThread() {
     ioService->run();
 }
 
+void Context::cleanupWorkerThreads() {
+    // Wait for workers to finish
+    for(uint32 i = 0; i < mWorkerThreads.size(); i++) {
+        mWorkerThreads[i]->join();
+        delete mWorkerThreads[i];
+    }
+    mWorkerThreads.clear();
+}
+
 void Context::shutdown() {
+    // If the original thread wasn't running this context as well, then it won't
+    // be able to wait for the worker threads it created.
+    if (mExecutionThreadsType != IncludeOriginal)
+        cleanupWorkerThreads();
+
     Signal::unregisterHandler(mSignalHandler);
 
     this->stop();
