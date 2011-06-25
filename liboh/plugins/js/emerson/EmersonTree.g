@@ -45,14 +45,14 @@ options
     #define CHECK_RESOURCES()                 \
     {                                         \
     APP("\nif ( ! __checkResources8_8_3_1__() )\n");  \
-    APP("{ \nthrow '__resource_error__'; \n}\n");   \
+    APP("{ \nthrow new Error('__resource_error__'); \n}\n");   \
     }
 
 
     #define CHECK_KILL()\
     { \
     APP("\nif ( system.__isKilling() )\n");  \
-    APP("{ \nthrow '__killing__'; \n}\n");   \
+    APP("{ \nthrow new Error('__killing__'); \n}\n");   \
     }
 
 
@@ -653,7 +653,7 @@ catchBlock
                 APP( ")\n");
                 APP(" {  \n");
                 APP(" if ( system.__isResetting() ) \n { \n");
-                APP("throw '__resetting__';\n}\n");
+                APP("throw new Error('__resetting__');\n}\n");
                 CHECK_RESOURCES();
                 CHECK_KILL();
             }
@@ -670,7 +670,7 @@ finallyBlock
                 APP("finally \n");
                 APP(" {  \n");  
                 APP(" if ( system.__isResetting() ) \n { \n");
-                APP("throw '__resetting__';\n}\n");
+                APP("throw new Error('__resetting__');\n}\n");
                 CHECK_RESOURCES();
                 CHECK_KILL();
             }
