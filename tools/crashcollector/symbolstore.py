@@ -14,11 +14,11 @@ class LinuxSettings(Settings):
     def offset(self, path):
         return path
 
-    def run_file_command(f):
+    def run_file_command(self, f):
         return subprocess.Popen(['file', '-Lb', f], stdout=subprocess.PIPE).communicate()[0]
 
     def should_process(self, f):
-        return (f.endswith('.so') or  os.access(f, os.X_OK)) and run_file_command(f).startswith("ELF")
+        return (f.endswith('.so') or  os.access(f, os.X_OK)) and self.run_file_command(f).startswith("ELF")
 
     def canonicalize_bin_name(self, path):
         return path
