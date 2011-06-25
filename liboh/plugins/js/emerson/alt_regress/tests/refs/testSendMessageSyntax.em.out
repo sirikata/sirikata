@@ -1,38 +1,18 @@
-In parseTriple.
 
-aa
 
-boooooo  message object
+Inside of senderMessagePair
 
-creceiver
+a
+oooooo  message object
 
-sendSyntax
 
-aoooooo  message object
 
-breceiver
-
-In parseTriple.
-
-aa
-
-boooooo  message object
-
-creceiver
 
 sendSyntax
 
-aoooooo  message object
-
-breceiver
-
-In parseTriple.
-
 aa
 
-b[object Object]
-
-creceiver
+breceiver
 
 sendSyntax
 
@@ -41,15 +21,62 @@ aoooooo  message object
 breceiver
 
 
-Message receiver sender
 
-aa
+Inside of senderMessagePair
 
-b6
+a
+oooooo  message object
+
+
+
 
 sendSyntax
 
-a7
+aa
+
+breceiver
+
+sendSyntax
+
+aoooooo  message object
+
+breceiver
+
+
+
+Inside of senderMessagePair
+
+a
+[object Object]
+
+
+
+
+sendSyntax
+
+aa
+
+breceiver
+
+
+
+Inside of senderMessagePair
+
+a
+oooooo  message object
+
+
+
+
+sendSyntax
+
+aa
+
+breceiver
+
+sendSyntax
+
+a6
 
 btodo
 

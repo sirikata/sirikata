@@ -21,6 +21,7 @@ options
 
 @header
 {
+
     #include <stdlib.h>
     #include <string.h>
     #include <antlr3.h>
@@ -719,16 +720,11 @@ finallyClause
 // expressions
 expression
         : ^(EXPR assignmentExpression)
-//        | ^(COND_EXPR conditionalExpression)
 	;
 	
 expressionNoIn
 	: ^(EXPR_NO_IN  assignmentExpressionNoIn)
-//        | ^(COND_EXPR_NOIN conditionalExpressionNoIn)
 	;
-//lkjs;	
-
-//lkjs;
 
 assignmentExpression
 scope
@@ -1521,7 +1517,7 @@ literal
 	| StringLiteral
           {
               const char* input = (const char*)$StringLiteral.text->chars;
-              int len = $StringLiteral.text->size;
+              int len = $StringLiteral.text->len;
               char firstChar = *input;
               if(firstChar == '@')
               {
@@ -1533,7 +1529,6 @@ literal
                 APP("\"");
               }
               else APP((const char*)$StringLiteral.text->chars);
-        
         }
 	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
 	;

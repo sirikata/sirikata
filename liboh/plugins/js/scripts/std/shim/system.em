@@ -740,17 +740,13 @@ function PresenceEntry(sporef, presObj)
                   var funcString = quoteEscaper(script.toString());
                   if (arg !== null)
                   {
-                      var serializedArg = Escape.escapeString(this.serialize(arg), '"');
+                      var serializedArg = Escape.escapeString(this.serialize(arg), '@');
                       funcString = '(' + funcString + ") ( system.deserialize(" + serializedArg + "));" ;
                   }
                   else
                       funcString = '(' + funcString + ") ( );";
 
 
-                  system.__debugPrint('\n\n');
-                  system.__debugPrint(funcString);
-                  system.__debugPrint('\n\n');
-                  
                   this.__hidden_createEntity(position, 'js',funcString,mesh,scale,solidAngle,space);
               }
               else if (typeof(script) == 'string')
