@@ -34,6 +34,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/network/IODefs.hpp>
+#include <sirikata/core/util/AtomicTypes.hpp>
+#include <sirikata/core/util/SerializationCheck.hpp>
 
 namespace Sirikata {
 namespace Network {
@@ -56,7 +58,12 @@ class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer
     DeadlineTimer *mTimer;
     IOCallback mFunc;
     class TimedOut;
-
+    SerializationCheck chk;
+    /**
+     * Since the cancel does not always stop the boost callback this adds
+     * a level of safety to prevent the callback
+     */
+    bool mCanceled;
     /** Create a new timer, serviced by the specified IOService.
      *  \param io the IOService to service this timers events
      */

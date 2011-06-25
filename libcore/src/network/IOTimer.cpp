@@ -55,15 +55,20 @@ public:
         if (error == boost::asio::error::operation_aborted) {
             return; // don't care if the timer was cancelled.
         }
-        sharedThis->mFunc();
+        sharedThis->chk.serializedEnter();
+        IOTimer*st=&*sharedThis;
+        bool cancl=st->mCanceled;
+        if (!cancl)
+            sharedThis->mFunc();
+        sharedThis->chk.serializedExit();
     }
 };
 
-IOTimer::IOTimer(IOService& io) {
+IOTimer::IOTimer(IOService& io) :mCanceled(false){
     mTimer = new DeadlineTimer(io);
 }
 
-IOTimer::IOTimer(IOService& io, const IOCallback& cb) {
+IOTimer::IOTimer(IOService& io, const IOCallback& cb)  :mCanceled(false){
     mTimer = new DeadlineTimer(io);
     setCallback(cb);
 }
@@ -85,8 +90,10 @@ IOTimerPtr IOTimer::create(IOService& io, const IOCallback& cb) {
 }
 
 IOTimer::~IOTimer() {
+    chk.serializedEnter();
     cancel();
     delete mTimer;
+    chk.serializedExit();
 }
 
 IOService IOTimer::service() const {
@@ -113,7 +120,10 @@ void IOTimer::setCallback(const IOCallback& cb) {
 }
 
 void IOTimer::cancel() {
+    chk.serializedEnter();
+    mCanceled=true;
     mTimer->cancel();
+    chk.serializedExit();
 }
 Duration IOTimer::expiresFromNow() {
     return Duration::microseconds(mTimer->expires_from_now().total_microseconds());
