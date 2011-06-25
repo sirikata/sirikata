@@ -77,7 +77,7 @@ void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
     if (it != resources.end()) resources.erase(it);
 }
 
-void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
+void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile,const SpaceObjectReference& sporef)
 {
     vector<Resource>::iterator it = findResource(proxy);
     URI last_file = it->file;

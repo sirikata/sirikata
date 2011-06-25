@@ -95,7 +95,7 @@ ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
     return static_cast<ProxyEntity*>( Entity::fromMovableObject(movable) );
 }
 
-void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds) {
+void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
     SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
     setOgrePosition(Vector3d(newLocation.position()));
     setOgreOrientation(newOrient.position());
@@ -109,7 +109,7 @@ void ProxyEntity::validated() {
     // Because this could be a new ProxyEntity, created after a bunch
     // of updates have been received by the ProxyObject, we need to
     // refresh its important data
-    updateLocation( mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds() );
+    updateLocation( mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds(),SpaceObjectReference::null() );
 
     // And the final step is to update the mesh, kicking off the
     // download process.
@@ -143,12 +143,12 @@ void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {
 // overrides from MeshListener
 // MCB: integrate these with the MeshObject model class
 
-void ProxyEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile )
+void ProxyEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile,const SpaceObjectReference& sporef )
 {
 
 }
 
-void ProxyEntity::onSetScale (ProxyObjectPtr proxy, float32 scale )
+void ProxyEntity::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObjectReference& sporef )
 {
     updateScale(scale);
 }

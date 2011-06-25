@@ -88,11 +88,11 @@ struct JSPositionListener : public PositionListener,
     SpaceObjectReference* getToListenFrom();
 
 
-    virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
+    virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
 
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
-    virtual void onSetPhysics (ProxyObjectPtr proxy, const String& newphy);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
+    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
+    virtual void onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef);
 
 
     virtual void destroyed();

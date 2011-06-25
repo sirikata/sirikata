@@ -68,12 +68,12 @@ void ResourceDownloadPlanner::setCamera(Camera *entity)
     camera = entity;
 }
 
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile)
+void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile,const SpaceObjectReference& sporef)
 {
 
 }
 
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale)
+void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObjectReference& sporef)
 {
 
 }

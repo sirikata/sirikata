@@ -152,12 +152,12 @@ SpaceObjectReference* JSPositionListener::getToListenFrom()
 //for the newLocation,newOrientation, and newBounds of updateLocation field.
 void JSPositionListener::updateOtherJSPosListener(JSPositionListener* jspos)
 {
-    jspos->updateLocation(mLocation,mOrientation,mBounds);
-    jspos->onSetMesh(ProxyObjectPtr(),Transfer::URI(mMesh));
+    jspos->updateLocation(mLocation,mOrientation,mBounds,*sporefToListenTo);
+    jspos->onSetMesh(ProxyObjectPtr(),Transfer::URI(mMesh),*sporefToListenTo);
 }
 
 //from being a position listener, must define what to do when receive an updated location.
-void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds)
+void JSPositionListener::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds, const SpaceObjectReference& ider)
 {
     mLocation    = newLocation;
     mOrientation = newOrient;
@@ -197,7 +197,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getPhysics()
 }
 
 
-void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh)
+void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh, const SpaceObjectReference& ider)
 {
     mMesh = newMesh.toString();
 
@@ -208,7 +208,7 @@ void JSPositionListener::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& n
     }
 }
 
-void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale )
+void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& ider )
 {
     mBounds = BoundingSphere3f(mBounds.center(),newScale);
     if (sporefToListenFrom != NULL)
@@ -218,7 +218,7 @@ void JSPositionListener::onSetScale (ProxyObjectPtr proxy, float32 newScale )
     }
 }
 
-void JSPositionListener::onSetPhysics (ProxyObjectPtr proxy, const String& newphy )
+void JSPositionListener::onSetPhysics (ProxyObjectPtr proxy, const String& newphy, const SpaceObjectReference& ider )
 {
     mPhysics = newphy;
 }

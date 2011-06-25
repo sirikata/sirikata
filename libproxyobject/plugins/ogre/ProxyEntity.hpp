@@ -91,7 +91,7 @@ public:
     static ProxyEntity *fromMovableObject(Ogre::MovableObject *obj);
 
     // PositionListener
-    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds);
+    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
 
     // ProxyObjectListener
     virtual void validated();
@@ -99,8 +99,8 @@ public:
     virtual void destroyed();
 
     // interface from MeshListener
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
-    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale );
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
+    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
 
 
     void extrapolateLocation(TemporalValue<Location>::Time current);

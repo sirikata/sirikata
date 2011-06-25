@@ -119,7 +119,7 @@ void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, b
     // other update while handling eht requests...
     if (predictive || reqloc.updateTime() > mLoc.updateTime()) {
         mLoc = reqloc;
-        PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
+        PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     }
 }
 
@@ -131,7 +131,7 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
     // FIXME see relevant comment in setLocation
     if (predictive || reqorient.updateTime() > mOrientation.updateTime()) {
         mOrientation = reqorient;//TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position(), reqorient.velocity()));
-        PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
+        PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     }
 }
 
@@ -140,10 +140,10 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
 
     if (!predictive) mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
     mBounds = bnds;
-    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds);
+    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     ProxyObjectPtr ptr = getSharedPtr();
     assert(ptr);
-    MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius());
+    MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius(),mID);
 }
 
 ProxyObjectPtr ProxyObject::getParentProxy() const {
@@ -161,7 +161,7 @@ void ProxyObject::setMesh (Transfer::URI const& mesh, uint64 seqno, bool predict
     mMeshURI = mesh;
 
     ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh);
+    if (ptr) MeshProvider::notify ( &MeshListener::onSetMesh, ptr, mesh,mID);
 }
 
 //cameras may have meshes as of now.
@@ -176,7 +176,7 @@ void ProxyObject::setPhysics (const String& rhs, uint64 seqno, bool predictive) 
     if (!predictive) mUpdateSeqno[LOC_PHYSICS_PART] = seqno;
     mPhysics = rhs;
     ProxyObjectPtr ptr = getSharedPtr();
-    if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs);
+    if (ptr) MeshProvider::notify ( &MeshListener::onSetPhysics, ptr, rhs,mID);
 }
 
 const String& ProxyObject::getPhysics () const {

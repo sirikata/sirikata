@@ -57,7 +57,7 @@ public:
     virtual void removeObject(ProxyObjectPtr p);
 
     //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh);
+    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
 
     //PollingService interface
     virtual void poll();

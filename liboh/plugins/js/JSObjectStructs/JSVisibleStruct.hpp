@@ -49,6 +49,7 @@ typedef std::vector<JSVisibleStruct*> JSVisibleVec;
 typedef JSVisibleVec::iterator JSVisibleVecIter;
 
 
+
 }//end namespace js
 }//end namespace sirikata
 
