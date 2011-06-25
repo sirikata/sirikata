@@ -32,6 +32,8 @@ function newEntExec()
     };
     
     system.onPresenceConnected(onPresConnectedCB);
+    
+    system.__debugPrint('\n\nGot into new entity\n\n');
 }
 
 
