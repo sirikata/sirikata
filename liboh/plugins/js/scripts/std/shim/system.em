@@ -737,15 +737,15 @@ function PresenceEntry(sporef, presObj)
               //handle script is function
               if (typeof(script) == 'function')
               {
-                  //var funcString = quoteEscaper(script.toString());
-                  var funcString = Escape.escapeString(quoteEscaper(script.toString()),null);
+                  var funcString = quoteEscaper(script.toString());
                   if (arg !== null)
                   {
                       var serializedArg = Escape.escapeString(this.serialize(arg), '@');
-                      funcString = '"' + '(' + funcString + ") ( system.deserialize(" + serializedArg + "));" + '"';
+                      funcString = '(' + funcString + ") ( system.deserialize(" + serializedArg + "));" ;
                   }
                   else
-                      funcString = '"' + '(' + funcString + ") ( );" + '"';
+                      funcString = '(' + funcString + ") ( );";
+
 
                   this.__hidden_createEntity(position, 'js',funcString,mesh,scale,solidAngle,space);
               }

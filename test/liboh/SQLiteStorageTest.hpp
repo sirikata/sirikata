@@ -1,7 +1,7 @@
 /*  Sirikata
- *  default.em
+ *  SQLiteStorageTest.hpp
  *
- *  Copyright (c) 2011, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,47 +30,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cxxtest/TestSuite.h>
+#include "StorageTestBase.hpp"
 
-// A sane, simple, default. Only includes functionality from libraries.
-system.require('std/shim/restore/simpleStorage.em');
-
-
-
-std.simpleStorage.setScript(
-    function()
+class SQLiteStorageTest : public CxxTest::TestSuite
+{
+    static const String dbfile;
+    StorageTestBase _base;
+public:
+    SQLiteStorageTest()
+     : _base("oh-sqlite", "sqlite", String("--db=") + dbfile)
     {
-        system.require('std/shim/restore/persistService.em');
-        system.require('std/script/scriptable.em');
-        system.require('std/movement/movable.em');
-        system.require('std/graphics/default.em');
+    }
 
-        
-        scriptable = new std.script.Scriptable();
-        movable = new std.movement.Movable(true); // Self only
-        
-        // For convenience in debugging, figuring out who's trying to
-        // contact you, etc, while we don't have a UI for it, print
-        // out any requests that ask you to
-        function(msg, sender) { system.prettyprint('Message from ', sender.toString(), ': ', msg); } << [{'printrequest'::}];
+    // CXXTest is horrible so we have to override this. Since it doesn't use the
+    // preprocessor properly, we can't even make these macros.
+    void setUp() {_base.setUp(); }
+    void tearDown() {_base.tearDown(); }
 
-        var init = function() {
-            simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
-        };
+    void testSetupTeardown() {_base.testSetupTeardown(); }
+    void testSingleWrite() {_base.testSingleWrite(); }
+    void testSingleRead() {_base.testSingleRead(); }
+    void testSingleInvalidRead() {_base.testSingleInvalidRead(); }
+    void testSingleErase() {_base.testSingleErase(); }
 
-        if (system.self == system)
-        {
-            //if do not have a connected presence
-            system.onPresenceConnected(
-                function(pres) {
-                    init();
-                    system.onPresenceConnected(function(){});
-                }
-            );
-        }
-        else
-        {
-            //already have a connected presence, use it.
-            init();
-        }
-        
-    }, false);
+    void testMultiWrite() {_base.testMultiWrite(); }
+    void testMultiRead() {_base.testMultiRead(); }
+    void testMultiInvalidRead() {_base.testMultiInvalidRead(); }
+    void testMultiSomeInvalidRead() {_base.testMultiSomeInvalidRead(); }
+    void testMultiErase() {_base.testMultiErase(); }
+};
+
+const String SQLiteStorageTest::dbfile("test.db");

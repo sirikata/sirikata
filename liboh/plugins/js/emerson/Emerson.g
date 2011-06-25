@@ -718,7 +718,7 @@ StringLiteral
 
 
 fragment VerbatimStringCharacter
-        : ~('@')
+        : ~ '@'
         | '\\' '@'
         ;
 

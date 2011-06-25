@@ -57,6 +57,15 @@ class Trace;
 class SIRIKATA_EXPORT Context : public Service {
 public:
 
+    /** Which threads to execute in. Passed to run() to indicate whether the
+     *  original thread should be included as one of the requested threads for
+     *  handling this Context.
+     */
+    enum ExecutionThreads {
+        IncludeOriginal,
+        AllNew
+    };
+
     Context(const String& name, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
     ~Context();
 
@@ -128,7 +137,7 @@ public:
         }
     }
 
-    void run(uint32 nthreads = 1);
+    void run(uint32 nthreads = 1, ExecutionThreads exthreads = IncludeOriginal);
 
     // Stop the simulation
     void shutdown();
@@ -169,6 +178,7 @@ protected:
     }
 
     void workerThread();
+    void cleanupWorkerThreads();
 
     // Signal handling
     void handleSignal(Signal::Type stype);
@@ -188,6 +198,10 @@ protected:
     Sirikata::AtomicValue<bool> mStopRequested;
 
     Signal::HandlerID mSignalHandler;
+
+    ExecutionThreads mExecutionThreadsType;
+    typedef std::vector<Thread*> ThreadList;
+    ThreadList mWorkerThreads;
 }; // class ObjectHostContext
 
 } // namespace Sirikata

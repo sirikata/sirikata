@@ -95,7 +95,10 @@ system.sendMessage = function(sender, msgObj, receiver)
     print('receiver:  ' + receiver.toString());
 };
 
-
+system.__isKilling = function()
+{
+    return false;
+};
 
 std = {
     };
@@ -131,4 +134,14 @@ std.messaging.MessageReceiverSender = function(a,b)
     print('a' + a.toString() + '\n');
     print('b' + b.toString() + '\n');
     return std.messaging.counter;
+};
+
+
+std.messaging.SenderMessagePair = function (sender,msgObj)
+{
+    print('\n\nInside of senderMessagePair\n');
+    print(sender);
+    print(msgObj);
+    print('\n\n\n');
+    return sender;
 };
