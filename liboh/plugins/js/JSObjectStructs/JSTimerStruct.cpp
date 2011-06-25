@@ -37,7 +37,7 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
     if (isSuspended)
         suspend();
 
-    
+
     if (contID != jscont->getContextID())
     {
         eobj->registerFixupSuspendable(this,contID);
@@ -45,12 +45,12 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
     else
     {
         noTimerWaiting=false;
-        
+
         if (timeRemaining == 0)
             mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
         else
             mDeadlineTimer->wait(Duration::microseconds(timeRemaining*1000000),std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
-        
+
 
         if (jscont != NULL)
             jscont->struct_registerSuspendable(this);
@@ -104,7 +104,7 @@ void JSTimerStruct::noReference(const Liveness::Token& alive)
 {
     if (alive) {
         killAfterFire = true;
-        
+
         if (noTimerWaiting)
         {
             //check if it's suspended and its context is suspended
@@ -128,7 +128,7 @@ void JSTimerStruct::fixSuspendableToContext(JSContextStruct* toAttachTo)
         mDeadlineTimer->wait(timeUntil,std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
     else
         mDeadlineTimer->wait(Duration::microseconds(mTimeRemaining*1000000),std::tr1::bind(&JSTimerStruct::evaluateCallback,this));
-    
+
     jsContStruct->struct_registerSuspendable(this);
 }
 
@@ -158,7 +158,7 @@ JSTimerStruct* JSTimerStruct::decodeTimerStruct(v8::Handle<v8::Value> toDecode,S
     wrapJSTimerStruct = v8::Local<v8::External>::Cast(toDecodeObject->GetInternalField(TIMER_JSTIMERSTRUCT_FIELD));
     void* ptr = wrapJSTimerStruct->Value();
 
-    
+
     JSTimerStruct* returner;
     returner = static_cast<JSTimerStruct*>(ptr);
     if (returner == NULL)
@@ -183,7 +183,7 @@ JSTimerStruct::~JSTimerStruct()
 v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 {
     v8::HandleScope handle_scope;
-    
+
     uint32  contId   = jsContStruct->getContextID();
     bool    issusp   = getIsSuspended();
     bool    isclear  = getIsCleared();
@@ -191,7 +191,7 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
     double  tUntil   = -1;
 
     v8::Handle<v8::Function> cbFunc;
-    
+
     if (! isclear)
     {
         cbFunc = cb;
@@ -213,13 +213,13 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
         returner->Set(v8::String::New("contextId"), v8::Integer::NewFromUnsigned(contId));
         return handle_scope.Close(returner);
     }
-    
-    returner->Set(v8::String::New("period"), v8::Number::New(period));    
+
+    returner->Set(v8::String::New("period"), v8::Number::New(period));
     returner->Set(v8::String::New("callback"),cbFunc);
     returner->Set(v8::String::New("timeRemaining"),v8::Number::New(tUntil));
     returner->Set(v8::String::New("isSuspended"),v8::Boolean::New(issusp));
 
-    
+
     return handle_scope.Close(returner);
 }
 
@@ -230,13 +230,17 @@ void JSTimerStruct::evaluateCallback()
     Liveness::Token token=mLiveness.livenessToken();
     emerScript->handleTimeoutContext(cb,jsContStruct);
     if (token) {
-        //means that we have no pending timer operation.
-        noTimerWaiting=true;
-        
         //if we were told to kill the timer after firing, then check kill conditions
         //again in noReference.
         if (killAfterFire)
             ios->post(std::tr1::bind(&JSTimerStruct::noReference,this,token));
+
+        //means that we have no pending timer operation.
+        // Note that since this allows the JS GC thread to destroy this object
+        // in response to all references to it being lost,
+        // we need to make sure it is absolutely the *last* operation we do on
+        // member variables.
+        noTimerWaiting=true;
     }
 }
 
@@ -256,8 +260,12 @@ v8::Handle<v8::Value> JSTimerStruct::suspend()
     //checks for timer cleanup.
     v8::HandleScope handle_scope;
     v8::Handle<v8::Value>returner = JSSuspendable::suspend();
-    noTimerWaiting = true;
     mDeadlineTimer->cancel();
+    // Note that since this allows the JS GC thread to destroy this object
+    // in response to all references to it being lost,
+    // we need to make sure it is absolutely the *last* operation we do on
+    // member variables.
+    noTimerWaiting = true;
     return handle_scope.Close(returner);
 }
 
@@ -292,17 +300,24 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
 
 
     JSSuspendable::clear();
-    
-    noTimerWaiting = true;
+
     mDeadlineTimer->cancel();
 
     if (! cb.IsEmpty())
         cb.Dispose();
 
-    
     if (jsContStruct != NULL)
         jsContStruct->struct_deregisterSuspendable(this);
-        
+
+    // Note that since this allows the JS GC thread to destroy this object
+    // in response to all references to it being lost,
+    // we need to make sure it is absolutely the *last* operation we do on
+    // member variables.
+    // In this case, the above call will have deleted this JSTimerStruct, so we
+    // don't even set it at all. It would have been unsafe to set it earlier
+    // because we could have ended up with two threads trying to do the deletion.
+    //noTimerWaiting = true;
+
     return v8::Boolean::New(true);
 }
 
