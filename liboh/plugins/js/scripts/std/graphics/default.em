@@ -95,6 +95,8 @@ function() {
 
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
+        this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
+
         this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
         this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
         this._binding.addToggleAction('moveLeft', std.core.bind(this.moveSelf, this, new util.Vec3(-1, 0, 0)), 1, -1);
@@ -144,6 +146,7 @@ function() {
 
             { key: ['mouse-click', 3], action: 'pickObject' },
             { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
+            { key: ['button-pressed', 'return'], action: 'actOnObject' },
 
             { key: ['button-pressed', 'c' ], action: 'toggleCameraMode' },
 
@@ -267,6 +270,12 @@ function() {
             this._simulator.bbox(this._selected, true);
         }
     };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.actOnObject = function(evt) {
+        if (this._selected)
+            { 'action' : 'touch' } >> this._selected >> [];
+    }
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.updatePhysicsProperties = function() {
