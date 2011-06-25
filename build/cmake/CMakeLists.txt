@@ -2625,7 +2625,7 @@ IF(OGRE_FOUND)
 
   # data for ogre, including web views
   IF(APPLE)
-    INSTALL(DIRECTORY ${SIRIKATA_OGRE_DATA_DIR}
+    INSTALL(DIRECTORY ${SIRIKATA_OGRE_DATA_DIR}/
       DESTINATION share/ogre/data/
       PATTERN "*/jquery" EXCLUDE
       )
