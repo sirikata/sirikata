@@ -20,7 +20,7 @@ int main (int argc, char** argv)
 
     std::string args = "";
     std::string script ( "system.import('" + fileToCheck+ "');");
-    Sirikata::JS::JSObjectScript* jsobj = jsman.createHeadless(args, script);
+    Sirikata::JS::JSObjectScript* jsobj = jsman.createHeadless(args, script,10000000);
 
     delete jsobj;
     return 0;

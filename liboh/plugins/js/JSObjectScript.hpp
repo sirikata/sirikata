@@ -56,7 +56,6 @@
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/oh/PersistedObjectSet.hpp>
 
-#define EMERSON_RESOURCE_THRESHOLD 10000
 
 namespace Sirikata {
 namespace JS {
@@ -83,8 +82,8 @@ public:
     //this function returns a context with
     v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference* canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,bool canEval, JSContextStruct*& internalContextField);
 
-    void initialize(const String& args, const String& script);
-
+    void initialize(const String& args, const String& script,int32 maxResThresh);
+    
     /** Print the given string to the current output. */
     void print(const String& str);
 
@@ -291,6 +290,13 @@ protected:
     void storageCommitCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success, OH::Storage::ReadSet* rs);
 
     void setRestoreScriptCallback(JSContextStruct* jscont, v8::Persistent<v8::Function> cb, bool success);
+
+    /**
+       If we execute this number of cycles in one pass of event loop, throw a
+       resource error.
+     */
+    int32 maxResourceThresh;
+    
 };
 
 } // namespace JS

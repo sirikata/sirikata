@@ -56,7 +56,7 @@ public:
     virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args, const String& script);
     virtual void destroyObjectScript(ObjectScript* toDestroy);
 
-    JSObjectScript* createHeadless(const String& args, const String& script);
+    JSObjectScript* createHeadless(const String& args, const String& script,int32 maxres);
 
     OptionSet* getOptions() const { return mOptions; }
 

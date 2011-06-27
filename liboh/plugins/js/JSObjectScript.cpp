@@ -213,8 +213,10 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 
 
 
-void JSObjectScript::initialize(const String& args, const String& script)
+void JSObjectScript::initialize(const String& args, const String& script,int32 maxResThresh)
 {
+    maxResourceThresh =maxResThresh;
+    
     InitializeClassOptions(
         "jsobjectscript", this,
         // Default value allows us to use std libs in the build tree, starting
@@ -687,7 +689,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
 bool JSObjectScript::checkResourcesCPP()
 {
     ++mResourceCounter;
-    return (mResourceCounter < EMERSON_RESOURCE_THRESHOLD);
+    return (mResourceCounter < maxResourceThresh);
 }
 
 v8::Handle<v8::Value> JSObjectScript::checkResources()

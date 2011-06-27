@@ -3,7 +3,7 @@
 import subprocess
 import sys
 
-EXCLUDES = [ 'dependencies', 'externals', 'scripts', 'build/cmake', 'build/Frameworks', '.git', 'doc', 'docs' ]
+EXCLUDES = [ 'dependencies', 'externals', 'scripts', 'build/cmake', 'build/Frameworks', '.git', 'doc', 'docs', 'libproxyobject/plugins/ogre/data/ace' ]
 
 if __name__ == "__main__":
     if (len (sys.argv) < 2):

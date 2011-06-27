@@ -98,6 +98,7 @@ std.core.pretty = function(obj) {
     var indent = '';
     var numPrint = 1;
     while(obj_stack.length != 0) {
+
         var cur = obj_stack.pop();
 
         visited.push([cur.obj,numPrint,output.length]);
@@ -124,6 +125,7 @@ std.core.pretty = function(obj) {
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
             // And process this one, possibly triggering recursion
             var key = objectFields(cur.obj)[cur.idx];
+            
             var child = cur.obj[key];
             output += key + ': ';
             if (typeof(child) === "object" && child !== null) {

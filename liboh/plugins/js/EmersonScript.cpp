@@ -88,7 +88,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
 {
-    JSObjectScript::initialize(args, script);
+    int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
+    JSObjectScript::initialize(args, script,resourceMax);
 
     // Subscribe for session events
     mParent->addListener((SessionEventListener*)this);
