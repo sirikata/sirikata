@@ -55,6 +55,8 @@ var setScriptInfo = function() {
 	  '  <input type="radio" id="ignore" name="radio" checked="checked" /><label for="ignore">Disabled</label>' +
 	  '  <input type="radio" id="static" name="radio" /><label for="static">Static</label>' +
 	  '  <input type="radio" id="dynamic" name="radio" /><label for="dynamic">Dynamic</label>' +
+	  '  <input type="radio" id="linear_dynamic" name="radio" /><label for="linear_dynamic">Linear Dynamic</label>' +
+	  '  <input type="radio" id="vertical_dynamic" name="radio" /><label for="vertical_dynamic">Vertical Dynamic</label>' +
           ' </form>' +
           ' </div>' +
           ' <div id="collision-mesh" class="collision-mesh">' +

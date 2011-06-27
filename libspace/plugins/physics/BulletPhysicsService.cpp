@@ -47,6 +47,35 @@ namespace Sirikata {
 typedef float float_t;
 #endif
 
+void BulletPhysicsService::getCollisionMask(bulletObjTreatment treatment, bulletObjCollisionMaskGroup* mygroup, bulletObjCollisionMaskGroup* collide_with) {
+    switch(treatment) {
+      case BULLET_OBJECT_TREATMENT_IGNORE:
+        // We shouldn't be trying to add this to a sim
+        assert(treatment != BULLET_OBJECT_TREATMENT_IGNORE);
+        break;
+      case BULLET_OBJECT_TREATMENT_STATIC:
+        *mygroup = BULLET_OBJECT_COLLISION_GROUP_STATIC;
+        // Static collides with everything
+        *collide_with = (bulletObjCollisionMaskGroup)(BULLET_OBJECT_COLLISION_GROUP_STATIC | BULLET_OBJECT_COLLISION_GROUP_DYNAMIC | BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED);
+        break;
+      case BULLET_OBJECT_TREATMENT_DYNAMIC:
+        *mygroup = BULLET_OBJECT_COLLISION_GROUP_DYNAMIC;
+        *collide_with = (bulletObjCollisionMaskGroup)(BULLET_OBJECT_COLLISION_GROUP_STATIC | BULLET_OBJECT_COLLISION_GROUP_DYNAMIC | BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED);
+        break;
+      case BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC:
+      case BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC:
+        *mygroup = BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED;
+        // Only collide with static objects because the constrained
+        // movement can become problematic otherwise, e.g. the
+        // vertical only movement can result in interpenetrating
+        // objects which can't resolve their collision normally and
+        // the energy ends up in the vertically moving object,
+        // throwing it up in the air
+        *collide_with = BULLET_OBJECT_COLLISION_GROUP_STATIC;
+        break;
+
+    };
+}
 
 BulletPhysicsService::LocationInfo::LocationInfo()
  : location(),
@@ -306,6 +335,8 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
         String objTreatmentString = pt.get("treatment", String("ignore"));
         if (objTreatmentString == "static") objTreatment = BULLET_OBJECT_TREATMENT_STATIC;
         if (objTreatmentString == "dynamic") objTreatment = BULLET_OBJECT_TREATMENT_DYNAMIC;
+        if (objTreatmentString == "linear_dynamic") objTreatment = BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC;
+        if (objTreatmentString == "vertical_dynamic") objTreatment = BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC;
 
         String objBBoxString = pt.get("bounds", String("sphere"));
         if (objBBoxString == "box") objBBox = BULLET_OBJECT_BOUNDS_ENTIRE_OBJECT;
@@ -333,18 +364,26 @@ void BulletPhysicsService::updatePhysicsWorld(const UUID& uuid) {
     //objTreatment enum defined in header file
     //using if/elseif here to avoid switch/case compiler complaints (initializing variables in a case)
     if(objTreatment == BULLET_OBJECT_TREATMENT_IGNORE) {
-        BULLETLOG(detailed," This mesh will not be added to the bullet world: " << msh[0]);
+        BULLETLOG(detailed," This mesh will not be added to the bullet world: " << msh);
         return;
     }
     else if(objTreatment == BULLET_OBJECT_TREATMENT_STATIC) {
-        BULLETLOG(detailed, "This mesh will not move: " << msh[0]);
+        BULLETLOG(detailed, "This mesh will not move: " << msh);
         //this is a variable in loc structure that sets the item to be static
         locinfo.isFixed = true;
         //if the mass is 0, Bullet treats the object as static
         locinfo.mass = 0;
     }
     else if(objTreatment == BULLET_OBJECT_TREATMENT_DYNAMIC) {
-        BULLETLOG(detailed, "This mesh will move: " << msh[0]);
+        BULLETLOG(detailed, "This mesh will move: " << msh);
+        locinfo.isFixed = false;
+    }
+    else if(objTreatment == BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC) {
+        BULLETLOG(detailed, "This mesh will move linearly: " << msh);
+        locinfo.isFixed = false;
+    }
+    else if(objTreatment == BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC) {
+        BULLETLOG(detailed, "This mesh will move vertically: " << msh);
         locinfo.isFixed = false;
     }
     else {
@@ -491,6 +530,7 @@ void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo)
     locinfo.objShape->calculateLocalInertia(locinfo.mass,objInertia);
     //make a constructionInfo object
     btRigidBody::btRigidBodyConstructionInfo objRigidBodyCI(locinfo.mass, locinfo.objMotionState, locinfo.objShape, objInertia);
+
     //CREATE: make the rigid body
     locinfo.objRigidBody = new btRigidBody(objRigidBodyCI);
     //locinfo.objRigidBody->setRestitution(0.5);
@@ -503,8 +543,23 @@ void BulletPhysicsService::addRigidBody(const UUID& uuid, LocationInfo& locinfo)
     objAngVelocity.toAngleAxis(angvel_angle, angvel_axis);
     Vector3f angvel = angvel_axis.normal() * angvel_angle;
     locinfo.objRigidBody->setAngularVelocity(btVector3(angvel.x, angvel.y, angvel.z));
+    // With different types of dynamic objects we need to set . Eventually, we
+    // might just want to store values for this in locinfo, currently we just
+    // decide based on the treatment.  Everything is linear: <1, 1, 1>, angular
+    // <1, 1, 1> by default.
+    if (locinfo.objTreatment == BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC) {
+        locinfo.objRigidBody->setAngularFactor(btVector3(0, 0, 0));
+    }
+    else if (locinfo.objTreatment == BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC) {
+        locinfo.objRigidBody->setAngularFactor(btVector3(0, 0, 0));
+        locinfo.objRigidBody->setLinearFactor(btVector3(0, 1, 0));
+    }
+
+    // Get mask information
+    bulletObjCollisionMaskGroup mygroup, collide_with;
+    getCollisionMask(locinfo.objTreatment, &mygroup, &collide_with);
     //add to the dynamics world
-    dynamicsWorld->addRigidBody(locinfo.objRigidBody);
+    dynamicsWorld->addRigidBody(locinfo.objRigidBody, (short)mygroup, (short)collide_with);
     // And if its dynamic, make sure its in our list of objects to
     // track for sanity checking
     mDynamicPhysicsObjects.insert(uuid);

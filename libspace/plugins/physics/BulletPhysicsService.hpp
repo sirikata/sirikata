@@ -49,10 +49,23 @@ class SirikataMotionState;
 //IGNORE = Bullet shouldn't know about this object
 //STATIC = Bullet thinks this is a static (not moving) object
 //DYNAMIC = Bullet thinks this is a dynamic (moving) object
+//LINEAR_DYNAMIC = Turn off rotational effects, but make the object
+//dynamic. This means you can push it around and gravity affects it, but it
+//should never rotate.
+//VERTICAL_DYNAMIC = Turn off all but vertical movement. Useful for
+//placing objects on the ground.
 enum bulletObjTreatment {
 	BULLET_OBJECT_TREATMENT_IGNORE,
 	BULLET_OBJECT_TREATMENT_STATIC,
-	BULLET_OBJECT_TREATMENT_DYNAMIC
+	BULLET_OBJECT_TREATMENT_DYNAMIC,
+	BULLET_OBJECT_TREATMENT_LINEAR_DYNAMIC,
+	BULLET_OBJECT_TREATMENT_VERTICAL_DYNAMIC
+};
+
+enum bulletObjCollisionMaskGroup {
+	BULLET_OBJECT_COLLISION_GROUP_STATIC = 1,
+	BULLET_OBJECT_COLLISION_GROUP_DYNAMIC = 1 << 1,
+	BULLET_OBJECT_COLLISION_GROUP_CONSTRAINED = 1 << 2
 };
 
 //ENTIRE_OBJECT = Bullet creates an AABB encompassing the entire object
@@ -72,6 +85,9 @@ using namespace Mesh;
  */
 class BulletPhysicsService : public LocationService {
 	friend class SirikataMotionState;
+
+    // Gets the collision mask for a given type of object
+    static void getCollisionMask(bulletObjTreatment treatment, bulletObjCollisionMaskGroup* mygroup, bulletObjCollisionMaskGroup* collide_with);
 public:
     BulletPhysicsService(SpaceContext* ctx, LocationUpdatePolicy* update_policy);
     virtual ~BulletPhysicsService();
