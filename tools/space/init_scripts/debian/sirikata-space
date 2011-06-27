@@ -1,0 +1,58 @@
+#!/bin/bash
+
+if test -f /etc/default/sirikata-space; then
+    . /etc/default/sirikata-space
+fi
+
+SIRIKATA_DIR=${SIRIKATA_DIR:-"/"}
+PIDFILE=${PIDFILE:-"/var/run/sirikata-space.pid"}
+ARGS=${ARGS:-""}
+LOGFILE=${LOGFILE:-"/var/log/sirikata-space.log"}
+ID=${ID:-"1"}
+SERVERMAP=${SERVERMAP:-"/etc/servermap.txt"}
+LAYOUT=${LAYOUT:-"<1,1,1>"}
+REGION=${REGION:-"<<-200.000000,-4000.000000,-8000.000000>,<200.000000,4000.000000,8000.000000>>"}
+PINTO_HOST=${PINTO_HOST:-"localhost"}
+PINTO_PORT=${PINTO_PORT:-"6665"}
+REDIS_HOST=${REDIS_HOST:-"localhost"}
+REDIS_PORT=${REDIS_PORT:-"6379"}
+SPACE_PLUGINS=${SPACE_PLUGINS:-"weight-exp,weight-sqr,weight-const,space-null,space-craq,space-local,space-standard,space-master-pinto,colladamodels,space-redis"}
+
+SPACED=$SIRIKATA_DIR/bin/space
+SIRIKATA_LIB=$SIRIKATA_DIR/lib
+
+SPACE_OPTS=()
+SPACE_OPTS+=("--log-file=$LOGFILE")
+SPACE_OPTS+=("--id=$ID")
+SPACE_OPTS+=("--servermap=tabular")
+SPACE_OPTS+=("--servermap-options=--filename=$SERVERMAP")
+SPACE_OPTS+=("--layout=$LAYOUT")
+SPACE_OPTS+=("--region=$REGION")
+SPACE_OPTS+=("--pinto=master")
+SPACE_OPTS+=("--pinto-options=--host=$PINTO_HOST --port=$PINTO_PORT")
+#SPACE_OPTS+=("--oseg=redis")
+#SPACE_OPTS+=("--oseg-options=--host=$REDIS_HOST --port=$REDIS_PORT")
+SPACE_OPTS+=("--space.plugins=$SPACE_PLUGINS")
+SPACE_OPTS+=("--loglevel=insane")
+
+case "$1" in
+  start)
+    echo -n "Starting sirikata space server: space"
+    LD_LIBRARY_PATH=$SIRIKATA_LIB start-stop-daemon --start --quiet --background --pidfile $PIDFILE --make-pidfile --exec $SPACED -- $ARGS "${SPACE_OPTS[@]}"
+    echo "."
+    ;;
+  stop)
+    echo -n "Stopping sirikata space server: space"
+    start-stop-daemon --stop --retry 10 --quiet --pidfile $PIDFILE
+    echo "."
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+        echo "Usage: /etc/init.d/sirikata-space {start|stop|restart}"
+        exit 1
+esac
+
+exit 0

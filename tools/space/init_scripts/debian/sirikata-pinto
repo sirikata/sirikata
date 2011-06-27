@@ -1,0 +1,34 @@
+if test -f /etc/default/sirikata-pinto; then
+    . /etc/default/sirikata-pinto
+fi
+
+SIRIKATA_DIR=${SIRIKATA_DIR:-"/"}
+PIDFILE=${PIDFILE:-"/var/run/sirikata-pinto.pid"}
+ARGS=${ARGS:-""}
+LOGFILE=${LOGFILE:-"/var/log/sirikata-pinto.log"}
+PORT=${PORT:-"6789"}
+
+PINTOD=$SIRIKATA_DIR/bin/pinto
+SIRIKATA_LIB=$SIRIKATA_DIR/lib
+
+case "$1" in
+  start)
+    echo -n "Starting sirikata pinto server: pinto"
+    LD_LIBRARY_PATH=$SIRIKATA_LIB start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile --background --exec $PINTOD -- $ARGS --port=$PORT --log-file=$LOGFILE
+    echo "."
+    ;;
+  stop)
+    echo -n "Stopping sirikata pinto server: pinto"
+    start-stop-daemon --stop --retry 10 --quiet --pidfile $PIDFILE
+    echo "."
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+        echo "Usage: /etc/init.d/sirikata-pinto {start|stop|restart}"
+        exit 1
+esac
+
+exit 0
