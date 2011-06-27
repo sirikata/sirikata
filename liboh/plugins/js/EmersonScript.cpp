@@ -491,9 +491,12 @@ void EmersonScript::callbackUnconnected(const SpaceObjectReference& name, Hosted
     {
         if (token == (*iter)->getPresenceToken())
         {
-            mPresences[name] = *iter;
-            (*iter)->connect(name);
+            JSPresenceStruct* pstruct = *iter;
+            mPresences[name] = pstruct;
             mUnconnectedPresences.erase(iter);
+            // Make sure this call is last since it invokes a callback which
+            // could in turn call connect requests and modify mUnconnectedPresences.
+            pstruct->connect(name);
             return;
         }
     }
