@@ -72,6 +72,8 @@ function() {
                  typeof(arg) === 'number' ||
                  typeof(arg) === 'boolean')
             return arg.toString();
+        else if (typeof(arg) === 'object' && typeof(arg.__var) === 'string' )
+            return arg.__var; // Variables, see GUI.variable
         else {
             // Non-trivial type. Try to JSONify it.
             try {
@@ -82,6 +84,22 @@ function() {
                 throw new TypeError("Invalid object type passed to GUI.call. Must be basic type (undefined, null, boolean, number, string) or JSON-encodable.");
             }
         }
+    };
+
+    /** Create an object which can be used to specify a variable name
+     *  to GUI.call and GUI.set. Since strings are converted to string
+     *  literals, it isn't possible to specify variable names in these
+     *  calls without this method.
+     *
+     *  @param {string} name the name of the variable
+     *  @returns {object} a placeholder object which gets converted to
+     *  the variable name when passed to GUI.call or GUI.set.
+     */
+    std.graphics.GUI.prototype.variable = function(name) {
+        // Just a special object, see getGUIJSValue for how it is used.
+        return {
+            '__var' : name
+        };
     };
 
     /** Call a method in the GUI context. This is just a convenience
