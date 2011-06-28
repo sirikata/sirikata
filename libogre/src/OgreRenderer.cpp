@@ -261,6 +261,8 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mNextFrameScreenshotFile("")
 {
     try {
+        // These have to be consistent with any other simulations -- e.g. the
+        // space bullet plugin and scripting plugins that expose mesh data
         std::vector<String> names_and_args;
         names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
         names_and_args.push_back("center"); names_and_args.push_back("");
@@ -327,7 +329,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
                            NULL);
     bool userAccepted=true;
     (mOptions=OptionSet::getOptions("ogregraphics",this))->parse(options);
-    
+
     String search_path=searchPaths->as<String>();
     if (search_path.length()) {
         while (true) {
@@ -342,7 +344,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
         }
     }
     mResourcesDir=getOgreResourcesDir(mSearchPaths);
-    
+
     mBackgroundColor = backColor->as<Vector4f>();
 
     // Initialize this first so we can get it to not spit out to stderr

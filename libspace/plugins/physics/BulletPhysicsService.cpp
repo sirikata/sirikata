@@ -32,6 +32,7 @@
 
 #include "BulletPhysicsService.hpp"
 #include <sirikata/core/trace/Trace.hpp>
+#include <sirikata/mesh/CompositeFilter.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 
@@ -117,6 +118,23 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     mLastTime = mContext->simTime();
 
     mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
+    try {
+        // FIXME these have to be consistent with the ones in OgreRenderer.cpp
+        // (actually, with anything on the client, which will soon mean the
+        // scripting layer as well) or the simulations won't match
+        // up. In this case, we can omit reduce-draw-calls, used by
+        // Ogre, because all we actually care about is the adjustment
+        // of the mesh to be centered (affecting both the collision
+        // mesh and the bounds when used for collision).
+        std::vector<String> names_and_args;
+        names_and_args.push_back("center"); names_and_args.push_back("");
+        mModelFilter = new Mesh::CompositeFilter(names_and_args);
+    }
+    catch(Mesh::CompositeFilter::Exception e) {
+        BULLETLOG(warning,"Couldn't allocate requested model load filter, will not apply filter to loaded models.");
+        mModelFilter = NULL;
+    }
+
     mTransferMediator = &(Transfer::TransferMediator::getSingleton());
     mTransferPool = mTransferMediator->registerClient("BulletPhysics");
 
@@ -129,6 +147,7 @@ BulletPhysicsService::~BulletPhysicsService(){
 	delete dispatcher;
 	delete collisionConfiguration;
 	delete broadphase;
+        delete mModelFilter;
 	delete mModelsSystem;
 
 	BULLETLOG(detailed,"Service Unloaded");
@@ -262,6 +281,13 @@ void BulletPhysicsService::getMeshCallback(Transfer::ChunkRequestPtr request, Tr
     // thread) so make sure we get it back on the main thread.
     if (request && response) {
         MeshdataPtr mesh = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+        if (mesh && mModelFilter) {
+            Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
+            input_data->push_back(mesh);
+            Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);
+            assert(output_data->single());
+            mesh = output_data->get();
+        }
         mContext->mainStrand->post(std::tr1::bind(cb, mesh));
     }
     else {

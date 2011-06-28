@@ -41,6 +41,8 @@
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 
+#include <sirikata/mesh/Filter.hpp>
+
 namespace Sirikata {
 
 class SirikataMotionState;
@@ -205,6 +207,7 @@ private:
 
     //load meshes to create appropriate bounding volumes
     ModelsSystem* mModelsSystem;
+    Mesh::Filter* mModelFilter;
 
     Transfer::TransferMediator *mTransferMediator;
     Transfer::TransferPoolPtr mTransferPool;
