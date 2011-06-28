@@ -234,7 +234,7 @@ private:
 
     void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
 
-    v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst);
+    v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src);
 
     void flushQueuedHandlerEvents();
     bool mHandlingEvent;

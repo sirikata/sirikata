@@ -48,9 +48,6 @@ void JSVisibleManager::stopTrackingVis(const SpaceObjectReference& sporef)
         return;
     }
     mProxies.erase(iter);
-    //lkjs;
-    //mProxies.erase(sporef);
-    
     removeListeners(sporef);
 }
 

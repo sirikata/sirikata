@@ -69,24 +69,11 @@ JSEventHandlerStruct::~JSEventHandlerStruct()
 }
 
 //sender should be of type VISIBLE (see template defined in JSObjectScriptManager
-bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> incoming_sender, const SpaceObjectReference& receiver)
+bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, const SpaceObjectReference&  incoming_sender, const SpaceObjectReference& receiver)
 {
     
     if (getIsSuspended() || getIsCleared())
         return false; //cannot match a suspended handler
-
-
-    //decode the sender of the message
-    String errorMessage = "[JS] Error encountered in matches of JSEventHandler.  Failed to decode sender of message as a visible object.  ";
-    JSPositionListener* jsposlist = decodeJSPosListener(incoming_sender,errorMessage);
-
-    if (jsposlist == NULL)
-    {
-        JSLOG(error,errorMessage);
-        return false;
-    }
-
-    SpaceObjectReference spref1 =  jsposlist->getSporef();
 
     
     //decode the expected sender
@@ -104,7 +91,7 @@ bool JSEventHandlerStruct::matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Ob
         SpaceObjectReference spref2 = jsplExpectedSender->getSporef();
 
         //check if the senders match
-        if ( spref1  != spref2)  //the senders do not match.  do not fire
+        if ( incoming_sender  != spref2)  //the senders do not match.  do not fire
             return false;
     }
 

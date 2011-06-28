@@ -17,7 +17,7 @@ struct JSEventHandlerStruct : public JSSuspendable
     JSEventHandlerStruct(const PatternList& _pattern, v8::Persistent<v8::Function> _cb, v8::Persistent<v8::Object> _sender, JSContextStruct* jscs,bool issusp);
 
     ~JSEventHandlerStruct();
-    bool matches(v8::Handle<v8::Object> obj, v8::Handle<v8::Object> sender, const SpaceObjectReference& receiver );
+    bool matches(v8::Handle<v8::Object> obj, const SpaceObjectReference& sender, const SpaceObjectReference& receiver );
 
     static JSEventHandlerStruct* decodeEventHandlerStruct(v8::Handle<v8::Value> toDecode, String& errorMessage);
 

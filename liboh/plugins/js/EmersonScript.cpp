@@ -627,16 +627,15 @@ void EmersonScript::printAllHandlers()
  * associated visible object.  If it doesn't, then return a new visible object
  * with stillVisible false associated with this object.
  */
-v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src, const ODP::Endpoint& dst)
+v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src)
 {
     v8::HandleScope handle_scope;
     SpaceObjectReference from(src.space(), src.object());
-    SpaceObjectReference to  (dst.space(), dst.object());
 
     JSVisibleStruct* jsvis = createVisStruct(from);
     v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
-
-    return returner;
+    
+    return handle_scope.Close(returner);
 }
 
 
@@ -652,7 +651,7 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     v8::Context::Scope context_scope(mContext->mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
 
-    v8::Handle<v8::Object> msgSender = getMessageSender(src,dst);
+    v8::Handle<v8::Object> msgSender = getMessageSender(src);
     //try deserialization
 
     Sirikata::JS::Protocol::JSMessage js_msg;
@@ -676,17 +675,18 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     bool matchesSomeHandler = false;
 
     SpaceObjectReference to  (dst.space(), dst.object());
+    SpaceObjectReference from(src.space(), src.object());
 
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
-
 
     for (int s=0; s < (int) mEventHandlers.size(); ++s)
     {
         if ((mResetting) || (mKilling))
             break;
 
-        if (mEventHandlers[s]->matches(obj,msgSender,to))
+
+        if (mEventHandlers[s]->matches(obj,from,to))
         {
             // Adding support for the knowing the message properties too
             int argc = 3;
