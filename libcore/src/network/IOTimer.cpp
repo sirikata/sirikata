@@ -46,7 +46,7 @@ class IOTimer::TimedOut {
 public:
     static void timedOut(
             const boost::system::error_code &error,
-            IOTimerWPtr wthis)
+            IOTimerWPtr wthis,uint64 tokenVal)
     {
         IOTimerPtr sharedThis (wthis.lock());
         if (!sharedThis) {
@@ -57,8 +57,10 @@ public:
         }
         sharedThis->chk.serializedEnter();
         IOTimer*st=&*sharedThis;
-        bool cancl=st->mCanceled;
-        if (!cancl)
+
+        //token only gets incremented if was canceled.  Therefore, if these two
+        //are equal, means wasn't canceled.
+        if (tokenVal == st->callbackToken)
             sharedThis->mFunc();
         sharedThis->chk.serializedExit();
     }
@@ -68,7 +70,7 @@ IOTimer::IOTimer(IOService& io) :mCanceled(false){
     mTimer = new DeadlineTimer(io);
 }
 
-IOTimer::IOTimer(IOService& io, const IOCallback& cb)  :mCanceled(false){
+IOTimer::IOTimer(IOService& io, const IOCallback& cb)  :callbackToken(0){
     mTimer = new DeadlineTimer(io);
     setCallback(cb);
 }
@@ -107,7 +109,10 @@ void IOTimer::wait(const Duration &num_seconds) {
         boost::bind(
             &IOTimer::TimedOut::timedOut,
             boost::asio::placeholders::error,
-            weakThisPtr));
+            weakThisPtr,
+            callbackToken.read()));
+
+    mCanceled = false;
 }
 
 void IOTimer::wait(const Duration &num_seconds, const IOCallback& cb) {
@@ -121,7 +126,7 @@ void IOTimer::setCallback(const IOCallback& cb) {
 
 void IOTimer::cancel() {
     chk.serializedEnter();
-    mCanceled=true;
+    callbackToken++;
     mTimer->cancel();
     chk.serializedExit();
 }

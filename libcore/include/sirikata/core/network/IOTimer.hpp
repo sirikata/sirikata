@@ -59,10 +59,17 @@ class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer
     IOCallback mFunc;
     class TimedOut;
     SerializationCheck chk;
+
     /**
      * Since the cancel does not always stop the boost callback this adds
-     * a level of safety to prevent the callback
+     * a level of safety to prevent the callback: This value gets incremented
+     * when call cancel.  When creating callback, bind it with the value of
+     * callbackToken when at this point.  When executing callback compare the
+     * bound value passed through with current value of callbackToken.  If
+     * tokens aren't equal, programmer called cancel in intervening time.
      */
+    AtomicValue<uint64> callbackToken;
+    
     bool mCanceled;
     /** Create a new timer, serviced by the specified IOService.
      *  \param io the IOService to service this timers events
