@@ -36,6 +36,11 @@
 
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/core/options/Options.hpp>
+#include <sirikata/core/transfer/TransferMediator.hpp>
+#include <sirikata/core/transfer/ResourceDownloadTask.hpp>
+#include <sirikata/mesh/ModelsSystem.hpp>
+#include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 #include <v8.h>
 
@@ -72,6 +77,10 @@ public:
     v8::Persistent<v8::ObjectTemplate>   mTimerTemplate;
     v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
 
+    // Mesh loading functions
+    typedef std::tr1::function<void(Mesh::MeshdataPtr)> MeshLoadCallback;
+    void loadMesh(const Transfer::URI& uri, MeshLoadCallback cb);
+
 private:
     ObjectHostContext* mContext;
 
@@ -88,8 +97,6 @@ private:
 
     void createTemplates();
 
-
-
     // The manager tracks the templates so they can be reused by all the
     // individual scripts.
     v8::Persistent<v8::FunctionTemplate> mVec3Template;
@@ -97,6 +104,37 @@ private:
     v8::Persistent<v8::FunctionTemplate> mPatternTemplate;
 
     OptionSet* mOptions;
+
+    // The manager also maintains mesh data. We store it here so it is easily
+    // shared by all the scripts, particularly important because mesh data is so
+    // costly memory-wise.
+    // FIXME this should be more complicated -- perhaps tracking shared_ptr's for awhile
+    // or just maintaining an LRU.
+    typedef std::tr1::unordered_map<Transfer::URI, Mesh::MeshdataWPtr, Transfer::URI::Hasher> MeshCache;
+    MeshCache mMeshCache;
+    // Some additional information is needed to keep track of in-progress
+    // downloads. Note that these are only ever modified in the main thread
+    typedef std::tr1::unordered_map<Transfer::URI, Transfer::ResourceDownloadTaskPtr, Transfer::URI::Hasher> MeshDownloads;
+    MeshDownloads mMeshDownloads;
+    typedef std::vector<MeshLoadCallback> MeshLoadCallbackList;
+    typedef std::tr1::unordered_map<Transfer::URI, MeshLoadCallbackList, Transfer::URI::Hasher> WaitingMeshCallbacks;
+    WaitingMeshCallbacks mMeshCallbacks;
+
+    Transfer::TransferPoolPtr mTransferPool;
+    // FIXME because we don't have proper multithreaded support in cppoh, we
+    // need to allocate our own thread dedicated to parsing
+    Network::IOService* mParsingIOService;
+    Network::IOWork* mParsingWork;
+    Thread* mParsingThread;
+
+    ModelsSystem* mModelParser;
+    Mesh::Filter* mModelFilter;
+
+    void meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data);
+    void parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    void meshParsed();
+    void finishMeshDownload(const Transfer::URI& uri, Mesh::MeshdataPtr mesh);
+
 };
 
 } // namespace JS

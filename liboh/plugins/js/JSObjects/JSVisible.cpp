@@ -8,6 +8,7 @@
 #include "../JSSerializer.hpp"
 #include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
+#include "../JSObjectStructs/JSSystemStruct.hpp"
 #include "JSFields.hpp"
 #include "JSVec3.hpp"
 #include "JSObjectsUtils.hpp"
@@ -345,6 +346,48 @@ v8::Handle<v8::Value> checkEqual(const v8::Arguments& args)
 
 
     return jsvis->struct_checkEqual(jsvis2);
+}
+
+
+namespace {
+v8::Handle<v8::Function> decodeCallbackArgument(const v8::Arguments& args, int32 idx) {
+    v8::Handle<v8::Function> cb;
+    if (args.Length() > idx) {
+        v8::Handle<v8::Value> cbVal = args[idx];
+        if (cbVal->IsFunction())
+            cb = v8::Handle<v8::Function>::Cast(cbVal);
+    }
+    return cb;
+}
+}
+
+v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
+{
+    if (args.Length() != 2) // only tell about one, first should be system
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling visible.loadMesh.  Requires 1 argument: the callback to invoke when loading is complete.")));
+
+    String errorMessage = "Error in loadMesh while decoding visible.  ";
+    JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+
+    errorMessage = "Error decoding system in presence.loadMesh";
+    JSSystemStruct* sysstruct = JSSystemStruct::decodeSystemStruct(args[0], errorMessage);
+
+    v8::Handle<v8::Function> cb = decodeCallbackArgument(args, 1);
+    if (cb.IsEmpty())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid callback argument to visible.loadMesh.")));
+
+    return visstruct->loadMesh(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling visible.unloadMesh. Takes no arguments.")));
+
+    String errorMessage = "Error in unloadMesh while decoding visible.  ";
+    JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+
+    return visstruct->unloadMesh();
 }
 
 

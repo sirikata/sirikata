@@ -574,6 +574,12 @@ public:
     operator bool() const {
         return !empty();
     }
+
+    struct Hasher {
+        size_t operator() (const URI& uri)const {
+            return std::tr1::hash<std::string>()(uri.mPath);
+        }
+    };
 };
 
 /// Display both the URI string (including its context).

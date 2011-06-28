@@ -179,6 +179,12 @@
                            }
                           );
 
+     visible.prototype.__origLoadMesh = visible.prototype.loadMesh;
+     visible.prototype.loadMesh = function(cb) {
+         system.__loadVisibleMesh(this, cb);
+     };
+
+
      visible.prototype.__prettyPrintFieldsData__ = [
          "position", "velocity",
          "orientation", "orientationVel",

@@ -370,15 +370,25 @@ system.__presence_constructor__.prototype.__getType = function()
        @return Returns the identifier for the space that the presence is in.
        @type String
        */
-      presence.prototype.getSpaceID = function(){}
+      presence.prototype.getSpaceID = function(){};
 
       /** @function
        @return Returns the identifier for the presence in the space that it's in.
        @type String
        */
-      presence.prototype.getPresenceID = function(){}
+      presence.prototype.getPresenceID = function(){};
       
-      
+
+      /** @function
+       *  @description Requests that the mesh for this model is
+       *  downloaded and parsed, making it available for operations
+       *  like raytracing and getting precise bounding box
+       *  information.
+       *  @param {function} cb callback to invoke when loading is
+       *  complete. The callback takes no parameters.
+       *
+       */
+      presence.prototype.loadMesh = function(cb) {};
   };
 
 
@@ -424,5 +434,14 @@ system.__presence_constructor__.prototype.__getType = function()
           }
           return orig_set_physics.apply(this, [encodePhysics(raw)]);
       };
+
+     // FIXME we shouldn't need __origLoadMesh but getting at the
+     // real, internal system object requires us to route through
+     // system right now
+     system.__presence_constructor__.prototype.__origLoadMesh = system.__presence_constructor__.prototype.loadMesh;
+     system.__presence_constructor__.prototype.loadMesh = function(cb) {
+         system.__loadPresenceMesh(this, cb);
+     };
+     // No need to override unloadMesh since it takes no special parameters
 
 })();

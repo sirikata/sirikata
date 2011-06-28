@@ -34,7 +34,7 @@ void JSPositionListener::setSharedProxyDataPtr( JSProxyPtr _jpp)
 v8::Handle<v8::Value> JSPositionListener::struct_getAllData()
 {
     CHECK_JPP_INIT_THROW_V8_ERROR(getAllData);
-    
+
     v8::HandleScope handle_scope;
     v8::Handle<v8::Object> returner = v8::Object::New();
     returner->Set(v8::String::New("sporef"), struct_getSporef());
@@ -151,7 +151,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getTransTime()
 v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
 {
     CHECK_JPP_INIT_THROW_V8_ERROR(getOrientTime);
-    
+
     uint64 orientTime = jpp->mOrientation.updateTime().raw();
     String convertedString;
 
@@ -165,6 +165,32 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
     }
 
     return v8::String::New(convertedString.c_str(),convertedString.size());
+}
+
+v8::Handle<v8::Value> JSPositionListener::loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb) {
+    CHECK_JPP_INIT_THROW_V8_ERROR(loadMesh);
+
+    JSObjectScriptManager::MeshLoadCallback wrapped_cb =
+        std::tr1::bind(&JSPositionListener::finishLoadMesh, this,
+            this->livenessToken(), ctx->livenessToken(), ctx, v8::Persistent<v8::Function>::New(cb), _1);
+    jpp->emerScript->manager()->loadMesh(Transfer::URI(getMesh()), wrapped_cb);
+    return v8::Undefined();
+}
+
+void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::MeshdataPtr data) {
+    if (!alive || !ctx_alive) return;
+
+    mMeshdata = data;
+
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(ctx->mContext);
+    TryCatch try_catch;
+    jpp->emerScript->invokeCallback(ctx, cb);
+}
+
+v8::Handle<v8::Value> JSPositionListener::unloadMesh() {
+    CHECK_JPP_INIT_THROW_V8_ERROR(unloadMesh);
+    mMeshdata.reset();
 }
 
 

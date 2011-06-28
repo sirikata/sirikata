@@ -1109,7 +1109,17 @@ function PresenceEntry(sporef, presObj)
 
      //populates self with basic system object.
      system.addToSelfMap(null);
-     
+
+
+     // FIXME this shouldn't be in system, but its the only place we
+     // can put functions with callbacks right now because we need to
+     // get at the context they are running in
+     system.__loadPresenceMesh = function(pres, cb) {
+         pres.__origLoadMesh.apply(pres, [baseSystem, cb]);
+     };
+     system.__loadVisibleMesh = function(vis, cb) {
+         vis.__origLoadMesh.apply(vis, [baseSystem, cb]);
+     };
      
   })();
 

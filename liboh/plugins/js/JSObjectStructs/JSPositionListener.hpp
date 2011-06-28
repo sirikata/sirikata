@@ -3,16 +3,17 @@
 
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
-
+#include <sirikata/core/util/Liveness.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace JS {
 
 class JSProxyData;
-
+class JSContextStruct;
 
 //note: only position and isConnected will actually set the flag of the watchable
-struct JSPositionListener 
+struct JSPositionListener : public Liveness
 {
     friend class JSSerializer;
     friend class JSVisibleStruct;
@@ -30,7 +31,6 @@ public:
     virtual String getPhysics();
     virtual bool getStillVisible();
 
-    
     virtual v8::Handle<v8::Value> struct_getPosition();
     virtual v8::Handle<v8::Value> struct_getVelocity();
     virtual v8::Handle<v8::Value> struct_getOrientation();
@@ -45,8 +45,11 @@ public:
 
     virtual v8::Handle<v8::Value> struct_getAllData();
     virtual v8::Handle<v8::Value> struct_checkEqual(JSPositionListener* jpl);
-    
+
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
+
+    v8::Handle<v8::Value> loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> unloadMesh();
 
     //simple accessors for sporef fields
     SpaceObjectReference getSporef();
@@ -58,18 +61,24 @@ public:
        world.  JSPresenceStruct can set it here.
      */
     void setSharedProxyDataPtr(    std::tr1::shared_ptr<JSProxyData>_jpp);
-    
+
 
 protected:
     v8::Handle<v8::Value> wrapSporef(SpaceObjectReference sporef);
     std::tr1::shared_ptr<JSProxyData> jpp;
+    // We don't store this in jpp because we would just have to keep track of
+    // separate flags for whether we loaded it so we could do some refcounting.
+    Mesh::MeshdataPtr mMeshdata;
 
-    
 private:
 
     //private constructor.  Can only be made through serializer,
     //JSVisibleStruct, or JSPresenceStruct.
     JSPositionListener(    std::tr1::shared_ptr<JSProxyData> _jpp);
+
+    // Invoked after loading is complete, invokes callback if all necessary
+    // components are still alive.
+    void finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::MeshdataPtr data);
 };
 
 
@@ -83,7 +92,7 @@ private:
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling " #funcIn ".  Proxy ptr was not set.")));\
     }\
 }
-    
+
 
 //Throws an error if not in context.
 //funcIn specifies which function is asking passErrorChecks, and gets printed in

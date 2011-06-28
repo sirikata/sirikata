@@ -54,11 +54,16 @@
 #include "JSSystemNames.hpp"
 #include "JSObjects/JSContext.hpp"
 
-
+#include <sirikata/core/network/IOServiceFactory.hpp>
+#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/network/IOWork.hpp>
+#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/CompositeFilter.hpp>
 
 namespace Sirikata {
 namespace JS {
 
+using namespace Sirikata::Mesh;
 
 ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments) {
     return new JSObjectScriptManager(ctx, arguments);
@@ -67,8 +72,36 @@ ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(ObjectHost
 
 
 JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments)
- : mContext(ctx)
+ : mContext(ctx),
+   mTransferPool(),
+   mParsingIOService(NULL),
+   mParsingWork(NULL),
+   mParsingThread(NULL),
+   mModelParser(NULL),
+   mModelFilter(NULL)
 {
+    // In emheadless we run without an ObjectHostContext
+    if (mContext != NULL) {
+        mTransferPool = Transfer::TransferMediator::getSingleton().registerClient("JSObjectScriptManager");
+
+        mParsingIOService = Network::IOServiceFactory::makeIOService();
+        mParsingWork = new Network::IOWork(*mParsingIOService, "JSObjectScriptManager Mesh Parsing");
+        mParsingThread = new Sirikata::Thread(std::tr1::bind(&Network::IOService::runNoReturn, mParsingIOService));
+
+        mModelParser = ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" );
+        try {
+            // These have to be consistent with any other simulations -- e.g. the
+            // space bullet plugin and scripting plugins that expose mesh data
+            std::vector<String> names_and_args;
+            names_and_args.push_back("center"); names_and_args.push_back("");
+            mModelFilter = new Mesh::CompositeFilter(names_and_args);
+        }
+        catch(Mesh::CompositeFilter::Exception e) {
+            SILOG(js,warning,"Couldn't allocate requested model load filter, will not apply filter to loaded models.");
+            mModelFilter = NULL;
+        }
+    }
+
     OptionValue* import_paths;
     OptionValue* v8_flags_opt;
     OptionValue* emer_resource_max;
@@ -340,6 +373,9 @@ void JSObjectScriptManager::createVisibleTemplate()
     proto_t->Set(v8::String::New("checkEqual"),v8::FunctionTemplate::New(JSVisible::checkEqual));
     proto_t->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
 
+    proto_t->Set(v8::String::New("loadMesh"),v8::FunctionTemplate::New(JSVisible::loadMesh));
+    proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSVisible::unloadMesh));
+
     proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
     proto_t->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSVisible::getType));
 
@@ -425,6 +461,9 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("disconnect"), v8::FunctionTemplate::New(JSPresence::pres_disconnect));
 
 
+  proto_t->Set(v8::String::New("loadMesh"),v8::FunctionTemplate::New(JSPresence::loadMesh));
+  proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSPresence::unloadMesh));
+
 
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
@@ -459,8 +498,78 @@ void JSObjectScriptManager::createHandlerTemplate()
 }
 
 
+void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback cb) {
+    // First try to grab out of cache
+    MeshCache::iterator it = mMeshCache.find(uri);
+    if (it != mMeshCache.end()) {
+        MeshdataWPtr w_mesh = it->second;
+        MeshdataPtr mesh = w_mesh.lock();
+        if (mesh) {
+            mContext->mainStrand->post(std::tr1::bind(cb, mesh));
+            return;
+        }
+    }
+
+    // Always add the callback to the list to be invoked, whether
+    // we're the first requester or not
+    mMeshCallbacks[uri].push_back(cb);
+
+    // Even if we don't have the MeshdataPtr, the load might be in progress. In
+    // that case, we just queue up the callback.
+    if (mMeshDownloads.find(uri) != mMeshDownloads.end())
+        return;
+
+    // Finally, if none of that worked, we need to download it.
+    Transfer::ResourceDownloadTaskPtr dl = Transfer::ResourceDownloadTask::construct(
+        uri,
+        mTransferPool,
+        1.0,
+        std::tr1::bind(&JSObjectScriptManager::meshDownloaded, this, _1, _2)
+    );
+    mMeshDownloads[uri] = dl;
+    dl->start();
+}
+
+void JSObjectScriptManager::meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data) {
+    mParsingIOService->post(
+        std::tr1::bind(&JSObjectScriptManager::parseMeshWork, this, request->getMetadata().getURI(), request->getMetadata().getFingerprint(), data)
+    );
+}
+
+void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
+    Mesh::MeshdataPtr parsed = mModelParser->load(uri, fp, data);
+    if (parsed && mModelFilter) {
+        Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
+        input_data->push_back(parsed);
+        Mesh::FilterDataPtr output_data = mModelFilter->apply(input_data);
+        assert(output_data->single());
+        parsed = output_data->get();
+    }
+
+    mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, uri, parsed));
+}
+
+void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, MeshdataPtr mesh) {
+    // We need to clean up and invoke callbacks. Make sure we're fully cleaned
+    // up (out of member data) before making callbacks in case they do any
+    // re-requests.
+    mMeshCache[uri] = mesh;
+    mMeshDownloads.erase(uri);
+    MeshLoadCallbackList cbs = mMeshCallbacks[uri];
+    mMeshCallbacks.erase(uri);
+
+    for(MeshLoadCallbackList::iterator it = cbs.begin(); it != cbs.end(); it++)
+        mContext->mainStrand->post(std::tr1::bind(*it, mesh));
+}
+
 JSObjectScriptManager::~JSObjectScriptManager()
 {
+    mParsingThread->join();
+    delete mParsingThread;
+    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+
+    delete mModelFilter;
+    delete mModelParser;
 }
 
 

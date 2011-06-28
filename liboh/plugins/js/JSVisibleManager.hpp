@@ -17,9 +17,9 @@ typedef std::tr1::shared_ptr<JSProxyData> JSProxyPtr;
 
 static JSProxyPtr nullProxyPtr;
 
-struct JSProxyData 
+struct JSProxyData
 {
-    
+
     JSProxyData(EmersonScript* eScript)
      : emerScript(eScript)
     {
@@ -46,17 +46,7 @@ struct JSProxyData
        mPhysics(from->mPhysics)
     {
     }
-    
-    // JSProxyData(EmersonScript* eScript,JSProxyData* from)
-    //  : emerScript(eScript),
-    //    sporefToListenTo(from->sporefToListenTo),
-    //    mLocation(from->mLocation),
-    //    mOrientation(from->mOrientation),
-    //    mBounds(from->mBounds),
-    //    mMesh(from->mMesh),
-    //    mPhysics(from->mPhysics)
-    // {}
-    
+
     ~JSProxyData();
 
     EmersonScript*                  emerScript;
@@ -80,7 +70,7 @@ public:
     JSVisibleManager(EmersonScript* eScript);
     ~JSVisibleManager();
 
-    
+
 
     /**
        Creates a new visible struct with sporef whatsVisible.  First checks if
@@ -101,15 +91,15 @@ public:
      */
     JSProxyPtr createProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams);
 
-  
-    
+
+
     /**
        If a new proxy object is available and its sporef is in mProxies, update
        mProxies and with the new proxies fields and set JSVisibleManager as a
        listener for it.
      */
     virtual void onCreateProxy(ProxyObjectPtr p);
-    
+
     /**
        If sporef of p exists in mProxies, then at some point, we must have
        registered JSVisibleManager as a position and mesh listener for p.
@@ -121,8 +111,8 @@ public:
      */
     virtual void destroyed()
     {}
-    
-    
+
+
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
@@ -138,10 +128,10 @@ public:
     void stopTrackingVis(const SpaceObjectReference& sporef);
 
     bool isVisible(const SpaceObjectReference& sporef);
-    
+
 private:
 
-  
+
     /**
        Runs through all the presences on this entity.  For each presence, checks
        if have a proxy object associated with sporef.  Return the proxy object
@@ -160,17 +150,17 @@ private:
        that have the sporef toRemoveListenersFor.
      */
     void removeListeners(const SpaceObjectReference& toRemoveListenersFor);
-    
-    
+
+
 
     v8::Handle<v8::Value> isVisibleV8(const SpaceObjectReference& sporef);
-    
+
     EmersonScript* emerScript;
-    
+
     typedef std::map<SpaceObjectReference,JSProxyWPtr > SporefProxyMap;
     typedef SporefProxyMap::iterator SporefProxyMapIter;
     SporefProxyMap mProxies;
-    
+
 };
 
 

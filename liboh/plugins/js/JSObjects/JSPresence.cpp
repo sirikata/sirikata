@@ -1,6 +1,7 @@
 #include "JSPresence.hpp"
 #include "JSFields.hpp"
 #include "../JSObjectStructs/JSPresenceStruct.hpp"
+#include "../JSObjectStructs/JSSystemStruct.hpp"
 #include "JSVec3.hpp"
 #include "JSQuaternion.hpp"
 #include "JSInvokableObject.hpp"
@@ -61,7 +62,7 @@ v8::Handle<v8::Value>  pres_disconnect(const v8::Arguments& args)
 
     if (jspres == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str()) ));
-    
+
     return jspres->disconnect();
 }
 
@@ -96,7 +97,7 @@ v8::Handle<v8::Value>  getAllData(const v8::Arguments& args)
     return jspres->getAllData();
 }
 
-  
+
 v8::Handle<v8::Value>  getSpace(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -640,6 +641,49 @@ Handle<v8::Value> setPhysics(const v8::Arguments& args)
 
     return mStruct->setPhysicsFunction(phy);
 }
+
+
+namespace {
+v8::Handle<v8::Function> decodeCallbackArgument(const v8::Arguments& args, int32 idx) {
+    v8::Handle<v8::Function> cb;
+    if (args.Length() > idx) {
+        v8::Handle<v8::Value> cbVal = args[idx];
+        if (cbVal->IsFunction())
+            cb = v8::Handle<v8::Function>::Cast(cbVal);
+    }
+    return cb;
+}
+}
+
+v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
+{
+    if (args.Length() != 2) // only tell about one, first should be system
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling presence.loadMesh.  Requires 1 argument: the callback to invoke when loading is complete.")));
+
+    String errorMessage = "Error in loadMesh while decoding presence.  ";
+    JSPresenceStruct* presstruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    errorMessage = "Error decoding system in presence.loadMesh";
+    JSSystemStruct* sysstruct = JSSystemStruct::decodeSystemStruct(args[0], errorMessage);
+
+    v8::Handle<v8::Function> cb = decodeCallbackArgument(args, 1);
+    if (cb.IsEmpty())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid callback argument to presence.loadMesh.")));
+
+    return presstruct->loadMesh(sysstruct->getContext(), cb);
+}
+
+v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
+{
+    if (args.Length() != 0)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling presence.unloadMesh. Takes no arguments.")));
+
+    String errorMessage = "Error in unloadMesh while decoding presence.  ";
+    JSPresenceStruct* presstruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+
+    return presstruct->unloadMesh();
+}
+
 
 
 void setNullPresence(const v8::Arguments& args)

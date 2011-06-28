@@ -34,6 +34,9 @@ v8::Handle<v8::Value> getPhysics(const v8::Arguments& args);
 v8::Handle<v8::Value> getAllData(const v8::Arguments& args);
 v8::Handle<v8::Value> getType(const v8::Arguments& args);
 
+v8::Handle<v8::Value> loadMesh(const v8::Arguments& args);
+v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args);
+
 }//end jsvisible namespace
 }//end js namespace
 }//end sirikata

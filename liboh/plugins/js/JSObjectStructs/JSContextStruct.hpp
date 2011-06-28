@@ -13,7 +13,7 @@
 #include "../JSUtil.hpp"
 #include <sirikata/core/util/Vector3.hpp>
 #include <sirikata/oh/Storage.hpp>
-
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -29,7 +29,7 @@ class JSSystemStruct;
 struct PresStructRestoreParams;
 class JSProxyData;
 
-struct JSContextStruct : public JSSuspendable
+struct JSContextStruct : public JSSuspendable, public Liveness
 {
     JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
     ~JSContextStruct();

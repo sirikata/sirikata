@@ -53,6 +53,7 @@ typedef std::vector<std::string> TextureList;
 
 struct Meshdata;
 typedef std::tr1::shared_ptr<Meshdata> MeshdataPtr;
+typedef std::tr1::weak_ptr<Meshdata> MeshdataWPtr;
 
 /** Represents a skinned animation. A skinned animation is directly associated
  *  with a SubMeshGeometry.

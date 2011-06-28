@@ -70,6 +70,8 @@ v8::Handle<v8::Value> toVisible(const v8::Arguments& args);
 v8::Handle<v8::Value> pres_suspend(const v8::Arguments& args);
 v8::Handle<v8::Value> pres_resume(const v8::Arguments& args);
 
+v8::Handle<v8::Value> loadMesh(const v8::Arguments& args);
+v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args);
 
 void setNullPresence(const v8::Arguments& args);
 
