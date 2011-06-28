@@ -349,18 +349,6 @@ function PresenceEntry(sporef, presObj)
          return baseSystem.headless();
      };
 
-     /** @function
-      @param string space and object id of a visible object.  
-      
-      @return a visible object with the space and object id contained argument.
-      
-      Throws an exception if string is incorrectly formatted, otherwise returns vis object.
-      */
-      system.createVisible = function(/**String**/strToCreateFrom)
-      {
-          return baseSystem.createVisible.apply(baseSystem,arguments);
-      };
-
       
       /** I an not defining any callback handlers. They can be, if required */
       /** Since these functions are not getting added to the prototype of the system object, it will generate static functions */
@@ -737,7 +725,10 @@ function PresenceEntry(sporef, presObj)
               //handle script is function
               if (typeof(script) == 'function')
               {
-                  var funcString = quoteEscaper(script.toString());
+                  //var funcString = quoteEscaper(script.toString());
+                  //var funcString = Escape.escapeString(script.toString(),null);
+                  var funcString = script.toString();
+                  
                   if (arg !== null)
                   {
                       var serializedArg = Escape.escapeString(this.serialize(arg), '@');
@@ -745,8 +736,7 @@ function PresenceEntry(sporef, presObj)
                   }
                   else
                       funcString = '(' + funcString + ") ( );";
-
-
+                  
                   this.__hidden_createEntity(position, 'js',funcString,mesh,scale,solidAngle,space);
               }
               else if (typeof(script) == 'string')

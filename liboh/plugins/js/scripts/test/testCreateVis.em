@@ -26,7 +26,7 @@ function bMessageHandler(msg,sender)
 
 function sendCData(msgToSend)
 {
-    msgToSend -> cVis;
+    msgToSend >> cVis >>[];
 }
 
 
@@ -55,7 +55,18 @@ function cInitializer(myMaster)
         
         var processMasterMessage = function(msg,sender)
         {
-            var otherVis = system.createVisible(msg.sporef, msg.sporefFrom, msg.pos,msg.vel, msg.posTime, msg.orient, msg.orientVel, msg.orientTime,msg.pos, msg.scale, msg.mesh);
+            //var otherVis = system.createVisible(msg.sporef, msg.sporefFrom, msg.pos,msg.vel, msg.posTime, msg.orient, msg.orientVel, msg.orientTime,msg.pos, msg.scale, msg.mesh);
+            var otherVis = system.createVisible(msg.sporef,
+                                                msg.pos,
+                                                msg.vel,
+                                                msg.posTime,
+                                                msg.orient,
+                                                msg.orientVel,
+                                                msg.orientTime,
+                                                msg.pos,
+                                                msg.scale,
+                                                msg.mesh,
+                                                msg.physics);
 
             system.print('\n\nThis is the position of the object that I am sending to: ');
             system.print( msg.pos);
@@ -66,14 +77,14 @@ function cInitializer(myMaster)
             system.print(msg.pos.z);
             system.print('\n\n');
 
-            msg -> otherVis;
+            msg >> otherVis >>[];
         };
 
         processMasterMessage << {'sporef'::} << masterVis;
 
         
         var msg = {'cField': "c's_registration"};
-        msg -> masterVis;
+        msg >> masterVis >>[];
     };
 
 
@@ -106,7 +117,7 @@ function bInitializer(myMaster)
         
         var allSelfData = system.self.toVisible().getAllData();
         allSelfData.bField = "b's_registration";
-        allSelfData->masterVis;
+        allSelfData>>masterVis>>[];
         
     };
     

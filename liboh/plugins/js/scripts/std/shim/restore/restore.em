@@ -282,7 +282,6 @@ if (typeof(std.persist) === 'undefined')
 
          var returner = system.createVisible(
              toRestoreFrom.sporef,
-             toRestoreFrom.sporefFrom,
              toRestoreFrom.pos,
              toRestoreFrom.vel,
              toRestoreFrom.posTime,
@@ -372,8 +371,6 @@ if (typeof(std.persist) === 'undefined')
       */
      function restorePresence(keyName,unfixedPres,ptrId,ptrsToFix,nameService, cb)
      {
-
-
          var pToFix = [];
          restoreBasicObject(
              keyName,unfixedPres,ptrId,pToFix,nameService,

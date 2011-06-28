@@ -55,6 +55,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
+
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, JSProxyData* addParams);
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp);

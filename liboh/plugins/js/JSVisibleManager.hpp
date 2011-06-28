@@ -15,13 +15,16 @@ class JSProxyData;
 typedef std::tr1::weak_ptr<JSProxyData>   JSProxyWPtr;
 typedef std::tr1::shared_ptr<JSProxyData> JSProxyPtr;
 
-
+static JSProxyPtr nullProxyPtr;
 
 struct JSProxyData 
 {
+    
     JSProxyData(EmersonScript* eScript)
      : emerScript(eScript)
-    {}
+    {
+        std::cout<<"\nDEBUG: emerScript: "<<emerScript<<"\n\n";
+    }
 
     JSProxyData(EmersonScript* eScript,const SpaceObjectReference& _sporefToListenTo,const TimedMotionVector3f& _mLocation,const TimedMotionQuaternion& _mOrientation, const BoundingSphere3f& _mBounds,const String& _mMesh, const String& _mPhysics)
      : emerScript(eScript),
@@ -31,7 +34,9 @@ struct JSProxyData
        mBounds(_mBounds),
        mMesh(_mMesh),
        mPhysics(_mPhysics)
-    {}
+    {
+        std::cout<<"\nDEBUG: emerScript: "<<emerScript<<"\n\n";
+    }
 
     JSProxyData(EmersonScript* eScript, JSProxyPtr from)
      : emerScript(eScript),
@@ -41,7 +46,9 @@ struct JSProxyData
        mBounds(from->mBounds),
        mMesh(from->mMesh),
        mPhysics(from->mPhysics)
-    {}
+    {
+        std::cout<<"\nDEBUG: emerScript: "<<emerScript<<"\n\n";
+    }
     
     // JSProxyData(EmersonScript* eScript,JSProxyData* from)
     //  : emerScript(eScript),
@@ -55,7 +62,6 @@ struct JSProxyData
     
     ~JSProxyData();
 
-    
     EmersonScript*                  emerScript;
     SpaceObjectReference      sporefToListenTo;
     TimedMotionVector3f              mLocation;

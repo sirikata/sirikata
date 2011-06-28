@@ -11,7 +11,11 @@ namespace JS{
 
 JSProxyData::~JSProxyData()
 {
-    emerScript->stopTrackingVis(sporefToListenTo);
+    if (emerScript)
+    {
+        std::cout<<"\nDEBUG: emerScript DELETE: "<<emerScript<<"\n\n";
+        emerScript->stopTrackingVis(sporefToListenTo);
+    }
 }
 
 
@@ -28,21 +32,30 @@ JSVisibleManager::~JSVisibleManager()
 
 JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& whatsVisible,JSProxyData* addParams)
 {
-    JSProxyPtr toCreateFrom = createProxyPtr( whatsVisible, JSProxyPtr(addParams));
+    JSProxyPtr toCreateFrom;
+    if (addParams == NULL)
+        toCreateFrom = createProxyPtr( whatsVisible, nullProxyPtr);
+    else
+        toCreateFrom = createProxyPtr( whatsVisible, JSProxyPtr(addParams));
+    
     return new JSVisibleStruct(toCreateFrom);
 }
 
 
 void JSVisibleManager::stopTrackingVis(const SpaceObjectReference& sporef)
 {
+    std::cout<<"\n\nDEBUG: this is sporef: "<<sporef<<"\n\n";
+    
     SporefProxyMapIter iter = mProxies.find(sporef);
     if (iter == mProxies.end())
     {
         JSLOG(error, "Error in stopTrackingVis.  Requesting to stop tracking a visible that we had not previously been tracking.");
         return;
     }
-
     mProxies.erase(iter);
+    //lkjs;
+    //mProxies.erase(sporef);
+    
     removeListeners(sporef);
 }
 
@@ -90,11 +103,10 @@ JSProxyPtr JSVisibleManager::createProxyPtr(const SpaceObjectReference& whatsVis
     //hosted object does not have a visible with sporef whatsVisible.
 
     //load additional data on the visible from addParams
-    if (addParams)
+    if (addParams != nullProxyPtr)
     {
         if (addParams->sporefToListenTo != whatsVisible)
             JSLOG(error, "Erorr in createVisStruct of JSVisibleManager.  Expected sporefs of new visible should match whatsVisible");
-
         
         JSProxyPtr returner (new JSProxyData(emerScript,addParams));
         mProxies[whatsVisible] = JSProxyWPtr(returner);
@@ -232,10 +244,6 @@ void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
         p->MeshProvider::removeListener(this);
     }
 }
-
-
-
-
 
 
 }//end namespace JS

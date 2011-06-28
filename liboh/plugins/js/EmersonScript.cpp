@@ -451,7 +451,7 @@ void EmersonScript::callbackUnconnected(const SpaceObjectReference& name, Hosted
             //had to set presence's position listener with a blank proxyptr.
             //can now set it with a real one that listens as it moves/changes in
             //the world.
-            JSProxyPtr proxPtr  =  createProxyPtr(name, JSProxyPtr());
+            JSProxyPtr proxPtr  =  createProxyPtr(name, nullProxyPtr);
 
             mUnconnectedPresences.erase(iter);
             // Make sure this call is last since it invokes a callback which
