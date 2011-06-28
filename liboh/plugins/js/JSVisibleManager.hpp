@@ -23,7 +23,6 @@ struct JSProxyData
     JSProxyData(EmersonScript* eScript)
      : emerScript(eScript)
     {
-        std::cout<<"\nDEBUG: emerScript: "<<emerScript<<"\n\n";
     }
 
     JSProxyData(EmersonScript* eScript,const SpaceObjectReference& _sporefToListenTo,const TimedMotionVector3f& _mLocation,const TimedMotionQuaternion& _mOrientation, const BoundingSphere3f& _mBounds,const String& _mMesh, const String& _mPhysics)
@@ -35,7 +34,6 @@ struct JSProxyData
        mMesh(_mMesh),
        mPhysics(_mPhysics)
     {
-        std::cout<<"\nDEBUG: emerScript: "<<emerScript<<"\n\n";
     }
 
     JSProxyData(EmersonScript* eScript, JSProxyPtr from)
@@ -47,7 +45,6 @@ struct JSProxyData
        mMesh(from->mMesh),
        mPhysics(from->mPhysics)
     {
-        std::cout<<"\nDEBUG: emerScript: "<<emerScript<<"\n\n";
     }
     
     // JSProxyData(EmersonScript* eScript,JSProxyData* from)

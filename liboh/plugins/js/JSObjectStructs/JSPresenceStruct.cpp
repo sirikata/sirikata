@@ -58,7 +58,33 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
    mPresenceToken(presToken),
    mContext(NULL)
 {
-    std::cout<<"\n\n\nFIXME: re-write after finished\n\n";
+    jpp->mLocation = *psrp.mTmv3f;
+    jpp->mOrientation = *psrp.mTmq;
+    jpp->mMesh = *psrp.mMesh;
+    jpp->mBounds = BoundingSphere3f( center  ,* psrp.mScale);
+    jpp->mPhysics = "";
+    mQuery       = *psrp.mQuery;
+
+    mSuspendedVelocity = *psrp.mSuspendedVelocity;
+    mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
+
+    if (psrp.mConnCallback != NULL)
+    {
+        hasConnectedCallback = true;
+        mOnConnectedCallback = v8::Persistent<v8::Function>::New(*psrp.mConnCallback);
+    }
+
+    if (*psrp.mIsSuspended)
+        suspend();
+
+    if (*psrp.mIsCleared)
+        clear();
+
+    mContID = *psrp.mContID;
+    if (mContID != jscont->getContextID())
+        parent->registerFixupSuspendable(this,mContID);
+    else
+        mContext = jscont;
 }
 
 

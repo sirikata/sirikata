@@ -905,21 +905,16 @@ JSPresenceStruct* EmersonScript::findPresence(const SpaceObjectReference& sporef
 
 v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx)
 {
-
     if (jsctx != mContext)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Can only restore presence from root context.")) );
 
-
     v8::Context::Scope context_scope(jsctx->mContext);
-
 
     //get location
     Vector3f newPos            = psrp.mTmv3f->extrapolate(mParent->currentLocalTime()).position();
     Quaternion newOrient       = psrp.mTmq->extrapolate(mParent->currentLocalTime()).position();
     Vector3f newVel            = psrp.mTmv3f->velocity();
     Quaternion orientVel       = psrp.mTmq->velocity();
-
-
 
     Vector3f newAngAxis;
     float newAngVel;
@@ -934,7 +929,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
     JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
-
 
     if (*psrp.mIsConnected)
     {

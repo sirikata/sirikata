@@ -12,10 +12,7 @@ namespace JS{
 JSProxyData::~JSProxyData()
 {
     if (emerScript)
-    {
-        std::cout<<"\nDEBUG: emerScript DELETE: "<<emerScript<<"\n\n";
         emerScript->stopTrackingVis(sporefToListenTo);
-    }
 }
 
 
@@ -44,8 +41,6 @@ JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& w
 
 void JSVisibleManager::stopTrackingVis(const SpaceObjectReference& sporef)
 {
-    std::cout<<"\n\nDEBUG: this is sporef: "<<sporef<<"\n\n";
-    
     SporefProxyMapIter iter = mProxies.find(sporef);
     if (iter == mProxies.end())
     {
