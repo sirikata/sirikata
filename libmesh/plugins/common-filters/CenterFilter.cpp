@@ -63,9 +63,12 @@ FilterDataPtr CenterFilter::apply(FilterDataPtr input) {
 
         Vector3f center = bbox.center();
 
-        // And add a root node with the appropriate transformation
+        // We to add a transformation. We can't just insert a root node because
+        // globalTransform might have other adjustments (very importantly,
+        // changing which dimension is up). Instead, we shift globalTransform to
+        // a new root node and put our transformation in globalTransform.
 
-        Node new_root(NullNodeIndex, Matrix4x4f::translate(-center));
+        Node new_root(NullNodeIndex, mesh->globalTransform);
         new_root.children = mesh->rootNodes;
 
         NodeIndex new_root_index = mesh->nodes.size();
@@ -73,6 +76,8 @@ FilterDataPtr CenterFilter::apply(FilterDataPtr input) {
 
         mesh->rootNodes.clear();
         mesh->rootNodes.push_back(new_root_index);
+
+        mesh->globalTransform = Matrix4x4f::translate(-center);
     }
 
     return input;
