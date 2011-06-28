@@ -41,6 +41,7 @@ system.require('std/graphics/chat.em');
 system.require('std/graphics/physics.em');
 system.require('std/graphics/propertybox.em');
 system.require('std/graphics/presenceList.em');
+system.require('std/graphics/setMesh.em');
 
 (
 function() {
@@ -68,6 +69,7 @@ function() {
         this._physics = new std.graphics.PhysicsProperties(this._simulator);
         this._propertybox = new std.propertybox.PropertyBox(this);
         this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter);
+        this._setMesh = new std.graphics.SetMesh(this._simulator);
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
@@ -92,6 +94,7 @@ function() {
 
         this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
         this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
+        this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
 
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
@@ -143,6 +146,7 @@ function() {
             { key: ['button-pressed', 'p', 'ctrl' ], action: 'togglePhysicsProperties' },
             { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
             { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
+            { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
 
             { key: ['mouse-click', 3], action: 'pickObject' },
             { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
