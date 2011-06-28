@@ -60,13 +60,14 @@ namespace Sirikata {
 namespace JS {
 
 
-ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
-    return new JSObjectScriptManager(arguments);
+ObjectScriptManager* JSObjectScriptManager::createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments) {
+    return new JSObjectScriptManager(ctx, arguments);
 }
 
 
 
-JSObjectScriptManager::JSObjectScriptManager(const Sirikata::String& arguments)
+JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments)
+ : mContext(ctx)
 {
     OptionValue* import_paths;
     OptionValue* v8_flags_opt;

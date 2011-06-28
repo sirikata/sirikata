@@ -41,7 +41,7 @@ namespace SimpleCamera {
 
 class SimpleCameraObjectScriptManager : public ObjectScriptManager {
 public:
-    static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
+    static ObjectScriptManager* createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments);
 
     SimpleCameraObjectScriptManager(const Sirikata::String& arguments);
     virtual ~SimpleCameraObjectScriptManager();

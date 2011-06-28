@@ -82,7 +82,7 @@ ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const
         std::map<std::string,std::string> *options=&scriptManagers->as<std::map<std::string,std::string> > ();
         for (std::map<std::string,std::string>::iterator i=options->begin(),ie=options->end();i!=ie;++i) {
             if (!ObjectScriptManagerFactory::getSingleton().hasConstructor(i->first)) continue;
-            ObjectScriptManager* newmgr = ObjectScriptManagerFactory::getSingleton().getConstructor(i->first)(i->second);
+            ObjectScriptManager* newmgr = ObjectScriptManagerFactory::getSingleton().getConstructor(i->first)(mContext, i->second);
             if (newmgr)
                 mScriptManagers[i->first] = newmgr;
         }

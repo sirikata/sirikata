@@ -34,6 +34,7 @@
 #define _SIRIKATA_OBJECT_SCRIPT_MANAGER_FACTORY_
 
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 
 namespace Sirikata{
 
@@ -42,7 +43,7 @@ class ObjectScriptManager;
 ///Class to create graphics subsystems. FIXME: should this load a dll when a named factory is not found
 class SIRIKATA_OH_EXPORT ObjectScriptManagerFactory
     : public AutoSingleton<ObjectScriptManagerFactory>,
-      public Factory1<ObjectScriptManager*,
+      public Factory2<ObjectScriptManager*, ObjectHostContext*,
                       const String&> //options string for the object script manager
 {
 public:

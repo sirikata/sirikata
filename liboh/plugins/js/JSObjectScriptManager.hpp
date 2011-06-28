@@ -48,9 +48,9 @@ class JSObjectScript;
 
 class JSObjectScriptManager : public ObjectScriptManager {
 public:
-    static ObjectScriptManager* createObjectScriptManager(const Sirikata::String& arguments);
+    static ObjectScriptManager* createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments);
 
-    JSObjectScriptManager(const Sirikata::String& arguments);
+    JSObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments);
     virtual ~JSObjectScriptManager();
 
     virtual ObjectScript* createObjectScript(HostedObjectPtr ho, const String& args, const String& script);
@@ -73,7 +73,7 @@ public:
     v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
 
 private:
-
+    ObjectHostContext* mContext;
 
     void createVisibleTemplate();
     void createHandlerTemplate();

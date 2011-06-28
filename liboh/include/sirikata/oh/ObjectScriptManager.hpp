@@ -31,7 +31,9 @@
  */
 #ifndef _OBJECT_SCRIPT_MANAGER_HPP_
 #define _OBJECT_SCRIPT_MANAGER_HPP_
+
 #include <sirikata/oh/Platform.hpp>
+#include <sirikata/oh/ObjectHostContext.hpp>
 
 namespace Sirikata {
 

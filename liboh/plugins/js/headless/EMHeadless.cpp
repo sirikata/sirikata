@@ -15,7 +15,7 @@ int main (int argc, char** argv)
         return 0;
     }
 
-    Sirikata::JS::JSObjectScriptManager jsman("");
+    Sirikata::JS::JSObjectScriptManager jsman(NULL, "");
     std::string fileToCheck(argv[1]);
 
     std::string args = "";

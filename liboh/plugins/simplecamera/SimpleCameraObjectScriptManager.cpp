@@ -38,7 +38,8 @@
 namespace Sirikata {
 namespace SimpleCamera {
 
-ObjectScriptManager* SimpleCameraObjectScriptManager::createObjectScriptManager(const Sirikata::String& arguments) {
+ObjectScriptManager* SimpleCameraObjectScriptManager::createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments) {
+    // No need in this case to pass on the OHContext.
     return new SimpleCameraObjectScriptManager(arguments);
 }
 

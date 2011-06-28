@@ -59,13 +59,14 @@ SIRIKATA_PLUGIN_EXPORT_C int refcount() {
 SIRIKATA_PLUGIN_EXPORT_C void init() {
     using namespace Sirikata;
     using std::tr1::placeholders::_1;
+    using std::tr1::placeholders::_2;
     if (js_plugin_refcount == 0) {
         JSLOG(info,"Initializing JS Plugin.");
         ObjectScriptManagerFactory::getSingleton().registerConstructor(
             "js",
             std::tr1::bind(
                 &Sirikata::JS::JSObjectScriptManager::createObjectScriptManager,
-                _1
+                _1, _2
             )
         );
     }
