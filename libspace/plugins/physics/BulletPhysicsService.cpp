@@ -33,6 +33,7 @@
 #include "BulletPhysicsService.hpp"
 #include <sirikata/core/trace/Trace.hpp>
 #include <sirikata/mesh/CompositeFilter.hpp>
+#include <sirikata/mesh/Bounds.hpp>
 
 #include "Protocol_Loc.pbj.hpp"
 
@@ -451,24 +452,10 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
 	* Supposedly the system scales every mesh down to a unit sphere and then scales up by the scale factor
 	* from the scene file. We try to emulate this behavior here, but this should really be on the CDN side
 	* (we retrieve the precomputed bounding box as well as the mesh) ***/
-    BoundingBox3f3f bbox = BoundingBox3f3f::null();
-    double mesh_rad = 0;
+    BoundingBox3f3f bbox;
+    double mesh_rad;
+    ComputeBounds(retrievedMesh, &bbox, &mesh_rad);
 
-    // Mesh should be available in retrievedMesh. If it isn't
-    Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
-    uint32 indexInstance; Matrix4x4f transformInstance;
-    //loop through the instances, expand the bounding box and find the radius
-    while(geoIter.next(&indexInstance, &transformInstance)) {
-        GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);
-        BoundingBox3f3f inst_bnds;
-        double rad = 0;
-        geoInst->computeTransformedBounds(retrievedMesh, transformInstance, &inst_bnds, &rad);
-        if (bbox == BoundingBox3f3f::null())
-            bbox = inst_bnds;
-        else
-            bbox.mergeIn(inst_bnds);
-        mesh_rad = std::max(mesh_rad, rad);
-    }
     BULLETLOG(detailed, "bbox: " << bbox);
     Vector3f diff = bbox.max() - bbox.min();
 
@@ -484,10 +471,13 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
 		//we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
 		worldTransformation = worldTransformation * Matrix4x4f::scale((float) locinfo.bounds.radius()/mesh_rad);
 		//reset the instance iterator for a second round
-		geoIter = retrievedMesh->getGeometryInstanceIterator();
+                Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
 		//we need to pass the triangles to Bullet
 		btTriangleMesh * meshToConstruct = new btTriangleMesh(false, false);
-		//loop through the instances again, applying the new transformations to vertices and adding them to the Bullet mesh
+		//loop through the instances again, applying the new
+		//transformations to vertices and adding them to the Bullet mesh
+                uint32 indexInstance;
+                Matrix4x4f transformInstance;
 		while(geoIter.next(&indexInstance, &transformInstance)) {
 			transformInstance = transformInstance * worldTransformation;
 			GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);

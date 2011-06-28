@@ -58,6 +58,26 @@
 # endif
 #endif
 
+#ifndef SIRIKATA_MESH_FUNCTION_EXPORT
+# if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#   if defined(STATIC_LINKED)
+#     define SIRIKATA_MESH_FUNCTION_EXPORT
+#   else
+#     if defined(SIRIKATA_BUILD)
+#       define SIRIKATA_MESH_FUNCTION_EXPORT __declspec(dllexport)
+#     else
+#       define SIRIKATA_MESH_FUNCTION_EXPORT __declspec(dllimport)
+#     endif
+#   endif
+# else
+#   if defined(__GNUC__) && __GNUC__ >= 4
+#     define SIRIKATA_MESH_FUNCTION_EXPORT __attribute__ ((visibility("default")))
+#   else
+#     define SIRIKATA_MESH_FUNCTION_EXPORT
+#   endif
+# endif
+#endif
+
 #ifndef SIRIKATA_MESH_EXPORT_C
 # define SIRIKATA_MESH_EXPORT_C extern "C" SIRIKATA_MESH_EXPORT
 #endif

@@ -1,7 +1,7 @@
 /*  Sirikata
- *  ComputeBoundsFilter.cpp
+ *  Bounds.hpp
  *
- *  Copyright (c) 2010, Ewen Cheslack-Postava
+ *  Copyright (c) 2011, Stanford University
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -30,35 +30,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ComputeBoundsFilter.hpp"
-#include <sirikata/mesh/Bounds.hpp>
+#ifndef _SIRIKATA_MESH_BOUNDS_HPP_
+#define _SIRIKATA_MESH_BOUNDS_HPP_
+
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Mesh {
 
-ComputeBoundsFilter::ComputeBoundsFilter(const String& args) {
-}
+/** Compute the bounds of the mesh. */
+SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(MeshdataPtr mesh, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
 
-FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
-    // The bounding box is just the bounding box of all the component geometry
-    // instances.  These were already computed, post-transform, for each
-    // instance, so this is a simple computation.
-
-    BoundingBox3f3f bbox = BoundingBox3f3f::null();
-    for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
-        MeshdataPtr mesh = *mesh_it;
-
-        BoundingBox3f3f mesh_bnds;
-        ComputeBounds(mesh, &mesh_bnds);
-
-        if (bbox == BoundingBox3f3f::null())
-            bbox = mesh_bnds;
-        else
-            bbox.mergeIn(mesh_bnds);
-    }
-    std::cout << bbox << std::endl;
-    return input;
-}
+/** Compute the bounds of the mesh when trasnformed by xform. The bounding box
+ *  is computed *after* transforming the mesh, so it is tighter than computing
+ *  the bounding box of the transformed original bounding box.
+ */
+SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(MeshdataPtr mesh, const Matrix4x4f& xform, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
 
 } // namespace Mesh
 } // namespace Sirikata
+
+#endif //_SIRIKATA_MESH_BOUNDS_HPP_
