@@ -518,16 +518,38 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
 
 
 
+
+
+
 /**
-  Takes no parameters.  Destroys all created objects, except presences in the
-  root context.  Then executes script associated with root context.  (Use
-  system.setScript to set this script.)
+   Single parameter: an object with information on each presence's prox result
+   set:
+
+   obj[pres0.sporef] = [visTo0_a.sporef,visTo0_b.sporef, ...];
+   obj[pres1.sporef] = [visTo1_a.sporef,visTo1_b.sporef, ...];
+   ...
+   
+   Destroys all created objects, except presences in the
+   root context and the visibles that were in those presences' prox result set.
+   Then executes script associated with root context.  (Use
+   system.setScript to set this script.)
  */
 v8::Handle<v8::Value> root_reset(const v8::Arguments& args)
 {
-    if (args.Length() != 0)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. reset takes no arguments.")));
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. reset takes a single argument: an object that contains an array of the sporefs for visibles in presences' result sets.  See documentation in JSSystem.cpp.")));
 
+    if (!args[0]->IsObject())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: reset requires an *object* to be passed in.")));
+
+
+    v8::Handle<v8::Object> proxResSet = args[0]->ToObject();
+    std::map<SpaceObjectReference,std::vector<SpaceObjectReference> > proxResultSetArg;
+    bool decodeSuccess= decodeResetArg(proxResSet,proxResultSetArg);
+    if (!decodeSuccess)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. Could not decode reset arg.  See documentation in JSSystem.cpp.")));
+
+        
 
     String errorMessage = "Error in reset of system object.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -535,8 +557,59 @@ v8::Handle<v8::Value> root_reset(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
 
-    return jsfake->struct_reset();
+    return jsfake->struct_reset(proxResultSetArg);
 }
+
+//turns a v8 object, arg, of the form:
+// arg[pres0.sporef] = [visTo0_a.sporef,visTo0_b.sporef, ...];
+// arg[pres1.sporef] = [visTo1_a.sporef,visTo1_b.sporef, ...];
+//into a std::map<sporef, std::vec<sporef>>, where index of map are
+// presence's sporefs and values of map (vectors) are sporefs contained in
+// vectors.
+bool decodeResetArg(v8::Handle<v8::Object> arg, std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & cppRes)
+{
+
+    v8::Local<v8::Array> allPresSporefs = arg->GetPropertyNames();
+
+    std::vector<v8::Local<v8::Object> > propertyNames;
+    for (int s=0; s < (int)allPresSporefs->Length(); ++s)
+    {
+
+        String dummy; //do not need to track errors from decode sporef, so just
+                      //inserting blank string.
+        SpaceObjectReference presSporef;
+        if (!decodeSporef(allPresSporefs->Get(s), presSporef,dummy))
+            return false;  //index wasn't a sporef.
+
+        //presSporef should now contain the sporef of a local presence.  
+        //getting the field of arg corresponding to allPresSporefs->Get(s)
+        //should give arrays of sporefs of visibles that are within presSporef's
+        //prox set.
+        v8::Local<v8::Value> visSetVal = arg->Get(allPresSporefs->Get(s));
+
+        //arg's values must be arrays of sporefs.
+        if (!visSetVal->IsArray())
+            return false;
+
+        v8::Local<v8::Array> visSetArray = v8::Local<v8::Array>::Cast(visSetVal);
+
+        for (int t= 0; t < (int) visSetArray->Length(); ++t)
+        {
+            SpaceObjectReference visSporef;
+            if (!decodeSporef(visSetArray->Get(t), visSporef,dummy))
+                return false;
+
+            //visSporef should now contain a sporef for a visible object that is
+            //within the prox result set for presSporef.
+            cppRes[presSporef].push_back(visSporef);
+        }
+    }
+        
+    return true;
+}
+
+
+
 
 v8::Handle<v8::Value> root_getScript(const v8::Arguments& args)
 {

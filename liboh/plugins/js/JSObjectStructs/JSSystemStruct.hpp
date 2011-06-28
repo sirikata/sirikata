@@ -106,7 +106,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
-    v8::Handle<v8::Value> struct_reset();
+    v8::Handle<v8::Value> struct_reset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet);
 
 
 private:

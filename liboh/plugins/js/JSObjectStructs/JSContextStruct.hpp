@@ -85,7 +85,7 @@ struct JSContextStruct : public JSSuspendable
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 
-    v8::Handle<v8::Value> struct_setReset();
+    v8::Handle<v8::Value> struct_setReset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet);
     v8::Handle<v8::Value> struct_setScript(const String& script);
     v8::Handle<v8::Value> struct_getScript();
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);

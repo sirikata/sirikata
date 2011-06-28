@@ -311,13 +311,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents
   process for all objects and contexts.
 
  */
-v8::Handle<v8::Value> JSContextStruct::struct_setReset()
+v8::Handle<v8::Value> JSContextStruct::struct_setReset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet)
 {
     //jsobjscript will chcek if this is the root context.  If it is, returns
     //undefined, and schedules reset (eventually calling rootReset).  If it is
     //not, throws an error.
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,reset,jsObjScript);
-    return emerScript->requestReset(this);
+    return emerScript->requestReset(this,proxResSet);
 }
 
 v8::Handle<v8::Value> JSContextStruct::struct_getScript()

@@ -83,7 +83,7 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args);
 v8::Handle<v8::Value> root_proxAddedHandler(const v8::Arguments& args);
 v8::Handle<v8::Value> root_proxRemovedHandler(const v8::Arguments& args);
 
-
+bool decodeResetArg(v8::Handle<v8::Object> arg, std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & cppRes);
 
 
 }//end jssystem namespace

@@ -179,7 +179,16 @@ public:
 
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
-    v8::Handle<v8::Value> requestReset(JSContextStruct* jscont);
+    /**
+       @param {JSContextStruct} jscont: just checks to ensure that jscont is
+       root sandbox before calling reset. (Otherwise, throws error.)
+       @param proxSetVis : When we reset, we want to be able to replay all the
+       visibles in an entity's prox result set.  The key of this map is the
+       visible whose prox set is contained in the value of the map (ie in the
+       vector).
+       
+     */
+    v8::Handle<v8::Value> requestReset(JSContextStruct* jscont, const std::map <SpaceObjectReference,std::vector <SpaceObjectReference> > & proxSetVis);
 
 
 
@@ -220,6 +229,12 @@ public:
 
 private:
 
+    /**
+       Wraps proxVis in an Emerson visible object and notifies shim layer that a
+       visibile is now within presence with sporef proxTo's result set.
+     */
+    void notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
+    
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
@@ -283,6 +298,18 @@ private:
     typedef PresenceMap::iterator PresenceMapIter;
     PresenceMap mPresences;
 
+    /**
+       When we are resetting, we want to replay all the visibles that presences
+       had received in their prox result set.  This map temporarily holds a
+       list of these visibles (fills in requestReset, empties in resetScript).
+       Index of map corresponds to presence whose prox set value is associated
+       with.
+
+       Note: visibleManager class takes care of deleting memory allocated for
+       JSVisibleStructs.  
+     */
+    std::map<SpaceObjectReference,std::vector<JSVisibleStruct*> >resettingVisiblesResultSet;
+    
     typedef std::vector<JSPresenceStruct*> PresenceVec;
     PresenceVec mUnconnectedPresences;
 };

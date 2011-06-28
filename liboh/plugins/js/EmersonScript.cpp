@@ -153,17 +153,34 @@ bool EmersonScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toLi
 //requested by root context, then set mResetting to true.  In the check handlers
 //function, if mResetting is true, stops comparing event against handlers.
 //Then, call resetScript.  resetScript tears down the rest of the script.
-v8::Handle<v8::Value> EmersonScript::requestReset(JSContextStruct* jscont)
+v8::Handle<v8::Value> EmersonScript::requestReset(JSContextStruct* jscont,const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxSetVis)
 {
     if (jscont != mContext)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error.  Cannot call reset unless within root context.")));
 
     mResetting = true;
+
+
+    //need to load all elements of each presence's prox result set into
+    //resetVisiblesResultSet.  That way, still hold references to them
+    //even after all the emerson objects associated with them get disposed/gc-ed
+    //during reset.
+    for (std::map<SpaceObjectReference,std::vector<SpaceObjectReference> >::const_iterator presIter = proxSetVis.begin();
+         presIter != proxSetVis.end(); ++presIter)
+    {
+        for (std::vector<SpaceObjectReference>::const_iterator proxSetIter = presIter->second.begin();
+             proxSetIter != presIter->second.end();
+             ++proxSetIter)
+        {
+            resettingVisiblesResultSet[presIter->first].push_back(createVisStruct(*proxSetIter));
+        }
+    }
     return v8::Undefined();
 }
 
 void EmersonScript::resetScript()
 {
+    //before cler presences, take all 
     mResetting = false;
     mPresences.clear();
     mEventHandlers.clear();
@@ -172,6 +189,25 @@ void EmersonScript::resetScript()
     mImportedFiles.clear();
     mContext->struct_rootReset();
     flushQueuedHandlerEvents();
+
+
+    //replay all prox sets to each presence
+    for (std::map<SpaceObjectReference, std::vector<JSVisibleStruct*> >::iterator presIter = resettingVisiblesResultSet.begin();
+         presIter != resettingVisiblesResultSet.end(); ++presIter)
+    {
+        for (std::vector<JSVisibleStruct*>::iterator proxSetIter = presIter->second.begin();
+             proxSetIter != presIter->second.end(); ++proxSetIter)
+        {
+            //issue user-callback that jsvisiblestruct contined in proxSetIter
+            //is a member of the proximity result set for the presence that has
+            //sporef presIter->first.
+            notifyProximate(*proxSetIter, presIter->first);
+        }
+    }
+
+    //note: do not expressly delete the allocated JSVisibleStructs here.  The
+    //underlying JSVisibleManager takes care of this.
+    resettingVisiblesResultSet.clear();
 }
 
 /**
@@ -317,18 +353,14 @@ void EmersonScript::printMPresences()
 
 
 
-//Gets called by notifier when PINTO states that proximateObject originally
-//satisfies the solid angle query registered by querier
-void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
-{
-    JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
-    JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
 
-    // Invoke user callback
-    PresenceMapIter iter = mPresences.find(querier);
+void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo)
+{
+   // Invoke user callback
+    PresenceMapIter iter = mPresences.find(proxTo);
     if (iter == mPresences.end())
     {
-        JSLOG(error,"No presence associated with sporef "<<querier<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
+        JSLOG(error,"No presence associated with sporef "<<proxTo<<" exists in presence mapping when getting notifyProximate.  Taking no action.");
         return;
     }
 
@@ -339,7 +371,7 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
     }
 
     v8::HandleScope handle_scope;
-    v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(jsvis, mContext->mContext);
+    v8::Handle<v8::Object> newVisibleObj = createVisiblePersistent(proxVis, mContext->mContext);
 
     v8::Context::Scope context_scope(mContext->mContext);
     TryCatch try_catch;
@@ -358,6 +390,17 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
     if (try_catch.HasCaught()) {
         printException(try_catch);
     }
+}
+
+
+//Gets called by notifier when PINTO states that proximateObject originally
+//satisfies the solid angle query registered by querier
+void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
+{
+    JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
+    JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
+
+    notifyProximate(jsvis,querier);
 }
 
 

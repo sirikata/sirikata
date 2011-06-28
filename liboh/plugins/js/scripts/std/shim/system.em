@@ -1039,9 +1039,26 @@ function PresenceEntry(sporef, presObj)
        */
       system.reset = function()
       {
+          //Indices of presProxSetArg are presence's sporefs.  Values are
+          //arrays containing the sporefs of all visibles within these
+          //presences' prox sets.
+          var presProxSetArg = { };
+          for (var s in this._selfMap)
+          {
+              if (s == this.__NULL_TOKEN__)
+                  continue;
+              
+              var pSet = this._selfMap[s].getProxResultSet();
+              var pSetArray = [];
+              for (var t in pSet)
+                  pSetArray.push(t);
+
+              presProxSetArg[s] = pSetArray;
+          }
+          
           try
           {
-              baseSystem.reset.apply(baseSystem, arguments);
+              baseSystem.reset(presProxSetArg);
               isResetting = true;
               throw '__resetting__';
           }

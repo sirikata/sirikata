@@ -237,9 +237,9 @@ v8::Handle<v8::Value> JSSystemStruct::struct_getScript()
     return associatedContext->struct_getScript();
 }
 
-v8::Handle<v8::Value> JSSystemStruct::struct_reset()
+v8::Handle<v8::Value> JSSystemStruct::struct_reset(const std::map<SpaceObjectReference, std::vector<SpaceObjectReference> > & proxResSet)
 {
-    return associatedContext->struct_setReset();
+    return associatedContext->struct_setReset(proxResSet);
 }
 
 
