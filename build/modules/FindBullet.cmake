@@ -110,4 +110,4 @@ ELSE(bullet_FOUND)
     MESSAGE(FATAL_ERROR "bullet not found")
   ENDIF(bullet_FIND_REQUIRED)
 ENDIF(bullet_FOUND)
-#${TOP_LEVEL}/dependencies/bullet-2.74/src/.libs/libbulletcollision.so ${TOP_LEVEL}/dependencies/bullet-2.74/src/.libs/libbulletdynamics.so ${TOP_LEVEL}/dependencies/bullet-2.74/src/.libs/libbulletmath.so
+#${TOP_LEVEL}/dependencies/bullet-2.78/src/.libs/libbulletcollision.so ${TOP_LEVEL}/dependencies/bullet-2.78/src/.libs/libbulletdynamics.so ${TOP_LEVEL}/dependencies/bullet-2.78/src/.libs/libbulletmath.so
