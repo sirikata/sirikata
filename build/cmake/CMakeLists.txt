@@ -574,6 +574,11 @@ ELSE()
   SET(GSL_LIBRARIES)
 ENDIF()
 
+SET(SIRIKATA_JQUERY_FILE ${SIRIKATA_OGRE_DATA_DIR}/jquery/js/jquery-1.4.2.min.js)
+IF (EXISTS ${SIRIKATA_JQUERY_FILE})
+ELSE()
+  MESSAGE(FATAL_ERROR "Missing jquery symlink in the ogre data directory ${SIRIKATA_JQUERY_FILE} for startup scripts and mouse handling.")
+ENDIF()
 IF(WIN32)
 #dependency: berkelium
   IF(NOT BERKELIUM_ROOT)
@@ -597,11 +602,6 @@ ELSE()
   SET(BERKELIUM_TARGET_BINARIES)
   SET(BERKELIUM_LIBRARIES)
   IF(EXISTS ${TOP_LEVEL}/externals/berkelium/chromium AND EXISTS ${TOP_LEVEL}/externals/berkelium/chromium/chromium)
-    SET(SIRIKATA_JQUERY_FILE ${SIRIKATA_OGRE_DATA_DIR}/jquery/js/jquery-1.4.2.min.js)
-    IF (EXISTS ${SIRIKATA_JQUERY_FILE})
-    ELSE()
-      MESSAGE(FATAL_ERROR "Missing jquery symlink in the ogre data directory ${SIRIKATA_JQUERY_FILE} for startup scripts and mouse handling.")
-    ENDIF()
     # This name is needed by the ADD_CHROME_APP macro
     SET(BERKELIUM_TOP_LEVEL ${TOP_LEVEL}/externals/berkelium)
 
