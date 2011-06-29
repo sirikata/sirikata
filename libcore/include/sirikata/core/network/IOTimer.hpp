@@ -68,8 +68,8 @@ class SIRIKATA_EXPORT IOTimer : public std::tr1::enable_shared_from_this<IOTimer
      * bound value passed through with current value of callbackToken.  If
      * tokens aren't equal, programmer called cancel in intervening time.
      */
-    AtomicValue<uint64> callbackToken;
-    
+    AtomicValue<uint32> callbackToken;
+
     bool mCanceled;
     /** Create a new timer, serviced by the specified IOService.
      *  \param io the IOService to service this timers events

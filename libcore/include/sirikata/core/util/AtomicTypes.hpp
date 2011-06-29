@@ -85,6 +85,9 @@ public:
     }
 };
 
+/** NOTE: These functions aren't available on Windows when compiling for
+ * 32-bit. Avoid if possible.
+ */
 template<> class SizedAtomicValue<8> {
 public:
     template <typename T> static T add(volatile T* scalar, T other) {
