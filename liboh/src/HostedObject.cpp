@@ -399,6 +399,9 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info)
     );
+
+
+    
 }
 
 
@@ -428,6 +431,8 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     PerPresenceData& psd = psd_it->second;
     initializePerPresenceData(psd, self_proxy);
 
+    //setup an sst listener that listens for scripting messages.
+    createScriptCommListener(SpaceObjectReference(space,obj));
 
     //bind an odp port to listen for the begin scripting signal.  if have
     //receive the scripting signal for the first time, that means that we create
@@ -443,6 +448,37 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 }
 
 
+void HostedObject::createScriptCommListener(const SpaceObjectReference& toListenFrom)
+{
+    std::cout<<"\n\nDEBUG: Creating script listener\n";
+    SSTStream::listen(
+        std::tr1::bind(&HostedObject::createScriptCommListenerStreamCB,this,toListenFrom,_1,_2),
+        EndPoint<SpaceObjectReference>(toListenFrom,OBJECT_SCRIPT_COMMUNICATION_PORT));
+    
+}
+
+void HostedObject::createScriptCommListenerStreamCB(const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream)
+{
+    if (err != SST_IMPL_SUCCESS)
+    {
+        createScriptCommListener(toListenFrom);
+        std::cout<<"\n\nError creating stream.\n\n";
+        return;
+    }
+    std::cout<<"\n\n\nCONNECTED LISTENER succeeded\n";
+
+    PresenceDataMap::iterator psd_it = mPresenceData->find(toListenFrom);
+    if (psd_it == mPresenceData->end())
+    {
+        SILOG(cppog, error,"Connected a script listener for a presence that no longer exists.");
+        return;
+    }
+
+    sstStream->registerReadCallback( std::tr1::bind(&HostedObject::handleScriptCommRead, this, toListenFrom, sstStream, new std::stringstream(), _1, _2) );
+}
+
+
+
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token) {
     HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
@@ -454,29 +490,16 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, Pre
         sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
             std::tr1::bind(&HostedObject::handleProximitySubstream, this, spaceobj, _1, _2)
         );
-
-
-        //listen on a new substream for script communication messages on (ie
-        //messages from one presence to another presence that were sent using
-        //sendMessage from script.)
-        sstStream->listenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT,
-            std::tr1::bind(&HostedObject::handleNewScriptListenerSubstream, this,spaceobj, _1, _2)
-        );
     }
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
 }
 
 
-
-void HostedObject::handleNewScriptListenerSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s)
-{
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleScriptCommRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
-}
-
-
 void HostedObject::handleScriptCommRead(const SpaceObjectReference& spaceobj, SSTStreamPtr sstptr, std::stringstream* prevdata, uint8* buffer, int length)
 {
+    std::cout<<"\n\nDEBUG: got a handleScriptCommRead\n\n";
+    
     prevdata->write((const char*)buffer, length);
     
     //if do not have an object script, or our objectscript processed the
@@ -1135,6 +1158,93 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
     sendLocUpdateRequest(space, oref);
 }
 
+//lkjs;
+void HostedObject::scriptCommStreamCallback(const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr)
+{
+    //if connection failure, just try to re-connect.
+    if (err != SST_IMPL_SUCCESS)
+    {
+        SSTStream::connectStream(
+            EndPoint<SpaceObjectReference>(sender,0), //local port is random
+            EndPoint<SpaceObjectReference>(receiver,OBJECT_SCRIPT_COMMUNICATION_PORT), //send to
+                                                                    //receiver's
+                                                                    //script
+                                                                    //comm port
+            std::tr1::bind(
+                &HostedObject::scriptCommStreamCallback, this,
+                msg, sender, receiver, _1, _2
+            )  //what to do when the connection is created.
+        );
+        return;
+    }
+
+    int bytesWritten = streamPtr->write((uint8*) msg.data(), msg.size());
+
+    //error code.  just return, aborting write.
+    if (bytesWritten == -1)
+    {
+        SILOG(cppoh,error,"Error sending script communication message in scriptCommStreamCallback.  Not sending message.");
+        return;
+    }
+
+    
+    //check if full message was written.
+    if(bytesWritten < msg.size())
+    {
+        PresenceDataMap::iterator pdFinder = mPresenceData->find(sender);
+        if (pdFinder == mPresenceData->end())
+        {
+            SILOG(cppoh, error,"Presence logged out before could finish delivering message.  Aborting message transmission.");
+            return;
+        }
+
+        //retry write infinitely
+        PerPresenceData& pd = pdFinder->second;
+        String restToWrite = msg.substr(msg.size());
+        pd.rerequestTimer->wait(
+            Duration::milliseconds((int64)20),
+            std::tr1::bind(&HostedObject::scriptCommStreamCallback, this, restToWrite,sender,receiver,SST_IMPL_SUCCESS,streamPtr)
+        );
+        SILOG(cppoh,detailed,"More sript data to write to stream.  Queueing future write operation.");
+    }
+    
+}
+
+
+bool HostedObject::sendScriptCommMessage(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg)
+{
+    if (mPresenceData->find(sender) == mPresenceData->end())
+    {
+        SILOG(cppoh,error,"Error: attempting to send a script message from a presence that we do not control.");
+        return false;
+    }
+
+    bool returner = false;
+    SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(sender.space(),sender.object());
+    if (spaceStream)
+    {
+        returner = SSTStream::connectStream(
+            EndPoint<SpaceObjectReference>(sender,0), //local port is random
+            EndPoint<SpaceObjectReference>(receiver,OBJECT_SCRIPT_COMMUNICATION_PORT), //send to
+                                                                    //receiver's
+                                                                    //script
+                                                                    //comm port
+            std::tr1::bind(
+                &HostedObject::scriptCommStreamCallback, this,
+                msg, sender,receiver, _1, _2
+            )  //what to do when the connection is created.
+        );
+    }
+    else
+    {
+        returner = false;
+        SILOG(cppoh,error,"Error sending script communication message.  Could not get space stream.");
+    }
+
+    return returner;
+}
+
+
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
     assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
     PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
@@ -1173,6 +1283,7 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 
     std::string payload = serializePBJMessage(container);
 
+    
     bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream) {

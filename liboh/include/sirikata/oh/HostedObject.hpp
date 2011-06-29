@@ -342,23 +342,30 @@ public:
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
     virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
 
+    bool sendScriptCommMessage(const SpaceObjectReference& sender, const SpaceObjectReference& receiver, const String& msg);
+    
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
     //scripting communication messages
-    /*
-      I think this gets called when the stream for listening for script
-      communication messages is created.  We can then register a readCallback on the
-      stream.  This read callback gets executed whenever there are bytes to be read
-      on this stream (ie, whenever we receive a message).
-    */
-    void handleNewScriptListenerSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
-    /**
-       Gets executed when there are bytes to read on the scripting communication stream.
-    */
-    void handleScriptCommRead(const SpaceObjectReference& spaceobj, SSTStreamPtr sstptr, std::stringstream* prevdata, uint8* buffer, int length);
+
+    // I think this gets called when the stream for listening for script
+    // communication messages is created.  We can then register a readCallback on the
+    // stream.  This read callback gets executed whenever there are bytes to be read
+    // on this stream (ie, whenever we receive a message).
+
+    //lkjs: to delete.
+    //void handleNewScriptListenerSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
+
+    void createScriptCommListener(const SpaceObjectReference& toListenFrom);
+    void createScriptCommListenerStreamCB(const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream);
     
+    //Gets executed when there are bytes to read on the scripting communication stream.
+    void handleScriptCommRead(const SpaceObjectReference& spaceobj, SSTStreamPtr sstptr, std::stringstream* prevdata, uint8* buffer, int length);
+    void scriptCommStreamCallback(const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr);
+
+
     
     // Handlers for substreams for space-managed updates
     void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);

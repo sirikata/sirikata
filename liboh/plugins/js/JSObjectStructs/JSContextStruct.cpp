@@ -214,7 +214,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createVec3(Vector3d& toCreate)
 v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendMessage,jsObjScript);
-    emerScript->sendMessageToEntity( jspl->getSporef(), jspres->getSporef(), serialized_message);
+    emerScript->sendMessageToEntityReliable( jspl->getSporef(), jspres->getSporef(), serialized_message);
 
     return v8::Undefined();
 }
@@ -641,7 +641,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
     }
 
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendHome,jsObjScript);
-    emerScript->sendMessageToEntity(mHomeObject,associatedPresence->getSporef(),toSend);
+    emerScript->sendMessageToEntityReliable(mHomeObject,associatedPresence->getSporef(),toSend);
     return v8::Undefined();
 }
 

@@ -134,9 +134,17 @@ public:
 
     v8::Handle<v8::Value> killEntity(JSContextStruct* jscont);
 
-    void sendMessageToEntity(const SpaceObjectReference& reffer, const SpaceObjectReference& from, const std::string& msgBody);
+    /**
+       Sends a message over the odp port from local presence that has sporef
+       from to some other presence in world with sporef receiver.  
 
+       Gets port to send over as value of mMessagingPortMap associated with key
+       from.
+     */
+    void sendMessageToEntityUnreliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const std::string& msgBody);
+    void sendMessageToEntityReliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const String& msgBody);
 
+    
     //takes the c++ object jspres, creates a new visible object out of it, if we
     //don't already have a c++ visible object associated with it (if we do, use
     //that one), wraps that c++ object in v8, and returns it as a v8 object to

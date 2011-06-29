@@ -561,9 +561,8 @@ bool EmersonScript::valid() const
 
 
 
-void EmersonScript::sendMessageToEntity(const SpaceObjectReference& sporef, const SpaceObjectReference& from, const std::string& msgBody)
+void EmersonScript::sendMessageToEntityUnreliable(const SpaceObjectReference& sporef, const SpaceObjectReference& from, const std::string& msgBody)
 {
-
     std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(from);
     if (iter == mMessagingPortMap.end())
     {
@@ -575,6 +574,11 @@ void EmersonScript::sendMessageToEntity(const SpaceObjectReference& sporef, cons
     MemoryReference toSend(msgBody);
 
     iter->second->send(dest,toSend);
+}
+
+void EmersonScript::sendMessageToEntityReliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const String& msgBody)
+{
+    mParent->sendScriptCommMessage(from,receiver,msgBody);    
 }
 
 
