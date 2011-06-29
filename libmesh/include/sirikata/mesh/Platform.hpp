@@ -63,7 +63,7 @@
 #   if defined(STATIC_LINKED)
 #     define SIRIKATA_MESH_FUNCTION_EXPORT
 #   else
-#     if defined(SIRIKATA_BUILD)
+#     if defined(SIRIKATA_MESH_BUILD)
 #       define SIRIKATA_MESH_FUNCTION_EXPORT __declspec(dllexport)
 #     else
 #       define SIRIKATA_MESH_FUNCTION_EXPORT __declspec(dllimport)

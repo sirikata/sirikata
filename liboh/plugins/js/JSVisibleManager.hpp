@@ -4,7 +4,7 @@
 
 #include <map>
 #include <sirikata/core/util/Platform.hpp>
-#include <tr1/memory>
+//the above include file already includes <tr1/memory> via <boost/tr1/memory.hpp> 
 #include "JSObjectStructs/JSVisibleStruct.hpp"
 
 namespace Sirikata{

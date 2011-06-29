@@ -30,12 +30,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/mesh/Platform.hpp>
 #include <sirikata/mesh/Bounds.hpp>
 
 namespace Sirikata {
 namespace Mesh {
 
-void ComputeBounds(MeshdataPtr mesh, BoundingBox3f3f* bbox, double* rad) {
+void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(MeshdataPtr mesh, BoundingBox3f3f* bbox, double* rad) {
     Meshdata::GeometryInstanceIterator geoIter = mesh->getGeometryInstanceIterator();
     uint32 indexInstance; Matrix4x4f transformInstance;
 
@@ -59,7 +60,7 @@ void ComputeBounds(MeshdataPtr mesh, BoundingBox3f3f* bbox, double* rad) {
     }
 }
 
-void ComputeBounds(MeshdataPtr mesh, const Matrix4x4f& xform, BoundingBox3f3f* bbox, double* rad) {
+void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(MeshdataPtr mesh, const Matrix4x4f& xform, BoundingBox3f3f* bbox, double* rad) {
     Meshdata::GeometryInstanceIterator geoIter = mesh->getGeometryInstanceIterator();
     uint32 indexInstance; Matrix4x4f transformInstance;
 
