@@ -49,8 +49,7 @@ AssetDownloadTask::AssetDownloadTask(const Transfer::URI& uri, Graphics::OgreRen
    mAssetURI(uri),
    mPriority(priority),
    mCB(cb),
-   mAsset(),
-   mRemainingDownloads(0)
+   mAsset()
 {
 }
 
@@ -141,10 +140,8 @@ void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
         }
     }
 
-    mRemainingDownloads = md->textures.size();
-
     // Special case for no dependent downloads
-    if (mRemainingDownloads == 0) {
+    if (md->textures.size() == 0) {
         mCB();
         return;
     }
@@ -153,6 +150,10 @@ void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
     for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
         String texURIString = assetURIString.substr(0, assetURIString.rfind("/")+1) + (*it);
         Transfer::URI texURI(texURIString);
+        // Sometimes we get duplicate references, so make sure we're not already
+        // working on this one.
+        if (mActiveDownloads.find(texURI) != mActiveDownloads.end()) continue;
+
         ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
             texURI, mScene->transferPool(),
             mPriority,
@@ -182,8 +183,7 @@ void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> req
     mDependencies[request->getURI()].request = request;
     mDependencies[request->getURI()].response = response;
 
-    mRemainingDownloads--;
-    if (mRemainingDownloads == 0)
+    if (mActiveDownloads.size() == 0)
         mCB();
 }
 

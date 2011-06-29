@@ -99,7 +99,6 @@ private:
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
     typedef std::map<Transfer::URI, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
     ActiveDownloadMap mActiveDownloads;
-    uint32 mRemainingDownloads; // Dependent downloads remaining.
 };
 typedef std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTaskPtr;
 
