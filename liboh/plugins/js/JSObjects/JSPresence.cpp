@@ -660,8 +660,10 @@ v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
     if (args.Length() != 2) // only tell about one, first should be system
         return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling presence.loadMesh.  Requires 1 argument: the callback to invoke when loading is complete.")));
 
-    String errorMessage = "Error in loadMesh while decoding presence.  ";
+    String errorMessage = "Error in loadMesh while decoding presence.";
     JSPresenceStruct* presstruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+    if (presstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     errorMessage = "Error decoding system in presence.loadMesh";
     JSSystemStruct* sysstruct = JSSystemStruct::decodeSystemStruct(args[0], errorMessage);
@@ -673,6 +675,30 @@ v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
     return presstruct->loadMesh(sysstruct->getContext(), cb);
 }
 
+v8::Handle<v8::Value> meshBounds(const v8::Arguments& args) {
+    if (args.Length() != 0)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling presence.meshBounds.  Should take no arguments.")));
+
+    String errorMessage = "Error in meshBounds while decoding presence.";
+    JSPresenceStruct* presstruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+    if (presstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return presstruct->meshBounds();
+}
+
+v8::Handle<v8::Value> untransformedMeshBounds(const v8::Arguments& args) {
+    if (args.Length() != 0)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling presence.meshBounds.  Should take no arguments.")));
+
+    String errorMessage = "Error in untransformedMeshBounds while decoding presence.";
+    JSPresenceStruct* presstruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+    if (presstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return presstruct->untransformedMeshBounds();
+}
+
 v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -680,6 +706,8 @@ v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
 
     String errorMessage = "Error in unloadMesh while decoding presence.  ";
     JSPresenceStruct* presstruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+    if (presstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     return presstruct->unloadMesh();
 }

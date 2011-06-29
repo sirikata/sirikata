@@ -444,4 +444,16 @@ system.__presence_constructor__.prototype.__getType = function()
      };
      // No need to override unloadMesh since it takes no special parameters
 
+     var __origMeshBounds = system.__presence_constructor__.prototype.meshBounds;
+     var __origUntransformedMeshBounds = system.__presence_constructor__.prototype.untransformedMeshBounds;
+     var decodeBBox = function(raw) {
+         return new util.BBox(raw[0], raw[1]);
+     };
+     system.__presence_constructor__.prototype.meshBounds = function() {
+         return decodeBBox(__origMeshBounds.apply(this));
+     };
+     system.__presence_constructor__.prototype.untransformedMeshBounds = function() {
+         return decodeBBox(__origUntransformedMeshBounds.apply(this));
+     };
+
 })();

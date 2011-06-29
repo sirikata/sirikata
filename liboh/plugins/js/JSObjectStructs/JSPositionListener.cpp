@@ -9,6 +9,8 @@
 #include "JSPresenceStruct.hpp"
 #include <boost/lexical_cast.hpp>
 
+#include <sirikata/mesh/Bounds.hpp>
+
 namespace Sirikata {
 namespace JS {
 
@@ -188,9 +190,39 @@ void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token c
     jpp->emerScript->invokeCallback(ctx, cb);
 }
 
+namespace {
+v8::Handle<v8::Value> CreateJSBBoxResult(v8::Handle<v8::Context>& ctx, const BoundingBox3f3f& bbox) {
+    // Returns as a pair of Vec3s
+    v8::Handle<v8::Array> js_bb = v8::Array::New();
+    js_bb->Set(0, CreateJSResult(ctx, bbox.min()));
+    js_bb->Set(1, CreateJSResult(ctx, bbox.max()));
+    return js_bb;
+}
+}
+v8::Handle<v8::Value> JSPositionListener::meshBounds() {
+    if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call meshBounds before loading the mesh.")));
+
+    Matrix4x4f xform = Matrix4x4f::translate(getPosition()) * Matrix4x4f::rotate(getOrientation()) * Matrix4x4f::scale(getBounds().radius());
+
+    BoundingBox3f3f bbox;
+    Mesh::ComputeBounds(mMeshdata, xform, &bbox);
+    JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(meshBounds,curContext);
+    return CreateJSBBoxResult(curContext, bbox);
+}
+
+v8::Handle<v8::Value> JSPositionListener::untransformedMeshBounds() {
+    if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call untransformedMeshBounds before loading the mesh.")));
+
+    BoundingBox3f3f bbox;
+    Mesh::ComputeBounds(mMeshdata, &bbox);
+    JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(untransformedMeshBounds,curContext);
+    return CreateJSBBoxResult(curContext, bbox);
+}
+
 v8::Handle<v8::Value> JSPositionListener::unloadMesh() {
     CHECK_JPP_INIT_THROW_V8_ERROR(unloadMesh);
     mMeshdata.reset();
+    return v8::Undefined();
 }
 
 

@@ -374,6 +374,8 @@ void JSObjectScriptManager::createVisibleTemplate()
     proto_t->Set(v8::String::New("dist"),v8::FunctionTemplate::New(JSVisible::dist));
 
     proto_t->Set(v8::String::New("loadMesh"),v8::FunctionTemplate::New(JSVisible::loadMesh));
+    proto_t->Set(v8::String::New("meshBounds"),v8::FunctionTemplate::New(JSVisible::meshBounds));
+    proto_t->Set(v8::String::New("untransformedMeshBounds"),v8::FunctionTemplate::New(JSVisible::untransformedMeshBounds));
     proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSVisible::unloadMesh));
 
     proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
@@ -462,6 +464,8 @@ void JSObjectScriptManager::createPresenceTemplate()
 
 
   proto_t->Set(v8::String::New("loadMesh"),v8::FunctionTemplate::New(JSPresence::loadMesh));
+  proto_t->Set(v8::String::New("meshBounds"),v8::FunctionTemplate::New(JSPresence::meshBounds));
+  proto_t->Set(v8::String::New("untransformedMeshBounds"),v8::FunctionTemplate::New(JSPresence::untransformedMeshBounds));
   proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSPresence::unloadMesh));
 
 

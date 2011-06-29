@@ -49,6 +49,8 @@ public:
     virtual v8::Handle<v8::Value> struct_getDistance(const Vector3d& distTo);
 
     v8::Handle<v8::Value> loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb);
+    v8::Handle<v8::Value> meshBounds();
+    v8::Handle<v8::Value> untransformedMeshBounds();
     v8::Handle<v8::Value> unloadMesh();
 
     //simple accessors for sporef fields

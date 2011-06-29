@@ -183,6 +183,17 @@
      visible.prototype.loadMesh = function(cb) {
          system.__loadVisibleMesh(this, cb);
      };
+     var __origMeshBounds = visible.prototype.meshBounds;
+     var __origUntransformedMeshBounds = visible.prototype.untransformedMeshBounds;
+     var decodeBBox = function(raw) {
+         return new util.BBox(raw[0], raw[1]);
+     };
+     visible.prototype.meshBounds = function() {
+         return decodeBBox(__origMeshBounds.apply(this));
+     };
+     visible.prototype.untransformedMeshBounds = function() {
+         return decodeBBox(__origUntransformedMeshBounds.apply(this));
+     };
 
 
      visible.prototype.__prettyPrintFieldsData__ = [

@@ -50,5 +50,7 @@ system.require('std/shim/class.em');
 
 system.require('std/shim/presence.em');
 system.require('std/shim/visible.em');
+
 system.require('std/shim/vec3.em');
 system.require('std/shim/quaternion.em');
+system.require('std/shim/bbox.em');

@@ -368,8 +368,10 @@ v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
 
     String errorMessage = "Error in loadMesh while decoding visible.  ";
     JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (visstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    errorMessage = "Error decoding system in presence.loadMesh";
+    errorMessage = "Error decoding system in visible.loadMesh";
     JSSystemStruct* sysstruct = JSSystemStruct::decodeSystemStruct(args[0], errorMessage);
 
     v8::Handle<v8::Function> cb = decodeCallbackArgument(args, 1);
@@ -379,6 +381,30 @@ v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
     return visstruct->loadMesh(sysstruct->getContext(), cb);
 }
 
+v8::Handle<v8::Value> meshBounds(const v8::Arguments& args) {
+    if (args.Length() != 0)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling visible.meshBounds.  Should take no arguments.")));
+
+    String errorMessage = "Error in meshBounds while decoding visible.";
+    JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
+    if (visstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return visstruct->meshBounds();
+}
+
+v8::Handle<v8::Value> untransformedMeshBounds(const v8::Arguments& args) {
+    if (args.Length() != 0)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling visible.meshBounds.  Should take no arguments.")));
+
+    String errorMessage = "Error in untransformedMeshBounds while decoding visible.";
+    JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
+    if (visstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return visstruct->untransformedMeshBounds();
+}
+
 v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
 {
     if (args.Length() != 0)
@@ -386,6 +412,8 @@ v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
 
     String errorMessage = "Error in unloadMesh while decoding visible.  ";
     JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This(),errorMessage);
+    if (visstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
     return visstruct->unloadMesh();
 }
