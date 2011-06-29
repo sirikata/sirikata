@@ -978,7 +978,7 @@ function PresenceEntry(sporef, presObj)
                   system.__setBehindSelf( system._selfMap[presCalling.toString()].presObj);
                   var existing = system.getProxSet(presCalling);
                   for (var s in existing)
-                      funcToCall(existing);
+                      funcToCall(existing[s]);
                   
                   system.__setBehindSelf( system._selfMap[prevSelfKey].presObj);
               }
