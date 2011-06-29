@@ -442,10 +442,10 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
     NOT_IMPLEMENTED(ho);
 }
 
+
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token) {
     HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
-    //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
     if (sstStream != SSTStreamPtr() ) {
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
@@ -454,10 +454,44 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, Pre
         sstStream->listenSubstream(OBJECT_PORT_PROXIMITY,
             std::tr1::bind(&HostedObject::handleProximitySubstream, this, spaceobj, _1, _2)
         );
+
+
+        //listen on a new substream for script communication messages on (ie
+        //messages from one presence to another presence that were sent using
+        //sendMessage from script.)
+        sstStream->listenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT,
+            std::tr1::bind(&HostedObject::handleNewScriptListenerSubstream, this,spaceobj, _1, _2)
+        );
     }
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
 }
+
+
+
+void HostedObject::handleNewScriptListenerSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s)
+{
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleScriptCommRead, this, spaceobj, s, new std::stringstream(), _1, _2) );
+}
+
+
+void HostedObject::handleScriptCommRead(const SpaceObjectReference& spaceobj, SSTStreamPtr sstptr, std::stringstream* prevdata, uint8* buffer, int length)
+{
+    prevdata->write((const char*)buffer, length);
+    
+    //if do not have an object script, or our objectscript processed the
+    //scripting communication message, then perform cleanup.
+    if ((!mObjectScript) || (mObjectScript->handleScriptCommRead(sstptr->remoteEndPoint().endPoint,spaceobj,prevdata->str())))
+    {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to sstptr
+        sstptr->registerReadCallback(0);
+    }
+}
+
 
 void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);

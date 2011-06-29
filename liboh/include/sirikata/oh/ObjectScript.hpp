@@ -55,12 +55,18 @@ class SIRIKATA_OH_EXPORT ObjectScript {
     virtual void  notifyProximateGone(std::tr1::shared_ptr<ProxyObject> p, const SpaceObjectReference&){}
     virtual void  notifyProximate(std::tr1::shared_ptr<ProxyObject> p, const SpaceObjectReference&){ }
 
+    /*
+      Returns true if decoded payload as a scripting communication message,
+      false otherwise.  Also processes the message it receives if can decode it.
+     */
+    virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload) { return true;};
     
      virtual String scriptType() const { return scriptType_;}
      virtual String scriptOptions() const {return scriptOptions_;}
      virtual void scriptTypeIs(String _scriptType) { scriptType_ = _scriptType;}
      virtual void scriptOptionsIs(String _scriptOptions) {scriptOptions_ = _scriptOptions;}
-
+     
+     
   protected:
      String scriptType_;
      String scriptOptions_;

@@ -458,9 +458,9 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     if (msgPort != NULL)
     {
         mMessagingPortMap[SpaceObjectReference(space_id,obj_refer)] = msgPort;
-        msgPort->receive( std::tr1::bind(&EmersonScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
+        msgPort->receive( std::tr1::bind(&EmersonScript::handleScriptCommUnreliable, this, _1, _2, _3));
     }
-
+    
     if (!mCreateEntityPort)
         mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
@@ -595,8 +595,6 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
 
     //create an object
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
-//    v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
-
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
@@ -682,44 +680,50 @@ v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src)
 }
 
 
+
+
 void EmersonScript::registerFixupSuspendable(JSSuspendable* jssusp, uint32 contID)
 {
     toFixup[contID].push_back(jssusp);
 }
 
 
-void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+
+bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload)
 {
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext->mContext);
-    v8::Local<v8::Object> obj = v8::Object::New();
-
-    v8::Handle<v8::Object> msgSender = getMessageSender(src);
-    //try deserialization
-
     Sirikata::JS::Protocol::JSMessage js_msg;
-    bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
+    bool parsed = js_msg.ParseFromString(payload);
 
     if (! parsed)
     {
         JSLOG(error,"Cannot parse the message that I received on this port");
-        return;
+        return false;
     }
+    
+    return deserializeMsgAndDispatch(src,dst,js_msg);
+}
 
+
+bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
+{
+
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext->mContext);
+    v8::Local<v8::Object> obj = v8::Object::New();
+
+    v8::Handle<v8::Object> msgSender = createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,mContext->mContext);
+
+    //try deserialization
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
     if (! deserializeWorks)
     {
         JSLOG(error, "Deserialization Failed!!");
-        return;
+        return false;
     }
 
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
-
-    SpaceObjectReference to  (dst.space(), dst.object());
-    SpaceObjectReference from(src.space(), src.object());
-
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 
@@ -728,12 +732,11 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
         if ((mResetting) || (mKilling))
             break;
 
-
-        if (mEventHandlers[s]->matches(obj,from,to))
+        if (mEventHandlers[s]->matches(obj,src,dst))
         {
             // Adding support for the knowing the message properties too
             int argc = 3;
-            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str(), to.toString().size()) };
+            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (dst.toString().c_str(), dst.toString().size()) };
             TryCatch try_catch;
             invokeCallback(mContext, NULL, mEventHandlers[s]->cb, argc, argv);
 
@@ -754,8 +757,24 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     if (!matchesSomeHandler) {
         JSLOG(detailed,"Message did not match any handler patterns");
     }
+
+    return true;
 }
 
+
+/**
+   Used for unreliable messages.
+ */
+void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+{
+    SpaceObjectReference to  (dst.space(), dst.object());
+    SpaceObjectReference from(src.space(), src.object());
+    
+    Sirikata::JS::Protocol::JSMessage js_msg;
+    bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
+
+    deserializeMsgAndDispatch(from,to,js_msg);
+}
 
 
 //This function takes care of all of the event handling changes that were queued
