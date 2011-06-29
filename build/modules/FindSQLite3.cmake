@@ -76,11 +76,21 @@ IF(SQLite3_ROOT)
   IF(EXISTS "${SQLite3_LIBRARY_DIRS}/lib")
       SET(SQLite3_LIBRARY_DIRS ${SQLite3_LIBRARY_DIRS} ${SQLite3_LIBRARY_DIRS}/lib)
   ENDIF()
-  FIND_LIBRARY(SQLite3_LIBRARIES
+  FIND_LIBRARY(SQLite3_OPTIMIZED_LIBRARIES
                NAMES sqlite3
                PATHS
                ${SQLite3_LIBRARY_DIRS}
                NO_DEFAULT_PATH)
+  IF(WIN32)
+  FIND_LIBRARY(SQLite3_DEBUG_LIBRARIES
+               NAMES sqlite3_d
+               PATHS
+               ${SQLite3_LIBRARY_DIRS}
+               NO_DEFAULT_PATH)
+  SET(SQLite3_LIBRARIES debug ${SQLite3_DEBUG_LIBRARIES} optimized ${SQLite3_OPTIMIZED_LIBRARIES})
+  ELSE()
+  SET(SQLite3_LIBRARIES ${SQLite3_OPTIMIZED_LIBRARIES})
+  ENDIF() 
 ENDIF()
   IF(NOT SQLite3_LIBRARIES)  # now look in system locations
     FIND_LIBRARY(SQLite3_LIBRARIES NAMES sqlite3)

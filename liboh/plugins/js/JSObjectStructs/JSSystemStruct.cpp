@@ -100,13 +100,6 @@ JSSystemStruct::~JSSystemStruct()
 }
 
 
-
-v8::Handle<v8::Value> JSSystemStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,JSProxyData* addParams)
-{
-    return associatedContext->struct_create_vis(sporefWatching,addParams);
-}
-
-
 v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserialize)
 {
     return associatedContext->deserializeObject(toDeserialize);
