@@ -48,13 +48,7 @@ std.movement.Pursue = std.movement.MoveAndRotateTo.extend(
                 this.follow(destination_visual,speed, angular_speed, callback);
             }
         },
-        follow:function(destination_visual, speed, angular_speed, callback, callback_distance) {
-           if (speed) {
-               this._speed=speed;
-           }
-           if (angular_speed) {
-               this._angular_speed=angular_speed;
-           }
+        follow:function(destination_visual, callback, callback_distance) {
            this._destination_visual=destination_visual;
            this._pursue_callback=callback;
            this._callback_distance=callback_distance;
