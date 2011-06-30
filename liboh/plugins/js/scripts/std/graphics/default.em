@@ -57,20 +57,29 @@ function() {
      */
     std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this, cb), true);
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), true);
     };
-    std.graphics.DefaultGraphics.prototype.finishInit = function(cb, gfx) {
+    std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
-        this._simulator.hideLoadScreen();
         this._cameraMode = 'first';
 
         this._selected = null;
-        this._scripter = new std.script.Scripter(this);
-        this._chat = new std.graphics.Chat(this._pres, this._simulator);
-        this._physics = new std.graphics.PhysicsProperties(this._simulator);
-        this._propertybox = new std.propertybox.PropertyBox(this);
-        this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter);
-        this._setMesh = new std.graphics.SetMesh(this._simulator);
+        this._loadingUIs = 0;
+
+        var ui_finish_cb = std.core.bind(this.finishedUIInit, this, cb);
+        this._loadingUIs++; this._scripter = new std.script.Scripter(this, ui_finish_cb);
+        this._loadingUIs++; this._chat = new std.graphics.Chat(this._pres, this._simulator, ui_finish_cb);
+        this._loadingUIs++; this._physics = new std.graphics.PhysicsProperties(this._simulator, ui_finish_cb);
+        this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
+        this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
+        this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+    };
+    std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
+        this._loadingUIs--;
+        if (this._loadingUIs > 0) return;
+
+        this._simulator.hideLoadScreen();
+
         this._moverot = new std.movement.MoveAndRotate(this._pres, std.core.bind(this.updateCameraOffset, this), 'rotation');
 
         this._draggers = {
@@ -183,7 +192,7 @@ function() {
             { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'stopDrag' }
         ];
-        
+
         this._binding.addBindings(bindings);
 
         if (cb && typeof(cb) === "function")

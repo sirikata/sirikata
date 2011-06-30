@@ -40,12 +40,17 @@ if (typeof(std.propertybox) === "undefined") std.propertybox = {};
 function () {
     var pb = std.propertybox;
 
-    pb.PropertyBox = function(parent) {
+    pb.PropertyBox = function(parent, init_cb) {
         this._parent = parent;
     try {
-            var propertybox_gui = this._parent._simulator.addGUIModule("propertybox", "propertybox/propertybox.js");
+            var propertybox_gui = this._parent._simulator.addGUIModule(
+                "propertybox", "propertybox/propertybox.js",
+                std.core.bind(function(gui) {
+                                  if (init_cb) init_cb();
+                              }, this)
+            );
             this._propertyWindow = propertybox_gui;
-            this._self = system.presences[0];
+            this._self = system.self;
             this._selected_visible = this._self;
             // Magic number of 0.5 seconds for updating the property box automatically
             this._updateTimer = new std.core.RepeatingTimer(.5, std.core.bind(this.HandleUpdateProperties, this));

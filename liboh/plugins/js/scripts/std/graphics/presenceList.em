@@ -10,7 +10,7 @@ system.require("std/script/scripter.em");
  */
 std.graphics.PresenceList = system.Class.extend(
     {
-        init: function(pres, sim, scripter) {
+        init: function(pres, sim, scripter, init_cb) {
             this._pres = pres;
             this._sim = sim;
 	    this._scripter = scripter;
@@ -29,6 +29,8 @@ std.graphics.PresenceList = system.Class.extend(
 			this._ui.bind("clearAll", std.core.bind(this.onClearAll, this));
 
 		        this.addObject(this._pres,"Visible");
+
+                        if (init_cb) init_cb();
 		    },
                     this));
 

@@ -36,7 +36,7 @@
  */
 std.graphics.SetMesh = system.Class.extend(
     {
-        init: function(sim) {
+        init: function(sim, init_cb) {
             this._sim = sim;
 
             this._selected = undefined;
@@ -47,6 +47,8 @@ std.graphics.SetMesh = system.Class.extend(
                                   this._ui = setMesh_gui;
                                   this._ui.bind("setmesh", std.core.bind(this.handleSetMesh, this));
                                   this._ui.bind("createNewPres", std.core.bind(this.handleCreateNew, this));
+                                  
+                                  if (init_cb) init_cb();
                               }, this)
             );
         },

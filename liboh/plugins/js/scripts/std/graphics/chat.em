@@ -37,7 +37,7 @@ system.require("std/library.em");
  */
 std.graphics.Chat = system.Class.extend(
     {
-        init: function(pres, sim) {
+        init: function(pres, sim, init_cb) {
             this._pres = pres;
             this._sim = sim;
 
@@ -48,6 +48,7 @@ std.graphics.Chat = system.Class.extend(
                 std.core.bind(function(chat_gui) {
                                   this._ui = chat_gui;
                                   this._ui.bind("chat", std.core.bind(this.onSendChat, this));
+                                  if (init_cb) init_cb();
                               }, this)
             );
             var p  = new util.Pattern("name", "get_protocol");

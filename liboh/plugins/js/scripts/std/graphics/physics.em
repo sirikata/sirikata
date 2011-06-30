@@ -35,7 +35,7 @@ system.require('std/movement/movableremote.em');
 /** The PhysicsProperties class allows you to modify the properties of a physics object from a UI. */
 std.graphics.PhysicsProperties = system.Class.extend(
     {
-        init: function(sim) {
+        init: function(sim, init_cb) {
             this._sim = sim;
 
             this._selected = undefined;
@@ -45,6 +45,7 @@ std.graphics.PhysicsProperties = system.Class.extend(
                 std.core.bind(function(physics_gui) {
                                   this._ui = physics_gui;
                                   this._ui.bind("requestPhysicsUpdate", std.core.bind(this.requestPhysicsUpdate, this));
+                                  if (init_cb) init_cb();
                               }, this)
             );
         },

@@ -44,7 +44,7 @@ function() {
     /** A Scripter is an object which will display a scripting window
      *  for operating on other objects.
      */
-    ns.Scripter = function(parent) {
+    ns.Scripter = function(parent, init_cb) {
         this._parent = parent;
         this._scriptedObjects = {};
 
@@ -56,6 +56,7 @@ function() {
                     scripting_gui.onException( function(msg, file, line) { system.print('Scripting GUI Exception: ' + msg + ' at ' + file + ':' + line); } );
                     this._scriptingWindow = scripting_gui;
                     //this._scriptingWindow.hide();
+                    if (init_cb) init_cb();
                 }, this));
         } catch (ex) {
 	    system.print(ex);
