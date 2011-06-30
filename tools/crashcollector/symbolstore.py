@@ -45,6 +45,9 @@ def process_file(settings, f):
     bin_name = os.path.basename(f)
 
     syms_dump = subprocess.Popen([dump_syms_bin, f], stdout=subprocess.PIPE).communicate()[0]
+    if not syms_dump:
+        print 'Failed to dump symbols for', bin_name
+        return
     (bin_hash,bin_file_name) = syms_dump.split()[3:5] #MODULE Linux x86_64 HASH binary
     canonical_bin_name = settings.canonicalize_bin_name(bin_file_name)
 
