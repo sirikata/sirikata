@@ -226,6 +226,8 @@ void WebView::initializeWebView(
                              L"};"));
     bind("__ready", std::tr1::bind(&WebView::handleReadyCallback, this, _1, _2));
     bind("__setViewport", std::tr1::bind(&WebView::handleSetUIViewport, this, _1, _2));
+    bind("__openBrowser", std::tr1::bind(&WebView::handleOpenBrowser, this, _1, _2));
+    bind("__closeBrowser", std::tr1::bind(&WebView::handleCloseBrowser, this, _1, _2));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
         webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
@@ -285,6 +287,31 @@ void WebView::userLog(WebView* wv, const JSArguments& args) {
     else if (level == "insane")
         SILOG(ui, insane, msg);
 }
+
+void WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
+    String name(args[0].begin());
+    String url(args[1].begin());
+    if (url.empty() || name.empty()) return;
+    int32 w = 0, h = 0;
+    if (args.size() >= 4) {
+        w = boost::lexical_cast<int32>(String(args[2].begin()));
+        h = boost::lexical_cast<int32>(String(args[3].begin()));
+    }
+    if (w == 0) w = 400;
+    if (h == 0) h = 400;
+
+    WebView* child_wv = WebViewManager::getSingleton().createWebView(name, name, w, h,
+        OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0, WebView::WebViewBorderSize(0,0,0,0));
+    child_wv->loadURL(url);
+    child_wv->setTransparent(false);
+}
+
+void WebView::handleCloseBrowser(WebView* wv, const JSArguments& args) {
+    String name(args[0].begin());
+    if (name.empty()) return;
+    WebViewManager::getSingleton().destroyWebView(name);
+}
+
 
 void WebView::createMaterial()
 {

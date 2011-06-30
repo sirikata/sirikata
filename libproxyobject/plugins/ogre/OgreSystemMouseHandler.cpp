@@ -791,7 +791,7 @@ void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& arg
 
 void OgreSystemMouseHandler::ensureUI() {
     if(!mUIWidgetView) {
-        printf("Creating UI Widget\n");
+        SILOG(ogre, info, "Creating UI Widget");
         mUIWidgetView = WebViewManager::getSingleton().createWebView("ui_widget","ui_widget",
             mParent->getRenderTarget()->getWidth(), mParent->getRenderTarget()->getHeight(),
             OverlayPosition(RP_TOPLEFT), false, 70, TIER_BACK, 0, WebView::WebViewBorderSize(0,0,0,0));

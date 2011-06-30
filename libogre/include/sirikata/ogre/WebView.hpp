@@ -580,6 +580,16 @@ class SIRIKATA_OGRE_EXPORT WebView
         /** Pass user logging request on to logging system. */
         void userLog(WebView* wv, const JSArguments& args);
 
+        /** Handle request by UI to open a *new* browser, not a link in a
+         * browser. This is critical because it is necessary to isolate the
+         * browser instead of just, e.g., using an iframe.
+         */
+        void handleOpenBrowser(WebView* wv, const JSArguments& args);
+
+        /** Close child browser by the given name.
+         */
+        void handleCloseBrowser(WebView* wv, const JSArguments& args);
+
         };
 }
 }

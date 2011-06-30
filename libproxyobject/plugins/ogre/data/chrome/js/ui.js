@@ -85,6 +85,20 @@ sirikata.log = function() {
     for(var i = 0; i < arguments.length; i++) { args.push( stringify(arguments[i]) ); }
     sirikata.event.apply(this, ['__log'].concat(args));
 };
+
+/** Allocate a web browser with the given URL. Width and height are optional. */
+sirikata.openBrowser = function(name, url, width, height) {
+    if (width && height)
+        sirikata.event.apply(this, ['__openBrowser', stringify(name), stringify(url), stringify(width), stringify(height)]);
+    else
+        sirikata.event.apply(this, ['__openBrowser', stringify(name), stringify(url)]);
+};
+
+/** Close the browser with the given name. */
+sirikata.closeBrowser = function(name) {
+    sirikata.event.apply(this, ['__closeBrowser', stringify(name)]);
+};
+
 })();
 
 /** A wrapper for UI code which sets up the environment for
