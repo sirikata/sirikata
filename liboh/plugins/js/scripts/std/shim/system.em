@@ -702,9 +702,9 @@ function PresenceEntry(sporef, presObj)
                   catch (excep)
                   {
                       if (excep === toThrow)
-                          return false;  //there is no emerson syntax error
+                          return false;  //there is no emerson syntax error                              
                       else
-                          return excep;   //there is an emerson syntax error
+                          return excep;   //there is an emerson syntax error                              
                   }
                   return false;  //should never get here;
               };
@@ -725,8 +725,6 @@ function PresenceEntry(sporef, presObj)
               //handle script is function
               if (typeof(script) == 'function')
               {
-                  //var funcString = quoteEscaper(script.toString());
-                  //var funcString = Escape.escapeString(script.toString(),null);
                   var funcString = script.toString();
                   
                   if (arg !== null)
@@ -747,7 +745,7 @@ function PresenceEntry(sporef, presObj)
                       throw "Error calling createEntity.  String passed in must be valid Emerson.  " + emSynError;
                   }
 
-                  this.__hidden_createEntity(position,'js','"' +  quoteEscaper(script) + '"',mesh,scale,solidAngle,space);
+                  this.__hidden_createEntity(position,'js',script,mesh,scale,solidAngle,space);
               }
               else
               {
