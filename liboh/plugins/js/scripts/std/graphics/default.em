@@ -258,6 +258,8 @@ function() {
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.scriptSelectedObject = function() {
+        if (this._selected == null)
+            return;
         this._presenceList.addObject(this._selected.toString(), 'Scripted');
         this._scripter.script(this._selected);
     };
