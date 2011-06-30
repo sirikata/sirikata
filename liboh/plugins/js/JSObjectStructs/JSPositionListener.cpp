@@ -10,6 +10,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <sirikata/mesh/Bounds.hpp>
+#include <sirikata/mesh/Raytrace.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -217,6 +218,22 @@ v8::Handle<v8::Value> JSPositionListener::untransformedMeshBounds() {
     Mesh::ComputeBounds(mMeshdata, &bbox);
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(untransformedMeshBounds,curContext);
     return CreateJSBBoxResult(curContext, bbox);
+}
+
+/* NOTE that this ONLY RAYTRACES THE MESH with NO TRANSFORMATIONS APPLIED. It is
+ * in mesh space, not even object space. Wrappers in Emerson take care of
+ * providing more convenient versions.
+ */
+v8::Handle<v8::Value> JSPositionListener::raytrace(const Vector3f& mesh_ray_start, const Vector3f& mesh_ray_dir) {
+    if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call raytrace before loading the mesh.")));
+
+    float32 t_out; Vector3f hit_out;
+    bool did_hit = Mesh::Raytrace(mMeshdata, mesh_ray_start, mesh_ray_dir, &t_out, &hit_out);
+    if (!did_hit) return v8::Undefined();
+
+    JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(raytrace,curContext);
+    return CreateJSResult(curContext, hit_out);
+
 }
 
 v8::Handle<v8::Value> JSPositionListener::unloadMesh() {

@@ -456,4 +456,12 @@ system.__presence_constructor__.prototype.__getType = function()
          return decodeBBox(__origUntransformedMeshBounds.apply(this));
      };
 
+     // The basic raytrace is in *completely untransformed* mesh space, meaning
+     // not even the translate/rotate/scale of the presence/visible is
+     // included. Wrappers provide those types of raytracing.
+     var __origRaytrace = system.__presence_constructor__.prototype.raytrace;
+     system.__presence_constructor__.prototype.raytrace = function(start, dir) {
+         return __origRaytrace.apply(this, arguments);
+     };
+
 })();

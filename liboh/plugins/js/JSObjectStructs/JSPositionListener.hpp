@@ -51,6 +51,8 @@ public:
     v8::Handle<v8::Value> loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> meshBounds();
     v8::Handle<v8::Value> untransformedMeshBounds();
+    // NOTE: This the ray parameters are in *object* space.
+    v8::Handle<v8::Value> raytrace(const Vector3f& mesh_ray_start, const Vector3f& mesh_ray_dir);
     v8::Handle<v8::Value> unloadMesh();
 
     //simple accessors for sporef fields

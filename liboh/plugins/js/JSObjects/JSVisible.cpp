@@ -405,6 +405,28 @@ v8::Handle<v8::Value> untransformedMeshBounds(const v8::Arguments& args) {
     return visstruct->untransformedMeshBounds();
 }
 
+v8::Handle<v8::Value> raytrace(const v8::Arguments& args) {
+    if (args.Length() != 2)
+        return v8::ThrowException ( v8::Exception::Error(v8::String::New("Error calling visible.raytrace.  Should take ray start and ray direction.")));
+
+    String errorMessage = "Error in raytrace while decoding visible.";
+    JSVisibleStruct* visstruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
+    if (visstruct == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    v8::Handle<v8::Object> arg0 = args[0]->ToObject();
+    if (!args[0]->IsObject() || !Vec3Validate(arg0))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: first argument to raytrace should be vec3.")));
+    Vector3d ray_start = Vec3Extract(arg0);
+
+    v8::Handle<v8::Object> arg1 = args[1]->ToObject();
+    if (!args[1]->IsObject() || !Vec3Validate(arg1))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid: second argument to raytrace should be vec3.")));
+    Vector3d ray_dir = Vec3Extract(arg1);
+
+    return visstruct->raytrace(Vector3f(ray_start), Vector3f(ray_dir));
+}
+
 v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
 {
     if (args.Length() != 0)

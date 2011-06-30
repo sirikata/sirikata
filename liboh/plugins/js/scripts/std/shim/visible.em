@@ -195,6 +195,14 @@
          return decodeBBox(__origUntransformedMeshBounds.apply(this));
      };
 
+     // The basic raytrace is in *completely untransformed* mesh space, meaning
+     // not even the translate/rotate/scale of the presence/visible is
+     // included. Wrappers provide those types of raytracing.
+     var __origRaytrace = visible.prototype.raytrace;
+     visible.prototype.raytrace = function(start, dir) {
+         return __origRaytrace.apply(this, arguments);
+     };
+
 
      visible.prototype.__prettyPrintFieldsData__ = [
          "position", "velocity",
