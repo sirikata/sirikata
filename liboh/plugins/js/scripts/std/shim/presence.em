@@ -460,7 +460,7 @@ system.__presence_constructor__.prototype.__getType = function()
      // not even the translate/rotate/scale of the presence/visible is
      // included. Wrappers provide those types of raytracing.
      var __origRaytrace = system.__presence_constructor__.prototype.raytrace;
-     system.__presence_constructor__.prototype.raytrace = function(start, dir) {
+     system.__presence_constructor__.prototype.__raytrace = function(start, dir) {
          return __origRaytrace.apply(this, arguments);
      };
 

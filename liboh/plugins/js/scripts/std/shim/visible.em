@@ -120,7 +120,8 @@
 
      // Hide visible but let rest of method override behavior.
      var visible = system.__visible_constructor__;
-     delete system.__visible_constructor__;
+     // NOTE: Currently disabled so we can use it in raytrace
+     // delete system.__visible_constructor__;
 
      Object.defineProperty(visible.prototype, "position",
                            {
@@ -199,7 +200,7 @@
      // not even the translate/rotate/scale of the presence/visible is
      // included. Wrappers provide those types of raytracing.
      var __origRaytrace = visible.prototype.raytrace;
-     visible.prototype.raytrace = function(start, dir) {
+     visible.prototype.__raytrace = function(start, dir) {
          return __origRaytrace.apply(this, arguments);
      };
 
@@ -220,6 +221,6 @@
      {
          return  'visible';
      };
-     
+
 
 })();
