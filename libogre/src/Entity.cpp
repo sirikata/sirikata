@@ -136,7 +136,7 @@ Entity::~Entity() {
     init(NULL);
     if (toDestroy) {
         getScene()->getSceneManager()->destroyEntity(toDestroy);
-        
+
     }
 
     OgreRenderer::SceneEntitiesMap::iterator iter =
@@ -432,8 +432,10 @@ void Entity::setSelected(bool selected) {
 
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
-    if (meshFile.empty())
+    if (meshFile.empty()) {
+        unloadMesh();
         return;
+    }
 
     // If it's the same mesh *and* we still have it around or are working on it, just leave it alone
     if (mURI == meshFile && (mAssetDownload || mOgreObject))
@@ -1162,7 +1164,7 @@ void Entity::createMesh(Liveness::Token alive) {
 
     SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();
-    
+
     // If we already have it, just load the existing one
     if (tryInstantiateExistingMesh(hash)) return;
 

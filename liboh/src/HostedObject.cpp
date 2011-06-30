@@ -611,7 +611,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
     if (bounds)
         proxy_obj->setBounds(*bounds, seqno);
 
-    if (mesh && *mesh != "")
+    if (mesh)
         proxy_obj->setMesh(Transfer::URI(*mesh), seqno);
 
     if (phy && *phy != "")
