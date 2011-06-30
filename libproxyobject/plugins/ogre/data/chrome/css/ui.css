@@ -11,6 +11,7 @@ body {
         -moz-user-select: none;
         -o-user-select: none;
         user-select: none;
+        background-color: #000;
 }
 div#transparency {
 	float: left;

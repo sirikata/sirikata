@@ -328,7 +328,7 @@ void WebView::createMaterial()
 
      uint8* pDest = static_cast<uint8*>(pixelBox.data);
 
-     memset(pDest, 128, texHeight*texPitch);
+     memset(pDest, 0, texHeight*texPitch);
 
      pixelBuffer->unlock();
  #endif
@@ -871,7 +871,7 @@ void WebView::resize(int width, int height)
 
 	uint8* pDest = static_cast<uint8*>(pixelBox.data);
 
-	memset(pDest, 128, texHeight*texPitch);
+	memset(pDest, 0, texHeight*texPitch);
 
 	pixelBuffer->unlock();
 

@@ -205,6 +205,8 @@ public:
     // Sets the onReady callback, invoked when the basic graphics and UI are
     // ready to be used.
     boost::any setOnReady(std::vector<boost::any>& params);
+    // Hide the loading screen, if it was displayed.
+    boost::any evalInUI(std::vector<boost::any>& params);
     // Helper which creates a WebView window, either
     boost::any createWindow(const String& name, bool is_html, bool is_file, String content, uint32 width, uint32 height);
     // Create a window using a URL

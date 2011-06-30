@@ -57,10 +57,11 @@ function() {
      */
     std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this, cb));
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishInit, this, cb), true);
     };
     std.graphics.DefaultGraphics.prototype.finishInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
+        this._simulator.hideLoadScreen();
         this._cameraMode = 'first';
 
         this._selected = null;

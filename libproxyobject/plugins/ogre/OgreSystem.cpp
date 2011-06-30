@@ -503,7 +503,9 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 
     if(name == "onReady")
         return setOnReady(params);
-    if(name == "createWindow")
+    else if(name == "evalInUI")
+        return evalInUI(params);
+    else if(name == "createWindow")
         return createWindow(params);
     else if(name == "createWindowFile")
         return createWindowFile(params);
@@ -548,6 +550,15 @@ boost::any OgreSystem::setOnReady(std::vector<boost::any>& params) {
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
     mOnReadyCallback = handler;
+    return boost::any();
+}
+
+boost::any OgreSystem::evalInUI(std::vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+
+    mMouseHandler->mUIWidgetView->evaluateJS(Invokable::anyAsString(params[1]));
+
     return boost::any();
 }
 

@@ -47,7 +47,8 @@ function() {
      *  and perform operations like picking in response to mouse
      *  clicks.
      * 
-     *  The callback passed in is invoked when
+     *  The callback passed in is invoked when Ogre has finished
+     *  initializing.
      */
     std.graphics.Graphics = function(pres, name, cb) {
         this.presence = pres;
@@ -64,6 +65,13 @@ function() {
     /** Set the callback to invoke when the system is ready for rendering. */
     std.graphics.Graphics.prototype._setOnReady = function(cb) {
         this.invoke('onReady', std.core.bind(cb, undefined, this));
+    };
+
+    /** Hides the loading screen. Call once you're GUIs and basic
+     * loading is done.
+     */
+    std.graphics.Graphics.prototype.hideLoadScreen = function() {
+        this.invoke('evalInUI', 'hideLoadScreen()');
     };
 
     /** Request that the renderer suspend rendering. It continues to exist, but doesn't use any CPU on rendering. */
