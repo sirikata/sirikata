@@ -102,6 +102,8 @@ function() {
 
         this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
 
+        this._binding.addAction('reorientSelf', std.core.bind(this.reorientSelf, this));
+
         this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
         this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
         this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
@@ -135,6 +137,10 @@ function() {
         this._binding.addAction('forwardMouseReleaseToDragger', std.core.bind(this.forwardMouseReleaseToDragger, this));
         this._binding.addAction('stopDrag', std.core.bind(this.stopDrag, this));
 
+        this._binding.addAction('startFreeRotate', std.core.bind(this.startFreeRotate, this));
+        this._binding.addAction('freeRotateDrag', std.core.bind(this.freeRotateDrag, this));
+        this._binding.addAction('freeRotateRelease', std.core.bind(this.freeRotateRelease, this));
+
         /** Bindings are an *ordered* list of keys and actions. Keys
          *  are a combination of the type of event, the primary key
          *  for the event (key or mouse button), and modifiers.
@@ -158,8 +164,10 @@ function() {
             { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
             { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
 
-            { key: ['mouse-click', 3], action: 'pickObject' },
-            { key: ['mouse-click', 3], action: 'scriptSelectedObject' },
+            { key: ['button-pressed', 't'], action: 'reorientSelf' },
+
+            { key: ['mouse-click', 2], action: 'pickObject' },
+            { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
             { key: ['button-pressed', 'return'], action: 'actOnObject' },
 
             { key: ['button-pressed', 'c' ], action: 'toggleCameraMode' },
@@ -190,7 +198,10 @@ function() {
             { key: ['mouse-press', 1, '*'], action: 'updatePropertyBox' },
             { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
-            { key: ['mouse-release', 1, '*'], action: 'stopDrag' }
+            { key: ['mouse-release', 1, '*'], action: 'stopDrag' },
+            { key: ['mouse-press', 3, 'none' ], action: 'startFreeRotate' },
+            { key: ['mouse-drag', 3, '*'], action: 'freeRotateDrag' },
+            { key: ['mouse-release', 3, '*'], action: 'freeRotateRelease' }
         ];
 
         this._binding.addBindings(bindings);
@@ -335,5 +346,40 @@ function() {
     std.graphics.DefaultGraphics.prototype.stopDrag = function() {
         delete this._dragger;
     };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.startFreeRotate = function(evt) {
+        this.startX = evt.x;
+        this.startY = evt.y;
+        this.startOrientation = this._pres.getOrientation();
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.freeRotateDrag = function(evt) {
+        var SCALE = 1;
+        var dx = evt.x - this.startX;
+        var dy = evt.y - this.startY;
+        var dXAngle = dx * SCALE;
+        var dYAngle = dy * SCALE;
+        var newQuat = this.startOrientation
+            .mul(new util.Quaternion(<0, 1, 0>, -dXAngle))
+            .mul(new util.Quaternion(<1, 0, 0>, dYAngle));
+        this._pres.setOrientation(newQuat);
+        this.updateCameraOffset();
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.freeRotateRelease = function(evt) {
+        this.startX = null;
+        this.startY = null;
+        this.startOrientation = null;
+    };
+
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.reorientSelf = function(evt) {
+        this._pres.setOrientation(util.Quaternion.fromLookAt(
+            this._pres.getOrientation().zAxis().scale(-1), <0, 1, 0>));
+        this.updateCameraOffset();
+    }
 
 })();
