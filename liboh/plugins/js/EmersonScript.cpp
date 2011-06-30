@@ -69,7 +69,7 @@
 #include "JSObjects/JSObjectsUtils.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
-
+#include "EmersonMessagingManager.hpp"
 
 
 using namespace v8;
@@ -81,6 +81,7 @@ namespace JS {
 EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan)
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
    JSVisibleManager(this),
+   EmersonMessagingManager(ho->context()->ioService),
    mParent(ho),
    mHandlingEvent(false),
    mResetting(false),
@@ -105,48 +106,6 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
 }
 
 
-//checks to see if the associated space object reference exists in the script.
-//if it does, then make the position listener a subscriber to its pos updates.
-bool EmersonScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String*mesh, String* phy)
-{
-    ProxyObjectPtr p;
-    bool succeeded = false;
-    if ((ownPres_toListenFrom ==NULL) || (*ownPres_toListenFrom == SpaceObjectReference::null()))
-    {
-        //trying to set to one of my own presence's postion listeners
-        JSLOG(insane,"attempting to register position listener for one of my own presences with sporef "<<*ownPres_toListenFrom);
-        succeeded = mParent->getProxy(sporef_toListenTo,p);
-    }
-    else
-    {
-        //trying to get a non-local proxy object
-        JSLOG(insane,"attempting to register position listener for a visible object with sporef "<<*sporef_toListenTo);
-        succeeded = mParent->getProxyObjectFrom(ownPres_toListenFrom,sporef_toListenTo,p);
-    }
-
-    //if actually had associated proxy object, then update loc and orientation.
-    if (succeeded)
-    {
-        p->PositionProvider::addListener(pl);
-        if (loc != NULL)
-            *loc = p->getTimedMotionVector();
-        if (orient != NULL)
-            *orient = p->getTimedMotionQuaternion();
-
-        p->MeshProvider::addListener(ml);
-        if (bs != NULL)
-            *bs = p->getBounds();
-        if (mesh != NULL)
-            *mesh = p->getMesh().toString();
-        if (phy != NULL)
-            *phy = p->getPhysics();
-    }
-    else
-        JSLOG(insane,"problem registering to be a position listener. could not find associated object in hosted object.");
-
-    return succeeded;
-
-}
 
 //Here's how resetting works.  system reqeusts a reset.  At this point,
 //JSContextStruct calls the below function (requestReset).  If reset was
@@ -220,40 +179,6 @@ void EmersonScript::resetPresence(JSPresenceStruct* jspresStruct)
 }
 
 
-
-//deregisters position listening for an arbitrary proxy object visible to
-//ownPres and with spaceobject reference sporef.
-bool EmersonScript::deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl, MeshListener* ml)
-{
-    ProxyObjectPtr p;
-    bool succeeded = false;
-
-    if (ownPres != NULL) {
-        if (sporef == NULL)
-        {
-            //de-regestering pl from position listening to one of my own presences.
-            JSLOG(insane,"attempting to de-register position listener for one of my presences with sporef "<<*ownPres);
-            succeeded = mParent->getProxy(ownPres,p);
-        }
-        else
-        {
-            //de-registering pl from position listening to an arbitrary proxy object
-            JSLOG(insane,"attempting to de-register position listener for visible object with sporef "<<*sporef);
-            succeeded =  mParent->getProxyObjectFrom(ownPres,sporef,p);
-        }
-    }
-
-    if (succeeded)
-    {
-        p->PositionProvider::removeListener(pl);
-        p->MeshProvider::removeListener(ml);
-    }
-    else
-        JSLOG(error,"error de-registering to be a position listener.  could not find associated object in hosted object.");
-
-    return succeeded;
-
-}
 
 
 //this is the callback that fires when proximateObject no longer receives
@@ -464,6 +389,10 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     if (!mCreateEntityPort)
         mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
+    //set up reliable messages for the connected presence
+    EmersonMessagingManager::presenceConnected(name);
+
+    
     //check for callbacks associated with presence connection
 
     //means that this is the first presence that has been added to the space
@@ -520,6 +449,8 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
     JSPresenceStruct* jspres = findPresence(name);
     //deregister underlying visible manager from listen for proxy creation events on hostedobjectproxymanager
     mParent->getProxyManager(name.space(),name.object())->removeListener(this);
+
+    EmersonMessagingManager::presenceDisconnected(name);
     
     if (jspres != NULL)
         jspres->disconnectCalledFromObjScript();
@@ -575,12 +506,6 @@ void EmersonScript::sendMessageToEntityUnreliable(const SpaceObjectReference& sp
 
     iter->second->send(dest,toSend);
 }
-
-void EmersonScript::sendMessageToEntityReliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const String& msgBody)
-{
-    mParent->sendScriptCommMessage(from,receiver,msgBody);    
-}
-
 
 
 Time EmersonScript::getHostedTime()

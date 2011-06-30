@@ -57,6 +57,8 @@
 #include "JSObjectScriptManager.hpp"
 #include "JSVisibleManager.hpp"
 #include "JS_JSMessage.pbj.hpp"
+#include "EmersonMessagingManager.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -64,7 +66,8 @@ namespace JS {
 
 class EmersonScript : public JSObjectScript,
                       public JSVisibleManager,
-                      public SessionEventListener
+                      public SessionEventListener,
+                      public EmersonMessagingManager
 {
 
 public:
@@ -96,6 +99,7 @@ public:
      */
     virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
 
+    
     /**
        Callback for unreliable messages.  
        Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
@@ -103,9 +107,6 @@ public:
        message. (via deserializeMsgAndDispatch.)
      */
     void handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-
-    
-    
     void handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
 
 
@@ -142,7 +143,6 @@ public:
        from.
      */
     void sendMessageToEntityUnreliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const std::string& msgBody);
-    void sendMessageToEntityReliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const String& msgBody);
 
     
     //takes the c++ object jspres, creates a new visible object out of it, if we
@@ -219,12 +219,6 @@ public:
        
      */
     v8::Handle<v8::Value> requestReset(JSContextStruct* jscont, const std::map <SpaceObjectReference,std::vector <SpaceObjectReference> > & proxSetVis);
-
-
-
-    //registering position listeners to receive updates from loc
-    bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String* mesh, String* phy);
-    bool deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener* ml);
 
 
     /** Register an event pattern matcher and handler. */
