@@ -259,8 +259,6 @@ typedef std::tr1::function<void (uint8*, int) >  ReadDatagramCallback;
 
 typedef std::tr1::function<void (uint8*, int) > ReadCallback;
 
-typedef std::tr1::function<void () > CloseCallback;
-
 typedef UUID USID;
 
 typedef uint16 LSID;
@@ -1581,16 +1579,6 @@ public:
     return true;
   }
 
-  virtual bool registerCloseCallback(CloseCallback callback)
-  {
-      mCloseCallback = callback;
-
-      boost::recursive_mutex::scoped_lock lock(mReceiveBufferMutex);
-      sendToApp(0);
-
-      return true;
-  }
-  
   /* Close this stream. If the 'force' parameter is 'false',
      all outstanding data is sent and acknowledged before the stream is closed.
      Otherwise, the stream is closed immediately and outstanding data may be lost.
@@ -1610,9 +1598,6 @@ public:
       if (conn)
         conn->eraseDisconnectedStream(this);
 
-      if (mCloseCallback != NULL)
-          mCloseCallback();
-
       return true;
     }
     else {
@@ -1622,10 +1607,6 @@ public:
               std::tr1::bind(&Stream<EndPointType>::serviceStreamNoReturn, this, mWeakThis.lock(), conn)
           );
       }
-
-      if (mCloseCallback != NULL)
-          mCloseCallback();
-      
       return true;
     }
   }
@@ -2310,8 +2291,7 @@ private:
 
   ReadCallback mReadCallback;
   StreamReturnCallbackFunction mStreamReturnCallback;
-  CloseCallback mCloseCallback;
-  
+
 
   typedef std::map<EndPoint<EndPointType>, StreamReturnCallbackFunction> StreamReturnCallbackMap;
   static StreamReturnCallbackMap mStreamReturnCallbackMap;
@@ -2350,3 +2330,4 @@ public:
 }
 
 #endif
+

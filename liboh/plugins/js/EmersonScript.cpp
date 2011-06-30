@@ -624,13 +624,12 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     bool parsed = js_msg.ParseFromString(payload);
 
     if (! parsed)
-    {
-        JSLOG(error,"Cannot parse the message that I received on this port");
         return false;
-    }
     
     return deserializeMsgAndDispatch(src,dst,js_msg);
 }
+
+
 
 
 bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
@@ -651,6 +650,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
         return false;
     }
 
+    
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
     //cannot affect the event handlers when we are executing event handlers.
@@ -660,7 +660,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     {
         if ((mResetting) || (mKilling))
             break;
-
+        
         if (mEventHandlers[s]->matches(obj,src,dst))
         {
             // Adding support for the knowing the message properties too
