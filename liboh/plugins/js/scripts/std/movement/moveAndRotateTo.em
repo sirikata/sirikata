@@ -65,11 +65,11 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
             var pos =this._pres.getPosition();
             var forward=destination.sub(pos).normal();
             destination_facing=destination_facing||this._pres.getOrientation();
-            var goal_orientation=new util.Quaternion.fromLookAt(forward,destination_facing.yAxis());
+            var goal_orientation=util.Quaternion.fromLookAt(forward,destination_facing.yAxis());
             if (this._force_up) {
                var tright=this._force_up.cross(forward);
                var tforward=tright.cross(this._force_up).normal();
-               goal_orientation=new util.Quaternion.fromLookAt(tforward,this._force_up);
+               goal_orientation=util.Quaternion.fromLookAt(tforward,this._force_up);
             }
             var thus=this;
             var destination_delta=destination.sub(pos);
