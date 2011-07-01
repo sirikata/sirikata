@@ -66,6 +66,7 @@ std.graphics.PhysicsProperties = system.Class.extend(
         },
 
         requestPhysicsUpdate: function(treatment, collision_mesh, mass) {
+            if (!this._selected) return;
             var physics_settings = {
                 treatment : treatment,
                 bounds : collision_mesh,
