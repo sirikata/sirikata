@@ -64,6 +64,7 @@ WebView::WebView(
 #endif
 	viewName = name;
         viewType = type;
+        viewURL = "";
 	viewWidth = width;
 	viewHeight = height;
 	maxUpdatePS = 0;
@@ -227,6 +228,7 @@ void WebView::initializeWebView(
     bind("__ready", std::tr1::bind(&WebView::handleReadyCallback, this, _1, _2));
     bind("__setViewport", std::tr1::bind(&WebView::handleSetUIViewport, this, _1, _2));
     bind("__openBrowser", std::tr1::bind(&WebView::handleOpenBrowser, this, _1, _2));
+    bind("__listenToBrowser", std::tr1::bind(&WebView::handleListenToBrowser, this, _1, _2));
     bind("__closeBrowser", std::tr1::bind(&WebView::handleCloseBrowser, this, _1, _2));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
@@ -243,6 +245,10 @@ void WebView::setUpdateViewportCallback(UpdateViewportCallback cb) {
 
 void WebView::setReadyCallback(ReadyCallback cb) {
     mReadyCallback = cb;
+}
+
+void WebView::setNavigatedCallback(NavigatedCallback cb) {
+    mNavigatedCallback = cb;
 }
 
 void WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
@@ -301,9 +307,42 @@ void WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
     if (h == 0) h = 400;
 
     WebView* child_wv = WebViewManager::getSingleton().createWebView(name, name, w, h,
-        OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0, WebView::WebViewBorderSize(0,0,0,0));
+        OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0);
     child_wv->loadURL(url);
     child_wv->setTransparent(false);
+}
+
+void WebView::handleListenToBrowser(WebView* wv, const JSArguments& args) {
+    String name(args[0].begin());
+    String cb_name(args[1].begin());
+    if (name.empty() || cb_name.empty()) return;
+
+    WebView* child_wv = WebViewManager::getSingleton().getWebView(name);
+    if (child_wv == NULL) return;
+
+    child_wv->setNavigatedCallback(
+        std::tr1::bind(
+            &WebView::forwardBrowserNavigatedCallback, this,
+            livenessToken(),
+            cb_name, std::tr1::placeholders::_1
+        )
+    );
+}
+
+void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const String& cb_name, const String& url) {
+    // Note that this is forwarding an event about a *different*
+    // webview to *this* webview's javascript. We need to check
+    // liveness since the child may outlive the parent (although it
+    // shouldn't, or you're probably going to have orphan WebViews
+    // that will never get closed.
+    if (!alive) return;
+
+    String escaped_url = "";
+    for(uint32 i = 0; i < url.size(); i++) {
+        if (url[i] == '\'') escaped_url += "\\'";
+        else escaped_url.push_back(url[i]);
+    }
+    evaluateJS( cb_name + "( 'navigate', '" + escaped_url + "')" );
 }
 
 void WebView::handleCloseBrowser(WebView* wv, const JSArguments& args) {
@@ -701,6 +740,10 @@ void WebView::createMaterial()
      return viewType;
  }
 
+std::string WebView::getURL() {
+    return viewURL;
+}
+
  std::string WebView::getViewTextureName()
  {
      return viewName;
@@ -937,7 +980,9 @@ void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
     SILOG(webview,detailed,"onAddressBarChanged"<<newURL);
 }
 void WebView::onStartLoading(Berkelium::Window*, URLString newURL) {
-    SILOG(webview,detailed,"onStartLoading"<<newURL);
+    SILOG(webview,fatal,"onStartLoading"<<newURL);
+    viewURL = newURL.get<String>();
+    if (mNavigatedCallback) mNavigatedCallback(viewURL);
 }
 void WebView::onTitleChanged(Berkelium::Window*, WideString wtitle) {
     UTF8String textString = Berkelium::WideToUTF8(wtitle);
@@ -1397,7 +1442,28 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
 
   }
 
-  return boost::any();
+    if (name == "onNavigate") {
+        if (params.size() != 2) {
+            SILOG(webview,error,"Invoking 'onNavigate' expects 2 arguments." );
+            return boost::any();
+        }
+        if (!Invokable::anyIsInvokable(params[1])){
+            SILOG(webview,error,"Invoking 'onNavigate' expects function argument." );
+            return boost::any();
+        }
+
+        Invokable* handler = Invokable::anyAsInvokable(params[1]);
+
+        setNavigatedCallback(
+            std::tr1::bind(
+                &WebView::forwardOnNavigateToInvokable, this,
+                handler,
+                std::tr1::placeholders::_1
+            )
+        );
+    }
+
+    return boost::any();
 }
 
 void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const JSArguments& args)
@@ -1414,6 +1480,12 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
   //After translation
   _invokable->invoke(params);
 
+}
+
+void WebView::forwardOnNavigateToInvokable(Invokable* _invokable, const String& url) {
+    std::vector<boost::any> params;
+    params.push_back(Invokable::asAny(String(url)));
+    _invokable->invoke(params);
 }
 
 #endif //HAVE_BERKELIUM

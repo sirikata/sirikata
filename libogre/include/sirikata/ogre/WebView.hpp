@@ -40,6 +40,7 @@
 #include <vector>
 #include <boost/any.hpp>
 
+#include <sirikata/core/util/Liveness.hpp>
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"
@@ -47,7 +48,6 @@
 #include "berkelium/Window.hpp"
 #include "berkelium/WindowDelegate.hpp"
 #endif
-
 
 #ifndef HAVE_BERKELIUM
 namespace Berkelium {
@@ -87,10 +87,12 @@ class SIRIKATA_OGRE_EXPORT WebView
         , public Berkelium::WindowDelegate
 #endif
         , public Invokable
+        , public Liveness
 	{
 	public:
 
             typedef std::tr1::function<void()> ReadyCallback;
+            typedef std::tr1::function<void(const String&)> NavigatedCallback;
             typedef std::tr1::function<void(int32 left, int32 top, int32 right, int32 bottom)> UpdateViewportCallback;
 
 		/**
@@ -122,6 +124,10 @@ class SIRIKATA_OGRE_EXPORT WebView
                 void setUpdateViewportCallback(UpdateViewportCallback cb);
 
                 void setReadyCallback(ReadyCallback cb);
+
+                // Callback to invoke when the browser URL
+                // changes. Does *not* indicate the page is fully loaded.
+                void setNavigatedCallback(NavigatedCallback cb);
 
 		/**
 		* Sets a global 'Client' callback that can be invoked via Javascript from
@@ -292,6 +298,11 @@ class SIRIKATA_OGRE_EXPORT WebView
 		std::string getType();
 
 		/**
+		* Returns the current URL of this WebView.
+		*/
+		std::string getURL();
+
+		/**
 		* Returns the name of the Ogre::Material used internally by this WebView.
 		*/
 		std::string getViewTextureName();
@@ -427,6 +438,9 @@ class SIRIKATA_OGRE_EXPORT WebView
 		std::string viewName;
             /// The type of the webview, which is used when generating events.
             std::string viewType;
+            /// Currently loading URL of this WebView. Loading may
+            /// still be in progress!
+            String viewURL;
         ///the width of the overlay and observed pixel view of the web page
 		unsigned short viewWidth;
         ///the height of the overlay and observed pixel view of the web page
@@ -491,6 +505,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 
                 UpdateViewportCallback mUpdateViewportCallback;
                 ReadyCallback mReadyCallback;
+                NavigatedCallback mNavigatedCallback;
 
 		friend class WebViewManager;
 
@@ -548,7 +563,9 @@ class SIRIKATA_OGRE_EXPORT WebView
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
 
      virtual boost::any invoke(std::vector<boost::any>& params);
+     // Helpers for invokable calls that produce callbacks later
      void translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
+     void forwardOnNavigateToInvokable(Invokable* _invokable, const String& url);
 
         void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
         void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
@@ -585,6 +602,15 @@ class SIRIKATA_OGRE_EXPORT WebView
          * browser instead of just, e.g., using an iframe.
          */
         void handleOpenBrowser(WebView* wv, const JSArguments& args);
+
+        /** Setup a function name to be invoked on events. Currently
+         * only supports 'navigate' events of the form
+         * callback('navigate', url).
+         */
+        void handleListenToBrowser(WebView* wv, const JSArguments& args);
+
+        // Helper handler for forwarding navigation events to listener
+        void forwardBrowserNavigatedCallback(Liveness::Token alive, const String& cb_name, const String& url);
 
         /** Close child browser by the given name.
          */

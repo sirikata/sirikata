@@ -94,6 +94,38 @@ sirikata.openBrowser = function(name, url, width, height) {
         sirikata.event.apply(this, ['__openBrowser', stringify(name), stringify(url)]);
 };
 
+
+sirikata.__listenToBrowserHandlers = {};
+var chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz";
+/** Listen for events from the browser. Generally, the callback should
+ *  be of the form
+ *    callback(event_name, ...)
+ *  Currently supported callbacks:
+ *    callback('navigate', url) // The page navigated to the given url.
+ */
+sirikata.listenToBrowser = function(name, cb) {
+    // To deal with the fact that we currently require the callback
+    // specified down to C++ to be a string name of a global function,
+    // we just build up a dispatch table using random keys to identify
+    // the listener
+
+    // Random key
+    var rand_key = '';
+    for (var i=0; i < 8; i++) {
+	var rnum = Math.floor(Math.random() * chars.length);
+        rand_key += chars.substring(rnum,rnum+1);
+    }
+
+    // Register in global to make accessible
+    sirikata.__listenToBrowserHandlers[rand_key] = function() {
+        cb.apply(this, arguments);
+    };
+
+    // Build and register string name of handler
+    var handler_name = 'sirikata.__listenToBrowserHandlers["' + rand_key + '"]';
+    sirikata.event.apply(this, ['__listenToBrowser', stringify(name), handler_name]);
+};
+
 /** Close the browser with the given name. */
 sirikata.closeBrowser = function(name) {
     sirikata.event.apply(this, ['__closeBrowser', stringify(name)]);
