@@ -1410,6 +1410,7 @@ public:
     mConnection.reset();
   }
 
+  bool connected() { return mConnected; }
 
   static bool connectStream(EndPoint <EndPointType> localEndPoint,
 			    EndPoint <EndPointType> remoteEndPoint,
@@ -2330,4 +2331,3 @@ public:
 }
 
 #endif
-
