@@ -250,9 +250,11 @@ void WebView::initializeWebView(
 }
 
 void WebView::cleanupWebView() {
+#ifdef HAVE_BERKELIUM
     if (webView == NULL) return;
     webView->destroy();
     webView = NULL;
+#endif
 }
 
 void WebView::setUpdateViewportCallback(UpdateViewportCallback cb) {
