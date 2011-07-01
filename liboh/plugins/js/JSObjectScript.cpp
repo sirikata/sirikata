@@ -988,7 +988,7 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
     {
-        std::string errorMessage("Couldn't find file for require named");
+        std::string errorMessage("Couldn't find file for require named ");
         errorMessage += filename;
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
