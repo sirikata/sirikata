@@ -200,8 +200,8 @@ function() {
             { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'stopDrag' },
             { key: ['mouse-press', 3, 'none' ], action: 'startFreeRotate' },
-            { key: ['mouse-drag', 3, '*'], action: 'freeRotateDrag' },
-            { key: ['mouse-release', 3, '*'], action: 'freeRotateRelease' }
+            { key: ['mouse-drag', 3, 'none'], action: 'freeRotateDrag' },
+            { key: ['mouse-release', 3, 'none'], action: 'freeRotateRelease' }
         ];
 
         this._binding.addBindings(bindings);
@@ -358,6 +358,9 @@ function() {
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.freeRotateDrag = function(evt) {
+        if (this.startX == null || this.startY == null)
+            return;
+
         var SCALE = 1;
         var dx = evt.x - this.startX;
         var dy = evt.y - this.startY;
