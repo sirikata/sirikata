@@ -72,6 +72,14 @@ function() {
         printHandler << printPattern;
     };
 
+    ns.Scripter.prototype.onReset = function(reset_cb) {
+        this._parent._simulator.addGUIModule(
+            "Scripter", "scripting/prompt.js",
+            std.core.bind(function(scripting_gui) {
+                              if (reset_cb) reset_cb();
+                          }, this));
+    };
+
     ns.Scripter.prototype.script = function(target) {
         if (!target) return;
 
@@ -95,7 +103,7 @@ function() {
                 return;
             }
 
-            
+
             var request = {
                 request : 'script',
                 script : val

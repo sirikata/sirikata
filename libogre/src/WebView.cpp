@@ -91,6 +91,8 @@ WebView::WebView(
         mExceptionHandler = NULL;
 	texFiltering = Ogre::FO_NONE;
 
+        mReady = false;
+
     mBorderLeft = border.mBorderLeft;
     mBorderRight = border.mBorderRight;
     mBorderTop = border.mBorderTop;
@@ -146,6 +148,8 @@ WebView::WebView(const std::string& name, const std::string& type, unsigned shor
         mExceptionHandler = NULL;
 	this->texFiltering = texFiltering;
 
+        mReady = false;
+
 	createMaterial();
 }
 
@@ -154,7 +158,7 @@ WebView::~WebView()
 	if(alphaCache)
 		delete[] alphaCache;
 #ifdef HAVE_BERKELIUM
-    webView->destroy();
+        cleanupWebView();
 #endif
 	if(overlay)
 		delete overlay;
@@ -167,20 +171,26 @@ WebView::~WebView()
     }
 }
 
-void WebView::createWebView(bool asyncRender, int maxAsyncRenderRate)
+void WebView::createWebView(bool resetting)
 {
 #ifdef HAVE_BERKELIUM
     initializeWebView(Berkelium::Window::create(
-                          WebViewManager::getSingleton().bkContext));
+            WebViewManager::getSingleton().bkContext),
+        false
+    );
 #endif
 }
 
 void WebView::initializeWebView(
 #ifdef HAVE_BERKELIUM
-    Berkelium::Window *win
+    Berkelium::Window *win,
 #endif
+    bool resetting
     )
 {
+    // The resetting flag allows us to not double-bind builtin
+    // functions
+
 #ifdef HAVE_BERKELIUM
     webView = win;
     webView->setDelegate(this);
@@ -213,7 +223,7 @@ void WebView::initializeWebView(
             L"for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }\n"
             L"sirikata.__event.apply(this, args);\n"
             L"};"));
-    bind("__log", std::tr1::bind(&WebView::userLog, this, _1, _2));
+    if (!resetting) bind("__log", std::tr1::bind(&WebView::userLog, this, _1, _2));
     // Deprecated
     webView->addBindOnStartLoading(WideString::point_to(L"chrome"),
                   Berkelium::Script::Variant::emptyObject());
@@ -225,11 +235,11 @@ void WebView::initializeWebView(
                              L"console.log([n].concat(args));\n"
                              L"chrome.send_.apply(this, [n].concat(args));\n"
                              L"};"));
-    bind("__ready", std::tr1::bind(&WebView::handleReadyCallback, this, _1, _2));
-    bind("__setViewport", std::tr1::bind(&WebView::handleSetUIViewport, this, _1, _2));
-    bind("__openBrowser", std::tr1::bind(&WebView::handleOpenBrowser, this, _1, _2));
-    bind("__listenToBrowser", std::tr1::bind(&WebView::handleListenToBrowser, this, _1, _2));
-    bind("__closeBrowser", std::tr1::bind(&WebView::handleCloseBrowser, this, _1, _2));
+    if (!resetting) bind("__ready", std::tr1::bind(&WebView::handleReadyCallback, this, _1, _2));
+    if (!resetting) bind("__setViewport", std::tr1::bind(&WebView::handleSetUIViewport, this, _1, _2));
+    if (!resetting) bind("__openBrowser", std::tr1::bind(&WebView::handleOpenBrowser, this, _1, _2));
+    if (!resetting) bind("__listenToBrowser", std::tr1::bind(&WebView::handleListenToBrowser, this, _1, _2));
+    if (!resetting) bind("__closeBrowser", std::tr1::bind(&WebView::handleCloseBrowser, this, _1, _2));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
         webView->resize(viewWidth-mBorderLeft-mBorderRight, viewHeight-mBorderTop-mBorderBottom);
@@ -237,6 +247,12 @@ void WebView::initializeWebView(
         webView->resize(0, 0);
     }
 #endif
+}
+
+void WebView::cleanupWebView() {
+    if (webView == NULL) return;
+    webView->destroy();
+    webView = NULL;
 }
 
 void WebView::setUpdateViewportCallback(UpdateViewportCallback cb) {
@@ -247,12 +263,22 @@ void WebView::setReadyCallback(ReadyCallback cb) {
     mReadyCallback = cb;
 }
 
+void WebView::setResetReadyCallback(ResetReadyCallback cb) {
+    mResetReadyCallback = cb;
+}
+
 void WebView::setNavigatedCallback(NavigatedCallback cb) {
     mNavigatedCallback = cb;
 }
 
 void WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
-    if (mReadyCallback) mReadyCallback();
+    if (mReady) { // This is a reset
+        if (mResetReadyCallback) mResetReadyCallback();
+    }
+    else {
+        mReady = true;
+        if (mReadyCallback) mReadyCallback();
+    }
 }
 
 void WebView::handleSetUIViewport(WebView* wv, const JSArguments& args) {
@@ -980,7 +1006,7 @@ void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
     SILOG(webview,detailed,"onAddressBarChanged"<<newURL);
 }
 void WebView::onStartLoading(Berkelium::Window*, URLString newURL) {
-    SILOG(webview,fatal,"onStartLoading"<<newURL);
+    SILOG(webview,detailed,"onStartLoading"<<newURL);
     viewURL = newURL.get<String>();
     if (mNavigatedCallback) mNavigatedCallback(viewURL);
 }
@@ -1151,13 +1177,26 @@ void WebView::onPaint(Berkelium::Window*win,
         compositeWidgets(win);
 }
 void WebView::onCrashed(Berkelium::Window*) {
-    SILOG(webview,fatal,"WebView crashed: " << viewName);
+    SILOG(webview,error,"WebView crashed: " << viewName);
+
+    // Try to cleanup and reinitialize everything.
+    cleanupWebView();
+    createWebView(true);
+
+    // All delegates should still be fine since they are just sitting
+    // in a map -- they don't get registered with the webview.
+
+    // Get us loading the right page again.
+    this->loadURL(viewURL);
+
+    // Make sure webview's transparency setting is correct
+    this->setTransparent(isWebViewTransparent);
 }
 void WebView::onResponsive(Berkelium::Window*) {
-    SILOG(webview,error,"WebView unresponsive: " << viewName);
+    SILOG(webview,error,"WebView became responsive again: " << viewName);
 }
 void WebView::onUnresponsive(Berkelium::Window*) {
-    SILOG(webview,error,"WebView became responsive again: " << viewName);
+    SILOG(webview,error,"WebView unresponsive: " << viewName);
 }
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     std::string name;

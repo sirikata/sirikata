@@ -92,6 +92,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 	public:
 
             typedef std::tr1::function<void()> ReadyCallback;
+            typedef std::tr1::function<void()> ResetReadyCallback;
             typedef std::tr1::function<void(const String&)> NavigatedCallback;
             typedef std::tr1::function<void(int32 left, int32 top, int32 right, int32 bottom)> UpdateViewportCallback;
 
@@ -124,6 +125,7 @@ class SIRIKATA_OGRE_EXPORT WebView
                 void setUpdateViewportCallback(UpdateViewportCallback cb);
 
                 void setReadyCallback(ReadyCallback cb);
+                void setResetReadyCallback(ResetReadyCallback cb);
 
                 // Callback to invoke when the browser URL
                 // changes. Does *not* indicate the page is fully loaded.
@@ -504,7 +506,9 @@ class SIRIKATA_OGRE_EXPORT WebView
 		std::pair<std::string, std::string> maskImageParameters;
 
                 UpdateViewportCallback mUpdateViewportCallback;
+                bool mReady;
                 ReadyCallback mReadyCallback;
+                ResetReadyCallback mResetReadyCallback;
                 NavigatedCallback mNavigatedCallback;
 
 		friend class WebViewManager;
@@ -519,13 +523,15 @@ class SIRIKATA_OGRE_EXPORT WebView
 
 		~WebView();
 
-		void createWebView(bool asyncRender, int maxAsyncRenderRate);
+		void createWebView(bool resetting);
 
         void initializeWebView(
 #ifdef HAVE_BERKELIUM
-            Berkelium::Window *win
+            Berkelium::Window *win,
 #endif
+            bool resetting
             );
+        void cleanupWebView();
 
 		void createMaterial();
 

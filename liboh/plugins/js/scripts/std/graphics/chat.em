@@ -65,6 +65,14 @@ std.graphics.Chat = system.Class.extend(
             }
         },
 
+        onReset : function(reset_cb) {
+            this._sim.addGUIModule(
+                "Chat", "chat/chat.js",
+                std.core.bind(function(chat_gui) {
+                                  if (reset_cb) reset_cb();
+                              }, this));
+        },
+
         toggle: function() {
             this._ui.call('Chat.toggleVisible');
         },

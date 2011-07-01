@@ -59,7 +59,8 @@ OgreSystem::OgreSystem(Context* ctx)
  : OgreRenderer(ctx),
    mPrimaryCamera(NULL),
    mOverlayCamera(NULL),
-   mOnReadyCallback(NULL)
+   mOnReadyCallback(NULL),
+   mOnResetReadyCallback(NULL)
 {
     increfcount();
     mCubeMap=NULL;
@@ -170,6 +171,7 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     instantiateAllObjects(proxyManager);
 
     mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
+    mMouseHandler->mUIWidgetView->setResetReadyCallback( std::tr1::bind(&OgreSystem::handleUIResetReady, this) );
     mMouseHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
     return true;
 }
@@ -180,6 +182,15 @@ void OgreSystem::handleUIReady() {
     // if all conditions are met.
     if (mOnReadyCallback != NULL) mOnReadyCallback->invoke();
     mMouseHandler->uiReady();
+}
+
+void OgreSystem::handleUIResetReady() {
+    // Currently the only blocker for being ready is that the UI loaded. If we
+    // end up with more, we may need to make this just set a flag and then check
+    // if all conditions are met.
+    if (mOnResetReadyCallback != NULL) mOnResetReadyCallback->invoke();
+    mMouseHandler->uiReady(); // Probably not really necessary since
+                              // it's been called once already?
 }
 
 void OgreSystem::handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom) {
@@ -546,10 +557,17 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
 
 boost::any OgreSystem::setOnReady(std::vector<boost::any>& params) {
     if (params.size() < 2) return boost::any();
+    // On ready cb
     if (!Invokable::anyIsInvokable(params[1])) return boost::any();
+    // On reset ready cb
+    if (params.size() > 2 && !Invokable::anyIsInvokable(params[2])) return boost::any();
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
     mOnReadyCallback = handler;
+
+    Invokable* reset_handler = Invokable::anyAsInvokable(params[2]);
+    mOnResetReadyCallback = reset_handler;
+
     return boost::any();
 }
 

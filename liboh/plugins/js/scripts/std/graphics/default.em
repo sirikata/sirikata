@@ -57,7 +57,7 @@ function() {
      */
     std.graphics.DefaultGraphics = function(pres, name, cb) {
         this._pres = pres;
-        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), true);
+        this._simulator = new std.graphics.Graphics(pres, name, std.core.bind(this.finishedGraphicsInit, this, cb), std.core.bind(this.finishedGraphicsUIReset, this));
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
@@ -73,6 +73,15 @@ function() {
         this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
         this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
         this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+    };
+    std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
+        var ui_finish_cb = std.core.bind(this.finishedUIInit, this);
+        this._loadingUIs++; this._scripter.onReset(ui_finish_cb);
+        this._loadingUIs++; this._chat.onReset(ui_finish_cb);
+        this._loadingUIs++; this._physics.onReset(ui_finish_cb);
+        this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
+        this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
+        this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
         this._loadingUIs--;

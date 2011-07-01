@@ -50,6 +50,14 @@ std.graphics.PhysicsProperties = system.Class.extend(
             );
         },
 
+        onReset : function(reset_cb) {
+            this._sim.addGUIModule(
+                "PhysicsSettings", "scripting/physics.js",
+                std.core.bind(function(chat_gui) {
+                                  if (reset_cb) reset_cb();
+                              }, this));
+        },
+
         toggle: function() {
             this._ui.call('PhysicsSettings.toggleVisible');
         },

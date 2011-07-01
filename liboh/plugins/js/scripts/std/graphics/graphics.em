@@ -50,11 +50,11 @@ function() {
      *  The callback passed in is invoked when Ogre has finished
      *  initializing.
      */
-    std.graphics.Graphics = function(pres, name, cb) {
+    std.graphics.Graphics = function(pres, name, cb, reset_cb) {
         this.presence = pres;
         this._simulator = pres.runSimulation(name);
         this.inputHandler = new std.graphics.InputHandler(this);
-        this._setOnReady(cb);
+        this._setOnReady(cb, reset_cb);
     };
 
     std.graphics.Graphics.prototype.invoke = function() {
@@ -63,8 +63,11 @@ function() {
     };
 
     /** Set the callback to invoke when the system is ready for rendering. */
-    std.graphics.Graphics.prototype._setOnReady = function(cb) {
-        this.invoke('onReady', std.core.bind(cb, undefined, this));
+    std.graphics.Graphics.prototype._setOnReady = function(cb, reset_cb) {
+        if (reset_cb !== undefined)
+            this.invoke('onReady', std.core.bind(cb, undefined, this), std.core.bind(reset_cb, undefined, this));
+        else
+            this.invoke('onReady', std.core.bind(cb, undefined, this));
     };
 
     /** Hides the loading screen. Call once you're GUIs and basic

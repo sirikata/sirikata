@@ -222,7 +222,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, const std
 
         WebView* newWebView = new WebView(webViewName, webViewType,width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport, border);
-        newWebView->createWebView(asyncRender, maxAsyncRenderRate);
+        newWebView->createWebView(false);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
         return newWebView;
@@ -252,7 +252,7 @@ WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsi
 
         WebView* newWebView = new WebView(webViewName, "___popup___", width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport);
-        newWebView->initializeWebView(newwin);
+        newWebView->initializeWebView(newwin, false);
 	activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
         focusWebView(newWebView);
@@ -268,7 +268,7 @@ WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, u
 			"WebViewManager::createWebViewMaterial");
 
         WebView* newWebView = new WebView(webViewName, "___material___", width, height, texFiltering);
-        newWebView->createWebView(asyncRender, maxAsyncRenderRate);
+        newWebView->createWebView(false);
         activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
         return newWebView;

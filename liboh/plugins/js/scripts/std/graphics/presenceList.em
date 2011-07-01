@@ -38,6 +38,14 @@ std.graphics.PresenceList = system.Class.extend(
 	    //	this._pres.onProxRemoved(std.core.bind(this.proxRemovedCallback, this));
 	},
 
+        onReset : function(reset_cb) {
+            this._sim.addGUIModule(
+                "PresenceList", "scripting/presenceList.js",
+                std.core.bind(function(chat_gui) {
+                                  if (reset_cb) reset_cb();
+                              }, this));
+        },
+
 		toggle: function() {
             this._ui.call('PresenceList.toggleVisible');
 		},

@@ -42,14 +42,8 @@ function () {
 
     pb.PropertyBox = function(parent, init_cb) {
         this._parent = parent;
-    try {
-            var propertybox_gui = this._parent._simulator.addGUIModule(
-                "propertybox", "propertybox/propertybox.js",
-                std.core.bind(function(gui) {
-                                  if (init_cb) init_cb();
-                              }, this)
-            );
-            this._propertyWindow = propertybox_gui;
+        try {
+            this._initOrResetUI(init_cb);
             this._self = system.self;
             this._selected_visible = this._self;
             // Magic number of 0.5 seconds for updating the property box automatically
@@ -57,6 +51,20 @@ function () {
         } catch (ex) {
             system.print(ex);
         }
+    };
+
+    pb.PropertyBox.prototype.onReset = function(reset_cb) {
+        this._initOrResetUI(reset_cb);
+    };
+
+    pb.PropertyBox.prototype._initOrResetUI = function(init_cb) {
+        var propertybox_gui = this._parent._simulator.addGUIModule(
+            "propertybox", "propertybox/propertybox.js",
+            std.core.bind(function(gui) {
+                              this._propertyWindow = gui;
+                              if (init_cb) init_cb();
+                          }, this)
+        );
     };
 
     pb.PropertyBox.prototype.HandleUpdateProperties = function(visible) {

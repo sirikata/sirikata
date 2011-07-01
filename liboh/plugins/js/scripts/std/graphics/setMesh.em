@@ -53,6 +53,14 @@ std.graphics.SetMesh = system.Class.extend(
             );
         },
 
+        onReset : function(reset_cb) {
+            this._sim.addGUIModule(
+                "SetMesh", "scripting/setMesh.js",
+                std.core.bind(function(chat_gui) {
+                                  if (reset_cb) reset_cb();
+                              }, this));
+        },
+
         toggle: function() {
             this._ui.call('SetMesh.toggleVisible');
         },

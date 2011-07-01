@@ -89,8 +89,10 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
     CubeMap *mCubeMap;
 
     Invokable* mOnReadyCallback;
+    Invokable* mOnResetReadyCallback;
 
     void handleUIReady();
+    void handleUIResetReady();
     void handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom);
 
     ProxyEntity* internalRayTrace(const Ogre::Ray &traceFrom,
