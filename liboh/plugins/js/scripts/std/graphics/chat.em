@@ -53,16 +53,7 @@ std.graphics.Chat = system.Class.extend(
             );
             var p  = new util.Pattern("name", "get_protocol");
             std.core.bind(this.onTestMessage, this) << p;
-            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this));
-            // This is a bad work around that digs into the
-            // implementation to get existing objects because this is
-            // all done after some async callbacks, meaning we're not
-            // getting prox events for everyone
-            var old_visibles = system._selfMap[system.self.toString()].proxResultSet;
-            for(var v in old_visibles) {
-                var vis = old_visibles[v];
-                this.proxAddedCallback(vis);
-            }
+            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
         },
 
         onReset : function(reset_cb) {
@@ -118,6 +109,8 @@ std.graphics.Chat = system.Class.extend(
         },
 
         sendIntro: function(new_addr_obj, retries) {
+            if (retries == 0) return;
+
             var test_msg = { "name" : "get_protocol" };
             //also register a callback
             test_msg >> new_addr_obj >> [std.core.bind(this.handleNewChatNeighbor, this), 2, std.core.bind(this.sendIntro, this, new_addr_obj, retries-1)];
