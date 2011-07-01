@@ -40,30 +40,54 @@ function() {
 
     var ns = std.movement;
 
-    /** @namespace 
+    /** @namespace
      *  A MovableRemote wraps a remote object (visible) and allows you
      *  to control its movement with simple commands, assuming it is
      *  both capable and allows you to.
      */
     std.movement.MovableRemote = function(remote) {
         this._remote = remote;
+        // To avoid out of order reception problems (i.e. lots of
+        // messagse go out, they get out of order, earlier ones are
+        // applied later), we follow a strict ping-pong, only sending
+        // updates if the last one has been acked.
+        this._clearToSend = true;
+        // And because of this, we need to queue updates.
+        this._updates = {};
+
+        this._thisHandleAck = std.core.bind(this._handleAck, this);
     };
-    /** @function 
+
+    std.movement.MovableRemote.prototype._sendUpdate = function(pos) {
+        if (this._clearToSend) {
+            this._clearToSend = false;
+            this._updates.request = 'movable';
+            this._updates >> this._remote >> [this._thisHandleAck, 10, this._thisHandleAck];
+            this._updates = {};
+        }
+    };
+
+    std.movement.MovableRemote.prototype._handleAck = function() {
+        this._clearToSend = true;
+        if (Object.getOwnPropertyNames(this._updates).length > 0)
+            this._sendUpdate();
+    };
+
+    /** @function
       * Get the position of the visible
       @return Vec3 object
     */
-      
     std.movement.MovableRemote.prototype.getPosition = function() {
         return this._remote.getPosition();
     };
-    /** @function 
+    /** @function
       * Get the velocity of the visible
       @return Vec3 object
     */
     std.movement.MovableRemote.prototype.getVelocity = function() {
         return this._remote.getVelocity();
     };
-    /** @function 
+    /** @function
       * Get orientation of the visible
     */
     std.movement.MovableRemote.prototype.getOrientation = function() {
@@ -81,73 +105,53 @@ function() {
     std.movement.MovableRemote.prototype.getMesh = function() {
         return this._remote.getMesh();
     };
+
     /** @function */
     std.movement.MovableRemote.prototype.setPosition = function(pos) {
-        {
-            request : 'movable',
-            action : 'setPosition',
-            position : pos
-        } >> this._remote >> [];
+        this._updates.position = pos;
+        this._sendUpdate();
     };
+
     /** @function */
     std.movement.MovableRemote.prototype.move = function(dir) {
-        {
-            request : 'movable',
-            action : 'setVelocity',
-            velocity : dir
-        } >> this._remote >>[];
+        this._updates.velocity = dir;
+        this._sendUpdate();
     };
 
     /** @function */
     std.movement.MovableRemote.prototype.setOrientation = function(orient) {
-        {
-            request : 'movable',
-            action : 'setOrientation',
-            orient : orient
-        } >> this._remote >> [];
+        this._updates.orient = orient;
+        this._sendUpdate();
     };
 
     /** @function */
     std.movement.MovableRemote.prototype.setRotationalVelocity = function(orientvel) {
-        {
-            request : 'movable',
-            action : 'setRotationalVelocity',
-            orientvel : orientvel
-        } >> this._remote >> [];
+        this._updates.orientvel = orientvel;
+        this._sendUpdate();
     };
+
     /** @function */
     std.movement.MovableRemote.prototype.setScale = function(scale) {
-        {
-            request : 'movable',
-            action : 'setScale',
-            scale : scale
-        } >> this._remote >> [];
+        this._updates.scale = scale;
+        this._sendUpdate();
     };
 
     /** @function */
     std.movement.MovableRemote.prototype.setPhysics = function(phy) {
-        {
-            request : 'movable',
-            action : 'setPhysics',
-            physics : phy
-        } >> this._remote >>[];
+        this._updates.physics = phy;
+        this._sendUpdate();
     };
 
     /** @function */
     std.movement.MovableRemote.prototype.setMesh = function(msh) {
-        {
-            request : 'movable',
-            action : 'setMesh',
-            mesh : msh
-        } >> this._remote >>[];
+        this._updates.mesh = msh;
+        this._sendUpdate();
     };
-    
+
     /** @function */
     std.movement.MovableRemote.prototype.stop = function() {
-        {
-            request : 'movable',
-            action : 'stop'
-        } >> this._remote >> [];
+        this._updates.stop = true;
+        this._sendUpdate();
     };
 
 })();

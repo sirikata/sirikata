@@ -54,21 +54,19 @@ function() {
      */
     std.movement.Movable = function(only_self) {
         var moveRequestHandler = std.core.bind(this._handleRequest, this, only_self);
-        moveRequestHandler << new util.Pattern("request", "movable");
+        moveRequestHandler << [{"request"::}];
 
         // Set up a bunch of handlers based on request name so we can
         // easily dispatch them
         this._handlers = {
-            stopMove : std.core.bind(this._handleStopMove, this),
-            stopRotate : std.core.bind(this._handleStopRotate, this),
             stop : std.core.bind(this._handleStop, this),
-            setPosition : std.core.bind(this._handleSetPos, this),
-            setVelocity : std.core.bind(this._handleSetVel, this),
-            setOrientation : std.core.bind(this._handleSetRot, this),
-            setRotationalVelocity : std.core.bind(this._handleSetRotVel, this),
-            setScale : std.core.bind(this._handleSetScale, this),
-            setPhysics : std.core.bind(this._handleSetPhysics, this),
-            setMesh : std.core.bind(this._handleSetMesh, this)
+            position : std.core.bind(this._handleSetPos, this),
+            velocity : std.core.bind(this._handleSetVel, this),
+            orient : std.core.bind(this._handleSetRot, this),
+            orientvel : std.core.bind(this._handleSetRotVel, this),
+            scale : std.core.bind(this._handleSetScale, this),
+            physics : std.core.bind(this._handleSetPhysics, this),
+            mesh : std.core.bind(this._handleSetMesh, this)
         };
     };
 
@@ -76,17 +74,12 @@ function() {
         if (only_self && !sender.checkEqual(system.self))
             return;
 
-        var handler = this._handlers[msg.action];
-        if (handler)
-            handler(msg, sender);
-    };
-
-    std.movement.Movable.prototype._handleStopMove = function(msg, sender) {
-        std.movement.stopMove(system.self);
-    };
-
-    std.movement.Movable.prototype._handleStopRotate = function(msg, sender) {
-        std.movement.stopRotate(system.self);
+        for(var f in msg) {
+            var handler = this._handlers[f];
+            if (handler)
+                handler(msg, sender);
+        }
+        msg.makeReply({}) >> [];
     };
 
     std.movement.Movable.prototype._handleStop = function(msg, sender) {
