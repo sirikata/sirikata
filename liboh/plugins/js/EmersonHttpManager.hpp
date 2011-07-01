@@ -106,11 +106,15 @@ private:
     void postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error);
 
 
+    void debugPrintTokenMap();
+    void debugPrintContextMap();
+
+
+
+    
     //If have outstanding requests, this pointer will have a pointer to self.
     //If don't, then it has an empty ptr.  Allows this to garbage collect properly
     EmersonHttpPtr managerLiveness;
-
-    
     Sirikata::Network::IOService* mIO;
 };
 

@@ -104,8 +104,9 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
     const unsigned char* data = httpResp->getData()->data();
     for (int s = 0;s < httpResp->getContentLength(); ++s)
     {
-        const char* dataPiece = (const char*) data;
-        dataStr.append(dataPiece);
+        dataStr.push_back((char)*data);
+        // const char* dataPiece = (const char*) data;
+        // dataStr.append(dataPiece[0]);
         ++data;
     }
 

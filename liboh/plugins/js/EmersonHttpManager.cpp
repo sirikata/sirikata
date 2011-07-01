@@ -24,6 +24,16 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
     ++currentToken;
 
     //Log that jscont has issued a request associated with token current token.
+    // if ((ctxTokeMap.find(jscont) == ctxTokeMap.end()) || (ctxTokeMap.find(jscont)->second.empty()))
+    // {
+    //     TokenMap toLoad;
+    //     toLoad[currentToken] = currentToken;
+    //     ctxTokeMap[jscont]   = toLoad;
+    // }
+    // else
+    // {
+    //     ctxTokeMap[jscont][currentToken] = currentToken;
+    
     ctxTokeMap[jscont][currentToken] = currentToken;
 
     //log that any http responses we get associated with current token should
@@ -33,29 +43,8 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
     if (managerLiveness == nullEmersonHttpPtr)
         managerLiveness = EmersonHttpPtr(this);
 
-    std::ostringstream request_stream;
-    request_stream.str("");
-    request_stream << "GET " <<  "/" << " HTTP/1.1\r\n";
-    request_stream << "Host: " << "www.google.com" << "\r\n";
-    request_stream << "Accept: */*\r\n";
-    request_stream << "Connection: close\r\n\r\n";
-//    request_stream << "Connection: keep-alive\r\n\r\n";
-
-    // request_stream<<"GET / HTTP/1.1\r\n";
-    // request_stream<<"Host: www.google.com\r\n";
-    // request_stream<<"User-Agent: Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.18) Gecko/20110628 Ubuntu/10.04 (lucid) Firefox/3.6.18\r\n";
-    // request_stream<<"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n";
-    // request_stream<<"Accept-Language: en-us,en;q=0.5\r\n";
-    // request_stream<<"Accept-Encoding: gzip,deflate\r\n";
-    // request_stream<<"Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7\r\n";
-    // request_stream<<"Keep-Alive: 115\r\n";
-    // request_stream<<"Connection: keep-alive\r\n";
-    // request_stream<<"Cache-Control: max-age=0\r\n";
-
-    
     //issue query, and have response callback to receiveHttpResponse
-//    Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,
-    Transfer::HttpManager::getSingleton().makeRequest(addr,method,request_stream.str(),
+    Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,
         std::tr1::bind(&EmersonHttpManager::receiveHttpResponse, this, currentToken, _1,_2,_3));
 
     return currentToken;
@@ -109,10 +98,37 @@ void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpResp
     mIO->post(std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
 }
 
+void EmersonHttpManager::debugPrintContextMap()
+{
+    std::cout<<"\nPrinting context map\n";
+    for (ContextTokenMapIter ctxIter = ctxTokeMap.begin(); ctxIter != ctxTokeMap.end(); ++ ctxIter)
+    {
+        std::cout<<"Context: "<<ctxIter->first<<"\n";
+        for (TokenCBMapIter tokeCBIter = tokeCBMap.begin(); tokeCBIter!=tokeCBMap.end(); ++tokeCBIter)
+            std::cout<<tokeCBIter->first<<"\n";
+
+        std::cout<<"\n\n";
+    }
+}
+
+void EmersonHttpManager::debugPrintTokenMap()
+{
+    std::cout<<"\nPrinting token map\n";
+    for (TokenCBMapIter tknIter = tokeCBMap.begin(); tknIter != tokeCBMap.end(); ++ tknIter)
+    {
+        std::cout<<"Token: "<<tknIter->first<<"\n";
+        std::cout<<"Context: "<<tknIter->second.first<<"\n\n";
+    }
+    std::cout<<"\n\n";
+}
+
 void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
 
     std::cout<<"\n\nInside of posting receive response\n\n";
+
+    debugPrintContextMap();
+    debugPrintTokenMap();
     
     //first lookup token in outstanding token map to find corresponding context
     //and callback
@@ -177,7 +193,10 @@ void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr 
     if (tokeCBMap.empty())
         managerLiveness = nullEmersonHttpPtr;
 
-    
+
+    std::cout<<"\n\n\nDEBUG: LAST PRINT\n\n";
+    debugPrintContextMap();
+    debugPrintTokenMap();
 }
 
 
