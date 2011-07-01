@@ -399,6 +399,9 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info)
     );
+
+
+    
 }
 
 
@@ -442,10 +445,11 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
     NOT_IMPLEMENTED(ho);
 }
 
+
+
 void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token) {
     HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
-    //SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), getUUID());
 
     if (sstStream != SSTStreamPtr() ) {
         sstStream->listenSubstream(OBJECT_PORT_LOCATION,
@@ -458,6 +462,9 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, Pre
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
     notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
 }
+
+
+
 
 void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy) {
     psd.initializeAs(selfproxy);
@@ -1101,6 +1108,10 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
     sendLocUpdateRequest(space, oref);
 }
 
+
+
+
+
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
     assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
     PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
@@ -1139,6 +1150,7 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 
     std::string payload = serializePBJMessage(container);
 
+    
     bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream) {

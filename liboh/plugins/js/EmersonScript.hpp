@@ -56,6 +56,9 @@
 #include "JSObjectScript.hpp"
 #include "JSObjectScriptManager.hpp"
 #include "JSVisibleManager.hpp"
+#include "JS_JSMessage.pbj.hpp"
+#include "EmersonMessagingManager.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -63,7 +66,8 @@ namespace JS {
 
 class EmersonScript : public JSObjectScript,
                       public JSVisibleManager,
-                      public SessionEventListener
+                      public SessionEventListener,
+                      public EmersonMessagingManager
 {
 
 public:
@@ -79,11 +83,30 @@ public:
     void requestDisconnect(JSPresenceStruct* jspres);
 
     Time getHostedTime();
-    void processMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
+
 
     virtual void  notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
     virtual void  notifyProximate(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier);
 
+
+    /*
+      Returns true if decoded payload as a scripting communication message,
+      false otherwise.
+
+      Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
+      can be, and deserialization is successful, processes the scripting
+      message. (via deserializeMsgAndDispatch.)
+     */
+    virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
+
+    
+    /**
+       Callback for unreliable messages.  
+       Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
+       can be, and deserialization is successful, processes the scripting
+       message. (via deserializeMsgAndDispatch.)
+     */
+    void handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
     void handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
 
 
@@ -112,9 +135,16 @@ public:
 
     v8::Handle<v8::Value> killEntity(JSContextStruct* jscont);
 
-    void sendMessageToEntity(const SpaceObjectReference& reffer, const SpaceObjectReference& from, const std::string& msgBody);
+    /**
+       Sends a message over the odp port from local presence that has sporef
+       from to some other presence in world with sporef receiver.  
 
+       Gets port to send over as value of mMessagingPortMap associated with key
+       from.
+     */
+    void sendMessageToEntityUnreliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const std::string& msgBody);
 
+    
     //takes the c++ object jspres, creates a new visible object out of it, if we
     //don't already have a c++ visible object associated with it (if we do, use
     //that one), wraps that c++ object in v8, and returns it as a v8 object to
@@ -191,12 +221,6 @@ public:
     v8::Handle<v8::Value> requestReset(JSContextStruct* jscont, const std::map <SpaceObjectReference,std::vector <SpaceObjectReference> > & proxSetVis);
 
 
-
-    //registering position listeners to receive updates from loc
-    bool registerPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener*ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String* mesh, String* phy);
-    bool deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl,MeshListener* ml);
-
-
     /** Register an event pattern matcher and handler. */
     void registerHandler(JSEventHandlerStruct* jsehs);
     v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs);
@@ -247,8 +271,13 @@ private:
 
     void resetScript();
 
-    void handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
+    /*
+      Deserializes the object contained in js_msg, checks if have any pattern
+      handlers that match it, and dispatch their callbacks if there are.
+     */
+    bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
 
+    
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src);
 
     void flushQueuedHandlerEvents();
@@ -277,7 +306,16 @@ private:
     //returns the jspresstruct associated with new object
     JSPresenceStruct* addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token);
 
+    
+   /**
+      Deserializes the jsmessage that a presence on this entity with
+      sporef dst received from a presence in the world with sporef src.
 
+      If have any handlers that match pattern of message, dispatch their associated
+      callbacks.
+   */
+    bool deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
+    
     //looks through all previously connected presneces (located in mPresences).
     //returns the corresponding jspresencestruct that has a spaceobjectreference
     //that matches sporef.

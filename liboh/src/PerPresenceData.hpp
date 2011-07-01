@@ -12,6 +12,7 @@
 namespace Sirikata
 {
 
+
 class PerPresenceData
 {
 public:

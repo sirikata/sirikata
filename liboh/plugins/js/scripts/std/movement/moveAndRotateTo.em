@@ -39,42 +39,52 @@ system.require('moveAndRotate.em');
  */
 std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
     {
-        init:function(pres,update_cb, destination, destination_facing, speed, angular_speed, callback){
+        forceUp:function(upVec) {
+            this._force_up=upVec;
+        },
+        setSpeed:function(speed) {
             this._speed=speed;
+        },
+        setAngularSpeed:function(angular_speed){
+            this._angular_speed=angular_speed;
+        },
+        setTurningDistance:function(turning_distance){
+            this._turning_distance=turning_distance;
+        },
+        init:function(pres,update_cb, destination, destination_facing, speed, angular_speed, callback){
+            this.setSpeed(speed);
+            this.setAngularSpeed(angular_speed);
+            this._force_up=undefined;
+            this._turning_distance=.25;
             std.movement.MoveAndRotate.prototype.init.call(this,pres,update_cb,'rotation');
             if (destination) {
-                this.goTo(destination,destination_facing,speed, angular_speed, callback);
+                this.goTo(destination,destination_facing,callback);
             }
         },
-        goTo:function(destination,destination_facing, speed, angular_speed, callback) {
-           if (speed) {
-               this._speed=speed;
-           }
-           if (angular_speed){
-               this._angular_speed=angular_speed;
-           }
-           var pos =this._pres.getPosition();
-           var forward=destination.sub(pos).normal();
-           destination_facing=destination_facing||this._pres.getOrientation();
-           var goal_orientation=new util.Quaternion.fromLookAt(forward,destination_facing.yAxis());
-           var thus=this;
-           var destination_delta=destination.sub(pos);
-           var destination_length=destination_delta.length();
-           var turning_distance=.25;
-           if(destination_length>2.5*turning_distance) {
-               destination_delta=destination_delta.scale(.125);
-           }else {
-               destination_delta.scale(turning_distance/destination_length);
-           }
-           this.goToWaypoint(destination_delta.add(pos),goal_orientation,true, function(){
-                 thus.goToWaypoint(destination.add(destination_delta.scale(-1.0)),goal_orientation,false,function (){
+        goTo:function(destination,destination_facing, callback) {
+            var pos =this._pres.getPosition();
+            var forward=destination.sub(pos).normal();
+            destination_facing=destination_facing||this._pres.getOrientation();
+            var goal_orientation=new util.Quaternion.fromLookAt(forward,destination_facing.yAxis());
+            if (this._force_up) {
+               var tright=this._force_up.cross(forward);
+               var tforward=tright.cross(this._force_up).normal();
+               goal_orientation=new util.Quaternion.fromLookAt(tforward,this._force_up);
+            }
+            var thus=this;
+            var destination_delta=destination.sub(pos);
+            var destination_length=destination_delta.length();
+            var turning_distance=this._turning_distance;
+            destination_delta=destination_delta.scale(turning_distance/destination_length);
+            this.goToWaypoint(destination_delta.add(pos),goal_orientation,true, function(){
+                 thus.goToWaypoint(destination.add(destination_delta.scale(-.1)),goal_orientation,false,function (){
                    thus.goToWaypoint(destination,(destination_facing||this._pres.orientation()),true,function () {
                                          thus.rotateLocalOrientation(new util.Quaternion(0,0,0,1),true);
                                          thus.move(new util.Vec3(0,0,0),0,true);
                                          callback();
                                      });
                });
-           });
+            });
         },
         abort:function(doClearVelocityAndAngular) {
            if (this._moveTimer) {
@@ -105,7 +115,8 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
             if (doTurning) {
                 this.move(new util.Vec3(0,0,-1),distance/time,true);
             }else {
-                this.move(inverseOrientation.mul(deltapos),1.0/time,true);
+                var vel=inverseOrientation.mul(deltapos);
+                this.move(vel,1.0/time,true);
             }
             this.rotateLocalOrientation(rotation.scale(1.0/time),true);
 

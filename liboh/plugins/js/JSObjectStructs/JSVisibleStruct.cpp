@@ -105,8 +105,9 @@ void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> cont
     //jsvis now contains a pointer to a jsvisible struct, which we can now
     //delete.
     delete jsvis;
-    containsVisStruct.Dispose();
-
+    vis->SetInternalField(VISIBLE_JSVISIBLESTRUCT_FIELD,v8::External::New(NULL));
+    vis->SetInternalField(TYPEID_FIELD,v8::External::New(NULL));
+        
     JSLOG(insane,"Freeing memory for jsvisible.");
 }
 

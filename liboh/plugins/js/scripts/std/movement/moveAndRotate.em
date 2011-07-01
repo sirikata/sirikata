@@ -69,6 +69,9 @@ std.movement.MoveAndRotate = system.Class.extend(
             this._moving = this.moving();
             this._rotating = this.rotating();
         },
+        presence: function () {
+            return this._pres;
+        },
         moving: function() {
             return this._pres.velocity.lengthSquared() > 1e-08;
         },

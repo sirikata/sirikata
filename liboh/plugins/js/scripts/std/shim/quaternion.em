@@ -271,8 +271,9 @@ util.Quaternion.fromLookAt = function(direction, up) {
     } else if ((direction - <0, 0, 1>).lengthSquared() < 1e-08) {
         firstQuat = new util.Quaternion(0, 1, 0, 0);
     } else {
-        var quatAxis = <0, 0, -1>.cross(direction);
-        var angle = util.acos(<0, 0, -1>.dot(direction));
+        var defaultForward=new util.Vec3(0,0,-1);
+        var quatAxis = defaultForward.cross(direction);
+        var angle = util.acos(defaultForward.dot(direction));
         quatAxis = quatAxis.normal();
         firstQuat = new util.Quaternion(quatAxis, angle);
     }
@@ -283,11 +284,9 @@ util.Quaternion.fromLookAt = function(direction, up) {
     var newUp = left.cross(direction);
     if (newUp.lengthSquared()>.00001||newUp.lengthSquared()<-.00001) {
         newUp = newUp.normal();
-        var quatAxis = <0, 1, 0>.cross(newUp);
-        if (quatAxis.lengthSquared()<.00001) {
-            quatAxis = <1, 0, 0>.cross(newUp);
-        }
-        var angle = util.acos(<0, 1, 0>.dot(newUp));
+        var yAxis=firstQuat.yAxis();
+        var quatAxis = direction;
+        var angle = util.acos(yAxis.dot(newUp));
         quatAxis = quatAxis.normal();
         secondQuat = new util.Quaternion(quatAxis, angle);
     } else {

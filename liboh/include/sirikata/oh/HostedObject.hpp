@@ -342,10 +342,13 @@ public:
     virtual void requestQueryRemoval(const SpaceID& space, const ObjectReference& oref);
     virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
 
+
+    
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
+    
     // Handlers for substreams for space-managed updates
     void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);

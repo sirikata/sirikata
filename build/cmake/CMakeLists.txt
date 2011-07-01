@@ -1915,6 +1915,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectScriptManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectScript.cpp
   ${LIBOH_PLUGIN_JS_DIR}/EmersonScript.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/EmersonMessagingManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSUtil.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVec3.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp

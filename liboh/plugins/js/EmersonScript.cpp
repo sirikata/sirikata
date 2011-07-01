@@ -69,7 +69,7 @@
 #include "JSObjects/JSObjectsUtils.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
-
+#include "EmersonMessagingManager.hpp"
 
 
 using namespace v8;
@@ -81,6 +81,7 @@ namespace JS {
 EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan)
  : JSObjectScript(jMan, ho->getObjectHost()->getStorage(), ho->getObjectHost()->getPersistedObjectSet(), ho->id()),
    JSVisibleManager(this),
+   EmersonMessagingManager(ho->context()->ioService),
    mParent(ho),
    mHandlingEvent(false),
    mResetting(false),
@@ -105,48 +106,6 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
 }
 
 
-//checks to see if the associated space object reference exists in the script.
-//if it does, then make the position listener a subscriber to its pos updates.
-bool EmersonScript::registerPosAndMeshListener(SpaceObjectReference* sporef_toListenTo, SpaceObjectReference* ownPres_toListenFrom,PositionListener* pl,MeshListener* ml, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bs, String*mesh, String* phy)
-{
-    ProxyObjectPtr p;
-    bool succeeded = false;
-    if ((ownPres_toListenFrom ==NULL) || (*ownPres_toListenFrom == SpaceObjectReference::null()))
-    {
-        //trying to set to one of my own presence's postion listeners
-        JSLOG(insane,"attempting to register position listener for one of my own presences with sporef "<<*ownPres_toListenFrom);
-        succeeded = mParent->getProxy(sporef_toListenTo,p);
-    }
-    else
-    {
-        //trying to get a non-local proxy object
-        JSLOG(insane,"attempting to register position listener for a visible object with sporef "<<*sporef_toListenTo);
-        succeeded = mParent->getProxyObjectFrom(ownPres_toListenFrom,sporef_toListenTo,p);
-    }
-
-    //if actually had associated proxy object, then update loc and orientation.
-    if (succeeded)
-    {
-        p->PositionProvider::addListener(pl);
-        if (loc != NULL)
-            *loc = p->getTimedMotionVector();
-        if (orient != NULL)
-            *orient = p->getTimedMotionQuaternion();
-
-        p->MeshProvider::addListener(ml);
-        if (bs != NULL)
-            *bs = p->getBounds();
-        if (mesh != NULL)
-            *mesh = p->getMesh().toString();
-        if (phy != NULL)
-            *phy = p->getPhysics();
-    }
-    else
-        JSLOG(insane,"problem registering to be a position listener. could not find associated object in hosted object.");
-
-    return succeeded;
-
-}
 
 //Here's how resetting works.  system reqeusts a reset.  At this point,
 //JSContextStruct calls the below function (requestReset).  If reset was
@@ -220,40 +179,6 @@ void EmersonScript::resetPresence(JSPresenceStruct* jspresStruct)
 }
 
 
-
-//deregisters position listening for an arbitrary proxy object visible to
-//ownPres and with spaceobject reference sporef.
-bool EmersonScript::deRegisterPosAndMeshListener(SpaceObjectReference* sporef, SpaceObjectReference* ownPres,PositionListener* pl, MeshListener* ml)
-{
-    ProxyObjectPtr p;
-    bool succeeded = false;
-
-    if (ownPres != NULL) {
-        if (sporef == NULL)
-        {
-            //de-regestering pl from position listening to one of my own presences.
-            JSLOG(insane,"attempting to de-register position listener for one of my presences with sporef "<<*ownPres);
-            succeeded = mParent->getProxy(ownPres,p);
-        }
-        else
-        {
-            //de-registering pl from position listening to an arbitrary proxy object
-            JSLOG(insane,"attempting to de-register position listener for visible object with sporef "<<*sporef);
-            succeeded =  mParent->getProxyObjectFrom(ownPres,sporef,p);
-        }
-    }
-
-    if (succeeded)
-    {
-        p->PositionProvider::removeListener(pl);
-        p->MeshProvider::removeListener(ml);
-    }
-    else
-        JSLOG(error,"error de-registering to be a position listener.  could not find associated object in hosted object.");
-
-    return succeeded;
-
-}
 
 
 //this is the callback that fires when proximateObject no longer receives
@@ -458,12 +383,16 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     if (msgPort != NULL)
     {
         mMessagingPortMap[SpaceObjectReference(space_id,obj_refer)] = msgPort;
-        msgPort->receive( std::tr1::bind(&EmersonScript::handleCommunicationMessageNewProto, this, _1, _2, _3));
+        msgPort->receive( std::tr1::bind(&EmersonScript::handleScriptCommUnreliable, this, _1, _2, _3));
     }
-
+    
     if (!mCreateEntityPort)
         mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
+    //set up reliable messages for the connected presence
+    EmersonMessagingManager::presenceConnected(name);
+
+    
     //check for callbacks associated with presence connection
 
     //means that this is the first presence that has been added to the space
@@ -520,6 +449,8 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
     JSPresenceStruct* jspres = findPresence(name);
     //deregister underlying visible manager from listen for proxy creation events on hostedobjectproxymanager
     mParent->getProxyManager(name.space(),name.object())->removeListener(this);
+
+    EmersonMessagingManager::presenceDisconnected(name);
     
     if (jspres != NULL)
         jspres->disconnectCalledFromObjScript();
@@ -561,9 +492,8 @@ bool EmersonScript::valid() const
 
 
 
-void EmersonScript::sendMessageToEntity(const SpaceObjectReference& sporef, const SpaceObjectReference& from, const std::string& msgBody)
+void EmersonScript::sendMessageToEntityUnreliable(const SpaceObjectReference& sporef, const SpaceObjectReference& from, const std::string& msgBody)
 {
-
     std::map<SpaceObjectReference, ODP::Port*>::iterator iter = mMessagingPortMap.find(from);
     if (iter == mMessagingPortMap.end())
     {
@@ -576,7 +506,6 @@ void EmersonScript::sendMessageToEntity(const SpaceObjectReference& sporef, cons
 
     iter->second->send(dest,toSend);
 }
-
 
 
 Time EmersonScript::getHostedTime()
@@ -595,8 +524,6 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
 
     //create an object
     v8::Persistent<v8::Object> returner = v8::Persistent<v8::Object>::New(mManager->mTimerTemplate->NewInstance());
-//    v8::Handle<v8::Object> returner  = mManager->mTimerTemplate->NewInstance();
-
     returner->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD,External::New(jstimer));
     returner->SetInternalField(TYPEID_FIELD, External::New(new String("timer")));
 
@@ -682,44 +609,50 @@ v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src)
 }
 
 
+
+
 void EmersonScript::registerFixupSuspendable(JSSuspendable* jssusp, uint32 contID)
 {
     toFixup[contID].push_back(jssusp);
 }
 
 
-void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+
+bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload)
 {
+    Sirikata::JS::Protocol::JSMessage js_msg;
+    bool parsed = js_msg.ParseFromString(payload);
+
+    if (! parsed)
+        return false;
+    
+    return deserializeMsgAndDispatch(src,dst,js_msg);
+}
+
+
+
+
+bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
+{
+
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext->mContext);
     v8::Local<v8::Object> obj = v8::Object::New();
 
-    v8::Handle<v8::Object> msgSender = getMessageSender(src);
+    v8::Handle<v8::Object> msgSender = createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,mContext->mContext);
+
     //try deserialization
-
-    Sirikata::JS::Protocol::JSMessage js_msg;
-    bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
-
-    if (! parsed)
-    {
-        JSLOG(error,"Cannot parse the message that I received on this port");
-        return;
-    }
-
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
     if (! deserializeWorks)
     {
         JSLOG(error, "Deserialization Failed!!");
-        return;
+        return false;
     }
 
+    
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
-
-    SpaceObjectReference to  (dst.space(), dst.object());
-    SpaceObjectReference from(src.space(), src.object());
-
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 
@@ -727,13 +660,12 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     {
         if ((mResetting) || (mKilling))
             break;
-
-
-        if (mEventHandlers[s]->matches(obj,from,to))
+        
+        if (mEventHandlers[s]->matches(obj,src,dst))
         {
             // Adding support for the knowing the message properties too
             int argc = 3;
-            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (to.toString().c_str(), to.toString().size()) };
+            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (dst.toString().c_str(), dst.toString().size()) };
             TryCatch try_catch;
             invokeCallback(mContext, NULL, mEventHandlers[s]->cb, argc, argv);
 
@@ -754,8 +686,24 @@ void EmersonScript::handleCommunicationMessageNewProto (const ODP::Endpoint& src
     if (!matchesSomeHandler) {
         JSLOG(detailed,"Message did not match any handler patterns");
     }
+
+    return true;
 }
 
+
+/**
+   Used for unreliable messages.
+ */
+void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload)
+{
+    SpaceObjectReference to  (dst.space(), dst.object());
+    SpaceObjectReference from(src.space(), src.object());
+    
+    Sirikata::JS::Protocol::JSMessage js_msg;
+    bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
+
+    deserializeMsgAndDispatch(from,to,js_msg);
+}
 
 
 //This function takes care of all of the event handling changes that were queued
