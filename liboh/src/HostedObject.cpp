@@ -401,7 +401,7 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     );
 
 
-    
+
 }
 
 
@@ -714,6 +714,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // shouldn't get overwritten.
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
                 String* phy_ptr = (addition.has_physics() ? &phy : NULL);
+                assert(mesh_ptr != NULL && mesh != "");
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
             }
             // Always mark the object as valid (either revalidated, or just
@@ -776,26 +777,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
 ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle)
 {
-    ProxyObjectPtr returner = buildProxy(objref,owner_objref,meshuri,queryAngle);
-    returner->setLocation(tmv, 0);
-    returner->setOrientation(tmq, 0);
-    returner->setBounds(bs, 0);
-
-
-    if(meshuri)
-        returner->setMesh(meshuri, 0);
-
-    if(phy.size() > 0)
-        returner->setPhysics(phy, 0);
-
-    return returner;
-}
-
-
-//should only be called from within createProxy functions.  Otherwise, will not
-//initilize position and quaternion correctly
-ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri,const SolidAngle& queryAngle)
-{
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
     if (!proxy_manager)
@@ -806,11 +787,34 @@ ProxyObjectPtr HostedObject::buildProxy(const SpaceObjectReference& objref, cons
 
     ProxyObjectPtr proxy_obj = ProxyObject::construct<ProxyObject> (proxy_manager.get(),objref,getSharedPtr(),owner_objref);
 
-    // The call to createObject must occur before trying to do any other
-    // operations so that any listeners will be set up.
+    // The redundancy here is confusing, but is for the sake of simplicity
+    // elsewhere. First, we make sure all the values are set properly so that
+    // when we call ProxyManager::createObject, the proxy passed to listeners
+    // (for onCreateProxy) will be completely setup, making it valid for use:
+    proxy_obj->setLocation(tmv, 0);
+    proxy_obj->setOrientation(tmq, 0);
+    proxy_obj->setBounds(bs, 0);
+    if(meshuri)
+        proxy_obj->setMesh(meshuri, 0);
+    if(phy.size() > 0)
+        proxy_obj->setPhysics(phy, 0);
+
     proxy_manager->createObject(proxy_obj);
+
+    // Then we repeat it all for the sake of listeners who only pay attention to
+    // updates from, e.g., PositionListener or MeshListener.
+    proxy_obj->setLocation(tmv, 0);
+    proxy_obj->setOrientation(tmq, 0);
+    proxy_obj->setBounds(bs, 0);
+    if(meshuri)
+        proxy_obj->setMesh(meshuri, 0);
+    if(phy.size() > 0)
+        proxy_obj->setPhysics(phy, 0);
+
     return proxy_obj;
 }
+
+
 ProxyManagerPtr HostedObject::presence(const SpaceObjectReference& sor)
 {
     //    ProxyManagerPtr proxyManPtr = getProxyManager(sor.space(),sor.object());
@@ -1150,7 +1154,7 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 
     std::string payload = serializePBJMessage(container);
 
-    
+
     bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream) {

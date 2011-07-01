@@ -343,12 +343,12 @@ public:
     virtual SolidAngle requestQueryAngle(const SpaceID& space, const ObjectReference& oref);
 
 
-    
+
   private:
     ODP::DelegatePort* createDelegateODPPort(ODP::DelegateService* parentService, const SpaceObjectReference& spaceobj, ODP::PortID port);
     bool delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP::Endpoint& dest_ep, MemoryReference payload);
 
-    
+
     // Handlers for substreams for space-managed updates
     void handleLocationSubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
     void handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s);
@@ -365,7 +365,6 @@ public:
     // Helper for creating the correct type of proxy
 
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle);
-    ProxyObjectPtr buildProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, const SolidAngle& queryAngle);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update
