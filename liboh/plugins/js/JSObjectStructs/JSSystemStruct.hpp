@@ -68,6 +68,8 @@ struct JSSystemStruct
     v8::Handle<v8::Value> debug_fileWrite(const String& strToWrite,const String& filename);
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
+    v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
+    
 
     v8::Handle<v8::Value> struct_print(const String& msg);
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);

@@ -55,6 +55,7 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectScriptManager.hpp"
+#include "EmersonHttpManager.hpp"
 
 
 namespace Sirikata {
@@ -160,6 +161,8 @@ public:
 
     JSContextStruct* rootContext() const { return mContext; }
 
+
+    
 
 protected:
 
@@ -294,7 +297,8 @@ protected:
        resource error.
      */
     int32 maxResourceThresh;
-    
+
+
 };
 
 } // namespace JS

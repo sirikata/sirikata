@@ -204,6 +204,36 @@ function PresenceEntry(sporef, presObj)
 
 
      /**
+      @param {String} type (GET or POST) are only two supported for now.
+      @param {String} url or ip address.
+      @param {String} request paramerts
+      @param {function} callback to execute on success or failure (first arg of
+      function is bool.  If success, bool is true, if fail, bool is false).
+      Success callbacks have a second arg that takes in an object with the
+      following fields:
+        respHeaders (string map).
+        contentLength (number).
+        status code (number).
+        data (string).
+      */
+     system.basicHttpGet = function(type, url, params, cb)
+     {
+         return baseSystem.http(type,url, params, system.__wrapHttpHandler(cb));
+     };
+
+      system.__wrapHttpHandler = function (toCallback)
+      {
+          var curSelf = system.self.toString();
+          var returner = function (success,failure)
+          {
+              system.__setBehindSelf(system._selfMap[curSelf].presObj);
+              toCallback(success,failure);
+          };
+          return std.core.bind(returner,this);
+      };
+     
+
+     /**
       @param {string} toChangeTo  The sporef of the presence that we want to change self to.
       */
      system.changeSelf  = function(toChangeTo)

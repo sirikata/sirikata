@@ -18,7 +18,9 @@
 #include "JSQuaternion.hpp"
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/oh/HostedObject.hpp>
-
+#include <algorithm>
+#include <cctype>
+#include <boost/any.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -148,6 +150,74 @@ v8::Handle<v8::Value> root_killEntity(const v8::Arguments& args)
     //decode the system object
     INLINE_SYSTEM_CONV_ERROR(args.This(),killEntity,this,jssystem);
     return handle_scope.Close(jssystem->killEntity());
+}
+
+
+
+/**
+   @param {String} type (GET or POST) are only two supported for now.
+   @param {String} url or ip address.
+   @param {String} request paramerts
+   @param {function} callback to execute on success or failure (first arg of
+   function is bool.  If success, bool is true, if fail, bool is false).
+   Success callbacks have a second arg that takes in an object with the
+   following fields:
+      respHeaders (string map).
+      contentLength (number).
+      status code (number).
+      data (string).
+ */
+v8::Handle<v8::Value> root_http(const v8::Arguments& args)
+{
+    if (args.Length() != 4)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http request.  Require 4 arguments")));
+
+
+    //system object
+    INLINE_SYSTEM_CONV_ERROR(args.This(),http,this,jssys);
+    
+    //http command, get, head, etc.
+    INLINE_STR_CONV_ERROR(args[0], http, 1,httpComm);
+
+    //check if it's a get or post: first convert to lower case
+    for(int i=0; i < httpComm.size(); ++i)
+        httpComm[i] = std::tolower(httpComm[i]);
+
+
+    Transfer::HttpManager::HTTP_METHOD httpCommType;
+    if (httpComm == "get")
+        httpCommType = Transfer::HttpManager::GET;
+    else if (httpComm == "head")
+        httpCommType= Transfer::HttpManager::HEAD;
+    else
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http request.  Http query type must be get or head.")));
+
+
+    //url
+    INLINE_STR_CONV_ERROR(args[1], http, 2, urlStr);
+    Network::Address addr = Network::Address::null();
+    try
+    {
+        addr = Network::Address::lexical_cast(urlStr).as<Network::Address>();
+    }
+    catch(std::invalid_argument& ia)
+    {
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http request.  Could not decode address.")));
+    }
+
+    
+    //request params
+    INLINE_STR_CONV_ERROR(args[2], http,3,reqParams);
+
+    
+    //callback function.
+    if (! args[3]->IsFunction())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http request: callback must be a function")));
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(args[3]);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+    
+    return jssys->httpRequest(addr, httpCommType, reqParams, cb_persist);
 }
 
 

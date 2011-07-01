@@ -14,9 +14,12 @@
 #include <sirikata/core/util/Vector3.hpp>
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/core/util/Liveness.hpp>
+#include "../EmersonHttpManager.hpp"
+
 
 namespace Sirikata {
 namespace JS {
+
 
 //need to forward-declare this so that can reference this inside
 class JSObjectScript;
@@ -186,6 +189,21 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Persistent<v8::Function>proxRemovedFunc;
 
 
+   /**
+      The http request that was associated with this request failed. Execute
+      callback with single argument: false.  Caller is in charge of calling dispose
+      on cb.
+   */
+    void httpFail(v8::Persistent<v8::Function> cb);
+    /**
+       The http request that was associated with cb passed, and its associated
+       data are in httpResp.  Execute callback with first argument true, and
+       second argument containing data.  
+       Caller is in charge of calling dispose on cb.
+     */
+    void httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpManager::HttpRespPtr httpResp);
+    v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
+    
 private:
     uint32 mContextID;
 
@@ -245,6 +263,8 @@ private:
 
     void flushQueuedSuspendablesToChange();
 
+    //for http connections.
+    Transfer::TransferPoolPtr mTransferPool;
 
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \

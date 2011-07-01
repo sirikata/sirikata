@@ -19,6 +19,7 @@
 #include "../JSSerializer.hpp"
 #include "../EmersonScript.hpp"
 #include "JSSystemStruct.hpp"
+#include "../JSObjects/JSObjectsUtils.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -42,7 +43,78 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
 
     //no need to register this context with it's parent context because that's
     //taken care of in the createContext function of this class.
+
+
+    //create a new http pool;
+    String httpClient = whichPresence != NULL? "pres_" + whichPresence->getSporef().toString() : "root" +UUID::random().toString();
+    mTransferPool = Transfer::TransferMediator::getSingleton().registerClient(httpClient);
 }
+
+
+v8::Handle<v8::Value> JSContextStruct::httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb)
+{
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in httpRequest.  Cannot run headless while issuing an http request")));
+
+        
+    std::cout<<"\n\nDEBUG: Requesting from "<<this<<"\n\n";
+    return v8::Uint32::New(emerScript->getEmersonHttpPtr()->makeRequest(addr,method,request, cb, this));
+}
+
+
+void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb)
+{
+    std::cout<<"\n\nDEBUG: Failing from: "<<this<<"\n\n";
+//    lkjs;
+    
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+    v8::Handle<v8::Value> argv[1] = { v8::Boolean::New(false)};
+    jsObjScript->invokeCallback(this,cb, 1, argv);
+}
+
+
+void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpManager::HttpRespPtr httpResp)
+{
+    v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(mContext);
+    v8::Handle<v8::Object> httpObj = v8::Object::New();
+
+    //load response headers
+    v8::Handle<v8::Object> respHeadersObj = v8::Object::New();
+    const std::map<String,String>& respHeaders = httpResp->getHeaders();
+    for (std::map<String,String>::const_iterator headerFieldIt = respHeaders.begin();
+         headerFieldIt != respHeaders.end(); ++headerFieldIt)
+    {
+        respHeadersObj->Set(v8::String::New(headerFieldIt->first.c_str(), headerFieldIt->first.size()),
+            v8::String::New(headerFieldIt->second.c_str(), headerFieldIt->second.size()));
+    }
+
+    httpObj->Set(v8::String::New("respHeaders"), respHeadersObj);
+    
+    //load content length
+    httpObj->Set(v8::String::New("contentLength"), v8::Number::New(httpResp->getContentLength()));
+
+    //load status code
+    httpObj->Set(v8::String::New("statusCode"), v8::Number::New(httpResp->getStatusCode()));
+
+    //load data
+    String dataStr;
+    const unsigned char* data = httpResp->getData()->data();
+    for (int s = 0;s < httpResp->getContentLength(); ++s)
+    {
+        const char* dataPiece = (const char*) data;
+        dataStr.append(dataPiece);
+        ++data;
+    }
+
+    httpObj->Set(v8::String::New("data"), strToUint16Str(dataStr));
+    v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(true), httpObj};
+    jsObjScript->invokeCallback(this,cb, 2, argv);
+}
+
+
 
 v8::Handle<v8::Value> JSContextStruct::storageBeginTransaction()
 {
@@ -406,10 +478,8 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 JSContextStruct::~JSContextStruct()
 {
     clear();
-
     delete mSystem;
     delete mUtil;
-
 }
 
 
@@ -473,6 +543,12 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     if (getIsCleared())
         return v8::Boolean::New(true);
 
+    //should lose all of its http queries. when clear it.
+    EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    if (emerScript != NULL)
+        emerScript->getEmersonHttpPtr()->deregisterContext(this);
+
+    
     v8::HandleScope handle_scope;
     v8::Handle<v8::Value> returner = JSSuspendable::clear();
     

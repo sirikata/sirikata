@@ -40,6 +40,11 @@ v8::Handle<v8::Value> JSSystemStruct::storageWrite(const OH::Storage::Key& key, 
     return associatedContext->storageWrite(key, toWrite, cb);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb)
+{
+    return associatedContext->httpRequest(addr,method,request,cb);
+}
+
 v8::Handle<v8::Value> JSSystemStruct::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb)
 {
     return associatedContext->storageErase(key, cb);

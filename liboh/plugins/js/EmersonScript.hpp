@@ -58,7 +58,7 @@
 #include "JSVisibleManager.hpp"
 #include "JS_JSMessage.pbj.hpp"
 #include "EmersonMessagingManager.hpp"
-
+#include "EmersonHttpManager.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -251,6 +251,19 @@ public:
 
     HostedObjectPtr mParent;
 
+/**
+       Contexts are allowed to initiate http requests.  To do so, they should
+       get a copy of each EmersonScript's httpPtr and make requests directly
+       from there.  Similarly, in contexts' destructors, they should also notify
+       emHttpPtr that the context was destroyed.
+     */
+    EmersonHttpPtr getEmersonHttpPtr()
+    {
+        return emHttpPtr;
+    }
+
+    
+    
 private:
 
     /**
@@ -350,6 +363,10 @@ private:
     
     typedef std::vector<JSPresenceStruct*> PresenceVec;
     PresenceVec mUnconnectedPresences;
+
+
+    
+    EmersonHttpPtr emHttpPtr;
 };
 
 } // namespace JS

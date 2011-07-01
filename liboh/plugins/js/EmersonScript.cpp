@@ -70,7 +70,7 @@
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
 #include "EmersonMessagingManager.hpp"
-
+#include "EmersonHttpManager.hpp"
 
 using namespace v8;
 using namespace std;
@@ -87,7 +87,8 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mResetting(false),
    mKilling(false),
    mCreateEntityPort(NULL),
-   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1)
+   presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
+   emHttpPtr(EmersonHttpPtr(new EmersonHttpManager(ho->context()->ioService)))
 {
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
