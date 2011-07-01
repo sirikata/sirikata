@@ -742,14 +742,14 @@ function PresenceEntry(sporef, presObj)
                   var emSynError = emersonSyntaxError(script);
                   if (emSynError !== false)
                   {
-                      throw "Error calling createEntity.  String passed in must be valid Emerson.  " + emSynError;
+                      throw new Error("Error calling createEntity.  String passed in must be valid Emerson.  " + emSynError);
                   }
 
                   this.__hidden_createEntity(position,'js',script,mesh,scale,solidAngle,space);
               }
               else
               {
-                  throw "Error.  Second argument to createEntity must contain a string or a function to execute on new entity.";
+                  throw new Error("Error.  Second argument to createEntity must contain a string or a function to execute on new entity.");
               }
               
           };
@@ -906,7 +906,7 @@ function PresenceEntry(sporef, presObj)
      {
          var key = presToGetSetFor.toString();
          if (!(key in system._selfMap))
-             throw 'Error in system.getProxSet.  Do not have a presence with the identifier specified.';
+             throw new Error('Error in system.getProxSet.  Do not have a presence with the identifier specified.');
 
          return system._selfMap[key].getProxResultSet();
      };
@@ -929,7 +929,7 @@ function PresenceEntry(sporef, presObj)
              system._selfMap[presVisTo.toString()].proxAddedEvent(visObj,presVisTo);
          }
          else
-             throw 'Error: received prox added message for presence not controlling';
+             throw new Error('Error: received prox added message for presence not controlling');
      };
 
      /**
@@ -948,7 +948,7 @@ function PresenceEntry(sporef, presObj)
              system._selfMap[presVisTo.toString()].proxRemovedEvent(visObj,presVisTo);
          }
          else
-             throw 'Error: received prox added message for presence not controlling';
+             throw new Error('Error: received prox added message for presence not controlling');
      };
 
      baseSystem.registerProxAddedHandler(proxAddedManager);
@@ -984,7 +984,7 @@ function PresenceEntry(sporef, presObj)
               return returner;
           }
           else
-              throw 'Error: do not have a presence in map matching ' + presCalling.toString();
+              throw new Error('Error: do not have a presence in map matching ' + presCalling.toString());
       };
      
      /**
@@ -996,7 +996,7 @@ function PresenceEntry(sporef, presObj)
           if (presCalling.toString()  in this._selfMap)
               return this._selfMap[presCalling.toString()].setProxRemCB(funcToCall);
           else
-              throw 'Error: do not have a presence in map matching ' + presCalling.toString();
+              throw new Error('Error: do not have a presence in map matching ' + presCalling.toString());
       };
 	  
 	 /**

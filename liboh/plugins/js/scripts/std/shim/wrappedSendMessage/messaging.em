@@ -5,7 +5,7 @@ if (typeof(std) == 'undefined')
     std = { };
 
 if (typeof(std.messaging) != 'undefined')
-    throw 'Error.  Already included messaging library.  Aborting instead of re-including.';
+    throw new Error('Error.  Already included messaging library.  Aborting instead of re-including.');
 
 
 
@@ -39,7 +39,7 @@ if (typeof(std.messaging) != 'undefined')
     std.messaging.SenderMessagePair = function(sender,msg)
     {
         if ((! checkIsPresence(sender)) || (typeof(msg) != 'object'))
-            throw 'Error constructing SenderMessagePair.  Require a presence and an object message';
+            throw new Error('Error constructing SenderMessagePair.  Require a presence and an object message');
 
         return new SenderMessagePair(sender,msg);
     };
@@ -163,7 +163,7 @@ if (typeof(std.messaging) != 'undefined')
     function callSendSenderMessageReceiver(smr, responseArray)
     {
         if (responseArray.length > 3)
-            throw 'Error: Incorrectly formatted response array.  Response array requires three arguments or fewer 1) function to call on responses to your message; 2) amount of time to wait before stop listening for response; 3) function to execute if receive no response after this time.';
+            throw new Error('Error: Incorrectly formatted response array.  Response array requires three arguments or fewer 1) function to call on responses to your message; 2) amount of time to wait before stop listening for response; 3) function to execute if receive no response after this time.');
 
         var respFunc   = function(){};
         var timeToWait = DEFAULT_TIME_TO_WAIT;
@@ -172,19 +172,19 @@ if (typeof(std.messaging) != 'undefined')
         {
             respFunc = responseArray[0];
             if (typeof(respFunc) != 'function')
-                throw 'Error: Response function must be a function';
+                throw new Error('Error: Response function must be a function');
         }
         if (responseArray.length >=2)
         {
             timeToWait = responseArray[1];
             if (typeof(timeToWait) != 'number')
-                throw 'Erorr: time to wait for response must be a number';
+                throw new Error('Erorr: time to wait for response must be a number');
         }
         if (responseArray.length >= 3)
         {
             noRespFunc = responseArray[2];
             if (typeof(noRespFunc) != 'function')
-                throw 'Error: Third arg in response array must be a function';
+                throw new Error('Error: Third arg in response array must be a function');
         }
 
         return std.messaging.sendMessage(smr.smp.msg,
@@ -257,7 +257,7 @@ if (typeof(std.messaging) != 'undefined')
                 return (new SenderMessageReceiver  ((new SenderMessagePair(system.self,lhs)),rhs));
         }
 
-        throw 'Error in sender syntax.  Require either that: 1) lhs must be senderReceiverPair and rhs must contain message handling code; or 2) lhs must be object and rhs must be visible.  Aborting.';
+        throw new Error('Error in sender syntax.  Require either that: 1) lhs must be senderReceiverPair and rhs must contain message handling code; or 2) lhs must be object and rhs must be visible.  Aborting.');
     };
 
 
@@ -321,7 +321,7 @@ if (typeof(std.messaging) != 'undefined')
         this.clear = function()
         {
             if (hasCanceled)
-                throw 'Error.  Cannot clear a message stream that was already cancelled.';
+                throw new Error('Error.  Cannot clear a message stream that was already cancelled.');
             cancelOpenHandler(key);
         };
         
@@ -343,7 +343,7 @@ if (typeof(std.messaging) != 'undefined')
     {
         var key = generateKey(recString,senderString,seqNo,streamID);
         if (! (key in openHandlers))
-            throw 'Error in successResponse.  Do not have key ' + key + ' in openHandlers.';
+            throw new Error('Error in successResponse.  Do not have key ' + key + ' in openHandlers.');
 
         
         //clear success handler

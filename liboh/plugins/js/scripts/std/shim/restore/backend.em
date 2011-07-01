@@ -1,5 +1,5 @@
 if (typeof(std.persist) === 'undefined')
-    throw 'Error.  Do not import this file directly.  Only import it from persistService.em';
+    throw new Error('Error.  Do not import this file directly.  Only import it from persistService.em');
 
 
 if (typeof(std) === "undefined") /** @namespace */ std = {};
@@ -65,7 +65,7 @@ readObject = function(entryName, itemName, cb)
         wrapped_cb = std.core.bind(readObjectCallback, undefined, keyname, cb);
     var queued = system.storageRead(keyname, wrapped_cb);
     if (!queued)
-        throw 'Error queuing read request.';
+        throw new Error('Error queuing read request.');
 };
 
 })();

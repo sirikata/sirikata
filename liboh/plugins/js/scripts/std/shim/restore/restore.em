@@ -235,10 +235,10 @@ if (typeof(std.persist) === 'undefined')
          }
 
          var id = unfixedObj['mID'];
-         if (id != ptrId) //throw 'Error: ptrId and object id must be identical';
+         if (id != ptrId) //throw new Error('Error: ptrId and object id must be identical');
              cb(false);
 
-         if (nameService.lookupObject(ptrId) != nameService.DNE) // throw "Error.  Called fixReferences on an object I've already visited";
+         if (nameService.lookupObject(ptrId) != nameService.DNE) // throw new Error("Error.  Called fixReferences on an object I've already visited");
              cb(false);
 
          var type = unfixedObj['type'];

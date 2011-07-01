@@ -3,7 +3,7 @@ if (typeof(std) == 'undefined')
     std = {};
 
 if (typeof(std.simpleStorage) != 'undefined')
-    throw 'Error in simple storage.  Should only import once.';
+    throw new Error('Error in simple storage.  Should only import once.');
 
 
 (function()
@@ -242,4 +242,3 @@ if (typeof(std.simpleStorage) != 'undefined')
     std.persist.restoreFromAsync(presKeyName,onPresKeyRestored);
 
 })();
-

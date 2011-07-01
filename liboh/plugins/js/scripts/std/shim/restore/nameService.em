@@ -1,5 +1,5 @@
 if (typeof(std.persist) === 'undefined')
-    throw 'Error.  Do not import this file directly.  Only import it from persistService.em';
+    throw new Error('Error.  Do not import this file directly.  Only import it from persistService.em');
 
 
 
@@ -97,7 +97,7 @@ std.persist.NameService = function()
       this.enterSubtreeObjects = function (objIndex, markedMap)
       {
           if (this.lookupName(objIndex) == this.DNE)
-              throw 'Error.  Not tracking this object in nameService when calling enterMarkedMap';
+              throw new Error('Error.  Not tracking this object in nameService when calling enterMarkedMap');
 
           hierarchyMap[objIndex] = markedMap; //marked map includes current object
       };
@@ -115,7 +115,7 @@ std.persist.NameService = function()
        */
      this.lookupSubtreeObjects = function(objIndex)
      {
-         throw 'Error in lookupSubtreeObjects';
+         throw new Error('Error in lookupSubtreeObjects');
           if (objIndex in hierarchyMap)
               return hierarchyMap[objIndex];
 

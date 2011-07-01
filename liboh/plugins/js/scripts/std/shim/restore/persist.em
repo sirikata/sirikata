@@ -1,5 +1,5 @@
 if (typeof(std.persist) === 'undefined')
-    throw 'Error.  Do not import this file directly.  Only import it from persistService.em';
+    throw new Error('Error.  Do not import this file directly.  Only import it from persistService.em');
 
 
 
@@ -23,7 +23,7 @@ if (typeof(std.persist) === 'undefined')
     var mark = function(objToMark,nameService)
     {
         if ((typeof(objToMark) != 'object') && (typeof(objToMark) != 'function'))            
-            throw 'Error.  Asking to mark a non-object: '+ objToMark.toString();            
+            throw new Error('Error.  Asking to mark a non-object: '+ objToMark.toString());
         
         var name = nameService.insertObject(objToMark);
         return name;
@@ -54,7 +54,7 @@ if (typeof(std.persist) === 'undefined')
      function processVec3(v3,nameService,backendWrite,interFunc)
      {
          if (! std.persist.checkVec3(v3))
-             throw 'Error processing vec3.  First argument passed in must be a vec3';
+             throw new Error('Error processing vec3.  First argument passed in must be a vec3');
 
          var record = new std.persist.Record(v3,nameService);
          record.pushValueType(std.persist.wrapPropValPair('x',v3.x));
@@ -70,7 +70,7 @@ if (typeof(std.persist) === 'undefined')
      function processQuat(quat,nameService,backendWrite,interFunc)
      {
          if (! std.persist.checkQuat(quat))
-             throw 'Error processing quat.  First argument passed in must be a quat';
+             throw new Error('Error processing quat.  First argument passed in must be a quat');
 
          var record = new std.persist.Record(quat,nameService);
          record.pushValueType(std.persist.wrapPropValPair('x',quat.x));
@@ -88,7 +88,7 @@ if (typeof(std.persist) === 'undefined')
    function processVisible(vis,nameService,backendWrite,interFunc)
    {
        if (! std.persist.checkVisible(vis))
-           throw 'Error processing visible.  First arg passed in must be a visible.';
+           throw new Error('Error processing visible.  First arg passed in must be a visible.');
 
 
        var allData = vis.getAllData();
@@ -107,7 +107,7 @@ if (typeof(std.persist) === 'undefined')
    function processPresence(pres,nameService,backendWrite,interFunc)
    {
        if (! std.persist.checkPresence(pres))
-           throw 'Error processing presence.  First arg passed in must be a presence.';
+           throw new Error('Error processing presence.  First arg passed in must be a presence.');
 
        var allData = pres.getAllData();
        var record = new std.persist.Record(pres,nameService);
@@ -126,7 +126,7 @@ if (typeof(std.persist) === 'undefined')
      function processFunction(func,nameService,backendWrite,interFunc)
      {
          if (! std.persist.checkFunction(func))
-             throw 'Error processing function.  First arg passed in must be a function.';
+             throw new Error('Error processing function.  First arg passed in must be a function.');
 
          //for now, just pushing the text of the function to the backend record.
          var record = new std.persist.Record(func,nameService);
@@ -224,7 +224,7 @@ if (typeof(std.persist) === 'undefined')
     
     std.persist.checkpoint =     function (presenceEntries)
     {
-        throw 'Checkpoint entire object does not work now.  Try again another time.';
+        throw new Error('Checkpoint entire object does not work now.  Try again another time.');
         var globalObj = (function()
                          {
                              return this;
@@ -276,14 +276,14 @@ if (typeof(std.persist) === 'undefined')
              var nameService = new std.persist.NameService();
              
              if (typeof(arrayOfObjKeyNames[s]['length']) != 'number')
-                 throw 'Error.  Require an array to be passed in to persist many';                     
+                 throw new Error('Error.  Require an array to be passed in to persist many');
              
              
              backendWrite.changeEntryName(arrayOfObjKeyNames[s][1]);
              var objToPersistFrom = arrayOfObjKeyNames[s][0];
 
              if ((objToPersistFrom == null) || (typeof(objToPersistFrom) != 'object'))
-                 throw 'Error.  Can only checkpoint objects.';
+                 throw new Error('Error.  Can only checkpoint objects.');
              
              //add root object to nameService...if it's not a special
              //object.  Hack-ish.  Need to get default entry to point at 0.
@@ -300,4 +300,3 @@ if (typeof(std.persist) === 'undefined')
      
 }
 )();
-

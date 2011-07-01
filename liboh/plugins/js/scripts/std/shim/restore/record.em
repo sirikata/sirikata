@@ -1,7 +1,7 @@
 
 
 if (typeof(std.persist) === 'undefined')
-    throw 'Error.  Do not import this file directly.  Only import it from persistService.em';
+    throw new Error('Error.  Do not import this file directly.  Only import it from persistService.em');
 
 
 
@@ -18,7 +18,7 @@ if (typeof(std.persist) === 'undefined')
     function getRecordType(objToGetTypeOf)
     {
         if ((typeof(objToGetTypeOf) != 'object') && (typeof(objToGetTypeOf) != 'function'))
-            throw 'Error in getRecordType.  Argument passed was not object or func';
+            throw new Error('Error in getRecordType.  Argument passed was not object or func');
 
         if (std.persist.checkFunction(objToGetTypeOf))
             return std.persist.FUNCTION_OBJECT_TYPE_STRING;
@@ -51,7 +51,7 @@ std.persist.Record = function(objectRecordOf, nameService)
 {
     var mID = nameService.lookupName(objectRecordOf);
     if (mID == nameService.DNE)
-        throw 'Error in Record constructor.  Require object passed in to be named in nameService';
+        throw new Error('Error in Record constructor.  Require object passed in to be named in nameService');
 
     
     var recordType = getRecordType(objectRecordOf);

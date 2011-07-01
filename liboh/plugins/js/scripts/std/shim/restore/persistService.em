@@ -125,10 +125,10 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
     getValueFromPropValPair : function (obj)
     {
         if (typeof(obj) != 'object')
-            throw 'Error in getValueFromPropValPair.  Requires an object for an argument';
+            throw new Error('Error in getValueFromPropValPair.  Requires an object for an argument');
         
         if (!('length' in obj))
-            throw 'Error in getValueFromPropValPair.  Any fields received to decode should be arrays.';     
+            throw new Error('Error in getValueFromPropValPair.  Any fields received to decode should be arrays.');
 
         return obj[1];
     },
@@ -136,10 +136,10 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
     getPropFromPropValPair : function (obj)
     {
         if (typeof(obj) != 'object')
-            throw 'Error in getPropFromPropValPair.  Requires an object for an argument';
+            throw new Error('Error in getPropFromPropValPair.  Requires an object for an argument');
         
         if (!('length' in obj))
-            throw 'Error in getPropFromPropValPair.  Any fields received to decode should be arrays.';
+            throw new Error('Error in getPropFromPropValPair.  Any fields received to decode should be arrays.');
 
         return obj[0];
     },
@@ -167,7 +167,7 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
     propValPointsToObj : function(pair)
     {
         if (! std.persist.isPropValPair(pair))
-            throw 'Error.  Requires an array of length two to be passed in.';
+            throw new Error('Error.  Requires an array of length two to be passed in.');
 
         if (typeof(std.persist.getPropFromPropValPair(pair)) === 'object')
             return std.persist.getPropFromPropValPair(pair);
