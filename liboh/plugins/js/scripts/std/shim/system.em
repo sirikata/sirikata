@@ -206,7 +206,7 @@ function PresenceEntry(sporef, presObj)
      /**
       @param {String} type (GET or POST) are only two supported for now.
       @param {String} url or ip address.
-      @param {String} request paramerts
+      @param {String} headers formatted as a string (with \r\n's ending each line)
       @param {function} callback to execute on success or failure (first arg of
       function is bool.  If success, bool is true, if fail, bool is false).
       Success callbacks have a second arg that takes in an object with the
@@ -216,9 +216,9 @@ function PresenceEntry(sporef, presObj)
         status code (number).
         data (string).
       */
-     system.basicHttpGet = function(type, url, params, cb)
+     system.basicHttpGet = function(type, url, headers, cb)
      {
-         return baseSystem.http(type,url, params, system.__wrapHttpHandler(cb));
+         return baseSystem.http(type,url, headers, system.__wrapHttpHandler(cb));
      };
 
       system.__wrapHttpHandler = function (toCallback)
