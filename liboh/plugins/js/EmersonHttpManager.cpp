@@ -10,7 +10,8 @@ namespace JS{
 
 
 EmersonHttpManager::EmersonHttpManager(Sirikata::Network::IOService* ioserve)
- : currentToken(0),
+ : SelfWeakPtr<EmersonHttpManager>(),
+   currentToken(0),
    mIO(ioserve)
 {
     managerLiveness = nullEmersonHttpPtr;
@@ -24,16 +25,6 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
     ++currentToken;
 
     //Log that jscont has issued a request associated with token current token.
-    // if ((ctxTokeMap.find(jscont) == ctxTokeMap.end()) || (ctxTokeMap.find(jscont)->second.empty()))
-    // {
-    //     TokenMap toLoad;
-    //     toLoad[currentToken] = currentToken;
-    //     ctxTokeMap[jscont]   = toLoad;
-    // }
-    // else
-    // {
-    //     ctxTokeMap[jscont][currentToken] = currentToken;
-    
     ctxTokeMap[jscont][currentToken] = currentToken;
 
     //log that any http responses we get associated with current token should
@@ -41,7 +32,7 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
     tokeCBMap[currentToken] = std::pair<JSContextStruct*, v8::Persistent<v8::Function> > (jscont,cb);
 
     if (managerLiveness == nullEmersonHttpPtr)
-        managerLiveness = EmersonHttpPtr(this);
+        managerLiveness = getSharedPtr();
 
     //issue query, and have response callback to receiveHttpResponse
     Transfer::HttpManager::getSingleton().makeRequest(addr,method,req,
@@ -94,7 +85,6 @@ void EmersonHttpManager::deregisterContext(JSContextStruct* toDeregister)
 
 void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
-    std::cout<<"\n\nGot a response to message in receiveHttpResponse\n";
     mIO->post(std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
 }
 
@@ -124,17 +114,9 @@ void EmersonHttpManager::debugPrintTokenMap()
 
 void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
-
-    std::cout<<"\n\nInside of posting receive response\n\n";
-
-    debugPrintContextMap();
-    debugPrintTokenMap();
-    
     //first lookup token in outstanding token map to find corresponding context
     //and callback
     TokenCBMapIter tokeFindIt = tokeCBMap.find(respToken);
-
-    
     if (tokeFindIt == tokeCBMap.end())
     {
         JSLOG(error, "Error in EmersonHttpManager.  Received an http response for a token I had not assigned.");
@@ -190,13 +172,10 @@ void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr 
     cb.Dispose();
     tokeCBMap.erase(tokeFindIt);
 
+
     if (tokeCBMap.empty())
         managerLiveness = nullEmersonHttpPtr;
 
-
-    std::cout<<"\n\n\nDEBUG: LAST PRINT\n\n";
-    debugPrintContextMap();
-    debugPrintTokenMap();
 }
 
 

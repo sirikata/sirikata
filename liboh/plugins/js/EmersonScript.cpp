@@ -88,7 +88,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mKilling(false),
    mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
-   emHttpPtr(EmersonHttpPtr(new EmersonHttpManager(ho->context()->ioService)))
+   emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ho->context()->ioService))
 {
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);

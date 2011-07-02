@@ -6,6 +6,7 @@
 #include <map>
 #include <sirikata/core/transfer/HttpManager.hpp>
 #include <v8.h>
+#include <sirikata/core/util/SelfWeakPtr.hpp>
 
 namespace Sirikata{
 namespace JS{
@@ -17,7 +18,7 @@ typedef std::tr1::shared_ptr<EmersonHttpManager> EmersonHttpPtr;
 typedef std::tr1::weak_ptr  <EmersonHttpManager> EmersonHttpWPtr;
 
 
-class EmersonHttpManager 
+class EmersonHttpManager : public SelfWeakPtr<EmersonHttpManager>
 {
 public:
     typedef uint32 EmersonHttpToken;

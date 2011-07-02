@@ -57,17 +57,12 @@ v8::Handle<v8::Value> JSContextStruct::httpRequest(Sirikata::Network::Address ad
     if (emerScript == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in httpRequest.  Cannot run headless while issuing an http request")));
 
-        
-    std::cout<<"\n\nDEBUG: Requesting from "<<this<<"\n\n";
     return v8::Uint32::New(emerScript->getEmersonHttpPtr()->makeRequest(addr,method,request, cb, this));
 }
 
 
 void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb)
 {
-    std::cout<<"\n\nDEBUG: Failing from: "<<this<<"\n\n";
-//    lkjs;
-    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Value> argv[1] = { v8::Boolean::New(false)};
