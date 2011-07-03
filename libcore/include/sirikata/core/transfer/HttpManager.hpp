@@ -54,7 +54,39 @@
 #include <sirikata/core/network/Asio.hpp>
 #include <sirikata/core/network/Address.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
+
+
+// This is a hack around a problem created by different packages
+// creating slightly different typedefs -- notably http_parser and
+// v8. On windows, we need to provide typedefs and make it skip that
+// part of http_parser.h.
+#if defined(_WIN32) && !defined(__MINGW32__)
+
+typedef signed __int8 int8_t;
+typedef unsigned __int8 uint8_t;
+typedef __int16 int16_t;
+typedef unsigned __int16 uint16_t;
+typedef __int32 int32_t;
+typedef unsigned __int32 uint32_t;
+typedef __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+
+typedef unsigned int size_t;
+typedef int ssize_t;
+
+// We turn on mingw to make it skip the include block, but then stdint
+// is included, and only available via a zzip dependency. We block
+// that out as well by using its include guard define
+#define _ZZIP__STDINT_H 1
+#define __MINGW32__
 #include "http_parser.h"
+#undef __MINGW32__
+
+#else
+
+#include "http_parser.h"
+
+#endif
 
 namespace Sirikata {
 namespace Transfer {
