@@ -43,11 +43,6 @@ JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* which
 
     //no need to register this context with it's parent context because that's
     //taken care of in the createContext function of this class.
-
-
-    //create a new http pool;
-    String httpClient = whichPresence != NULL? "pres_" + whichPresence->getSporef().toString() : "root" +UUID::random().toString();
-    mTransferPool = Transfer::TransferMediator::getSingleton().registerClient(httpClient);
 }
 
 
@@ -87,7 +82,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
     }
 
     httpObj->Set(v8::String::New("respHeaders"), respHeadersObj);
-    
+
     //load content length
     httpObj->Set(v8::String::New("contentLength"), v8::Number::New(httpResp->getContentLength()));
 
@@ -544,11 +539,11 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     if (emerScript != NULL)
         emerScript->getEmersonHttpPtr()->deregisterContext(this);
 
-    
+
     v8::HandleScope handle_scope;
     v8::Handle<v8::Value> returner = JSSuspendable::clear();
-    
-    
+
+
     inClear = true;
     JSLOG(insane,"Clearing context.");
 
@@ -619,7 +614,7 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
     associatedSuspendables.erase(iter);
 
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
-    
+
     //if it's an event handler struct, we also need to ensure that it is removed
     //from EmersonScript.  Calling emerScript->deleteHandler will kill the
     //event handler and free its memory.  Otherwise, we can free it directly here.
@@ -631,11 +626,11 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
             JSLOG(error, "should not be deregistering an event listener from headless script.");
             return;
         }
-        
+
         emerScript->deleteHandler(jsev);
         return;
     }
-    
+
     //handle presence clear.
     JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (toDeregister);
     if (jspres != NULL)
@@ -650,7 +645,7 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         return;
     }
 
-    
+
 
     //if it's just a timer or a context, can delete without requesting
     //Emerscript to do anything special.

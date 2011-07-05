@@ -198,12 +198,12 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     /**
        The http request that was associated with cb passed, and its associated
        data are in httpResp.  Execute callback with first argument true, and
-       second argument containing data.  
+       second argument containing data.
        Caller is in charge of calling dispose on cb.
      */
     void httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpManager::HttpRespPtr httpResp);
     v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
-    
+
 private:
     uint32 mContextID;
 
@@ -262,9 +262,6 @@ private:
     SuspendableVec suspendablesToAdd;
 
     void flushQueuedSuspendablesToChange();
-
-    //for http connections.
-    Transfer::TransferPoolPtr mTransferPool;
 
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \
