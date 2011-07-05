@@ -1128,6 +1128,31 @@ void WebView::blitScrollImage(
     size_t width = shared_rect.width();
     size_t height = shared_rect.height();
 
+#if SIRIKATA_PLATFORM == PLATFORM_LINUX
+    // For some reason, copying between hardware buffers on Linux doesn't work
+    // properly, and its not even card specific (both ATI and NVidia cards have
+    // this problem). Instead, we have to copy between GPU and RAM on Linux.
+
+    {
+        char* scrollbuf = new char[width*height*4];
+
+        Berkelium::Rect borderedScrollRect = getBorderedRect(shared_rect);
+        Berkelium::Rect borderedScrolledRect = getBorderedRect(scrolled_shared_rect);
+
+        pixelBuffer->blitToMemory(
+            Ogre::Box(borderedScrollRect.left(), borderedScrollRect.top(), borderedScrollRect.right(), borderedScrollRect.bottom()),
+            Ogre::PixelBox(borderedScrollRect.width(), borderedScrollRect.height(), 1, PF_BYTE_BGRA, (void*)scrollbuf)
+        );
+
+        pixelBuffer->blitFromMemory(
+            Ogre::PixelBox(borderedScrollRect.width(), borderedScrollRect.height(), 1, PF_BYTE_BGRA, (void*)scrollbuf),
+            Ogre::Box(borderedScrolledRect.left(), borderedScrolledRect.top(), borderedScrolledRect.right(), borderedScrolledRect.bottom())
+        );
+
+        delete scrollbuf;
+    }
+
+#else
     Ogre::TexturePtr shadow = Ogre::TextureManager::getSingleton().createManual(
         "_ _ webview scroll buffer _ _",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,
         Ogre::TEX_TYPE_2D,
@@ -1152,6 +1177,8 @@ void WebView::blitScrollImage(
     }
     Ogre::ResourcePtr shadowResource(shadow);
     Ogre::TextureManager::getSingleton().remove(shadowResource);
+
+#endif
 
     // FIXME We should be updating the alpha cache here, but that would require
     // pulling data back from the card...
