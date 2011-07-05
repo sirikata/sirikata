@@ -714,7 +714,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // shouldn't get overwritten.
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
                 String* phy_ptr = (addition.has_physics() ? &phy : NULL);
-                assert(mesh_ptr != NULL && mesh != "");
+
                 processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
             }
             // Always mark the object as valid (either revalidated, or just
