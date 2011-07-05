@@ -46,8 +46,6 @@ function () {
             this._initOrResetUI(init_cb);
             this._self = system.self;
             this._selected_visible = this._self;
-            // Magic number of 0.5 seconds for updating the property box automatically
-            this._updateTimer = new std.core.RepeatingTimer(.5, std.core.bind(this.HandleUpdateProperties, this));
         } catch (ex) {
             system.print(ex);
         }
@@ -62,7 +60,9 @@ function () {
             "propertybox", "propertybox/propertybox.js",
             std.core.bind(function(gui) {
                               this._propertyWindow = gui;
-                              if (init_cb) init_cb();
+                              if (init_cb) init_cb()
+                              // Magic number of 0.5 seconds for updating the property box automatically
+                              if (!this._updateTimer) this._updateTimer = new std.core.RepeatingTimer(.5, std.core.bind(this.HandleUpdateProperties, this));
                           }, this)
         );
     };
