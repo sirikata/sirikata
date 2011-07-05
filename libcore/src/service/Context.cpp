@@ -98,6 +98,11 @@ void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
         ioService->run();
         cleanupWorkerThreads();
     }
+
+    // If we exited gracefully, call shutdown automatically to clean everything
+    // up, make sure stop() methods get called, etc.
+    if (!mStopRequested.read())
+        this->shutdown();
 }
 
 void Context::workerThread() {
