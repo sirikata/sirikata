@@ -34,7 +34,7 @@ class JSProxyData;
 
 struct JSContextStruct : public JSSuspendable, public Liveness
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -134,22 +134,22 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
 
 
-    //presStruct: who the messages that this context's system sends will
-    //be from canMessage: who you can always send messages to.  sendEveryone creates
-    //system that can send messages to everyone besides just who created you.
-    //recvEveryone means that you can receive messages from everyone besides just
-    //who created you.  proxQueries means that you can issue proximity queries
-    //yourself, and latch on callbacks for them.  canImport means that you can
-    //import files/libraries into your code.
-    //canCreatePres is whether have capability to create presences
-    //canCreateEnt is whether have capability to create entities
-    //canEval is whether have capability to call system.eval directly in context
-    //creates a new context, and hangs the child into suspendables map.
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval, JSPresenceStruct* presStruct);
+    /**
+       @param {JSPresenceStruct} jspres Each context (other than the root) is
+       associated with a single presence.  Depending on the capabilities granted
+       to a sandbox, code within the sandbox can act on that presence, for
+       instance, sending messages from it, receiving its proximity callbacks, etc.
+
+       @param {SpaceObjectReference} canSendTo The sporef associated with the
+       May be SpaceObjectReference::null.  Used for the sendHome call.
+
+       @param {uint32} capNum Capabilities granted to knew sandbox.
+       
+     */
+    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum);
 
     //create a timer that will fire cb in dur seconds from now,
     v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
-
     v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
 
     //Tries to eval the emerson code in native_contents that came from origin

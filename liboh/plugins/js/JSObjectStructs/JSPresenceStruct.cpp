@@ -372,11 +372,6 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 }
 
 
-v8::Handle<v8::Value> JSPresenceStruct::struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport,bool canCreatePres, bool canCreateEnt, bool canEval)
-{
-    JSContextStruct* dummy;
-    return jpp->emerScript->createContext(this,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,dummy);
-}
 
 
 void JSPresenceStruct::addAssociatedContext(JSContextStruct* toAdd)

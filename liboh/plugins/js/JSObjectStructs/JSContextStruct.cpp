@@ -24,16 +24,16 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home, bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport,bool canCreatePres,bool canCreateEnt,bool canEval, v8::Handle<v8::ObjectTemplate> contGlobTempl,uint32 contID)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID)
  : JSSuspendable(),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
-   mContextID(contID),
+   mContextID(contextID),
    hasOnConnectedCallback(false),
    hasOnDisconnectedCallback(false),
    associatedPresence(whichPresence),
    mHomeObject(home),
-   mSystem(new JSSystemStruct(this,sendEveryone, recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval)),
+   mSystem(new JSSystemStruct(this,capNum)),
    mContGlobTempl(contGlobTempl),
    mUtil(NULL),
    inClear(false),
@@ -706,7 +706,6 @@ v8::Handle<v8::Value> JSContextStruct::resume()
 //The message contains the object toSend.
 v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
 {
-
     NullPresenceCheck("Context: sendHome");
 
     if (getIsCleared())
@@ -715,8 +714,11 @@ v8::Handle<v8::Value> JSContextStruct::struct_sendHome(const String& toSend)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Cannot call sendHome from a context that has already been cleared.")) );
     }
 
-    CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendHome,jsObjScript);
-    emerScript->sendScriptCommMessageReliable(associatedPresence->getSporef(),mHomeObject,toSend);
+    if (mHomeObject != SpaceObjectReference::null())
+    {
+        CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendHome,jsObjScript);
+        emerScript->sendScriptCommMessageReliable(associatedPresence->getSporef(),mHomeObject,toSend);
+    }
     return v8::Undefined();
 }
 
@@ -798,42 +800,15 @@ v8::Handle<v8::Value> JSContextStruct::struct_createTimeout(double period,v8::Pe
 
 
 
-
-/**
-presStruct: who the messages that this context's system sends will
-be from
-
-canMessage: who you can always send messages to.
-
-sendEveryone creates system that can send messages to everyone besides just
-who created you.
-
-recvEveryone means that you can receive messages from everyone besides just
-who created you.
-
-proxQueries means that you can issue proximity queries yourself, and latch on
-callbacks for them.
-
-canImport means that you can import files/libraries into your code.
-
-canCreatePres is whether have capability to create presences
-
-canCreateEnt is whether have capability to create entities
-
-if presStruct is null, just use the presence that is associated with this
-context (which may be null as well).
-*/
-v8::Handle<v8::Value> JSContextStruct::struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool canImport, bool canCreatePres, bool canCreateEnt, bool canEval,JSPresenceStruct* presStruct)
+v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* presStruct,const SpaceObjectReference& canSendTo,uint32 capNum)
 {
     if (presStruct == NULL)
         presStruct = associatedPresence;
     JSContextStruct* new_jscs      = NULL;
 
-    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canMessage,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,new_jscs);
-
+    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canSendTo,capNum,new_jscs);
     //register the new context as a child of the previous one
     struct_registerSuspendable(new_jscs);
-
     return returner;
 }
 

@@ -68,7 +68,7 @@
 #include "JSObjects/JSObjectsUtils.hpp"
 #include "JSObjectStructs/JSUtilStruct.hpp"
 #include <boost/lexical_cast.hpp>
-
+#include "JSObjectStructs/JSCapabilitiesConsts.hpp"
 
 
 
@@ -234,7 +234,7 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
     v8::HandleScope handle_scope;
 
     SpaceObjectReference sporef = SpaceObjectReference::null();
-    mContext = new JSContextStruct(this,NULL,sporef,true,true,true,true,true,true,true,mManager->mContextGlobalTemplate,contIDTracker);
+    mContext = new JSContextStruct(this, NULL,sporef, Capabilities::getFullCapabilities(),mManager->mContextGlobalTemplate,contIDTracker);
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
@@ -1006,27 +1006,12 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
     return absoluteImport(full_filename, full_base,jscont);
 }
 
-
-
-//presAssociatedWith: who the messages that this context's system sends will
-//be from
-//canMessage: who you can always send messages to.
-//sendEveryone creates system that can send messages to everyone besides just
-//who created you.
-//recvEveryone means that you can receive messages from everyone besides just
-//who created you.
-//proxQueries means that you can issue proximity queries yourself, and latch on
-//callbacks for them.
-//canImport means that you can import files/libraries into your code.
-//canCreatePres is whether have capability to create presences
-//canCreateEnt is whether have capability to create entities
-//last field returns the created context struct by reference
-v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,bool canEval,JSContextStruct*& internalContextField)
+v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField)
 {
     v8::HandleScope handle_scope;
 
     v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    internalContextField = new JSContextStruct(this,presAssociatedWith,canMessage,sendEveryone,recvEveryone,proxQueries, canImport,canCreatePres,canCreateEnt,canEval,mManager->mContextGlobalTemplate, contIDTracker);
+    internalContextField = new JSContextStruct(this,jspres,canSendTo,capNum,mManager->mContextGlobalTemplate,contIDTracker);
     mContStructMap[contIDTracker] = internalContextField;
     ++contIDTracker;
 
@@ -1034,7 +1019,7 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* presAssoci
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
 
-    return returner;
+    return handle_scope.Close(returner);
 }
 
 

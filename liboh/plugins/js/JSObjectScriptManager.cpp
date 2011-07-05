@@ -249,7 +249,8 @@ void JSObjectScriptManager::createSystemTemplate()
     //check what permissions fake root is loaded with
     mSystemTemplate->Set(v8::String::New("canSendMessage"), v8::FunctionTemplate::New(JSSystem::root_canSendMessage));
     mSystemTemplate->Set(v8::String::New("canRecvMessage"), v8::FunctionTemplate::New(JSSystem::root_canRecvMessage));
-    mSystemTemplate->Set(v8::String::New("canProx"), v8::FunctionTemplate::New(JSSystem::root_canProx));
+    mSystemTemplate->Set(v8::String::New("canProxCallback"), v8::FunctionTemplate::New(JSSystem::root_canProxCallback));
+    mSystemTemplate->Set(v8::String::New("canProxChangeQuery"), v8::FunctionTemplate::New(JSSystem::root_canProxChangeQuery));
     mSystemTemplate->Set(v8::String::New("canImport"),v8::FunctionTemplate::New(JSSystem::root_canImport));
 
     mSystemTemplate->Set(v8::String::New("canCreatePresence"), v8::FunctionTemplate::New(JSSystem::root_canCreatePres));

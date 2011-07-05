@@ -1934,6 +1934,7 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPresenceStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSPositionListener.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSuspendable.cpp
+  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSCapabilitiesConsts.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSEventHandlerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp

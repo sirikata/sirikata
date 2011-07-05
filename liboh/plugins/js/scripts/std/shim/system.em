@@ -596,35 +596,35 @@ function PresenceEntry(sporef, presObj)
       /** @deprecated Use createSandbox */
       system.create_context = function()
       {
-          return this.createSandbox.apply(this,arguments);//baseSystem.create_context.apply(baseSystem, arguments);
+          return this.__createSandbox.apply(this,arguments);//baseSystem.create_context.apply(baseSystem, arguments);
       };
 
      
       /** @function
        @description Creates a new sandbox with associated capabilities
-       @type context
-       @param presence The presence that the context is associated with. (will use this as sender of messages). If this arg is null, then just passes through the parent context's presence
-       @param visible The visible object that can always send messages to. if null, will use same spaceobjectreference as one passed in for arg0.
-       @param canSendMsg can I send messages to everyone?
-       @param canRecvMsg can I receive messages from everyone?
-       @param canProx can I make my own prox queries argument
-       @param canImport can I import argument
-       @param canCreatePresene can I create presences.
-       @param canCreateEntity can I create entites
-       @param canEval can I call eval directly through system object.
-
-       @see system.canSendMessage
-       @see system.canRecvMessage
-       @see system.canCreatePresence
-       @see system.canCreateEntity
+       @param {presence} If given capabilities, sends/receives
+       messages, sets prox queries, etc. for this presence.
+       @param {visible} or null The sporef for the presence on whose
+       behalf we are creating the sandbox
+       
+       @param {int} a permission number indicating the level of
+       permissions granted to the new sandbox.  NOTE: permission
+       numbers instead of being composed of bit-operators are
+       constructed from multiplying primes and interpretted from
+       modding them.
+       
+       @return {sandbox} A sandbox object.  Can call execute on this
+       sandbox to execute isolated code inside a sandbox.
        */
-      system.createSandbox = function(/** Presence */ presence, /** Visible */ visible, /** Boolean */ canSendMsg, /** Boolean */ canRecvMsg,
-          /** Boolean */ canProx, /** Boolean */ canImport, /** Boolean */ canCreatePresence, /** Boolean */ canCreateEntity,
-          /** Boolean */ canEval)
+      system.__createSandbox = function()
       {
           return baseSystem.create_context.apply(baseSystem, arguments);
       };
 
+
+
+     
+     
 
      /**@ignore
       Runs through presences array, and determines if should add presConn to that array

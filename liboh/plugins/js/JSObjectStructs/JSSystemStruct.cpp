@@ -10,22 +10,29 @@
 #include "../JSEntityCreateInfo.hpp"
 #include "JSPositionListener.hpp"
 #include "JSPresenceStruct.hpp"
+#include "../JSLogging.hpp"
+
 
 namespace Sirikata{
 namespace JS{
 
 
-JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, bool send, bool receive, bool prox,bool import, bool createPres, bool createEnt, bool evalable)
+JSSystemStruct::JSSystemStruct ( JSContextStruct* jscont, uint32 capNum)
  : associatedContext(jscont),
-   canSend(send),
-   canRecv(receive),
-   canProx(prox),
-   canImport(import),
-   canCreatePres(createPres),
-   canCreateEnt(createEnt),
-   canEval(evalable)
+   canSend(capNum & Capabilities::SEND_MESSAGE),
+   canRecv(capNum & Capabilities::RECEIVE_MESSAGE),
+   canImport(capNum & Capabilities::IMPORT),
+   canCreatePres(capNum & Capabilities::CREATE_PRESENCE),
+   canCreateEnt(capNum & Capabilities::CREATE_ENTITY),
+   canEval(capNum & Capabilities::EVAL),
+   canProxCallback(capNum & Capabilities::PROX_CALLBACKS),
+   canProxChangeQuery(capNum & Capabilities::PROX_QUERIES),
+   canCreateSandbox(capNum & Capabilities::CREATE_SANDBOX),
+   canGui(capNum & Capabilities::GUI),
+   canHttp(capNum & Capabilities::HTTP)
 {
 }
+
 
 v8::Handle<v8::Value> JSSystemStruct::storageBeginTransaction() {
     return associatedContext->storageBeginTransaction();
@@ -192,18 +199,26 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canEval()
 //new context will have at most as many permissions as parent context.
 //note: if presStruct is null, just means use the one that is associated with
 //this system's context
-v8::Handle<v8::Value> JSSystemStruct::struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import, bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct)
+v8::Handle<v8::Value> JSSystemStruct::struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, uint32 permNum)
 {
-    sendEveryone &= canSend;
-    recvEveryone &= canRecv;
-    proxQueries  &= canProx;
-    import       &= canImport;
-    createPres   &= canCreatePres;
-    createEnt    &= canCreateEnt;
-    evalable     &= canEval;
+    //prevents scripter from escalating capabilities beyond those that he/she
+    //already has
+    INLINE_CAPABILITY_STRIP(permNum,SEND_MESSAGE,canSend);
+    INLINE_CAPABILITY_STRIP(permNum,RECEIVE_MESSAGE,canRecv);
+    INLINE_CAPABILITY_STRIP(permNum,IMPORT,canImport);
+    INLINE_CAPABILITY_STRIP(permNum,CREATE_PRESENCE,canCreatePres);
+    INLINE_CAPABILITY_STRIP(permNum,CREATE_ENTITY,canCreateEnt);
+    INLINE_CAPABILITY_STRIP(permNum,EVAL,canEval);
+    INLINE_CAPABILITY_STRIP(permNum,PROX_CALLBACKS,canProxCallback);
+    INLINE_CAPABILITY_STRIP(permNum,PROX_QUERIES,canProxChangeQuery);
+    INLINE_CAPABILITY_STRIP(permNum,CREATE_SANDBOX,canCreateSandbox);
+    INLINE_CAPABILITY_STRIP(permNum,GUI,canGui);
+    INLINE_CAPABILITY_STRIP(permNum,HTTP,canHttp);
 
-    return associatedContext->struct_createContext(canMessage, sendEveryone,recvEveryone,proxQueries,import,createPres,createEnt,evalable,presStruct);
+    return associatedContext->struct_createContext(jspres,canSendTo,permNum);
 }
+
+
 
 v8::Handle<v8::Value> JSSystemStruct::struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist)
 {
@@ -286,21 +301,24 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createEntity(EntityCreateInfo& eci)
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canSendMessage()
 {
-    v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(canSend);
 }
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canRecvMessage()
 {
-    v8::HandleScope handle_scope;  //for garbage collection.
     return v8::Boolean::New(canRecv);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::struct_canProx()
+v8::Handle<v8::Value> JSSystemStruct::struct_canProxCallback()
 {
-    v8::HandleScope handle_scope;  //for garbage collection.
-    return v8::Boolean::New(canProx);
+    return v8::Boolean::New(canProxCallback);
 }
+
+v8::Handle<v8::Value> JSSystemStruct::struct_canProxChangeQuery()
+{
+    return v8::Boolean::New(canProxChangeQuery);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::struct_getPosition()
 {

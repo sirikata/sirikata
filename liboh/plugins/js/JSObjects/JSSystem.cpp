@@ -759,16 +759,28 @@ v8::Handle<v8::Value> root_canImport(const v8::Arguments& args)
    @return Boolean indicating whether this sandbox has capability to set
    proximity queries associated with its default presence.
  */
-v8::Handle<v8::Value> root_canProx(const v8::Arguments& args)
+v8::Handle<v8::Value> root_canProxCallback(const v8::Arguments& args)
 {
-    String errorMessage = "Error decoding the system object from root_canProx.  ";
+    String errorMessage = "Error decoding the system object from root_canProxCallback.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
 
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->struct_canProx();
+    return jsfake->struct_canProxCallback();
 }
+
+v8::Handle<v8::Value> root_canProxChangeQuery(const v8::Arguments& args)
+{
+    String errorMessage = "Error decoding the system object from root_canProxChangeQuery.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
+
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+
+    return jsfake->struct_canProxChangeQuery();
+}
+
 
 /**
    @return Boolean indicating whether this sandbox has capability to create presences
@@ -1342,35 +1354,24 @@ v8::Handle<v8::Value> root_createEntityNoSpace(const v8::Arguments& args)
   @param a visible object that can always send messages to.  if
   null, will use same spaceobjectreference as one passed in for arg0.
 
-  @param Boolean.  can I send messages to everyone?
-
-  @param Boolean.  can I receive messages from everyone?
-
-  @param Boolean.  can I make my own prox queries argument
-
-  @param Boolean.  can I import argument
-
-  @param Boolean.  can I create presences.
-
-  @param Boolean.  can I create entities.
-
-  @param Boolean.  can I call eval directly through system object.
+  @param permission number: an integer that indicates what the newly created
+  sandbox can do.
 */
 v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 {
-    if (args.Length() != 9)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have three arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><bool can I send to everyone?>, <bool can I receive from everyone?> , <bool, can I make my own proximity queries>, <bool, can I import code?>, <bool, can I create presences?>,<bool, can I create entities?>,<bool, can I call eval directly?>")) );
+    if (args.Length() != 3)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: must have 3 arguments: <presence to send/recv messages from (null if want to push through parent's presence)>, <JSVisible or JSPresence object that can always send messages to><permission int>")));
 
-
-    bool sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval;
-    String errorMessageBase = "In ScriptCreateContext.  Trying to decode argument ";
-    String errorMessageWhichArg,errorMessage;
+    String errorMessageWhichArg,errorMessage,errorMessageBase;
+    errorMessageBase = "Error creating sandbox.  ";
+    
 
     //jssystem decode
     String errorMsgSystem  = "Error decoding system when creating new context.  ";
     JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMsgSystem);
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMsgSystem.c_str())));
+
 
 
     //jspresstruct decode
@@ -1383,7 +1384,6 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
         if (jsPresStruct == NULL)
             return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
     }
-
 
     //getting who can sendTo
     SpaceObjectReference canSendTo = SpaceObjectReference::null();
@@ -1403,52 +1403,10 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
         canSendTo = jsposlist->getSporef();
     }
 
+    //decode permission number
+    INLINE_DECODE_UINT_32_ERROR(args[2],createSandbox,3,permNum);
 
-    //send everyone decode
-    errorMessageWhichArg= " 3.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[2],sendEveryone, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    //recv everyone decode
-    errorMessageWhichArg= " 4.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[3],recvEveryone, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-
-    //recv everyone decode
-    errorMessageWhichArg= " 5.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[4],proxQueries, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    //import decode
-    errorMessageWhichArg= " 6.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[5],canImport, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-
-    //can create presences
-    errorMessageWhichArg= " 7.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[6],canCreatePres, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    //can create entities
-    errorMessageWhichArg= " 8.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[7],canCreateEnt, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    //can eval
-    errorMessageWhichArg= " 9.  ";
-    errorMessage= errorMessageBase + errorMessageWhichArg;
-    if (! decodeBool(args[8],canEval, errorMessage))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    return jsfake->struct_createContext(canSendTo,sendEveryone,recvEveryone,proxQueries,canImport,canCreatePres,canCreateEnt,canEval,jsPresStruct);
+    return jsfake->struct_createContext(jsPresStruct,canSendTo,permNum);
 }
 
 

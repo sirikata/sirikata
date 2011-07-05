@@ -47,6 +47,7 @@ system.require('std/core/bind.em');
 system.require('std/shim/wrappedSendMessage/messaging.em');
 system.require('std/shim/system.em');
 system.require('std/shim/class.em');
+system.require('std/shim/capabilities.em');
 
 system.require('std/shim/presence.em');
 system.require('std/shim/visible.em');

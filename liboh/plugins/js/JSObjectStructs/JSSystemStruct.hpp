@@ -8,6 +8,8 @@
 #include <sirikata/oh/Storage.hpp>
 #include "JSPresenceStruct.hpp"
 #include "JSContextStruct.hpp"
+#include "JSCapabilitiesConsts.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -16,14 +18,13 @@ namespace JS {
 class JSEventHandlerStruct;
 
 
-
 //Most calls in this class just go straight through into associated context to
 //make a sibling call.  Split system into intermediate layer between v8-bound
 //calls and jscontextstruct to make tracking of capabilities explicit, and easy
 //to check without having to dig through a lot of other code.
 struct JSSystemStruct
 {
-    JSSystemStruct(JSContextStruct* jscont, bool send, bool receive, bool prox,bool import,bool createPres, bool createEntity,bool eval);
+    JSSystemStruct(JSContextStruct* jscont, uint32 capNum);
     ~JSSystemStruct();
 
     static JSSystemStruct* decodeSystemStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
@@ -34,7 +35,8 @@ struct JSSystemStruct
     //regular members
     v8::Handle<v8::Value> struct_canSendMessage();
     v8::Handle<v8::Value> struct_canRecvMessage();
-    v8::Handle<v8::Value> struct_canProx();
+    v8::Handle<v8::Value> struct_canProxCallback();
+    v8::Handle<v8::Value> struct_canProxChangeQuery();
     v8::Handle<v8::Value> struct_canImport();
 
     v8::Handle<v8::Value> checkResources();
@@ -88,7 +90,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist, bool isSuspended);
 
-    v8::Handle<v8::Value> struct_createContext(SpaceObjectReference canMessage, bool sendEveryone,bool recvEveryone,bool proxQueries,bool import,bool createPres,bool createEnt, bool evalable,JSPresenceStruct* presStruct);
+    v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo, uint32 permNum);
 
     JSContextStruct* getContext();
 
@@ -118,8 +120,36 @@ struct JSSystemStruct
 private:
     //associated data
     JSContextStruct* associatedContext;
-    bool canSend, canRecv, canProx,canImport,canCreatePres,canCreateEnt,canEval;
+    bool canSend, canRecv, canImport, canCreatePres,canCreateEnt,canEval,canProxCallback,canProxChangeQuery,canCreateSandbox,canGui,canHttp;
+    
 };
+
+
+/**
+   @param {uint32} permNum the uint32 corresponding to the capability level that the
+   sandbox is requesting.
+   @param capName the name of the static const uint32 associated with each
+   capability in JSCapabilitiesConsts.  These are the capabilities that we are
+   testing to see if scripter may be trying to exceed permissions for.
+   @param localCapName Should agree with capName.  Ie if capName is EVAL,
+   localCapName should be canEval.
+
+   If scripter is trying to request capabilities that the initial sandbox he/she
+   is creating does not have, strips those capabilities.
+ */
+#define INLINE_CAPABILITY_STRIP(permNum,capName,localCapName)\
+    {                                                        \
+        if (! localCapName)                                  \
+        {                                                    \
+            if (permNum % Capabilities::capName == 0)                   \
+            {                                                           \
+                /*means trying to set this capability when don't have it in the base*/ \
+                /*sandbox.  We should strip it.*/                       \
+                JSLOG(info,"Trying to exceed capability " #capName " when creating sandbox.  Stripping this capability"); \
+                permNum /= Capabilities::capName;                       \
+            }                                                           \
+        }                                                               \
+    }
 
 
 #define INLINE_SYSTEM_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)   \

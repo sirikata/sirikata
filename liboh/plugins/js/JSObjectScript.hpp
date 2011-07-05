@@ -79,7 +79,9 @@ public:
 
 
     //this function returns a context with
-    v8::Local<v8::Object> createContext(JSPresenceStruct* presAssociatedWith,SpaceObjectReference canMessage,bool sendEveryone, bool recvEveryone, bool proxQueries, bool canImport, bool canCreatePres,bool canCreateEnt,bool canEval, JSContextStruct*& internalContextField);
+
+    v8::Local<v8::Object> createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField);
+
 
     void initialize(const String& args, const String& script,int32 maxResThresh);
     
