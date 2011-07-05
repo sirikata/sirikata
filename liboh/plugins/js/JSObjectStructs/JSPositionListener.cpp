@@ -63,12 +63,13 @@ v8::Handle<v8::Value> JSPositionListener::struct_getSporef()
 
 SpaceObjectReference JSPositionListener::getSporef()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getSporef,SpaceObjectReference::null());
     return jpp->sporefToListenTo;
 }
 
 String JSPositionListener::getMesh()
 {
-
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getMesh,"");
     return jpp->mMesh;
 }
 
@@ -80,6 +81,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getMesh()
 
 bool JSPositionListener::getStillVisible()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(funcIn,false);
     return jpp->emerScript->isVisible(jpp->sporefToListenTo);
 }
 
@@ -91,6 +93,7 @@ v8::Handle<v8::Value> JSPositionListener::struct_getStillVisible()
 
 String JSPositionListener::getPhysics()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getPhysics,"");
     return jpp->mPhysics;
 }
 
@@ -103,26 +106,31 @@ v8::Handle<v8::Value> JSPositionListener::struct_getPhysics()
 
 Vector3f JSPositionListener::getPosition()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getPosition,Vector3f::nil());
     return jpp->mLocation.position(jpp->emerScript->getHostedTime());
 }
 Vector3f JSPositionListener::getVelocity()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getVelocity,Vector3f::nil());    
     return jpp->mLocation.velocity();
 }
 
 Quaternion JSPositionListener::getOrientationVelocity()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getOrientationVelocity,Quaternion::identity());
     return jpp->mOrientation.velocity();
 }
 
 Quaternion JSPositionListener::getOrientation()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getOrientation,Quaternion::identity());
     return jpp->mOrientation.position(jpp->emerScript->getHostedTime());
 }
 
 
 BoundingSphere3f JSPositionListener::getBounds()
 {
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getBounds,BoundingSphere3f());
     return jpp->mBounds;
 }
 

@@ -642,6 +642,8 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
 
     v8::Handle<v8::Object> msgSender = createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,mContext->mContext);
 
+
+    
     //try deserialization
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
@@ -651,7 +653,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
         return false;
     }
 
-    
+        
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
     //cannot affect the event handlers when we are executing event handlers.
@@ -862,6 +864,7 @@ JSPresenceStruct*  EmersonScript::addConnectedPresence(const SpaceObjectReferenc
     mPresences[sporef] = presToAdd;
     return presToAdd;
 }
+
 
 
 //should be called from something that already has declared a handlescope,

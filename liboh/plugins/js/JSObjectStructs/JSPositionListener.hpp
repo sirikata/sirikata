@@ -86,6 +86,17 @@ private:
 };
 
 
+//Throws an error if jpp has not yet been initialized.
+#define CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(funcIn,alternateVal)     \
+{\
+    if (!jpp)\
+    {\
+        JSLOG(detailed,"Error in jspositionlistener.  Position proxy was not set."); \
+        return alternateVal;\
+    }\
+}
+
+
 
 //Throws an error if jpp has not yet been initialized.
 #define CHECK_JPP_INIT_THROW_V8_ERROR(funcIn)\
