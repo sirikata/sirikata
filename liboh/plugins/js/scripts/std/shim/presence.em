@@ -168,7 +168,7 @@ system.__presence_constructor__.prototype.__getType = function()
 {
   return 'presence';
 };
-     
+
 
 
 
@@ -176,13 +176,13 @@ system.__presence_constructor__.prototype.__getType = function()
   /** @namespace presence */
   var presence = function()
   {
-    /**@function 
+    /**@function
        @description Returns the position of the presence
-       @return the vector corresponding to the position of the presence 
+       @return the vector corresponding to the position of the presence
        @type util.Vec3
     */
-    presence.prototype.getPosition = function(){} 
-   
+    presence.prototype.getPosition = function(){}
+
     /**@function
        @description sets the position of the presence to a new value
        @param newpos  The new position of the presence to set to
@@ -190,7 +190,7 @@ system.__presence_constructor__.prototype.__getType = function()
     */
 
     presence.prototype.setPosition = function(/** util.Vec3 */ newpos){}
-    
+
     /**@function
        @description sets the velocity of the presence to a new value
        @param newvel  The new velocity of the presence to set to
@@ -208,7 +208,7 @@ system.__presence_constructor__.prototype.__getType = function()
       presence.prototype.disconnect = function()
       {
       };
-      
+
 
      /**
       @param {string} sporef,
@@ -233,10 +233,10 @@ system.__presence_constructor__.prototype.__getType = function()
       {
       };
 
-      
-    /**@function 
+
+    /**@function
        @description Returns the velocity of the presence
-       @return the vector corresponding to the velocity of the presence 
+       @return the vector corresponding to the velocity of the presence
        @type util.Vec3
     */
 
@@ -248,59 +248,59 @@ system.__presence_constructor__.prototype.__getType = function()
     */
     presence.prototype.setOrientation = function(/** util.Quaternion */ newpos){}
 
-      
 
-    /**@function 
+
+    /**@function
        @description Returns the orientation of the presence
-       @return the quaternion corresponding to the  of the presence 
+       @return the quaternion corresponding to the  of the presence
        @type util.Quaternion
     */
 
     presence.prototype.getOrientation = function(){}
 
     /**@function
-       @description sets the orientation velocity (both angular velocity and the axis of rotation) 
+       @description sets the orientation velocity (both angular velocity and the axis of rotation)
           of the presence to a new value
        @param newvel  The new orientation velocity of the presence to set to
     */
 
     presence.prototype.setOrientationVel = function(/** util.Quaternion */ newvel){}
-    
-    /**@function 
+
+    /**@function
        @description Returns the orientation velocity of the presence
-       @return the quaternion corresponding to the  orientation velocity of the presence 
+       @return the quaternion corresponding to the  orientation velocity of the presence
        @type util.Quaternion
     */
-    
+
     presence.prototype.getOrientationVel = function(){}
 
 
     /**@function
        @description scales of the mesh of the presence to a new value
-       @param scale the factor by which to scale the mesh 
+       @param scale the factor by which to scale the mesh
     */
 
     presence.prototype.setScale = function(/**Number */ scale){}
-    
-    /**@function 
+
+    /**@function
        @description Returns the factor by which the mesh has been scaled from the original size
        @return  the factor by which the mesh has been scaled from the original size
-       @type Number 
+       @type Number
     */
 
     presence.prototype.getScale = function(){}
 
     /**@function
-       @description sets the mesh of the presence 
+       @description sets the mesh of the presence
        @param newmesh The url for the mesh to set to
     */
 
     presence.prototype.setMesh = function(/**String */ newmesh){}
 
-     /**@function 
+     /**@function
        @description Returns the mesh of the presence
-       @return  the url for the mesh of the presence 
-       @type String 
+       @return  the url for the mesh of the presence
+       @type String
     */
 
     presence.prototype.getMesh = function(){}
@@ -343,14 +343,14 @@ system.__presence_constructor__.prototype.__getType = function()
     */
     presence.prototype.getQueryAngle = function(){};
 
-      
-      
+
+
       /** @function
        *  @description Returns the (decoded) physics settings of the presence.
        *  @type Object
        */
       presence.prototype.getPhysics = function() {};
-      
+
       /** @function
        *  @description Sets the physics parameters for the
        *               presence. Unspecified values will use the
@@ -365,7 +365,7 @@ system.__presence_constructor__.prototype.__getType = function()
        *  @param newphys The new physics settings for the object.
        */
       presence.prototype.updatePhysics = function(/**Object */ newphys) {};
-      
+
       /** @function
        @return Returns the identifier for the space that the presence is in.
        @type String
@@ -377,7 +377,7 @@ system.__presence_constructor__.prototype.__getType = function()
        @type String
        */
       presence.prototype.getPresenceID = function(){};
-      
+
 
       /** @function
        *  @description Requests that the mesh for this model is
@@ -396,19 +396,74 @@ system.__presence_constructor__.prototype.__getType = function()
 
 (function() {
 
+     // Models may come in with improper orientation. We provide a
+     // modelOrientation setting (field + getter/setter) to adjust this
+     // orientation. Most importantly, this gets transparently multiplied into
+     // orientations you specify so that all motion appears 'natural' once you
+     // set the proper model orientation, i.e. forward is always negative z, up
+     // is always positive y, etc.
+
+     var presence = system.__presence_constructor__;
+
+     // Default value == identity
+     presence.prototype.__modelOrientation = new util.Quaternion();
+
+     presence.prototype.getModelOrientation = function() {
+         return this.__modelOrientation;
+     };
+     presence.prototype.setModelOrientation = function(v) {
+         // Extract orientation, making sure we get *current*
+         // orientation out before updating
+         var curorient = this.getOrientation();
+
+         this.__modelOrientation = v;
+
+         // And now we can set orientation again, which should
+         // transparently multiply in our new value
+         this.setOrientation(curorient);
+     };
+
+     Object.defineProperty(system.__presence_constructor__.prototype, "modelOrientation",
+                           {
+                               get: function() { return this.getModelOrientation(); },
+                               set: function() { return this.setModelOrientation.apply(this, arguments); },
+                               enumerable: true
+                           }
+                          );
+
+
+     // Override get/setOrientation so they automatically take into account the modelOrientation.
+
+     var orig_getOrientation = presence.prototype.getOrientation;
+     var orig_setOrientation = presence.prototype.setOrientation;
+
+     presence.prototype.getOrientation = function() {
+         // Provide orientation without model orientation
+         return orig_getOrientation.apply(this).mul(this.modelOrientation.neg());
+     };
+
+     presence.prototype.setOrientation = function(v) {
+         // Multiply in additional transformation
+         orig_setOrientation.apply(this, [v.mul(this.modelOrientation)]);
+     };
+
+})();
+
+(function() {
+
       // Physics is stored as an opaque string. This takes care of
       // encoding and decoding that string. Currently the only
       // supported type is JSON encoding.
-      
+
       var decodePhysics = function(phy) {
           if (phy.length == 0) return {};
           return JSON.parse(phy);
       };
-      
+
       var encodePhysics = function(phy) {
           return JSON.stringify(phy);
       };
-      
+
       var valid_physics_fields = ['treatment', 'bounds', 'mass'];
       var orig_get_physics = system.__presence_constructor__.prototype.getPhysics;
       var orig_set_physics = system.__presence_constructor__.prototype.setPhysics;
