@@ -259,36 +259,28 @@ util.Quaternion.prototype.angle = function() {
 */
 util.Quaternion.fromLookAt = function(direction, up) {
     up = up || <0, 1, 0>;
-    if (direction.length() < 1e-08)
+    
+    if (direction.lengthSquared() < 1e-08)
         return new util.Quaternion(0, 0, 0, 1);
-
     direction = direction.normal();
 
     // Orient the -z axis to be along direction.
-    var firstQuat;
-    if ((direction - <0, 0, -1>).lengthSquared() < 1e-08) {
-        firstQuat = new util.Quaternion(0, 0, 0, 1);
-    } else if ((direction - <0, 0, 1>).lengthSquared() < 1e-08) {
-        firstQuat = new util.Quaternion(0, 1, 0, 0);
-    } else {
-        var defaultForward=new util.Vec3(0,0,-1);
-        var quatAxis = defaultForward.cross(direction);
-        var angle = util.acos(defaultForward.dot(direction));
-        quatAxis = quatAxis.normal();
-        firstQuat = new util.Quaternion(quatAxis, angle);
-    }
+    var defaultForward = <0, 0, -1>;
+    var quatAxis = defaultForward.cross(direction);
+    var firstQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
+                                        1 + direction.dot(defaultForward));
+    firstQuat = firstQuat.normal();
 
     // Compute new up vector and orient the y axis to be along that direction.
     var secondQuat;
     var left = direction.cross(up);
     var newUp = left.cross(direction);
-    if (newUp.lengthSquared()>.00001||newUp.lengthSquared()<-.00001) {
+    if (newUp.lengthSquared() > 0.001) {
         newUp = newUp.normal();
-        var yAxis=firstQuat.yAxis();
-        var quatAxis = direction;
-        var angle = util.acos(yAxis.dot(newUp));
-        quatAxis = quatAxis.normal();
-        secondQuat = new util.Quaternion(quatAxis, angle);
+        var yAxis = firstQuat.yAxis();
+        var quatAxis = yAxis.cross(newUp);
+        secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
+                                         1 + yAxis.dot(newUp));
     } else {
         secondQuat = new util.Quaternion(0, 0, 0, 1);
     }

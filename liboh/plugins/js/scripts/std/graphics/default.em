@@ -111,8 +111,6 @@ function() {
 
         this._binding.addAction('toggleChat', std.core.bind(this.toggleChat, this));
 
-        this._binding.addAction('reorientSelf', std.core.bind(this.reorientSelf, this));
-
         this._binding.addAction('togglePhysicsProperties', std.core.bind(this._physics.toggle, this._physics));
         this._binding.addAction('togglePresenceList', std.core.bind(this._presenceList.toggle, this._presenceList));
         this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
@@ -172,8 +170,6 @@ function() {
             { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
             { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
             { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
-
-            { key: ['button-pressed', 't'], action: 'reorientSelf' },
 
             { key: ['mouse-click', 2], action: 'pickObject' },
             { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
@@ -379,6 +375,10 @@ function() {
             .mul(new util.Quaternion(<0, 1, 0>, -dXAngle))
             .mul(new util.Quaternion(<1, 0, 0>, dYAngle));
         this._pres.setOrientation(newQuat);
+
+        // Reorient self so up is up.
+        this._pres.setOrientation(util.Quaternion.fromLookAt(
+            this._pres.getOrientation().zAxis().scale(-1), <0, 1, 0>));
         this.updateCameraOffset();
     };
 
@@ -388,12 +388,4 @@ function() {
         this.startY = null;
         this.startOrientation = null;
     };
-
-    /** @function */
-    std.graphics.DefaultGraphics.prototype.reorientSelf = function(evt) {
-        this._pres.setOrientation(util.Quaternion.fromLookAt(
-            this._pres.getOrientation().zAxis().scale(-1), <0, 1, 0>));
-        this.updateCameraOffset();
-    }
-
 })();
