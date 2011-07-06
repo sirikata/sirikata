@@ -34,7 +34,6 @@
 #include <Ogre.h>
 #include "CubeMap.hpp"
 #include <sirikata/ogre/OgreConversions.hpp>
-#include "ProxyCamera.hpp"
 #include "ProxyEntity.hpp"
 #include <sirikata/ogre/Entity.hpp>
 
@@ -298,10 +297,8 @@ bool CubeMap::tooSmall(Ogre::Vector3 delta) {
 
 bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
 
-    if (mParent->getPrimaryCamera()->following() == NULL) return true;
-
     if (mFaceCounter==0) {
-        Ogre::Vector3 curCamera=toOgre(mParent->getPrimaryCamera()->following()->getOgrePosition(),mParent->getOffset());
+        Ogre::Vector3 curCamera = toOgre(mParent->getPrimaryCamera()->getPosition(), mParent->getOffset());
         Ogre::Vector3 delta=curCamera-mState[mMapCounter].mLastActualPosition;
         if (mState[mMapCounter].mLastActualPosition==Ogre::Vector3(0,0,0)) {
             mState[mMapCounter].mFirstCameraPosition=curCamera;
@@ -313,7 +310,7 @@ bool CubeMap::frameEnded(const Ogre::FrameEvent&evt) {
         }else {
             mState[mMapCounter].mLastRenderedPosition=curCamera;
         }
-        mState[mMapCounter].mCamera->setPosition(toOgre(mParent->getPrimaryCamera()->following()->getOgrePosition()+Vector3d(mState[mMapCounter].mCameraDelta),mParent->getOffset()));
+        mState[mMapCounter].mCamera->setPosition(toOgre(mParent->getPrimaryCamera()->getPosition()+Vector3d(mState[mMapCounter].mCameraDelta),mParent->getOffset()));
     }
     if (mFaceCounter>0&&mFaceCounter<7) {
         mBackbuffer[mFaceCounter-1]->getBuffer(0)->getRenderTarget()->removeAllViewports();

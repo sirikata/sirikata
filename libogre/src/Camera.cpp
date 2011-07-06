@@ -46,9 +46,7 @@ Camera::Camera(OgreRenderer *scene, Ogre::SceneManager* scenemgr, const String& 
    mOgreCamera(NULL),
    mSceneNode(NULL),
    mRenderTarget(NULL),
-   mViewport(NULL),
-   mMode(FirstPerson),
-   mOffset(Vector3d(0, 0, 0))
+   mViewport(NULL)
 {
     mSceneNode = mOgreSceneManager->createSceneNode(cameraName);
     mSceneNode->setInheritScale(false);
@@ -66,15 +64,6 @@ Camera::Camera(OgreRenderer *scene, Ogre::SceneManager* scenemgr, const String& 
     mOgreCamera->setFarClipDistance(scene->farPlane());
 }
 
-void Camera::initialize() {
-    Vector3d goalPos = getGoalPosition();
-    Quaternion goalOrient = getGoalOrientation();
-    mSceneNode->setPosition(toOgre(goalPos, mScene->getOffset()));
-    mSceneNode->setOrientation(toOgre(goalOrient));
-
-    setMode(FirstPerson);
-}
-
 Camera::~Camera() {
     if ((!mViewport) || (mViewport && mRenderTarget)) {
         detach();
@@ -87,15 +76,20 @@ Camera::~Camera() {
     mOgreSceneManager->destroySceneNode(mSceneNode);
 }
 
-void Camera::setMode(Mode m) {
-    mMode = m;
-}
-
 Vector3d Camera::getPosition() const {
     return fromOgre(mSceneNode->getPosition(), mScene->getOffset());
 }
+
+void Camera::setPosition(const Vector3d& pos) {
+    mSceneNode->setPosition(toOgre(pos, mScene->getOffset()));
+}
+
 Quaternion Camera::getOrientation() const {
     return fromOgre(mSceneNode->getOrientation());
+}
+
+void Camera::setOrientation(const Quaternion& orient) {
+    mSceneNode->setOrientation(toOgre(orient));
 }
 
 void Camera::attach (const String&renderTargetName,uint32 width,uint32 height,Vector4f back_color, int zorder)
@@ -148,49 +142,6 @@ void Camera::windowResized() {
     // continues to use the size based on the total size, e.g. [0,width] and
     // [0,height].
     this->setViewportDimensions(mViewportLeft, mViewportTop, mViewportRight, mViewportBottom);
-}
-
-void Camera::tick(const Time& t, const Duration& dt) {
-    if (!haveGoal()) return;
-
-    Vector3d goalPos = getGoalPosition();
-    Quaternion goalOrient = getGoalOrientation();
-
-    Vector3d pos;
-    Quaternion orient;
-
-    if (mMode == FirstPerson) {
-        // In first person mode we are tied tightly to the position of
-        // the object.
-        pos = goalPos;
-        orient = goalOrient;
-    }
-    else {
-        // In third person mode, the target is offset so we'll be behind and
-        // above ourselves and we need to interpolate to the target.
-        // Offset the goal.
-        BoundingSphere3f following_bounds = getGoalBounds();
-        goalPos += Vector3d(following_bounds.center());
-        // > 1 factor gets us beyond the top of the object
-        goalPos += mOffset * (following_bounds.radius());
-        // Restore the current values from the scene node.
-        pos = fromOgre(mSceneNode->getPosition(), mScene->getOffset());
-        orient = fromOgre(mSceneNode->getOrientation());
-        // And interpolate.
-        Vector3d toGoal = goalPos-pos;
-        double toGoalLen = toGoal.length();
-        if (toGoalLen < 1e-06) {
-            pos = goalPos;
-            orient = goalOrient;
-        } else {
-            double step = exp(-dt.seconds()*2.f);
-            pos = goalPos - (toGoal/toGoalLen)*(toGoalLen*step);
-            orient = (goalOrient*(1.f-step) + orient*step).normal();
-        }
-    }
-
-    mSceneNode->setPosition(toOgre(pos, mScene->getOffset()));
-    mSceneNode->setOrientation(toOgre(orient));
 }
 
 }

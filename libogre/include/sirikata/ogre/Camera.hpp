@@ -46,12 +46,6 @@ namespace Graphics {
 class OgreRenderer;
 
 class SIRIKATA_OGRE_EXPORT Camera {
-public:
-    enum Mode {
-        FirstPerson,
-        ThirdPerson
-    };
-
 protected:
     OgreRenderer *const mScene;
     Ogre::SceneManager* mOgreSceneManager;
@@ -61,22 +55,10 @@ protected:
     Ogre::RenderTarget *mRenderTarget;
     Ogre::Viewport *mViewport;
 
-    Mode mMode;
-    Vector3d mOffset;
-
     float32 mViewportLeft, mViewportTop, mViewportRight, mViewportBottom;
 public:
     Camera(OgreRenderer *scene, Ogre::SceneManager* scenemgr, const String& name);
     virtual ~Camera();
-
-    // Require an additional initialize call in order to use virtual functions
-    // for position, orientation
-    void initialize();
-
-    virtual bool haveGoal() { return false; }
-    virtual Vector3d getGoalPosition() { return Vector3d(); }
-    virtual Quaternion getGoalOrientation() { return Quaternion(); }
-    virtual BoundingSphere3f getGoalBounds() { return BoundingSphere3f(); }
 
     void attach (const String&renderTargetName,
         uint32 width,
@@ -88,8 +70,6 @@ public:
 
     void windowResized();
 
-    void tick(const Time& t, const Duration& dt);
-
     Ogre::Viewport* getViewport() {
         return mViewport;
     }
@@ -100,16 +80,10 @@ public:
     void setViewportDimensions(int32 left, int32 top, int32 right, int32 bottom);
     void setViewportDimensions(float32 left, float32 top, float32 right, float32 bottom);
 
-    virtual void setMode(Mode m);
-    Mode getMode() const { return mMode; }
-
-    void setOffset(Vector3d offset) {
-        mOffset = offset;
-    }
-
     Vector3d getPosition() const;
+    void setPosition(const Vector3d& pos);
     Quaternion getOrientation() const;
-
+    void setOrientation(const Quaternion& orient);
 };
 
 }

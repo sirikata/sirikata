@@ -34,6 +34,7 @@ system.require('graphics.em');
 system.require('std/movement/pursue.em');
 system.require('std/script/scripter.em');
 system.require('inputbinding.em');
+system.require('defaultcamera.em');
 system.require('drag/move.em');
 system.require('drag/rotate.em');
 system.require('drag/scale.em');
@@ -61,7 +62,7 @@ function() {
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsInit = function(cb, gfx) {
         // assert(gfx == this._simulator);
-        this._cameraMode = 'first';
+        this._camera = new std.graphics.DefaultCamera(this._simulator, system.self);
 
         this._selected = null;
         this._loadingUIs = 0;
@@ -75,6 +76,8 @@ function() {
         this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
+        this._camera.reinit();
+
         var ui_finish_cb = std.core.bind(this.finishedUIInit, this);
         this._loadingUIs++; this._scripter.onReset(ui_finish_cb);
         this._loadingUIs++; this._chat.onReset(ui_finish_cb);
@@ -271,16 +274,16 @@ function() {
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.toggleCameraMode = function(evt) {
-        this._cameraMode = this._cameraMode == 'first' ? 'third' : 'first';
-        this._simulator.setCameraMode(this._cameraMode);
+        var newmode = this._camera.mode() == 'first' ? 'third' : 'first';
+        this._camera.setMode(newmode);
         this.updateCameraOffset();
     };
 
     /** @function */
     std.graphics.DefaultGraphics.prototype.updateCameraOffset = function(evt) {
-        if (this._cameraMode == 'third') {
+        if (this._camera.mode() == 'third') {
             var orient = this._pres.getOrientation();
-            this._simulator.setCameraOffset(orient.mul(<0, 1.5, 4>));
+            this._camera.setOffset(orient.mul(<0, 1.5, 4>));
         }
     };
 
@@ -301,7 +304,8 @@ function() {
             this._selected = null;
         }
 
-        var clicked = this._simulator.pick(x, y);
+        var ignore_self = this._camera.mode() == 'first';
+        var clicked = this._simulator.pick(x, y, ignore_self);
         if (clicked) {
             this._selected = clicked;
             this._simulator.bbox(this._selected, true);

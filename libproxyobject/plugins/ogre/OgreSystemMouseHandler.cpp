@@ -55,7 +55,6 @@
 #include <sirikata/ogre/OgreConversions.hpp>
 
 #include "ProxyEntity.hpp"
-#include "ProxyCamera.hpp"
 
 namespace Sirikata {
 namespace Graphics {
@@ -99,7 +98,7 @@ void OgreSystemMouseHandler::mouseOverWebView(Camera *cam, Time time, float xPix
     }
 }
 
-ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which, Vector3f* hitPointOut) {
+ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float xPixel, float yPixel, bool mousedown, int *hitCount,int which, Vector3f* hitPointOut, bool ignore_self) {
     Vector3d pos = cam->getPosition();
     Vector3f dir (pixelToDirection(cam, xPixel, yPixel));
     SILOG(input,detailed,"OgreSystemMouseHandler::hoverEntity: X is "<<xPixel<<"; Y is "<<yPixel<<"; pos = "<<pos<<"; dir = "<<dir);
@@ -109,7 +108,7 @@ ProxyEntity* OgreSystemMouseHandler::hoverEntity (Camera *cam, Time time, float 
     IntersectResult res;
     int subent=-1;
     Ogre::Ray traceFrom(toOgre(pos, mParent->getOffset()), toOgre(dir));
-    ProxyEntity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which);
+    ProxyEntity *mouseOverEntity = mParent->internalRayTrace(traceFrom, false, *hitCount, dist, normal, subent, &res, mousedown, which, ignore_self);
     if (mousedown && mouseOverEntity) {
         ProxyEntity *me = mouseOverEntity;
         if (me) {
@@ -147,16 +146,16 @@ bool OgreSystemMouseHandler::recentMouseInRange(float x, float y, float *lastX, 
     return true;
 }
 
-SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction, Vector3f* hitPointOut) {
+SpaceObjectReference OgreSystemMouseHandler::pick(Vector2f p, int direction, bool ignore_self, Vector3f* hitPointOut) {
     if (!mParent||!mParent->mPrimaryCamera) SpaceObjectReference::null();
 
     Camera *camera = mParent->mPrimaryCamera;
     Time time = mParent->simTime();
 
     int numObjectsUnderCursor=0;
-    ProxyEntity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject, hitPointOut);
+    ProxyEntity *mouseOver = hoverEntity(camera, time, p.x, p.y, true, &numObjectsUnderCursor, mWhichRayObject, hitPointOut, ignore_self);
     if (recentMouseInRange(p.x, p.y, &mLastHitX, &mLastHitY)==false||numObjectsUnderCursor!=mLastHitCount)
-        mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0, hitPointOut);
+        mouseOver = hoverEntity(camera, time, p.x, p.y, true, &mLastHitCount, mWhichRayObject=0, hitPointOut, ignore_self);
     if (mouseOver)
         return mouseOver->getProxyPtr()->getObjectReference();
 

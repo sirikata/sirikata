@@ -54,12 +54,6 @@ public:
    : Graphics::Camera(scene, scene->getSceneManager(), "MeshView") // Only support 1 camera
   {}
     virtual ~MeshViewCamera() {}
-
-    virtual bool haveGoal() { return true; }
-  virtual Vector3d getGoalPosition() { return Vector3d(0, 0, 2); }
-  virtual Quaternion getGoalOrientation() { return Quaternion::identity(); }
-  virtual BoundingSphere3f getGoalBounds() { return BoundingSphere3f(Vector3f(0, 0, 0), 1.f); }
-
 };
 
 class MeshViewEntity : public Graphics::Entity, public Graphics::EntityListener {
@@ -117,8 +111,8 @@ int main(int argc, char** argv) {
     renderer->initialize("", false);
 
     MeshViewCamera* cam = new MeshViewCamera(renderer);
-    cam->initialize();
     cam->attach("", 0, 0, Vector4f(.7,.7,.7,1), 0);
+    cam->setPosition(Vector3d(0, 0, 2));
 
     MeshViewEntity* ent = new MeshViewEntity(renderer, GetOptionValue<String>("screenshot"));
     ent->setOgrePosition(Vector3d(0, 0, 0));

@@ -63,7 +63,6 @@ class ProxyObject;
 /** Namespace for the OGRE Graphics Plugin: see class OgreSystem. */
 namespace Graphics {
 class ProxyEntity;
-class ProxyCamera;
 class CubeMap;
 struct IntersectResult;
 class OgreSystemMouseHandler;
@@ -96,18 +95,19 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
     void handleUpdateUIViewport(int32 left, int32 top, int32 right, int32 bottom);
 
     ProxyEntity* internalRayTrace(const Ogre::Ray &traceFrom,
-                     bool aabbOnly,
-                     int&resultCount,
-                     double &returnResult,
-                     Vector3f &returnNormal,
-                     int& returnSubMesh,
-                     IntersectResult *returnIntersectResult, bool texcoord,
-                     int which=0) const;
+        bool aabbOnly,
+        int&resultCount,
+        double &returnResult,
+        Vector3f &returnNormal,
+        int& returnSubMesh,
+        IntersectResult *returnIntersectResult, bool texcoord,
+        int which=0,
+        bool ignore_self = true) const;
 
     Mesh::MeshdataPtr mDefaultMesh;
 public:
 
-    ProxyCamera *mPrimaryCamera;
+    Camera *mPrimaryCamera;
     Camera* mOverlayCamera;
 
     // For classes that only have access to OgreSystem and not a Context
@@ -118,7 +118,7 @@ public:
 
     String getResourcesDir() const { return mResourcesDir; }
 
-    ProxyCamera*getPrimaryCamera() {
+    Camera*getPrimaryCamera() {
         return mPrimaryCamera;
     }
 
@@ -153,13 +153,8 @@ public:
                      double &returnResult,
                      Vector3f&returnNormal,
                      int&subent,
-                     int which=0) const;
-    Entity* rayTraceAABB(const Vector3d &position,
-                     const Vector3f &direction,
-                     int&resultCount,
-                     double &returnResult,
-                     int&subent,
-                     int which=0) const;
+        int which=0,
+        bool ignore_self = true) const;
 
 
     virtual void windowResized(Ogre::RenderWindow *rw);
@@ -230,9 +225,8 @@ public:
     boost::any visible(std::vector<boost::any>& params);
 
     boost::any getCamera(std::vector<boost::any>& params);
-    boost::any setCameraMode(std::vector<boost::any>& params);
-    boost::any setCameraOffset(std::vector<boost::any>& params);
-
+    boost::any setCameraPosition(std::vector<boost::any>& params);
+    boost::any setCameraOrientation(std::vector<boost::any>& params);
 
     ~OgreSystem();
 

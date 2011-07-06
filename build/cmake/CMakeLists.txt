@@ -1294,7 +1294,6 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/CubeMap.cpp
   ${GFX}/OgreSystemMouseHandler.cpp
   ${GFX}/ProxyEntity.cpp
-  ${GFX}/ProxyCamera.cpp
   ${GFX}/OgrePlugin.cpp
 ${GFX}/resourceManager/ResourceDownloadPlanner.cpp
 ${GFX}/resourceManager/DistanceDownloadPlanner.cpp

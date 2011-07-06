@@ -39,7 +39,6 @@
 #include <sirikata/ogre/task/Event.hpp>
 #include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
-#include "ProxyCamera.hpp"
 #include "ProxyEntity.hpp"
 #include <Ogre.h>
 #include "CubeMap.hpp"
@@ -244,18 +243,15 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
     bool is_viewer = (p->getObjectReference() == mPresenceID);
     if (is_viewer)
     {
-        if (mPrimaryCamera != NULL) {
-            mPrimaryCamera->reparent(mesh);
-        }
-        else {
+        if (mPrimaryCamera == NULL) {
             assert(mOverlayCamera == NULL);
             mOverlayCamera = new Camera(this, getOverlaySceneManager(), "overlay_camera");
             mOverlayCamera->attach("", 0, 0, Vector4f(0, 0, 0, 0), 1);
 
-            ProxyCamera* cam = new ProxyCamera(this, getSceneManager(), mesh);
-            cam->initialize();
+            Camera* cam = new Camera(this, getSceneManager(), String("Camera:") + mesh->id());
             cam->attach("", 0, 0, mBackgroundColor, 0);
             attachCamera("", cam);
+            cam->setPosition(mesh->getOgrePosition());
             // Only store as primary camera now because doing it earlier loops back
             // to detachCamera, which then *removes* it as primary camera. It does
             // this because attach does a "normal" cleanup procedure before attaching.
@@ -297,24 +293,15 @@ struct RayTraceResult {
 };
 
 Entity* OgreSystem::rayTrace(const Vector3d &position,
-                             const Vector3f &direction,
-                             int&resultCount,
-                             double &returnResult,
-                             Vector3f&returnNormal,
-                             int&subent,
-                             int which) const{
+    const Vector3f &direction,
+    int&resultCount,
+    double &returnResult,
+    Vector3f&returnNormal,
+    int&subent,
+    int which, bool ignore_self) const{
+
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
-    return internalRayTrace(traceFrom,false,resultCount,returnResult,returnNormal, subent,NULL,false,which);
-}
-Entity* OgreSystem::rayTraceAABB(const Vector3d &position,
-                     const Vector3f &direction,
-                     int&resultCount,
-                     double &returnResult,
-                     int&subent,
-                     int which) const{
-    Vector3f normal;
-    Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
-    return internalRayTrace(traceFrom,true,resultCount,returnResult,normal,subent,NULL,false,which);
+    return internalRayTrace(traceFrom,false,resultCount,returnResult,returnNormal, subent,NULL,false,which, ignore_self);
 }
 
 ProxyEntity* OgreSystem::getEntity(const SpaceObjectReference &proxyId) const {
@@ -340,14 +327,14 @@ bool OgreSystem::queryRay(const Vector3d&position,
     int resultCount=0;
     int subent;
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
-    ProxyEntity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0);
+    ProxyEntity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0,true);
     if (retval != NULL) {
         returnName= retval->getProxy().getObjectReference();
         return true;
     }
     return false;
 }
-ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which) const {
+ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which, bool ignore_self) const {
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
     mRayQuery->setRay(traceFrom);
@@ -365,7 +352,7 @@ ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbO
         if (!foundEntity) continue;
         ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
         if (!ourEntity) continue;
-        if (ourEntity->id() == mPresenceID.toString() && mPrimaryCamera->getMode() == ProxyCamera::FirstPerson) continue;
+        if (ourEntity->id() == mPresenceID.toString() && ignore_self) continue;
 
         RayTraceResult rtr(result.distance,result.movable);
         bool passed=aabbOnly&&result.distance > 0;
@@ -546,10 +533,10 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return visible(params);
     else if (name == "camera")
         return getCamera(params);
-    else if (name == "setCameraMode")
-        return setCameraMode(params);
-    else if (name == "setCameraOffset")
-        return setCameraOffset(params);
+    else if (name == "setCameraPosition")
+        return setCameraPosition(params);
+    else if (name == "setCameraOrientation")
+        return setCameraOrientation(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -682,8 +669,9 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
 
     float x = Invokable::anyAsNumeric(params[1]);
     float y = Invokable::anyAsNumeric(params[2]);
+    bool ignore_self = (params.size() > 3 && Invokable::anyIsBoolean(params[3])) ? Invokable::anyAsBoolean(params[3]) : true;
     Vector3f hitPoint;
-    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1, &hitPoint);
+    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1, ignore_self, &hitPoint);
 
     Invokable::Dict pick_result;
     pick_result["object"] = Invokable::asAny(result);
@@ -763,25 +751,32 @@ boost::any OgreSystem::getCamera(vector<boost::any>& params) {
     return Invokable::asAny(camera_info);
 }
 
-boost::any OgreSystem::setCameraMode(vector<boost::any>& params) {
+boost::any OgreSystem::setCameraPosition(vector<boost::any>& params) {
     if (mPrimaryCamera == NULL) return boost::any();
-    if (params.size() < 2 || !Invokable::anyIsString(params[1])) return boost::any();
+    if (params.size() < 4) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1]) || !Invokable::anyIsNumeric(params[2]) || !Invokable::anyIsNumeric(params[3])) return boost::any();
 
-    String mode = Invokable::anyAsString(params[1]);
-    if (mode == "first")
-        mPrimaryCamera->setMode(Camera::FirstPerson);
-    else if (mode == "third")
-        mPrimaryCamera->setMode(Camera::ThirdPerson);
+    double x = Invokable::anyAsNumeric(params[1]),
+        y = Invokable::anyAsNumeric(params[2]),
+        z = Invokable::anyAsNumeric(params[3]);
+
+    mPrimaryCamera->setPosition(Vector3d(x, y, z));
 
     return boost::any();
 }
 
-boost::any OgreSystem::setCameraOffset(vector<boost::any>& params) {
+boost::any OgreSystem::setCameraOrientation(vector<boost::any>& params) {
     if (mPrimaryCamera == NULL) return boost::any();
-    if (params.size() < 4) return boost::any();
-    if (!Invokable::anyIsNumeric(params[1]) || !Invokable::anyIsNumeric(params[2]) || !Invokable::anyIsNumeric(params[3])) return boost::any();
-    Vector3d offset( Invokable::anyAsNumeric(params[1]), Invokable::anyAsNumeric(params[2]), Invokable::anyAsNumeric(params[3]) );
-    mPrimaryCamera->setOffset(offset);
+    if (params.size() < 5) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1]) || !Invokable::anyIsNumeric(params[2]) || !Invokable::anyIsNumeric(params[3]) || !Invokable::anyIsNumeric(params[4])) return boost::any();
+
+    double x = Invokable::anyAsNumeric(params[1]),
+        y = Invokable::anyAsNumeric(params[2]),
+        z = Invokable::anyAsNumeric(params[3]),
+        w = Invokable::anyAsNumeric(params[4]);
+
+    mPrimaryCamera->setOrientation(Quaternion(x, y, z, w, Quaternion::XYZW()));
+
     return boost::any();
 }
 

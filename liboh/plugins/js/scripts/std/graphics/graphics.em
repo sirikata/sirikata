@@ -65,7 +65,6 @@ function() {
 
     std.graphics.Graphics.prototype._handleOnReady = function(cb) {
         // Reinitialize camera mode
-        this.setCameraMode(this._cameraMode);
         this.invoke('onTick', std.core.bind(this._onTick, this));
         if (cb) cb(this);
     };
@@ -87,8 +86,8 @@ function() {
     /** Internal onTick handler.
      *  @private
      */
-    std.graphics.Graphics.prototype._onTick = function() {
-        if (this._onTickCB) this._onTickCB();
+    std.graphics.Graphics.prototype._onTick = function(t, dt) {
+        if (this._onTickCB) this._onTickCB(t, dt);
     };
 
     /** Hides the loading screen. Call once you're GUIs and basic
@@ -124,8 +123,8 @@ function() {
     };
 
     /** Pick at the given location for an object. Stores the hit point which can be retrieved with pickedPosition(). */
-    std.graphics.Graphics.prototype.pick = function(x, y) {
-        var result = this.invoke('pick', x, y);
+    std.graphics.Graphics.prototype.pick = function(x, y, ignore_self) {
+        var result = this.invoke('pick', x, y, ignore_self);
         if (result.object) {
             this._pickedPosition = new util.Vec3(result.position.x, result.position.y, result.position.z);
             return result.object;
@@ -221,26 +220,19 @@ function() {
         return dir;
     };
 
-    /** Set the camera mode: 'first' or 'third'. */
-    std.graphics.Graphics.prototype.setCameraMode = function(mode) {
-        this._cameraMode = mode;
-        var vis = (mode == 'first' ? false : true);
-        this.visible(this.presence, vis);
-        return this.invoke("setCameraMode", mode);
-    };
-
     /** Marks an object as visible or invisible. */
     std.graphics.Graphics.prototype.visible = function(obj, setting) {
         this.invoke('visible', obj, setting);
     }
 
-    /** Set the camera offset for 3rd person mode. This is an offset
-     *  vector in *world coordinates* which is scaled by the object
-     *  radius. For example, to place the camera 2 meters above the
-     *  avatar, use <0, 2, 0>.
-     */
-    std.graphics.Graphics.prototype.setCameraOffset = function(offset) {
-        return this.invoke("setCameraOffset", offset.x, offset.y, offset.z);
+    /** Set the camera's position. */
+    std.graphics.Graphics.prototype.setCameraPosition = function(pos) {
+        this.invoke('setCameraPosition', pos.x, pos.y, pos.z);
+    };
+
+    /** Set the camera's orientation. */
+    std.graphics.Graphics.prototype.setCameraOrientation = function(orient) {
+        this.invoke('setCameraOrientation', orient.x, orient.y, orient.z, orient.w);
     };
 
 })();
