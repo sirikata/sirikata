@@ -227,6 +227,7 @@ public:
 
     boost::any pick(std::vector<boost::any>& params);
     boost::any bbox(std::vector<boost::any>& params);
+    boost::any visible(std::vector<boost::any>& params);
 
     boost::any getCamera(std::vector<boost::any>& params);
     boost::any setCameraMode(std::vector<boost::any>& params);

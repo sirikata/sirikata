@@ -542,6 +542,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return pick(params);
     else if (name == "bbox")
         return bbox(params);
+    else if (name == "visible")
+        return visible(params);
     else if (name == "camera")
         return getCamera(params);
     else if (name == "setCameraMode")
@@ -708,6 +710,21 @@ boost::any OgreSystem::bbox(vector<boost::any>& params) {
     if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
     Entity* ent = mSceneEntities.find(objid.toString())->second;
     ent->setSelected(setting);
+
+    return boost::any();
+}
+
+boost::any OgreSystem::visible(vector<boost::any>& params) {
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsObject(params[1])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[2])) return boost::any();
+
+    SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
+    bool setting = Invokable::anyAsBoolean(params[2]);
+
+    if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
+    Entity* ent = mSceneEntities.find(objid.toString())->second;
+    ent->setVisible(setting);
 
     return boost::any();
 }

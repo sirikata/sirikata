@@ -61,9 +61,6 @@ void ProxyCamera::reparent(ProxyEntity* follow) {
     getGoalPosition();
     getGoalOrientation();
     getGoalBounds();
-
-    // Reset the mode to the existing setting
-    setMode(mMode);
 }
 
 Vector3d ProxyCamera::getGoalPosition() {
@@ -79,11 +76,6 @@ Quaternion ProxyCamera::getGoalOrientation() {
 BoundingSphere3f ProxyCamera::getGoalBounds() {
     if (mFollowing) return (mLastGoalBounds = mFollowing->getProxyPtr()->getBounds());
     else return mLastGoalBounds;
-}
-
-void ProxyCamera::setMode(Mode m) {
-    Camera::setMode(m);
-    if (mFollowing) mFollowing->setVisible( mMode == FirstPerson ? false : true );
 }
 
 ProxyEntity* ProxyCamera::following() const {

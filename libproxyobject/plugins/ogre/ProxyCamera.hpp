@@ -59,8 +59,6 @@ public:
     virtual Quaternion getGoalOrientation();
     virtual BoundingSphere3f getGoalBounds();
 
-    virtual void setMode(Mode m);
-
     // Reparent this camera to a new ProxyEntity. This is used to reparent to a
     // new ProxyObject when the Pinto results cause the old version to disappear.
     void reparent(ProxyEntity* follow);

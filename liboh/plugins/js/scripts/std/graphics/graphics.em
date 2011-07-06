@@ -46,7 +46,7 @@ function() {
      *  allowing you to get access to input, control display options,
      *  and perform operations like picking in response to mouse
      *  clicks.
-     * 
+     *
      *  The callback passed in is invoked when Ogre has finished
      *  initializing.
      */
@@ -54,6 +54,7 @@ function() {
         this.presence = pres;
         this._simulator = pres.runSimulation(name);
         this.inputHandler = new std.graphics.InputHandler(this);
+        this._cameraMode = 'first';
         this._setOnReady(cb, reset_cb);
     };
 
@@ -62,12 +63,18 @@ function() {
         return this._simulator.invoke.apply(this._simulator, arguments);
     };
 
+    std.graphics.Graphics.prototype._handleOnReady = function(cb) {
+        // Reinitialize camera mode
+        this.setCameraMode(this._cameraMode);
+        if (cb) cb(this);
+    };
+
     /** Set the callback to invoke when the system is ready for rendering. */
     std.graphics.Graphics.prototype._setOnReady = function(cb, reset_cb) {
-        if (reset_cb !== undefined)
-            this.invoke('onReady', std.core.bind(cb, undefined, this), std.core.bind(reset_cb, undefined, this));
-        else
-            this.invoke('onReady', std.core.bind(cb, undefined, this));
+        this.invoke('onReady',
+                    std.core.bind(this._handleOnReady, this, cb),
+                    std.core.bind(this._handleOnReady, this, reset_cb)
+                   );
     };
 
     /** Hides the loading screen. Call once you're GUIs and basic
@@ -202,8 +209,16 @@ function() {
 
     /** Set the camera mode: 'first' or 'third'. */
     std.graphics.Graphics.prototype.setCameraMode = function(mode) {
+        this._cameraMode = mode;
+        var vis = (mode == 'first' ? false : true);
+        this.visible(this.presence, vis);
         return this.invoke("setCameraMode", mode);
     };
+
+    /** Marks an object as visible or invisible. */
+    std.graphics.Graphics.prototype.visible = function(obj, setting) {
+        this.invoke('visible', obj, setting);
+    }
 
     /** Set the camera offset for 3rd person mode. This is an offset
      *  vector in *world coordinates* which is scaled by the object
