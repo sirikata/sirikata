@@ -2575,21 +2575,13 @@ IF(sdl_FOUND AND sdl_ROOT)
 ENDIF()
 
 IF(bullet_FOUND AND bullet_ROOT)
-  IF(WIN32)
-    INSTALL(DIRECTORY ${bullet_ROOT}/bin/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION bin/
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ELSE()
-    INSTALL(DIRECTORY ${bullet_ROOT}/lib/
-            FILE_PERMISSIONS ${EXEC_PERMS}
-            DESTINATION lib/
-            PATTERN "*.a" EXCLUDE
-            PATTERN "*.la" EXCLUDE
-            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
-            PATTERN "*.exe" EXCLUDE)
-  ENDIF()
+  INSTALL(DIRECTORY ${bullet_ROOT}/lib/
+          FILE_PERMISSIONS ${EXEC_PERMS}
+          DESTINATION lib/
+          PATTERN "*.a" EXCLUDE
+          PATTERN "*.la" EXCLUDE
+          #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+          PATTERN "*.exe" EXCLUDE)
 ENDIF()
 
 IF(OGRE_FOUND)
