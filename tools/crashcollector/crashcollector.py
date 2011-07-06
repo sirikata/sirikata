@@ -10,6 +10,9 @@ import time
 site_name = 'http://crashes.sirikata.com'
 id_file = 'data/__id'
 
+def str_to_bool(v):
+    return not (len(v) == 0 or v.lower() in ['no', 'false', '0'])
+
 def server_file(*args):
     return os.path.join( os.path.dirname(__file__), *args )
 
@@ -97,6 +100,10 @@ def id_get_stackwalk(id, dump, force=False):
         save_file(stackwalk_file, bt)
         return bt
     return "Couldn't generate backtrace."
+
+def decodable_revisions():
+    """Gets the list of decodable revisions, i.e. those we should have symbols for."""
+    return load_file( server_file('decodable') ).split()
 
 def is_post(environ):
     return environ['REQUEST_METHOD'].upper() == 'POST'
@@ -231,18 +238,31 @@ def listing(environ, start_response):
     headers = [('Content-type', 'text/html')]
     start_response(status, headers)
 
+    query_string = environ.get("QUERY_STRING","").strip()
+    argset = urlparse.parse_qs(query_string, keep_blank_values=True, strict_parsing=False)
+    count = ('count' in argset and argset['count'][0]) or 100
+    require_decodable = ('decodable' in argset and str_to_bool(argset['decodable'][0]))
+
     listing = id_list()
     if not listing:
         return wrap_html('No reports found.')
     listing.sort()
     listing.reverse()
-    listing = listing[:100] # Max 100 items to cap load
+
+    decodable = decodable_revisions()
 
     result = []
     result += ['<h3>Report List</h3>']
+    if not require_decodable:
+        result += ['<a href="/listing?decodable=true">(List with only stacks we can decode)</a>']
     result += ['<ul>']
     for id in listing:
         dump = id_lookup(id)
+        if dump['githash'] not in decodable and require_decodable: continue
+
+        count -= 1
+        if count == 0: break
+
         result += ['<li>', id_link(id), ' - ', time.strftime("%d %b %Y", dump['date'])]
         if dump['version']:
             result += [' Version: ', dump['version']]
