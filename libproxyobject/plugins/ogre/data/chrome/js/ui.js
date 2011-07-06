@@ -75,6 +75,7 @@ if (typeof(sirikata) === "undefined") {
          else
              return JSON.stringify(x);
      };
+
 /** Log data to the console. The first parameter should be a log
  * level, i.e. 'fatal', 'error', 'warn', 'debug', 'info', etc. The
  * remaining arguments are converted to strings and printed, separated
@@ -83,15 +84,15 @@ if (typeof(sirikata) === "undefined") {
 sirikata.log = function() {
     var args = [];
     for(var i = 0; i < arguments.length; i++) { args.push( stringify(arguments[i]) ); }
-    sirikata.event.apply(this, ['__log'].concat(args));
+    sirikata.__event.apply(this, ['__log'].concat(args));
 };
 
 /** Allocate a web browser with the given URL. Width and height are optional. */
 sirikata.openBrowser = function(name, url, width, height) {
     if (width && height)
-        sirikata.event.apply(this, ['__openBrowser', stringify(name), stringify(url), stringify(width), stringify(height)]);
+        sirikata.__event.apply(this, ['__openBrowser', stringify(name), stringify(url), stringify(width), stringify(height)]);
     else
-        sirikata.event.apply(this, ['__openBrowser', stringify(name), stringify(url)]);
+        sirikata.__event.apply(this, ['__openBrowser', stringify(name), stringify(url)]);
 };
 
 
@@ -123,15 +124,17 @@ sirikata.listenToBrowser = function(name, cb) {
 
     // Build and register string name of handler
     var handler_name = 'sirikata.__listenToBrowserHandlers["' + rand_key + '"]';
-    sirikata.event.apply(this, ['__listenToBrowser', stringify(name), handler_name]);
+    sirikata.__event.apply(this, ['__listenToBrowser', stringify(name), handler_name]);
 };
 
 /** Close the browser with the given name. */
 sirikata.closeBrowser = function(name) {
-    sirikata.event.apply(this, ['__closeBrowser', stringify(name)]);
+    sirikata.__event.apply(this, ['__closeBrowser', stringify(name)]);
 };
 
-})();
+     var encode = function(x) {
+         return JSON.stringify(x);
+     };
 
 /** A wrapper for UI code which sets up the environment for
  * isolation. You should generally execute all your UI code through
@@ -148,8 +151,8 @@ sirikata.ui = function(name, ui_code) {
             for(var i in __sirikata) { sirikata[i] = __sirikata[i]; }
             sirikata.event = function() {
                 var args = [];
-                for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
-                return __sirikata.event.apply(this, [name + '-' + args[0]].concat(args.slice(1)) );
+                for(var i = 1; i < arguments.length; i++) { args.push(encode(arguments[i])); }
+                return __sirikata.event.apply(this, [name + '-' + arguments[0]].concat(args) );
             };
             eval('(' + ui_code.toString() + ')()');
             sirikata.event('__ready'); // really name-__ready
@@ -203,7 +206,7 @@ sirikata.ui.window._recomputeViewport = function(added, removed) {
     var tot_height = $(window).height();
     // FIXME get rid of menu height as well as the dock
     // setViewport(left, top, right, bottom)
-    sirikata.event('__setViewport', dock_wid.toString(), (0).toString(), tot_wid.toString(), tot_height.toString());
+    sirikata.__event('__setViewport', dock_wid.toString(), (0).toString(), tot_wid.toString(), tot_height.toString());
 
     // Also set the dock's width since we can't easily get it to hide
     // with nothing in it but cover the full height of the screen when
@@ -211,6 +214,8 @@ sirikata.ui.window._recomputeViewport = function(added, removed) {
     // out how...
     $('#left-dock').width(dock_wid);
 };
+
+})();
 
 $(document).ready(
     function() {

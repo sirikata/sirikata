@@ -73,14 +73,9 @@ std.graphics.PhysicsProperties = system.Class.extend(
             }
         },
 
-        requestPhysicsUpdate: function(treatment, collision_mesh, mass) {
+        requestPhysicsUpdate: function(settings) {
             if (!this._selected) return;
-            var physics_settings = {
-                treatment : treatment,
-                bounds : collision_mesh,
-                mass : mass
-            };
-            (new std.movement.MovableRemote(this._selected)).setPhysics(physics_settings);
+            (new std.movement.MovableRemote(this._selected)).setPhysics(settings);
         }
     }
 );

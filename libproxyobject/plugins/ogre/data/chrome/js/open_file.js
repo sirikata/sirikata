@@ -85,7 +85,7 @@ $(document).ready(function() {
  *
 	jQuery.ajax = function(ajax_settings) {
 		directory_list_callback_store[ajax_settings.data] = ajax_settings;
-		sirikata.event("ui-action", 'action_directory_list_request', ajax_settings.data);
+		sirikata.__event("ui-action", 'action_directory_list_request', ajax_settings.data);
 	};
 */
 	

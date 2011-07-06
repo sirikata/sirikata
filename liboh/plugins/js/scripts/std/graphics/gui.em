@@ -54,9 +54,20 @@ function() {
             this.bind('__ready', std.core.bind(onready, undefined, this));
     };
 
+    var dispatchBindCallback = function(cb) {
+        // Any additional arguments after cb are arguments. They're JSON encoded, so we need to decode before passing them along.
+        var args = [];
+        for(var i = 1; i < arguments.length; i++) {
+            var parsed = JSON.parse(arguments[i]);
+            args.push(parsed);
+        }
+
+        cb.apply(undefined, args);
+    };
+
     /** Bind a listener for events from this GUI. */
     std.graphics.GUI.prototype.bind = function(type, cb) {
-        this._gui.invoke("bind", this._name + '-' + type, cb);
+        this._gui.invoke("bind", this._name + '-' + type, std.core.bind(dispatchBindCallback, undefined, cb));
     };
 
     /** Evaluate the Javascript string inside the GUI context. */

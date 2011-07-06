@@ -45,7 +45,12 @@ var setScriptInfo = function() {
     var treatment = $('.treatment label.ui-state-active').attr('for');
     var collision_mesh = $('.collision-mesh label.ui-state-active').attr('for');
     var mass = $('#massvalue').val();
-    sirikata.event('requestPhysicsUpdate', treatment, collision_mesh, mass);
+    sirikata.event('requestPhysicsUpdate',
+                   { 'treatment' : treatment,
+                     'bounds' : collision_mesh,
+                     'mass' : mass
+                   }
+                  );
 };
 
         // UI setup

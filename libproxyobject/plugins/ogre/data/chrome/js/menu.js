@@ -68,7 +68,7 @@ $(document).ready(function() {
 		if(action_clicked == 'action_exit') {
 			alert_permanent('Exiting', 'Please wait while Sirikata client exits...');
 			setTimeout(function() { 
-				sirikata.event("ui-action", action_clicked);
+				sirikata.__event("ui-action", action_clicked);
 			}, 1000);
 		}
 		
