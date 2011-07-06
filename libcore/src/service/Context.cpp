@@ -97,12 +97,12 @@ void Context::run(uint32 nthreads, ExecutionThreads exthreads) {
     if (exthreads == IncludeOriginal) {
         ioService->run();
         cleanupWorkerThreads();
-    }
 
-    // If we exited gracefully, call shutdown automatically to clean everything
-    // up, make sure stop() methods get called, etc.
-    if (!mStopRequested.read())
-        this->shutdown();
+        // If we exited gracefully, call shutdown automatically to clean everything
+        // up, make sure stop() methods get called, etc.
+        if (!mStopRequested.read())
+           this->shutdown();
+    }
 }
 
 void Context::workerThread() {
