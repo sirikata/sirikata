@@ -188,6 +188,11 @@ public:
     Mesh::MeshdataPtr parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
 
+    // Invokable helpers
+
+    // Set handler to be called on each tick, i.e. before each frame
+    boost::any setOnTick(std::vector<boost::any>& params);
+
     static Ogre::Root* sRoot;
     static Ogre::Plugin* sCDNArchivePlugin;
     static CDNArchivePlugin* mCDNArchivePlugin;
@@ -235,6 +240,8 @@ public:
     Vector3d mFloatingPointOffset;
 
     Task::LocalTime mLastFrameTime;
+    Invokable* mOnTickCallback;
+
 
     String mResourcesDir;
 

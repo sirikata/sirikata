@@ -550,9 +550,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return setCameraMode(params);
     else if (name == "setCameraOffset")
         return setCameraOffset(params);
-    else {
-        SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
-    }
+    else
+        return OgreRenderer::invoke(params);
 
     return boost::any();
 }
@@ -675,7 +674,6 @@ boost::any OgreSystem::setInputHandler(vector<boost::any>& params) {
     mMouseHandler->setDelegate(handler);
     return boost::any();
 }
-
 
 boost::any OgreSystem::pick(vector<boost::any>& params) {
     if (params.size() < 3) return boost::any();

@@ -66,6 +66,7 @@ function() {
     std.graphics.Graphics.prototype._handleOnReady = function(cb) {
         // Reinitialize camera mode
         this.setCameraMode(this._cameraMode);
+        this.invoke('onTick', std.core.bind(this._onTick, this));
         if (cb) cb(this);
     };
 
@@ -75,6 +76,19 @@ function() {
                     std.core.bind(this._handleOnReady, this, cb),
                     std.core.bind(this._handleOnReady, this, reset_cb)
                    );
+    };
+
+    /** Set a callback to be invoked once before each frame.
+     */
+    std.graphics.Graphics.prototype.onTick = function(cb) {
+        this._onTickCB = cb;
+    };
+
+    /** Internal onTick handler.
+     *  @private
+     */
+    std.graphics.Graphics.prototype._onTick = function() {
+        if (this._onTickCB) this._onTickCB();
     };
 
     /** Hides the loading screen. Call once you're GUIs and basic

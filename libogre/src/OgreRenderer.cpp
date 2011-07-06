@@ -257,6 +257,7 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mSuspended(false),
    mFloatingPointOffset(0,0,0),
    mLastFrameTime(Task::LocalTime::now()),
+   mOnTickCallback(NULL),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
    mNextFrameScreenshotFile("")
 {
@@ -799,6 +800,13 @@ bool OgreRenderer::renderOneFrame(Task::LocalTime curFrameTime, Duration deltaTi
 }
 
 void OgreRenderer::preFrame(Task::LocalTime currentTime, Duration frameTime) {
+    if (mOnTickCallback != NULL) {
+        std::vector<boost::any> tick_args;
+        tick_args.push_back(Invokable::asAny( (currentTime-Task::LocalTime::epoch()).toSeconds() ));
+        tick_args.push_back(Invokable::asAny(frameTime.toSeconds()));
+        mOnTickCallback->invoke(tick_args);
+    }
+
     std::list<Entity*>::iterator iter;
     Time cur_time = mContext->simTime();
     for (iter = mMovingEntities.begin(); iter != mMovingEntities.end(); iter++)
@@ -857,7 +865,27 @@ void OgreRenderer::stop() {
 
 // Invokable Interface
 boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
-    // FIXME we might want to pull some OgreSystem methods in here.
+    // Decode the command. First argument is the "function name"
+    if (params.empty() || !Invokable::anyIsString(params[0]))
+        return boost::any();
+
+    std::string name = Invokable::anyAsString(params[0]);
+    SILOG(ogre,detailed,"Invoking the function " << name);
+
+    if (name == "onTick")
+        return setOnTick(params);
+    else
+        SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
+
+    return boost::any();
+}
+
+boost::any OgreRenderer::setOnTick(std::vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsInvokable(params[1])) return boost::any();
+
+    Invokable* handler = Invokable::anyAsInvokable(params[1]);
+    mOnTickCallback = handler;
     return boost::any();
 }
 
