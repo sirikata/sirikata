@@ -33,8 +33,8 @@ if (typeof(std) === 'undefined')
          if (decodedURL == null)
              throw new Error('Error in get: could not decode url passed in as first argument.');
 
-         var headers ="GET  "+ decodedURL.resource + "  HTTP/1.1\r\n";
-         headers += "Host: " + decodedURL.host +" \r\n";
+         var headers = "GET " + decodedURL.resource + " HTTP/1.1\r\n";
+         headers += "Host: " + decodedURL.host + " \r\n";
          headers += "Accept: */*\r\n";
          headers += "Connection: close\r\n\r\n";
 
