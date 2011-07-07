@@ -47,23 +47,19 @@
 #include<shellapi.h>
 #endif
 
+#ifdef HAVE_BREAKPAD
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#include <client/windows/crash_generation/crash_generation_server.h>
+#include <client/windows/crash_generation/client_info.h>
+#endif
+#endif
+
 size_t writehandler(void*ptr, size_t size, size_t nmemb, std::string* userdata) {
     *userdata += std::string((const char*)ptr, size*nmemb);
     return size*nmemb;
 }
 
-int main(int argc, char** argv) {
-    // crashreporter report_url minidumppath minidumpfile version git_hash
-    assert(argc == 6);
-    // The file is called minidumppath/minidumpfile.dmp
-
-    const char* report_url = argv[1];
-    std::string dumppath = std::string(argv[2]) + std::string("/");
-    std::string dumpfilename = std::string(argv[3]) + std::string(".dmp");
-    std::string fulldumpfile = dumppath + dumpfilename;
-    std::string sirikata_version = std::string(argv[4]);
-    std::string sirikata_git_hash = std::string(argv[5]);
-
+void reportCrash(const std::string& report_url, const std::string&dumpfilename,  const std::string& fulldumpfile, const std::string& sirikata_version, const std::string& sirikata_git_hash) {
     CURL* curl;
     CURLcode res;
 
@@ -98,7 +94,7 @@ int main(int argc, char** argv) {
     if (curl) {
         std::string resultStr;
 
-        curl_easy_setopt(curl, CURLOPT_URL, report_url);
+        curl_easy_setopt(curl, CURLOPT_URL, report_url.c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultStr);
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writehandler);
@@ -115,6 +111,182 @@ int main(int argc, char** argv) {
 #endif
         }
     }
+}
+
+// All crash generation server code is only relevant with breakpad
+#ifdef HAVE_BREAKPAD
+
+// Currently only enabled for windows
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+
+
+std::string wchar_to_string(const wchar_t* orig) {
+  size_t origsize = wcslen(orig) + 1;
+  const size_t newsize = origsize;
+  size_t convertedChars = 0;
+  char* nstring = new char[newsize];
+  wcstombs_s(&convertedChars, nstring, origsize, orig, _TRUNCATE);
+  std::string res(nstring);
+  delete nstring;
+  return res;
+}
+
+std::string wstring_to_string(const std::wstring& orig) {
+    return wchar_to_string(orig.c_str());
+}
+
+// Convert to a wchar_t*
+std::wstring str_to_wstring(const std::string& orig) {
+    size_t origsize = orig.size() + 1;
+    const size_t newsize = origsize;
+    size_t convertedChars = 0;
+    wchar_t* wcstring = new wchar_t[newsize];
+    mbstowcs_s(&convertedChars, wcstring, origsize, orig.c_str(), _TRUNCATE);
+    std::wstring res(wcstring);
+    delete wcstring;
+    return res;
+}
+
+static const wchar_t kPipeName[] = L"\\\\.\\pipe\\SirikataCrashServices";
+
+static google_breakpad::CrashGenerationServer* breakpad_server = NULL;
+static int n_connected = 0; // Current total connections
+static int n_sessions = 0; // Sessions seen so far
+static int n_work = 0;
+static std::string g_report_url;
+static std::string g_dump_path;
+
+void OnClientConnected(void* context,
+    const google_breakpad::ClientInfo* client_info) {
+    //std::cout << "Client connected, pid = "  << client_info->pid() <<  std::endl;
+    // FIXME thread safety
+    n_connected++;
+    n_sessions++;
+}
+
+void OnClientExited(void* context,
+    const google_breakpad::ClientInfo* client_info) {
+    //std::cout << "Client exited" << std::endl;
+
+    // FIXME thread safety
+    n_connected--;
+}
+
+void OnClientDumpRequest(void* context,
+    const google_breakpad::ClientInfo* client_info,
+    const std::wstring* file_path) {
+
+    using namespace google_breakpad;
+
+    n_work++;
+
+    if (file_path == NULL || client_info == NULL) {
+        n_work--;
+        return;
+    }
+
+    //std::wcout << L"Client dump request: " << *file_path << std::endl;
+
+    // Decode client info
+    std::wstring version, githash;
+    CustomClientInfo custom_info = client_info->GetCustomInfo();
+    for(int i = 0; i < custom_info.count; i++) {
+        if (std::wstring(custom_info.entries[i].name) == L"version")
+            version = std::wstring(custom_info.entries[i].value);
+        else if (std::wstring(custom_info.entries[i].name) == L"githash")
+            githash = std::wstring(custom_info.entries[i].value);
+    }
+
+    // Finally do the report
+    // In this case we just get the full path, so we need to strip off
+    // the dump name
+    std::string fulldumpfile = wstring_to_string(*file_path);
+    std::string dumpfile = fulldumpfile.substr(fulldumpfile.rfind('\\')+1);
+    reportCrash(
+        g_report_url,
+        dumpfile,
+        fulldumpfile,
+        wstring_to_string(version),
+        wstring_to_string(githash)
+    );
+
+    n_work--;
+}
+
+#endif // SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+#endif // HAVE_BREAKPAD
+
+int main(int argc, char** argv) {
+    // We can run crashreporter in one of two ways. First, as just the
+    // crashreporter, triggered by in-process minidump generation.  In this case
+    // we run with the command line:
+    // crashreporter report_url minidumppath minidumpfile version git_hash
+    if (argc == 6) {
+        // The file is called minidumppath/minidumpfile.dmp
+        std::string report_url = std::string(argv[1]);
+        std::string dumppath = std::string(argv[2]) + std::string("/");
+        std::string dumpfilename = std::string(argv[3]) + std::string(".dmp");
+        std::string fulldumpfile = dumppath + dumpfilename;
+        std::string sirikata_version = std::string(argv[4]);
+        std::string sirikata_git_hash = std::string(argv[5]);
+        reportCrash(report_url, dumpfilename, fulldumpfile, sirikata_version, sirikata_git_hash);
+        return 0;
+    }
+#ifdef HAVE_BREAKPAD // All crash generation server code is only relevant with breakpad
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS // windows only OOP right now
+    else {
+        // Otherwise, we're in out of process minidump generation + crashreport
+        // service mode: we setup to listen for crashes, help the other process
+        // get a dump, and finally file the reports ourselves. In this
+        // case, we invoke with the following signature:
+        // crashreporter report_url minidumppath
+        // The remaining values are provided by breakpad or through
+        // CustomClientInfo
+        assert(argc == 3);
+        std::string report_url = std::string(argv[1]);
+        std::string dumppath = std::string(argv[2]) + std::string("/");
+        g_report_url = report_url;
+        g_dump_path = dumppath;
+
+        using namespace google_breakpad;
+        const wchar_t* pipe_name = kPipeName;
+        std::wstring wdumppath = str_to_wstring(dumppath);
+        breakpad_server = new CrashGenerationServer(
+            pipe_name, NULL,
+            OnClientConnected, NULL,
+            OnClientDumpRequest, NULL,
+            OnClientExited, NULL,
+            true, &wdumppath
+        );
+
+        if (!breakpad_server->Start()) {
+            printf("crashreporter couldn't start crash generation server. Exiting\n");
+            return -1;
+        }
+
+        // "Processing" loop, server manages everything in the
+        // background. The condition for exit is a bit confusing.
+        // When we start things up, we need to wait for a connection,
+        // in which case the *normal* exit condition -- no connections
+        // and no on-going work -- will be true. Therefore, we also
+        // keep track of total sessions seen and number of times we've
+        // run through the loop and found no clients or work, allowing
+        // us to exit if we don't get clients in a reasonable time
+        // period, but exit promptly if we've already seen clients and
+        // they are just gone.
+        int n_empty_its = 0;
+        while(true) {
+            if (n_connected == 0 && n_work == 0) {
+                n_empty_its++;
+                // Arbitrary 15 second wait for client that triggered us
+                if ((n_sessions == 0 && n_empty_its > 15) || n_sessions > 0)
+                    break;
+            }
+            Sleep(1000);
+        }
+    }
+#endif // WINDOWS
+#endif // HAVE_BREAKPAD
 
     return 0;
 }

@@ -71,6 +71,18 @@ std::string wchar_to_string(const wchar_t* orig) {
   return res;
 }
 
+// Convert to a wchar_t*
+std::wstring str_to_wstring(const std::string& orig) {
+    size_t origsize = orig.size() + 1;
+    const size_t newsize = origsize;
+    size_t convertedChars = 0;
+    wchar_t* wcstring = new wchar_t[newsize];
+    mbstowcs_s(&convertedChars, wcstring, origsize, orig.c_str(), _TRUNCATE);
+    std::wstring res(wcstring);
+    delete wcstring;
+    return res;
+}
+
 bool finishedDump(const wchar_t* dump_path,
     const wchar_t* minidump_id,
     void* context,
@@ -111,6 +123,9 @@ bool finishedDump(const wchar_t* dump_path,
 }
 }
 
+// Must match crashreporter
+static const wchar_t kPipeName[] = L"\\\\.\\pipe\\SirikataCrashServices";
+
 void init() {
     if (breakpad_handler != NULL) return;
 
@@ -121,14 +136,54 @@ void init() {
     breakpad_url = GetOptionValue<String>(OPT_CRASHREPORT_URL);
 
     using namespace google_breakpad;
-    breakpad_handler = new ExceptionHandler(L".\\",
+
+    // Setup info about this process
+    static std::vector<CustomInfoEntry> custom_entries;
+    std::wstring version = str_to_wstring(std::string(SIRIKATA_VERSION));
+    std::wstring githash = str_to_wstring(std::string(SIRIKATA_GIT_REVISION));
+    custom_entries.push_back(CustomInfoEntry(L"version", version.c_str()));
+    custom_entries.push_back(CustomInfoEntry(L"githash", githash.c_str()));
+    static CustomClientInfo custom_client_info;
+    custom_client_info.entries = &custom_entries.front();
+    custom_client_info.count = custom_entries.size();
+
+
+    // Try to run the external minidump processing server
+    const char* reporter_name =
+#if SIRIKATA_DEBUG
+      "crashreporter_d.exe"
+#else
+      "crashreporter.exe"
+#endif
+      ;
+    STARTUPINFO info={sizeof(info)};
+    PROCESS_INFORMATION processInfo;
+    wchar_t* w_dump_path = L".\\";
+    std::string cmd =
+        reporter_name + std::string(" ") +
+        breakpad_url + std::string(" ") +
+        wchar_to_string(w_dump_path);
+    std::cout << "Dump process: " << cmd << std::endl;
+    CreateProcess(reporter_name, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &info, &processInfo);
+    // FIXME better way to make sure the reporter gets a chance to
+    // start up?
+    Sleep(250);
+
+    // Finally instantiate the exception handler, which should connect
+    // to the external process, or in the worst case, setup to handle
+    // minidumps internally
+    const wchar_t* pipe_name = kPipeName;
+    breakpad_handler = new ExceptionHandler(w_dump_path,
         NULL,
         finishedDump,
         NULL,
         ExceptionHandler::HANDLER_ALL,
         MiniDumpNormal,
-        NULL,
-        NULL);
+        pipe_name,
+        &custom_client_info);
+
+    if (!breakpad_handler->IsOutOfProcess())
+        SILOG(breakpad, error, "Using in-process dump generation.");
 }
 
 #elif SIRIKATA_PLATFORM == PLATFORM_LINUX
