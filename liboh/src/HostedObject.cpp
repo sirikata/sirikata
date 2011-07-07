@@ -138,7 +138,13 @@ void HostedObject::destroy()
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
-    return t + mObjectHost->serverTimeOffset(space);
+    Duration off = mObjectHost->serverTimeOffset(space);
+    // FIXME we should probably return a negative time and force the code using
+    // this (e.g. the loc update stuff) to make sure it handles it correctly by
+    // extrapolating to a current time.
+    // This is kinda gross, but we need to make sure result >= 0
+    if ( (int64)t.raw() + off.toMicro() < 0) return Time::null();
+    return t + off;
 }
 
 Time HostedObject::currentSpaceTime(const SpaceID& space) {
@@ -146,7 +152,13 @@ Time HostedObject::currentSpaceTime(const SpaceID& space) {
 }
 
 Time HostedObject::localTime(const SpaceID& space, const Time& t) {
-    return t + mObjectHost->clientTimeOffset(space);
+    Duration off = mObjectHost->clientTimeOffset(space);
+    // FIXME we should probably return a negative time and force the code using
+    // this (e.g. the loc update stuff) to make sure it handles it correctly by
+    // extrapolating to a current time.
+    // This is kinda gross, but we need to make sure result >= 0
+    if ( (int64)t.raw() + off.toMicro() < 0) return Time::null();
+    return t + off;
 }
 
 Time HostedObject::currentLocalTime() {

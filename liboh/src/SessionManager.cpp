@@ -362,11 +362,13 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
 
 Duration SessionManager::serverTimeOffset() const {
     assert(mTimeSyncClient != NULL);
+    assert(mTimeSyncClient->valid());
     return mTimeSyncClient->offset();
 }
 
 Duration SessionManager::clientTimeOffset() const {
     assert(mTimeSyncClient != NULL);
+    assert(mTimeSyncClient->valid());
     return -(mTimeSyncClient->offset());
 }
 

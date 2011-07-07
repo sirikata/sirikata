@@ -117,7 +117,7 @@ void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, b
     // unless we track multiple outstanding update requests and can
     // figure out which one failed, even if the space server generates
     // other update while handling eht requests...
-    if (predictive || reqloc.updateTime() > mLoc.updateTime()) {
+    if (predictive || reqloc.updateTime() >= mLoc.updateTime()) {
         mLoc = reqloc;
         PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     }
@@ -129,8 +129,8 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
     if (!predictive) mUpdateSeqno[LOC_ORIENT_PART] = seqno;
 
     // FIXME see relevant comment in setLocation
-    if (predictive || reqorient.updateTime() > mOrientation.updateTime()) {
-        mOrientation = reqorient;//TimedMotionQuaternion(reqorient.time(), MotionQuaternion(reqorient.position(), reqorient.velocity()));
+    if (predictive || reqorient.updateTime() >= mOrientation.updateTime()) {
+        mOrientation = reqorient;
         PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     }
 }
