@@ -16,7 +16,7 @@ namespace JS {
 
 
 //this constructor is called when we ask the space to create a presence for us.
-//we give the space the token presenceToken, which it ships back when connection 
+//we give the space the token presenceToken, which it ships back when connection
 //is completed.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
  : JSPositionListener(nullProxyPtr),
@@ -81,10 +81,16 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
         clear();
 
     mContID = *psrp.mContID;
-    if (mContID != jscont->getContextID())
+    if (mContID != jscont->getContextID()) {
         parent->registerFixupSuspendable(this,mContID);
-    else
+        JSLOG(fatal,"Restoring a presence with multiple sandboxes doesn't work right now. You won't be able to receive messages properly...");
+    }
+    else {
         mContext = jscont;
+        // FIXME this same call needs to go in the if-block above when it sets
+        // mContext properly.
+        mContext->struct_registerSuspendable(this);
+    }
 }
 
 
@@ -100,7 +106,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     }
 
     v8::Handle<v8::Object> returner = returnerVal->ToObject();
-    
+
 
     uint32 contID = mContext->getContextID();
     returner->Set(v8::String::New("isConnected"), v8::Boolean::New(isConnected));
@@ -121,7 +127,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
 
     returner->Set(v8::String::New("solidAngleQuery"),struct_getQueryAngle());
 
-    
+
 
     //onConnected
     if (mOnConnectedCallback.IsEmpty())
@@ -191,7 +197,7 @@ v8::Handle<v8::Value> JSPresenceStruct::clear()
 
     //do not ask emerson script to delete presence here.  the context will get
     //this presence deleted.
-    
+
     mContext->struct_deregisterSuspendable(this);
     return handle_scope.Close(returner);
 }
@@ -222,7 +228,7 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef, JSProxyPtr n
     //set the jpp of jspositionlistener to be a non-empty value now that we
     //actually have a sporef to associate with.
     setSharedProxyDataPtr(   newJPP);
-    
+
     v8::HandleScope handle_scope;
 
     if (getIsConnected())
