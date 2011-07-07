@@ -2512,6 +2512,26 @@ IF(SQLite3_ROOT)
   ENDIF()
 ENDIF()
 
+#install redis
+IF(HIREDIS_ROOT)
+  IF(WIN32)
+    INSTALL(DIRECTORY ${HIREDIS_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION bin/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.exe" EXCLUDE
+            PATTERN "*.lib" EXCLUDE)
+  ELSE()
+    INSTALL(DIRECTORY ${HIREDIS_ROOT}/lib/
+            FILE_PERMISSIONS ${EXEC_PERMS}
+            DESTINATION lib/
+            #PATTERN "*.dll"<-- if only we could just INCLUDE a pattern
+            PATTERN "*.a" EXCLUDE
+            PATTERN "*.la" EXCLUDE
+            PATTERN "*.exe" EXCLUDE)
+  ENDIF()
+ENDIF()
+
 #install 
 IF(THRIFT_FOUND AND LIBCASSANDRA_FOUND)
   IF(WIN32)
