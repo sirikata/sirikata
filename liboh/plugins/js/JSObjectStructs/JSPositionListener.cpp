@@ -111,7 +111,7 @@ Vector3f JSPositionListener::getPosition()
 }
 Vector3f JSPositionListener::getVelocity()
 {
-    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getVelocity,Vector3f::nil());    
+    CHECK_JPP_INIT_THROW_LOG_CPP_ERROR(getVelocity,Vector3f::nil());
     return jpp->mLocation.velocity();
 }
 
@@ -211,7 +211,16 @@ v8::Handle<v8::Value> CreateJSBBoxResult(v8::Handle<v8::Context>& ctx, const Bou
 v8::Handle<v8::Value> JSPositionListener::meshBounds() {
     if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call meshBounds before loading the mesh.")));
 
-    Matrix4x4f xform = Matrix4x4f::translate(getPosition()) * Matrix4x4f::rotate(getOrientation()) * Matrix4x4f::scale(getBounds().radius());
+    // Unfortunately, the radius part of the bounds are computed against the
+    // origin. We need to get the bounds of:
+    //   xform * make_uniform_size * mesh
+    // The second term requires the radius of the mesh, but when it is centered
+    // on the origin. Currently we need two passes, one untransformed to get the
+    // scale factor, the second using the transformed data.
+    double rad;
+    Mesh::ComputeBounds(mMeshdata, NULL, &rad);
+
+    Matrix4x4f xform = Matrix4x4f::translate(getPosition()) * Matrix4x4f::rotate(getOrientation()) * Matrix4x4f::scale(getBounds().radius()/rad);
 
     BoundingBox3f3f bbox;
     Mesh::ComputeBounds(mMeshdata, xform, &bbox);
@@ -223,8 +232,12 @@ v8::Handle<v8::Value> JSPositionListener::untransformedMeshBounds() {
     if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call untransformedMeshBounds before loading the mesh.")));
 
     BoundingBox3f3f bbox;
-    Mesh::ComputeBounds(mMeshdata, &bbox);
+    double rad;
+    Mesh::ComputeBounds(mMeshdata, &bbox, &rad);
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(untransformedMeshBounds,curContext);
+    // The only 'transformation' we apply is to get the initial scale of the
+    // model in the correct range, i.e. we divide by rad. Here, we.
+    bbox = BoundingBox3f3f(bbox.min()/rad, bbox.max()/rad);
     return CreateJSBBoxResult(curContext, bbox);
 }
 
