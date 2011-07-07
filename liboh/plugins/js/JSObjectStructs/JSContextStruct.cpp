@@ -91,13 +91,16 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 
     //load data
     String dataStr;
-    const unsigned char* data = httpResp->getData()->data();
-    for (int s = 0;s < httpResp->getContentLength(); ++s)
+    if (httpResp->getContentLength() > 0)
     {
-        dataStr.push_back((char)*data);
-        // const char* dataPiece = (const char*) data;
-        // dataStr.append(dataPiece[0]);
-        ++data;
+        const unsigned char* data = httpResp->getData()->data();
+        for (int s = 0;s < httpResp->getContentLength(); ++s)
+        {
+            dataStr.push_back((char)*data);
+            // const char* dataPiece = (const char*) data;
+            // dataStr.append(dataPiece[0]);
+            ++data;
+        }
     }
 
     httpObj->Set(v8::String::New("data"), strToUint16Str(dataStr));
