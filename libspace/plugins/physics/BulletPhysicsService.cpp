@@ -445,9 +445,6 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
 
     // Other types require processing the retrieved mesh.
 
-    //initialize the world transformation
-    Matrix4x4f worldTransformation = Matrix4x4f::identity();
-
     /***Let's now find the bounding box for the entire object, which is needed for re-scaling purposes.
 	* Supposedly the system scales every mesh down to a unit sphere and then scales up by the scale factor
 	* from the scene file. We try to emulate this behavior here, but this should really be on the CDN side
@@ -469,7 +466,10 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
     //do NOT attempt to collide two btBvhTriangleMeshShapes, it will not work
     else if(locinfo.objBBox == BULLET_OBJECT_BOUNDS_PER_TRIANGLE) {
 		//we found the bounding box and radius, so let's scale the mesh down by the radius and up by the scaling factor from the scene file (bnds.radius())
-		worldTransformation = worldTransformation * Matrix4x4f::scale((float) locinfo.bounds.radius()/mesh_rad);
+    //initialize the world transformation
+        // The raw mesh data is scaled down to unit size, see below
+        // for scaling up to the requested size.
+        Matrix4x4f scale_to_unit = Matrix4x4f::scale(1.f/mesh_rad);
 		//reset the instance iterator for a second round
                 Meshdata::GeometryInstanceIterator geoIter = retrievedMesh->getGeometryInstanceIterator();
 		//we need to pass the triangles to Bullet
@@ -479,7 +479,10 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
                 uint32 indexInstance;
                 Matrix4x4f transformInstance;
 		while(geoIter.next(&indexInstance, &transformInstance)) {
-			transformInstance = transformInstance * worldTransformation;
+                    // Note: Scale to unit *after* transforming the
+                    // instanced geometry to its location --
+                    // scale_to_unit is applied to the mesh as a whole!
+			transformInstance = scale_to_unit * transformInstance;
 			GeometryInstance* geoInst = &(retrievedMesh->instances[indexInstance]);
 
 			unsigned int geoIndx = geoInst->geometryIndex;
@@ -529,6 +532,10 @@ void BulletPhysicsService::updatePhysicsWorldWithMesh(const UUID& uuid, Meshdata
                 BULLETLOG(detailed, "Num of triangles in mesh: " << meshToConstruct->getNumTriangles());
 		//btVector3 aabbMin(-1000,-1000,-1000),aabbMax(1000,1000,1000);
 		locinfo.objShape  = new btBvhTriangleMeshShape(meshToConstruct,true);
+                // Apply additional scaling factor to get from unit
+                // scale up to requested scale.
+                float32 rad_scale = locinfo.bounds.radius();
+                locinfo.objShape->setLocalScaling(btVector3(rad_scale, rad_scale, rad_scale));
 	}
 	//FIXME bug somewhere else? bnds.radius()/mesh_rad should be
 	//the correct radius, but it is not...
