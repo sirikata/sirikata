@@ -74,7 +74,7 @@ public:
 
     virtual void receiveMessage(Message* msg);
 
-    virtual void locationUpdate(UUID source, void* buffer, uint32 length);
+    virtual bool locationUpdate(UUID source, void* buffer, uint32 length);
 
 private:
     struct LocationInfo {

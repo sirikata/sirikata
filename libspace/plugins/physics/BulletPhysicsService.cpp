@@ -885,12 +885,12 @@ void BulletPhysicsService::receiveMessage(Message* msg) {
     delete msg;
 }
 
-void BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 length) {
+bool BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 length) {
     Sirikata::Protocol::Loc::Container loc_container;
     bool parse_success = loc_container.ParseFromString( String((char*) buffer, length) );
     if (!parse_success) {
         LOG_INVALID_MESSAGE_BUFFER(standardloc, error, ((char*)buffer), length);
-        return;
+        return false;
     }
 
     if (loc_container.has_update_request()) {
@@ -946,6 +946,7 @@ void BulletPhysicsService::locationUpdate(UUID source, void* buffer, uint32 leng
             // Warn about update to non-local object
         }
     }
+    return true;
 }
 
 

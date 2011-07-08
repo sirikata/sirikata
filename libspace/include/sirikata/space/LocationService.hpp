@@ -208,7 +208,7 @@ public:
     /** MessageRecipient Interface. */
     virtual void receiveMessage(Message* msg) = 0;
 
-    virtual void locationUpdate(UUID source, void* buffer, uint32 length) = 0;
+    virtual bool locationUpdate(UUID source, void* buffer, uint32 length) = 0;
 
     Stream<SpaceObjectReference>::Ptr getObjectStream(const UUID& uuid) {
         ObjectSession* session = mContext->sessionManager()->getSession(ObjectReference(uuid));
@@ -235,6 +235,12 @@ protected:
     void notifyReplicaBoundsUpdated(const UUID& uuid, const BoundingSphere3f& newval) const;
     void notifyReplicaMeshUpdated(const UUID& uuid, const String& newval) const;
     void notifyReplicaPhysicsUpdated(const UUID& uuid, const String& newval) const;
+
+    // Helpers for listening to streams
+    typedef Stream<SpaceObjectReference> SSTStream;
+    typedef SSTStream::Ptr SSTStreamPtr;
+    void handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s);
+    void handleLocationUpdateSubstreamRead(const UUID& source, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length);
 
     SpaceContext* mContext;
 private:

@@ -106,7 +106,7 @@ void LocationService::newSession(ObjectSession* session) {
 
     SpaceObjectReference sourceObject = conn->remoteEndPoint().endPoint;
 
-
+    // Datagram updates
     conn->registerReadDatagramCallback( OBJECT_PORT_LOCATION,
         std::tr1::bind(
             &LocationService::locationUpdate, this,
@@ -114,6 +114,39 @@ void LocationService::newSession(ObjectSession* session) {
             std::tr1::placeholders::_1,std::tr1::placeholders::_2
         )
     );
+
+    // SST updates
+    strm->listenSubstream(OBJECT_PORT_LOCATION,
+        std::tr1::bind(
+            &LocationService::handleLocationUpdateSubstream, this,
+            sourceObject.object().getAsUUID(),
+            std::tr1::placeholders::_1,std::tr1::placeholders::_2
+        )
+    );
+
+}
+
+void LocationService::handleLocationUpdateSubstream(const UUID& source, int err, SSTStreamPtr s) {
+    s->registerReadCallback(
+        std::tr1::bind(
+            &LocationService::handleLocationUpdateSubstreamRead, this,
+            source, s, new std::stringstream(),
+            std::tr1::placeholders::_1,std::tr1::placeholders::_2
+        )
+    );
+}
+
+void LocationService::handleLocationUpdateSubstreamRead(const UUID& source, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
+    prevdata->write((const char*)buffer, length);
+    String payload(prevdata->str());
+    if (locationUpdate(source, (void*)payload.c_str(), payload.size())) {
+        // FIXME we should be getting a callback on stream close instead of
+        // relying on this parsing as an indicator
+        delete prevdata;
+        // Clear out callback so we aren't responsible for any remaining
+        // references to s
+        s->registerReadCallback(0);
+    }
 }
 
 void LocationService::poll() {

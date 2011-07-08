@@ -128,7 +128,7 @@ public:
 
     virtual void receiveMessage(Message* msg);
 
-    virtual void locationUpdate(UUID source, void* buffer, uint32 length);
+    virtual bool locationUpdate(UUID source, void* buffer, uint32 length);
 
     typedef std::tr1::function<void(MeshdataPtr)> MeshdataParsedCallback;
     void getMesh(const std::string meshURI, const UUID uuid, MeshdataParsedCallback cb);

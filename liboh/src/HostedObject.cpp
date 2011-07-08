@@ -1125,8 +1125,10 @@ void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectRefe
 }
 
 
-
-
+namespace {
+void discardChildStream(int success, Stream<SpaceObjectReference>::Ptr sptr) {
+}
+}
 
 void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectReference& oref) {
     assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
@@ -1170,11 +1172,18 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     bool send_succeeded = false;
     SSTStreamPtr spaceStream = mObjectHost->getSpaceStream(space, oref);
     if (spaceStream) {
+        /* datagram update, still supported but gets dropped
         SSTConnectionPtr conn = spaceStream->connection().lock();
         assert(conn);
-
         send_succeeded = conn->datagram( (void*)payload.data(), payload.size(), OBJECT_PORT_LOCATION,
             OBJECT_PORT_LOCATION, NULL);
+        */
+        spaceStream->createChildStream(
+            std::tr1::bind(discardChildStream, _1, _2),
+            (void*)payload.data(), payload.size(),
+            OBJECT_PORT_LOCATION, OBJECT_PORT_LOCATION
+        );
+        send_succeeded = true;
     }
 
     if (send_succeeded) {
