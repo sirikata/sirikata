@@ -140,7 +140,7 @@ v8::Handle<v8::Value> EmersonScript::requestReset(JSContextStruct* jscont,const 
 
 void EmersonScript::resetScript()
 {
-    //before cler presences, take all 
+    //before cler presences, take all
     mResetting = false;
     mPresences.clear();
     mEventHandlers.clear();
@@ -370,9 +370,14 @@ void EmersonScript::killScript()
 
 void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
-    //register underlying visible manager to listen for proxy creation events on hostedobjectproxymanager
-    mParent->getProxyManager(name.space(),name.object())->addListener(this);
-    
+    //register underlying visible manager to listen for proxy creation events on
+    //hostedobjectproxymanager
+    ProxyManagerPtr proxy_manager = mParent->getProxyManager(name.space(),name.object());
+    proxy_manager->addListener(this);
+    // Proxies for the object connected are created before this occurs, so we
+    // need to manually notify of it:
+    this->onCreateProxy( proxy_manager->getProxyObject(name) );
+
     //register for scripting messages from user
     SpaceID space_id = name.space();
     ObjectReference obj_refer = name.object();
@@ -386,14 +391,14 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
         mMessagingPortMap[SpaceObjectReference(space_id,obj_refer)] = msgPort;
         msgPort->receive( std::tr1::bind(&EmersonScript::handleScriptCommUnreliable, this, _1, _2, _3));
     }
-    
+
     if (!mCreateEntityPort)
         mCreateEntityPort = mParent->bindODPPort(space_id,obj_refer, Services::CREATE_ENTITY);
 
     //set up reliable messages for the connected presence
     EmersonMessagingManager::presenceConnected(name);
 
-    
+
     //check for callbacks associated with presence connection
 
     //means that this is the first presence that has been added to the space
@@ -452,7 +457,7 @@ void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObje
     mParent->getProxyManager(name.space(),name.object())->removeListener(this);
 
     EmersonMessagingManager::presenceDisconnected(name);
-    
+
     if (jspres != NULL)
         jspres->disconnectCalledFromObjScript();
 }
@@ -605,7 +610,7 @@ v8::Handle<v8::Object> EmersonScript::getMessageSender(const ODP::Endpoint& src)
 
     JSVisibleStruct* jsvis = createVisStruct(from);
     v8::Persistent<v8::Object> returner =createVisiblePersistent(jsvis, mContext->mContext);
-    
+
     return handle_scope.Close(returner);
 }
 
@@ -626,7 +631,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
 
     if (! parsed)
         return false;
-    
+
     return deserializeMsgAndDispatch(src,dst,js_msg);
 }
 
@@ -643,7 +648,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     v8::Handle<v8::Object> msgSender = createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,mContext->mContext);
 
 
-    
+
     //try deserialization
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
 
@@ -653,7 +658,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
         return false;
     }
 
-        
+
     // Checks if matches some handler.  Try to dispatch the message
     bool matchesSomeHandler = false;
     //cannot affect the event handlers when we are executing event handlers.
@@ -663,7 +668,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     {
         if ((mResetting) || (mKilling))
             break;
-        
+
         if (mEventHandlers[s]->matches(obj,src,dst))
         {
             // Adding support for the knowing the message properties too
@@ -701,7 +706,7 @@ void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const 
 {
     SpaceObjectReference to  (dst.space(), dst.object());
     SpaceObjectReference from(src.space(), src.object());
-    
+
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
 
