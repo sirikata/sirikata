@@ -98,7 +98,8 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
     if (nparsed != req.length()) {
         SILOG(transfer, warning, "Parsing http request failed");
         boost::system::error_code ec;
-        cb(std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec);
+        postCallback(std::tr1::bind(cb, std::tr1::shared_ptr<HttpResponse>(), REQUEST_PARSING_FAILED, ec));
+        return;
     }
 
     std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, cb));

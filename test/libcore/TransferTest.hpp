@@ -111,6 +111,25 @@ public:
 
 
         /*
+         * Issue an invalid request to make sure we get appropriate
+         * error
+         */
+        request_stream.str("");
+        request_stream << "GET lkdjlskjdlkjdlj\r\n";
+        request_stream << "Haxorz \t\t\t\r\n\r\n";
+        request_stream << "Somethingelse \r\n";
+        request_stream << "BAD INPUTlkjslkd lskjdflks jdlfks dflskjdflkj";
+
+        SILOG(transfer, debug, "Issuing invalid GET request");
+        Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::expect_request_failed, this, _1, _2, _3));
+        SILOG(transfer, debug, "about to wait");
+        mDone.wait(lock);
+
+
+
+
+        /*
          * For HEAD name request, check for File-Size and Hash headers
          * and make sure body is null, content length is not present,
          * http status is 200
@@ -536,6 +555,29 @@ public:
         if(mNumCbs == 0) {
             mDone.notify_all();
         }
+    }
+
+    void expect_request_failed(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
+            Transfer::HttpManager::ERR_TYPE error, const boost::system::error_code& boost_error) {
+
+        std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> bad;
+        mHttpResponse = bad;
+
+        if (error == Transfer::HttpManager::REQUEST_PARSING_FAILED) {
+            SILOG(transfer, debug, "parsing failed as it should have");
+            mHttpResponse = response;
+        } else if (error == Transfer::HttpManager::SUCCESS) {
+            TS_FAIL("HTTP Request succeeded when it should have failed");
+        } else if (error == Transfer::HttpManager::RESPONSE_PARSING_FAILED) {
+            TS_FAIL("HTTP Response parsing failed");
+        } else if (error == Transfer::HttpManager::BOOST_ERROR) {
+            TS_FAIL("HTTP request failed with a boost error: " + boost_error.message());
+        } else {
+            TS_FAIL("Got unknown response code from HttpManager");
+        }
+
+        SILOG(transfer, debug, "notifying");
+        mDone.notify_all();
     }
 
     void request_finished(std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> response,
