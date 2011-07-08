@@ -1006,6 +1006,8 @@ void WebView::resize(int width, int height)
 ///////// Berkelium Callbacks...
 void WebView::onAddressBarChanged(Berkelium::Window*, URLString newURL) {
     SILOG(webview,detailed,"onAddressBarChanged"<<newURL);
+    viewURL = newURL.get<String>();
+    if (mNavigatedCallback) mNavigatedCallback(viewURL);
 }
 void WebView::onStartLoading(Berkelium::Window*, URLString newURL) {
     SILOG(webview,detailed,"onStartLoading"<<newURL);
