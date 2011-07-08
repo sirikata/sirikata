@@ -47,6 +47,7 @@ function restoreFunc()
       @param {quaternion} orientVel,
       @param {string} orientTime,
       @param {string} mesh,
+      @param {string} physics,
       @param {number} scale,
       @param {boolean} isCleared ,
       @param {uint32} contextId,
@@ -64,6 +65,7 @@ function restoreFunc()
                            presData.orientVel,
                            presData.orientTime,
                            presData.mesh,
+                           presData.physics,
                            presData.scale,
                            presData.isCleared ,
                            presData.contextId,
@@ -78,4 +80,3 @@ function restoreFunc()
                           );
     
 }
-

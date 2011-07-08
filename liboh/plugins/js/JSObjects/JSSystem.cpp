@@ -175,7 +175,7 @@ v8::Handle<v8::Value> root_http(const v8::Arguments& args)
 
     //system object
     INLINE_SYSTEM_CONV_ERROR(args.This(),http,this,jssys);
-    
+
     //http command, get, head, etc.
     INLINE_STR_CONV_ERROR(args[0], http, 1,httpComm);
 
@@ -205,18 +205,18 @@ v8::Handle<v8::Value> root_http(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http request.  Could not decode address.")));
     }
 
-    
+
     //request params
     INLINE_STR_CONV_ERROR(args[2], http,3,reqParams);
 
-    
+
     //callback function.
     if (! args[3]->IsFunction())
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error in http request: callback must be a function")));
 
     v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(args[3]);
     v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
-    
+
     return jssys->httpRequest(addr, httpCommType, reqParams, cb_persist);
 }
 
@@ -453,7 +453,7 @@ v8::Handle<v8::Value> root_headless(const v8::Arguments& args)
 v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if ((args.Length() != 11) && (args.Length() != 1))
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error in createVisible call.  Require either a single string argument to create visible object.  Or requires 11 arguments.  See documentation.")));
 
@@ -530,7 +530,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
 
-    //do not delete this bcause it gets put into a shared pointer.    
+    //do not delete this bcause it gets put into a shared pointer.
     JSProxyData* jspd = new JSProxyData(NULL, //note, do not need to point at
                                              //emerScript here.
         sporefVisWatching,
@@ -540,7 +540,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
         meshString,
         physicsString);
 
-    
+
     v8::Handle<v8::Value> returner = jssys->struct_create_vis(sporefVisWatching,jspd);
     return handle_scope.Close(returner);
 }
@@ -598,7 +598,7 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
    obj[pres0.sporef] = [visTo0_a.sporef,visTo0_b.sporef, ...];
    obj[pres1.sporef] = [visTo1_a.sporef,visTo1_b.sporef, ...];
    ...
-   
+
    Destroys all created objects, except presences in the
    root context and the visibles that were in those presences' prox result set.
    Then executes script associated with root context.  (Use
@@ -619,7 +619,7 @@ v8::Handle<v8::Value> root_reset(const v8::Arguments& args)
     if (!decodeSuccess)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error. Could not decode reset arg.  See documentation in JSSystem.cpp.")));
 
-        
+
 
     String errorMessage = "Error in reset of system object.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -651,7 +651,7 @@ bool decodeResetArg(v8::Handle<v8::Object> arg, std::map<SpaceObjectReference, s
         if (!decodeSporef(allPresSporefs->Get(s), presSporef,dummy))
             return false;  //index wasn't a sporef.
 
-        //presSporef should now contain the sporef of a local presence.  
+        //presSporef should now contain the sporef of a local presence.
         //getting the field of arg corresponding to allPresSporefs->Get(s)
         //should give arrays of sporefs of visibles that are within presSporef's
         //prox set.
@@ -674,7 +674,7 @@ bool decodeResetArg(v8::Handle<v8::Object> arg, std::map<SpaceObjectReference, s
             cppRes[presSporef].push_back(visSporef);
         }
     }
-        
+
     return true;
 }
 
@@ -942,6 +942,7 @@ v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args)
    @param {quaternion} orientVel,
    @param {string} orientTime,
    @param {string} mesh,
+   @param {string} physics,
    @param {number} scale,
    @param {boolean} isCleared ,
    @param {uint32} contextId,
@@ -956,8 +957,8 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
 
-    if (args.Length() != 17)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 17 arguments")));
+    if (args.Length() != 18)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to restore presence through system object.  restore_presence requires 18 arguments")));
 
 
     v8::Handle<v8::Value> mSporefArg                       = args[0];
@@ -968,15 +969,16 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     v8::Handle<v8::Value> orientVelArg                     = args[5];
     v8::Handle<v8::Value> orientTimeArg                    = args[6];
     v8::Handle<v8::Value> meshArg                          = args[7];
-    v8::Handle<v8::Value> scaleArg                         = args[8];
-    v8::Handle<v8::Value> isClearedArg                     = args[9];
-    v8::Handle<v8::Value> contextIDArg                     = args[10];
-    v8::Handle<v8::Value> isConnectedArg                   = args[11];
-    v8::Handle<v8::Value> connectedCallbackArg             = args[12];
-    v8::Handle<v8::Value> isSuspendedArg                   = args[13];
-    v8::Handle<v8::Value> suspendedVelocityArg             = args[14];
-    v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[15];
-    v8::Handle<v8::Value> solidAngleQueryArg               = args[16];
+    v8::Handle<v8::Value> physicsArg                       = args[8];
+    v8::Handle<v8::Value> scaleArg                         = args[9];
+    v8::Handle<v8::Value> isClearedArg                     = args[10];
+    v8::Handle<v8::Value> contextIDArg                     = args[11];
+    v8::Handle<v8::Value> isConnectedArg                   = args[12];
+    v8::Handle<v8::Value> connectedCallbackArg             = args[13];
+    v8::Handle<v8::Value> isSuspendedArg                   = args[14];
+    v8::Handle<v8::Value> suspendedVelocityArg             = args[15];
+    v8::Handle<v8::Value> suspendedOrientationVelocityArg  = args[16];
+    v8::Handle<v8::Value> solidAngleQueryArg               = args[17];
 
     //now, it's time to decode them.
 
@@ -1006,6 +1008,12 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     specificErrMsg = baseErrMsg + "mesh.";
     bool meshDecodeSuccessful = decodeString(meshArg, mesh, specificErrMsg);
     if (! meshDecodeSuccessful)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+    String physics;
+    specificErrMsg = baseErrMsg + "physics.";
+    bool physicsDecodeSuccessful = decodeString(physicsArg, physics, specificErrMsg);
+    if (! physicsDecodeSuccessful)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
 
@@ -1077,6 +1085,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         &mPos,
         &mOrient,
         &mesh,
+        &physics,
         &scale,
         &isCleared,
         &contextID,

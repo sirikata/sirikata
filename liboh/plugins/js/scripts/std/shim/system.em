@@ -844,6 +844,7 @@ function PresenceEntry(sporef, presObj)
       @param {quaternion} orientVel,
       @param {string} orientTime,
       @param {string} mesh,
+      @param {string} physics,
       @param {number} scale,
       @param {boolean} isCleared ,
       @param {uint32} contextId,
@@ -854,12 +855,12 @@ function PresenceEntry(sporef, presObj)
       @param {quaternion} suspendedOrientationVelocity,
       @param {float} solidAngleQuery
       */
-     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery)
+     system.restorePresence = function(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery)
      {
          if (connCB != null)
              connCB = this.__wrapPresConnCB(connCB);
 
-         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
+         return baseSystem.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextId,isConnected,connCB,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
      };
       
       /** @deprecated Use createPresence */

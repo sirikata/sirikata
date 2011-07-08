@@ -402,6 +402,7 @@ if (typeof(std.persist) === 'undefined')
              toRestoreFrom.orientVel,
              toRestoreFrom.orientTime,
              toRestoreFrom.mesh,
+             toRestoreFrom.physics,
              toRestoreFrom.scale,
              toRestoreFrom.isCleared,
              toRestoreFrom.contextId,

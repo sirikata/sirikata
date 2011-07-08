@@ -936,7 +936,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
             newLoc,
             bs,
             *psrp.mMesh,
-            "",
+            *psrp.mPhysics,
             *psrp.mQuery,
             UUID::null(),
             psrp.mSporef->object(),

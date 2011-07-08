@@ -14,11 +14,20 @@ namespace JS {
 
 struct PresStructRestoreParams
 {
-    PresStructRestoreParams(SpaceObjectReference* sporef,TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,String* mesh,double* scale,bool *isCleared,uint32* contID,bool* isConnected,v8::Handle<v8::Function>* connCallback,bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity, SolidAngle* sa)
+    PresStructRestoreParams(
+        SpaceObjectReference* sporef,
+        TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,
+        String* mesh,String* physics,double* scale,
+        bool *isCleared,uint32* contID,bool* isConnected,
+        v8::Handle<v8::Function>* connCallback,
+        bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity,
+        SolidAngle* sa
+    )
         : mSporef(sporef),
           mTmv3f(tmv3f),
           mTmq(tmq),
           mMesh(mesh),
+          mPhysics(physics),
           mScale(scale),
           mIsCleared(isCleared),
           mContID(contID),
@@ -35,6 +44,7 @@ struct PresStructRestoreParams
     TimedMotionVector3f* mTmv3f;
     TimedMotionQuaternion* mTmq;
     String* mMesh;
+    String* mPhysics;
     double* mScale;
     bool *mIsCleared;
     uint32* mContID;
@@ -69,7 +79,7 @@ struct JSPresenceStruct : public JSPositionListener,
 
     virtual void fixupSuspendable()
     {}
-    
+
     ~JSPresenceStruct();
 
 
@@ -79,7 +89,7 @@ struct JSPresenceStruct : public JSPositionListener,
        @param {JSProxyPtr} newJPP Before this presenceStruct was connected, we
        didn't have a sporef, and therefore, had to use an empty proxy ptr in the
        positionlistener for this presence.  Now that we know sporef, we also
-       know the proxy ptr should set in position listener.  
+       know the proxy ptr should set in position listener.
      */
     void connect(const SpaceObjectReference& _sporef, std::tr1::shared_ptr<JSProxyData> newJPP);
     void disconnectCalledFromObjScript();
@@ -97,7 +107,7 @@ struct JSPresenceStruct : public JSPositionListener,
     v8::Handle<v8::Value> getAllData();
 
     v8::Handle<v8::Value> doneRestoring();
-    
+
     bool getIsConnected();
     v8::Handle<v8::Value> getIsConnectedV8();
     v8::Handle<v8::Value> setConnectedCB(v8::Handle<v8::Function> newCB);
@@ -142,7 +152,7 @@ struct JSPresenceStruct : public JSPositionListener,
 
 private:
     uint32 mContID;
-    
+
     //this function checks if we have a callback associated with this presence.
     //Then it asks jsobjectscript to call the callback
     void callConnectedCallback();
@@ -161,10 +171,10 @@ private:
     Vector3f   mSuspendedVelocity;
     Quaternion mSuspendedOrientationVelocity;
 
-    
+
     JSContextStruct* mContext;
     SolidAngle mQuery;
-    
+
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();
 
