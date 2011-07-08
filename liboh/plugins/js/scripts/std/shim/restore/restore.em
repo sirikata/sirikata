@@ -431,6 +431,7 @@ if (typeof(std.persist) === 'undefined')
              throw new Error('Error restoring function.  Restoring object does not have funcField.');
 
          var funcAsString = tripletGetValue(funcTriple);
+         funcAsString = '(' + funcAsString + ')';
 
          var returner = null;
          var success = true;
