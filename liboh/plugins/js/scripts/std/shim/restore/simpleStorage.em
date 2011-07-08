@@ -39,11 +39,13 @@ if (typeof(std.simpleStorage) != 'undefined')
         var keyName = prepender + fieldName;
         std.persist.checkpointPartialPersist(fieldVal,keyName);            
     };
+    std.simpleStorage.write = std.simpleStorage.setField;
 
     std.simpleStorage.eraseField = function(fieldName)
     {
         system.storageErase(prepender + fieldName);
     };
+    std.simpleStorage.erase = std.simpleStorage.eraseField;
     
     std.simpleStorage.readField = function(fieldName,cb,def)
     {
@@ -56,7 +58,7 @@ if (typeof(std.simpleStorage) != 'undefined')
                                              cb(def);
                                      });
     };
-
+    std.simpleStorage.read = std.simpleStorage.readField;
     
     std.simpleStorage.setPresence = function (presToRestore)
     {
@@ -92,7 +94,7 @@ if (typeof(std.simpleStorage) != 'undefined')
                                 [presToRestore,presName]], finishedCB);
 
     };
-    
+    std.simpleStorage.writePresence = std.simpleStorage.setPresence;
 
     std.simpleStorage.erasePresence = function (presToErase)
     {
@@ -226,14 +228,12 @@ if (typeof(std.simpleStorage) != 'undefined')
             //if we've already restored this presence ignore it.
             if (s in allRestored)
                 continue;
-
             //restore this presence, but call return so that we
             //don't yet restore script (in finishOnRestorePresences).
             allRestored[s] = true;
             std.persist.restoreFromAsync(s,restorePresences);
             return;
         }
-
         //if had no presences to restore, or they all had already been restored,
         //will call finishOnRestorePresences(), which just restores the script.
         finishOnRestorePresences();
