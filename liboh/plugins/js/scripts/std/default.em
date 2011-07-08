@@ -41,9 +41,20 @@ std.simpleStorage.setScript(
         system.require('std/shim/restore/persistService.em');
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
-        system.require('std/graphics/default.em');
-        
+        system.require('std/core/repeatingTimer.em');
+
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable();
-    },false);
 
+        var init = function() {
+            var storeFunc = function() {
+                std.simpleStorage.writePresence(system.self);
+            };
+            storageTimer = std.core.RepeatingTimer(60, storeFunc);
+            storeFunc(); // Force immediate storage
+        };
+        if (system.self == system)
+            system.onPresenceConnected(function() { init(); });
+        else
+            init();
+    },false);
