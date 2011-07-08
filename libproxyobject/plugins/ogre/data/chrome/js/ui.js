@@ -154,7 +154,11 @@ sirikata.ui = function(name, ui_code) {
                 for(var i = 1; i < arguments.length; i++) { args.push(encode(arguments[i])); }
                 return __sirikata.event.apply(this, [name + '-' + arguments[0]].concat(args) );
             };
-            eval('(' + ui_code.toString() + ')()');
+            try {
+                eval('(' + ui_code.toString() + ')()');
+            } catch (x) {
+                sirikata.log('error', 'Warning: Failed UI initialization. ' + x.toString());
+            }
             sirikata.event('__ready'); // really name-__ready
         }
     );
