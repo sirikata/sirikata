@@ -28,6 +28,10 @@ message JSFieldValue
 	optional int32 ui_value = 6;
         optional double d_value = 7;
         optional JSMessage a_value = 8;
+        // Note that loop_pointer is somewhat misleading. This really
+        // just handles any objects which are pointed to more than
+        // once, e.g. the same value could appear many times if it
+        // points to the prototype of a common type such as vec3
         optional int32 loop_pointer = 9;
 }
 

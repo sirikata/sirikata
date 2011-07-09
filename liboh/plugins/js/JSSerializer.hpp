@@ -40,7 +40,8 @@ struct LoopedObjPointer
 typedef std::map<int32, v8::Handle<v8::Object> > ObjectMap;
 typedef ObjectMap::iterator ObjectMapIter;
 
-typedef std::map<int32, LoopedObjPointer> FixupMap;
+typedef std::vector<LoopedObjPointer> LoopedObjPointerList;
+typedef std::map<int32, LoopedObjPointerList> FixupMap;
 typedef FixupMap::iterator FixupMapIter;
 
 void debug_printSerialized(Sirikata::JS::Protocol::JSMessage jm, String prepend);

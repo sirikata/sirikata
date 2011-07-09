@@ -81,7 +81,7 @@ void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::J
     INLINE_STR_CONV(name,cStrMsgBody1,"error decoding string in serializeFunction");
 
 
-    
+
     jsf.set_name(cStrMsgBody1);
 
     v8::Local<v8::Value> value = v8Func->ToString();
@@ -185,7 +185,7 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toSta
   {
       serializeObjectInternal(v8Val, jsmessage,toStampWith,allObjs);
   }
-  
+
   std::string serialized_message;
   jsmessage.SerializeToString(&serialized_message);
 
@@ -257,7 +257,7 @@ void JSSerializer::serializeFunctionInternal(v8::Local<v8::Function> funcToSeria
 {
     v8::Local<v8::Value> value = funcToSerialize->ToString();
     INLINE_STR_CONV(value,cStrMsgBody2, "error decoding string in serializeFunctionInternal");
-    
+
     Sirikata::JS::Protocol::IJSFunctionObject jsfuncObj = field_to_put_in.mutable_f_value();
     jsfuncObj.set_f_value(cStrMsgBody2);
     jsfuncObj.set_func_id(toStampWith);
@@ -339,7 +339,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         {
             v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
             INLINE_STR_CONV(v8Func->ToString(),cStrMsgBody2, "error decoding string in serializeObjectInternal");
-            
+
             if (cStrMsgBody2.find("{ [native code] }") != String::npos)
                 continue;
         }
@@ -349,8 +349,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
         // create a JSField out of this
         jsf.set_name(prop_name);
-        
-        
+
+
         /* Check if the value is a function, object, bool, etc. */
         if(prop_val->IsFunction())
         {
@@ -401,8 +401,8 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         {
             v8::Local<v8::Object> v8obj = v8::Local<v8::Object>::Cast(prop_val);
             v8::Local<v8::Value> hiddenValue = v8obj->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
-            
-            if (hiddenValue.IsEmpty()) 
+
+            if (hiddenValue.IsEmpty())
             {
                 //means that we have not already stamped this object, and should
                 //now
@@ -466,31 +466,33 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
 {
     for (FixupMapIter iter = toFixUp.begin(); iter != toFixUp.end(); ++iter)
     {
-        ObjectMapIter finder = labeledObjs.find(iter->first);
-        if (finder == labeledObjs.end())
-        {
-            JSLOG(error, "error deserializing object pointing to "<< iter->first<< ". No record of that label.");
-            return false;
-        }
-        if (iter->second.name != "prototype")
-            iter->second.parent->Set(v8::String::New(iter->second.name.c_str(), iter->second.name.size()), finder->second);
-        else
-        {
-            if (!finder->second.IsEmpty() && !finder->second->IsUndefined() && !finder->second->IsNull())
+        int32 objid = iter->first;
+        for (LoopedObjPointerList::iterator liter = iter->second.begin(); liter != iter->second.end(); liter++) {
+            LoopedObjPointer& objpointer = *liter;
+            ObjectMapIter finder = labeledObjs.find(objid);
+            if (finder == labeledObjs.end())
             {
-                iter->second.parent->SetPrototype(finder->second);
+                JSLOG(error, "error deserializing object pointing to "<< objid<< ". No record of that label.");
+                return false;
+            }
+            if (objpointer.name != "prototype")
+                objpointer.parent->Set(v8::String::New(objpointer.name.c_str(), objpointer.name.size()), finder->second);
+            else
+            {
+                if (!finder->second.IsEmpty() && !finder->second->IsUndefined() && !finder->second->IsNull())
+                {
+                    objpointer.parent->SetPrototype(finder->second);
+                }
             }
         }
-//        iter->second.parent->Set(v8::String::New(iter->second.name.c_str(), iter->second.name.size()), finder->second);
     }
     return true;
 }
 
 
-
 bool JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
 {
-        
+
     v8::HandleScope handle_scope;
     ObjectMap labeledObjs;
     FixupMap  toFixUp;
@@ -568,7 +570,7 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
 
       //create the vis obj through objScript
-      deserializeTo = emerScript->createVisiblePersistent(visibleObj,NULL,ctx);  
+      deserializeTo = emerScript->createVisiblePersistent(visibleObj,NULL,ctx);
 
       return true;
     }
@@ -581,7 +583,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
         String fieldname = jsf.name();
 
-        
         v8::Local<v8::String> fieldkey = v8::String::New(fieldname.c_str(), fieldname.size());
         v8::Handle<v8::Value> val;
 
@@ -632,7 +633,7 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
         }
         else if (jsvalue.has_loop_pointer())
         {
-            toFixUp[jsvalue.loop_pointer()] =(LoopedObjPointer(deserializeTo,fieldname,jsvalue.loop_pointer()));
+            toFixUp[jsvalue.loop_pointer()].push_back(LoopedObjPointer(deserializeTo,fieldname,jsvalue.loop_pointer()));
             continue;
         }
 
