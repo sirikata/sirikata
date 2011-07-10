@@ -123,7 +123,6 @@ public:
         SILOG(transfer, debug, "Issuing invalid GET request");
         Transfer::HttpManager::getSingleton().makeRequest(addr, Transfer::HttpManager::GET, request_stream.str(),
                 std::tr1::bind(&HttpTransferTest::expect_request_failed, this, _1, _2, _3));
-        SILOG(transfer, debug, "about to wait");
         mDone.wait(lock);
 
 
@@ -497,6 +496,28 @@ public:
         }
 
 
+        /*
+         * Issue a GET request to a location that is known to return
+         * a 301 redirect to make sure that the HttpManager will
+         * redirect us properly
+         */
+        request_stream.str("");
+        request_stream << "GET /api/browse HTTP/1.1\r\n";
+        request_stream << "Host: www.open3dhub.com\r\n";
+        request_stream << "Accept: */*\r\n\r\n";
+
+        SILOG(transfer, debug, "Issuing known redirect URL");
+        Network::Address redir_addr("www.open3dhub.com", "http");
+        Transfer::HttpManager::getSingleton().makeRequest(redir_addr, Transfer::HttpManager::GET, request_stream.str(),
+                std::tr1::bind(&HttpTransferTest::request_finished, this, _1, _2, _3));
+        mDone.wait(lock);
+
+        TS_ASSERT(mHttpResponse);
+        if(mHttpResponse) {
+            TS_ASSERT(mHttpResponse->getHeaders().size() != 0);
+            TS_ASSERT(mHttpResponse->getStatusCode() == 200);
+        }
+
 
         /*
          * Now, let's plug in a bunch of persistent connections (no connection:close)
@@ -576,7 +597,6 @@ public:
             TS_FAIL("Got unknown response code from HttpManager");
         }
 
-        SILOG(transfer, debug, "notifying");
         mDone.notify_all();
     }
 

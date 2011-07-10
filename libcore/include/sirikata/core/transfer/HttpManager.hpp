@@ -97,6 +97,13 @@ namespace Transfer {
 class SIRIKATA_EXPORT HttpManager
     : public AutoSingleton<HttpManager> {
 
+protected:
+	enum LAST_HEADER_CB {
+		NONE,
+		FIELD,
+		VALUE
+	};
+
 public:
 
     /*
@@ -113,11 +120,6 @@ public:
     class HttpResponse {
     protected:
         // This stuff is all used internally for http-parser
-        enum LAST_HEADER_CB {
-            NONE,
-            FIELD,
-            VALUE
-        };
         std::string mTempHeaderField;
         std::string mTempHeaderValue;
         LAST_HEADER_CB mLastCallback;
@@ -209,11 +211,19 @@ private:
         const HttpCallback cb;
         const HTTP_METHOD method;
         HttpRequest(Sirikata::Network::Address _addr, std::string _req, HTTP_METHOD meth, HttpCallback _cb)
-            : addr(_addr), req(_req), cb(_cb), method(meth), mNumTries(0) {}
+            : addr(_addr), req(_req), cb(_cb), method(meth), mNumTries(0),
+              mLastCallback(NONE), mHeaderComplete(false) {}
 
         friend class HttpManager;
     protected:
         uint32 mNumTries;
+        http_parser_settings mHttpSettings;
+        http_parser mHttpParser;
+        std::string mTempHeaderField;
+        std::string mTempHeaderValue;
+        LAST_HEADER_CB mLastCallback;
+        bool mHeaderComplete;
+        std::map<std::string, std::string> mHeaders;
     };
 
     //Holds a queue of requests to be made
@@ -269,6 +279,10 @@ private:
     static int on_headers_complete(http_parser *_);
     static int on_body(http_parser *_, const char *at, size_t len);
     static int on_message_complete(http_parser *_);
+
+    static int on_request_header_field(http_parser *_, const char *at, size_t len);
+    static int on_request_header_value(http_parser *_, const char *at, size_t len);
+    static int on_request_headers_complete(http_parser *_);
 
     enum HTTP_PARSER_FLAGS
       { F_CHUNKED = 1 << 0

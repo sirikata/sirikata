@@ -32,6 +32,8 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/network/Address.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpManager);
 
@@ -92,9 +94,24 @@ void HttpManager::postCallback(IOCallback cb) {
 
 void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD method, std::string req, HttpCallback cb) {
 
-    http_parser reqParser;
-    http_parser_init(&reqParser, HTTP_REQUEST);
-    size_t nparsed = http_parser_execute(&reqParser, &EMPTY_PARSER_SETTINGS, req.c_str(), req.length());
+    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, cb));
+
+    //Initialize http parser settings callbacks
+    r->mHttpSettings = EMPTY_PARSER_SETTINGS;
+    r->mHttpSettings.on_header_field = &HttpManager::on_request_header_field;
+    r->mHttpSettings.on_header_value = &HttpManager::on_request_header_value;
+    r->mHttpSettings.on_headers_complete = &HttpManager::on_request_headers_complete;
+
+    //Initialize the parser for parsing a response
+    http_parser_init(&(r->mHttpParser), HTTP_REQUEST);
+
+    /*
+     * http-parser library uses this void * parameter to callbacks for user-defined data
+     * Store a pointer to the HttpRequest object so we can access it during static callbacks
+     */
+    r->mHttpParser.data = static_cast<void *>(r.get());
+
+    size_t nparsed = http_parser_execute(&(r->mHttpParser), &(r->mHttpSettings), req.c_str(), req.length());
     if (nparsed != req.length()) {
         SILOG(transfer, warning, "Parsing http request failed");
         boost::system::error_code ec;
@@ -102,7 +119,6 @@ void HttpManager::makeRequest(Sirikata::Network::Address addr, HTTP_METHOD metho
         return;
     }
 
-    std::tr1::shared_ptr<HttpRequest> r(new HttpRequest(addr, req, method, cb));
     add_req(r);
     processQueue();
 }
@@ -360,7 +376,28 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
         }
 
         SILOG(transfer, detailed, "Finished http transfer with content length of " << respPtr->getContentLength());
-        req->cb(respPtr, SUCCESS, ec);
+        std::map<std::string, std::string>::const_iterator findLocation;
+        findLocation = respPtr->mHeaders.find("Location");
+        if (respPtr->getStatusCode() == 301 && findLocation != respPtr->mHeaders.end()) {
+            SILOG(transfer, detailed, "Got a 301 redirect reply and location = " << findLocation->second);
+            std::ostringstream request_stream;
+            std::string request_method = (req->method == HEAD) ? "HEAD" : "GET";
+            URI newURI(findLocation->second.c_str());
+            request_stream << request_method << " " << newURI.fullpath() << " HTTP/1.1\r\n";
+            std::map<std::string, std::string>::const_iterator it;
+            for (it = req->mHeaders.begin(); it != req->mHeaders.end(); it++) {
+            	if (it->first == "Host") {
+            		request_stream << "Host: " << newURI.host() << "\r\n";
+            	} else {
+            		request_stream << it->first << ": " << it->second << "\r\n";
+            	}
+            }
+            request_stream << "\r\n";
+            Network::Address newaddr(newURI.host(), newURI.proto());
+            makeRequest(newaddr, req->method, request_stream.str(), req->cb);
+        } else {
+            req->cb(respPtr, SUCCESS, ec);
+        }
 
         //If this is Connection: Close or we reached EOF, then close connection, otherwise recycle
         if ((respPtr->mHttpParser.flags & F_CONNECTION_CLOSE) || err == boost::asio::error::eof) {
@@ -406,7 +443,7 @@ int HttpManager::on_headers_complete(http_parser* _) {
     curResponse->mStatusCode = _->status_code;
 
     //Check for last header that might not have been saved
-    if (curResponse->mLastCallback == HttpResponse::VALUE) {
+    if (curResponse->mLastCallback == VALUE) {
         curResponse->mHeaders[curResponse->mTempHeaderField] = curResponse->mTempHeaderValue;
     }
 
@@ -425,21 +462,21 @@ int HttpManager::on_header_field(http_parser* _, const char* at, size_t len) {
 
     //See http-parser documentation for why this is necessary
     switch (curResponse->mLastCallback) {
-        case HttpResponse::VALUE:
+        case VALUE:
             //Previous header name/value is finished, so save
             curResponse->mHeaders[curResponse->mTempHeaderField] = curResponse->mTempHeaderValue;
             //Then continue on to the none case to make new values:
-        case HttpResponse::NONE:
+        case NONE:
             //Clear strings and save header name
             curResponse->mTempHeaderField.clear();
             //Continue on to append:
-        case HttpResponse::FIELD:
+        case FIELD:
             //Field was called twice in a row, so append new data to previous name
             curResponse->mTempHeaderField.append(at, len);
             break;
     }
 
-    curResponse->mLastCallback = curResponse->FIELD;
+    curResponse->mLastCallback = FIELD;
     return 0;
 }
 
@@ -449,21 +486,81 @@ int HttpManager::on_header_value(http_parser* _, const char* at, size_t len) {
 
     //See http-parser documentation for why this is necessary
     switch(curResponse->mLastCallback) {
-        case HttpResponse::FIELD:
+        case FIELD:
             //Field is finished, this is a new value so clear
             curResponse->mTempHeaderValue.clear();
             //Continue on to append data:
-        case HttpResponse::VALUE:
+        case VALUE:
             //May be a continued header value, so append
             curResponse->mTempHeaderValue.append(at, len);
             break;
-        case HttpResponse::NONE:
+        case NONE:
             //Shouldn't happen
             assert(false);
             break;
     }
 
-    curResponse->mLastCallback = curResponse->VALUE;
+    curResponse->mLastCallback = VALUE;
+    return 0;
+}
+
+int HttpManager::on_request_headers_complete(http_parser* _) {
+    //SILOG(transfer, debug, "headers complete. content length = " << _->content_length);
+    HttpRequest* curRequest = static_cast<HttpRequest*>(_->data);
+
+    //Check for last header that might not have been saved
+    if (curRequest->mLastCallback == VALUE) {
+        curRequest->mHeaders[curRequest->mTempHeaderField] = curRequest->mTempHeaderValue;
+    }
+
+    curRequest->mHeaderComplete = true;
+    return 0;
+}
+
+int HttpManager::on_request_header_field(http_parser* _, const char* at, size_t len) {
+    HttpRequest* curRequest = static_cast<HttpRequest*>(_->data);
+
+    //See http-parser documentation for why this is necessary
+    switch (curRequest->mLastCallback) {
+        case VALUE:
+            //Previous header name/value is finished, so save
+            curRequest->mHeaders[curRequest->mTempHeaderField] = curRequest->mTempHeaderValue;
+            //Then continue on to the none case to make new values:
+        case NONE:
+            //Clear strings and save header name
+            curRequest->mTempHeaderField.clear();
+            //Continue on to append:
+        case FIELD:
+            //Field was called twice in a row, so append new data to previous name
+            curRequest->mTempHeaderField.append(at, len);
+            break;
+    }
+
+    curRequest->mLastCallback = FIELD;
+    return 0;
+}
+
+int HttpManager::on_request_header_value(http_parser* _, const char* at, size_t len) {
+    //SILOG(transfer, debug, "on_header_value called");
+    HttpRequest* curRequest = static_cast<HttpRequest*>(_->data);
+
+    //See http-parser documentation for why this is necessary
+    switch(curRequest->mLastCallback) {
+        case FIELD:
+            //Field is finished, this is a new value so clear
+            curRequest->mTempHeaderValue.clear();
+            //Continue on to append data:
+        case VALUE:
+            //May be a continued header value, so append
+            curRequest->mTempHeaderValue.append(at, len);
+            break;
+        case NONE:
+            //Shouldn't happen
+            assert(false);
+            break;
+    }
+
+    curRequest->mLastCallback = VALUE;
     return 0;
 }
 
