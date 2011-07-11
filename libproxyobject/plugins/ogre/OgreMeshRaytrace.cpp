@@ -92,13 +92,16 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord, std::vecto
 
         // find and lock the buffer containing position information
         VertexBufferBinding *bufferBinding = vertexData->vertexBufferBinding;
-        HardwareVertexBuffer *buffer = bufferBinding->getBuffer(element->getSource()).get();
+        HardwareVertexBuffer *buffer = bufferBinding->getBuffer(element->getSource()).get();        
+
         if (lvertices.empty()) {
             unsigned char *pVert = static_cast<unsigned char*>(buffer->lock(HardwareBuffer::HBL_READ_ONLY));
-            HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;
+            HardwareVertexBuffer *texbuffer = texelement ? bufferBinding->getBuffer(texelement->getSource()).get() : NULL;            
+
             unsigned char *pTexVert = texbuffer
                 ? (texbuffer == buffer ? pVert : static_cast<unsigned char*>(texbuffer->lock(HardwareBuffer::HBL_READ_ONLY)))
-                : NULL;
+                : NULL;            
+
             for (size_t vert = 0; vert < vertexData->vertexCount; vert++)
             {
                 float *vertex = 0;
@@ -123,6 +126,10 @@ void OgreMesh::syncFromOgreMesh(Ogre::SubMesh*subMesh, bool texcoord, std::vecto
                 lvertices.push_back(TriVertex(vec, texvec.x, texvec.y));
 
                 pVert += buffer->getVertexSize();
+            }
+
+            if (texbuffer && texbuffer != buffer && texbuffer->isLocked()) {
+              texbuffer->unlock();
             }
 
             buffer->unlock();
