@@ -147,6 +147,9 @@ std.movement.MoveAndRotate = system.Class.extend(
                        system.timeout(.05, std.core.bind(this._reeval, this));
                }
         },
+        reeval: function() {
+            this._reeval(true);
+        },
         _reeval: function(is_first) {
             // Only perform reeval if we really need it
             if (this._moving && this._rotating || is_first)

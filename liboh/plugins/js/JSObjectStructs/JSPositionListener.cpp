@@ -179,17 +179,17 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getAnimationList()
-{  
-    if (!mMeshdata) {      
+{
+    if (!mMeshdata) {
       return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call getAnimationList before loading the mesh.")));
     }
 
     std::vector<String> animationList;
     std::set<String> animationSet;
 
-    for (uint i=0;  i < mMeshdata->nodes.size(); i++) {
+    for (uint32 i=0;  i < mMeshdata->nodes.size(); i++) {
       Sirikata::Mesh::Node& node = mMeshdata->nodes[i];
-      
+
       for (std::map<String, Sirikata::Mesh::TransformationKeyFrames>::iterator it = node.animations.begin();
            it != node.animations.end(); it++)
         {
@@ -202,11 +202,11 @@ v8::Handle<v8::Value> JSPositionListener::struct_getAnimationList()
     }
 
     v8::HandleScope handle_scope;
-    v8::Handle<v8::Object> returner = v8::Array::New(animationList.size());    
-    
-    for ( uint  i = 0; i < animationList.size(); i++) {
+    v8::Handle<v8::Object> returner = v8::Array::New(animationList.size());
+
+    for ( uint32  i = 0; i < animationList.size(); i++) {
       returner->Set(i, v8::String::New(animationList[i].c_str(), animationList[i].size() ));
-    }    
+    }
 
     return handle_scope.Close(returner);
 }

@@ -398,6 +398,7 @@ function() {
         this._pres.setOrientation(util.Quaternion.fromLookAt(
             this._pres.getOrientation().zAxis().scale(-1), <0, 1, 0>));
         this.updateCameraOffset();
+        this._moverot.reeval();
     };
 
     /** @function */
