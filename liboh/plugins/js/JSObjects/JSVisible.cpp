@@ -361,6 +361,17 @@ v8::Handle<v8::Function> decodeCallbackArgument(const v8::Arguments& args, int32
 }
 }
 
+v8::Handle<v8::Value> getAnimationList(const v8::Arguments& args)
+{
+  String errorMessage = "Error in getAnimationList while decoding presence.  ";
+  JSVisibleStruct* mStruct = JSVisibleStruct::decodeVisible(args.This() ,errorMessage);
+  
+  if (mStruct == NULL)
+    return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+  
+  return mStruct->struct_getAnimationList();  
+}
+
 v8::Handle<v8::Value> loadMesh(const v8::Arguments& args)
 {
     if (args.Length() != 2) // only tell about one, first should be system

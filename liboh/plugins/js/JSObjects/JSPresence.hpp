@@ -76,6 +76,8 @@ v8::Handle<v8::Value> untransformedMeshBounds(const v8::Arguments& args);
 v8::Handle<v8::Value> raytrace(const v8::Arguments& args);
 v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args);
 
+v8::Handle<v8::Value> getAnimationList(const v8::Arguments& args);
+
 void setNullPresence(const v8::Arguments& args);
 
 } //end namespace JSPresence

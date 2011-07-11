@@ -234,6 +234,20 @@ function() {
         return this._simulator.addGUIModule(name, url, cb);
     };
 
+    /** Get a list of animations associated with this entity. */
+    std.graphics.DefaultGraphics.prototype.getAnimationList = function(vis) {
+        if (!vis)
+          vis = system.self;
+
+        return this._simulator.getAnimationList(vis);
+    };
+
+    /** Start the animation on this entity given by the specified animation name. */
+    std.graphics.DefaultGraphics.prototype.startAnimation = function(vis, anim) {
+        return this._simulator.startAnimation(vis, anim);
+    };
+
+
     /** Request that the given script text be added as a module in the UI. */
     std.graphics.DefaultGraphics.prototype.addGUITextModule = function(name, js_text, cb) {
         return this._simulator.addGUITextModule(name, js_text, cb);

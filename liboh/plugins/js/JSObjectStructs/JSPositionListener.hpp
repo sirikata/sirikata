@@ -43,6 +43,9 @@ public:
     virtual v8::Handle<v8::Value> struct_getSporef();
     virtual v8::Handle<v8::Value> struct_getStillVisible();
 
+    virtual v8::Handle<v8::Value> struct_getAnimationList();
+    
+
     virtual v8::Handle<v8::Value> struct_getAllData();
     virtual v8::Handle<v8::Value> struct_checkEqual(JSPositionListener* jpl);
 

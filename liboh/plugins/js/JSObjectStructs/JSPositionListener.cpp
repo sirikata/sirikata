@@ -178,6 +178,39 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
     return v8::String::New(convertedString.c_str(),convertedString.size());
 }
 
+v8::Handle<v8::Value> JSPositionListener::struct_getAnimationList()
+{  
+    if (!mMeshdata) {      
+      return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call getAnimationList before loading the mesh.")));
+    }
+
+    std::vector<String> animationList;
+    std::set<String> animationSet;
+
+    for (uint i=0;  i < mMeshdata->nodes.size(); i++) {
+      Sirikata::Mesh::Node& node = mMeshdata->nodes[i];
+      
+      for (std::map<String, Sirikata::Mesh::TransformationKeyFrames>::iterator it = node.animations.begin();
+           it != node.animations.end(); it++)
+        {
+          animationSet.insert(it->first);
+        }
+    }
+
+    for (std::set<String>::iterator it = animationSet.begin(); it != animationSet.end(); it++) {
+      animationList.push_back(*it);
+    }
+
+    v8::HandleScope handle_scope;
+    v8::Handle<v8::Object> returner = v8::Array::New(animationList.size());    
+    
+    for ( uint  i = 0; i < animationList.size(); i++) {
+      returner->Set(i, v8::String::New(animationList[i].c_str(), animationList[i].size() ));
+    }    
+
+    return handle_scope.Close(returner);
+}
+
 v8::Handle<v8::Value> JSPositionListener::loadMesh(JSContextStruct* ctx, v8::Handle<v8::Function> cb) {
     CHECK_JPP_INIT_THROW_V8_ERROR(loadMesh);
 
@@ -254,7 +287,6 @@ v8::Handle<v8::Value> JSPositionListener::raytrace(const Vector3f& mesh_ray_star
 
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(raytrace,curContext);
     return CreateJSResult(curContext, hit_out);
-
 }
 
 v8::Handle<v8::Value> JSPositionListener::unloadMesh() {

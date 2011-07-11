@@ -734,6 +734,16 @@ v8::Handle<v8::Value> unloadMesh(const v8::Arguments& args)
     return presstruct->unloadMesh();
 }
 
+v8::Handle<v8::Value> getAnimationList(const v8::Arguments& args)
+{
+  String errorMessage = "Error in getAnimationList while decoding presence.  ";
+  JSPresenceStruct* mStruct = JSPresenceStruct::decodePresenceStruct(args.This() ,errorMessage);
+  
+  if (mStruct == NULL)
+    return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
+  
+  return mStruct->struct_getAnimationList();  
+}
 
 
 void setNullPresence(const v8::Arguments& args)

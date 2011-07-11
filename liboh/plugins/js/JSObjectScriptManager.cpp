@@ -380,6 +380,10 @@ void JSObjectScriptManager::createVisibleTemplate()
     proto_t->Set(v8::String::New("raytrace"),v8::FunctionTemplate::New(JSVisible::raytrace));
     proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSVisible::unloadMesh));
 
+    //animations
+    proto_t->Set(v8::String::New("getAnimationList"),v8::FunctionTemplate::New(JSVisible::getAnimationList));
+
+
     proto_t->Set(v8::String::New("getAllData"), v8::FunctionTemplate::New(JSVisible::getAllData));
     proto_t->Set(v8::String::New("__getType"),v8::FunctionTemplate::New(JSVisible::getType));
 
@@ -471,6 +475,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("raytrace"),v8::FunctionTemplate::New(JSPresence::raytrace));
   proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSPresence::unloadMesh));
 
+  //animations
+  proto_t->Set(v8::String::New("getAnimationList"),v8::FunctionTemplate::New(JSPresence::getAnimationList));  
 
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();

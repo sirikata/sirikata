@@ -155,6 +155,8 @@ Object.defineProperty(system.__presence_constructor__.prototype, "physics",
                       }
 );
 
+
+
 system.__presence_constructor__.prototype.__prettyPrintFieldsData__ = [
     "position", "velocity",
     "orientation", "orientationVel",
@@ -305,6 +307,7 @@ system.__presence_constructor__.prototype.__getType = function()
 
     presence.prototype.getMesh = function(){}
 
+    presence.prototype.getAnimationList = function(){}
 
       /** @function
        @description Allows a scripter to set a callback to execute

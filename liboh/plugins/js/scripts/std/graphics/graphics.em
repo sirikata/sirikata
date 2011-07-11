@@ -35,6 +35,8 @@ if (typeof(std.graphics) === "undefined") std.graphics = {};
 
 system.require('gui.em');
 system.require('std/escape.em');
+system.require('std/graphics/animationInfo.em');
+
 
 (
 function() {
@@ -56,6 +58,7 @@ function() {
         this.inputHandler = new std.graphics.InputHandler(this);
         this._cameraMode = 'first';
         this._setOnReady(cb, reset_cb);
+        this._animationInfo = new std.graphics.AnimationInfo(pres, this);
     };
 
     std.graphics.Graphics.prototype.invoke = function() {
@@ -111,6 +114,18 @@ function() {
     std.graphics.Graphics.prototype.toggleSuspend = function() {
         this.invoke('toggleSuspend');
     };
+    
+    std.graphics.Graphics.prototype.getAnimationList = function(pres) {
+      return this.invoke('getAnimationList', pres);
+    };
+
+    std.graphics.Graphics.prototype.startAnimation = function(vis, anim_name, responseToMsg) {
+      this.invoke('startAnimation', vis, anim_name);
+  
+      if (!responseToMsg)
+        this._animationInfo.sendAnimationInfo("AnimationInfo", vis.getVisibleID() + ":" + vis.getSpaceID(), anim_name);
+    };
+
 
     /** Request that the OH shut itself down, i.e. that the entire application exit. */
     std.graphics.Graphics.prototype.quit = function() {

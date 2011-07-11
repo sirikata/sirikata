@@ -25,6 +25,13 @@
       visible.prototype.getMesh = function(){
       };
 
+      /** 
+       @return An array of strings, where each string is the name of an animation that
+       is supported by this visible's mesh.
+      */
+      visible.prototype.getAnimationList = function(){}
+
+
 
       /**
        @return Vec3 associated with the position of this visible object.
@@ -167,6 +174,8 @@
                                enumerable: true
                            }
                           );
+
+
 
       var decodePhysics = function(phy) {
           if (phy.length == 0) return {};
