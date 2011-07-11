@@ -667,14 +667,15 @@ private:
                                  connection. StreamReturnCallbackFunction
                                  should have the signature void (int,std::tr1::shared_ptr<Stream>).
 
+    @return the number of bytes queued from the initial data buffer, or -1 if there was an error.
   */
-  virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
+  virtual int stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
 		      uint16 local_port, uint16 remote_port)
   {
-    stream(cb, initial_data, length, local_port, remote_port, 0);
+    return stream(cb, initial_data, length, local_port, remote_port, 0);
   }
 
-  virtual void stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
+  virtual int stream(StreamReturnCallbackFunction cb, void* initial_data, int length,
                       uint16 local_port, uint16 remote_port, LSID parentLSID)
   {
     USID usid = createNewUSID();
@@ -684,9 +685,11 @@ private:
       std::tr1::shared_ptr<Stream<EndPointType> >
       ( new Stream<EndPointType>(parentLSID, mWeakThis, local_port, remote_port,  usid, lsid, cb) );
     stream->mWeakThis = stream;
-    stream->init(initial_data, length, false, 0);
+    int numBytesBuffered = stream->init(initial_data, length, false, 0);
 
     mOutgoingSubstreamMap[lsid]=stream;
+
+    return numBytesBuffered;
   }
 
   uint64 sendData(const void* data, uint32 length, bool isAck) {
@@ -1656,13 +1659,16 @@ public:
                                   stream is created and the initial data queued up
                                   (or actually sent?). The function will provide  a
                                   reference counted, shared pointer to the  connection.
+
+     @return the number of bytes actually buffered from the initial data buffer specified, or
+     -1 if an error occurred.
   */
-  virtual void createChildStream(StreamReturnCallbackFunction cb, void* data, int length,
+  virtual int createChildStream(StreamReturnCallbackFunction cb, void* data, int length,
 				 uint16 local_port, uint16 remote_port)
   {
     std::tr1::shared_ptr<Connection<EndPointType> > conn = mConnection.lock();
     assert(conn);
-    conn->stream(cb, data, length, local_port, remote_port, mLSID);
+    return conn->stream(cb, data, length, local_port, remote_port, mLSID);
   }
 
   /*
@@ -1735,8 +1741,7 @@ private:
     // Continues in init, when we have mWeakThis set
   }
 
-  void init(void* initial_data, uint32 length,
-      bool remotelyInitiated, LSID remoteLSID) {
+  int init(void* initial_data, uint32 length, bool remotelyInitiated, LSID remoteLSID) {
     if (remotelyInitiated) {
         mRemoteLSID = remoteLSID;
         mConnected = true;
@@ -1745,9 +1750,10 @@ private:
     else {
         mConnected = false;
         mState = PENDING_CONNECT;
-    }
+    }    
 
     mInitialDataLength = (length <= MAX_PAYLOAD_SIZE) ? length : MAX_PAYLOAD_SIZE;
+    int numBytesBuffered = mInitialDataLength;
 
     if (initial_data != NULL) {
       mInitialData = new uint8[mInitialDataLength];
@@ -1770,8 +1776,14 @@ private:
     mNumBytesSent = mInitialDataLength;
 
     if (length > mInitialDataLength) {
-      write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
+      int writeval = write( ((uint8*)initial_data) + mInitialDataLength, length - mInitialDataLength);
+
+      if (writeval >= 0) {
+        numBytesBuffered += writeval;
+      }
     }
+
+    return numBytesBuffered;
   }
 
   void initRemoteLSID(LSID remoteLSID) {
