@@ -38,6 +38,8 @@
 #include <sirikata/ogre/Lights.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 
+#undef nil
+
 using namespace Sirikata::Transfer;
 
 namespace Sirikata {
@@ -786,13 +788,13 @@ public:
   }
 
   bool getTRS(const Matrix4x4f& bsm, Ogre::Vector3& translate, Ogre::Quaternion& quaternion, Ogre::Vector3& scale) {
-    Vector4f trans = bsm.getCol(3);            
-    
+    Vector4f trans = bsm.getCol(3);
+
     // Get the scaling matrix
     float32 scaleX = bsm.getCol(0).length();
     float32 scaleY = bsm.getCol(1).length();
-    float32 scaleZ = bsm.getCol(2).length();            
-    
+    float32 scaleZ = bsm.getCol(2).length();
+
     // Get the rotation quaternion
     Vector4f xrot =  bsm.getCol(0)/scaleX;
     Vector4f yrot =  bsm.getCol(1)/scaleY;
@@ -805,15 +807,15 @@ public:
     if (trace > 0) {
       float32 S = sqrt(trace + 1);
 
-      qw =  0.5f * S ;   
+      qw =  0.5f * S ;
       S = 0.5f / S;
-      qx = (rotmat(2,1)-rotmat(1,2)) * S;  
-      qy = (rotmat(0,2)-rotmat(2,0)) * S ; 
+      qx = (rotmat(2,1)-rotmat(1,2)) * S;
+      qy = (rotmat(0,2)-rotmat(2,0)) * S ;
       qz = (rotmat(1,0)-rotmat(0,1)) * S;
     }
     else {
       //code in this block copied from Ogre Quaternion...
-      
+
       static size_t s_iNext[3] = { 1, 2, 0 };
       size_t i = 0;
       if ( rotmat(1,1) > rotmat(0,0) )
@@ -822,14 +824,14 @@ public:
         i = 2;
       size_t j = s_iNext[i];
       size_t k = s_iNext[j];
-      
+
       float32 fRoot = sqrt(rotmat(i,i)-rotmat(j,j)-rotmat(k,k) + 1.0f);
       float32* apkQuat[3] = { &qx, &qy, &qz };
       *apkQuat[i] = 0.5f*fRoot;
       fRoot = 0.5f/fRoot;
       qw = (rotmat(k,j)-rotmat(j,k))*fRoot;
       *apkQuat[j] = (rotmat(j,i)+rotmat(i,j))*fRoot;
-      *apkQuat[k] = (rotmat(k,i)+rotmat(i,k))*fRoot;      
+      *apkQuat[k] = (rotmat(k,i)+rotmat(i,k))*fRoot;
     }
 
     float32 N = sqrt(qx*qx + qy*qy + qz*qz + qw*qw);
@@ -839,27 +841,27 @@ public:
     scalemat(0,0) = scaleX;
     scalemat(1,1) = scaleY;
     scalemat(2,2) = scaleZ;
-    
+
     Matrix4x4f transmat(Matrix4x4f::identity());
     transmat(0,3) = trans.x;
     transmat(1,3) = trans.y;
     transmat(2,3) = trans.z;
 
     Matrix4x4f diffmat = (bsm - (transmat*rotmat*scalemat));
-    float32 matlen = diffmat.getCol(0).length() + diffmat.getCol(1).length() + diffmat.getCol(2).length()  
-      + diffmat.getCol(3).length() ;                       
-    
-    if (matlen > 0.00001) {      
+    float32 matlen = diffmat.getCol(0).length() + diffmat.getCol(1).length() + diffmat.getCol(2).length()
+      + diffmat.getCol(3).length() ;
+
+    if (matlen > 0.00001) {
       return false;
     }
-    
+
     quaternion = Ogre::Quaternion(qw,
                                   qx,
                                   qy, qz);
 
     translate = Ogre::Vector3(trans.x, trans.y, trans.z);
-    
-    scale = Ogre::Vector3( scaleX, scaleY, scaleZ);    
+
+    scale = Ogre::Vector3( scaleX, scaleY, scaleZ);
 
     return true;
   }
@@ -881,7 +883,7 @@ public:
         BoneMap bones;
 
         Ogre::Vector3 translate(0,0,0), scale(1,1,1);
-        Ogre::Quaternion rotate(1,0,0,0);      
+        Ogre::Quaternion rotate(1,0,0,0);
         Meshdata::JointIterator joint_it = mdptr->getJointIterator();
         uint32 joint_id;
         uint32 joint_idx;
@@ -901,15 +903,15 @@ public:
 
         Matrix4x4f bsm = skin.bindShapeMatrix;
         Matrix4x4f B_inv;
-        invert(B_inv, bsm);        
+        invert(B_inv, bsm);
 
         bones[0] = skel->createBone(0);
-        
+
         unsigned short curBoneValue = mdptr->getJointCount()+1;
 
         std::tr1::unordered_map<uint32, Matrix4x4f> ibmMap;
 
-        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) ) {          
+        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) ) {
 
           // We need to work backwards from the joint_idx (index into
           // mdptr->joints) to the index of the joint in this skin controller
@@ -920,7 +922,7 @@ public:
           }
           // If we couldn't find it, its not bound for this animation/submesh
           //if (skin_joint_idx >= skin.joints.size()) continue;
-          
+
           Matrix4x4f ibm = Matrix4x4f::identity();
           if (skin_joint_idx < skin.joints.size()) {
             // Get the bone's inverse bind-pose matrix and store it in the ibmMap.
@@ -928,7 +930,7 @@ public:
           }
           ibmMap[joint_id] = ibm;
 
-          /* Now construct the bone hierarchy. First implement the transform hierarchy from root to the bone's node. */          
+          /* Now construct the bone hierarchy. First implement the transform hierarchy from root to the bone's node. */
           Ogre::Bone* bone = bones[parent_id];
 
           if (bone == NULL) {
@@ -937,12 +939,12 @@ public:
           }
 
           if (parent_id == 0) {
-            for (uint i = 0;   i < transformList.size() ; i++) {
+            for (uint32 i = 0;   i < transformList.size() ; i++) {
               Matrix4x4f mat = transformList[i];
-              
+
               bool ret = getTRS(mat, translate, rotate, scale);
-              assert(ret);            
-              
+              assert(ret);
+
               bone = bone->createChild(curBoneValue++, translate, rotate);
               bone->setScale(scale);
             }
@@ -954,12 +956,12 @@ public:
           bones[joint_id] = bone;
 
           const Node& node = mdptr->nodes[ mdptr->joints[joint_idx] ];
-         
+
           for(Node::AnimationMap::const_iterator anim_it = node.animations.begin(); anim_it != node.animations.end(); anim_it++) {
             // Find/create the animation
             const String& anim_name = anim_it->first;
-            
-            animationList.insert(anim_name);            
+
+            animationList.insert(anim_name);
 
             const TransformationKeyFrames& anim_key_frames = anim_it->second;
             if (animations.find(anim_name) == animations.end())
@@ -971,7 +973,7 @@ public:
 
             Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);
             Ogre::Vector3 startPos(0,0,0);
-            Ogre::Quaternion startOrientation(1,0,0,0);            
+            Ogre::Quaternion startOrientation(1,0,0,0);
             Ogre::Vector3 startScale(1,1,1);
 
             bool firstRun = false;
@@ -985,10 +987,10 @@ public:
                 //need to cancel out the effect of BSM*IBM from the parent in the hierarchy
                 Matrix4x4f parentI_inv;
                 invert(parentI_inv, ibmMap[parent_id]);
-                
+
                 mat = B_inv * parentI_inv * mat;
               }
-                     
+
               bool ret = getTRS(mat, translate, rotate, scale);
               assert(ret);
 
@@ -1002,20 +1004,20 @@ public:
 
                 key->setTranslate( translate );
 
-                Ogre::Quaternion quat =  rotate;                
-                
+                Ogre::Quaternion quat =  rotate;
+
                 key->setRotation( quat );
                 key->setScale( scale );
               }
-              
+
               if (ret && !firstRun) {
                 // The relative transform for the remaining frames after the first frame.
                 Ogre::TransformKeyFrame* key = track->createNodeKeyFrame(key_time);
 
                 key->setTranslate( translate - startPos );
-                                
-                Ogre::Quaternion quat = startOrientation.Inverse() *  rotate;                
-                
+
+                Ogre::Quaternion quat = startOrientation.Inverse() *  rotate;
+
                 key->setRotation( quat );
                 key->setScale( scale );
               }
@@ -1038,7 +1040,7 @@ public:
 
 private:
     MeshdataPtr mdptr;
-    
+
     bool skeletonLoaded;
 
     std::set<String> animationList;
@@ -1229,17 +1231,17 @@ public:
                 // decode them) into Ogre.
                 // FIXME this can be done on a per-submesh (rather
                 // than per-mesh) basis. Do we ever need that?
-                Ogre::VertexBoneAssignment vba;                
+                Ogre::VertexBoneAssignment vba;
 
                 for(uint32 vidx = 0;  vidx < submesh.positions.size(); vidx++) {
                   vba.vertexIndex = vidx;
 
                   //int numBonesPerVertex = 0;
-                  
+
                   for(uint32 ass_idx = skin.weightStartIndices[vidx];  ass_idx < skin.weightStartIndices[vidx+1]; ass_idx++) {
                     vba.boneIndex = skin.joints[ skin.jointIndices[ass_idx] ]+1;
                     vba.weight = skin.weights[ass_idx];
-                    
+
                     mesh->addBoneAssignment(vba);
 
                     //numBonesPerVertex++;
@@ -1487,7 +1489,7 @@ void Entity::createMesh(Liveness::Token alive) {
     String hash = sha.convertToHexString();
 
     // If we already have it, just load the existing one
-    if (tryInstantiateExistingMesh(hash)) return;    
+    if (tryInstantiateExistingMesh(hash)) return;
 
     if (!usingDefault) { // we currently assume no dependencies for default
         for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
@@ -1503,7 +1505,7 @@ void Entity::createMesh(Liveness::Token alive) {
         }
     }
 
-    
+
     if (!mdptr->instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
@@ -1537,7 +1539,7 @@ void Entity::createMesh(Liveness::Token alive) {
               mAnimationList = ((SkeletonManualLoader*)reload)->getAnimationList();
             }
         }
-       
+
 
         // Mesh
         {
@@ -1560,7 +1562,7 @@ void Entity::createMesh(Liveness::Token alive) {
 
             if (!skel.isNull())
                 mo->_notifySkeleton(skel);
-   
+
 
             bool check = mm.resourceExists(hash);
         }
@@ -1604,7 +1606,7 @@ void Entity::createMesh(Liveness::Token alive) {
         }
     }
 
-    notify(&EntityListener::entityLoaded, this, true);    
+    notify(&EntityListener::entityLoaded, this, true);
 }
 
 const std::vector<String> Entity::getAnimationList() {
