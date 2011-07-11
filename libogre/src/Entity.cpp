@@ -1232,19 +1232,13 @@ public:
                 Ogre::VertexBoneAssignment vba;                
 
                 for(uint32 vidx = 0;  vidx < submesh.positions.size(); vidx++) {
-                  vba.vertexIndex = vidx;
-
-                  //int numBonesPerVertex = 0;
+                  vba.vertexIndex = vidx;                  
                   
                   for(uint32 ass_idx = skin.weightStartIndices[vidx];  ass_idx < skin.weightStartIndices[vidx+1]; ass_idx++) {
                     vba.boneIndex = skin.joints[ skin.jointIndices[ass_idx] ]+1;
                     vba.weight = skin.weights[ass_idx];
                     
                     mesh->addBoneAssignment(vba);
-
-                    //numBonesPerVertex++;
-
-                    //if (numBonesPerVertex >= 4) break;
                   }
                 }
 
