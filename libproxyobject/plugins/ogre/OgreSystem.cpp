@@ -438,7 +438,6 @@ bool OgreSystem::renderOneFrame(Task::LocalTime t, Duration frameTime) {
 
     return cont;
 }
-
 void OgreSystem::preFrame(Task::LocalTime currentTime, Duration frameTime) {
     OgreRenderer::preFrame(currentTime, frameTime);
 }
@@ -537,6 +536,10 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return setCameraPosition(params);
     else if (name == "setCameraOrientation")
         return setCameraOrientation(params);
+    else if (name == "getAnimationList")
+        return getAnimationList(params);
+    else if (name == "startAnimation") 
+        return startAnimation(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -684,6 +687,40 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
     return Invokable::asAny(pick_result);
 }
 
+boost::any OgreSystem::getAnimationList(vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsObject(params[1])) return boost::any();    
+
+    SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
+
+    if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
+    Entity* ent = mSceneEntities.find(objid.toString())->second;
+
+    const std::vector<String> animationList = ent->getAnimationList();
+    Invokable::Array arr;
+
+    for (uint32 i = 0; i < animationList.size(); i++) {
+      arr.push_back(Invokable::asAny(animationList[i]));
+    }
+
+    return arr;
+}
+
+boost::any OgreSystem::startAnimation(std::vector<boost::any>& params) {
+  if (params.size() < 3) return boost::any();
+  if (!Invokable::anyIsObject(params[1])) return boost::any();
+  if ( !anyIsString(params[2]) ) return boost::any();
+  
+  SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
+  String animation_name = Invokable::anyAsString(params[2]);
+
+  if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
+
+  Entity* ent = mSceneEntities.find(objid.toString())->second;
+  ent->setAnimation(animation_name);
+
+  return boost::any();
+}
 
 boost::any OgreSystem::bbox(vector<boost::any>& params) {
     if (params.size() < 3) return boost::any();
