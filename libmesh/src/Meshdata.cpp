@@ -242,7 +242,8 @@ uint32 Meshdata::getJointCount() const {
     uint32 joint_idx;
     Matrix4x4f pos_xform;
     uint32 parent_id;
-    while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id) )
+    std::vector<Matrix4x4f> transformList;
+    while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) )
         count++;
     return count;
 }
@@ -319,7 +320,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
             st.step = NodeState::Nodes;
             st.currentChild = -1;
-            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;  
             mStack.push(st);
             continue;
         }
@@ -361,7 +362,9 @@ Meshdata::JointIterator::JointIterator(const Meshdata* const mesh)
 {
 }
 
-bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id) {
+  bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id,
+                                     std::vector<Matrix4x4f>& transformList) 
+  {
     while(true) { // Outer loop keeps us moving until we hit something to return
 
         // First, if we emptied out, try to handle the next root.
@@ -372,8 +375,9 @@ bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x
             JointNodeState st;
             st.index = mMesh->rootNodes[mRoot];
             st.step = NodeState::Init;
-            st.currentChild = -1;
+            st.currentChild = -1; 
             st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
+
             st.joint_id = 0;
             mStack.push(st);
         }
@@ -398,6 +402,8 @@ bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x
                     *joint_id = node.joint_id;
                     *joint_idx = i;
                     *xform = node.transform;
+                   
+                    transformList = mMesh->mInstanceControllerTransformList;
                     return true;
                 }
             }
@@ -415,7 +421,9 @@ bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x
             st.index = mMesh->nodes[node.index].children[node.currentChild];
             st.step = NodeState::Init;
             st.currentChild = -1;
+            
             st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+
             st.joint_id = node.joint_id;
             mStack.push(st);
             continue;
@@ -434,6 +442,7 @@ bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x
             st.step = NodeState::Init;
             st.currentChild = -1;
             st.transform = node.transform * mMesh->nodes[ st.index ].transform;
+
             st.joint_id = node.joint_id;
             mStack.push(st);
             continue;

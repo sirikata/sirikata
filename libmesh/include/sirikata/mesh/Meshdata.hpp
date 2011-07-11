@@ -258,6 +258,8 @@ struct SIRIKATA_MESH_EXPORT Node {
     Node(NodeIndex par, const Matrix4x4f& xform);
     Node(const Matrix4x4f& xform);
 
+    bool containsInstanceController;
+
     // Parent node in the actual hierarchy (not instantiated).
     NodeIndex parent;
     // Transformation to apply when traversing this node.
@@ -286,6 +288,8 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     SHA256 hash;
     long id;
 
+    bool hasAnimations;
+
     GeometryInstanceList instances;
     LightInstanceList lightInstances;
 
@@ -298,10 +302,11 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     NodeList nodes;
     NodeIndexList rootNodes;
 
+    //Stores a list of transforms on the path from the scene root 
+    //to the instance controller for the skeleton.
+    std::vector<Matrix4x4f>  mInstanceControllerTransformList;
     // Joints are tracked as indices of the nodes they are associated with.
-    NodeIndexList joints;
-
-
+    NodeIndexList joints;    
 
     // Be careful using these methods. Since there are no "parent" links for
     // instance nodes (and even if there were, there could be more than one),
@@ -330,6 +335,7 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     };
     struct SIRIKATA_MESH_EXPORT JointNodeState : public NodeState {
         uint32 joint_id;
+        std::vector<Matrix4x4f> transformList;
     };
   public:
 
@@ -359,11 +365,12 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     public:
         JointIterator(const Meshdata* const mesh);
         // Get the next Joint's unique ID, its index in the list of joints, its
-        // transform, and parent joint ID. Returns true if
+        // transform, and parent joint ID. Also gets the list of transforms from the root node
+        // to the instance controller of the skeleton referencing the joint. Returns true if
         // values were set, false if there were no more joints. Joint IDs are
         // non-zero, so you can check for, e.g., no parent with parent_id == 0
         // or if (parent_id). The joint_idx is an index into Meshdata::joints.
-        bool next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id);
+        bool next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id, std::vector<Matrix4x4f>& transformList);
     private:
         const Meshdata* mMesh;
 

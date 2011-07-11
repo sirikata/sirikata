@@ -194,6 +194,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         };
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, AnimationCurve, UniqueIdHash> AnimationCurveMap;
         AnimationCurveMap mAnimationCurves;
+        std::set<String> mAnimationNames;
+        bool mOnlyHasDefaultAnimation;
 
         /** AnimationBindings uniquely identify AnimationCurves for each
          * (joint,animation). This is maintained because OpenCOLLADA keeps these
@@ -203,6 +205,8 @@ class SIRIKATA_PLUGIN_EXPORT ColladaDocumentImporter
         typedef std::vector<COLLADAFW::AnimationList::AnimationBinding> AnimationBindings;
         typedef std::tr1::unordered_map<COLLADAFW::UniqueId, AnimationBindings, UniqueIdHash> AnimationBindingsMap;
         AnimationBindingsMap mAnimationBindings;
+
+        std::vector<size_t> mAnimatedNodeIndices;
 
         Mesh::SubMeshGeometryList mGeometries;
 
