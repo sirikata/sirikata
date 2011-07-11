@@ -97,6 +97,8 @@ protected:
 
     AssetDownloadTaskPtr mAssetDownload;
 
+    std::set<String> mAnimationList;
+
     void fixTextures();
 
     void createMesh(Liveness::Token alive);
@@ -162,6 +164,8 @@ public:
     void setVisible(bool vis);
 
     void setAnimation(const String& name);
+    const std::vector<String> getAnimationList();
+
 
     void bindTexture(const std::string &textureName, const String& objId);
     void unbindTexture(const std::string &textureName);
