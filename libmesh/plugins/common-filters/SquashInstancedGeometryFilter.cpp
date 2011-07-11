@@ -79,7 +79,12 @@ FilterDataPtr SquashInstancedGeometryFilter::apply(FilterDataPtr input) {
     MutableFilterDataPtr output(new FilterData());
 
     for(FilterData::const_iterator md_it = input->begin(); md_it != input->end(); md_it++) {
-        MeshdataPtr md = *md_it;
+        MeshdataPtr md = *md_it;        
+
+        if (md->hasAnimations) {
+          output->push_back(md);
+          continue;
+        }
 
         // Our basic approach for each Meshdata is to generate one
         // SubMeshGeometry for each set of materials. We scan through all

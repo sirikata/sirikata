@@ -78,6 +78,11 @@ FilterDataPtr CenterFilter::apply(FilterDataPtr input) {
         mesh->rootNodes.push_back(new_root_index);
 
         mesh->globalTransform = Matrix4x4f::translate(-center);
+
+        if ( !mesh->mInstanceControllerTransformList.empty() ) {
+            mesh->mInstanceControllerTransformList.insert(mesh->mInstanceControllerTransformList.begin(),
+                                                          mesh->globalTransform);
+        }
     }
 
     return input;
