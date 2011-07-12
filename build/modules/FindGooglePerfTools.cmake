@@ -2,10 +2,10 @@
 #
 # This module defines
 #  GOOGLE_PERFTOOLS_FOUND                  - True if google-perftools was found.
+#  GOOGLE_PERFTOOLS_LIB_DIR                - Directory containing perftools libraries.
 #  GOOGLE_PERFTOOLS_TCMALLOC_LIBRARIES     - Libraries for just using tcmalloc.
 #  GOOGLE_PERFTOOLS_HEAPPROFILE_LIBRARIES  - Libraries for heap checking and profiling
 #  GOOGLE_PERFTOOLS_CPUPROFILE_LIBRARIES   - Libraries for cpu profiling
-#
 # To specify an additional directory to search, set GOOGLE_PERFTOOLS_ROOT.
 #
 # Copyright (c) 2011, Stanford University
@@ -57,6 +57,8 @@ ENDIF()
 
 IF(GOOGLE_PERFTOOLS_TCMALLOC_LIBRARY AND GOOGLE_PERFTOOLS_PROFILER_LIBRARY)
   SET(GOOGLE_PERFTOOLS_FOUND TRUE)
+
+  GET_FILENAME_COMPONENT(GOOGLE_PERFTOOLS_LIB_DIR ${GOOGLE_PERFTOOLS_TCMALLOC_LIBRARY} PATH)
 
   SET(GOOGLE_PERFTOOLS_TCMALLOC_LIBRARIES ${GOOGLE_PERFTOOLS_TCMALLOC_LIBRARY})
   SET(GOOGLE_PERFTOOLS_HEAPPROFILE_LIBRARIES ${GOOGLE_PERFTOOLS_TCMALLOC_LIBRARY})

@@ -2801,6 +2801,14 @@ IF(BUILDING_JS_PLUGIN)
     )
 ENDIF()
 
+IF(GOOGLE_PERFTOOLS_FOUND)
+  INSTALL(DIRECTORY ${GOOGLE_PERFTOOLS_LIB_DIR}/
+    FILE_PERMISSIONS ${EXEC_PERMS}
+    DESTINATION lib/
+    PATTERN "*.exe" EXCLUDE
+    )
+ENDIF()
+
 INSTALL(DIRECTORY
           # note: the trailing slashes avoid prepending the directory name
           # itself to the installed files
