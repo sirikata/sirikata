@@ -20,6 +20,8 @@
 #include "../EmersonScript.hpp"
 #include "JSSystemStruct.hpp"
 #include "../JSObjects/JSObjectsUtils.hpp"
+#include "../JSObjects/JSQuaternion.hpp"
+
 
 namespace Sirikata {
 namespace JS {
@@ -273,6 +275,13 @@ v8::Handle<v8::Value> JSContextStruct::struct_createVec3(Vector3d& toCreate)
 {
     return CreateJSResult_Vec3Impl(mContext, toCreate);
 }
+
+v8::Handle<v8::Value> JSContextStruct::struct_createQuaternion(Quaternion& toCreate)
+{
+    return CreateJSResult(mContext, toCreate);
+}
+
+
 
 
 

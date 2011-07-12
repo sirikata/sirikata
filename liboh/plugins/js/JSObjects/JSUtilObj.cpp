@@ -5,6 +5,7 @@
 #include "JSObjectsUtils.hpp"
 #include "JSHandler.hpp"
 #include "JSVec3.hpp"
+#include "JSQuaternion.hpp"
 #include "../JSUtil.hpp"
 #include "../JSObjectStructs/JSUtilStruct.hpp"
 #include "../JSObjectStructs/JSVisibleStruct.hpp"
@@ -30,6 +31,8 @@ namespace JSUtilObj{
  */
 v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
 {
+    v8::HandleScope handle_scope;
+    
     if (args.Length() != 2)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minu requires two arguments.")) );
 
@@ -51,6 +54,27 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
         return v8::Number::New(num1-num2);
     }
 
+    String errMsg = "Error in JSUtilObj.cpp when trying to subtract.  Could not decode util struct.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This() ,errMsg);
+    if (jsutil == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
+
+    
+    //check if quaternions
+    Quaternion q1,q2;
+    if (QuaternionValValidate(args[0]))
+    {
+        if (! QuaternionValValidate(args[1]))
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minus requires two arguments of same type.  First argument is quat.  Second argument is not.")) );
+
+        q1 = QuaternionValExtract(args[0]);
+        q2 = QuaternionValExtract(args[1]);
+        
+        q1 = q1 - q2;
+        return handle_scope.Close(jsutil->struct_createQuaternion(q1));
+    }
+
+    
     //check if vecs
     Vector3d vec1,vec2;
     if (Vec3ValValidate(args[0]))
@@ -58,24 +82,16 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
         if (! Vec3ValValidate(args[1]))
             return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minus requires two arguments of same type.  First argument is vec3.  Second argument is not.")) );
 
-        v8::HandleScope handle_scope;
+
         v8::Handle<v8::Object> o1,o2;
         o1 = args[0]->ToObject();
         o2 = args[1]->ToObject();
         vec1 = Vec3Extract(o1);
         vec2 = Vec3Extract(o2);
 
-        Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
-
-        String errMsg = "Error in JSUtilObj.cpp when trying to subtract.  Could not decode util struct.  ";
-        JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This() ,errMsg);
-
-        if (jsutil == NULL)
-            return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
-
         vec1 = vec1-vec2;
 
-        return jsutil->struct_createVec3(vec1);
+        return handle_scope.Close(jsutil->struct_createVec3(vec1));
     }
 
     return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minus requires two arguments.  Both must either be vectors or numbers.")) );
@@ -125,6 +141,7 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
     if (args.Length() != 2)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments.")) );
 
+    v8::HandleScope handle_scope;
     String dummyErr;
     //check if numbers
     bool isNum1, isNum2;
@@ -143,6 +160,28 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
         return v8::Number::New(num1+num2);
     }
 
+    String errMsg = "Error in JSUtilObj.cpp when trying to subtract.  Could not decode util struct.  ";
+    JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This() ,errMsg);
+    if (jsutil == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
+
+    
+    //check if quaternions
+    Quaternion q1,q2;
+    if (QuaternionValValidate(args[0]))
+    {
+        if (! QuaternionValValidate(args[1]))
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: plus requires two arguments of same type.  First argument is quat.  Second argument is not.")) );
+
+        q1 = QuaternionValExtract(args[0]);
+        q2 = QuaternionValExtract(args[1]);
+        
+        q1 = q1 + q2;
+        return handle_scope.Close(jsutil->struct_createQuaternion(q1));
+    }
+
+
+    
     //check if vecs
     Vector3d vec1,vec2;
     if (Vec3ValValidate(args[0]))
@@ -157,20 +196,10 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
         vec1 = Vec3Extract(o1);
         vec2 = Vec3Extract(o2);
 
-        Handle<Value> CreateJSResult_Vec3Impl(v8::Handle<v8::Context>& ctx, const Vector3d& src);
-
-        String errMsg = "Error in JSUtilObj.cpp when trying to add.  Could not decode util struct.  ";
-        JSUtilStruct* jsutil = JSUtilStruct::decodeUtilStruct(args.This() ,errMsg);
-
-        if (jsutil == NULL)
-            return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
-
-
         vec1 = vec1+vec2;
 
-        return jsutil->struct_createVec3(vec1);
+        return handle_scope.Close(jsutil->struct_createVec3(vec1));
     }
-
 
 
     //check if strings

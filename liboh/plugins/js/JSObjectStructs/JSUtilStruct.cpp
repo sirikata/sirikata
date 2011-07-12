@@ -27,6 +27,11 @@ v8::Handle<v8::Value> JSUtilStruct::struct_createVec3(Vector3d& toCreate )
 }
 
 
+v8::Handle<v8::Value> JSUtilStruct::struct_createQuaternion(Quaternion& toCreate )
+{
+    return  associatedContext->struct_createQuaternion(toCreate);
+}
+
 
 //decodes util struct object
 JSUtilStruct* JSUtilStruct::decodeUtilStruct(v8::Handle<v8::Value> toDecode ,String& errorMessage)

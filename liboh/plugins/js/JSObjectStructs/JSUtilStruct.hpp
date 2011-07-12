@@ -22,6 +22,7 @@ struct JSUtilStruct
     static JSUtilStruct* decodeUtilStruct(v8::Handle<v8::Value> toDecode ,std::string& errorMessage);
 
     v8::Handle<v8::Value> struct_createVec3(Vector3d& toCreate );
+    v8::Handle<v8::Value> struct_createQuaternion(Quaternion& toCreate );
 
 private:
     //associated data
