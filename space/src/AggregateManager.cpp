@@ -76,6 +76,9 @@ AggregateManager::AggregateManager( LocationService* loc) :
 
 AggregateManager::~AggregateManager() {
     // Shut down the main processing thread
+    delete mIOWork;
+    mIOWork = NULL;
+
     if (mAggregationThread != NULL) {
         if (mAggregationService != NULL)
             mAggregationService->stop();
@@ -87,9 +90,6 @@ AggregateManager::~AggregateManager() {
     mAggregationService = NULL;
 
     delete mAggregationThread;
-
-    delete mIOWork;
-    mIOWork = NULL;
 
     delete mModelsSystem;
 }
