@@ -83,9 +83,6 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 
     httpObj->Set(v8::String::New("respHeaders"), respHeadersObj);
 
-    //load content length
-    httpObj->Set(v8::String::New("contentLength"), v8::Number::New(httpResp->getContentLength()));
-
     //load status code
     httpObj->Set(v8::String::New("statusCode"), v8::Number::New(httpResp->getStatusCode()));
 
