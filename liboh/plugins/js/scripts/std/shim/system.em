@@ -891,7 +891,7 @@ function PresenceEntry(sporef, presObj)
                 if ('mesh' in firstArg)
                     mesh = firstArg['mesh'];
 
-                if ('phsyics' in firstArg)
+                if ('physics' in firstArg)
                     physics = firstArg['physics'];
 
                 if ('scale' in firstArg)
@@ -905,6 +905,7 @@ function PresenceEntry(sporef, presObj)
                 
             }
 
+            system.__debugPrint('MESH URL: ' + mesh + '\n\n');
 
             return system.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextID,isConnected,connectedCallback,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
 
