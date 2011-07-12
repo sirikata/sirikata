@@ -243,6 +243,7 @@ void Entity::setAnimation(const String& name) {
         SILOG(ogre,error,"Tried to set animation to non-existant track.");
         return;
     }
+
     state->setEnabled(true);
     state->setLoop(true);
     state->setTimePosition(0.f);
@@ -364,6 +365,8 @@ void Entity::loadMesh(const String& meshname)
     unloadMesh();
 
     mReplacedMaterials.clear();
+
+    
 
     /** FIXME we need a better way of generating unique id's. We should
      *  be able to use just the uuid, but its not enough since we want
@@ -961,7 +964,6 @@ public:
             // Find/create the animation
             const String& anim_name = anim_it->first;
 
-            animationList.insert(anim_name);
 
             const TransformationKeyFrames& anim_key_frames = anim_it->second;
             if (animations.find(anim_name) == animations.end())
@@ -1034,16 +1036,10 @@ public:
       return skeletonLoaded;
     }
 
-    std::set<String>& getAnimationList() {
-      return animationList;
-    }
-
 private:
     MeshdataPtr mdptr;
 
     bool skeletonLoaded;
-
-    std::set<String> animationList;
 };
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
@@ -1466,6 +1462,15 @@ bool Entity::tryInstantiateExistingMesh(const String& meshname) {
 void Entity::createMesh(Liveness::Token alive) {
     if (!alive) return;
 
+    // first reset any animations.
+    setAnimation("");
+    setDynamic(false);
+    if (mCurrentAnimation) {
+      mCurrentAnimation->setEnabled(false);
+      mCurrentAnimation = NULL;
+    }
+
+    //get the mesh data and check that it is valid.
     bool usingDefault = false;
     MeshdataPtr mdptr = mAssetDownload->asset();
     AssetDownloadTaskPtr assetDownload(mAssetDownload);
@@ -1478,6 +1483,18 @@ void Entity::createMesh(Liveness::Token alive) {
             return;
         }
     }
+
+    //Extract any animations from the new mesh.
+    for (uint32 i=0;  i < mdptr->nodes.size(); i++) {
+      Sirikata::Mesh::Node& node = mdptr->nodes[i];
+
+      for (std::map<String, Sirikata::Mesh::TransformationKeyFrames>::iterator it = node.animations.begin();
+           it != node.animations.end(); it++)
+        {
+          mAnimationList.insert(it->first);
+        }
+    }
+
 
     SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();
@@ -1528,9 +1545,6 @@ void Entity::createMesh(Liveness::Token alive) {
 
             if (! ((SkeletonManualLoader*)reload)->wasSkeletonLoaded()) {
               skel.setNull();
-            }
-            else {
-              mAnimationList = ((SkeletonManualLoader*)reload)->getAnimationList();
             }
         }
 
@@ -1600,7 +1614,7 @@ void Entity::createMesh(Liveness::Token alive) {
         }
     }
 
-    notify(&EntityListener::entityLoaded, this, true);
+    notify(&EntityListener::entityLoaded, this, true);    
 }
 
 const std::vector<String> Entity::getAnimationList() {
