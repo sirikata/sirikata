@@ -80,17 +80,25 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     if (*psrp.mIsCleared)
         clear();
 
-    mContID = *psrp.mContID;
-    if (mContID != jscont->getContextID()) {
+
+    //if null, should just create presence in current context.
+    //if mContID != jscont->getContextID, means that we were restoring a
+    //presence, and should be restoring a presence that was in a different
+    //sandbox than the one we're in.
+    if ((psrp.mContID != NULL) && (mContID != jscont->getContextID()))
+    {
+        mContID = *psrp.mContID;
         parent->registerFixupSuspendable(this,mContID);
         JSLOG(fatal,"Restoring a presence with multiple sandboxes doesn't work right now. You won't be able to receive messages properly...");
     }
     else {
+        mContID = jscont->getContextID();
         mContext = jscont;
         // FIXME this same call needs to go in the if-block above when it sets
         // mContext properly.
         mContext->struct_registerSuspendable(this);
     }
+
 }
 
 

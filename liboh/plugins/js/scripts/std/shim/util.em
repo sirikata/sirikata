@@ -51,6 +51,22 @@
 
 
       /**
+       @param {optional} {string} space id
+       @param {optional} {string} presence id
+
+       @return {string} without any arguments, returns a string with
+       default null values for both space identifier and presence
+       identifier.  With single arg, returns identifier with
+       argument's space id, but with a null presence identifier.  With
+       two args, returns full id as string with both space id and
+       presence id.
+       
+       */
+      util.prototype.identifier = function()
+      {
+      };
+      
+      /**
        @param float to take arccosine of
        @return angle in radians
        */

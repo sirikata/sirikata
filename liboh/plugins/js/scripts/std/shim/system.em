@@ -810,27 +810,104 @@ function PresenceEntry(sporef, presObj)
 
       
         /** @function
-         @description This function call creates a new presence for the entity running this script.
-         Note: Presence's initial position is the same as the presence that created it. Scale is set to 1.
+         @description This function call creates a new presence for
+         the entity running this script.  Note: Presence's initial
+         position is the same as the presence that created it. Scale
+         is set to 1.
 
-         @throws {Exception}  if sandbox does not have capability to create presences.
+         @throws {Exception} if sandbox does not have capability to
+         create presences.
 
          @see system.canCreatePresence
 
-         @param mesh  a uri for a mesh for the new presence.
-         @param callback function to be called when presence gets connected to the world. (Function has form func (pres), where pres contains the presence just connected.)
-         @param {optional} A position for the new presence.  Unspecified defaults to same position as self.
-         @param {optional} A space to create the new presence in.  Unspecified defaults to same space as self.
-         @return Presence object. Presence is not connected to world until receive notification. (Ie, don't call setVelocity, setPosition, etc. until the second paramater has been called.)
-         */
-        system.createPresence = function (/** String */mesh, /** Function */ callback, /**Vec3*/position, space)
-        {
-            if ((typeof(space) == 'undefined') || (space === null))
-                space = this.self.getSpaceID();
-            if ((typeof(position) == 'undefined') || (position === null))
-                position = this.self.getPosition();
+         
+         @param {string or object} If string, will try to decode
+         string as a mesh a uri for the new presence and callback
+         argument is required.  If it's an object, we read the fields
+         of the object for presence initialization information.  The
+         fields of the object we read are as follows: space (string),
+         pos(vec3), orient (quat), mesh (string), physics (string),
+         scale (float), callback (function), solidAngleQuery(float).
+         Any of these parameters that are undefined default to taking
+         the equivalent value of system.self.
 
-            baseSystem.create_presence(mesh,this.__wrapPresConnCB(callback),position,space);
+         @param {optional} callback function to be called when
+         presence gets connected to the world. (Function has form func
+         (pres), where pres contains the presence just connected.)
+         @param {optional} A position for the new presence.
+         Unspecified defaults to same position as self.
+         @param {optional} A space to create the new presence in.
+         Unspecified defaults to same space as self.
+
+         @return Returns nothing.
+         */
+        system.createPresence = function (firstArg, callback, position, space)
+        {
+            var sporef  = util.identifier(system.self.getSpaceID());
+            var pos = system.self.getPosition();
+            var connectedCallback = this.__wrapPresConnCB(function(){  });
+            var mesh = this.self.getMesh();
+            
+            if ((typeof(space) != 'undefined') && (space !== null))
+                sporef = util.identifier(space);
+            if ((typeof(position) != 'undefined') && (position !== null))
+                pos = position;
+
+            if ((typeof(callback) != 'undefined'))
+                connectedCallback = this.__wrapPresConnCB(callback);
+
+            if (typeof(firstArg) == 'string')
+                mesh = firstArg;
+
+            var orient = system.self.getOrientation();
+            var vel = new util.Vec3(0,0,0);
+            var posTime = "0";
+            var orientVel = new util.Quaternion (0,0,0,1); //identity.
+            var orientTime = '0';
+            var physics = '';
+            var scale = this.self.getScale();
+            var isCleared = false;
+            var contextID = null;
+            var isConnected = true;
+            
+
+            var isSuspended = false;
+            var suspendedVelocity = new util.Vec3(0,0,0);
+            var suspendedOrientationVelocity = new util.Quaternion(0,0,0,1);
+            var solidAngleQuery = 1000; //set it to a high solid angle.  
+
+            
+            if (typeof(firstArg) == 'object')
+            {
+                if ('space' in firstArg)
+                    sporef = util.identifier(firstArg['space']);
+
+                if ('pos' in firstArg)
+                    pos = firstArg['pos'];
+
+                if ('orient' in firstArg)
+                    orient = firstArg['orient'];
+
+                if ('mesh' in firstArg)
+                    mesh = firstArg['mesh'];
+
+                if ('phsyics' in firstArg)
+                    physics = firstArg['physics'];
+
+                if ('scale' in firstArg)
+                    scale = firstArg['scale'];
+
+                if ('callback' in firstArg)
+                    connectedCallback = this.__wrapPresConnCB(firstArg['callback']);
+
+                if ('solidAngleQuery' in firstArg)
+                    solidAngleQuery = firstArg['solidAngleQuery'];
+                
+            }
+
+
+            return system.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextID,isConnected,connectedCallback,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
+
         };
 
 

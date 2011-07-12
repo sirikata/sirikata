@@ -905,9 +905,6 @@ JSPresenceStruct* EmersonScript::findPresence(const SpaceObjectReference& sporef
 
 v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx)
 {
-    if (jsctx != mContext)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Can only restore presence from root context.")) );
-
     v8::Context::Scope context_scope(jsctx->mContext);
 
     //get location
@@ -929,7 +926,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
     JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
-
+    
     if (*psrp.mIsConnected)
     {
         mParent->connect(psrp.mSporef->space(),
@@ -943,7 +940,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
             presToke);
 
         mUnconnectedPresences.push_back(jspres);
-
         return v8::Null();
     }
     //if is unconnected, return presence now.

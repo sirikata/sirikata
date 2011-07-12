@@ -63,7 +63,9 @@ v8::Handle<v8::Value> JSSystemStruct::storageRead(const OH::Storage::Key& key, v
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb) {
+v8::Handle<v8::Value> JSSystemStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb)
+{
+
     return associatedContext->setRestoreScript(key, cb);
 }
 
@@ -103,6 +105,9 @@ v8::Handle<v8::Value> JSSystemStruct::killEntity()
 
 v8::Handle<v8::Value> JSSystemStruct::restorePresence(PresStructRestoreParams& psrp)
 {
+    if (! canCreatePres)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create presences.")));
+
     return associatedContext->restorePresence(psrp);
 }
 

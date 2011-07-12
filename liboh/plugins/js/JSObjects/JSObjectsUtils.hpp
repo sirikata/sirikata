@@ -16,6 +16,8 @@ JSPositionListener* decodeJSPosListener(v8::Handle<v8::Value> toDecode,String& e
 bool decodeString(v8::Handle<v8::Value> toDecode, String& decodedValue, String& errorMessage);
 bool decodeBool(v8::Handle<v8::Value> toDecode, bool& decodedValue, String& errorMessage);
 bool decodeSporef(v8::Handle<v8::Value> toDecode, SpaceObjectReference& sporef, String& errorMessage);
+bool decodeSpaceID(v8::Handle<v8::Value> toDecode,SpaceID& space, String& errorMessage);
+bool decodeObjectReference(v8::Handle<v8::Value> toDecode, ObjectReference& oref, String& errorMessage);
 bool decodeUint64FromString(v8::Handle<v8::Value> toDecode,uint64& decodedInt, String& errorMessage);
 bool decodeTimedMotionVector(v8::Handle<v8::Value>toDecodePos, v8::Handle<v8::Value>toDecodeVel,v8::Handle<v8::Value>toDecodeTimeAsString, TimedMotionVector3f& toDecodeTo, String& errorMessage);
 bool decodeTimedMotionQuat(v8::Handle<v8::Value> orientationQuat,v8::Handle<v8::Value> orientationVelQuat,v8::Handle<v8::Value> toDecodeTimeAsString, TimedMotionQuaternion& toDecodeTo, String& errMsg);
@@ -31,6 +33,25 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 String uint16StrToStr(v8::Handle<v8::String> toDeserialize);
 v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 
+
+
+#define INLINE_SPACEID_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
+    SpaceID whereWriteTo;                                               \
+    {                                                                   \
+        String _errMsg = "In " #whereError "cannot convert arg " #whichArg " to space id"; \
+        if (!decodeSpaceID(toConvert,whereWriteTo,_errMsg))             \
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
+    }
+
+
+
+#define INLINE_OBJID_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
+    ObjectReference whereWriteTo;                                       \
+    {                                                                   \
+        String _errMsg = "In " #whereError "cannot convert arg " #whichArg " to object reference"; \
+        if (!decodeObjectReference(toConvert,whereWriteTo,_errMsg))             \
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
+    }
 
 
 

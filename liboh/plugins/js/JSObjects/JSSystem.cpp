@@ -998,10 +998,12 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 
     String specificErrMsg =baseErrMsg + "sporef.";
     SpaceObjectReference mSporef;
+
     bool sporefDecoded = decodeSporef(mSporefArg, mSporef, specificErrMsg);
     if (! sporefDecoded)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
+    
     TimedMotionVector3f mPos;
     specificErrMsg = baseErrMsg + "timed motion vector.";
     bool mPosDecoded = decodeTimedMotionVector(posArg,velArg,posTimeArg,mPos,specificErrMsg);
@@ -1040,12 +1042,15 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (! isClearedDecodeSuccessful)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
-
+    bool hasContextID = (! contextIDArg->IsNull());
     uint32 contextID;
-    specificErrMsg = baseErrMsg + "contextID.";
-    bool contextIDDecodeSuccessful = decodeUint32(contextIDArg, contextID, specificErrMsg);
-    if (! contextIDDecodeSuccessful)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    if (hasContextID)
+    {
+        specificErrMsg = baseErrMsg + "contextID.";
+        bool contextIDDecodeSuccessful = decodeUint32(contextIDArg, contextID, specificErrMsg);
+        if (! contextIDDecodeSuccessful)
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    }
 
     bool isConnected;
     specificErrMsg = baseErrMsg + "isConnected.";
@@ -1081,9 +1086,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     suspendedOrientationVelocity = QuaternionValExtract(suspendedOrientationVelocityArg);
 
 
-
     INLINE_SA_CONV_ERROR(solidAngleQueryArg,restorePresence,16,queryAngle);
-
 
     //decode system.
     String errorMessageFRoot = "Error decoding the system object from restorePresence.  ";
@@ -1100,7 +1103,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         &physics,
         &scale,
         &isCleared,
-        &contextID,
+        (hasContextID ? &contextID : NULL),
         &isConnected,
         (connCB.IsEmpty() ? NULL : &connCB),
         &isSuspended,
@@ -1108,7 +1111,6 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         &suspendedOrientationVelocity,
         &queryAngle
     );
-
 
     return handle_scope.Close(jssys->restorePresence(restParams));
 }
@@ -1130,7 +1132,7 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 {
     if (args.Length() != 4)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence><position><space>")));
-
+    
     //check args.
     //mesh arg
     String newMesh = "";

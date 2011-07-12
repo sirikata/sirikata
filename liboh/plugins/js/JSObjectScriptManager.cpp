@@ -150,10 +150,13 @@ void JSObjectScriptManager::createUtilTemplate()
 
     mUtilTemplate->Set(v8::String::New("plus"), v8::FunctionTemplate::New(JSUtilObj::ScriptPlus));
     mUtilTemplate->Set(v8::String::New("minus"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
+    mUtilTemplate->Set(v8::String::New("identifier"),v8::FunctionTemplate::New(JSUtilObj::ScriptSporef));
 
+    
     mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
+
 }
 
 /*

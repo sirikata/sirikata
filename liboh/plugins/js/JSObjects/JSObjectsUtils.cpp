@@ -118,6 +118,33 @@ bool decodeSporef(v8::Handle<v8::Value> toDecode, SpaceObjectReference& sporef, 
     return true;
 }
 
+
+
+bool decodeObjectReference(v8::Handle<v8::Value> toDecode, ObjectReference& oref, String& errorMessage)
+{
+    String orefStr;
+    bool strDecode = decodeString(toDecode,orefStr,errorMessage);
+    if (! strDecode )
+        return false;
+
+    oref = ObjectReference(orefStr);
+    return true;
+}
+
+bool decodeSpaceID(v8::Handle<v8::Value> toDecode,SpaceID& space, String& errorMessage)
+{
+    String spaceStr;
+    bool strDecode = decodeString(toDecode,spaceStr,errorMessage);
+    if (! strDecode )
+        return false;
+
+    space = SpaceID(spaceStr);
+    return true;
+}
+
+
+
+
 bool decodeUint64FromString(v8::Handle<v8::Value> toDecode,uint64& decodedInt, String& errorMessage)
 {
     String decodedVal;

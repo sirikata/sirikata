@@ -81,6 +81,35 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
     return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minus requires two arguments.  Both must either be vectors or numbers.")) );
 }
 
+/**
+   
+ */
+v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args)
+{
+    if (args.Length() == 0)
+    {
+        SpaceObjectReference sporef = SpaceObjectReference::null();
+        return v8::String::New(sporef.toString().c_str(),sporef.toString().size() );
+    }
+
+    if (args.Length() > 2)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: spcript sporef requires two or fewer arguments.")));
+    
+    //use first arg as space
+    INLINE_SPACEID_CONV_ERROR(args[0],ScriptSporef,1,space);
+
+    if (args.Length() == 2)
+    {
+        INLINE_OBJID_CONV_ERROR(args[1],ScriptSporef,2,obj);
+        SpaceObjectReference sporef (space,obj);
+        return v8::String::New(sporef.toString().c_str(),sporef.toString().size() );
+    }
+
+    //have no object reference, just use space.
+    SpaceObjectReference sporef (space,ObjectReference::null());
+    return v8::String::New(sporef.toString().c_str(),sporef.toString().size() );
+}
+
 
 /**
    Overloads the '+' operator for many types.  a and b must be of the same type
