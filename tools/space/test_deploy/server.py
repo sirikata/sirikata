@@ -11,10 +11,10 @@ import subprocess
 
 plugins = {
     'core' : 'tcpsst,servermap-tabular,core-local,graphite',
-    'space' : 'weight-exp,weight-sqr,weight-const,space-null,space-craq,space-local,space-standard,space-master-pinto,colladamodels,space-redis',
+    'space' : 'weight-exp,weight-sqr,weight-const,space-null,space-craq,space-local,space-standard,space-master-pinto,colladamodels,mesh-billboard,space-redis',
     'cseg' : 'weight-exp,weight-sqr,weight-const',
     'pinto' : '',
-    'oh' : 'weight-exp,weight-sqr,weight-const,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,csvfactory,scripting-js,simplecamera'
+    'oh' : 'weight-exp,weight-sqr,weight-const,tcpsst,sqlite,weight-const,ogregraphics,colladamodels,mesh-billboard,csvfactory,scripting-js,simplecamera'
 }
 
 

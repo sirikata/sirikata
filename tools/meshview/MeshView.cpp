@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     PluginManager plugins;
     plugins.loadList( GetOptionValue<String>(OPT_PLUGINS) );
     // FIXME this should be an option
-    plugins.loadList( "colladamodels,common-filters,nvtt" );
+    plugins.loadList( "colladamodels,mesh-billboard,common-filters,nvtt" );
 
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* iostrand = ios->createStrand();

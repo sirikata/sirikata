@@ -62,6 +62,7 @@ int main(int argc, char** argv) {
 
     PluginManager plugins;
     plugins.loadList("colladamodels");
+    plugins.loadList("mesh-billboard");
     plugins.loadList("common-filters");
     plugins.loadList("nvtt");
 

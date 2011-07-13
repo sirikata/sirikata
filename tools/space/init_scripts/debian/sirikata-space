@@ -16,7 +16,7 @@ PINTO_HOST=${PINTO_HOST:-"localhost"}
 PINTO_PORT=${PINTO_PORT:-"6665"}
 REDIS_HOST=${REDIS_HOST:-"localhost"}
 REDIS_PORT=${REDIS_PORT:-"6379"}
-SPACE_PLUGINS=${SPACE_PLUGINS:-"weight-exp,weight-sqr,weight-const,space-null,space-craq,space-local,space-standard,space-master-pinto,colladamodels,space-redis"}
+SPACE_PLUGINS=${SPACE_PLUGINS:-"weight-exp,weight-sqr,weight-const,space-null,space-craq,space-local,space-standard,space-master-pinto,colladamodels,mesh-billboard,space-redis"}
 
 SPACED=$SIRIKATA_DIR/bin/space
 SIRIKATA_LIB=$SIRIKATA_DIR/lib
