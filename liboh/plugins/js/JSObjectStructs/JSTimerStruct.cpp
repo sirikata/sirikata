@@ -252,7 +252,7 @@ v8::Handle<v8::Value> JSTimerStruct::suspend()
         JSLOG(info, "Error in suspend of JSTimerStruct.cpp.  Called suspend even though the timer had previously been cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a timer that had already been cleared.")));
     }
-
+    
     JSLOG(insane,"suspending timer");
 
     //note, it is important that call to JSSuspendable::supsend occurs before

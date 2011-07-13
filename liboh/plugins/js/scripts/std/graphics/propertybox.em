@@ -62,7 +62,7 @@ function () {
                               this._propertyWindow = gui;
                               if (init_cb) init_cb()
                               // Magic number of 0.5 seconds for updating the property box automatically
-                              if (!this._updateTimer) this._updateTimer = new std.core.RepeatingTimer(.5, std.core.bind(this.HandleUpdateProperties, this));
+                              if (!this._updateTimer) this._updateTimer = new std.core.RepeatingTimer(.5, std.core.bind(this.HandleUpdateProperties, this,false));
                           }, this)
         );
     };
