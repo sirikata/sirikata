@@ -442,7 +442,7 @@ system.__presence_constructor__.prototype.__getType = function()
 
      presence.prototype.getOrientation = function() {
          // Provide orientation without model orientation
-         return orig_getOrientation.apply(this).mul(this.modelOrientation.neg());
+         return orig_getOrientation.apply(this).mul(this.modelOrientation.inv());
      };
 
      presence.prototype.setOrientation = function(v) {
