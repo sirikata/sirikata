@@ -114,16 +114,6 @@ void EmersonHttpManager::debugPrintTokenMap()
 
 void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
-    if (error ==Transfer::HttpManager::REQUEST_PARSING_FAILED)
-    {
-        JSLOG(info,"Parsing request header failed");
-        return;
-    }
-    if(error == Transfer::HttpManager::RESPONSE_PARSING_FAILED)
-    {
-        JSLOG(info,"Parsing response header failed");
-        return;
-    }
     
     //first lookup token in outstanding token map to find corresponding context
     //and callback
@@ -170,7 +160,17 @@ void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr 
         if (error == Transfer::HttpManager::BOOST_ERROR)
         {
             JSLOG(detailed,"emerson http callback was unsuccessful");
-            jscont->httpFail(cb);
+            jscont->httpFail(cb,"UNKNOWN_ERROR");
+        }
+        else if (error ==Transfer::HttpManager::REQUEST_PARSING_FAILED)
+        {
+            JSLOG(info,"Parsing request header failed");
+            jscont->httpFail(cb,"REQUEST_PARSING_ERROR");
+        }
+        else if(error == Transfer::HttpManager::RESPONSE_PARSING_FAILED)
+        {
+            JSLOG(info,"Parsing response header failed");
+            jscont->httpFail(cb,"RESPONSE_PARSING_ERROR");
         }
         else
         {

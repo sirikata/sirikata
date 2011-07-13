@@ -192,10 +192,11 @@ struct JSContextStruct : public JSSuspendable, public Liveness
 
    /**
       The http request that was associated with this request failed. Execute
-      callback with single argument: false.  Caller is in charge of calling dispose
-      on cb.
+      callback with two arguments: false, and a string with the reason
+      (potential reasons: UNKNOWN_ERROR, REQUEST_PARSING_ERROR,
+      RESPONSE_PARSING_ERROR.  Caller is in charge of calling dispose on cb.
    */
-    void httpFail(v8::Persistent<v8::Function> cb);
+    void httpFail(v8::Persistent<v8::Function> cb,const String& failureReason );
     /**
        The http request that was associated with cb passed, and its associated
        data are in httpResp.  Execute callback with first argument true, and
