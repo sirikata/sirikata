@@ -1209,7 +1209,9 @@ SET(LIBSPACE_SOURCES
   )
 
 SET(LIBMESH_SOURCES
+  ${LIBMESH_SOURCE_DIR}/Visual.cpp
   ${LIBMESH_SOURCE_DIR}/Meshdata.cpp
+  ${LIBMESH_SOURCE_DIR}/Billboard.cpp
   ${LIBMESH_SOURCE_DIR}/AnyModelsSystem.cpp
   ${LIBMESH_SOURCE_DIR}/ModelsSystemFactory.cpp
   ${LIBMESH_SOURCE_DIR}/Filter.cpp

@@ -203,6 +203,10 @@ bool MaterialEffectInfo::operator!=(const MaterialEffectInfo& rhs) const {
     return !(*this == rhs);
 }
 
+
+Meshdata::~Meshdata() {
+}
+
 Matrix4x4f Meshdata::getTransform(NodeIndex index) const {
     // Just trace up the tree, multiplying in transforms
     Matrix4x4f xform(Matrix4x4f::identity());
@@ -320,7 +324,7 @@ bool Meshdata::GeometryInstanceIterator::next(uint32* geo_idx, Matrix4x4f* xform
             st.index = mMesh->nodes[node.index].instanceChildren[node.currentChild];
             st.step = NodeState::Nodes;
             st.currentChild = -1;
-            st.transform = node.transform * mMesh->nodes[ st.index ].transform;  
+            st.transform = node.transform * mMesh->nodes[ st.index ].transform;
             mStack.push(st);
             continue;
         }
@@ -363,7 +367,7 @@ Meshdata::JointIterator::JointIterator(const Meshdata* const mesh)
 }
 
   bool Meshdata::JointIterator::next(uint32* joint_id, uint32* joint_idx, Matrix4x4f* xform, uint32* parent_id,
-                                     std::vector<Matrix4x4f>& transformList) 
+                                     std::vector<Matrix4x4f>& transformList)
   {
     while(true) { // Outer loop keeps us moving until we hit something to return
 
@@ -375,7 +379,7 @@ Meshdata::JointIterator::JointIterator(const Meshdata* const mesh)
             JointNodeState st;
             st.index = mMesh->rootNodes[mRoot];
             st.step = NodeState::Init;
-            st.currentChild = -1; 
+            st.currentChild = -1;
             st.transform = mMesh->globalTransform * mMesh->nodes[st.index].transform;
 
             st.joint_id = 0;
@@ -402,7 +406,7 @@ Meshdata::JointIterator::JointIterator(const Meshdata* const mesh)
                     *joint_id = node.joint_id;
                     *joint_idx = i;
                     *xform = node.transform;
-                   
+
                     transformList = mMesh->mInstanceControllerTransformList;
                     return true;
                 }
@@ -421,7 +425,7 @@ Meshdata::JointIterator::JointIterator(const Meshdata* const mesh)
             st.index = mMesh->nodes[node.index].children[node.currentChild];
             st.step = NodeState::Init;
             st.currentChild = -1;
-            
+
             st.transform = node.transform * mMesh->nodes[ st.index ].transform;
 
             st.joint_id = node.joint_id;

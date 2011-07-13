@@ -34,9 +34,8 @@
 #define _SIRIKATA_MESH_MESHDATA_HPP_
 
 #include <sirikata/mesh/Platform.hpp>
-#include <sirikata/core/util/Sha256.hpp>
+#include <sirikata/mesh/Visual.hpp>
 #include "LightInfo.hpp"
-#include <sirikata/core/util/UUID.hpp>
 #include <stack>
 
 namespace Sirikata {
@@ -278,14 +277,15 @@ struct SIRIKATA_MESH_EXPORT Node {
 };
 typedef std::vector<Node> NodeList;
 
-struct SIRIKATA_MESH_EXPORT Meshdata {
+struct SIRIKATA_MESH_EXPORT Meshdata : public Visual {
+  public:
+    virtual ~Meshdata();
+
     SubMeshGeometryList geometry;
     TextureList textures;
     LightInfoList lights;
     MaterialEffectInfoList materials;
 
-    std::string uri;
-    SHA256 hash;
     long id;
 
     bool hasAnimations;
@@ -302,11 +302,11 @@ struct SIRIKATA_MESH_EXPORT Meshdata {
     NodeList nodes;
     NodeIndexList rootNodes;
 
-    //Stores a list of transforms on the path from the scene root 
+    //Stores a list of transforms on the path from the scene root
     //to the instance controller for the skeleton.
     std::vector<Matrix4x4f>  mInstanceControllerTransformList;
     // Joints are tracked as indices of the nodes they are associated with.
-    NodeIndexList joints;    
+    NodeIndexList joints;
 
     // Be careful using these methods. Since there are no "parent" links for
     // instance nodes (and even if there were, there could be more than one),
