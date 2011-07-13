@@ -89,8 +89,9 @@ private:
     // asset) failing to download.
     void failDownload();
 
-    // Get the URL for an asset specified relative to the asset being downloaded.
-    String getRelativeURL(const String& relative_name);
+    // Get the URL for an asset, deciding automatically whether it
+    // needs to be relative or absolute
+    Transfer::URI getURL(const Transfer::URI& orig, const String& given_url);
 
     Graphics::OgreRenderer *const mScene;
     Transfer::URI mAssetURI;

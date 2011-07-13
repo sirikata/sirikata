@@ -59,10 +59,8 @@ AssetDownloadTask::~AssetDownloadTask() {
     cancel();
 }
 
-String AssetDownloadTask::getRelativeURL(const String& relative_name) {
-    String assetURIString = mAssetURI.toString();
-    String relativeURIString = assetURIString.substr(0, assetURIString.rfind("/")+1) + relative_name;
-    return relativeURIString;
+Transfer::URI AssetDownloadTask::getURL(const Transfer::URI& orig, const String& given_url) {
+    return Transfer::URI(orig.context(), given_url);
 }
 
 void AssetDownloadTask::cancel() {
@@ -162,7 +160,7 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
         }
 
         for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
-            Transfer::URI texURI( getRelativeURL(*it) );
+            Transfer::URI texURI( getURL(mAssetURI, *it) );
             addDependentDownload(texURI);
         }
 
@@ -173,7 +171,7 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
     if (bboard) {
         // For billboards, we have to download at least the image to display on
         // it
-        Transfer::URI texURI( getRelativeURL(bboard->image) );
+        Transfer::URI texURI( getURL(mAssetURI, bboard->image) );
         addDependentDownload(texURI);
         return;
     }
@@ -206,6 +204,11 @@ void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDown
 }
 
 void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+    if (!request) {
+        failDownload();
+        return;
+    }
+
     // Clear the download task
     mActiveDownloads.erase(request->getURI());
 
