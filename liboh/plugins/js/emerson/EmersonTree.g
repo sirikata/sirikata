@@ -28,20 +28,6 @@ options
     #include "Util.h"
     #define APP(s)  program_string->append(program_string, s);
 
-    
-    // #define CHECK_RESOURCES()               \
-    // {                                       \
-    // APP("(function()\n");                   \
-    // APP("{ \n");                            \
-    // APP("var tmp = function()\n");          \
-    // APP("{\n");                             \
-    // APP("return this;");                    \
-    // APP("};");                              \
-    // APP("var tmpGlobal = tmp();");          \
-    // APP("if (! tmpGlobal.__checkResources8_8_3_1__())"); \
-    // APP("throw '__resource_error__';");     \
-    // APP("})();");                           \
-    // }
 
     #define CHECK_RESOURCES()                 \
     {                                         \
@@ -1219,7 +1205,7 @@ additiveExpression
             ) 
         | ^(SUB
             {
-                APP("  util.minus( " );
+                APP("  util.sub( " );
             }
              e1=additiveExpression 
              {

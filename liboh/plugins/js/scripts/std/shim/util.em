@@ -1,54 +1,81 @@
 
+(function()
 {
-  /** @namespace visible */
-  var util = function()
-  {
+    
+    var internalUtilPlus = std.core.bind(util.plus,util);
+    var internalUtilSub  = std.core.bind(util.sub,util);
+    var internalUtilRand = std.core.bind(util.rand,util);
+    var internalUtilSqrt = std.core.bind(util.sqrt,util);
+    var internalUtilIdentifier = std.core.bind(util.identifier,util);
 
-      /**
-       Overloads the '-' operator for many types.  a and b must be of the same type
-       (either vectors or numbers).  If a and b are vectors (a =
-       <ax,ay,az>; b = <bx,by,bz>, returns <ax-bx, ay-by, az-bz>).  If a and b are
-       numbers, returns a - b.
+    var internalUtilAcos = std.core.bind(util.acos,util);
+    var internalUtilCos = std.core.bind(util.cos,util);
+    var internalUtilSin = std.core.bind(util.sin,util);
+    var internalUtilAsin  = std.core.bind(util.asin,util);
+    var internalUtilPow = std.core.bind(util.pow,util);
+    var internalUtilExp = std.core.bind(util.exp,util);
+    var internalUtilAbs = std.core.bind(util.abs,util);
 
-       @param a Of type vector or number.
-       @param b Of type vector or number.
+    // var internalUtilPattern = std.core.bind(util.Pattern,util);
+    // var internalUtilVec3 = std.core.bind(util.Vec3,util);
+    // var internalUtilQuaternion = std.core.bind(util.Quaternion,util);
 
-       @return vector or number
-       */
-      util.prototype.minus = function()
-      {
-      };
+    var internalUtilPattern = util.Pattern;
+    var internalUtilVec3 = util.Vec3;
+    var internalUtilQuaternion = util.Quaternion;
+    
+    
+    /**
+     Overloads the '+' operator.
+
+     Checks if lhs has a plus function defined on it.  If it does, then
+     calls lhs.plus(rhs).  If it doesn't, call internal util
+     addition.  Internal requires that both lhs and rhs are of same
+     type.  and can either be a vector, number, quaternion, or string.
+
+     */
+    util.plus = function (lhs, rhs)
+    {
+        if (typeof(lhs.add) == 'function')
+            return lhs.add(rhs);                
+
+        return internalUtilPlus.apply(undefined,arguments);
+    };
 
 
-      /**
-       Overloads the '+' operator for many types.  a and b must be of the same type
-       (either vectors, numbers, or strings).  If a and b are vectors (a =
-       <ax,ay,az>; b = <bx,by,bz>, returns <ax+bx, ay+by, az+bz>).  If a and b are
-       numbers, returns a + b.  If a and b are strings, returns concatenated string.
-       
-       @param a Of type vector, number, or string.
-       @param b Of type vector, number, or string.
-       @return vector, number, or string
-       */
-      util.prototype.plus = function()
-      {
-      };
-
+    /**
+     Overloads the '-' operator.
+     
+     Checks if lhs has a sub function defined on it.  If it does, then
+     calls lhs.sub(rhs).  If it doesn't, call internal util
+     subtraction.  Internal requires that both lhs and rhs are of same
+     type.  and can either be a vector, number, or quaternion.
+     */
+    util.sub = function (lhs,rhs)
+    {
+        if (typeof(lhs.sub) == 'function')
+            return lhs.sub(rhs);
+        
+        return internalUtilSub.apply(undefined,arguments);
+    };
 
       /**
        @return a random float from 0 to 1
        */
-      util.prototype.rand = function()
-      { };
+      util.rand = function()
+      {
+          return internalUtilRand.apply(undefined,arguments);
+      };
+
 
       /**
        @param takes in a single argument
        @return returns a float
        */
-      util.prototype.sqrt = function()
+      util.sqrt = function()
       {
+          return internalUtilSqrt.apply(undefined,arguments);
       };
-
 
       /**
        @param {optional} {string} space id
@@ -62,26 +89,27 @@
        presence id.
        
        */
-      util.prototype.identifier = function()
+      util.identifier = function()
       {
+          return internalUtilIdentifer.apply(undefined,arguments);
       };
       
       /**
        @param float to take arccosine of
        @return angle in radians
        */
-      util.prototype.acos = function()
+      util.acos = function()
       {
-          
+          return internalUtilAcos.apply(undefined,arguments);
       };
 
       /**
        @param angle in radians to take cosine of
        @return cosine of that angle
        */
-      util.prototype.cos = function()
+      util.cos = function()
       {
-          
+          return internalUtilCos.apply(undefined,arguments);
       };
 
 
@@ -89,9 +117,9 @@
        @param angle in radians to take sine of
        @return sine of that angle
        */
-      util.prototype.sin = function()
+      util.sin = function()
       {
-          
+          return internalUtilSin.apply(undefined,arguments);
       };
 
 
@@ -99,9 +127,9 @@
        @param float to take arcsine of
        @return angle in radians
        */
-      util.prototype.asin = function()
+      util.asin = function()
       {
-          
+          return internalUtilAsin.apply(undefined,arguments);
       };
 
 
@@ -110,9 +138,9 @@
        @param exponent
        @return returns base to the exponent
        */
-      util.prototype.pow = function()
+      util.pow = function()
       {
-          
+          return internalUtilPow.apply(undefined,arguments);
       };
 
 
@@ -120,17 +148,18 @@
        @param exponent
        @return returns e to the exponent
        */
-      util.prototype.exp = function()
+      util.exp = function()
       {
+          return internalUtilExp.apply(undefined,arguments);
       };
 
       /**
        @param number to take abs of
        @return returns absolute value of argument.
        */
-      util.prototype.abs = function()
+      util.abs = function()
       {
-          
+          return internalUtilAbs.apply(undefined,arguments);
       };
 
 
@@ -141,11 +170,12 @@
 
        @return pattern object
        */
-      util.prototype.Pattern =function()
+      util.Pattern =function()
       {
-          
+          return internalUtilPattern.apply(this,arguments);
       };
 
+    
       /**
        @param x
        @param y
@@ -155,9 +185,9 @@
        @return quaternion object
        
        */
-      util.prototype.Quaternion = function()
+      util.Quaternion = function()
       {
-          
+          return internalUtilQuaternion.apply(this,arguments);
       };
 
       /**
@@ -167,8 +197,11 @@
 
        @return a vec3 object
        */
-      util.prototype.Vec3 = function()
+      util.Vec3 = function()
       {
+          return internalUtilVec3.apply(this,arguments);
       };
-  };
-}
+    
+    
+})();
+
