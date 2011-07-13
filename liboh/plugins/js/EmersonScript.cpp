@@ -282,7 +282,7 @@ void EmersonScript::printMPresences()
 
 void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo)
 {
-   // Invoke user callback
+    // Invoke user callback
     PresenceMapIter iter = mPresences.find(proxTo);
     if (iter == mPresences.end())
     {
@@ -292,7 +292,7 @@ void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectR
 
     if (mContext->proxAddedFunc.IsEmpty())
     {
-        JSLOG(debug,"No prox added func to execute");
+        JSLOG(detailed,"No prox added func to execute");
         return;
     }
 
@@ -325,7 +325,6 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
     JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
-
     notifyProximate(jsvis,querier);
 }
 
