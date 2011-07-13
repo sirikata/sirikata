@@ -39,7 +39,7 @@ namespace Sirikata {
 
 /** AnyModelsSystem is an implementation of ModelsSystem which uses all other
  *  available implementations to handle as wide a variety of meshes as
- *  possible.  It uses all
+ *  possible.
  */
 class SIRIKATA_MESH_EXPORT AnyModelsSystem : public ModelsSystem
 {
@@ -48,19 +48,10 @@ class SIRIKATA_MESH_EXPORT AnyModelsSystem : public ModelsSystem
 
     virtual ~AnyModelsSystem();
 
-    /** Check if this ModelsSystem will be able to parse the
-     *  data.  This doesn't guarantee successful parsing:
-     *  generally it only checks for magic numbers to see if it is
-     *  likely a supported format.
-     */
-    virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data);
-
-    /** Load a mesh into a Meshdata object. */
-    virtual Mesh::MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
-        std::tr1::shared_ptr<const Transfer::DenseData> data);
-
-    /** Convert a Meshdata to the format for this ModelsSystem. */
-    virtual bool convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename);
+    virtual bool canLoad(Transfer::DenseDataPtr data);
+    virtual Mesh::VisualPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+        Transfer::DenseDataPtr data);
+    virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename);
 
     static ModelsSystem* create(const String& args);
   private:

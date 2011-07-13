@@ -42,6 +42,7 @@
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 
 #include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 

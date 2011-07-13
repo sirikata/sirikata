@@ -33,7 +33,9 @@
 #ifndef _SIRIKATA_MESH_RAYTRACE_HPP_
 #define _SIRIKATA_MESH_RAYTRACE_HPP_
 
+#include <sirikata/mesh/Visual.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Billboard.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -51,7 +53,9 @@ namespace Mesh {
  *  \param hit_out the point of collision, if one was found
  *  \returns true if a collision was found, false otherwise
  */
+SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
 SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
+SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
 
 } // namespace Mesh
 } // namespace Sirikata

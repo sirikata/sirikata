@@ -180,25 +180,28 @@ v8::Handle<v8::Value> JSPositionListener::struct_getOrientTime()
 
 v8::Handle<v8::Value> JSPositionListener::struct_getAnimationList()
 {
-    if (!mMeshdata) {
+    if (!mVisual) {
       return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call getAnimationList before loading the mesh.")));
     }
 
     std::vector<String> animationList;
     std::set<String> animationSet;
 
-    for (uint32 i=0;  i < mMeshdata->nodes.size(); i++) {
-      Sirikata::Mesh::Node& node = mMeshdata->nodes[i];
+    Mesh::MeshdataPtr md( std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(mVisual) );
+    if (md) {
+        for (uint32 i=0;  i < md->nodes.size(); i++) {
+            Sirikata::Mesh::Node& node = md->nodes[i];
 
-      for (std::map<String, Sirikata::Mesh::TransformationKeyFrames>::iterator it = node.animations.begin();
-           it != node.animations.end(); it++)
-        {
-          animationSet.insert(it->first);
+            for (std::map<String, Sirikata::Mesh::TransformationKeyFrames>::iterator it = node.animations.begin();
+                 it != node.animations.end(); it++)
+            {
+                animationSet.insert(it->first);
+            }
         }
-    }
 
-    for (std::set<String>::iterator it = animationSet.begin(); it != animationSet.end(); it++) {
-      animationList.push_back(*it);
+        for (std::set<String>::iterator it = animationSet.begin(); it != animationSet.end(); it++) {
+            animationList.push_back(*it);
+        }
     }
 
     v8::HandleScope handle_scope;
@@ -221,10 +224,10 @@ v8::Handle<v8::Value> JSPositionListener::loadMesh(JSContextStruct* ctx, v8::Han
     return v8::Undefined();
 }
 
-void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::MeshdataPtr data) {
+void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::VisualPtr data) {
     if (!alive || !ctx_alive) return;
 
-    mMeshdata = data;
+    mVisual = data;
 
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx->mContext);
@@ -242,7 +245,7 @@ v8::Handle<v8::Value> CreateJSBBoxResult(v8::Handle<v8::Context>& ctx, const Bou
 }
 }
 v8::Handle<v8::Value> JSPositionListener::meshBounds() {
-    if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call meshBounds before loading the mesh.")));
+    if (!mVisual) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call meshBounds before loading the mesh.")));
 
     // Unfortunately, the radius part of the bounds are computed against the
     // origin. We need to get the bounds of:
@@ -251,22 +254,22 @@ v8::Handle<v8::Value> JSPositionListener::meshBounds() {
     // on the origin. Currently we need two passes, one untransformed to get the
     // scale factor, the second using the transformed data.
     double rad;
-    Mesh::ComputeBounds(mMeshdata, NULL, &rad);
+    Mesh::ComputeBounds(mVisual, NULL, &rad);
 
     Matrix4x4f xform = Matrix4x4f::translate(getPosition()) * Matrix4x4f::rotate(getOrientation()) * Matrix4x4f::scale(getBounds().radius()/rad);
 
     BoundingBox3f3f bbox;
-    Mesh::ComputeBounds(mMeshdata, xform, &bbox);
+    Mesh::ComputeBounds(mVisual, xform, &bbox);
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(meshBounds,curContext);
     return CreateJSBBoxResult(curContext, bbox);
 }
 
 v8::Handle<v8::Value> JSPositionListener::untransformedMeshBounds() {
-    if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call untransformedMeshBounds before loading the mesh.")));
+    if (!mVisual) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call untransformedMeshBounds before loading the mesh.")));
 
     BoundingBox3f3f bbox;
     double rad;
-    Mesh::ComputeBounds(mMeshdata, &bbox, &rad);
+    Mesh::ComputeBounds(mVisual, &bbox, &rad);
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(untransformedMeshBounds,curContext);
     // The only 'transformation' we apply is to get the initial scale of the
     // model in the correct range, i.e. we divide by rad. Here, we.
@@ -279,10 +282,10 @@ v8::Handle<v8::Value> JSPositionListener::untransformedMeshBounds() {
  * providing more convenient versions.
  */
 v8::Handle<v8::Value> JSPositionListener::raytrace(const Vector3f& mesh_ray_start, const Vector3f& mesh_ray_dir) {
-    if (!mMeshdata) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call raytrace before loading the mesh.")));
+    if (!mVisual) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call raytrace before loading the mesh.")));
 
     float32 t_out; Vector3f hit_out;
-    bool did_hit = Mesh::Raytrace(mMeshdata, mesh_ray_start, mesh_ray_dir, &t_out, &hit_out);
+    bool did_hit = Mesh::Raytrace(mVisual, mesh_ray_start, mesh_ray_dir, &t_out, &hit_out);
     if (!did_hit) return v8::Undefined();
 
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(raytrace,curContext);
@@ -291,7 +294,7 @@ v8::Handle<v8::Value> JSPositionListener::raytrace(const Vector3f& mesh_ray_star
 
 v8::Handle<v8::Value> JSPositionListener::unloadMesh() {
     CHECK_JPP_INIT_THROW_V8_ERROR(unloadMesh);
-    mMeshdata.reset();
+    mVisual.reset();
     return v8::Undefined();
 }
 

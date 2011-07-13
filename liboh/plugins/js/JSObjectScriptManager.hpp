@@ -40,7 +40,7 @@
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
 #include <sirikata/mesh/ModelsSystem.hpp>
 #include <sirikata/mesh/Filter.hpp>
-#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Visual.hpp>
 
 #include <v8.h>
 
@@ -78,7 +78,7 @@ public:
     v8::Persistent<v8::ObjectTemplate>   mContextGlobalTemplate;
 
     // Mesh loading functions
-    typedef std::tr1::function<void(Mesh::MeshdataPtr)> MeshLoadCallback;
+    typedef std::tr1::function<void(Mesh::VisualPtr)> MeshLoadCallback;
     void loadMesh(const Transfer::URI& uri, MeshLoadCallback cb);
 
 private:
@@ -110,7 +110,7 @@ private:
     // costly memory-wise.
     // FIXME this should be more complicated -- perhaps tracking shared_ptr's for awhile
     // or just maintaining an LRU.
-    typedef std::tr1::unordered_map<Transfer::URI, Mesh::MeshdataWPtr, Transfer::URI::Hasher> MeshCache;
+    typedef std::tr1::unordered_map<Transfer::URI, Mesh::VisualWPtr, Transfer::URI::Hasher> MeshCache;
     MeshCache mMeshCache;
     // Some additional information is needed to keep track of in-progress
     // downloads. Note that these are only ever modified in the main thread
@@ -133,7 +133,7 @@ private:
     void meshDownloaded(Transfer::ChunkRequestPtr request, Transfer::DenseDataPtr data);
     void parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
     void meshParsed();
-    void finishMeshDownload(const Transfer::URI& uri, Mesh::MeshdataPtr mesh);
+    void finishMeshDownload(const Transfer::URI& uri, Mesh::VisualPtr mesh);
 
 };
 

@@ -54,8 +54,8 @@ FilterDataPtr SaveFilter::apply(FilterDataPtr input) {
     assert(input->single());
 
     ModelsSystem* parser = ModelsSystemFactory::getSingleton().getConstructor("any")("");
-    MeshdataPtr md = input->get();
-    bool success = parser->convertMeshdata(*md.get(), mFormat, mFilename);
+    VisualPtr vis = input->get();
+    bool success = parser->convertVisual(vis, mFormat, mFilename);
     if (!success) {
         std::cout << "Error saving mesh." << std::endl;
         return FilterDataPtr();

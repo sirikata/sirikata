@@ -60,7 +60,7 @@ ModelsSystem* AnyModelsSystem::create(const String& args) {
     return new AnyModelsSystem();
 }
 
-bool AnyModelsSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) {
+bool AnyModelsSystem::canLoad(Transfer::DenseDataPtr data) {
     for(SystemsMap::iterator it = mModelsSystems.begin(); it != mModelsSystems.end(); it++) {
         ModelsSystem* ms = it->second;
         if (ms->canLoad(data)) return true;
@@ -68,9 +68,9 @@ bool AnyModelsSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> da
     return false;
 }
 
-Mesh::MeshdataPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
-    std::tr1::shared_ptr<const Transfer::DenseData> data) {
-    Mesh::MeshdataPtr result;
+Mesh::VisualPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+    Transfer::DenseDataPtr data) {
+    Mesh::VisualPtr result;
     for(SystemsMap::iterator it = mModelsSystems.begin(); it != mModelsSystems.end(); it++) {
         ModelsSystem* ms = it->second;
         if (ms->canLoad(data)) {
@@ -82,14 +82,14 @@ Mesh::MeshdataPtr AnyModelsSystem::load(const Transfer::URI& uri, const Transfer
     return result;
 }
 
-bool AnyModelsSystem::convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) {
+bool AnyModelsSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) {
     SystemsMap::iterator it = mModelsSystems.find(format);
     if (it == mModelsSystems.end()) {
         SILOG(AnyModelsSystem,error,"AnyModelsSystem couldn't find format " << format << " during mesh conversion.");
         return false;
     }
     ModelsSystem* ms = it->second;
-    return ms->convertMeshdata(meshdata, "", filename);
+    return ms->convertVisual(visual, "", filename);
 }
 
 } // namespace Sirikata

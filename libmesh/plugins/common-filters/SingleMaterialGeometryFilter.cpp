@@ -31,7 +31,7 @@
  */
 
 #include "SingleMaterialGeometryFilter.hpp"
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -40,10 +40,11 @@ SingleMaterialGeometryFilter::SingleMaterialGeometryFilter(const String& args) {
 }
 
 FilterDataPtr SingleMaterialGeometryFilter::apply(FilterDataPtr input) {
-    using namespace Sirikata::Transfer;
-
     for(FilterData::const_iterator md_it = input->begin(); md_it != input->end(); md_it++) {
-        MeshdataPtr md = *md_it;
+        VisualPtr vis = *md_it;
+        // Meshdata only currently
+        MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+        if (!md) continue;
 
         // Our approach is to run through all SubMeshGeometries generating
         // versions that are split. By maintaining a map from old indices to a

@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_LIBMESH_FILTER_HPP_
 #define _SIRIKATA_LIBMESH_FILTER_HPP_
 
-#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Visual.hpp>
 #include <sirikata/core/util/Factory.hpp>
 
 namespace Sirikata {
@@ -41,12 +41,12 @@ namespace Mesh {
 
 /** FilterData is the input and output of a Filter. In order to support filters
  *  with multiple inputs (e.g. simplification of multiple meshes), FilterData is
- *  a list of MeshdataPtrs.
+ *  a list of VisualPtrs.
  */
-class SIRIKATA_MESH_EXPORT FilterData : public std::vector<MeshdataPtr> {
+class SIRIKATA_MESH_EXPORT FilterData : public std::vector<VisualPtr> {
 public:
     bool single() const { return this->size() == 1; }
-    MeshdataPtr get() const { assert(single()); return at(0); }
+    VisualPtr get() const { assert(single()); return at(0); }
 }; // class FilterData
 typedef std::tr1::shared_ptr<const FilterData> FilterDataPtr;
 typedef std::tr1::shared_ptr<FilterData> MutableFilterDataPtr;

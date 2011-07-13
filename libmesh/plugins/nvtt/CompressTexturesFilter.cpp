@@ -31,6 +31,7 @@
  */
 
 #include "CompressTexturesFilter.hpp"
+#include <sirikata/mesh/Meshdata.hpp>
 #include "FreeImage.hpp"
 #include <nvtt/nvtt.h>
 
@@ -48,7 +49,12 @@ FilterDataPtr CompressTexturesFilter::apply(FilterDataPtr input) {
     InitFreeImage();
 
     for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
-        MeshdataPtr mesh = *mesh_it;
+        VisualPtr vis = *mesh_it;
+
+        // Can only handle meshes for now
+        MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+        // Just continue to ignore since we modify in-place
+        if (!mesh) continue;
 
         // We only know how to handle local files
         if (mesh->uri.size() < 7 || mesh->uri.substr(0, 7) != "file://") continue;

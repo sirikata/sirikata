@@ -36,7 +36,7 @@
 #include <sirikata/ogre/Platform.hpp>
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include "OgreResource.h"
-#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Visual.hpp>
 #include <sirikata/core/service/Context.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
 #include <sirikata/proxyobject/TimeSteppedQueryableSimulation.hpp>
@@ -145,11 +145,11 @@ public:
     ///removes the camera from the list of attached cameras.
     virtual void detachCamera(Camera*);
 
-    typedef std::tr1::function<void(Mesh::MeshdataPtr)> ParseMeshCallback;
+    typedef std::tr1::function<void(Mesh::VisualPtr)> ParseMeshCallback;
     /** Tries to parse a mesh. Can handle different types of meshes and tries to
      *  find the right parser using magic numbers.  If it is unable to find the
      *  right parser, returns NULL.  Otherwise, returns the parsed mesh as a
-     *  Meshdata object.
+     *  Visual object.
      *  \param orig_uri original URI, used to construct correct relative paths
      *                  for dependent resources
      *  \param fp the fingerprint of the data, used for unique naming and passed
@@ -160,9 +160,9 @@ public:
     void parseMesh(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
 
     /** Get the default mesh to present if a model fails to load. This may
-     *  return an empty MeshdataPtr if no default mesh is specified.
+     *  return an empty VisualPtr if no default mesh is specified.
      */
-    virtual Mesh::MeshdataPtr defaultMesh() const { return Mesh::MeshdataPtr(); }
+    virtual Mesh::VisualPtr defaultMesh() const { return Mesh::VisualPtr(); }
 
     void screenshot(const String& filename);
     void screenshotNextFrame(const String& filename);
@@ -185,7 +185,7 @@ public:
 
 
     void parseMeshWork(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data, ParseMeshCallback cb);
-    Mesh::MeshdataPtr parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
+    Mesh::VisualPtr parseMeshWorkSync(const Transfer::URI& orig_uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data);
 
 
     // Invokable helpers

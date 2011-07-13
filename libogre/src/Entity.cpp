@@ -366,7 +366,7 @@ void Entity::loadMesh(const String& meshname)
 
     mReplacedMaterials.clear();
 
-    
+
 
     /** FIXME we need a better way of generating unique id's. We should
      *  be able to use just the uuid, but its not enough since we want
@@ -1230,8 +1230,8 @@ public:
                 Ogre::VertexBoneAssignment vba;
 
                 for(uint32 vidx = 0;  vidx < submesh.positions.size(); vidx++) {
-                  vba.vertexIndex = vidx;                  
-                  
+                  vba.vertexIndex = vidx;
+
                   for(uint32 ass_idx = skin.weightStartIndices[vidx];  ass_idx < skin.weightStartIndices[vidx+1]; ass_idx++) {
                     vba.boneIndex = skin.joints[ skin.jointIndices[ass_idx] ]+1;
                     vba.weight = skin.weights[ass_idx];
@@ -1472,16 +1472,25 @@ void Entity::createMesh(Liveness::Token alive) {
 
     //get the mesh data and check that it is valid.
     bool usingDefault = false;
-    MeshdataPtr mdptr = mAssetDownload->asset();
+    VisualPtr visptr = mAssetDownload->asset();
+
     AssetDownloadTaskPtr assetDownload(mAssetDownload);
     mAssetDownload=AssetDownloadTaskPtr();
-    if (!mdptr) {
+
+    if (!visptr) {
         usingDefault = true;
-        mdptr = mScene->defaultMesh();
-        if (!mdptr) {
+        visptr = mScene->defaultMesh();
+        if (!visptr) {
             notify(&EntityListener::entityLoaded, this, false);
             return;
         }
+    }
+
+    // FIXME only supporting Meshdatas right now
+    MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Meshdata>(visptr) );
+    if (!mdptr) {
+        notify(&EntityListener::entityLoaded, this, false);
+        return;
     }
 
     //Extract any animations from the new mesh.
@@ -1614,7 +1623,7 @@ void Entity::createMesh(Liveness::Token alive) {
         }
     }
 
-    notify(&EntityListener::entityLoaded, this, true);    
+    notify(&EntityListener::entityLoaded, this, true);
 }
 
 const std::vector<String> Entity::getAnimationList() {

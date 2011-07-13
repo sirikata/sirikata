@@ -34,7 +34,7 @@
 #define _SIRIKATA_OGRE_ASSET_DOWNLOAD_TASK_HPP_
 
 #include <sirikata/core/transfer/ResourceDownloadTask.hpp>
-#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Visual.hpp>
 
 namespace Sirikata {
 namespace Graphics {
@@ -65,7 +65,7 @@ public:
     static std::tr1::shared_ptr<AssetDownloadTask> construct(const Transfer::URI& uri, Graphics::OgreRenderer* const scene, double priority, FinishedCallback cb);
     ~AssetDownloadTask();
 
-    Mesh::MeshdataPtr asset() const { return mAsset; }
+    Mesh::VisualPtr asset() const { return mAsset; }
     const Dependencies& dependencies() const { return mDependencies; }
 
     void cancel();
@@ -73,8 +73,10 @@ private:
     void downloadAssetFile();
     static void weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<Transfer::ChunkRequest> request, std::tr1::shared_ptr<const Transfer::DenseData> response);
     void assetFileDownloaded(std::tr1::shared_ptr<Transfer::ChunkRequest> request, std::tr1::shared_ptr<const Transfer::DenseData> response);
-    static void weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::MeshdataPtr md);
-    void handleAssetParsed(Mesh::MeshdataPtr md);
+    static void weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::VisualPtr md);
+    void handleAssetParsed(Mesh::VisualPtr md);
+
+    void addDependentDownload(const Transfer::URI& depUrl);
 
     static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&,std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<const Transfer::DenseData> response);
@@ -87,13 +89,16 @@ private:
     // asset) failing to download.
     void failDownload();
 
+    // Get the URL for an asset specified relative to the asset being downloaded.
+    String getRelativeURL(const String& relative_name);
+
     Graphics::OgreRenderer *const mScene;
     Transfer::URI mAssetURI;
     double mPriority; // FIXME this should really be a function or functor to
                       // get priority so it can be kept up to date
     FinishedCallback mCB;
 
-    Mesh::MeshdataPtr mAsset;
+    Mesh::VisualPtr mAsset;
     Dependencies mDependencies;
 
     // Active downloads, for making sure shared_ptrs stick around and for cancelling

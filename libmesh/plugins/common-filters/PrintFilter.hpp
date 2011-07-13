@@ -31,6 +31,8 @@
  */
 
 #include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Billboard.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -44,6 +46,9 @@ public:
 
     virtual FilterDataPtr apply(FilterDataPtr input);
 private:
+    void printMeshdata(MeshdataPtr md);
+    void printBillboard(BillboardPtr bb);
+
     bool mTexturesOnly;
 };
 

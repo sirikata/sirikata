@@ -92,7 +92,7 @@ bool ColladaSystem::initialize(String const& options)
 /////////////////////////////////////////////////////////////////////
 // overrides from ModelsSystem
 
-bool ColladaSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) {
+bool ColladaSystem::canLoad(Transfer::DenseDataPtr data) {
     // There's no magic number for collada files. Instead, search for
     // a <COLLADA> tag (just the beginning since it has other content
     // in it).  Originally we'd check for the closing tag too, but to
@@ -110,8 +110,8 @@ bool ColladaSystem::canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data
     return false;
 }
 
-Mesh::MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
-            std::tr1::shared_ptr<const Transfer::DenseData> data)
+Mesh::VisualPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+            Transfer::DenseDataPtr data)
 {
     ColladaDocumentLoader loader(uri, fp);
 
@@ -127,9 +127,11 @@ Mesh::MeshdataPtr ColladaSystem::load(const Transfer::URI& uri, const Transfer::
       return loader.getMeshdata();
 }
 
-bool ColladaSystem::convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) {
+bool ColladaSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) {
+    Mesh::MeshdataPtr meshdata(std::tr1::dynamic_pointer_cast<Mesh::Meshdata>(visual));
+    if (!meshdata) return false;
     // format is ignored, we only know one format
-    int result = meshdataToCollada(meshdata, filename);
+    int result = meshdataToCollada(*meshdata, filename);
     return (result == 0);
 }
 

@@ -36,6 +36,38 @@
 namespace Sirikata {
 namespace Mesh {
 
+void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(VisualPtr vis, BoundingBox3f3f* bbox, double* rad) {
+    // Just dispatches based on type
+    MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+    if (md) {
+        ComputeBounds(md, bbox, rad);
+        return;
+    }
+    BillboardPtr bboard( std::tr1::dynamic_pointer_cast<Billboard>(vis) );
+    if (bboard) {
+        ComputeBounds(bboard, bbox, rad);
+        return;
+    }
+}
+
+void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(VisualPtr vis, const Matrix4x4f& xform, BoundingBox3f3f* bbox, double* rad) {
+    // Just dispatches based on type
+    MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+    if (md) {
+        ComputeBounds(md, xform, bbox, rad);
+        return;
+    }
+    BillboardPtr bboard( std::tr1::dynamic_pointer_cast<Billboard>(vis) );
+    if (bboard) {
+        ComputeBounds(bboard, xform, bbox, rad);
+        return;
+    }
+}
+
+
+
+
+
 void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(MeshdataPtr mesh, BoundingBox3f3f* bbox, double* rad) {
     Meshdata::GeometryInstanceIterator geoIter = mesh->getGeometryInstanceIterator();
     uint32 indexInstance; Matrix4x4f transformInstance;
@@ -82,6 +114,33 @@ void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(MeshdataPtr mesh, const Matrix4
         }
         if (rad != NULL) *rad = std::max(*rad, inst_rad);
     }
+}
+
+
+
+void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(BillboardPtr bboard, BoundingBox3f3f* bbox, double* rad) {
+    // Billboards without any sizes specified are just squares -- X & Y but no
+    // depth in Z
+    static float one_over_rad2 = 0.707106781;
+    if (bbox != NULL) *bbox = BoundingBox3f3f(Vector3f(-one_over_rad2, -one_over_rad2, 0), Vector3f(one_over_rad2, one_over_rad2, 0));
+    if (rad != NULL) *rad = 1.0;
+}
+
+void SIRIKATA_MESH_FUNCTION_EXPORT ComputeBounds(BillboardPtr bboard, const Matrix4x4f& xform, BoundingBox3f3f* bbox, double* rad) {
+    // Billboards without any sizes specified are just squares -- X & Y but no
+    // depth in Z
+    static float one_over_rad2 = 0.707106781;
+    if (bbox != NULL) {
+        // Transform and merge in each corner
+        *bbox = BoundingBox3f3f(
+            xform * Vector3f(one_over_rad2, one_over_rad2, 0),
+            xform * Vector3f(one_over_rad2, one_over_rad2, 0)
+        );
+        bbox->mergeIn( xform * Vector3f(-one_over_rad2, one_over_rad2, 0) );
+        bbox->mergeIn( xform * Vector3f(one_over_rad2, -one_over_rad2, 0) );
+        bbox->mergeIn( xform * Vector3f(-one_over_rad2, -one_over_rad2, 0) );
+    }
+    if (rad != NULL) *rad = 1.0;
 }
 
 } // namespace Mesh

@@ -31,7 +31,7 @@
  */
 
 #include "SquashMaterialsFilter.hpp"
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -40,10 +40,11 @@ SquashMaterialsFilter::SquashMaterialsFilter(const String& args) {
 }
 
 FilterDataPtr SquashMaterialsFilter::apply(FilterDataPtr input) {
-    using namespace Sirikata::Transfer;
-
     assert(input->single());
-    MeshdataPtr md = input->get();
+    VisualPtr vis = input->get();
+    // Only know how to process Meshdata
+    MeshdataPtr md(std::tr1::dynamic_pointer_cast<Meshdata>(vis));
+    if (!md) return input;
 
     // This keeps track of our new set of unique materials and will replace
     // Meshdata::materials.

@@ -46,7 +46,7 @@ FilterDataPtr ComputeBoundsFilter::apply(FilterDataPtr input) {
 
     BoundingBox3f3f bbox = BoundingBox3f3f::null();
     for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
-        MeshdataPtr mesh = *mesh_it;
+        VisualPtr mesh = *mesh_it;
 
         BoundingBox3f3f mesh_bnds;
         ComputeBounds(mesh, &mesh_bnds);

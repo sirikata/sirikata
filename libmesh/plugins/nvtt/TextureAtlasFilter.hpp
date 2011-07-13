@@ -34,6 +34,7 @@
 #define _SIRIKATA_MESH_NVTT_PLUGIN_TEXTURE_ATLAS_HPP_
 
 #include <sirikata/mesh/Filter.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Mesh {

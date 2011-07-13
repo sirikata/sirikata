@@ -353,9 +353,16 @@ FilterDataPtr TextureAtlasFilter::apply(FilterDataPtr input) {
 
     MutableFilterDataPtr output(new FilterData());
     for(FilterData::const_iterator mesh_it = input->begin(); mesh_it != input->end(); mesh_it++) {
-        MeshdataPtr mesh = *mesh_it;
-        MeshdataPtr ta_mesh = apply(mesh);
-        output->push_back(ta_mesh);
+        VisualPtr vis = *mesh_it;
+        MeshdataPtr mesh( std::tr1::dynamic_pointer_cast<Meshdata>(vis));
+        if (!mesh) {
+            // Unsupported
+            output->push_back(vis);
+        }
+        else {
+            MeshdataPtr ta_mesh = apply(mesh);
+            output->push_back(ta_mesh);
+        }
     }
     return output;
 }

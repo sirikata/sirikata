@@ -4,7 +4,7 @@
 #include <sirikata/oh/HostedObject.hpp>
 #include <v8.h>
 #include <sirikata/core/util/Liveness.hpp>
-#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Visual.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -44,7 +44,7 @@ public:
     virtual v8::Handle<v8::Value> struct_getStillVisible();
 
     virtual v8::Handle<v8::Value> struct_getAnimationList();
-    
+
 
     virtual v8::Handle<v8::Value> struct_getAllData();
     virtual v8::Handle<v8::Value> struct_checkEqual(JSPositionListener* jpl);
@@ -75,7 +75,7 @@ protected:
     std::tr1::shared_ptr<JSProxyData> jpp;
     // We don't store this in jpp because we would just have to keep track of
     // separate flags for whether we loaded it so we could do some refcounting.
-    Mesh::MeshdataPtr mMeshdata;
+    Mesh::VisualPtr mVisual;
 
 private:
 
@@ -85,7 +85,7 @@ private:
 
     // Invoked after loading is complete, invokes callback if all necessary
     // components are still alive.
-    void finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::MeshdataPtr data);
+    void finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::VisualPtr data);
 };
 
 

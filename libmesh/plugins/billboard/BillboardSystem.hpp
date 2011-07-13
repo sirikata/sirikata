@@ -46,9 +46,9 @@ public:
 
     // ModelsSystem Interface
     virtual bool canLoad(Transfer::DenseDataPtr data);
-    virtual Mesh::MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+    virtual Mesh::VisualPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
         Transfer::DenseDataPtr data);
-    virtual bool convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename);
+    virtual bool convertVisual(const Mesh::VisualPtr& meshdata, const String& format, const String& filename);
 };
 
 } // namespace Sirikata

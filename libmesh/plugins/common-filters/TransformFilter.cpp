@@ -31,6 +31,7 @@
  */
 
 #include "TransformFilter.hpp"
+#include <sirikata/mesh/Meshdata.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
@@ -61,7 +62,13 @@ FilterDataPtr TransformFilter::apply(FilterDataPtr input) {
     // children of it.
 
     for(FilterData::const_iterator md_it = input->begin(); md_it != input->end(); md_it++) {
-        MeshdataPtr md = *md_it;
+        VisualPtr vis = *md_it;
+        MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+
+        if (!md) {
+            SILOG(transform-filter, warning, "Can't transform this type of visual: " << vis->type());
+            continue;
+        }
 
         Node new_root(NullNodeIndex, mTransform);
         new_root.children = md->rootNodes;

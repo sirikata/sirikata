@@ -104,7 +104,7 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
         int which=0,
         bool ignore_self = true) const;
 
-    Mesh::MeshdataPtr mDefaultMesh;
+    Mesh::VisualPtr mDefaultMesh;
 public:
 
     Camera *mPrimaryCamera;
@@ -185,7 +185,7 @@ public:
     virtual void detachCamera(Camera*);
 
 
-    virtual Mesh::MeshdataPtr defaultMesh() const { return mDefaultMesh; }
+    virtual Mesh::VisualPtr defaultMesh() const { return mDefaultMesh; }
 
     // *******
 

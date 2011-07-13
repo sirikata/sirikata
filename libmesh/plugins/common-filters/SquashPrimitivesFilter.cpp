@@ -31,7 +31,7 @@
  */
 
 #include "SquashPrimitivesFilter.hpp"
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -40,10 +40,11 @@ SquashPrimitivesFilter::SquashPrimitivesFilter(const String& args) {
 }
 
 FilterDataPtr SquashPrimitivesFilter::apply(FilterDataPtr input) {
-    using namespace Sirikata::Transfer;
-
     assert(input->single());
-    MeshdataPtr md = input->get();
+    VisualPtr vis = input->get();
+    // Only know how to process Meshdata.
+    MeshdataPtr md(std::tr1::dynamic_pointer_cast<Meshdata>(vis));
+    if (!md) return input;
 
     // We need to look at each SubMeshGeometry and decide if its constituent
     // primitives can be squashed. Currently we require the following:

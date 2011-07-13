@@ -78,15 +78,15 @@ FilterDataPtr LoadFilter::apply(FilterDataPtr input) {
 
     URI fileuri(std::string("file://") + mFilename);
     Fingerprint hash = Fingerprint::computeDigest(filedata->data(), filedata->size());
-    MeshdataPtr md = parser->load(fileuri, hash, filedata);
+    VisualPtr vis = parser->load(fileuri, hash, filedata);
 
-    if (!md) {
+    if (!vis) {
         std::cout << "Error applying LoadFilter: " << mFilename << std::endl;
         return FilterDataPtr();
     }
 
     MutableFilterDataPtr output(new FilterData(*input.get()));
-    output->push_back(md);
+    output->push_back(vis);
     return output;
 }
 

@@ -31,6 +31,8 @@
  */
 
 #include "PrintFilter.hpp"
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Billboard.hpp>
 #include <stack>
 
 namespace Sirikata {
@@ -117,16 +119,13 @@ const char* WrapModeToString(MaterialEffectInfo::Texture::WrapMode type) {
 
 }
 
-FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
-    assert(input->single());
 
-    MeshdataPtr md = input->get();
-
+void PrintFilter::printMeshdata(MeshdataPtr md) {
     if(mTexturesOnly) {
         for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
             printf("%s\n", it->c_str());
         }
-        return input;
+        return;
     }
 
     printf("URI: %s\n", md->uri.c_str());
@@ -234,6 +233,26 @@ FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
         draw_calls += md->geometry[ md->instances[geoinst_idx].geometryIndex ].primitives.size();
     }
     printf("Estimated draw calls: %d\n", draw_calls);
+
+}
+
+void PrintFilter::printBillboard(BillboardPtr bb) {
+    printf("Billboard image: %s\n", bb->image.c_str());
+}
+
+
+FilterDataPtr PrintFilter::apply(FilterDataPtr input) {
+    assert(input->single());
+
+    VisualPtr vis = input->get();
+
+    MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+    if (md)
+        printMeshdata(md);
+
+    BillboardPtr bb( std::tr1::dynamic_pointer_cast<Billboard>(vis) );
+    if (bb)
+        printBillboard(bb);
 
     return input;
 }

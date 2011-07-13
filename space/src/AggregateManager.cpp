@@ -520,7 +520,7 @@ bool AggregateManager::generateAggregateMeshAsync(const UUID uuid, Time postTime
   mMeshSimplifier.simplify(agg_mesh, 600);
 
   //... and now create the collada file, upload to the CDN and update LOC.
-  mModelsSystem->convertMeshdata(*agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
+  mModelsSystem->convertVisual(agg_mesh, "colladamodels", std::string("/home/tahir/merucdn/meru/dump/") + localMeshName);
 
   //Upload to CDN
   std::string cmdline = std::string("./upload_to_cdn.sh ") +  localMeshName;
@@ -587,9 +587,11 @@ void AggregateManager::chunkFinished(Time t, const UUID uuid, const UUID child_u
       std::cout << "Time spent downloading: " << (Timer::now() - t)  << "\n";
 
       boost::mutex::scoped_lock aggregateObjectsLock(mAggregateObjectsMutex);
-      if (mAggregateObjects[child_uuid]->mMeshdata == std::tr1::shared_ptr<Meshdata>() ) {
+      if (mAggregateObjects[child_uuid]->mMeshdata == MeshdataPtr() ) {
 
-        MeshdataPtr m = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+        VisualPtr v = mModelsSystem->load(request->getURI(), request->getMetadata().getFingerprint(), response);
+        // FIXME handle non-Meshdata formats
+        MeshdataPtr m = std::tr1::dynamic_pointer_cast<Meshdata>(v);
 
         mAggregateObjects[child_uuid]->mMeshdata = m;
 

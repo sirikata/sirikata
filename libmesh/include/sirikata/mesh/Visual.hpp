@@ -12,9 +12,17 @@
 namespace Sirikata {
 namespace Mesh {
 
+/** Base class for visual objects that are passed through the system. Many types
+ *  of objects may be used -- regular meshes, billboards, particle systems,
+ *  depth+color images, etc -- so this only contains the most basic, common
+ *  information.  All types are defined in libmesh, but different loaders and
+ *  filters can be provided through plugins.
+ */
 class SIRIKATA_MESH_EXPORT Visual {
   public:
     virtual ~Visual();
+
+    virtual const String& type() const = 0;
 
     String uri;
     SHA256 hash;

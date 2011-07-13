@@ -278,8 +278,13 @@ struct SIRIKATA_MESH_EXPORT Node {
 typedef std::vector<Node> NodeList;
 
 struct SIRIKATA_MESH_EXPORT Meshdata : public Visual {
+  private:
+    static String sType;
+
   public:
     virtual ~Meshdata();
+
+    virtual const String& type() const;
 
     SubMeshGeometryList geometry;
     TextureList textures;

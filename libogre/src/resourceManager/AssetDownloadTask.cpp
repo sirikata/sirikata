@@ -33,6 +33,8 @@
 #include <sirikata/ogre/OgreRenderer.hpp>
 #include <sirikata/ogre/resourceManager/AssetDownloadTask.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Billboard.hpp>
 
 using namespace std::tr1::placeholders;
 using namespace Sirikata::Transfer;
@@ -57,6 +59,12 @@ AssetDownloadTask::~AssetDownloadTask() {
     cancel();
 }
 
+String AssetDownloadTask::getRelativeURL(const String& relative_name) {
+    String assetURIString = mAssetURI.toString();
+    String relativeURIString = assetURIString.substr(0, assetURIString.rfind("/")+1) + relative_name;
+    return relativeURIString;
+}
+
 void AssetDownloadTask::cancel() {
     for(ActiveDownloadMap::iterator it = mActiveDownloads.begin(); it != mActiveDownloads.end(); it++)
         it->second->cancel();
@@ -74,12 +82,14 @@ void AssetDownloadTask::downloadAssetFile() {
     mActiveDownloads[mAssetURI] = dl;
     dl->start();
 }
+
 void AssetDownloadTask::weakAssetFileDownloaded(std::tr1::weak_ptr<AssetDownloadTask> thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
     if (locked){
         locked->assetFileDownloaded(request,response);
     }
 }
+
 void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     // Clear from the active download list
     assert(mActiveDownloads.size() == 1);
@@ -102,73 +112,99 @@ void AssetDownloadTask::assetFileDownloaded(std::tr1::shared_ptr<ChunkRequest> r
         std::tr1::bind(&AssetDownloadTask::weakHandleAssetParsed, getWeakPtr(), _1)
     );
 }
-void AssetDownloadTask::weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::MeshdataPtr md){
+
+void AssetDownloadTask::weakHandleAssetParsed(std::tr1::weak_ptr<AssetDownloadTask> thus, Mesh::VisualPtr md){
     std::tr1::shared_ptr<AssetDownloadTask> locked(thus.lock());
     if (locked){
         locked->handleAssetParsed(md);
     }
 }
-void AssetDownloadTask::handleAssetParsed(Mesh::MeshdataPtr md) {
-    mAsset = md;
 
-    if (!md) {
+void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
+    mAsset = vis;
+
+    if (!vis) {
         SILOG(ogre,error,"Failed to parse mesh " << mAssetURI.toString());
         mCB();
         return;
     }
 
-    // This is a sanity check. There's no way Ogre can reasonably handle meshes
-    // that require a ton of draw calls. Estimate them here and if its too high,
-    // destroy the data and invoke the callback to make it look like failure.
-    {
-        // Draw calls =
-        //   Number of instances * number of primitives in instance
-        uint32 draw_calls = 0;
-        Meshdata::GeometryInstanceIterator geoinst_it = md->getGeometryInstanceIterator();
-        uint32 geoinst_idx;
-        Matrix4x4f pos_xform;
-        while( geoinst_it.next(&geoinst_idx, &pos_xform) )
-            draw_calls += md->geometry[ md->instances[geoinst_idx].geometryIndex ].primitives.size();
+    // Now we need to handle downloads for each type of Visual.
+    MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+    if (md) {
+        // This is a sanity check. There's no way Ogre can reasonably handle meshes
+        // that require a ton of draw calls. Estimate them here and if its too high,
+        // destroy the data and invoke the callback to make it look like failure.
+        {
+            // Draw calls =
+            //   Number of instances * number of primitives in instance
+            uint32 draw_calls = 0;
+            Meshdata::GeometryInstanceIterator geoinst_it = md->getGeometryInstanceIterator();
+            uint32 geoinst_idx;
+            Matrix4x4f pos_xform;
+            while( geoinst_it.next(&geoinst_idx, &pos_xform) )
+                draw_calls += md->geometry[ md->instances[geoinst_idx].geometryIndex ].primitives.size();
 
-        // Arbitrary number, but probably more than we should even allow given
-        // that there are probably hundreds or thousands of other objects
-        if (draw_calls > 500) {
-            SILOG(ogre,error,"Excessively complicated mesh: " << mAssetURI.toString() << " has " << draw_calls << " draw calls. Ignoring this mesh.");
-            mAsset = Mesh::MeshdataPtr();
+            // Arbitrary number, but probably more than we should even allow given
+            // that there are probably hundreds or thousands of other objects
+            if (draw_calls > 500) {
+                SILOG(ogre,error,"Excessively complicated mesh: " << mAssetURI.toString() << " has " << draw_calls << " draw calls. Ignoring this mesh.");
+                mAsset = Mesh::VisualPtr();
+                mCB();
+                return;
+            }
+        }
+
+        // Special case for no dependent downloads
+        if (md->textures.size() == 0) {
             mCB();
             return;
         }
-    }
 
-    // Special case for no dependent downloads
-    if (md->textures.size() == 0) {
-        mCB();
+        for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
+            Transfer::URI texURI( getRelativeURL(*it) );
+            addDependentDownload(texURI);
+        }
+
         return;
     }
 
-    String assetURIString = mAssetURI.toString();
-    for(TextureList::const_iterator it = md->textures.begin(); it != md->textures.end(); it++) {
-        String texURIString = assetURIString.substr(0, assetURIString.rfind("/")+1) + (*it);
-        Transfer::URI texURI(texURIString);
-        // Sometimes we get duplicate references, so make sure we're not already
-        // working on this one.
-        if (mActiveDownloads.find(texURI) != mActiveDownloads.end()) continue;
-
-        ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
-            texURI, mScene->transferPool(),
-            mPriority,
-            std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
-        );
-        mActiveDownloads[texURI] = dl;
-        dl->start();
+    BillboardPtr bboard( std::tr1::dynamic_pointer_cast<Billboard>(vis) );
+    if (bboard) {
+        // For billboards, we have to download at least the image to display on
+        // it
+        Transfer::URI texURI( getRelativeURL(bboard->image) );
+        addDependentDownload(texURI);
+        return;
     }
+
+    // If we've gotten here, then we haven't handled the specific type of visual
+    // and we need to issue a warning and callback.
+    SILOG(ogre, error, "Tried to use AssetDownloadTask for a visual type it doesn't handle (" << vis->type() << "). Not downloading dependent resources.");
+    mCB();
 }
+
+void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
+    // Sometimes we get duplicate references, so make sure we're not already
+    // working on this one.
+    if (mActiveDownloads.find(depUrl) != mActiveDownloads.end()) return;
+
+    ResourceDownloadTaskPtr dl = ResourceDownloadTask::construct(
+        depUrl, mScene->transferPool(),
+        mPriority,
+        std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
+    );
+    mActiveDownloads[depUrl] = dl;
+    dl->start();
+}
+
 void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     std::tr1::shared_ptr<AssetDownloadTask>locked(thus.lock());
     if (locked) {
         locked->textureDownloaded(request,response);
     }
 }
+
 void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
     // Clear the download task
     mActiveDownloads.erase(request->getURI());

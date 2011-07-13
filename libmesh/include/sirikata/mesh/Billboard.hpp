@@ -12,8 +12,13 @@ namespace Sirikata {
 namespace Mesh {
 
 struct SIRIKATA_MESH_EXPORT Billboard : public Visual {
+  private:
+    static String sType;
+
   public:
     virtual ~Billboard();
+
+    virtual const String& type() const;
 
     String image;
 };

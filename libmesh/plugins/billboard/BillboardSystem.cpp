@@ -32,7 +32,8 @@
 
 #include "BillboardSystem.hpp"
 
-// Property tree for parsing the physics info
+#include <sirikata/mesh/Billboard.hpp>
+// Property tree for parsing the billboard description
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -66,7 +67,7 @@ bool BillboardSystem::canLoad(Transfer::DenseDataPtr data) {
     return true;
 }
 
-Mesh::MeshdataPtr BillboardSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+Mesh::VisualPtr BillboardSystem::load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
     Transfer::DenseDataPtr data) {
     ptree pt;
     try {
@@ -74,16 +75,19 @@ Mesh::MeshdataPtr BillboardSystem::load(const Transfer::URI& uri, const Transfer
         read_json(data_json, pt);
     }
     catch(json_parser::json_parser_error exc) {
-        return Mesh::MeshdataPtr();
+        return Mesh::VisualPtr();
     }
 
     String url = pt.get("url", String(""));
 
-    Mesh::MeshdataPtr result(new Mesh::Meshdata());
+    Mesh::BillboardPtr result(new Mesh::Billboard());
+    result->uri = uri.toString();
+    result->hash = fp;
+    result->image = url;
     return result;
 }
 
-bool BillboardSystem::convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) {
+bool BillboardSystem::convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) {
     return false;
 }
 

@@ -7,7 +7,13 @@
 namespace Sirikata {
 namespace Mesh {
 
+String Billboard::sType("billboard");
+
 Billboard::~Billboard() {
+}
+
+const String& Billboard::type() const {
+    return sType;
 }
 
 } // namespace Mesh

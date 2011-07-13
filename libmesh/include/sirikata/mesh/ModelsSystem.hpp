@@ -38,7 +38,7 @@
 
 #include <sirikata/core/transfer/Range.hpp>
 
-#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Visual.hpp>
 
 namespace Sirikata {
 
@@ -63,20 +63,20 @@ class SIRIKATA_MESH_EXPORT ModelsSystem
          *  generally it only checks for magic numbers to see if it is
          *  likely a supported format.
          */
-        virtual bool canLoad(std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
+        virtual bool canLoad(Transfer::DenseDataPtr data) = 0;
 
-        /** Load a mesh into a Meshdata object. */
-        virtual Mesh::MeshdataPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
-            std::tr1::shared_ptr<const Transfer::DenseData> data) = 0;
+        /** Load a mesh into a Visual object. */
+        virtual Mesh::VisualPtr load(const Transfer::URI& uri, const Transfer::Fingerprint& fp,
+            Transfer::DenseDataPtr data) = 0;
 
 
-        /** Convert a Meshdata to the format for this ModelsSystem.
-         *  \param meshdata the Meshdata to save to disk
+        /** Convert a Visual to the format for this ModelsSystem.
+         *  \param visual the Visual to save to disk
          *  \param format format hint (may or may not be used by plugin)
          *  \param filename the file to save the serialized mesh to
          *  \returns true if the conversion was successful, false otherwise
          */
-        virtual bool convertMeshdata(const Mesh::Meshdata& meshdata, const String& format, const String& filename) = 0;
+        virtual bool convertVisual(const Mesh::VisualPtr& visual, const String& format, const String& filename) = 0;
 
     protected:
 

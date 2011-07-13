@@ -152,7 +152,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("minus"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
     mUtilTemplate->Set(v8::String::New("identifier"),v8::FunctionTemplate::New(JSUtilObj::ScriptSporef));
 
-    
+
     mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
@@ -235,7 +235,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
-    
+
     mSystemTemplate->Set(v8::String::New("storageBeginTransaction"),v8::FunctionTemplate::New(JSSystem::storageBeginTransaction));
     mSystemTemplate->Set(v8::String::New("storageCommit"),v8::FunctionTemplate::New(JSSystem::storageCommit));
     mSystemTemplate->Set(v8::String::New("storageErase"), v8::FunctionTemplate::New(JSSystem::storageErase));
@@ -480,7 +480,7 @@ void JSObjectScriptManager::createPresenceTemplate()
   proto_t->Set(v8::String::New("unloadMesh"),v8::FunctionTemplate::New(JSPresence::unloadMesh));
 
   //animations
-  proto_t->Set(v8::String::New("getAnimationList"),v8::FunctionTemplate::New(JSPresence::getAnimationList));  
+  proto_t->Set(v8::String::New("getAnimationList"),v8::FunctionTemplate::New(JSPresence::getAnimationList));
 
   // For instance templates
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
@@ -519,8 +519,8 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
     // First try to grab out of cache
     MeshCache::iterator it = mMeshCache.find(uri);
     if (it != mMeshCache.end()) {
-        MeshdataWPtr w_mesh = it->second;
-        MeshdataPtr mesh = w_mesh.lock();
+        VisualWPtr w_mesh = it->second;
+        VisualPtr mesh = w_mesh.lock();
         if (mesh) {
             mContext->mainStrand->post(std::tr1::bind(cb, mesh));
             return;
@@ -531,7 +531,7 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
     // we're the first requester or not
     mMeshCallbacks[uri].push_back(cb);
 
-    // Even if we don't have the MeshdataPtr, the load might be in progress. In
+    // Even if we don't have the VisualPtr, the load might be in progress. In
     // that case, we just queue up the callback.
     if (mMeshDownloads.find(uri) != mMeshDownloads.end())
         return;
@@ -554,7 +554,7 @@ void JSObjectScriptManager::meshDownloaded(Transfer::ChunkRequestPtr request, Tr
 }
 
 void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transfer::Fingerprint& fp, Transfer::DenseDataPtr data) {
-    Mesh::MeshdataPtr parsed = mModelParser->load(uri, fp, data);
+    Mesh::VisualPtr parsed = mModelParser->load(uri, fp, data);
     if (parsed && mModelFilter) {
         Mesh::MutableFilterDataPtr input_data(new Mesh::FilterData);
         input_data->push_back(parsed);
@@ -566,7 +566,7 @@ void JSObjectScriptManager::parseMeshWork(const Transfer::URI& uri, const Transf
     mContext->mainStrand->post(std::tr1::bind(&JSObjectScriptManager::finishMeshDownload, this, uri, parsed));
 }
 
-void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, MeshdataPtr mesh) {
+void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualPtr mesh) {
     // We need to clean up and invoke callbacks. Make sure we're fully cleaned
     // up (out of member data) before making callbacks in case they do any
     // re-requests.

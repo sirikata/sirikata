@@ -30,6 +30,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/Filter.hpp>
 
 namespace Sirikata {
@@ -204,7 +205,13 @@ bool MaterialEffectInfo::operator!=(const MaterialEffectInfo& rhs) const {
 }
 
 
+String Meshdata::sType("Meshdata");
+
 Meshdata::~Meshdata() {
+}
+
+const String& Meshdata::type() const {
+    return sType;
 }
 
 Matrix4x4f Meshdata::getTransform(NodeIndex index) const {

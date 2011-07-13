@@ -31,6 +31,7 @@
  */
 
 #include "TriangulateFilter.hpp"
+#include <sirikata/mesh/Meshdata.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -63,7 +64,10 @@ TriangulateFilter::TriangulateFilter(bool tristrips, bool trifans)
 
 FilterDataPtr TriangulateFilter::apply(FilterDataPtr input) {
     for(FilterData::const_iterator md_it = input->begin(); md_it != input->end(); md_it++) {
-        MeshdataPtr md = *md_it;
+        VisualPtr vis = *md_it;
+        // Only makes sense for Meshdata
+        MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
+        if (!md) continue;
 
         // We just run through the primitives in each SubMeshGeometry and
         // transform each one as necessary

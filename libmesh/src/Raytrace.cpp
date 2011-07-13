@@ -228,6 +228,14 @@ bool RaytraceTriangle(const Vector3f& v1, const Vector3f& v2, const Vector3f& v3
     return RaytraceTriangle(v1, v2, v3, normal, ray_start, ray_dir, true, true, t_out);
 }
 
+bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+    MeshdataPtr md(std::tr1::dynamic_pointer_cast<Meshdata>(vis));
+    if (md) return Raytrace(md, ray_start, ray_dir, t_out, hit_out);
+
+    BillboardPtr bboard(std::tr1::dynamic_pointer_cast<Billboard>(vis));
+    if (bboard) return Raytrace(bboard, ray_start, ray_dir, t_out, hit_out);
+}
+
 bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
     bool found_hit = false;
 
@@ -323,6 +331,11 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(MeshdataPtr mesh, const Vector3f& ra
         if (hit_out != NULL) *hit_out = ray_start + ray_dir * t;
     }
     return have_hit;
+}
+
+bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+    // FIXME Implement intersections with billboards.
+    return false;
 }
 
 } // namespace Mesh

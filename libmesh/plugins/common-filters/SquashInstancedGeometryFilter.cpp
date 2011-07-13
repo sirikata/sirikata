@@ -31,7 +31,7 @@
  */
 
 #include "SquashInstancedGeometryFilter.hpp"
-#include <sirikata/mesh/ModelsSystemFactory.hpp>
+#include <sirikata/mesh/Meshdata.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace Sirikata {
@@ -74,15 +74,15 @@ SquashInstancedGeometryFilter::SquashInstancedGeometryFilter(const String& args)
 }
 
 FilterDataPtr SquashInstancedGeometryFilter::apply(FilterDataPtr input) {
-    using namespace Sirikata::Transfer;
-
     MutableFilterDataPtr output(new FilterData());
 
     for(FilterData::const_iterator md_it = input->begin(); md_it != input->end(); md_it++) {
-        MeshdataPtr md = *md_it;        
+        VisualPtr vis = *md_it;
+        MeshdataPtr md( std::tr1::dynamic_pointer_cast<Meshdata>(vis) );
 
-        if (md->hasAnimations) {
-          output->push_back(md);
+        // Only know how to process Meshdata and those that don't have animations.
+        if (!md || md->hasAnimations) {
+          output->push_back(vis);
           continue;
         }
 

@@ -34,9 +34,20 @@
 #define _SIRIKATA_MESH_BOUNDS_HPP_
 
 #include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Billboard.hpp>
 
 namespace Sirikata {
 namespace Mesh {
+
+/** Compute the bounds of the visual. */
+SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(VisualPtr visual, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
+
+/** Compute the bounds of the visual when trasnformed by xform. The bounding box
+ *  is computed *after* transforming the visual, so it is tighter than computing
+ *  the bounding box of the transformed original bounding box.
+ */
+SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(VisualPtr visual, const Matrix4x4f& xform, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
+
 
 /** Compute the bounds of the mesh. */
 SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(MeshdataPtr mesh, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
@@ -46,6 +57,16 @@ SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(MeshdataPtr mesh, BoundingBox3f
  *  the bounding box of the transformed original bounding box.
  */
 SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(MeshdataPtr mesh, const Matrix4x4f& xform, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
+
+
+/** Compute the bounds of the billboard. */
+SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(BillboardPtr billboard, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
+
+/** Compute the bounds of the mesh when trasnformed by xform. The bounding box
+ *  is computed *after* transforming the mesh, so it is tighter than computing
+ *  the bounding box of the transformed original bounding box.
+ */
+SIRIKATA_MESH_FUNCTION_EXPORT void ComputeBounds(BillboardPtr billboard, const Matrix4x4f& xform, BoundingBox3f3f* bbox = NULL, double* rad = NULL);
 
 } // namespace Mesh
 } // namespace Sirikata
