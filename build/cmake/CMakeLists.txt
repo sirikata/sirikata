@@ -480,10 +480,11 @@ FIND_PACKAGE(OGRE)
 #dependency: Bullet
 IF(WIN32)
 SET(bullet_ROOT ${PLATFORM_LIBS}/bullet-2.78)
+SET(bullet_MINIMUM_VERSION 2.77)
 ELSE()
 SET(bullet_ROOT ${PLATFORM_LIBS}/installed-bullet)
+SET(bullet_MINIMUM_VERSION 2.75)
 ENDIF()
-SET(bullet_MINIMUM_VERSION 2.77)
 FIND_PACKAGE(Bullet)
 
 
