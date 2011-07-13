@@ -46,6 +46,9 @@
 #include <sirikata/core/util/ListenerProvider.hpp>
 #include <sirikata/core/util/Liveness.hpp>
 
+#include <sirikata/mesh/Meshdata.hpp>
+#include <sirikata/mesh/Billboard.hpp>
+
 namespace Sirikata {
 namespace Graphics {
 
@@ -68,7 +71,7 @@ protected:
     OgreRenderer *const mScene;
     String mName;
 
-    Ogre::Entity* mOgreObject;
+    Ogre::MovableObject* mOgreObject;
     Ogre::SceneNode *mSceneNode;
 
     std::list<Entity*>::iterator mMovingIter;
@@ -102,8 +105,25 @@ protected:
     void fixTextures();
 
     void createMesh(Liveness::Token alive);
+    void loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usingDefault);
+    void createMeshdata(const Mesh::MeshdataPtr& mdptr, bool usingDefault, AssetDownloadTaskPtr assetDownload);
+    void createBillboard(const Mesh::BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload);
 
-    void init(Ogre::Entity *obj);
+    void init(Ogre::MovableObject *obj);
+
+    /** Load the mesh and use it for this entity
+     *  \param meshname the name (ID) of the mesh to use for this entity
+     */
+    void loadMesh(const String& meshname);
+    /** Load the billboard and use it for this entity
+     *  \param bbname the name (ID) of the billboard to use for this entity
+     */
+    void loadBillboard(const String& bbname);
+
+    void unloadEntity();
+    void unloadMesh();
+    void unloadBillboard();
+
 
     // Note that this is forceful -- it doesn't do any checks. Generally you
     // should only use it from within checkDynamic().
@@ -142,9 +162,8 @@ public:
         return mSceneNode;
     }
 
-    Ogre::Entity *getOgreEntity() const {
-        return mOgreObject;
-    }
+    Ogre::Entity* getOgreEntity() const;
+    Ogre::BillboardSet* getOgreBillboard() const;
 
     void setOgrePosition(const Vector3d &pos);
     void setOgreOrientation(const Quaternion &orient);
@@ -171,13 +190,6 @@ public:
     void unbindTexture(const std::string &textureName);
 
     void processMesh(Transfer::URI const& newMesh);
-
-    /** Load the mesh and use it for this entity
-     *  \param meshname the name (ID) of the mesh to use for this entity
-     */
-    void loadMesh(const String& meshname);
-
-    void unloadMesh();
 
 
     protected:

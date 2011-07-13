@@ -130,7 +130,7 @@ Entity::Entity(OgreRenderer *scene, const String& name)
     mCDNArchive=CDNArchiveFactory::getSingleton().addArchive();
     mActiveCDNArchive=true;
 
-    unloadMesh();
+    unloadEntity();
 }
 
 Entity::~Entity() {
@@ -178,7 +178,14 @@ Entity *Entity::fromMovableObject(Ogre::MovableObject *movable) {
     return Ogre::any_cast<Entity*>(movable->getUserAny());
 }
 
-void Entity::init(Ogre::Entity *obj) {
+Ogre::Entity* Entity::getOgreEntity() const {
+    return dynamic_cast<Ogre::Entity*>(mOgreObject);
+}
+Ogre::BillboardSet* Entity::getOgreBillboard() const {
+    return dynamic_cast<Ogre::BillboardSet*>(mOgreObject);
+}
+
+void Entity::init(Ogre::MovableObject *obj) {
     if (mOgreObject) {
         mSceneNode->detachObject(mOgreObject);
     }
@@ -238,7 +245,12 @@ void Entity::setAnimation(const String& name) {
     }
 
     // Find and enable new animation
-    Ogre::AnimationState* state = mOgreObject->getAnimationState(name);
+    Ogre::Entity* ent = getOgreEntity();
+    if (ent == NULL)  {
+        SILOG(ogre,error,"Tried to set animation on non-mesh.");
+        return;
+    }
+    Ogre::AnimationState* state = ent->getAnimationState(name);
     if (state == NULL) {
         SILOG(ogre,error,"Tried to set animation to non-existant track.");
         return;
@@ -362,19 +374,11 @@ void Entity::unbindTexture(const std::string &textureName) {
 
 void Entity::loadMesh(const String& meshname)
 {
-    unloadMesh();
+    unloadEntity();
 
     mReplacedMaterials.clear();
 
-
-
-    /** FIXME we need a better way of generating unique id's. We should
-     *  be able to use just the uuid, but its not enough since we want
-     *  to be able to create a replacement entity before destroying the
-     *  original.  Also, this is definitely thread safe.
-     */
-    static AtomicValue<int32> idx ((int32)0);
-    Ogre::Entity* new_entity;
+    Ogre::Entity* new_entity = NULL;
     try {
       try {
         new_entity = getScene()->getSceneManager()->createEntity(
@@ -385,21 +389,11 @@ void Entity::loadMesh(const String& meshname)
       }
     } catch (...) {
         SILOG(ogre,error,"Failed to load mesh "<< meshname << " (id "<<id()<<")!");
+        return;
+    }
 
-        return;
-        //new_entity = getScene()->getSceneManager()->createEntity(ogreMovableName(),Ogre::SceneManager::PT_CUBE);
-        /*
-        init(NULL);
-        if (oldMeshObj) {
-            getScene()->getSceneManager()->destroyEntity(oldMeshObj);
-        }
-        return;
-        */
-    }
     SILOG(ogre,detailed,"Bounding box: " << new_entity->getBoundingBox());
-    if (false) { //programOptions[OPTION_ENABLE_TEXTURES].as<bool>() == false) {
-        new_entity->setMaterialName("BaseWhiteTexture");
-    }
+
     unsigned int num_subentities=new_entity->getNumSubEntities();
     SHA256 random_seed=SHA256::computeDigest(id());
     const SHA256::Digest &digest=random_seed.rawData();
@@ -423,13 +417,55 @@ void Entity::loadMesh(const String& meshname)
     fixTextures();
 }
 
+void Entity::loadBillboard(const String& meshname)
+{
+    unloadEntity();
+    mReplacedMaterials.clear();
+
+    // With the material in place, create the Billboard(Set)
+    Ogre::BillboardSet* new_bbs = NULL;
+    try {
+      try {
+          new_bbs = getScene()->getSceneManager()->createBillboardSet(ogreMovableName(), 1);
+          std::string matname = meshname + "_mat_billboard_";
+          new_bbs->setMaterialName(matname);
+          new_bbs->createBillboard(Ogre::Vector3(0,0,0), Ogre::ColourValue(1.f, 1.f, 1.f, 1.f));
+      } catch (Ogre::InvalidParametersException &) {
+        SILOG(ogre,error,"Got invalid parameters");
+        throw;
+      }
+    } catch (...) {
+        SILOG(ogre,error,"Failed to load billboard "<< meshname << " (id "<<id()<<")!");
+        return;
+    }
+
+    SILOG(ogre,detailed,"Bounding box: " << new_bbs->getBoundingBox());
+
+    init(new_bbs);
+    fixTextures();
+}
+
+void Entity::unloadEntity() {
+    if (getOgreEntity()) unloadMesh();
+    else if (getOgreBillboard()) unloadBillboard();
+}
+
 void Entity::unloadMesh() {
     Ogre::Entity* meshObj = getOgreEntity();
-    //init(getScene()->getSceneManager()->createEntity(ogreMovableName(), Ogre::SceneManager::PT_CUBE));
     init(NULL);
     if (meshObj) {
         getScene()->getSceneManager()->destroyEntity(meshObj);
         mOgreObject=NULL;
+    }
+    mReplacedMaterials.clear();
+}
+
+void Entity::unloadBillboard() {
+    Ogre::BillboardSet* bbObj = getOgreBillboard();
+    init(NULL);
+    if (bbObj) {
+        getScene()->getSceneManager()->destroyBillboardSet(bbObj);
+        mOgreObject = NULL;
     }
     mReplacedMaterials.clear();
 }
@@ -442,7 +478,7 @@ void Entity::setSelected(bool selected) {
 void Entity::processMesh(Transfer::URI const& meshFile)
 {
     if (meshFile.empty()) {
-        unloadMesh();
+        unloadEntity();
         return;
     }
 
@@ -484,20 +520,21 @@ void fixupTextureUnitState(Ogre::TextureUnitState*tus, const MaterialEffectInfo:
 
 }
 class MaterialManualLoader : public Ogre::ManualResourceLoader {
-    MeshdataPtr mMeshdataPtr;
+    VisualPtr mVisualPtr;
     const MaterialEffectInfo* mMat;
     String mName;
-    String mURI;
+    Transfer::URI mURI;
     std::tr1::shared_ptr<Entity::TextureBindingsMap> mTextureFingerprints;
 public:
-    MaterialManualLoader(MeshdataPtr mdptr,
-                         const String name,
-                         const MaterialEffectInfo&mat,
-                         const std::string uri,
-                         std::tr1::shared_ptr<Entity::TextureBindingsMap> textureFingerprints):
-                                                     mTextureFingerprints(textureFingerprints)
+    MaterialManualLoader(
+        VisualPtr visptr,
+        const String name,
+        const MaterialEffectInfo&mat,
+        const Transfer::URI& uri,
+        std::tr1::shared_ptr<Entity::TextureBindingsMap> textureFingerprints)
+     : mTextureFingerprints(textureFingerprints)
     {
-        mMeshdataPtr = mdptr;
+        mVisualPtr = visptr;
         mName = name;
         mMat=&mat;
         mURI=uri;
@@ -573,8 +610,8 @@ public:
                   break;
                 }
             } else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) { // or textured
-                String texURI = mURI.substr(0, mURI.rfind("/")+1) + tex.uri;
-                Entity::TextureBindingsMap::iterator where = mTextureFingerprints->find(texURI);
+                Transfer::URI mat_uri(mURI.context(), tex.uri);
+                Entity::TextureBindingsMap::iterator where = mTextureFingerprints->find(mat_uri.toString());
                 if (where!=mTextureFingerprints->end()) {
                     String ogreTextureName = where->second;
                     fixOgreURI(ogreTextureName);
@@ -1486,13 +1523,42 @@ void Entity::createMesh(Liveness::Token alive) {
         }
     }
 
-    // FIXME only supporting Meshdatas right now
     MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Meshdata>(visptr) );
-    if (!mdptr) {
-        notify(&EntityListener::entityLoaded, this, false);
+    if (mdptr) {
+        createMeshdata(mdptr, usingDefault, assetDownload);
+        notify(&EntityListener::entityLoaded, this, true);
         return;
     }
 
+    BillboardPtr bbptr( std::tr1::dynamic_pointer_cast<Billboard>(visptr) );
+    if (bbptr) {
+        createBillboard(bbptr, usingDefault, assetDownload);
+        notify(&EntityListener::entityLoaded, this, true);
+        return;
+    }
+
+    // If we got here, we don't know how to load it
+    SILOG(ogre, error, "Entity::createMesh failed because it doesn't know how to load " << visptr->type());
+    notify(&EntityListener::entityLoaded, this, false);
+}
+
+void Entity::loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usingDefault) {
+    if (!usingDefault) { // we currently assume no dependencies for default
+        for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
+            const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
+            if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
+                String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
+
+                (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
+
+                fixOgreURI(id);
+                CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+            }
+        }
+    }
+}
+
+void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {
     //Extract any animations from the new mesh.
     for (uint32 i=0;  i < mdptr->nodes.size(); i++) {
       Sirikata::Mesh::Node& node = mdptr->nodes[i];
@@ -1511,20 +1577,7 @@ void Entity::createMesh(Liveness::Token alive) {
     // If we already have it, just load the existing one
     if (tryInstantiateExistingMesh(hash)) return;
 
-    if (!usingDefault) { // we currently assume no dependencies for default
-        for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
-            const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
-            if (mActiveCDNArchive && mTextureFingerprints->find(tex_data.request->getURI().toString()) == mTextureFingerprints->end() ) {
-                String id = tex_data.request->getURI().toString() + tex_data.request->getMetadata().getFingerprint().toString();
-
-                (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
-
-                fixOgreURI(id);
-                CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
-            }
-        }
-    }
-
+    loadDependentTextures(assetDownload, usingDefault);
 
     if (!mdptr->instances.empty()) {
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
@@ -1534,7 +1587,10 @@ void Entity::createMesh(Liveness::Token alive) {
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
-                matPtr=matm.create(matname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,true,(reload=new MaterialManualLoader (mdptr, matname,*mat, mURIString, mTextureFingerprints)));
+                matPtr = matm.create(
+                    matname, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
+                    (reload=new MaterialManualLoader (mdptr, matname, *mat, mURI, mTextureFingerprints))
+                );
 
                 reload->prepareResource(&*matPtr);
                 reload->loadResource(&*matPtr);
@@ -1622,8 +1678,55 @@ void Entity::createMesh(Liveness::Token alive) {
             //light->setDebugDisplayEnabled(true);
         }
     }
+}
 
-    notify(&EntityListener::entityLoaded, this, true);
+void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {
+    SHA256 sha = bbptr->hash;
+    String hash = sha.convertToHexString();
+
+    loadDependentTextures(assetDownload, usingDefault);
+
+    // Load the single material
+    Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
+
+    std::string matname = hash + "_mat_billboard_";
+    Ogre::MaterialPtr matPtr = matm.getByName(matname);
+    if (matPtr.isNull()) {
+        Ogre::ManualResourceLoader* reload;
+
+        // We need to fill in a MaterialEffectInfo because the loader we're
+        // using only knows how to process them for Meshdatas right now
+        MaterialEffectInfo matinfo;
+        matinfo.shininess = 0.0f;
+        matinfo.reflectivity = 1.0f;
+        matinfo.textures.push_back(MaterialEffectInfo::Texture());
+        MaterialEffectInfo::Texture& tex = matinfo.textures.back();
+        tex.uri = bbptr->image;
+        tex.color = Vector4f(1.f, 1.f, 1.f, 1.f);
+        tex.texCoord = 0;
+        tex.affecting = MaterialEffectInfo::Texture::DIFFUSE;
+        tex.samplerType = MaterialEffectInfo::Texture::SAMPLER_TYPE_2D;
+        tex.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
+        tex.magFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
+        tex.wrapS = MaterialEffectInfo::Texture::WRAP_MODE_NONE;
+        tex.wrapT = MaterialEffectInfo::Texture::WRAP_MODE_NONE;
+        tex.wrapU = MaterialEffectInfo::Texture::WRAP_MODE_NONE;
+        tex.mipBias = 0.0f;
+        tex.maxMipLevel = 20;
+
+        matPtr = matm.create(
+            matname, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
+            (reload = new MaterialManualLoader (bbptr, matname, matinfo, mURI, mTextureFingerprints))
+        );
+
+        reload->prepareResource(&*matPtr);
+        reload->loadResource(&*matPtr);
+    }
+
+    // The BillboardSet that actually gets rendered is like an Ogre::Entity,
+    // load it in a similar way. There is no equivalent of the Ogre::Mesh -- we
+    // only need to load up the material
+    loadBillboard(hash);
 }
 
 const std::vector<String> Entity::getAnimationList() {
