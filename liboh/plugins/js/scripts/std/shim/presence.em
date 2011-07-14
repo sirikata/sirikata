@@ -447,7 +447,7 @@ system.__presence_constructor__.prototype.__getType = function()
 
      presence.prototype.setOrientation = function(v) {
          // Multiply in additional transformation
-         orig_setOrientation.apply(this, [v.mul(this.modelOrientation.neg())]);
+         orig_setOrientation.apply(this, [v.mul(this.modelOrientation.inv())]);
      };
 
 })();
