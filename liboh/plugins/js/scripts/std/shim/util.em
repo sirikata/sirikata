@@ -202,7 +202,7 @@
        */
       util.identifier = function()
       {
-          return internalUtilIdentifer.apply(undefined,arguments);
+          return internalUtilIdentifier.apply(undefined,arguments);
       };
       
       /**
