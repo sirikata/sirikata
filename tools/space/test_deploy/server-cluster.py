@@ -68,4 +68,11 @@ def start(**kwargs):
     time.sleep(5)
     startSpace(**kwargs)
 
-start(with_xterm=True, debug=True, valgrind=False)
+# Options:
+# with_xterm - run services in terminals
+# debug - run services in gdb
+# valgrind - run services in valgrind
+# heapcheck - turn on heap checking to the specified level
+# heapprofile - turn on heap profiling, storing data to the specified destination
+# heapprofile_interval - when heap profiling is on, take a snapshot every time this many bytes (accumulated over all allocations) are allocated (100MB by default)
+start(with_xterm=True, debug=True, valgrind=False, heapcheck=False, heapprofile=False, heapprofile_interval=100*1024*1024)
