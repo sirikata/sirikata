@@ -89,6 +89,30 @@ util.Quaternion.prototype.dot = function(rhs) {
     return this.x * rhs.x + this.y * rhs.y + this.z * rhs.z + this.w * rhs.w;
 };
 
+
+/**
+ @param rhs any type
+ @return {bool} True if rhs is not a quaternion and x,y,z,and w fields
+ of this and rhs are identical.  False otherwise.
+ */
+util.Quaternion.prototype.equal = function(rhs){
+    if (rhs == null)
+        return false;
+
+    
+    return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z) && (this.w === rhs.w));
+};
+
+/**
+ Just calls equal.
+ @see equal 
+ */
+util.Quaternion.prototype.identical = function(rhs){
+    return this.equal(rhs);
+};
+
+
+
 /**
   @function
   @return The quaternion product of two quaternions
