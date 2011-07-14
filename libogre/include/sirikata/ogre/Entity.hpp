@@ -118,7 +118,7 @@ protected:
     /** Load the billboard and use it for this entity
      *  \param bbname the name (ID) of the billboard to use for this entity
      */
-    void loadBillboard(const String& bbname);
+    void loadBillboard(Mesh::BillboardPtr bboard, const String& bbname);
 
     void unloadEntity();
     void unloadMesh();

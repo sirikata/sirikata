@@ -9,6 +9,20 @@ namespace Mesh {
 
 String Billboard::sType("billboard");
 
+Billboard::Billboard()
+ : image(),
+   aspectRatio(-1.f),
+   facing(FACING_CAMERA)
+{
+}
+
+Billboard::Billboard(const String& img)
+ : image(img),
+   aspectRatio(-1.f),
+   facing(FACING_CAMERA)
+{
+}
+
 Billboard::~Billboard() {
 }
 

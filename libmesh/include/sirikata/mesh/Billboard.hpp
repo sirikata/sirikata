@@ -16,11 +16,19 @@ struct SIRIKATA_MESH_EXPORT Billboard : public Visual {
     static String sType;
 
   public:
+    Billboard();
+    Billboard(const String& img);
     virtual ~Billboard();
 
     virtual const String& type() const;
 
     String image;
+    float32 aspectRatio; // Width / height
+    enum BillboardFacing {
+        FACING_CAMERA,
+        FACING_FIXED
+    };
+    BillboardFacing facing;
 };
 
 typedef std::tr1::shared_ptr<Billboard> BillboardPtr;

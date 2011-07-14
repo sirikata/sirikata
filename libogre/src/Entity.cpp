@@ -417,7 +417,7 @@ void Entity::loadMesh(const String& meshname)
     fixTextures();
 }
 
-void Entity::loadBillboard(const String& meshname)
+void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
 {
     unloadEntity();
     mReplacedMaterials.clear();
@@ -429,6 +429,12 @@ void Entity::loadBillboard(const String& meshname)
           new_bbs = getScene()->getSceneManager()->createBillboardSet(ogreMovableName(), 1);
           std::string matname = meshname + "_mat_billboard_";
           new_bbs->setMaterialName(matname);
+          if (bboard->facing == Mesh::Billboard::FACING_FIXED)
+              new_bbs->setBillboardType(Ogre::BBT_PERPENDICULAR_COMMON);
+          else if (bboard->facing == Mesh::Billboard::FACING_CAMERA)
+              new_bbs->setBillboardType(Ogre::BBT_POINT);
+          new_bbs->setDefaultWidth( (bboard->aspectRatio > 0.f) ? bboard->aspectRatio : 1.f);
+          new_bbs->setDefaultHeight(1.f);
           new_bbs->createBillboard(Ogre::Vector3(0,0,0), Ogre::ColourValue(1.f, 1.f, 1.f, 1.f));
       } catch (Ogre::InvalidParametersException &) {
         SILOG(ogre,error,"Got invalid parameters");
@@ -1726,7 +1732,7 @@ void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, Asset
     // The BillboardSet that actually gets rendered is like an Ogre::Entity,
     // load it in a similar way. There is no equivalent of the Ogre::Mesh -- we
     // only need to load up the material
-    loadBillboard(hash);
+    loadBillboard(bbptr, hash);
 }
 
 const std::vector<String> Entity::getAnimationList() {

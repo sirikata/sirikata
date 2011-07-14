@@ -79,11 +79,17 @@ Mesh::VisualPtr BillboardSystem::load(const Transfer::URI& uri, const Transfer::
     }
 
     String url = pt.get("url", String(""));
+    float32 aspect = -1;
+    if (pt.find("aspect") != pt.not_found())
+        aspect = pt.get<float32>("aspect");
+    String type = pt.get("facing", String("camera"));
 
     Mesh::BillboardPtr result(new Mesh::Billboard());
     result->uri = uri.toString();
     result->hash = fp;
     result->image = url;
+    result->aspectRatio = aspect;
+    result->facing = (type == "fixed") ? Mesh::Billboard::FACING_FIXED : Mesh::Billboard::FACING_CAMERA;
     return result;
 }
 
