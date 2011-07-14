@@ -534,6 +534,11 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
 
     returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
 
+    //timer requires a handle to its persistent object so can handle cleanup
+    //correctly.
+    jstimer->setPersistentObject(returner);
+
+    
     return handle_scope.Close(returner);
 }
 

@@ -12,12 +12,12 @@ namespace JS{
    fields for.
    @param {int} Number of internal fields that should be in object
  */
-#define CHECK_INTERNAL_FIELD_COUNT(obj,struct,shouldBeFieldCount)\
+#define CHECK_INTERNAL_FIELD_COUNT(obj,struct,shouldBeFieldCount,optionalReturn) \
 {\
     if(obj->InternalFieldCount() != shouldBeFieldCount)\
     {\
         JSLOG(error, "Error when cleaning up " #struct ".  Has incorrect number of internal fields.");\
-        return;\
+        return optionalReturn;                                          \
     }\
 }
 
@@ -28,34 +28,35 @@ namespace JS{
    for
    @param {const char*} Character string that we want to match type to
  */
-#define DEL_TYPEID_AND_CHECK(obj,struct,shouldBeTypeID)                        \
-{                                                                              \
-    v8::Local<v8::Value> typeidVal = obj->GetInternalField(TYPEID_FIELD);      \
-    if (typeidVal.IsEmpty())                                                   \
-    {                                                                          \
-        JSLOG(error, "Error when cleaning up " #struct ".  No value in type id."); \
-        return;                                                                \
-    }                                                                  \
-    if(typeidVal->IsNull() || typeidVal->IsUndefined())                        \
-    {                                                                          \
-        JSLOG(error, "Error when cleaning up " #struct ".  Null or undefined type id."); \
-        return;                                                                \
-    }                                                                          \
-                                                                               \
-    v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);  \
-    void* ptr = wrapped->Value();                                              \
-    std::string* typeId = static_cast<std::string*>(ptr);                      \
-    if(typeId == NULL)                                                         \
+#define DEL_TYPEID_AND_CHECK(obj,struct,shouldBeTypeID,optionalReturn)  \
+{                                                                   \
+    v8::Local<v8::Value> typeidVal = obj->GetInternalField(TYPEID_FIELD);   \
+    if (typeidVal.IsEmpty())                                            \
     {                                                                   \
-        JSLOG(error, "Error when cleaning up " #struct ".  Casting typeid to string produces null.");  \
-        return;                                                                \
-    }                                                                          \
-    if (*typeId != shouldBeTypeID)                                             \
-    {                                                                          \
-        JSLOG(error, "Error when cleaning up "#struct ".  Incorrect type id received.");  \
-        return;                                                                \
-    }                                                                          \
-    delete typeId;                                                             \
+        JSLOG(error, "Error when cleaning up " #struct ".  No value in type id."); \
+        return optionalReturn;                                          \
+    }                                                                   \
+    if(typeidVal->IsNull() || typeidVal->IsUndefined())                 \
+    {                                                                   \
+        JSLOG(error, "Error when cleaning up " #struct ".  Null or undefined type id."); \
+        return optionalReturn;                                          \
+    }                                                                   \
+                                                                        \
+    v8::Local<v8::External> wrapped  = v8::Local<v8::External>::Cast(typeidVal);  \
+    void* ptr = wrapped->Value();                                       \
+    std::string* typeId = static_cast<std::string*>(ptr);               \
+    if(typeId == NULL)                                                  \
+    {                                                                   \
+        JSLOG(detailed, "Potential error when cleaning up " #struct ".  Casting typeid to string produces null.");  \
+        return optionalReturn;                                          \
+    }                                                                   \
+    if (*typeId != shouldBeTypeID)                                      \
+    {                                                                   \
+        JSLOG(error, "Error when cleaning up "#struct ".  Incorrect type id received: " + (*typeId)); \
+        return optionalReturn;                                          \
+    }                                                                   \
+    delete typeId;                                                      \
+    obj->SetInternalField(TYPEID_FIELD,v8::External::New(NULL));        \
 }
 
 

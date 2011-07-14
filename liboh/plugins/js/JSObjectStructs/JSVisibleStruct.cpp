@@ -94,10 +94,10 @@ void JSVisibleStruct::visibleWeakReferenceCleanup(v8::Persistent<v8::Value> cont
     v8::Handle<v8::Object> vis = containsVisStruct->ToObject();
 
     //check to make sure object has adequate number of fields.
-    CHECK_INTERNAL_FIELD_COUNT(vis,JSVisible,VISIBLE_FIELD_COUNT);
+    CHECK_INTERNAL_FIELD_COUNT(vis,JSVisible,VISIBLE_FIELD_COUNT, );
 
     //delete typeId, and return if have incorrect params for type id
-    DEL_TYPEID_AND_CHECK(vis,jsvis,VISIBLE_TYPEID_STRING);
+    DEL_TYPEID_AND_CHECK(vis,jsvis,VISIBLE_TYPEID_STRING, );
 
     String err = "Potential error when cleaning up jsvisible.  Could not decode visible struct.";
     JSVisibleStruct* jsvis = JSVisibleStruct::decodeVisible(vis,err);

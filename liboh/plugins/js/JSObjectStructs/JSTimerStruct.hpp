@@ -73,6 +73,11 @@ public:
      */
     void noReference(const Liveness::Token &token);
 
+    /**
+       Every time a timer struct is created, the next line should set its
+       persistent object. 
+     */
+    void setPersistentObject(v8::Persistent<v8::Object>);
     
 private:
     /**
@@ -90,6 +95,16 @@ private:
        True if have no callback waiting to be executed. False otherwise.
      */
     bool noTimerWaiting;
+
+
+    /**
+       On clear, should set mPersistentHandle's internal fields to NULL.  That
+       way.  This accounts for the case where a user explicitly called clear on
+       a timer, which deletes the JSTimerStruct pointer and then the v8 garbage
+       collector tries to delete the internal field of mPersistentHandle.
+     */
+    v8::Persistent<v8::Object> mPersistentHandle;
+    
 };
 
 
