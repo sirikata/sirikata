@@ -19,6 +19,8 @@
     var internalUtilDiv = std.core.bind(util.div,util);
     var internalUtilMul = std.core.bind(util.mul,util);
     var internalUtilMod = std.core.bind(util.mod,util);
+
+    var internalUtilEqual = std.core.bind(util.equal,util);
     
     var internalUtilPattern = util.Pattern;
     var internalUtilVec3 = util.Vec3;
@@ -36,8 +38,11 @@
      */
     util.plus = function (lhs, rhs)
     {
-        if (typeof(lhs.add) == 'function')
-            return lhs.add(rhs);                
+        if (lhs != null)
+        {
+            if (typeof(lhs.add) == 'function')
+                return lhs.add(rhs);
+        }
 
         return internalUtilPlus.apply(undefined,arguments);
     };
@@ -53,8 +58,11 @@
      */
     util.sub = function (lhs,rhs)
     {
-        if (typeof(lhs.sub) == 'function')
-            return lhs.sub(rhs);
+        if (lhs != null)
+        {
+            if (typeof(lhs.sub) == 'function')
+                return lhs.sub(rhs);
+        }
         
         return internalUtilSub.apply(undefined,arguments);
     };
@@ -67,8 +75,11 @@
      */
     util.div = function (lhs,rhs)
     {
-        if (typeof(lhs.div) == 'function')
-            return lhs.div(rhs);
+        if (lhs != null)
+        {
+            if (typeof(lhs.div) == 'function')
+                return lhs.div(rhs);
+        }
         
         return internalUtilDiv.apply(undefined,arguments);
     };
@@ -81,8 +92,11 @@
      */
     util.mul = function (lhs,rhs)
     {
-        if (typeof(lhs.mul) == 'function')
-            return lhs.mul(rhs);
+        if (lhs != null)
+        {
+            if (typeof(lhs.mul) == 'function')
+                return lhs.mul(rhs);
+        }
         
         return internalUtilMul.apply(undefined,arguments);
     };
@@ -95,12 +109,65 @@
      */
     util.mod = function (lhs,rhs)
     {
-        if (typeof(lhs.mod) == 'function')
-            return lhs.mod(rhs);
+        if (lhs != null)
+        {
+            if (typeof(lhs.mod) == 'function')
+                return lhs.mod(rhs);
+        }
         
         return internalUtilMod.apply(undefined,arguments);
     };
 
+
+    util.equal = function (lhs,rhs)
+    {
+        if (! internalUtilEqual(lhs,null))
+        {
+            if (internalUtilEqual(typeof(lhs.equal) ,'function'))
+                return lhs.equal(rhs);
+        }
+        
+        return internalUtilEqual.apply(undefined,arguments);
+    };
+
+    util.notEqual = function (lhs,rhs)
+    {
+        if (! internalUtilEqual(lhs,null))
+        {
+            if (typeof(lhs.notEqual) == 'function')
+                return lhs.notEqual(rhs);
+        }
+        
+        return (! internalUtilEqual.apply(undefined,arguments));
+    };
+
+    util.identical = function (lhs,rhs)
+    {
+        if (lhs != null)
+        {
+            if (typeof(lhs.identical) == 'function')
+                return lhs.identical(rhs);
+        }
+
+        if (typeof(lhs) != typeof(rhs))
+            return false;
+        
+        return internalUtilEqual.apply(undefined,arguments);
+    };
+
+    util.notIdentical = function (lhs,rhs)
+    {
+        if (lhs != null)
+        {
+            if (typeof(lhs.notIdentical) == 'function')
+                return lhs.notIdentical(rhs);
+        }
+
+        if (typeof(lhs) != typeof(rhs))
+            return true;
+        
+        return (! internalUtilEqual.apply(undefined,arguments));
+    };
     
     
       /**

@@ -1112,19 +1112,114 @@ bitwiseANDExpressionNoIn
 	
 equalityExpression
 	: relationalExpression
-	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
-	| ^(NOT_EQUALS e=equalityExpression {APP(" != ");} relationalExpression)
-	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {APP(" !== ");} relationalExpression)
+        | ^(EQUALS
+            {
+                APP(" util.equal( ");
+            }
+            e=equalityExpression
+            {
+                APP(",");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
+	| ^(NOT_EQUALS
+            {
+                APP(" util.notEqual( ");
+            }
+            e=equalityExpression
+            {
+                APP(" , ");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
+	| ^(IDENT
+            {
+                APP(" util.identical( ");
+            }
+            e=equalityExpression
+            {
+                APP(" , ");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
+	| ^(NOT_IDENT
+            {
+                APP(" util.notIdentical( ");
+            }
+            e=equalityExpression
+            {
+                APP(" , ");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
 ;
 
 equalityExpressionNoIn
 : relationalExpressionNoIn
-| ^( EQUALS equalityExpressionNoIn { APP(" == ");} relationalExpressionNoIn)
-| ^( NOT_EQUALS equalityExpressionNoIn {  APP(" != ");} relationalExpressionNoIn)
-| ^( IDENT equalityExpressionNoIn { APP(" === "); } relationalExpressionNoIn)
-| ^( NOT_IDENT equalityExpressionNoIn { APP(" !== ");} relationalExpressionNoIn)
-
+  | ^(EQUALS
+      {
+          APP(" util.equal( ");        
+      }
+      equalityExpressionNoIn
+      {
+          APP(" , ");
+      }
+      relationalExpressionNoIn
+      {
+          APP(")");
+      }
+     )
+  | ^(NOT_EQUALS
+      {
+          APP("util.notEqual(");
+      }
+      equalityExpressionNoIn
+      {
+          APP(" != ");
+      }
+      relationalExpressionNoIn
+      {
+          APP(")");      
+      }
+     )
+  | ^(IDENT
+      {
+          APP("util.identical( ");
+      }
+      equalityExpressionNoIn
+      {
+          APP(" , ");
+      }
+      relationalExpressionNoIn
+      {
+          APP(")");
+      }
+     )
+  | ^(NOT_IDENT
+      {
+         APP("util.notIdentical (");
+      }
+      equalityExpressionNoIn
+      {
+         APP(" , ");
+      }
+      relationalExpressionNoIn
+      {
+         APP(" )");
+      }
+     )
 ;
 	
 

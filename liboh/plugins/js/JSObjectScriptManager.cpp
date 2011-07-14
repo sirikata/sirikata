@@ -155,6 +155,7 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("div"),v8::FunctionTemplate::New(JSUtilObj::ScriptDiv));
     mUtilTemplate->Set(v8::String::New("mul"),v8::FunctionTemplate::New(JSUtilObj::ScriptMult));
     mUtilTemplate->Set(v8::String::New("mod"),v8::FunctionTemplate::New(JSUtilObj::ScriptMod));
+    mUtilTemplate->Set(v8::String::New("equal"),v8::FunctionTemplate::New(JSUtilObj::ScriptEqual));
     
     mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);

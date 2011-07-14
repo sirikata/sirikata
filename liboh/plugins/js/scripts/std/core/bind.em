@@ -30,8 +30,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-if (typeof(std) === "undefined") /** @namespace */ std = {};
-if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
+if (typeof(std) == "undefined") /** @namespace */ std = {};
+if (typeof(std.core) == "undefined") /** @namespace */ std.core = {};
 
 /** @function 
  *  Returns a function that binds the passed function to an object.
@@ -43,7 +43,7 @@ if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
  *  @return {function(...[*])}  A new function that wraps func.apply()
  */
 std.core.bind = function(func, object) {
-    if (typeof(func) === "undefined")
+    if (typeof(func) == "undefined")
         throw new TypeError("Tried to bind undefined function.");
     if (arguments.length==2) {
         delete arguments;

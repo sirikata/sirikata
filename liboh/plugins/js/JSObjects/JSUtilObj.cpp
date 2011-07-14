@@ -126,6 +126,14 @@ v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args)
     return v8::String::New(sporef.toString().c_str(),sporef.toString().size() );
 }
 
+v8::Handle<v8::Value> ScriptEqual(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        V8_EXCEPTION_CSTR("Error in check equal.  requires only two arguments");
+
+    return v8::Boolean::New(args[0]->Equals(args[1]));
+}
+
 
 v8::Handle<v8::Value> ScriptDiv(const v8::Arguments& args)
 {
