@@ -64,8 +64,8 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
         goTo:function(destination,destination_facing, callback) {
             var pos =this._pres.getPosition();
             var forward=destination.sub(pos).normal();
-            destination_facing=destination_facing||this._pres.getOrientation();
-            var goal_orientation=util.Quaternion.fromLookAt(forward,destination_facing.yAxis());
+            
+            var goal_orientation=util.Quaternion.fromLookAt(forward,(destination_facing||this._pres.getOrientation()).yAxis());
             if (this._force_up) {
                var tright=this._force_up.cross(forward);
                var tforward=tright.cross(this._force_up).normal();
@@ -78,11 +78,17 @@ std.movement.MoveAndRotateTo = std.movement.MoveAndRotate.extend(
             destination_delta=destination_delta.scale(turning_distance/destination_length);
             this.goToWaypoint(destination_delta.add(pos),goal_orientation,true, function(){
                  thus.goToWaypoint(destination.add(destination_delta.scale(-.1)),goal_orientation,false,function (){
-                   thus.goToWaypoint(destination,(destination_facing||this._pres.orientation()),true,function () {
-                                         thus.rotateLocalOrientation(new util.Quaternion(0,0,0,1),true);
-                                         thus.move(new util.Vec3(0,0,0),0,true);
-                                         callback();
+                                       if (destination_facing) {
+                                           thus.goToWaypoint(destination,destination_facing,true,function () {
+                                                                 thus.rotateLocalOrientation(new util.Quaternion(0,0,0,1),true);
+                                                                 thus.move(new util.Vec3(0,0,0),0,true);
+                                                                 callback();
                                      });
+                                       } else {
+                                           thus.rotateLocalOrientation(new util.Quaternion(0,0,0,1),true);
+                                           thus.move(new util.Vec3(0,0,0),0,true);
+                                           callback();
+                                       }
                });
             });
         },
