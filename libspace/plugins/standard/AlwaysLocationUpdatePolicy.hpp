@@ -154,6 +154,9 @@ private:
             SubscriberSet* obj_subs = obj_sub_it->second;
             obj_subs->insert(remote);
 
+
+            std::cout<<"\nDEBUG: about to call propertyUpdatedForSubscriber for object: "<<uuid<<"  listening from" << remote<<".\n";
+
             // Force an update. This is necessary because the subscription comes
             // in asynchronously from Proximity, so its possible the data sent
             // with the origin subscription is out of date by the time this
@@ -169,6 +172,8 @@ private:
                 subs->subscribedTo.erase(uuid);
             }
 
+            std::cout<<"\nDEBUG: unsubscribing subscriber: "<<remote<<" subscribered to: "<<uuid<<"\n";
+            
             // Remove server from object's list
             typename ObjectSubscribersMap::iterator obj_it = mObjectSubscribers.find(uuid);
             if (obj_it != mObjectSubscribers.end()) {
@@ -222,6 +227,9 @@ private:
             if (sub_info->subscribedTo.find(uuid) == sub_info->subscribedTo.end()) return; // XXX FIXME
             assert(sub_info->subscribedTo.find(uuid) != sub_info->subscribedTo.end());
 
+            std::cout<<"\nDEBUG: propertyUpdatedForSubscriber subscriber: "<< sub<<" and subscribed "<< uuid <<"\n";
+
+            
             if (sub_info->outstandingUpdates.find(uuid) == sub_info->outstandingUpdates.end()) {
                 UpdateInfo new_ui;
                 new_ui.location = locservice->location(uuid);
@@ -231,7 +239,12 @@ private:
                 new_ui.physics = locservice->physics(uuid);
                 sub_info->outstandingUpdates[uuid] = new_ui;
             }
-
+            else
+            {
+                UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
+                std::cout<<"\nDEBUG: using old update info when sending update with radius: "<< ui.bounds.radius()<<"\n";
+            }
+                
             UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
             if (fup)
                 fup(ui);
@@ -302,7 +315,6 @@ private:
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
 
-
                     location.set_velocity(up_it->second.location.velocity());
 
                     Sirikata::Protocol::ITimedMotionQuaternion orientation = update.mutable_orientation();
@@ -311,6 +323,10 @@ private:
                     orientation.set_velocity(up_it->second.orientation.velocity());
 
                     update.set_bounds(up_it->second.bounds);
+
+
+                    std::cout<<"\nDEBUG: Sending location update about "<<up_it->first.toString()<< " with bounds " <<up_it->second.bounds<<" to " <<sid<<"  and sequence number is "<< update.seqno() <<"\n";
+                    
                     update.set_mesh(up_it->second.mesh);
                     update.set_physics(up_it->second.physics);
 

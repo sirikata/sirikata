@@ -115,8 +115,9 @@ template <> class OptionValueType<UUID> {public:
         return UUID(value,UUID::HumanReadable());
     }
 };
-}
+
 SIRIKATA_FUNCTION_EXPORT std::istream & operator>>(std::istream & is, Sirikata::UUID & uuid);
 SIRIKATA_FUNCTION_EXPORT std::ostream &  operator<<(std::ostream & os, const Sirikata::UUID & uuid);
+}
 
 #endif //_SIRIKATA_UUID_HPP_

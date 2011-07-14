@@ -101,8 +101,6 @@ size_t UUID::hash() const {
     return seed;
 }
 
-} // namespace Sirikata
-
 std::ostream& operator << (std::ostream &os, const Sirikata::UUID& output) {
     os << boost_::uuid(output.getArray().begin(),output.getArray().end());
     return os;
@@ -114,3 +112,6 @@ std::istream& operator>>(std::istream & is, Sirikata::UUID & uuid) {
     uuid = Sirikata::UUID(internal);
     return is;
 }
+
+} // namespace Sirikata
+
