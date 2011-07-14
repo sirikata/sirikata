@@ -152,6 +152,9 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("sub"), v8::FunctionTemplate::New(JSUtilObj::ScriptMinus));
     mUtilTemplate->Set(v8::String::New("identifier"),v8::FunctionTemplate::New(JSUtilObj::ScriptSporef));
 
+    mUtilTemplate->Set(v8::String::New("div"),v8::FunctionTemplate::New(JSUtilObj::ScriptDiv));
+    mUtilTemplate->Set(v8::String::New("mul"),v8::FunctionTemplate::New(JSUtilObj::ScriptMult));
+    mUtilTemplate->Set(v8::String::New("mod"),v8::FunctionTemplate::New(JSUtilObj::ScriptMod));
     
     mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);

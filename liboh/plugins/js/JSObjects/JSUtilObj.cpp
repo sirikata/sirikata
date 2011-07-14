@@ -127,6 +127,42 @@ v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> ScriptDiv(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        V8_EXCEPTION_CSTR("Error in division.  requires only two arguments");
+
+    INLINE_DOUBLE_CONV_ERROR(args[0],scriptDiv,1,lhs);
+    INLINE_DOUBLE_CONV_ERROR(args[1],scriptDiv,2,rhs);
+
+    return v8::Number::New(lhs/rhs);
+}
+
+v8::Handle<v8::Value> ScriptMult(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        V8_EXCEPTION_CSTR("Error in mult.  requires only two arguments");
+
+    INLINE_DOUBLE_CONV_ERROR(args[0],scriptMult,1,lhs);
+    INLINE_DOUBLE_CONV_ERROR(args[1],scriptMult,2,rhs);
+
+    return v8::Number::New(lhs*rhs);    
+}
+
+v8::Handle<v8::Value> ScriptMod(const v8::Arguments& args)
+{
+    if (args.Length() != 2)
+        V8_EXCEPTION_CSTR("Error in mod.  requires only two arguments");
+
+    INLINE_INTEGER_CONV_ERROR(args[0],scriptMod,1,lhs);
+    INLINE_INTEGER_CONV_ERROR(args[1],scriptMod,2,rhs);
+
+    return v8::Number::New(lhs%rhs);        
+}
+
+    
+
+
 /**
    Overloads the '+' operator for many types.  a and b must be of the same type
    (either vectors, numbers, or strings).  If a and b are vectors (a =

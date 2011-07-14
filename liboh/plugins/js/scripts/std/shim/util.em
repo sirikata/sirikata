@@ -16,10 +16,10 @@
     var internalUtilExp = std.core.bind(util.exp,util);
     var internalUtilAbs = std.core.bind(util.abs,util);
 
-    // var internalUtilPattern = std.core.bind(util.Pattern,util);
-    // var internalUtilVec3 = std.core.bind(util.Vec3,util);
-    // var internalUtilQuaternion = std.core.bind(util.Quaternion,util);
-
+    var internalUtilDiv = std.core.bind(util.div,util);
+    var internalUtilMul = std.core.bind(util.mul,util);
+    var internalUtilMod = std.core.bind(util.mod,util);
+    
     var internalUtilPattern = util.Pattern;
     var internalUtilVec3 = util.Vec3;
     var internalUtilQuaternion = util.Quaternion;
@@ -59,6 +59,50 @@
         return internalUtilSub.apply(undefined,arguments);
     };
 
+    /**
+     Overloads the '/' operator.
+
+     Checks if lhs has a div function defined on it.  If it does, then
+     returns lhs.div(rhs).  Otherwise, returns normal number division.
+     */
+    util.div = function (lhs,rhs)
+    {
+        if (typeof(lhs.div) == 'function')
+            return lhs.div(rhs);
+        
+        return internalUtilDiv.apply(undefined,arguments);
+    };
+
+    /**
+     Overloads the '*' operator.
+
+     Checks if lhs has a mul function defined on it.  If it does, then
+     returns lhs.mul(rhs).  Otherwise, returns normal number multiplication.
+     */
+    util.mul = function (lhs,rhs)
+    {
+        if (typeof(lhs.mul) == 'function')
+            return lhs.mul(rhs);
+        
+        return internalUtilMul.apply(undefined,arguments);
+    };
+
+    /**
+     Overloads the '%' operator.
+
+     Checks if lhs has a mod function defined on it.  If it does, then
+     returns lhs.mod(rhs).  Otherwise, returns normal number modulo.
+     */
+    util.mod = function (lhs,rhs)
+    {
+        if (typeof(lhs.mod) == 'function')
+            return lhs.mod(rhs);
+        
+        return internalUtilMod.apply(undefined,arguments);
+    };
+
+    
+    
       /**
        @return a random float from 0 to 1
        */

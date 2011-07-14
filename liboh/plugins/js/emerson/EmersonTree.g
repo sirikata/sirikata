@@ -1220,29 +1220,47 @@ additiveExpression
 
 
 multiplicativeExpression
-
-/*
-@init
-{
-  printf(" ( ");
-}
-@after
-{
-  printf(" ) ");
-}
-*/
-	: unaryExpression
-	| ^( MULT 
-	    multiplicativeExpression 
-					{
-					  APP(" * ");
-					 
-					} 
-					unaryExpression
-					)
-	| ^(DIV multiplicativeExpression { APP(" / ");} unaryExpression)
-	| ^(MOD multiplicativeExpression { APP(" \% ");} unaryExpression)
-	;
+        : unaryExpression
+        | ^( MULT
+             {
+                APP(" util.mul( ");
+             } 
+             multiplicativeExpression 
+             {
+                APP(" , ");
+             }
+             unaryExpression
+             {
+                APP(" ) ");
+             }
+            )
+        | ^( DIV
+            {
+                APP(" util.div( ");
+            }
+            multiplicativeExpression
+            {
+                APP(" , ");
+            }
+            unaryExpression
+            {
+                APP(" ) ");
+            }
+           )
+        | ^( MOD
+            {       
+                APP(" util.mod( ");
+            }
+            multiplicativeExpression
+            {
+                APP(" , ");
+            }
+            unaryExpression
+            {
+                APP(" ) ");
+            }
+           )
+        ;
 
 unaryOps
 : DELETE_OP 

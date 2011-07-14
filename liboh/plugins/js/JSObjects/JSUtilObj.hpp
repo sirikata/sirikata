@@ -23,6 +23,10 @@ v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args);
 v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args);
 
+v8::Handle<v8::Value> ScriptDiv(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptMult(const v8::Arguments& args);
+v8::Handle<v8::Value> ScriptMod(const v8::Arguments& args);
+
 v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args);
 
 

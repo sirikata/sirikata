@@ -22,10 +22,10 @@ bool decodeUint64FromString(v8::Handle<v8::Value> toDecode,uint64& decodedInt, S
 bool decodeTimedMotionVector(v8::Handle<v8::Value>toDecodePos, v8::Handle<v8::Value>toDecodeVel,v8::Handle<v8::Value>toDecodeTimeAsString, TimedMotionVector3f& toDecodeTo, String& errorMessage);
 bool decodeTimedMotionQuat(v8::Handle<v8::Value> orientationQuat,v8::Handle<v8::Value> orientationVelQuat,v8::Handle<v8::Value> toDecodeTimeAsString, TimedMotionQuaternion& toDecodeTo, String& errMsg);
 bool decodeBoundingSphere3f(v8::Handle<v8::Value> toDecodeCenterVec, v8::Handle<v8::Value> toDecodeRadius, BoundingSphere3f& toDecodeTo, String& errMsg);
-
+bool decodeInt64(v8::Handle<v8::Value> toDecode, int64& toDecodeTo, String& errMsg);
 bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& errMsg);
 bool decodeSolidAngle(v8::Handle<v8::Value> toDecode, SolidAngle& toDecodeTo, String& errMsg);
-
+bool decodeDouble(v8::Handle<v8::Value> toDecode, double& toDecodeTo, String& errMsg);
 
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMessage);
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
@@ -33,6 +33,28 @@ void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
 String uint16StrToStr(v8::Handle<v8::String> toDeserialize);
 v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 
+
+#define V8_EXCEPTION_STRING(stringErrMsg)\
+    return v8::ThrowException(v8::Exception::Error(v8::String::New(stringErrMsg.c_str(),stringErrMsg.length())));
+
+#define V8_EXCEPTION_CSTR(cstrErrMsg)\
+    return v8::ThrowException(v8::Exception::Error(v8::String::New(cstrErrMsg)));
+
+#define INLINE_DOUBLE_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
+    double whereWriteTo;                                                \
+    {                                                                   \
+        String _errMsg = "In " #whereError " cannot convert arg " #whichArg " to double"; \
+        if (!decodeDouble(toConvert,whereWriteTo,_errMsg))        \
+            V8_EXCEPTION_STRING(_errMsg);                               \
+    }
+        
+#define INLINE_INTEGER_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
+    int64 whereWriteTo;                                                \
+    {                                                                   \
+        String _errMsg = "In " #whereError " cannot convert arg " #whichArg " to integer"; \
+        if (!decodeInt64(toConvert,whereWriteTo,_errMsg))        \
+            V8_EXCEPTION_STRING(_errMsg);                               \
+    }
 
 
 #define INLINE_SPACEID_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
