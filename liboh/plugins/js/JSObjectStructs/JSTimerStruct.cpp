@@ -301,6 +301,7 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
         return JSSuspendable::clear();
     }
 
+    v8::HandleScope handle_scope;
 
     JSSuspendable::clear();
 
