@@ -291,8 +291,15 @@ util.Quaternion.fromLookAt = function(direction, up) {
     // Orient the -z axis to be along direction.
     var defaultForward = <0, 0, -1>;
     var quatAxis = defaultForward.cross(direction);
-    var firstQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
-                                        1 + direction.dot(defaultForward));
+	if(quatAxis.lengthSquared() > 0.001 || direction.dot(defaultForward) > 0) {
+        // defaultForward and direction are either not colinear, or are colinear
+        // but are pointing in the same direction.
+		var firstQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
+											1 + direction.dot(defaultForward));
+	} else {
+        // defaultForward and direction are pointing in opposite directions.
+		var firstQuat = new util.Quaternion(<0, 1, 0>, Math.PI);
+	}
     firstQuat = firstQuat.normal();
 
     // Compute new up vector and orient the y axis to be along that direction.
