@@ -35,6 +35,7 @@
 #include <sirikata/core/transfer/TransferHandlers.hpp>
 #include <sirikata/core/transfer/MeerkatTransferHandler.hpp>
 #include <sirikata/core/transfer/FileTransferHandler.hpp>
+#include <sirikata/core/transfer/HttpTransferHandler.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -47,6 +48,9 @@ void MetadataRequest::execute(std::tr1::shared_ptr<TransferRequest> req, Execute
                     &MetadataRequest::execute_finished, this, _1, cb));
     } else if (casted->getURI().proto() == "file") {
         FileNameHandler::getSingleton().resolve(casted, std::tr1::bind(
+                    &MetadataRequest::execute_finished, this, _1, cb));
+    } else if (casted->getURI().proto() == "http") {
+        HttpNameHandler::getSingleton().resolve(casted, std::tr1::bind(
                     &MetadataRequest::execute_finished, this, _1, cb));
     } else {
         SILOG(transfer, error, "Got unknown protocol in Metadata request: " << casted->getURI().proto());
@@ -65,6 +69,9 @@ void ChunkRequest::execute(std::tr1::shared_ptr<TransferRequest> req, ExecuteFin
                 &ChunkRequest::execute_finished, this, _1, cb));
     } else if (casted->getMetadata().getURI().proto() == "file") {
         FileChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
+                &ChunkRequest::execute_finished, this, _1, cb));
+    } else if (casted->getMetadata().getURI().proto() == "http") {
+        HttpChunkHandler::getSingleton().get(mMetadata, mChunk, std::tr1::bind(
                 &ChunkRequest::execute_finished, this, _1, cb));
     } else {
         SILOG(transfer, error, "Got unknown protocol in Chunk request: " << casted->getMetadata().getURI().proto());
