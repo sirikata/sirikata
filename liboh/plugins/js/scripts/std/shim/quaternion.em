@@ -310,8 +310,12 @@ util.Quaternion.fromLookAt = function(direction, up) {
         newUp = newUp.normal();
         var yAxis = firstQuat.yAxis();
         var quatAxis = yAxis.cross(newUp);
-        secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
-                                         1 + yAxis.dot(newUp));
+        if (quatAxis.lengthSquared() > 0.01 || yAxis.dot(newUp) > 0) {
+            secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
+                                             1 + yAxis.dot(newUp));
+        } else {
+            secondQuat = new util.Quaternion(1, 0, 0, 0);
+        }
     } else {
         secondQuat = new util.Quaternion(0, 0, 0, 1);
     }
