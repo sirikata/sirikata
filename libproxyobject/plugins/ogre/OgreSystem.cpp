@@ -336,9 +336,10 @@ bool OgreSystem::queryRay(const Vector3d&position,
 }
 ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which, bool ignore_self) const {
     Ogre::RaySceneQuery* mRayQuery;
-    mRayQuery = mSceneManager->createRayQuery(Ogre::Ray(), Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK);
+    mRayQuery = mSceneManager->createRayQuery(Ogre::Ray());
     mRayQuery->setRay(traceFrom);
     mRayQuery->setSortByDistance(aabbOnly);
+    mRayQuery->setQueryTypeMask(Ogre::SceneManager::WORLD_GEOMETRY_TYPE_MASK | Ogre::SceneManager::ENTITY_TYPE_MASK | Ogre::SceneManager::FX_TYPE_MASK);
     const Ogre::RaySceneQueryResult& resultList = mRayQuery->execute();
 
     ProxyEntity *toReturn = NULL;
@@ -348,32 +349,58 @@ ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbO
     for (Ogre::RaySceneQueryResult::const_iterator iter  = resultList.begin();
          iter != resultList.end(); ++iter) {
         const Ogre::RaySceneQueryResultEntry &result = (*iter);
+
+        Ogre::BillboardSet* foundBillboard = dynamic_cast<Ogre::BillboardSet*>(result.movable);
         Ogre::Entity *foundEntity = dynamic_cast<Ogre::Entity*>(result.movable);
-        if (!foundEntity) continue;
-        ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
-        if (!ourEntity) continue;
-        if (ourEntity->id() == mPresenceID.toString() && ignore_self) continue;
+
+        if (foundEntity != NULL) {
+            ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
+            if (!ourEntity) continue;
+            if (ourEntity->id() == mPresenceID.toString() && ignore_self) continue;
+        }
 
         RayTraceResult rtr(result.distance,result.movable);
         bool passed=aabbOnly&&result.distance > 0;
         if (aabbOnly==false) {
-            rtr.mDistance=3.0e38f;
-            Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
-            Ogre::Mesh *mesh = foundEntity->getMesh().get();
-            uint16 numSubMeshes = mesh->getNumSubMeshes();
-            std::vector<TriVertex> sharedVertices;
-            for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
-                Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
-                OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
-                IntersectResult intRes;
-                ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
-                if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {
-                    rtr.mResult = intRes;
-                    rtr.mMovableObject = result.movable;
-                    rtr.mDistance=intRes.distance;
-                    rtr.mSubMesh=ndx;
-                    passed=true;
+            if (foundEntity != NULL) {
+                rtr.mDistance=3.0e38f;
+                ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
+                Ogre::Ray meshRay = OgreMesh::transformRay(ourEntity->getSceneNode(), traceFrom);
+                Ogre::Mesh *mesh = foundEntity->getMesh().get();
+                uint16 numSubMeshes = mesh->getNumSubMeshes();
+                std::vector<TriVertex> sharedVertices;
+                for (uint16 ndx = 0; ndx < numSubMeshes; ndx++) {
+                    Ogre::SubMesh *submesh = mesh->getSubMesh(ndx);
+                    OgreMesh ogreMesh(submesh, texcoord, sharedVertices);
+                    IntersectResult intRes;
+                    ogreMesh.intersect(ourEntity->getSceneNode(), meshRay, intRes);
+                    if (intRes.intersected && intRes.distance < rtr.mDistance && intRes.distance > 0 ) {
+                        rtr.mResult = intRes;
+                        rtr.mMovableObject = result.movable;
+                        rtr.mDistance=intRes.distance;
+                        rtr.mSubMesh=ndx;
+                        passed=true;
+                    }
                 }
+            }
+            else if (foundBillboard != NULL) {
+                // FIXME real check against the object if checking bounding box
+                // isn't sufficient (but maybe it is for billboards since ogre
+                // forces them to face the user? but they also have an
+                // orientation? but the billboard set seems to let you control
+                // orientation? I don't know...)
+                // FIXME fake distances
+                float32 dist = (foundBillboard->getWorldBoundingSphere().getCenter() - traceFrom.getOrigin()).length();
+                IntersectResult intRes;
+                intRes.intersected = true;
+                intRes.distance = dist;
+                intRes.normal = fromOgre(-traceFrom.getDirection().normalisedCopy());
+                // No triangle or uv...
+                rtr.mResult = intRes;
+                rtr.mMovableObject = foundBillboard;
+                rtr.mDistance = dist;
+                rtr.mSubMesh = -1;
+                passed = true;
             }
         }
         if (passed) {
@@ -538,7 +565,7 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return setCameraOrientation(params);
     else if (name == "getAnimationList")
         return getAnimationList(params);
-    else if (name == "startAnimation") 
+    else if (name == "startAnimation")
         return startAnimation(params);
     else
         return OgreRenderer::invoke(params);
@@ -689,7 +716,7 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
 
 boost::any OgreSystem::getAnimationList(vector<boost::any>& params) {
     if (params.size() < 2) return boost::any();
-    if (!Invokable::anyIsObject(params[1])) return boost::any();    
+    if (!Invokable::anyIsObject(params[1])) return boost::any();
 
     SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
 
@@ -710,7 +737,7 @@ boost::any OgreSystem::startAnimation(std::vector<boost::any>& params) {
   if (params.size() < 3) return boost::any();
   if (!Invokable::anyIsObject(params[1])) return boost::any();
   if ( !anyIsString(params[2]) ) return boost::any();
-  
+
   SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
   String animation_name = Invokable::anyAsString(params[2]);
 
