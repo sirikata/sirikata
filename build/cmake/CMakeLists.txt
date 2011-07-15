@@ -1040,6 +1040,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${PROTOCOLBUFFERS_SCRIPTING_OUTPUTS}
         ${Protocol_PBJ_CPP_FILES}
         ${TRACE_PBJ_CPP_FILES}
+	${LIBCORE_SOURCE_DIR}/transfer/DataURI.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferMediator.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskCacheLayer.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/DiskManager.cpp
