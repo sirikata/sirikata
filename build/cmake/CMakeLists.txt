@@ -2842,6 +2842,7 @@ INSTALL(DIRECTORY
         PATTERN "*.cpp" EXCLUDE
         PATTERN "*.cc" EXCLUDE
         PATTERN "*.hh" EXCLUDE
+        PATTERN "*.gch" EXCLUDE
 )
 
 
