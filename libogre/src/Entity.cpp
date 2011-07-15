@@ -1087,6 +1087,7 @@ private:
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
     MeshdataPtr mdptr;
+    String meshname;
     Ogre::VertexData * createVertexData(const SubMeshGeometry &submesh, int vertexCount, Ogre::HardwareVertexBufferSharedPtr&vbuf) {
 
         using namespace Ogre;
@@ -1142,7 +1143,10 @@ class MeshdataManualLoader : public Ogre::ManualResourceLoader {
     }
 public:
 
-    MeshdataManualLoader(MeshdataPtr meshdata):mdptr(meshdata) {
+    MeshdataManualLoader(MeshdataPtr meshdata, const String& _meshname)
+     :mdptr(meshdata),
+      meshname(_meshname)
+    {
     }
 
     void prepareResource(Ogre::Resource*r) {
@@ -1220,9 +1224,6 @@ public:
     void traverseNodes(Ogre::Resource* r, const bool useSharedBuffer, const size_t totalVertexCount) {
         using namespace Ogre;
         const Meshdata& md = *mdptr;
-
-        SHA256 sha = md.hash;
-        String hash = sha.convertToHexString();
 
         Ogre::Mesh* mesh = dynamic_cast <Ogre::Mesh*> (r);
 
@@ -1310,7 +1311,10 @@ public:
                 GeometryInstance::MaterialBindingMap::const_iterator whichMaterial = geoinst.materialBindingMap.find(prim.materialId);
                 if (whichMaterial == geoinst.materialBindingMap.end())
                     SILOG(ogre, error, "[OGRE] Invalid MaterialBindingMap: couldn't find " << prim.materialId << " for " << md.uri);
-                std::string matname = whichMaterial!=geoinst.materialBindingMap.end()?hash+"_mat_"+boost::lexical_cast<std::string>(whichMaterial->second):"baseogremat";
+                std::string matname =
+                    whichMaterial != geoinst.materialBindingMap.end() ?
+                    meshname+"_mat_"+boost::lexical_cast<std::string>(whichMaterial->second) :
+                    "baseogremat";
                 Ogre::SubMesh *osubmesh = mesh->createSubMesh(submesh.name);
 
                 osubmesh->setMaterialName(matname);
@@ -1548,6 +1552,21 @@ void Entity::createMesh(Liveness::Token alive) {
     notify(&EntityListener::entityLoaded, this, false);
 }
 
+SHA256 Entity::computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr assetDownload) {
+    // To compute a hash of the entire visual, we just combine the hashes of the
+    // original and all the dependent resources, then hash the result. The
+    // approach right now uses strings and could do somethiing like xor'ing
+    // everything instead, but this is easy and shouldn't happen all that often.
+    String data = visptr->hash.toString();
+
+    for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
+        const AssetDownloadTask::ResourceData& tex_data = tex_it->second;
+        data += tex_data.request->getMetadata().getFingerprint().toString();
+    }
+
+    return SHA256::computeDigest(data);
+}
+
 void Entity::loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usingDefault) {
     if (!usingDefault) { // we currently assume no dependencies for default
         for(AssetDownloadTask::Dependencies::const_iterator tex_it = assetDownload->dependencies().begin(); tex_it != assetDownload->dependencies().end(); tex_it++) {
@@ -1579,9 +1598,10 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
 
     SHA256 sha = mdptr->hash;
     String hash = sha.convertToHexString();
+    String meshname = computeVisualHash(mdptr, assetDownload).toString();
 
     // If we already have it, just load the existing one
-    if (tryInstantiateExistingMesh(hash)) return;
+    if (tryInstantiateExistingMesh(meshname)) return;
 
     loadDependentTextures(assetDownload, usingDefault);
 
@@ -1589,7 +1609,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
         Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
         int index=0;
         for (MaterialEffectInfoList::const_iterator mat=mdptr->materials.begin(),mate=mdptr->materials.end();mat!=mate;++mat,++index) {
-            std::string matname = hash+"_mat_"+boost::lexical_cast<std::string>(index);
+            std::string matname = meshname+"_mat_"+boost::lexical_cast<std::string>(index);
             Ogre::MaterialPtr matPtr=matm.getByName(matname);
             if (matPtr.isNull()) {
                 Ogre::ManualResourceLoader * reload;
@@ -1609,7 +1629,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
 
             Ogre::SkeletonManager& skel_mgr = Ogre::SkeletonManager::getSingleton();
             Ogre::ManualResourceLoader *reload;
-            skel = Ogre::SkeletonPtr(skel_mgr.create(hash+"_skeleton",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
+            skel = Ogre::SkeletonPtr(skel_mgr.create(meshname+"_skeleton",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
                     (reload=new SkeletonManualLoader(mdptr))));
             reload->prepareResource(&*skel);
             reload->loadResource(&*skel);
@@ -1625,7 +1645,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
             Ogre::MeshManager& mm = Ogre::MeshManager::getSingleton();
             /// FIXME: set bounds, bounding radius here
             Ogre::ManualResourceLoader *reload;
-            Ogre::MeshPtr mo (mm.createManual(hash,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
+            Ogre::MeshPtr mo (mm.createManual(meshname,Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME,(reload=
 #ifdef _WIN32
 #ifdef NDEBUG
 			OGRE_NEW
@@ -1635,7 +1655,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
 #else
 			OGRE_NEW
 #endif
-      			      MeshdataManualLoader(mdptr))));
+                        MeshdataManualLoader(mdptr, meshname))));
             reload->prepareResource(&*mo);
             reload->loadResource(&*mo);
 
@@ -1643,10 +1663,10 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
                 mo->_notifySkeleton(skel);
 
 
-            bool check = mm.resourceExists(hash);
+            bool check = mm.resourceExists(meshname);
         }
 
-        loadMesh(hash);
+        loadMesh(meshname);
     }
 
     // Lights
@@ -1664,7 +1684,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
         }
         const LightInfo& sublight = mdptr->lights[lightinst.lightIndex];
 
-        String lightname = mName+"_light_"+hash+ boost::lexical_cast<String>(light_idx++);
+        String lightname = mName+"_light_"+meshname+ boost::lexical_cast<String>(light_idx++);
         Ogre::Light* light = constructOgreLight(getScene()->getSceneManager(), lightname, sublight);
         if (!light->isAttached()) {
             mLights.push_back(light);
@@ -1689,13 +1709,14 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
 void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {
     SHA256 sha = bbptr->hash;
     String hash = sha.convertToHexString();
+    String bbname = computeVisualHash(bbptr, assetDownload).toString();
 
     loadDependentTextures(assetDownload, usingDefault);
 
     // Load the single material
     Ogre::MaterialManager& matm = Ogre::MaterialManager::getSingleton();
 
-    std::string matname = hash + "_mat_billboard_";
+    std::string matname = bbname + "_mat_billboard_";
     Ogre::MaterialPtr matPtr = matm.getByName(matname);
     if (matPtr.isNull()) {
         Ogre::ManualResourceLoader* reload;
@@ -1732,7 +1753,7 @@ void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, Asset
     // The BillboardSet that actually gets rendered is like an Ogre::Entity,
     // load it in a similar way. There is no equivalent of the Ogre::Mesh -- we
     // only need to load up the material
-    loadBillboard(bbptr, hash);
+    loadBillboard(bbptr, bbname);
 }
 
 const std::vector<String> Entity::getAnimationList() {

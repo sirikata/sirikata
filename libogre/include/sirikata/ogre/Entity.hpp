@@ -105,6 +105,11 @@ protected:
     void fixTextures();
 
     void createMesh(Liveness::Token alive);
+    // Utility to compute full hash of the content of a visual. This is needed
+    // because the hash of some date (e.g. a collada file) may be the same, but
+    // some textures may differ (the relative names are the same, but the data
+    // the absolute names point to differs).
+    SHA256 computeVisualHash(const Mesh::VisualPtr& visptr, AssetDownloadTaskPtr assetDownload);
     void loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usingDefault);
     void createMeshdata(const Mesh::MeshdataPtr& mdptr, bool usingDefault, AssetDownloadTaskPtr assetDownload);
     void createBillboard(const Mesh::BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload);
