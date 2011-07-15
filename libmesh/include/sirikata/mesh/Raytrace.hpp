@@ -54,8 +54,8 @@ namespace Mesh {
  *  \returns true if a collision was found, false otherwise
  */
 SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
-SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
-SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
+SIRIKATA_MESH_FUNCTION_EXPORT bool RaytraceType(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
+SIRIKATA_MESH_FUNCTION_EXPORT bool RaytraceType(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
 
 } // namespace Mesh
 } // namespace Sirikata

@@ -32,6 +32,7 @@
 
 #include <sirikata/mesh/Platform.hpp>
 #include <sirikata/mesh/Bounds.hpp>
+#include <sirikata/mesh/Raytrace.hpp>
 
 namespace Sirikata {
 namespace Mesh {
@@ -210,6 +211,57 @@ bool RaytraceTriangle(const Vector3f& v1, const Vector3f& v2, const Vector3f& v3
     return true;
 }
 
+/** Raytraces a sphere. Assumes that t_out is initialized and will only
+ *  update output values and return true if the hit is at t < t_orig.
+ *  \param center The center position of the sphere
+ *  \param radius The radius of the sphere
+ *  \param ray_start the starting position of the ray to trace
+ *  \param ray_dir the direction of the ray to trace
+ *  \param discard_inside discard hits that start from inside the sphere
+ *  \param t_out the point of the collision, if one was found
+ *  \param returns true if the sphere was hit and it was before the existing hit
+ */
+bool RaytraceSphere(
+    const Vector3f& center, float32 radius,
+    const Vector3f& ray_start, const Vector3f& ray_dir,
+    bool discard_inside, float32* t_out)
+{
+    // Adjust ray origin relative to sphere center
+    Vector3f rayorig = ray_start - center;
+
+    // Check origin inside first
+    if (rayorig.lengthSquared() <= radius*radius && discard_inside)
+    {
+        return false;
+    }
+
+    // Mmm, quadratics
+    // Build coeffs which can be used with std quadratic solver
+    // ie t = (-b +/- sqrt(b*b + 4ac)) / 2a
+    float32 a = ray_dir.dot(ray_dir);
+    float32 b = 2 * rayorig.dot(ray_dir);
+    float32 c = rayorig.dot(rayorig) - radius*radius;
+
+    // Calc determinant
+    float32 d = (b*b) - (4 * a * c);
+    if (d < 0)
+    {
+        // No intersection
+        return false;
+    }
+    else
+    {
+        // BTW, if d=0 there is one intersection, if d > 0 there are 2
+        // But we only want the closest one, so that's ok, just use the
+        // '-' version of the solver
+        float32 t = ( -b - sqrt(d) ) / (2 * a);
+        if (t < 0)
+            t = ( -b + sqrt(d) ) / (2 * a);
+        if (t_out != NULL) *t_out = t;
+        return true;
+    }
+}
+
 /** Raytraces a single triangle. Assumes that t_out is initialized and will only
  *  update output values and return true if the hit is at t < t_orig.
  *  \param v1 First vertex of triangle
@@ -228,15 +280,35 @@ bool RaytraceTriangle(const Vector3f& v1, const Vector3f& v2, const Vector3f& v3
     return RaytraceTriangle(v1, v2, v3, normal, ray_start, ray_dir, true, true, t_out);
 }
 
-bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
-    MeshdataPtr md(std::tr1::dynamic_pointer_cast<Meshdata>(vis));
-    if (md) return Raytrace(md, ray_start, ray_dir, t_out, hit_out);
 
-    BillboardPtr bboard(std::tr1::dynamic_pointer_cast<Billboard>(vis));
-    if (bboard) return Raytrace(bboard, ray_start, ray_dir, t_out, hit_out);
+/** Raytraces a sphere. Assumes that t_out is initialized and will only
+ *  update output values and return true if the hit is at t < t_orig.
+ *  \param center The center position of the sphere
+ *  \param radius The radius of the sphere
+ *  \param ray_start the starting position of the ray to trace
+ *  \param ray_dir the direction of the ray to trace
+ *  \param t_out the point of the collision, if one was found
+ *  \param returns true if the sphere was hit and it was before the existing hit
+ */
+bool RaytraceSphere(
+    const Vector3f& center, float32 radius,
+    const Vector3f& ray_start, const Vector3f& ray_dir,
+    float32* t_out)
+{
+    return RaytraceSphere(center, radius, ray_start, ray_dir, false, t_out);
 }
 
-bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+    MeshdataPtr md(std::tr1::dynamic_pointer_cast<Meshdata>(vis));
+    if (md) return RaytraceType(md, ray_start, ray_dir, t_out, hit_out);
+
+    BillboardPtr bboard(std::tr1::dynamic_pointer_cast<Billboard>(vis));
+    if (bboard) return RaytraceType(bboard, ray_start, ray_dir, t_out, hit_out);
+
+    return false;
+}
+
+bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
     bool found_hit = false;
 
     bool have_hit = false;
@@ -333,9 +405,60 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(MeshdataPtr mesh, const Vector3f& ra
     return have_hit;
 }
 
-bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
-    // FIXME Implement intersections with billboards.
-    return false;
+bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+    bool found_hit = false;
+
+    bool have_hit = false;
+    float32 t = 1000000.0;
+
+    if (bboard->facing == Billboard::FACING_CAMERA) {
+        // This could be pointing in any direction. We could try to
+        // make it perpendicular to ray_dir, but then we'd still have
+        // to choose the other axes for orientation (the ray has no
+        // orientation to work from like a camera does).  Instead,
+        // raytrace against the bounding sphere.
+        have_hit = have_hit ||
+            RaytraceSphere(Vector3f(0, 0, 0), 1.f, ray_start, ray_dir, &t);
+    }
+    else if (bboard->facing == Billboard::FACING_FIXED) {
+        // In this case, orientation is fixed, so we just need to
+        // intersect against a simple quad, taking into account the
+        // aspect ratio.
+        float32 aspect = (bboard->aspectRatio == -1) ? 1.f : bboard->aspectRatio;
+        // We start with width = aspect, height = 1 and need to scale
+        // down to fit into the unit sphere.
+        float32 width = aspect, height = 1.f;
+        float max_r = sqrt(width*width + height*height);
+        width /= max_r;
+        height /= max_r;
+
+        // Now just test against the two triangles of the appropriate size
+        have_hit = have_hit ||
+            RaytraceTriangle(
+                Vector3f(-width, -height, 0.f),
+                Vector3f(-width, height, 0.f),
+                Vector3f(width, height, 0.f),
+                ray_start, ray_dir,
+                &t
+            );
+        // Note opposite winding order! If we use sided-ness ever,
+        // we'd need to change this.
+        have_hit = have_hit ||
+            RaytraceTriangle(
+                Vector3f(-width, -height, 0.f),
+                Vector3f(width, -height, 0.f),
+                Vector3f(width, height, 0.f),
+                ray_start, ray_dir,
+                &t
+            );
+    }
+
+    // Provide output
+    if (have_hit) {
+        if (t_out != NULL) *t_out = t;
+        if (hit_out != NULL) *hit_out = ray_start + ray_dir * t;
+    }
+    return have_hit;
 }
 
 } // namespace Mesh
