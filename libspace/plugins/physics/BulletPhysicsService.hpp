@@ -141,6 +141,7 @@ public:
 
     void updateBulletFromObject(const UUID& uuid, btTransform& worldTrans);
     void updateObjectFromBullet(const UUID& uuid, const btTransform& worldTrans);
+    void updateObjectFromDeactivation(const UUID& uuid);
 
     // Callback invoked each time bullet performs an internal tick
     // (may be finer granularity than we request).
@@ -205,6 +206,8 @@ private:
     btDiscreteDynamicsWorld* dynamicsWorld;
 
     Time mLastTime;
+    // Track last time we checked deactivation state
+    Time mLastDeactivationTime;
 
     //load meshes to create appropriate bounding volumes
     ModelsSystem* mModelsSystem;

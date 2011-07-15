@@ -117,6 +117,7 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
     dynamicsWorld->setGravity(btVector3(0,-1,0));
 
     mLastTime = mContext->simTime();
+    mLastDeactivationTime = mContext->simTime();
 
     mModelsSystem = ModelsSystemFactory::getSingleton().getConstructor("any")("");
     try {
@@ -171,15 +172,32 @@ LocationService::TrackingType BulletPhysicsService::type(const UUID& uuid) const
 
 
 void BulletPhysicsService::service() {
-	//get the time elapsed between calls to this service and
-	//move the simulation forward by that amount
+    //get the time elapsed between calls to this service and
+    //move the simulation forward by that amount
     Time now = mContext->simTime();
     Duration delTime = now - mLastTime;
     mLastTime = now;
     float simForwardTime = delTime.toMilliseconds() / 1000.0f;
 
+    // Step simulation
     dynamicsWorld->stepSimulation(simForwardTime);
 
+    // Check for deactivated objects. Unfortunately there isn't a way to get
+    // this information from bullet at the time deactivation, so we need to poll
+    // for it
+    static Duration deactivation_check_interval(Duration::seconds(1));
+    if (now - mLastDeactivationTime > deactivation_check_interval) {
+        for(UUIDSet::iterator id_it = mDynamicPhysicsObjects.begin(); id_it != mDynamicPhysicsObjects.end(); id_it++) {
+            const UUID& locobj = *id_it;
+            LocationInfo& locinfo = mLocations[locobj];
+
+            if (locinfo.objRigidBody != NULL && !locinfo.objRigidBody->isActive())
+                updateObjectFromDeactivation(locobj);
+        }
+        mLastDeactivationTime = now;
+    }
+
+    // Process location updates
     for(UUIDSet::iterator i = physicsUpdates.begin(); i != physicsUpdates.end(); i++) {
         LocationMap::iterator it = mLocations.find(*i);
         if(it != mLocations.end())
@@ -646,7 +664,7 @@ void BulletPhysicsService::updateObjectFromBullet(const UUID& uuid, const btTran
     btVector3 vel = locinfo.objRigidBody->getLinearVelocity();
     TimedMotionVector3f newLocation(context()->simTime(), MotionVector3f(Vector3f(pos.x(), pos.y(), pos.z()), Vector3f(vel.x(), vel.y(), vel.z())));
     setLocation(uuid, newLocation);
-
+    BULLETLOG(insane, "Updating " << uuid.toString() << " to velocity " << vel.x() << " " << vel.y() << " " << vel.z());
     btQuaternion rot = worldTrans.getRotation();
     btVector3 angvel = locinfo.objRigidBody->getAngularVelocity();
     Vector3f angvel_siri(angvel.x(), angvel.y(), angvel.z());
@@ -656,6 +674,35 @@ void BulletPhysicsService::updateObjectFromBullet(const UUID& uuid, const btTran
         MotionQuaternion(
             Quaternion(rot.x(), rot.y(), rot.z(), rot.w()),
             Quaternion(angvel_siri, angvel_angle)
+        )
+    );
+    setOrientation(uuid, newOrientation);
+
+    physicsUpdates.insert(uuid);
+}
+
+void BulletPhysicsService::updateObjectFromDeactivation(const UUID& uuid) {
+    if (isFixed(uuid)) return;
+    if (location(uuid).velocity() == Vector3f(0.f, 0.f, 0.f) &&
+        orientation(uuid).velocity() == Quaternion::identity())
+        return;
+
+    Time t = context()->simTime();
+    TimedMotionVector3f newLocation(
+        t,
+        MotionVector3f(
+            currentPosition(uuid),
+            Vector3f(0.f, 0.f, 0.f)
+        )
+    );
+    setLocation(uuid, newLocation);
+    BULLETLOG(insane, "Updating " << uuid.toString() << " to stopped.");
+
+    TimedMotionQuaternion newOrientation(
+        t,
+        MotionQuaternion(
+            currentOrientation(uuid),
+            Quaternion::identity()
         )
     );
     setOrientation(uuid, newOrientation);
