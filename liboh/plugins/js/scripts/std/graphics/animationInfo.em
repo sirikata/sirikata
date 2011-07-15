@@ -46,7 +46,7 @@ std.graphics.AnimationInfo = system.Class.extend(
 
             var p  = new util.Pattern("name", "support_animation");
             std.core.bind(this.onTestMessage, this) << p;
-            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
+           this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
         },
 
 

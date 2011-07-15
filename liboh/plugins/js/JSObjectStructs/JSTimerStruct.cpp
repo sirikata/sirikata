@@ -57,6 +57,11 @@ JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::
     }
 }
 
+void JSTimerStruct::setPersistentObject(v8::Persistent<v8::Object>pers)
+{
+    mPersistentHandle = pers;
+}
+
 void JSTimerStruct::timerWeakReferenceCleanup(v8::Persistent<v8::Value> containsTimer, void* otherArg)
 {
     if (!containsTimer->IsObject())
@@ -68,12 +73,10 @@ void JSTimerStruct::timerWeakReferenceCleanup(v8::Persistent<v8::Value> contains
     v8::Handle<v8::Object> timer = containsTimer->ToObject();
 
     //check to make sure object has adequate number of fields.
-    CHECK_INTERNAL_FIELD_COUNT(timer,jstimer,TIMER_JSTIMER_TEMPLATE_FIELD_COUNT);
-
-    //delete typeId, and return if have incorrect params for type id
-    DEL_TYPEID_AND_CHECK(timer,jstimer,TIMER_TYPEID_STRING);
+    CHECK_INTERNAL_FIELD_COUNT(timer,jstimer,TIMER_JSTIMER_TEMPLATE_FIELD_COUNT, );
 
 
+    //should return if have already cleared the timer.
     String err = "Potential error when cleaning up jstimer.  Could not decode timer struct.  Likely the timer struct was already cleared, but could be more serious.";
     JSTimerStruct* jstimer = JSTimerStruct::decodeTimerStruct(timer,err);
     if (jstimer == NULL)
@@ -111,7 +114,7 @@ void JSTimerStruct::noReference(const Liveness::Token& alive)
             if (!(getIsSuspended() && jsContStruct->getIsSuspended()))
             {
                 //can kill
-            clear();
+                clear();
             }
         }
     }
@@ -252,7 +255,7 @@ v8::Handle<v8::Value> JSTimerStruct::suspend()
         JSLOG(info, "Error in suspend of JSTimerStruct.cpp.  Called suspend even though the timer had previously been cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a timer that had already been cleared.")));
     }
-
+    
     JSLOG(insane,"suspending timer");
 
     //note, it is important that call to JSSuspendable::supsend occurs before
@@ -298,6 +301,7 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
         return JSSuspendable::clear();
     }
 
+    v8::HandleScope handle_scope;
 
     JSSuspendable::clear();
 
@@ -309,6 +313,18 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
     if (jsContStruct != NULL)
         jsContStruct->struct_deregisterSuspendable(this);
 
+
+    if (! mPersistentHandle.IsEmpty())
+    {
+        //check to make sure object has adequate number of fields.
+        CHECK_INTERNAL_FIELD_COUNT(mPersistentHandle,jstimer,TIMER_JSTIMER_TEMPLATE_FIELD_COUNT, v8::Boolean::New(true));
+
+        //delete typeId, and return if have incorrect params for type id
+        DEL_TYPEID_AND_CHECK(mPersistentHandle,jstimer,TIMER_TYPEID_STRING,v8::Boolean::New(true));
+        
+        mPersistentHandle->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD, External::New(NULL));
+    }
+    
     // Note that since this allows the JS GC thread to destroy this object
     // in response to all references to it being lost,
     // we need to make sure it is absolutely the *last* operation we do on

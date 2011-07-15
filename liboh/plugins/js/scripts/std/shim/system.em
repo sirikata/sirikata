@@ -70,9 +70,7 @@ function PresenceEntry(sporef, presObj)
     {
         system.print('\nPrinting result set for presence: ' + this.sporef.toString()+'\n');
         for (var s in this.proxResultSet)
-        {
             system.print('\t' + s.toString() + '\n' );
-        }
     };
 
     //to set a prox add callback
@@ -84,7 +82,7 @@ function PresenceEntry(sporef, presObj)
 	{
 	    for (var i = 0; i <= this.proxAddCB.length; i++)
 	    {
-		if ((this.proxAddCB[i] == null) || (typeof(this.proxAddCB[i]) == 'undefined'))
+		if ((typeof(this.proxAddCB[i]) == 'undefined') || (this.proxAddCB[i] == null))
 		{
 		    this.proxAddCB[i] = std.core.bind(proxAddCB, this.presObj);
 		    return i;
@@ -94,6 +92,8 @@ function PresenceEntry(sporef, presObj)
 	    return null;
 	}
     };
+
+
     
     //to set a prox removed callback
     this.setProxRemCB = function (proxRemCB)
@@ -104,7 +104,7 @@ function PresenceEntry(sporef, presObj)
 	{
 	    for (var i = 0; i <= this.proxRemCB.length; i++)
 	    {
-		if ((this.proxRemCB[i] == null) || (typeof(this.proxRemCB[i]) == 'undefined'))
+		if ((typeof(this.proxRemCB[i]) == 'undefined') || (this.proxRemCB[i] == null))
 		{
 		    this.proxRemCB[i] = std.core.bind(proxRemCB, this.presObj);
 		    return i;
@@ -131,7 +131,7 @@ function PresenceEntry(sporef, presObj)
 
     //call this function when get a visible object added to prox results
     this.proxAddedEvent = function (visibleObj,visTo)
-    {        
+    {
         //add to proxResultSet
         this.proxResultSet[visibleObj.toString()] = visibleObj;
         //trigger all non-null non-undefined callbacks
@@ -172,11 +172,14 @@ function PresenceEntry(sporef, presObj)
        return 'system';
      };
      
-     
+
       //self declarations
       system.addToSelfMap= function(toAdd)
       {
           var selfKey = (toAdd == null) ? this.__NULL_TOKEN__ : toAdd.toString();
+          if (selfKey in this._selfMap)
+              return;
+
           this._selfMap[selfKey] = new PresenceEntry(selfKey,toAdd);
       };
 
@@ -622,10 +625,6 @@ function PresenceEntry(sporef, presObj)
       };
 
 
-
-     
-     
-
      /**@ignore
       Runs through presences array, and determines if should add presConn to that array
       */
@@ -693,8 +692,6 @@ function PresenceEntry(sporef, presObj)
               var wrapImport = "system.import('" + initFile + "');";
               return this.createEntityScript(position, wrapImport,null, solidAngle,mesh,scale);
           };
-
-
       
 
           /** @function
@@ -904,9 +901,6 @@ function PresenceEntry(sporef, presObj)
                     solidAngleQuery = firstArg['solidAngleQuery'];
                 
             }
-
-            system.__debugPrint('MESH URL: ' + mesh + '\n\n');
-
             return system.restorePresence(sporef,pos,vel,posTime,orient,orientVel,orientTime,mesh,physics,scale,isCleared,contextID,isConnected,connectedCallback,isSuspended,suspendedVelocity,suspendedOrientationVelocity,solidAngleQuery);
 
         };

@@ -32,6 +32,32 @@ bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& er
 
 
 
+bool decodeDouble(v8::Handle<v8::Value> toDecode, double& toDecodeTo, String& errMsg)
+{
+    if (! toDecode->IsNumber())
+    {
+        errMsg += "  Could not decode as number.";
+        return false;
+    }
+    
+    toDecodeTo = toDecode->ToNumber()->Value();
+    return true;
+}
+
+
+bool decodeInt64(v8::Handle<v8::Value> toDecode, int64& toDecodeTo, String& errMsg)
+{
+    if (! toDecode->IsNumber())
+    {
+        errMsg += "  Could not decode as integer.";
+        return false;
+    }
+    
+    toDecodeTo = toDecode->ToNumber()->Value();
+    return true;
+}
+
+
 v8::Handle<v8::Value> strToUint16Str(const String& toSerialize)
 {
     uint16* toStoreArray = new uint16[toSerialize.size()];

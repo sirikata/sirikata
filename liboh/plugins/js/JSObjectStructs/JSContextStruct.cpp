@@ -58,12 +58,12 @@ v8::Handle<v8::Value> JSContextStruct::httpRequest(Sirikata::Network::Address ad
 }
 
 
-void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb)
+void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& failureReason )
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
-    v8::Handle<v8::Value> argv[1] = { v8::Boolean::New(false)};
-    jsObjScript->invokeCallback(this,cb, 1, argv);
+    v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(false), v8::String::New(failureReason.c_str(),failureReason.size())};
+    jsObjScript->invokeCallback(this,cb, 2, argv);
 }
 
 

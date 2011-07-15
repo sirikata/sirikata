@@ -25,21 +25,25 @@ std.core.RepeatingTimer = function(period,callback)
 {
     var callbackHelper = function()
     {
-        this.userCallback();
-        this.timer.reset();
+        this.userCallback(this);
+        if (! this.suspendRequested)
+            this.timer.reset();
     };
-    
+
+    this.suspendRequested = false;
     this.period       = period;
     this.userCallback = callback;
     this.callback     = std.core.bind(callbackHelper,this);
     this.timer        = system.timeout(this.period,this.callback);
     this.suspend      = function ()
     {
+        this.suspendRequested = true;
         return this.timer.suspend();
     };
     this.reset        = function ()
     {
-         return this.timer.reset();  
+        this.suspendRequested = false;
+        return this.timer.reset();  
     };
     this.isSuspended  = function ()
     {

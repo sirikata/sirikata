@@ -28,20 +28,6 @@ options
     #include "Util.h"
     #define APP(s)  program_string->append(program_string, s);
 
-    
-    // #define CHECK_RESOURCES()               \
-    // {                                       \
-    // APP("(function()\n");                   \
-    // APP("{ \n");                            \
-    // APP("var tmp = function()\n");          \
-    // APP("{\n");                             \
-    // APP("return this;");                    \
-    // APP("};");                              \
-    // APP("var tmpGlobal = tmp();");          \
-    // APP("if (! tmpGlobal.__checkResources8_8_3_1__())"); \
-    // APP("throw '__resource_error__';");     \
-    // APP("})();");                           \
-    // }
 
     #define CHECK_RESOURCES()                 \
     {                                         \
@@ -1126,19 +1112,114 @@ bitwiseANDExpressionNoIn
 	
 equalityExpression
 	: relationalExpression
-	| ^(EQUALS e=equalityExpression { APP(" == ");} relationalExpression)
-	| ^(NOT_EQUALS e=equalityExpression {APP(" != ");} relationalExpression)
-	| ^(IDENT e=equalityExpression { APP(" === ");} relationalExpression)
-	| ^(NOT_IDENT e=equalityExpression {APP(" !== ");} relationalExpression)
+        | ^(EQUALS
+            {
+                APP(" util.equal( ");
+            }
+            e=equalityExpression
+            {
+                APP(",");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
+	| ^(NOT_EQUALS
+            {
+                APP(" util.notEqual( ");
+            }
+            e=equalityExpression
+            {
+                APP(" , ");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
+	| ^(IDENT
+            {
+                APP(" util.identical( ");
+            }
+            e=equalityExpression
+            {
+                APP(" , ");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
+	| ^(NOT_IDENT
+            {
+                APP(" util.notIdentical( ");
+            }
+            e=equalityExpression
+            {
+                APP(" , ");
+            }
+            relationalExpression
+            {
+                APP(")");
+            }
+           )
 ;
 
 equalityExpressionNoIn
 : relationalExpressionNoIn
-| ^( EQUALS equalityExpressionNoIn { APP(" == ");} relationalExpressionNoIn)
-| ^( NOT_EQUALS equalityExpressionNoIn {  APP(" != ");} relationalExpressionNoIn)
-| ^( IDENT equalityExpressionNoIn { APP(" === "); } relationalExpressionNoIn)
-| ^( NOT_IDENT equalityExpressionNoIn { APP(" !== ");} relationalExpressionNoIn)
-
+  | ^(EQUALS
+      {
+          APP(" util.equal( ");        
+      }
+      equalityExpressionNoIn
+      {
+          APP(" , ");
+      }
+      relationalExpressionNoIn
+      {
+          APP(")");
+      }
+     )
+  | ^(NOT_EQUALS
+      {
+          APP("util.notEqual(");
+      }
+      equalityExpressionNoIn
+      {
+          APP(" != ");
+      }
+      relationalExpressionNoIn
+      {
+          APP(")");      
+      }
+     )
+  | ^(IDENT
+      {
+          APP("util.identical( ");
+      }
+      equalityExpressionNoIn
+      {
+          APP(" , ");
+      }
+      relationalExpressionNoIn
+      {
+          APP(")");
+      }
+     )
+  | ^(NOT_IDENT
+      {
+         APP("util.notIdentical (");
+      }
+      equalityExpressionNoIn
+      {
+         APP(" , ");
+      }
+      relationalExpressionNoIn
+      {
+         APP(" )");
+      }
+     )
 ;
 	
 
@@ -1219,7 +1300,7 @@ additiveExpression
             ) 
         | ^(SUB
             {
-                APP("  util.minus( " );
+                APP("  util.sub( " );
             }
              e1=additiveExpression 
              {
@@ -1234,29 +1315,47 @@ additiveExpression
 
 
 multiplicativeExpression
-
-/*
-@init
-{
-  printf(" ( ");
-}
-@after
-{
-  printf(" ) ");
-}
-*/
-	: unaryExpression
-	| ^( MULT 
-	    multiplicativeExpression 
-					{
-					  APP(" * ");
-					 
-					} 
-					unaryExpression
-					)
-	| ^(DIV multiplicativeExpression { APP(" / ");} unaryExpression)
-	| ^(MOD multiplicativeExpression { APP(" \% ");} unaryExpression)
-	;
+        : unaryExpression
+        | ^( MULT
+             {
+                APP(" util.mul( ");
+             } 
+             multiplicativeExpression 
+             {
+                APP(" , ");
+             }
+             unaryExpression
+             {
+                APP(" ) ");
+             }
+            )
+        | ^( DIV
+            {
+                APP(" util.div( ");
+            }
+            multiplicativeExpression
+            {
+                APP(" , ");
+            }
+            unaryExpression
+            {
+                APP(" ) ");
+            }
+           )
+        | ^( MOD
+            {       
+                APP(" util.mod( ");
+            }
+            multiplicativeExpression
+            {
+                APP(" , ");
+            }
+            unaryExpression
+            {
+                APP(" ) ");
+            }
+           )
+        ;
 
 unaryOps
 : DELETE_OP 

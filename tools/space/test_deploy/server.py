@@ -18,7 +18,7 @@ plugins = {
 }
 
 
-def AddStandardParams(args, **kwargs):
+def AddStandardParams(appname, idx, args, env, **kwargs):
     if ('with_xterm' in kwargs and kwargs['with_xterm']):
         args.extend(['gnome-terminal', '-x'])
     if ('debug' in kwargs and kwargs['debug']):
@@ -26,18 +26,36 @@ def AddStandardParams(args, **kwargs):
     if ('valgrind' in kwargs and kwargs['valgrind']):
         args.extend(['valgrind'])
 
-def RunApp(appname, plugins, args, **kwargs):
+    if ('heapcheck' in kwargs and kwargs['heapcheck']):
+        # Value should be the type of checking: minimal, normal,
+        # strict, draconian
+        env['HEAPCHECK'] = kwargs['heapcheck']
+    elif ('heapprofile' in kwargs and kwargs['heapprofile']):
+        # Value should be something like '/tmp' to indicate where we
+        # should store heap profiling samples. In that example, the
+        # samples will be stored into /tmp/appname.1.0001.heap,
+        # /tmp/appname.1.0002.heap, etc.
+        env['HEAPPROFILE'] = kwargs['heapprofile'] + '/' + appname + '.' + str(idx)
+
+        if ('heapprofile_interval' in kwargs and kwargs['heapprofile_interval']):
+            env['HEAP_PROFILE_ALLOCATION_INTERVAL'] = str(kwargs['heapprofile_interval'])
+
+
+def RunApp(appname, idx, plugins, args, **kwargs):
     full_args = []
-    AddStandardParams(full_args, **kwargs)
-    full_args.extend([appname])
+    full_env = {}
+    AddStandardParams(appname, idx, full_args, full_env, **kwargs)
+    full_args.extend(['./' + appname])
     full_args.extend(args)
     if plugins:
         full_args.extend([ plugins ])
-    print 'Running:', full_args
-    subprocess.Popen(full_args)
+    print 'Running:', full_args, 'with environment:', full_env
+    # Clear full_env if its empty
+    if not full_env: full_env = None
+    subprocess.Popen(full_args, env=full_env)
 
 def RunPinto(args, **kwargs):
-    RunApp('./pinto_d', None, args, **kwargs)
+    RunApp('pinto_d', 0, None, args, **kwargs)
 
 def RunSpace(ssid, args, **kwargs):
-    RunApp('./space_d', '--space.plugins=' + plugins['space'], args, **kwargs)
+    RunApp('space_d', ssid, '--space.plugins=' + plugins['space'], args, **kwargs)

@@ -107,6 +107,31 @@ util.Vec3.prototype.div = function(rhs) {
     return new util.Vec3(this.x / rhs, this.y / rhs, this.z / rhs);
 };
 
+
+/**
+ @param rhs any type
+ @return {bool} True if rhs is not a quaternion and x,y,and z fields
+ of this and rhs are identical.  False otherwise.
+ */
+util.Vec3.prototype.equal = function(rhs){
+    if (rhs == null)
+        return false;
+
+    //want to prevent general case of saying that a vector is equal to a quaternion.
+    if (typeof (rhs.w) != 'undefined')
+        return false;
+    
+    return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z));
+};
+
+/**
+ Just calls equal.
+ @see equal 
+ */
+util.Vec3.prototype.identical = function(rhs){
+    return this.equal(rhs);
+};
+
 /** @function 
   @param rhs a Vec3
   @return a scalar representing the dot product of this vector with rhs

@@ -282,7 +282,7 @@ void EmersonScript::printMPresences()
 
 void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo)
 {
-   // Invoke user callback
+    // Invoke user callback
     PresenceMapIter iter = mPresences.find(proxTo);
     if (iter == mPresences.end())
     {
@@ -292,7 +292,7 @@ void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectR
 
     if (mContext->proxAddedFunc.IsEmpty())
     {
-        JSLOG(debug,"No prox added func to execute");
+        JSLOG(detailed,"No prox added func to execute");
         return;
     }
 
@@ -325,7 +325,6 @@ void  EmersonScript::notifyProximate(ProxyObjectPtr proximateObject, const Space
 {
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" is within query of "<<querier<<".");
     JSVisibleStruct* jsvis = JSVisibleManager::createVisStruct(proximateObject->getObjectReference());
-
     notifyProximate(jsvis,querier);
 }
 
@@ -535,6 +534,11 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
 
     returner.MakeWeak(NULL,&JSTimerStruct::timerWeakReferenceCleanup);
 
+    //timer requires a handle to its persistent object so can handle cleanup
+    //correctly.
+    jstimer->setPersistentObject(returner);
+
+    
     return handle_scope.Close(returner);
 }
 

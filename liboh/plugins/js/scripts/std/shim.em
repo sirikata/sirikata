@@ -43,6 +43,7 @@
 // This is useful enough and pure Emerson, so we include it manually here.
 system = __system; // Will get overwritten
 system.require('std/core/bind.em');
+system.require('std/shim/util.em');
 
 system.require('std/shim/wrappedSendMessage/messaging.em');
 system.require('std/shim/system.em');

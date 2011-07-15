@@ -89,6 +89,30 @@ util.Quaternion.prototype.dot = function(rhs) {
     return this.x * rhs.x + this.y * rhs.y + this.z * rhs.z + this.w * rhs.w;
 };
 
+
+/**
+ @param rhs any type
+ @return {bool} True if rhs is not a quaternion and x,y,z,and w fields
+ of this and rhs are identical.  False otherwise.
+ */
+util.Quaternion.prototype.equal = function(rhs){
+    if (rhs == null)
+        return false;
+
+    
+    return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z) && (this.w === rhs.w));
+};
+
+/**
+ Just calls equal.
+ @see equal 
+ */
+util.Quaternion.prototype.identical = function(rhs){
+    return this.equal(rhs);
+};
+
+
+
 /**
   @function
   @return The quaternion product of two quaternions
@@ -267,8 +291,15 @@ util.Quaternion.fromLookAt = function(direction, up) {
     // Orient the -z axis to be along direction.
     var defaultForward = <0, 0, -1>;
     var quatAxis = defaultForward.cross(direction);
-    var firstQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
-                                        1 + direction.dot(defaultForward));
+	if(quatAxis.lengthSquared() > 0.001 || direction.dot(defaultForward) > 0) {
+        // defaultForward and direction are either not colinear, or are colinear
+        // but are pointing in the same direction.
+		var firstQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
+											1 + direction.dot(defaultForward));
+	} else {
+        // defaultForward and direction are pointing in opposite directions.
+		var firstQuat = new util.Quaternion(<0, 1, 0>, Math.PI);
+	}
     firstQuat = firstQuat.normal();
 
     // Compute new up vector and orient the y axis to be along that direction.
@@ -279,8 +310,12 @@ util.Quaternion.fromLookAt = function(direction, up) {
         newUp = newUp.normal();
         var yAxis = firstQuat.yAxis();
         var quatAxis = yAxis.cross(newUp);
-        secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
-                                         1 + yAxis.dot(newUp));
+        if (quatAxis.lengthSquared() > 0.01 || yAxis.dot(newUp) > 0) {
+            secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
+                                             1 + yAxis.dot(newUp));
+        } else {
+            secondQuat = new util.Quaternion(1, 0, 0, 0);
+        }
     } else {
         secondQuat = new util.Quaternion(0, 0, 0, 1);
     }
