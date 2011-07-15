@@ -19,9 +19,13 @@ function getRandomVec() {
 function test(dir, up) {
 	up = up || <0, 1, 0>;
 	var q = util.Quaternion.fromLookAt(dir, up);
+	var reason = '';
+	if(Math.abs(q.length() - 1) > 0.001) {
+		reason += 'quaternion not normalized\n';
+	}
+	
 	var forward = q.mul(<0, 0, -1>);
     var newUp = q.mul(<0, 1, 0>);
-	var reason = '';
 	if((forward - dir.normal()).length() > 0.001) {
 		reason += 'incorrect forward vector\n';
 	}
@@ -30,7 +34,7 @@ function test(dir, up) {
 		reason += 'incorrect up vector\n';
 	}
 	
-	if(reason != '')
+	if(reason != '') {
 		system.print('lookAt(' + std.core.pretty(dir) + ', ' +
                 std.core.pretty(up) + ') failed:\n   gave ' +
 				std.core.pretty(q) + '\n   which produces\n   forward: ' +
