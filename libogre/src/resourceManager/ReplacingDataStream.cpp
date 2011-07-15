@@ -33,6 +33,7 @@
 #include <sirikata/ogre/resourceManager/ReplacingDataStream.hpp>
 
 #include <sirikata/ogre/resourceManager/CDNArchive.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 #include <boost/regex.hpp>
 #include <vector>
 
@@ -262,7 +263,7 @@ void ReplacingDataStream::replace_reference(Ogre::String&retval, const Ogre::Str
             uri = dep;
           }
           if (mTextureAliases) {
-            Ogre::String absURI(URI(mSourceURI.getContext(), uri).toString());
+              Ogre::String absURI(URL( URL(mSourceURI).getContext(), uri).toString());
             Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(absURI);
             if (where!=mTextureAliases->end()) {
               uri=where->second;
@@ -289,7 +290,7 @@ void ReplacingDataStream::replace_texture_reference(Ogre::String&retval, const O
       }else {
         uri = dep;
       }
-      Ogre::String absURI(URI(mSourceURI.getContext(), uri).toString());
+      Ogre::String absURI(URL( URL(mSourceURI).getContext(), uri).toString());
       Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(absURI);
       if (where!=mTextureAliases->end()) {
         retval+=input.substr(pwhere,lexeme_start-pwhere);
@@ -407,7 +408,7 @@ Ogre::String ReplacingDataStream::replaceData(Ogre::String input) {
 
           for (size_t i=1;i<=num_texture_aliases;++i) {
               if (what[i].matched) {
-                  Ogre::String absURI(URI(mSourceURI.getContext(), String(what[i].first,what[i].second)).toString());
+                  Ogre::String absURI(URL(URL(mSourceURI).getContext(), String(what[i].first,what[i].second)).toString());
                   Ogre::NameValuePairList::const_iterator where=mTextureAliases->find(absURI);
                   if (where!=mTextureAliases->end()) {
                       retval+=midval.substr(pwhere,(what[0].first-midval.begin())-pwhere);

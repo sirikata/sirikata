@@ -37,6 +37,7 @@
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <sirikata/ogre/Lights.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 
 #undef nil
 
@@ -616,7 +617,10 @@ public:
                   break;
                 }
             } else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) { // or textured
-                Transfer::URI mat_uri(mURI.context(), tex.uri);
+                // FIXME other URI schemes besides URL
+                Transfer::URL url(mURI);
+                assert(!url.empty());
+                Transfer::URI mat_uri( URL(url.context(), tex.uri).toString() );
                 Entity::TextureBindingsMap::iterator where = mTextureFingerprints->find(mat_uri.toString());
                 if (where!=mTextureFingerprints->end()) {
                     String ogreTextureName = where->second;

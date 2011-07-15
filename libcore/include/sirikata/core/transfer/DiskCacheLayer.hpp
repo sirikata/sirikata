@@ -41,6 +41,7 @@
 #include <sirikata/core/transfer/CacheMap.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
+#include <sirikata/core/transfer/RemoteFileId.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -147,7 +148,7 @@ public:
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
 		std::tr1::shared_ptr<DiskRequest> req (
-				new DiskRequest(DiskRequest::OPWRITE, RemoteFileId(fileId, URI(URIContext(),"")), *data));
+                    new DiskRequest(DiskRequest::OPWRITE, RemoteFileId(fileId, URI()), *data));
 		req->data = data;
 
 		mRequestQueue.push(req);
@@ -160,7 +161,7 @@ protected:
 			// don't want to erase the disk cache when exiting the program.
 			std::string fileName = fileId.convertToHexString();
 			std::tr1::shared_ptr<DiskRequest> req
-				(new DiskRequest(DiskRequest::OPDELETE, RemoteFileId(fileId, URI(URIContext(),"")), Range(true)));
+                            (new DiskRequest(DiskRequest::OPDELETE, RemoteFileId(fileId, URI()), Range(true)));
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
@@ -185,7 +186,7 @@ public:
 
 	virtual ~DiskCacheLayer() {
 		std::tr1::shared_ptr<DiskRequest> req
-			(new DiskRequest(DiskRequest::OPEXIT, RemoteFileId(Fingerprint(), URI(URIContext(),"")), Range(true)));
+			(new DiskRequest(DiskRequest::OPEXIT, RemoteFileId(Fingerprint(), URI()), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
 		mRequestQueue.push(req);
 		destroyCV.wait(sleep_cv); // we know the thread has terminated.

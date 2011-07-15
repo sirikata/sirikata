@@ -32,7 +32,7 @@
 
 #include <sirikata/core/util/Platform.hpp>
 #include <sirikata/core/transfer/HttpManager.hpp>
-#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 #include <sirikata/core/network/Address.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpManager);
@@ -382,7 +382,7 @@ void HttpManager::handle_read(std::tr1::shared_ptr<TCPSocket> socket, std::tr1::
             SILOG(transfer, detailed, "Got a 301 redirect reply and location = " << findLocation->second);
             std::ostringstream request_stream;
             std::string request_method = (req->method == HEAD) ? "HEAD" : "GET";
-            URI newURI(findLocation->second.c_str());
+            URL newURI(findLocation->second.c_str());
             request_stream << request_method << " " << newURI.fullpath() << " HTTP/1.1\r\n";
             std::map<std::string, std::string>::const_iterator it;
             for (it = req->mHeaders.begin(); it != req->mHeaders.end(); it++) {

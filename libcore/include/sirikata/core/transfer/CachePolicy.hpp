@@ -34,7 +34,7 @@
 #ifndef SIRIKATA_CachePolicy_HPP__
 #define SIRIKATA_CachePolicy_HPP__
 
-#include "URI.hpp"
+#include <sirikata/core/transfer/Defs.hpp>
 
 namespace Sirikata {
 namespace Transfer {

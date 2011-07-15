@@ -46,12 +46,15 @@ MeerkatNameHandler::~MeerkatNameHandler() {
 }
 
 void MeerkatNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
+    URL url(request->getURI());
+    assert(!url.empty());
+
     std::string dns_uri_prefix = CDN_DNS_URI_PREFIX;
     std::string host_name = CDN_HOST_NAME;
     Network::Address cdn_addr = mCdnAddr;
-    if (request->getURI().host() != "") {
-        host_name = request->getURI().context().hostname();
-        std::string service = request->getURI().context().service();
+    if (url.host() != "") {
+        host_name = url.context().hostname();
+        std::string service = url.context().service();
         if (service == "") {
             service = CDN_SERVICE;
         }
@@ -61,7 +64,7 @@ void MeerkatNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, 
     }
 
     std::ostringstream request_stream;
-    request_stream << "HEAD " << dns_uri_prefix << request->getURI().fullpath() << " HTTP/1.1\r\n";
+    request_stream << "HEAD " << dns_uri_prefix << url.fullpath() << " HTTP/1.1\r\n";
     request_stream << "Host: " << host_name << "\r\n";
     request_stream << "Accept: * /*\r\n\r\n";
 
@@ -210,7 +213,7 @@ void MeerkatChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
 
     //Check to see if it's in the cache first
-    RemoteFileId tempId(file->getFingerprint(), URIContext());
+    RemoteFileId tempId(file->getFingerprint(), URI());
     SharedChunkCache::getSingleton().getCache()->getData(tempId, chunk->getRange(), std::tr1::bind(
             &MeerkatChunkHandler::cache_check_callback, this, _1, file, chunk, callback));
 }
@@ -221,13 +224,15 @@ void MeerkatChunkHandler::cache_check_callback(const SparseData* data, std::tr1:
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
+        URL url(file->getURI());
+        assert(!url.empty());
 
         std::string download_uri_prefix = CDN_DOWNLOAD_URI_PREFIX;
         std::string host_name = CDN_HOST_NAME;
         Network::Address cdn_addr = mCdnAddr;
-        if (file->getURI().host() != "") {
-            host_name = file->getURI().context().hostname();
-            std::string service = file->getURI().context().service();
+        if (url.host() != "") {
+            host_name = url.context().hostname();
+            std::string service = url.context().service();
             if (service == "") {
                 service = CDN_SERVICE;
             }

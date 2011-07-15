@@ -35,6 +35,7 @@
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/mesh/Meshdata.hpp>
 #include <sirikata/mesh/Billboard.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 
 using namespace std::tr1::placeholders;
 using namespace Sirikata::Transfer;
@@ -60,7 +61,20 @@ AssetDownloadTask::~AssetDownloadTask() {
 }
 
 Transfer::URI AssetDownloadTask::getURL(const Transfer::URI& orig, const String& given_url) {
-    return Transfer::URI(orig.context(), given_url);
+    // We need to handle relative and absolute URIs:
+
+    // If we can decode a URL, then we may need to handle relative URLs.
+    Transfer::URL orig_url(orig);
+    if (!orig_url.empty()) {
+        // The URL constructor will figure out absolute/relative, or just fail
+        // if it can't construct a valid URL.
+        Transfer::URL deriv_url(orig_url.context(), given_url);
+        if (!deriv_url.empty()) return Transfer::URI(deriv_url.toString());
+    }
+
+    // Otherwise, try to decode as a plain URI, ignoring the original URI. This
+    // will either succeed with a full URI or fail and return an empty URI
+    return Transfer::URI(given_url);
 }
 
 void AssetDownloadTask::cancel() {

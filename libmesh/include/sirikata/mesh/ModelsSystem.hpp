@@ -33,6 +33,7 @@
 #ifndef _SIRIKATA_MODELS_SYSTEM_
 #define _SIRIKATA_MODELS_SYSTEM_
 
+#include <sirikata/core/transfer/Defs.hpp>
 #include <sirikata/core/transfer/URI.hpp>
 #include <sirikata/core/transfer/TransferData.hpp>
 

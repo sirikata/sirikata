@@ -897,10 +897,6 @@ public:
 };
 
 class TransferTest : public CxxTest::TestSuite {
-
-	//for ease of use
-	typedef Transfer::URIContext URIContext;
-
 	//Mediates transfers between subsystems (graphics, physics, etc)
 	Transfer::TransferMediator* mTransferMediator;
 

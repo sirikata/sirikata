@@ -45,19 +45,22 @@ HttpNameHandler::~HttpNameHandler() {
 }
 
 void HttpNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
+    URL url(request->getURI());
+    assert(!url.empty());
+
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
-    if (request->getURI().host() == "") {
+    if (url.host() == "") {
         HttpManager::getSingleton().postCallback(std::tr1::bind(callback,bad));
         return;
     }
 
-    std::string host_name = request->getURI().hostname();
-    std::string service = request->getURI().context().service();
+    std::string host_name = url.hostname();
+    std::string service = url.context().service();
     if (service.empty()) service = "http";
     Network::Address cdn_addr(host_name, service);
 
     std::ostringstream request_stream;
-    request_stream << "GET " << request->getURI().fullpath() << " HTTP/1.1\r\n";
+    request_stream << "GET " << url.fullpath() << " HTTP/1.1\r\n";
     request_stream << "Host: " << host_name << "\r\n";
     request_stream << "Accept: */*\r\n";
     request_stream << "Accept-Encoding: deflate, gzip\r\n";
@@ -166,7 +169,7 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
 
     //Check to see if it's in the cache first
-    RemoteFileId tempId(file->getFingerprint(), URIContext());
+    RemoteFileId tempId(file->getFingerprint(), URI());
     SharedChunkCache::getSingleton().getCache()->getData(tempId, chunk->getRange(), std::tr1::bind(
             &HttpChunkHandler::cache_check_callback, this, _1, file, chunk, callback));
 }
@@ -177,13 +180,16 @@ void HttpChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
-        std::string host_name = file->getURI().hostname();
-        std::string service = file->getURI().context().service();
+        URL url(file->getURI());
+        assert(!url.empty());
+
+        std::string host_name = url.hostname();
+        std::string service = url.context().service();
         if (service.empty()) service = "http";
         Network::Address cdn_addr(host_name, service);
 
         std::ostringstream request_stream;
-        request_stream << "GET " << file->getURI().fullpath() << " HTTP/1.1\r\n";
+        request_stream << "GET " << url.fullpath() << " HTTP/1.1\r\n";
         request_stream << "Host: " << host_name << "\r\n";
         request_stream << "Accept: */*\r\n";
         request_stream << "Accept-Encoding: deflate, gzip\r\n";

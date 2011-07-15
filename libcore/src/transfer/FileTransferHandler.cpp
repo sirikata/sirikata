@@ -29,8 +29,9 @@ FileNameHandler::~FileNameHandler() {
 }
 
 void FileNameHandler::resolve(std::tr1::shared_ptr<MetadataRequest> request, NameCallback callback) {
-
-    Filesystem::Path fileRequested(request->getURI().fullpath());
+    URL url(request->getURI());
+    assert(!url.empty());
+    Filesystem::Path fileRequested(url.fullpath());
 
     std::tr1::shared_ptr<DiskManager::DiskRequest> read_req(
         new DiskManager::ReadRequest(fileRequested,
@@ -43,7 +44,7 @@ void FileNameHandler::onReadFinished(std::tr1::shared_ptr<DenseData> fileContent
 
     std::tr1::shared_ptr<RemoteFileMetadata> bad;
     if (!fileContents) {
-        SILOG(transfer, error, "FileNameHandler couldn't find file '" << request->getURI().fullpath() << "'");
+        SILOG(transfer, error, "FileNameHandler couldn't find file '" << request->getURI() << "'");
         callback(bad);
         return;
     }
@@ -101,7 +102,7 @@ void FileChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
 
     //Check to see if it's in the cache first
-    RemoteFileId tempId(file->getFingerprint(), URIContext());
+    RemoteFileId tempId(file->getFingerprint(), URI());
     SharedChunkCache::getSingleton().getCache()->getData(tempId, chunk->getRange(), std::tr1::bind(
             &FileChunkHandler::cache_check_callback, this, _1, file, chunk, callback));
 }
@@ -112,7 +113,9 @@ void FileChunkHandler::cache_check_callback(const SparseData* data, std::tr1::sh
         std::tr1::shared_ptr<const DenseData> flattened = data->flatten();
         callback(flattened);
     } else {
-        Filesystem::Path fileRequested(file->getURI().fullpath());
+        URL url(file->getURI());
+        assert(!url.empty());
+        Filesystem::Path fileRequested(url.fullpath());
 
         std::tr1::shared_ptr<DiskManager::DiskRequest> read_req(
             new DiskManager::ReadRequest(fileRequested,
@@ -126,7 +129,7 @@ void FileChunkHandler::onReadFinished(std::tr1::shared_ptr<DenseData> fileConten
 
     std::tr1::shared_ptr<DenseData> bad;
     if (!fileContents) {
-        SILOG(transfer, error, "FileChunkHandler couldn't find file '" << file->getURI().fullpath() << "'");
+        SILOG(transfer, error, "FileChunkHandler couldn't find file '" << file->getURI() << "'");
         callback(bad);
         return;
     }
