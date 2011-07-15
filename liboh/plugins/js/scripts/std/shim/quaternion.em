@@ -314,11 +314,12 @@ util.Quaternion.fromLookAt = function(direction, up) {
             secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
                                              1 + yAxis.dot(newUp));
         } else {
-            secondQuat = new util.Quaternion(1, 0, 0, 0);
+            secondQuat = new util.Quaternion(direction, Math.PI);
         }
     } else {
         secondQuat = new util.Quaternion(0, 0, 0, 1);
     }
+    secondQuat = secondQuat.normal();
 
     return secondQuat.mul(firstQuat);
 }
