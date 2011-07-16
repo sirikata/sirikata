@@ -1048,6 +1048,7 @@ SET(SIRIKATA_CORE_SOURCES
 	${LIBCORE_SOURCE_DIR}/transfer/MeerkatTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/FileTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpTransferHandler.cpp
+	${LIBCORE_SOURCE_DIR}/transfer/DataTransferHandler.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/TransferPool.cpp
 	${LIBCORE_SOURCE_DIR}/transfer/HttpManager.cpp
         ${LIBCORE_SOURCE_DIR}/transfer/ResourceDownloadTask.cpp
