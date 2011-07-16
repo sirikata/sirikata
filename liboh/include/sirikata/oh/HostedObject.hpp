@@ -362,9 +362,18 @@ public:
     bool handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& paylod);
     bool handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload);
 
+    /**
+       Any time that we get a prox removal call, we first save the existing
+       proxy object's data to the orphan manager.  If we get a prox addition
+       call on the same object before the proxy object's data is removed, 
+       the orphan manager will return these data to us to process.  (by process,
+       I mean update the pos, bounds, orient, etc. for the proxy object).  
+     */
+    void processOrphanedProxyData(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj,OrphanLocUpdateManager::OrphanedProxData* opd);
+    
     // Helper for creating the correct type of proxy
 
-    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle);
+    ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle,uint64 seqNo);
     ProxyObjectPtr createDummyProxy();
 
     // Helper for constructing and sending location update

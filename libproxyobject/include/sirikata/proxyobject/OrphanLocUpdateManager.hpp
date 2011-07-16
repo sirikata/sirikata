@@ -36,6 +36,14 @@
 #include <sirikata/proxyobject/Platform.hpp>
 #include <sirikata/core/service/PollingService.hpp>
 #include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/proxyobject/Defs.hpp>
+#include <sirikata/core/util/Platform.hpp>
+#include <sirikata/core/util/MotionVector.hpp>
+#include <sirikata/core/util/MotionQuaternion.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/core/util/BoundingSphere.hpp>
+
+
 
 namespace Sirikata {
 
@@ -55,8 +63,7 @@ class LocationUpdate;
 class SIRIKATA_PROXYOBJECT_EXPORT OrphanLocUpdateManager : public PollingService {
 public:
     typedef Sirikata::Protocol::Loc::LocationUpdate LocUpdate;
-    typedef std::vector<LocUpdate> UpdateList;
-
+    
     OrphanLocUpdateManager(Context* ctx, Network::IOStrand* strand, const Duration& timeout);
     ~OrphanLocUpdateManager();
 
@@ -64,18 +71,69 @@ public:
      *  out.
      */
     void addOrphanUpdate(const SpaceObjectReference& obj, const LocUpdate& update);
+    /**
+       Take all fields in proxyPtr, and create an OrphanedProxData struct from
+       them.  
+     */
+    void addUpdateFromExisting(const SpaceObjectReference&obj, ProxyObjectPtr proxyPtr);
 
+    struct UpdateInfo;
+    typedef std::vector<UpdateInfo> UpdateInfoList;
+
+    
     /** Gets all orphan updates for a given object. */
-    UpdateList getOrphanUpdates(const SpaceObjectReference& obj);
+    UpdateInfoList getOrphanUpdates(const SpaceObjectReference& obj);
 
-private:
-    virtual void poll();
+
+
+    //When we get a prox removal, we take all the data that was stored in the
+    //corresponding proxy object and put it into an OrphanedProxData
+    struct OrphanedProxData
+    {
+        OrphanedProxData(const TimedMotionVector3f& tmv, uint64 tmv_seq_no, const TimedMotionQuaternion& tmq, uint64 tmq_seq_no, const Transfer::URI& uri_mesh, uint64 mesh_seq_no, const BoundingSphere3f& bounding_sphere, uint64 bnds_seq_no, const String& phys, uint64 phys_seq_no)
+         : timedMotionVector(tmv),
+           tmvSeqNo(tmv_seq_no),
+           timedMotionQuat(tmq),
+           tmqSeqNo(tmq_seq_no),
+           mesh(uri_mesh),
+           meshSeqNo(mesh_seq_no),
+           bounds(bounding_sphere),
+           bndsSeqNo(bnds_seq_no),
+           physics(phys),
+           physSeqNo(phys_seq_no)
+        {}
+
+        ~OrphanedProxData()
+        {}
+        
+        
+        TimedMotionVector3f timedMotionVector;
+        uint64 tmvSeqNo;
+
+        TimedMotionQuaternion timedMotionQuat;
+        uint64 tmqSeqNo;
+
+        Transfer::URI mesh;
+        uint64 meshSeqNo;
+
+        BoundingSphere3f bounds;
+        uint64 bndsSeqNo;
+        
+        String physics;
+        uint64 physSeqNo;
+    };
 
     struct UpdateInfo {
+        //Either value or opd will be non-null.  Never both.
         LocUpdate* value;
+        OrphanedProxData* opd;
         Time expiresAt;
     };
-    typedef std::vector<UpdateInfo> UpdateInfoList;
+
+    
+private:
+    virtual void poll();
+    
 
     typedef std::tr1::unordered_map<SpaceObjectReference, UpdateInfoList, SpaceObjectReference::Hasher> ObjectUpdateMap;
 

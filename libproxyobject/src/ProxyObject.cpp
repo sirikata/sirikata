@@ -135,23 +135,24 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
     }
 }
 
+uint64 ProxyObject::getUpdateSeqNo(LOC_PARTS whichPart)
+{
+    if (whichPart >= LOC_NUM_PART)
+    {
+        SILOG(proxy,error,"Error in getUpdateSeqNo of proxy.  Requesting an update sequence number for a field that does not exist.  Returning 0");
+        return 0;
+    }
+    return mUpdateSeqno[whichPart];
+}
+
 void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool predictive)
 {
-    std::cout<<"\nDEBUG: In set bounds with radius: "<<bnds.radius()<<" and seqno: "<<seqno<<"  expecting " << mUpdateSeqno[LOC_BOUNDS_PART]<<"\n";
-    
     if (seqno < mUpdateSeqno[LOC_BOUNDS_PART] && !predictive)
-    {
-        std::cout<<"\nDEBUG: Lesser seqno.  Update looking for "<<mUpdateSeqno[LOC_BOUNDS_PART]<<"\n";
         return;
-    }
     
     if (!predictive)
-    {
-        std::cout<<"\nDEBUG: updating expected seqno.\n";
         mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
-    }
 
-    std::cout<<"\nDEBUG: Actually updating bounds\n";
     
     mBounds = bnds;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);

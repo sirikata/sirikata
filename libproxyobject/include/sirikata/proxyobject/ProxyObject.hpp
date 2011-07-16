@@ -111,10 +111,6 @@ public:
     };
     typedef TimedWeightedExtrapolator<Location,UpdateNeeded> Extrapolator;
 
-private:
-    const SpaceObjectReference mID;
-    ProxyManager *const mManager;
-
     enum LOC_PARTS {
         LOC_POS_PART = 0,
         LOC_ORIENT_PART = 1,
@@ -123,6 +119,14 @@ private:
         LOC_PHYSICS_PART = 4,
         LOC_NUM_PART = 5
     };
+
+
+    uint64 getUpdateSeqNo(LOC_PARTS);
+    
+private:
+    const SpaceObjectReference mID;
+    ProxyManager *const mManager;
+
 
     uint64 mUpdateSeqno[LOC_NUM_PART];
 

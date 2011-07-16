@@ -436,8 +436,9 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     // Convert back to local time
     TimedMotionVector3f local_loc(localTime(space, info.loc.updateTime()), info.loc.value());
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
-    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle);
+    ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle,0);
 
+    
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
@@ -564,7 +565,19 @@ void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spac
     //s->registerReadCallback(0);
 }
 
+
+//not responsible for deleting opd.  gets deleted elsewhere.
+void HostedObject::processOrphanedProxyData(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj,OrphanLocUpdateManager::OrphanedProxData* opd)
+{
+    proxy_obj->setLocation(opd->timedMotionVector, opd->tmvSeqNo);
+    proxy_obj->setOrientation(opd->timedMotionQuat, opd->tmqSeqNo);
+    proxy_obj->setBounds(opd->bounds, opd->bndsSeqNo);
+    proxy_obj->setMesh(opd->mesh, opd->meshSeqNo);
+    proxy_obj->setPhysics(opd->physics,opd->physSeqNo);
+}
+
 void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,ProxyObjectPtr proxy_obj, const Sirikata::Protocol::Loc::LocationUpdate& update) {
+
     uint64 seqno = (update.has_seqno() ? update.seqno() : 0);
 
     TimedMotionVector3f loc;
@@ -616,7 +629,6 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         phyptr = &phy;
     }
 
-    std::cout<<"\nDEBUG: Calling processLocationUpdate from other processLocationupdate for object: "<<proxy_obj->getObjectReference()<<"  visible to: "<<sporef<<"\n";
     processLocationUpdate(sporef.space(), proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr, phyptr);
 }
 
@@ -629,10 +641,7 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
         proxy_obj->setOrientation(*orient, seqno);
 
     if (bounds)
-    {
-        std::cout<<"\nCalling setbounds for "<<proxy_obj->getObjectReference()<<" in processLocationUpdate\n";
         proxy_obj->setBounds(*bounds, seqno);
-    }
 
     if (mesh)
         proxy_obj->setMesh(Transfer::URI(*mesh), seqno);
@@ -665,12 +674,10 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
         if (!proxy_obj) {
-            std::cout<<"\nDEBUG: Received an orphaned location update for "<< observed << " visible to "<<spaceobj<<"\n";
             mOrphanLocUpdates.addOrphanUpdate(observed, update);
             continue;
         }
 
-        std::cout<<"\nDEBUG: Received a non-orphaned location update for "<< observed << " visible to "<<spaceobj<<"\n"; 
         processLocationUpdate(spaceobj, proxy_obj, update);
     }
 
@@ -682,11 +689,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success)
-    {
-        std::cout<<"\n\nParse of proximity message unsuccessful\n";
         return false;
-    }
-
 
     SpaceID space = spaceobj.space();
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
@@ -712,12 +715,13 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             String mesh = (addition.has_mesh() ? addition.mesh() : "");
             String phy = (addition.has_physics() ? addition.physics() : "");
 
+            uint64 proxyAddSeqNo = addition.seqno();
+            
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
             {
                 return true;
             }
-
 
             ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(proximateID);
             if (!proxy_obj) {
@@ -725,7 +729,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 if (addition.has_mesh()) meshuri = Transfer::URI(addition.mesh());
 
                 // FIXME use weak_ptr instead of raw
-                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max);
+                proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max,proxyAddSeqNo);
             }
             else {
                 // Reset so that updates from this new "session" for this proxy
@@ -736,19 +740,29 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // shouldn't get overwritten.
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
                 String* phy_ptr = (addition.has_physics() ? &phy : NULL);
-
-                std::cout<<"\nDEBUG: Calling processLocationUpdate from proxy_obj for object: "<<proxy_obj->getObjectReference()<<"  visible to: "<<spaceobj<<"\n";
-                processLocationUpdate(space, proxy_obj, 0, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
+                processLocationUpdate(space, proxy_obj, proxyAddSeqNo, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
             }
+            
             // Always mark the object as valid (either revalidated, or just
             // valid for the first time)
             if (proxy_obj) proxy_obj->validate();
 
 
             // Notify of any out of order loc updates
-            OrphanLocUpdateManager::UpdateList orphan_loc_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);
-            for(OrphanLocUpdateManager::UpdateList::iterator orphan_it = orphan_loc_updates.begin(); orphan_it != orphan_loc_updates.end(); orphan_it++)
-                processLocationUpdate(spaceobj,proxy_obj, *orphan_it);
+            OrphanLocUpdateManager::UpdateInfoList orphan_updates = mOrphanLocUpdates.getOrphanUpdates(proximateID);
+            for(OrphanLocUpdateManager::UpdateInfoList::iterator orphan_it = orphan_updates.begin(); orphan_it != orphan_updates.end(); orphan_it++)
+            {
+                if (orphan_it->value != NULL)
+                {
+                    processLocationUpdate(spaceobj,proxy_obj, *(orphan_it->value));
+                    delete orphan_it->value;
+                }
+                else
+                {
+                    processOrphanedProxyData(spaceobj,proxy_obj,orphan_it->opd);
+                    delete orphan_it->opd;
+                }
+            }
 
             //tells the object script that something that was close has come
             //into view
@@ -771,9 +785,14 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             }
             else {
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);
+                
                 if (proxy_obj) {
-
-                    std::cout<<"\nDEBUG: Got a request to remove proxy object: "<< proxy_obj->getObjectReference()<<" visible to: "<<spaceobj<<"\n";
+                    //hold on to the removed proxy object's internal data for a
+                    //little extra time in case get a re-addition proxy message, and
+                    //the loc messages that had already been processed for proxy_obj
+                    //arrived before the removal.
+                    mOrphanLocUpdates.addUpdateFromExisting(removed_obj_ref, proxy_obj);
+                    
                     proxy_manager->destroyObject(proxy_obj);
 
                     if (mObjectScript)
@@ -799,7 +818,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 }
 
 
-ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle)
+ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmq, const BoundingSphere3f& bs, const String& phy,const SolidAngle& queryAngle,uint64 seqNo)
 {
     ProxyManagerPtr proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
 
@@ -817,7 +836,6 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
     // (for onCreateProxy) will be completely setup, making it valid for use:
     proxy_obj->setLocation(tmv, 0);
     proxy_obj->setOrientation(tmq, 0);
-    std::cout<<"\nDEBUG: Calling setbounds directly for object: "<<objref<<" visible to: "<<owner_objref<<"\n";
     proxy_obj->setBounds(bs, 0);
     if(meshuri)
         proxy_obj->setMesh(meshuri, 0);
@@ -828,13 +846,13 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
     // Then we repeat it all for the sake of listeners who only pay attention to
     // updates from, e.g., PositionListener or MeshListener.
-    proxy_obj->setLocation(tmv, 0);
-    proxy_obj->setOrientation(tmq, 0);
-    proxy_obj->setBounds(bs, 0);
+    proxy_obj->setLocation(tmv, seqNo);
+    proxy_obj->setOrientation(tmq, seqNo);
+    proxy_obj->setBounds(bs, seqNo);
     if(meshuri)
-        proxy_obj->setMesh(meshuri, 0);
+        proxy_obj->setMesh(meshuri, seqNo);
     if(phy.size() > 0)
-        proxy_obj->setPhysics(phy, 0);
+        proxy_obj->setPhysics(phy, seqNo);
 
     return proxy_obj;
 }
