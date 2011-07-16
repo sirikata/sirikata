@@ -294,7 +294,7 @@ void Proximity::sendQueryRequests() {
         msg_loc.set_position(loc.velocity());
         msg.set_bounds(bounds);
         msg.set_min_angle(mMinObjectQueryAngle.asFloat());
-
+        
         Message* smsg = new Message(
             mContext->id(),
             SERVER_PORT_PROX,
@@ -703,6 +703,7 @@ void Proximity::proxSubstreamCallback(int x, ProxStreamPtr parent_stream, ProxSt
     writeSomeObjectResults(prox_stream_info);
 }
 
+
 void Proximity::writeSomeObjectResults(ProxStreamInfoWPtr w_prox_stream) {
     static Duration retry_rate = Duration::milliseconds((int64)1);
 
@@ -763,7 +764,7 @@ void Proximity::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg)
     // FIXME this is an infinite sized queue, but we don't really want to drop
     // proximity results....
     prox_stream->outstanding.push(Network::Frame::write(msg->payload()));
-
+    
     // If writing isn't already in progress, start it up
     if (!prox_stream->writing)
         writeSomeObjectResults(prox_stream);
@@ -791,6 +792,7 @@ void Proximity::poll() {
     mObjectResults.swap(object_results_copy);
     mObjectResultsToSend.insert(mObjectResultsToSend.end(), object_results_copy.begin(), object_results_copy.end());
 
+
     bool object_sent = true;
     while(object_sent && !mObjectResultsToSend.empty()) {
         Sirikata::Protocol::Object::ObjectMessage* msg_front = mObjectResultsToSend.front();
@@ -800,17 +802,36 @@ void Proximity::poll() {
     }
 }
 
+
+
 void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
     // We check the cache when we get the request, but also check it here since
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
-    mLocService->subscribe(subscriber, observed);
+
+    ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(subscriber);
+    SeqNoPtr seqPtr = infoPtr->getSeqNoPtr(observed);
+    mLocService->subscribe(subscriber, observed, seqPtr);
 }
+
 void Proximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+
+    ObjectProxStreamMap::iterator proxStreamIter  = mObjectProxStreams.find(subscriber);
+    if (proxStreamIter != mObjectProxStreams.end())
+        proxStreamIter->second->removeSeqNoPtr(observed);
+    else
+        PROXLOG(detailed, "Warning: trying to remove an object's subscription for a substream info that doesn't exist.");
+    
     mLocService->unsubscribe(subscriber, observed);
 }
 void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
+    ObjectProxStreamMap::iterator proxStreamIter  = mObjectProxStreams.find(subscriber);
+    if (proxStreamIter != mObjectProxStreams.end())
+        proxStreamIter->second->removeAllObjSeqNoPtrs();
+    else
+        PROXLOG(detailed, "Warning: trying to remove all subscriptions for a substream info that doesn't exist.");
+
     mLocService->unsubscribe(subscriber);
 }
 
@@ -819,7 +840,8 @@ void Proximity::handleAddServerLocSubscription(const ServerID& subscriber, const
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
-    mLocService->subscribe(subscriber, observed);
+
+    mLocService->subscribe(subscriber, observed, SeqNoPtr(new Sirikata::AtomicValue<uint64>(0)));
 }
 void Proximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
@@ -1033,6 +1055,14 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                     addition.set_object( objid );
 
+
+                    //query_id contains the uuid of the object that is receiving
+                    //the proximity message that obj_id has been added.
+                    ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(query_id);
+                    uint64 seqNo = infoPtr->getSeqNo(objid);
+                    addition.set_seqno (seqNo);
+                    
+                    
                     Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
                     TimedMotionVector3f loc = mLocCache->location(objid);
                     motion.set_t(loc.updateTime());
@@ -1063,8 +1093,11 @@ void Proximity::generateObjectQueryEvents(Query* query) {
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object( objid );
-            }
 
+                ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(query_id);
+                uint64 seqNo = infoPtr->getSeqNo(objid);
+                removal.set_seqno (seqNo);
+            }
             evts.pop_front();
         }
 
@@ -1074,9 +1107,22 @@ void Proximity::generateObjectQueryEvents(Query* query) {
             query_id, OBJECT_PORT_PROXIMITY,
             serializePBJMessage(prox_results)
         );
-
         mObjectResults.push(obj_msg);
     }
+}
+
+
+Proximity::ProxStreamInfoPtr Proximity::getOrCreateAndGetProxStreamIterFromObjsStreams(const UUID& obj_id)
+{
+    //query_id contains the uuid of the object that is receiving
+    //the proximity message that obj_id has been added.
+    ObjectProxStreamMap::iterator proxStreamIter  = mObjectProxStreams.find(obj_id);
+    if (proxStreamIter == mObjectProxStreams.end())
+    {
+        //create a new prox stream just for this subscriber
+        proxStreamIter = mObjectProxStreams.insert( ObjectProxStreamMap::value_type(obj_id, ProxStreamInfoPtr(new ProxStreamInfo())) ).first;
+    }
+    return proxStreamIter->second;
 }
 
 

@@ -681,7 +681,11 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 {
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
-    if (!parse_success) return false;
+    if (!parse_success)
+    {
+        std::cout<<"\n\nParse of proximity message unsuccessful\n";
+        return false;
+    }
 
 
     SpaceID space = spaceobj.space();
@@ -754,7 +758,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
         for(int32 ridx = 0; ridx < update.removal_size(); ridx++) {
             Sirikata::Protocol::Prox::ObjectRemoval removal = update.removal(ridx);
-
 
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
 

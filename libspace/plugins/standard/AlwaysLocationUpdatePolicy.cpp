@@ -56,8 +56,9 @@ AlwaysLocationUpdatePolicy::AlwaysLocationUpdatePolicy(const String& args)
 AlwaysLocationUpdatePolicy::~AlwaysLocationUpdatePolicy() {
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, LocationService* locservice) {
-    mServerSubscriptions.subscribe(remote, uuid, locservice);
+void AlwaysLocationUpdatePolicy::subscribe(ServerID remote, const UUID& uuid, LocationService* locservice,std::tr1::shared_ptr< Sirikata::AtomicValue<uint64> >seqnoPtr)
+{
+    mServerSubscriptions.subscribe(remote, uuid, locservice,seqnoPtr);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote, const UUID& uuid) {
@@ -68,8 +69,8 @@ void AlwaysLocationUpdatePolicy::unsubscribe(ServerID remote) {
     mServerSubscriptions.unsubscribe(remote);
 }
 
-void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice) {
-    mObjectSubscriptions.subscribe(remote, uuid, locservice);
+void AlwaysLocationUpdatePolicy::subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, std::tr1::shared_ptr < Sirikata::AtomicValue<uint64> > seqno) {
+    mObjectSubscriptions.subscribe(remote, uuid, locservice,seqno);
 }
 
 void AlwaysLocationUpdatePolicy::unsubscribe(const UUID& remote, const UUID& uuid) {
