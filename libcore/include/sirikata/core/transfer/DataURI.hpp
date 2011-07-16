@@ -26,11 +26,6 @@ private:
     String mData;
 
     void parse(const String& uri);
-
-    static String encodeBase64(const String& orig);
-    static String encodeBase64URL(const String& orig);
-    static String decodeBase64(const String& orig);
-    static String decodeBase64URL(const String& orig);
 public:
     explicit DataURI() {
     }

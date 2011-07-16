@@ -1084,6 +1084,7 @@ SET(SIRIKATA_CORE_SOURCES
         ${LIBCORE_SOURCE_DIR}/service/Poller.cpp
         ${LIBCORE_SOURCE_DIR}/service/PollingService.cpp
         ${LIBCORE_SOURCE_DIR}/service/TimeProfiler.cpp
+	${LIBCORE_SOURCE_DIR}/util/Base64.cpp
 	${LIBCORE_SOURCE_DIR}/util/DynamicLibrary.cpp
 	${LIBCORE_SOURCE_DIR}/util/SpaceID.cpp
 	${LIBCORE_SOURCE_DIR}/util/ObjectReference.cpp
