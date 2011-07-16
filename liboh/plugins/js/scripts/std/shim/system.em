@@ -368,6 +368,14 @@ function PresenceEntry(sporef, presObj)
           }
       };
 
+      /** @function
+      @description Prints the argument, followed by a newline
+      @see system.prettyPrint
+      */
+      system.println = function(/** Object */ obj) {
+          system.print.apply(this, Array.prototype.slice.call(arguments, "\n"));
+      };
+      
       system.__debugPrint = function()
       {
           baseSystem.print.apply(baseSystem,arguments);
