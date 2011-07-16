@@ -30,6 +30,11 @@ v8::Handle<v8::Value> ScriptEqual(const v8::Arguments& args);
 
 v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args);
 
+v8::Handle<v8::Value> Base64Encode(const v8::Arguments& args);
+v8::Handle<v8::Value> Base64EncodeURL(const v8::Arguments& args);
+v8::Handle<v8::Value> Base64Decode(const v8::Arguments& args);
+v8::Handle<v8::Value> Base64DecodeURL(const v8::Arguments& args);
+
 
 } //jsutilobj
 } //js

@@ -1,7 +1,7 @@
 
 (function()
 {
-    
+
     var internalUtilPlus = std.core.bind(util.plus,util);
     var internalUtilSub  = std.core.bind(util.sub,util);
     var internalUtilRand = std.core.bind(util.rand,util);
@@ -21,12 +21,20 @@
     var internalUtilMod = std.core.bind(util.mod,util);
 
     var internalUtilEqual = std.core.bind(util.equal,util);
-    
+
     var internalUtilPattern = util.Pattern;
     var internalUtilVec3 = util.Vec3;
     var internalUtilQuaternion = util.Quaternion;
-    
-    
+
+    var internalBase64Encode = util._base64Encode;
+    var internalBase64EncodeURL = util._base64EncodeURL;
+    var internalBase64Decode = util._base64Decode;
+    var internalBase64DecodeURL = util._base64DecodeURL;
+    delete util._base64Encode;
+    delete util._base64EncodeURL;
+    delete util._base64Decode;
+    delete util._base64DecodeURL;
+
     /**
      Overloads the '+' operator.
 
@@ -313,6 +321,62 @@
           return internalUtilVec3.apply(this,arguments);
       };
     
-    
-})();
+    /** @namespace Utilities for converting between binary
+     *  arrays/strings and base64 encoded strings.
+     */
+    util.Base64 = {};
 
+
+    /** Encode binary data as a Base64 string. This does not handle
+     *  URL escaping, i.e. special characters such as '=' may exist in
+     *  the returned string.
+     *  @param {string|array} value a string or array of data to encode
+     *  @returns {string} base 64 encoded data
+     *  @throws {Error} if the parameter is invalid (empty or not a valid type).
+     */
+    util.Base64.encode = function(value) {
+        if (typeof(value) === "string")
+            return internalBase64Encode(value);
+        throw new Error('Invalid type passed to Base64.encode.');
+    };
+    
+    /** Encode binary data as a Base64 string. This version encodes
+     *  for URLs, so special characters like '=' are escaped.
+     *  @param {string} value a string or array of data to encode. It will use utf-8 encoding.
+     *  @returns {string} base 64 encoded data
+     *  @throws {Error} if the parameter is invalid (empty or not a valid type).
+     */
+    util.Base64.encodeURL = function(value) {
+        if (typeof(value) === "string")
+            return internalBase64EncodeURL(value);
+        throw new Error('Invalid type passed to Base64.encodeURL.');
+    };
+
+
+    /** Decode a base 64 string. This assumes standard base 64
+     *  encoding, so no special decoding of escaped characters is
+     *  performed.
+     *  @param {string} value a string or array of data to encode. It will use utf-8 encoding.
+     *  @returns {string}
+     *  @throws {Error} if the parameter is invalid (empty or not a valid type).
+     */
+    util.Base64.decode = function(value) {
+        if (typeof(value) === "string")
+            return internalBase64Decode(value);
+        throw new Error('Invalid type passed to Base64.decode.');
+    };
+
+    /** Decode a base 64 string. This assumes standard base 64
+     *  encoding, so no special decoding of escaped characters is
+     *  performed.
+     *  @param {string} value a string or array of data to encode
+     *  @returns {string} base 64 encoded data
+     *  @throws {Error} if the parameter is invalid (empty or not a valid type).
+     */
+    util.Base64.decodeURL = function(value) {
+        if (typeof(value) === "string")
+            return internalBase64DecodeURL(value);
+        throw new Error('Invalid type passed to Base64.decodeURL.');
+    };
+
+})();

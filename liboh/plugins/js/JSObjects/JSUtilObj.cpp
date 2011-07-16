@@ -13,7 +13,7 @@
 #include <math.h>
 
 #include <sirikata/core/util/Random.hpp>
-
+#include <sirikata/core/util/Base64.hpp>
 
 
 namespace Sirikata{
@@ -32,7 +32,7 @@ namespace JSUtilObj{
 v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if (args.Length() != 2)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: minu requires two arguments.")) );
 
@@ -40,7 +40,7 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
     //check if numbers
     bool isNum1, isNum2;
     double num1,num2;
-    
+
     isNum1 = NumericValidate(args[0]);
     if (isNum1)
     {
@@ -50,7 +50,7 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
 
         num1 = NumericExtract(args[0]);
         num2 = NumericExtract(args[1]);
-        
+
         return v8::Number::New(num1-num2);
     }
 
@@ -59,7 +59,7 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
     if (jsutil == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
 
-    
+
     //check if quaternions
     Quaternion q1,q2;
     if (QuaternionValValidate(args[0]))
@@ -69,12 +69,12 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
 
         q1 = QuaternionValExtract(args[0]);
         q2 = QuaternionValExtract(args[1]);
-        
+
         q1 = q1 - q2;
         return handle_scope.Close(jsutil->struct_createQuaternion(q1));
     }
 
-    
+
     //check if vecs
     Vector3d vec1,vec2;
     if (Vec3ValValidate(args[0]))
@@ -98,7 +98,7 @@ v8::Handle<v8::Value> ScriptMinus(const v8::Arguments& args)
 }
 
 /**
-   
+
  */
 v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args)
 {
@@ -110,7 +110,7 @@ v8::Handle<v8::Value> ScriptSporef(const v8::Arguments& args)
 
     if (args.Length() > 2)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error: spcript sporef requires two or fewer arguments.")));
-    
+
     //use first arg as space
     INLINE_SPACEID_CONV_ERROR(args[0],ScriptSporef,1,space);
 
@@ -154,7 +154,7 @@ v8::Handle<v8::Value> ScriptMult(const v8::Arguments& args)
     INLINE_DOUBLE_CONV_ERROR(args[0],scriptMult,1,lhs);
     INLINE_DOUBLE_CONV_ERROR(args[1],scriptMult,2,rhs);
 
-    return v8::Number::New(lhs*rhs);    
+    return v8::Number::New(lhs*rhs);
 }
 
 v8::Handle<v8::Value> ScriptMod(const v8::Arguments& args)
@@ -165,10 +165,10 @@ v8::Handle<v8::Value> ScriptMod(const v8::Arguments& args)
     INLINE_INTEGER_CONV_ERROR(args[0],scriptMod,1,lhs);
     INLINE_INTEGER_CONV_ERROR(args[1],scriptMod,2,rhs);
 
-    return v8::Number::New(lhs%rhs);        
+    return v8::Number::New(lhs%rhs);
 }
 
-    
+
 
 
 /**
@@ -209,7 +209,7 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
     if (jsutil == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())) );
 
-    
+
     //check if quaternions
     Quaternion q1,q2;
     if (QuaternionValValidate(args[0]))
@@ -219,13 +219,13 @@ v8::Handle<v8::Value> ScriptPlus(const v8::Arguments& args)
 
         q1 = QuaternionValExtract(args[0]);
         q2 = QuaternionValExtract(args[1]);
-        
+
         q1 = q1 + q2;
         return handle_scope.Close(jsutil->struct_createQuaternion(q1));
     }
 
 
-    
+
     //check if vecs
     Vector3d vec1,vec2;
     if (Vec3ValValidate(args[0]))
@@ -422,6 +422,64 @@ v8::Handle<v8::Value> ScriptAbsFunction(const v8::Arguments& args)
     return v8::Number::New( fabs(numToAbs) );
 
 }
+
+
+v8::Handle<v8::Value> Base64Encode(const v8::Arguments& args) {
+    assert(args.Length() == 1);
+
+    v8::HandleScope handle_scope;
+
+    String unencoded;
+    String errmsg;
+    if (!decodeString(args[0], unencoded, errmsg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Got non-string in Base64Encode.")));
+
+    String encoded = Base64::encode(unencoded);
+    return v8::String::New(encoded.c_str(), encoded.size());
+}
+
+v8::Handle<v8::Value> Base64EncodeURL(const v8::Arguments& args) {
+    assert(args.Length() == 1);
+
+    v8::HandleScope handle_scope;
+
+    String unencoded;
+    String errmsg;
+    if (!decodeString(args[0], unencoded, errmsg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Got non-string in Base64EncodeURL.")));
+
+    String encoded = Base64::encodeURL(unencoded);
+    return v8::String::New(encoded.c_str(), encoded.size());
+}
+
+v8::Handle<v8::Value> Base64Decode(const v8::Arguments& args) {
+    assert(args.Length() == 1);
+
+    v8::HandleScope handle_scope;
+
+    String encoded;
+    String errmsg;
+    if (!decodeString(args[0], encoded, errmsg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Got non-string in Base64Decode.")));
+
+    String decoded = Base64::decode(encoded);
+    return v8::String::New(decoded.c_str(), decoded.size());
+}
+
+v8::Handle<v8::Value> Base64DecodeURL(const v8::Arguments& args) {
+    assert(args.Length() == 1);
+
+    v8::HandleScope handle_scope;
+
+    String encoded;
+    String errmsg;
+    if (!decodeString(args[0], encoded, errmsg))
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("Got non-string in Base64Decode.")));
+
+    String decoded = Base64::decodeURL(encoded);
+    return v8::String::New(decoded.c_str(), decoded.size());
+}
+
 
 
 }//JSUtilObj namespace

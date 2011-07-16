@@ -161,6 +161,10 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
 
+    mUtilTemplate->Set(v8::String::New("_base64Encode"), v8::FunctionTemplate::New(JSUtilObj::Base64Encode));
+    mUtilTemplate->Set(v8::String::New("_base64EncodeURL"), v8::FunctionTemplate::New(JSUtilObj::Base64EncodeURL));
+    mUtilTemplate->Set(v8::String::New("_base64Decode"), v8::FunctionTemplate::New(JSUtilObj::Base64Decode));
+    mUtilTemplate->Set(v8::String::New("_base64DecodeURL"), v8::FunctionTemplate::New(JSUtilObj::Base64DecodeURL));
 }
 
 /*
