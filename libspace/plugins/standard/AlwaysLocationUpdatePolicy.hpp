@@ -53,11 +53,11 @@ public:
     AlwaysLocationUpdatePolicy(const String& args);
     virtual ~AlwaysLocationUpdatePolicy();
 
-    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seqno);
+    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqno);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     virtual void unsubscribe(ServerID remote);
-    
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seqno);
+
+    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqno);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     virtual void unsubscribe(const UUID& remote);
 
@@ -104,11 +104,11 @@ private:
         typedef std::set<SubscriberType> SubscriberSet;
 
         struct SubscriberInfo {
-            SubscriberInfo(std::tr1::shared_ptr < Sirikata::AtomicValue<uint64> > seq_number_ptr )
+            SubscriberInfo(SeqNoPtr seq_number_ptr )
              : seqnoPtr(seq_number_ptr)
             {}
 
-            std::tr1::shared_ptr < Sirikata::AtomicValue<uint64> >  seqnoPtr;
+            SeqNoPtr seqnoPtr;
             UUIDSet subscribedTo;
             std::map<UUID, UpdateInfo> outstandingUpdates;
         };
@@ -135,12 +135,12 @@ private:
             mObjectSubscribers.clear();
         }
 
-        void subscribe(const SubscriberType& remote, const UUID& uuid, LocationService* locservice, std::tr1::shared_ptr <Sirikata::AtomicValue<uint64> >seqnoPtr) {
+        void subscribe(const SubscriberType& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqnoPtr) {
             // Add object to server's subscription list
             typename SubscriberMap::iterator sub_it = mSubscriptions.find(remote);
             if (sub_it == mSubscriptions.end()) {
                 mSubscriptions[remote] = new SubscriberInfo(seqnoPtr);
-                
+
                 sub_it = mSubscriptions.find(remote);
             }
             SubscriberInfo* subs = sub_it->second;
@@ -169,7 +169,7 @@ private:
                 SubscriberInfo* subs = sub_it->second;
                 subs->subscribedTo.erase(uuid);
             }
-            
+
             // Remove server from object's list
             typename ObjectSubscribersMap::iterator obj_it = mObjectSubscribers.find(uuid);
             if (obj_it != mObjectSubscribers.end()) {
@@ -235,7 +235,7 @@ private:
             else
                 UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
 
-                
+
             UpdateInfo& ui = sub_info->outstandingUpdates[uuid];
             if (fup)
                 fup(ui);
@@ -303,7 +303,7 @@ private:
                     //write and update sequence number
                     update.set_seqno( (*(sub_info->seqnoPtr)) ++ );
 
-                    
+
                     Sirikata::Protocol::ITimedMotionVector location = update.mutable_location();
                     location.set_t(up_it->second.location.updateTime());
                     location.set_position(up_it->second.location.position());
@@ -316,7 +316,7 @@ private:
                     orientation.set_velocity(up_it->second.orientation.velocity());
 
                     update.set_bounds(up_it->second.bounds);
-                    
+
                     update.set_mesh(up_it->second.mesh);
                     update.set_physics(up_it->second.physics);
 

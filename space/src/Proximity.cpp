@@ -294,7 +294,7 @@ void Proximity::sendQueryRequests() {
         msg_loc.set_position(loc.velocity());
         msg.set_bounds(bounds);
         msg.set_min_angle(mMinObjectQueryAngle.asFloat());
-        
+
         Message* smsg = new Message(
             mContext->id(),
             SERVER_PORT_PROX,
@@ -764,7 +764,7 @@ void Proximity::sendObjectResult(Sirikata::Protocol::Object::ObjectMessage* msg)
     // FIXME this is an infinite sized queue, but we don't really want to drop
     // proximity results....
     prox_stream->outstanding.push(Network::Frame::write(msg->payload()));
-    
+
     // If writing isn't already in progress, start it up
     if (!prox_stream->writing)
         writeSomeObjectResults(prox_stream);
@@ -822,7 +822,7 @@ void Proximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const 
         proxStreamIter->second->removeSeqNoPtr(observed);
     else
         PROXLOG(detailed, "Warning: trying to remove an object's subscription for a substream info that doesn't exist.");
-    
+
     mLocService->unsubscribe(subscriber, observed);
 }
 void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
@@ -841,7 +841,7 @@ void Proximity::handleAddServerLocSubscription(const ServerID& subscriber, const
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
 
-    mLocService->subscribe(subscriber, observed, SeqNoPtr(new Sirikata::AtomicValue<uint64>(0)));
+    mLocService->subscribe(subscriber, observed, SeqNoPtr(new SeqNo(0)));
 }
 void Proximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
@@ -1061,8 +1061,8 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                     ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(query_id);
                     uint64 seqNo = infoPtr->getSeqNo(objid);
                     addition.set_seqno (seqNo);
-                    
-                    
+
+
                     Sirikata::Protocol::ITimedMotionVector motion = addition.mutable_location();
                     TimedMotionVector3f loc = mLocCache->location(objid);
                     motion.set_t(loc.updateTime());

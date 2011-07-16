@@ -83,16 +83,19 @@ public:
  */
 class SIRIKATA_SPACE_EXPORT LocationUpdatePolicy : public LocationServiceListener{
 public:
+    typedef Sirikata::AtomicValue<uint32> SeqNo;
+    typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
+
     LocationUpdatePolicy();
     virtual ~LocationUpdatePolicy();
 
     virtual void initialize(LocationService* loc);
 
-    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seqNo) = 0;
+    virtual void subscribe(ServerID remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
     virtual void unsubscribe(ServerID remote, const UUID& uuid) = 0;
     virtual void unsubscribe(ServerID remote) = 0;
 
-    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seqNo) = 0;
+    virtual void subscribe(const UUID& remote, const UUID& uuid, LocationService* locservice, SeqNoPtr seqNo) = 0;
     virtual void unsubscribe(const UUID& remote, const UUID& uuid) = 0;
     virtual void unsubscribe(const UUID& remote) = 0;
 
@@ -135,6 +138,9 @@ class SIRIKATA_SPACE_EXPORT LocationUpdatePolicyFactory
  */
 class SIRIKATA_SPACE_EXPORT LocationService : public MessageRecipient, public PollingService, public ObjectSessionListener {
 public:
+    typedef LocationUpdatePolicy::SeqNo SeqNo;
+    typedef LocationUpdatePolicy::SeqNoPtr SeqNoPtr;
+
     enum TrackingType {
         NotTracking,
         Local,
@@ -195,15 +201,15 @@ public:
     virtual void removeListener(LocationServiceListener* listener);
 
     /** Subscriptions for other servers. */
-    virtual void subscribe(ServerID remote, const UUID& uuid, std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seq_no_ptr);
+    virtual void subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seq_no_ptr);
     virtual void unsubscribe(ServerID remote, const UUID& uuid);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(ServerID remote);
 
 
-    
+
     /** Subscriptions for local objects. */
-    virtual void subscribe(const UUID& remote, const UUID& uuid, std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> >  seq_no_ptr);
+    virtual void subscribe(const UUID& remote, const UUID& uuid, SeqNoPtr seq_no_ptr);
     virtual void unsubscribe(const UUID& remote, const UUID& uuid);
     /** Unsubscripe the given server from all its location subscriptions. */
     virtual void unsubscribe(const UUID& remote);

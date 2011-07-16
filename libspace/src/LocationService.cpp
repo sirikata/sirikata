@@ -178,7 +178,7 @@ void LocationService::removeListener(LocationServiceListener* listener) {
 }
 
 
-void LocationService::subscribe(ServerID remote, const UUID& uuid,std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seqnoptr) {
+void LocationService::subscribe(ServerID remote, const UUID& uuid, SeqNoPtr seqnoptr) {
     mUpdatePolicy->subscribe(remote, uuid, this,seqnoptr);
 }
 
@@ -191,7 +191,7 @@ void LocationService::unsubscribe(ServerID remote) {
 }
 
 
-void LocationService::subscribe(const UUID& remote, const UUID& uuid,std::tr1::shared_ptr<Sirikata::AtomicValue<uint64> > seqnoptr) {
+void LocationService::subscribe(const UUID& remote, const UUID& uuid, SeqNoPtr seqnoptr) {
     mUpdatePolicy->subscribe(remote, uuid, this,seqnoptr);
 }
 
