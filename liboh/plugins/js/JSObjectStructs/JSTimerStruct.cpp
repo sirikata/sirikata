@@ -255,7 +255,7 @@ v8::Handle<v8::Value> JSTimerStruct::suspend()
         JSLOG(info, "Error in suspend of JSTimerStruct.cpp.  Called suspend even though the timer had previously been cleared.");
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Called suspend on a timer that had already been cleared.")));
     }
-    
+
     JSLOG(insane,"suspending timer");
 
     //note, it is important that call to JSSuspendable::supsend occurs before
@@ -310,10 +310,6 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
     if (! cb.IsEmpty())
         cb.Dispose();
 
-    if (jsContStruct != NULL)
-        jsContStruct->struct_deregisterSuspendable(this);
-
-
     if (! mPersistentHandle.IsEmpty())
     {
         //check to make sure object has adequate number of fields.
@@ -321,10 +317,16 @@ v8::Handle<v8::Value> JSTimerStruct::clear()
 
         //delete typeId, and return if have incorrect params for type id
         DEL_TYPEID_AND_CHECK(mPersistentHandle,jstimer,TIMER_TYPEID_STRING,v8::Boolean::New(true));
-        
+
         mPersistentHandle->SetInternalField(TIMER_JSTIMERSTRUCT_FIELD, External::New(NULL));
     }
-    
+
+    // Be careful after this! JSContextStruct::struct_deregisterSuspendable will
+    // delete this object so you shouldn't use any member variables after
+    // invoking it.
+    if (jsContStruct != NULL)
+        jsContStruct->struct_deregisterSuspendable(this);
+
     // Note that since this allows the JS GC thread to destroy this object
     // in response to all references to it being lost,
     // we need to make sure it is absolutely the *last* operation we do on
