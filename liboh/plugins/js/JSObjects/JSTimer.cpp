@@ -75,7 +75,7 @@ v8::Handle<v8::Value> clear(const v8::Arguments& args)
     //decode associated timerstruct
     INLINE_DECODE_TIMER_ERROR(args.This(),clear,jstimer);
 
-    setNullTimer(args);
+//    setNullTimer(args);
     return jstimer->clear();
 }
 
