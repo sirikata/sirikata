@@ -128,21 +128,21 @@ v8::Handle<v8::Value> JSSystemStruct::checkHeadless()
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom)
+v8::Handle<v8::Value> JSSystemStruct::struct_require(const String& toRequireFrom,bool isJS)
 {
     //require uses the same capability as import
     if (! canImport)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to require.")));
 
-    return associatedContext->struct_require(toRequireFrom);
+    return associatedContext->struct_require(toRequireFrom,isJS);
 }
 
-v8::Handle<v8::Value> JSSystemStruct::struct_import(const String& toImportFrom)
+v8::Handle<v8::Value> JSSystemStruct::struct_import(const String& toImportFrom,bool isJS)
 {
     if (! canImport)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to import.")));
 
-    return associatedContext->struct_import(toImportFrom);
+    return associatedContext->struct_import(toImportFrom,isJS);
 }
 
 v8::Handle<v8::Value> JSSystemStruct::struct_canImport()

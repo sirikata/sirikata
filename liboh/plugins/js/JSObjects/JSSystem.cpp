@@ -571,6 +571,11 @@ v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args)
  */
 v8::Handle<v8::Value> root_require(const v8::Arguments& args)
 {
+    return commonRequire(args,false);
+}
+
+v8::Handle<v8::Value> commonRequire(const v8::Arguments& args,bool isJS)
+{
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Require only takes one parameter: the name of the file to import.")) );
 
@@ -583,7 +588,7 @@ v8::Handle<v8::Value> root_require(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str() )));
 
-    return jsfake->struct_require(native_filename);
+    return jsfake->struct_require(native_filename,isJS);
 }
 
 
@@ -825,24 +830,28 @@ v8::Handle<v8::Value> root_canEval(const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> root_jsrequire(const v8::Arguments& args)
+{
+    return commonRequire(args,true);
+}
 
 
-/**
-   @param String corresponding to the filename to look for file to include.
+v8::Handle<v8::Value> root_jsimport(const v8::Arguments& args)
+{
+    return commonImport(args,true);
+}
 
-   Library include mechanism.  Calling import makes it so that system searches
-   for file named by argument passed in.  Regardless of whether system has
-   already executed this file, it reads file, and executes it.  (See require as
-   well.)
- */
 v8::Handle<v8::Value> root_import(const v8::Arguments& args)
+{
+    return commonImport(args,false);
+}
+
+v8::Handle<v8::Value> commonImport(const v8::Arguments& args, bool isJS)
 {
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Import only takes one parameter: the name of the file to import.")) );
 
     v8::Handle<v8::Value> filename = args[0];
-
-
 
     //decode the filename to import from.
     String strDecodeErrorMessage = "Error decoding string as first argument of root_import of jssystem.  ";
@@ -851,8 +860,6 @@ v8::Handle<v8::Value> root_import(const v8::Arguments& args)
     if (! decodeStrSuccessful)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
 
-
-
     //decode the system object
     String errorMessage = "Error decoding the system object from root_import.  ";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
@@ -860,7 +867,7 @@ v8::Handle<v8::Value> root_import(const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(), errorMessage.length())) );
 
-    return jsfake->struct_import(native_filename);
+    return jsfake->struct_import(native_filename,isJS);
 }
 
 /**

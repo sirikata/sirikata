@@ -1,9 +1,9 @@
 
+//note: this file is imported as js.  All js operators are valid here,
+//but things like +,-, etc. aren't over-written.
+
 (function()
 {
-
-    var internalUtilPlus = std.core.bind(util.plus,util);
-    var internalUtilSub  = std.core.bind(util.sub,util);
     var internalUtilRand = std.core.bind(util.rand,util);
     var internalUtilSqrt = std.core.bind(util.sqrt,util);
     var internalUtilIdentifier = std.core.bind(util.identifier,util);
@@ -15,12 +15,6 @@
     var internalUtilPow = std.core.bind(util.pow,util);
     var internalUtilExp = std.core.bind(util.exp,util);
     var internalUtilAbs = std.core.bind(util.abs,util);
-
-    var internalUtilDiv = std.core.bind(util.div,util);
-    var internalUtilMul = std.core.bind(util.mul,util);
-    var internalUtilMod = std.core.bind(util.mod,util);
-
-    var internalUtilEqual = std.core.bind(util.equal,util);
 
     var internalUtilPattern = util.Pattern;
     var internalUtilVec3 = util.Vec3;
@@ -39,20 +33,17 @@
      Overloads the '+' operator.
 
      Checks if lhs has a plus function defined on it.  If it does, then
-     calls lhs.plus(rhs).  If it doesn't, call internal util
-     addition.  Internal requires that both lhs and rhs are of same
-     type.  and can either be a vector, number, quaternion, or string.
-
+     calls lhs.plus(rhs).  If it doesn't, call javascript version of +
      */
     util.plus = function (lhs, rhs)
     {
-        if (lhs != null)
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.add) == 'function')
                 return lhs.add(rhs);
         }
 
-        return internalUtilPlus.apply(undefined,arguments);
+        return lhs + rhs;
     };
 
 
@@ -60,121 +51,113 @@
      Overloads the '-' operator.
      
      Checks if lhs has a sub function defined on it.  If it does, then
-     calls lhs.sub(rhs).  If it doesn't, call internal util
-     subtraction.  Internal requires that both lhs and rhs are of same
-     type.  and can either be a vector, number, or quaternion.
+     calls lhs.sub(rhs).  If it doesn't, javascript version of -.
      */
     util.sub = function (lhs,rhs)
     {
-        if (lhs != null)
+        if ((lhs != null)&&(typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.sub) == 'function')
                 return lhs.sub(rhs);
         }
         
-        return internalUtilSub.apply(undefined,arguments);
+        return lhs - rhs;
     };
 
     /**
      Overloads the '/' operator.
 
      Checks if lhs has a div function defined on it.  If it does, then
-     returns lhs.div(rhs).  Otherwise, returns normal number division.
+     returns lhs.div(rhs).  Otherwise, returns normal js division.
      */
     util.div = function (lhs,rhs)
     {
-        if (lhs != null)
+        if ((lhs != null)&&(typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.div) == 'function')
                 return lhs.div(rhs);
         }
         
-        return internalUtilDiv.apply(undefined,arguments);
+        return lhs/rhs;
     };
 
     /**
      Overloads the '*' operator.
 
      Checks if lhs has a mul function defined on it.  If it does, then
-     returns lhs.mul(rhs).  Otherwise, returns normal number multiplication.
+     returns lhs.mul(rhs).  Otherwise, returns normal js *.
      */
     util.mul = function (lhs,rhs)
     {
-        if (lhs != null)
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.mul) == 'function')
                 return lhs.mul(rhs);
         }
         
-        return internalUtilMul.apply(undefined,arguments);
+        return lhs* rhs;
     };
 
     /**
      Overloads the '%' operator.
 
      Checks if lhs has a mod function defined on it.  If it does, then
-     returns lhs.mod(rhs).  Otherwise, returns normal number modulo.
+     returns lhs.mod(rhs).  Otherwise, returns normal js modulo.
      */
     util.mod = function (lhs,rhs)
     {
-        if (lhs != null)
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.mod) == 'function')
                 return lhs.mod(rhs);
         }
         
-        return internalUtilMod.apply(undefined,arguments);
+        return lhs % rhs;
     };
 
 
     util.equal = function (lhs,rhs)
     {
-        if (! internalUtilEqual(lhs,null))
+        if ((lhs !=null) && (typeof(lhs) != 'undefined'))
         {
-            if (internalUtilEqual(typeof(lhs.equal) ,'function'))
+            if (typeof(lhs.equal)  =='function')
                 return lhs.equal(rhs);
         }
         
-        return internalUtilEqual.apply(undefined,arguments);
+        return (lhs == rhs);
     };
 
     util.notEqual = function (lhs,rhs)
     {
-        if (! internalUtilEqual(lhs,null))
+        if ((lhs != null)&& (typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.notEqual) == 'function')
                 return lhs.notEqual(rhs);
         }
         
-        return (! internalUtilEqual.apply(undefined,arguments));
+        return (lhs != rhs);
     };
 
     util.identical = function (lhs,rhs)
     {
-        if (lhs != null)
+        if ((lhs !== null) && (typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.identical) == 'function')
                 return lhs.identical(rhs);
         }
-
-        if (typeof(lhs) != typeof(rhs))
-            return false;
         
-        return internalUtilEqual.apply(undefined,arguments);
+        return (lhs === rhs);
     };
 
     util.notIdentical = function (lhs,rhs)
     {
-        if (lhs != null)
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
         {
             if (typeof(lhs.notIdentical) == 'function')
                 return lhs.notIdentical(rhs);
         }
-
-        if (typeof(lhs) != typeof(rhs))
-            return true;
         
-        return (! internalUtilEqual.apply(undefined,arguments));
+        return (lhs !== rhs);
     };
     
     

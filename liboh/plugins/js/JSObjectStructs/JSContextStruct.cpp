@@ -248,7 +248,7 @@ void JSContextStruct::createContextObjects()
 
     //Always load the shim layer.
     //import shim
-    jsObjScript->import("std/shim.em",this);
+    jsObjScript->import("std/shim.em",this,false);
 
 }
 
@@ -284,7 +284,6 @@ v8::Handle<v8::Value> JSContextStruct::struct_createQuaternion(Quaternion& toCre
 
 
 
-
 v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendMessage,jsObjScript);
@@ -297,19 +296,18 @@ v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruc
 }
 
 
-
 //string argument is the filename that we're trying to open and execute
 //contents of.
-v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom)
+v8::Handle<v8::Value>  JSContextStruct::struct_import(const String& toImportFrom,bool isJS)
 {
-    return jsObjScript->import(toImportFrom,this);
+    return jsObjScript->import(toImportFrom,this,isJS);
 }
 
 //string argument is the filename that we're trying to open and execute
 //contents of.
-v8::Handle<v8::Value>  JSContextStruct::struct_require(const String& toRequireFrom)
+v8::Handle<v8::Value>  JSContextStruct::struct_require(const String& toRequireFrom,bool isJS)
 {
-    return jsObjScript->require(toRequireFrom,this);
+    return jsObjScript->require(toRequireFrom,this,isJS);
 }
 
 //if receiver is one of my presences, or it is the system presence that I

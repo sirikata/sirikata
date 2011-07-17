@@ -125,10 +125,10 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value>  struct_sendHome(const String& toSend);
     //string argument is the filename that we're trying to open and execute
     //contents of.
-    v8::Handle<v8::Value>  struct_import(const String& toImportFrom);
+    v8::Handle<v8::Value>  struct_import(const String& toImportFrom,bool isJS);
     //string argument is the filename that we're trying to open and execute
     //contents of.
-    v8::Handle<v8::Value>  struct_require(const String& toRequireFrom);
+    v8::Handle<v8::Value>  struct_require(const String& toRequireFrom,bool isJS);
 
     //requests jsobjscript to create an event handler in the context associated
     //wth jscontextstruct.  registers this handler as well through struct_registerSuspendable

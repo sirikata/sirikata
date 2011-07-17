@@ -55,6 +55,10 @@ v8::Handle<v8::Value> setRestoreScript(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_import(const v8::Arguments& args);
 v8::Handle<v8::Value> root_require(const v8::Arguments& args);
+v8::Handle<v8::Value> root_jsimport(const v8::Arguments& args);
+v8::Handle<v8::Value> commonImport(const v8::Arguments& args, bool isJS);
+v8::Handle<v8::Value> root_jsrequire(const v8::Arguments& args);
+v8::Handle<v8::Value> commonRequire(const v8::Arguments& args,bool isJS);
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args);

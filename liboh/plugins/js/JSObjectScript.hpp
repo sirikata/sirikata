@@ -95,12 +95,12 @@ public:
      * scope. Pass in NULL to contextCtx to just execute in JSObjectScript's
      * mContext's root object's scope
      */
-    v8::Handle<v8::Value> import(const String& filename, JSContextStruct* jscs);
+    v8::Handle<v8::Value> import(const String& filename, JSContextStruct* jscs,bool isJS);
 
     /** Require a file, executing its contents in the root object's scope iff it
      *  has not yet been imported.
      */
-    v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont);
+    v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont,bool isJS);
 
 
     v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
@@ -265,13 +265,13 @@ protected:
     // Perform an import on the absolute path filename. This performs no
     // resolution and *always* performs the import, even if the file has already
     // been imported.
-    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscs);
+    v8::Handle<v8::Value> absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscs,bool isJS);
 
 
     JSContextStruct* mContext;
 
 
-    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc = false);
+    v8::Handle<v8::Value> protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc = false, bool isJS=false);
 
 
     v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);

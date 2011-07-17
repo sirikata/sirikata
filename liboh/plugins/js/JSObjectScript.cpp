@@ -512,9 +512,10 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
     // Special casing emerson compilation
     v8::Handle<v8::String> source;
 #ifdef EMERSON_COMPILE
-    if (is_emerson) {
+    if (is_emerson)
+    {
         String em_script_str_new = em_script_str;
-
+        
         if(em_script_str.empty())
         {
             postEvalOps();
@@ -540,8 +541,6 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
             String js_script_str;
             bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), js_script_str,em_compile_err, handleEmersonRecognitionError);
 
-            // std::cout<<"\n\nDEBUGGING: original script: "<< em_script_str<<"\n\n-----------\n\n";
-            // std::cout<<"js_script_str: "<<js_script_str<<"\n\n";
 
             if (successfullyCompiled)
             {
@@ -565,9 +564,10 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
     }
     else
 #endif
+    {
         //assume the input string to be a valid js rather than emerson
         source = v8::String::New(em_script_str.c_str(), em_script_str.size());
-
+    }
     // Compile
     //note, because using compile command, will run in the mContext context
     v8::Handle<v8::Script> script = v8::Script::Compile(source, em_script_name);
@@ -625,13 +625,13 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
 
 
 
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc)
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc, bool isJS)
 {
     ScopedEvalContext sec(this, new_ctx);
     if (jscs == NULL)
-        return internalEval(mContext->mContext, em_script_str, em_script_name, true, return_exc);
+        return internalEval(mContext->mContext, em_script_str, em_script_name, !isJS, return_exc);
 
-    return internalEval(jscs->mContext, em_script_str, em_script_name, true, return_exc);
+    return internalEval(jscs->mContext, em_script_str, em_script_name, !isJS, return_exc);
 }
 
 
@@ -882,13 +882,13 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     return;
 }
 
-v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscont,bool isJS)
 {
     //to prevent infinite cycles
     if (!checkResourcesCPP())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Detected a potential infinite loop in imports.  Aborting.")));
 
-
+    
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(jscont ? jscont->mContext : mContext->mContext);
 
@@ -925,7 +925,7 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
 
     mImportedFiles[jscont->getContextID()].insert( full_filename.string() );
 
-    v8::Handle<v8::Value> returner = protectedEval(contents, &origin, new_ctx,jscont);
+    v8::Handle<v8::Value> returner = protectedEval(contents, &origin, new_ctx,jscont,false,isJS);
     return  handle_scope.Close(returner);
 }
 
@@ -948,11 +948,17 @@ std::string* JSObjectScript::extensionize(const String filename)
     return fileToFind;
 }
 
-v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont, bool isJS)
 {
-
     JSLOG(detailed, "Importing: " << filename);
-    std::string* fileToFind = extensionize(filename);
+
+    std::string* fileToFind= NULL;
+    
+    if (! isJS)
+        fileToFind =  extensionize(filename);
+    else
+        fileToFind = new String(filename);
+    
     if(fileToFind == NULL)
     {
       std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
@@ -968,14 +974,20 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
         errorMessage+=filename;
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
-    return absoluteImport(full_filename, full_base,jscont);
+    return absoluteImport(full_filename, full_base,jscont,isJS);
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextStruct* jscont)
+v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextStruct* jscont,bool isJS)
 {
     JSLOG(detailed, "Requiring: " << filename);
-    std::string* fileToFind = extensionize(filename);
+
+    std::string* fileToFind= NULL;
+    if (! isJS)
+        fileToFind =  extensionize(filename);
+    else
+        fileToFind = new String(filename);
+
     if(fileToFind == NULL)
     {
       std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
@@ -1002,8 +1014,8 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
         return v8::Undefined();
         }
     }
-
-    return absoluteImport(full_filename, full_base,jscont);
+    
+    return absoluteImport(full_filename, full_base,jscont,isJS);
 }
 
 v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField)

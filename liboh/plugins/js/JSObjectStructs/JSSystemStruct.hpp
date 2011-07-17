@@ -75,8 +75,8 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> struct_print(const String& msg);
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);
-    v8::Handle<v8::Value> struct_import(const String& toImportFrom);
-    v8::Handle<v8::Value> struct_require(const String& toRequireFrom);
+    v8::Handle<v8::Value> struct_import(const String& toImportFrom,bool isJS);
+    v8::Handle<v8::Value> struct_require(const String& toRequireFrom,bool isJS);
 
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
