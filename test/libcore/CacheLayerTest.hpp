@@ -48,9 +48,15 @@ using namespace Sirikata;
 #define EXAMPLE_HASH "55ca2e1659205d752e4285ce927dcda19b039ca793011610aaee3e5ab250ff80"
 #define SERVER_URI "http://localhost/"
 
+// NOTE: THis test seems out of date and some of it doesn't even seem
+// to make sense, e.g. real URLs are used and associated with bogus
+// hashes, then not checked, but calls to the cache layer are 'tested'
+// with these combinations.  I'm leaving this in for now since its
+// basic structure looks ok, but its going to have to stay out of the
+// build for the foreseeable future.
+
 class CacheLayerTestSuite : public CxxTest::TestSuite
 {
-	//typedef Transfer::RemoteFileId RemoteFileId;
 	typedef Transfer::URI URI;
 	typedef Transfer::URIContext URIContext;
 	typedef Transfer::CacheLayer CacheLayer;

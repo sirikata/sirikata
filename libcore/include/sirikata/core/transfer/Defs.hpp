@@ -18,8 +18,6 @@ typedef std::tr1::shared_ptr<ChunkRequest> ChunkRequestPtr;
 /// simple file ID class--should make no assumptions about which hash.
 typedef SHA256 Fingerprint;
 
-class RemoteFileId;
-
 } // namespace Transfer
 } // namespace Sirikata
 
