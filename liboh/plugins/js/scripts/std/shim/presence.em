@@ -175,7 +175,13 @@ system.__presence_constructor__.prototype.__getType = function()
 
 
 {
-  /** @namespace presence */
+  /** @class A presence represents your object in the world. It allows
+   *  you to get and set the basic properties of the object (position,
+   *  orientation, mesh, etc) as well communicate with other
+   *  objects. You must have a presence to interact with the world and
+   *  other objects in it. You don't create presences directly: call
+   *  system.createPresence to create a new connection to the space.
+   */
   var presence = function()
   {
     /**@function
@@ -212,24 +218,26 @@ system.__presence_constructor__.prototype.__getType = function()
       };
 
 
-     /**
-      @param {string} sporef,
-      @param {vec3} pos,
-      @param {vec3} vel,
-      @param {string} posTime,
-      @param {quaternion} orient,
-      @param {quaternion} orientVel,
-      @param {string} orientTime,
-      @param {string} mesh,
-      @param {number} scale,
-      @param {boolean} isCleared ,
-      @param {uint32} contextId,
-      @param {boolean} isConnected,
-      @param {function,null} connectedCallback,
-      @param {boolean} isSuspended,
-      @param {vec3} suspendedVelocity,
-      @param {quaternion} suspendedOrientationVelocity,
-      @param {float} solidAngleQuery
+     /** Returns all data associated with this
+      *  @private
+      *  Returns an object with:
+      *    {string} sporef,
+      *    {vec3} pos,
+      *    {vec3} vel,
+      *    {string} posTime,
+      *    {quaternion} orient,
+      *    {quaternion} orientVel,
+      *    {string} orientTime,
+      *    {string} mesh,
+      *    {number} scale,
+      *    {boolean} isCleared ,
+      *    {uint32} contextId,
+      *    {boolean} isConnected,
+      *    {function,null} connectedCallback,
+      *    {boolean} isSuspended,
+      *    {vec3} suspendedVelocity,
+      *    {quaternion} suspendedOrientationVelocity,
+      *    {float} solidAngleQuery
       */
       presence.prototype.getAllData = function()
       {

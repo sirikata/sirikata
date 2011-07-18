@@ -1,6 +1,14 @@
 
 {
-  /** @namespace visible */
+  /** @class A sandbox provides a safe execution environment so you
+   *  can run untrusted code, e.g. code shipped to you by another
+   *  object in the world. A sandbox can be suspended or destroyed at
+   *  any time and can be given restricted functionality, e.g. by
+   *  disabling message sending or proximity queries to limit its
+   *  effects in the world. Sandboxes aren't constructed
+   *  directly. Instead, use system.createSandbox to allocate a new
+   *  one.
+   */
   var sandbox = function()
   {
 

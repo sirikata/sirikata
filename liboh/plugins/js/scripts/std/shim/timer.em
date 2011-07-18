@@ -1,7 +1,11 @@
 
 {
-  /** @namespace visible */
-  var timer = function()
+  /** @class A timer fires a callback after the specified number of
+   * seconds. Create a new timer with system.timeout(duration, callback).
+   *  @param {number} duration number of seconds to wait, may be fractional
+   *  @param {function} callback callback to invoke after
+   */
+  var timer = function(duration, callback)
   {
 
 
@@ -13,8 +17,9 @@
           
       };
 
-      /**
-       @return Object with the following fields: {boolean} isCleared , {uint32} contextId, {double, optional} period, {function, optional} callback, {double, optional} timeRemaining, {boolean, optional} isSuspended.
+      /** Gets all data associated with this timer for serialization.
+       *  @private
+       *  @return Object with the following fields: {boolean} isCleared , {uint32} contextId, {double, optional} period, {function, optional} callback, {double, optional} timeRemaining, {boolean, optional} isSuspended.
        */
       timer.prototype.getAllData = function()
       {

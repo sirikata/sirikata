@@ -1,6 +1,14 @@
 
 {
-  /** @namespace visible */
+  /** @class A handler is a callback registered for a specific pattern
+   *  of events. You don't create handlers directly, but receive them
+   *  as the result of listening for events, e.g.
+   *
+   *    var actionHandler = actionMsgCallback << [{'action'::}];
+   *
+   *  The handler object allows you to suspend and cancel callbacks
+   *  for the event pattern.
+   */
   var handler = function()
   {
 
@@ -13,8 +21,9 @@
           
       };
 
-      /**
-       @return Object with the following fields: {boolean} isCleared , {uint32} contextId, {visible, optional} sender, {function, optional} callback, {array or null, optional} patterns, {boolean, optional} isSuspended.
+      /** Gets all data associated with this handler for serialization.
+       *  @private
+       *  @return Object with the following fields: {boolean} isCleared , {uint32} contextId, {visible, optional} sender, {function, optional} callback, {array or null, optional} patterns, {boolean, optional} isSuspended.
        */
       handler.prototype.getAllData = function()
       {

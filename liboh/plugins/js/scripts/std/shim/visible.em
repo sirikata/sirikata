@@ -3,7 +3,14 @@
 
     // NOTE: These are just for documentation
 
-  /** @namespace visible */
+  /** @class A visible represents some other presence, probably on
+   *  another object host, that exists (or existed) in the
+   *  space. Visibles track basic information like position,
+   *  orientation, and mesh and also allow you to communicate with the
+   *  other presence. You don't construct visibles directly: usually
+   *  they are the result of a proximity query or are passed to you by
+   *  other presences.
+   */
   var visible = function()
   {
       /**
@@ -43,8 +50,9 @@
 
 
 
-      /**
-       @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime,
+      /** Returns all data associated with this visible for serialization.
+       *  @private
+       *  @return Object containing all data associated with this visible.  Fields or returned object: {string} sporef, {vec3} pos, {vec3} vel, {quaternion} orient, {quaternion} orientVel, {number} scale, {string} mesh, {string} posTime, {string} orientTime,
        */
       visible.prototype.getAllData = function()
       {
