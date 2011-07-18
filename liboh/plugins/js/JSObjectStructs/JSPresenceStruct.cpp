@@ -85,7 +85,7 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     //if mContID != jscont->getContextID, means that we were restoring a
     //presence, and should be restoring a presence that was in a different
     //sandbox than the one we're in.
-    if ((psrp.mContID != NULL) && (mContID != jscont->getContextID()))
+    if ((psrp.mContID != NULL) && (*psrp.mContID != jscont->getContextID()))
     {
         mContID = *psrp.mContID;
         parent->registerFixupSuspendable(this,mContID);
