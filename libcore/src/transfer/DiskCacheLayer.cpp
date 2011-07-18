@@ -185,11 +185,11 @@ void DiskCacheLayer::workerThread() {
 			break;
 		} else if (req->op == DiskRequest::OPWRITE) {
 			// Note: TransferLayer::populatePreviousCaches has already been called.
-			std::string fileId = req->fileId.fingerprint().convertToHexString();
+			std::string fileId = req->fileId.convertToHexString();
 			bool newFile = true;
 			{
 				CacheMap::write_iterator writer(mFiles);
-				if (writer.find(req->fileId.fingerprint())) {
+				if (writer.find(req->fileId)) {
 					CacheData *rlist = static_cast<CacheData*>(*writer);
 					if (rlist->wholeFile() || rlist->contains(*(req->data))) {
 						// this range is already written to disk.
@@ -227,7 +227,7 @@ void DiskCacheLayer::workerThread() {
 			{
 				CacheMap::write_iterator writer(mFiles);
 
-				if (writer.insert(req->fileId.fingerprint(), diskUsage)) {
+				if (writer.insert(req->fileId, diskUsage)) {
 					*writer = new CacheData;
 					writer.use();
 				} else {
@@ -258,7 +258,7 @@ void DiskCacheLayer::workerThread() {
 			bool useWholeFile = false;
 			{
 				CacheMap::read_iterator iter(mFiles);
-				if (iter.find(req->fileId.fingerprint())) {
+				if (iter.find(req->fileId)) {
 					CacheData *rlist = static_cast<CacheData*>(*iter);
 					if (rlist->wholeFile()) {
 						useWholeFile = true;
@@ -269,7 +269,7 @@ void DiskCacheLayer::workerThread() {
 					}
 				}
 			}
-			std::string fileId = req->fileId.fingerprint().convertToHexString();
+			std::string fileId = req->fileId.convertToHexString();
 			std::string filePath = mPrefix + fileId;
 			if (!useWholeFile) {
 				filePath += PARTIAL_SUFFIX;
@@ -300,12 +300,12 @@ void DiskCacheLayer::workerThread() {
 			read(fd, datum->writableData(), (size_t)req->toRead.length());
 			close(fd);
 
-			CacheLayer::populateParentCaches(req->fileId.fingerprint(), datum);
+			CacheLayer::populateParentCaches(req->fileId, datum);
 			SparseData data;
 			data.addValidData(datum);
 			req->finished(&data);
 		} else if (req->op == DiskRequest::OPDELETE) {
-			std::string fileId = req->fileId.fingerprint().convertToHexString();
+			std::string fileId = req->fileId.convertToHexString();
 			std::string filePath = mPrefix + fileId;
 			unlink(filePath.c_str());
 			std::string rangesPath = filePath + RANGES_SUFFIX;

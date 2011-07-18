@@ -38,7 +38,6 @@
 #include "CacheMap.hpp"
 
 namespace Sirikata {
-/** MemoryCacheLayer.hpp -- MemoryCacheLayer -- the first layer of transfer cache. */
 namespace Transfer {
 
 /// MemoryCacheLayer is usually the first layer in the cache--simple map from FileId to SparseData.
@@ -103,16 +102,16 @@ public:
 		CacheLayer::purgeFromCache(fileId);
 	}
 
-	virtual void getData(const RemoteFileId &uri, const Range &requestedRange,
+	virtual void getData(const Fingerprint &fileId, const Range &requestedRange,
 			const TransferCallback&callback) {
 		bool haveData = false;
 		SparseData foundData;
 		{
 			MemoryMap::read_iterator iter(mData);
-			if (iter.find(uri.fingerprint())) {
+			if (iter.find(fileId)) {
 				const SparseData &sparseData = static_cast<const CacheData*>(*iter)->mSparse;
                 if (SILOGP(transfer,detailed)) {
-                    SILOGNOCR(transfer,detailed,"Found " << uri.fingerprint() << "; ranges=");
+                    SILOGNOCR(transfer,detailed,"Found " << fileId << "; ranges=");
                         std::stringstream rangeListStream;
                         Range::printRangeList(rangeListStream,
                             static_cast<const DenseDataList&>(sparseData),
@@ -129,11 +128,11 @@ public:
 			for (DenseDataList::iterator iter = foundData.DenseDataList::begin();
 					iter != foundData.DenseDataList::end();
 					++iter) {
-				CacheLayer::populateParentCaches(uri.fingerprint(), iter.getPtr());
+				CacheLayer::populateParentCaches(fileId, iter.getPtr());
 			}
 			callback(&foundData);
 		} else {
-			CacheLayer::getData(uri, requestedRange, callback);
+			CacheLayer::getData(fileId, requestedRange, callback);
 		}
 	}
 };

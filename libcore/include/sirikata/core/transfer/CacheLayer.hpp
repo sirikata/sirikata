@@ -40,7 +40,6 @@
 
 
 namespace Sirikata {
-/** CacheLayer.hpp -- CacheLayer superclass */
 namespace Transfer {
 
 /**
@@ -177,10 +176,10 @@ public:
 	 * @param callback       To be called with the data if successful, or NULL if failed.
 	 * @return          false, if the callback happened synchronously (i.e. in memory cache)
 	 */
-	virtual void getData(const RemoteFileId &fid, const Range &requestedRange,
+	virtual void getData(const Fingerprint &fileId, const Range &requestedRange,
 			const TransferCallback&callback) {
 		if (mNext) {
-			mNext->getData(fid, requestedRange, callback);
+			mNext->getData(fileId, requestedRange, callback);
 		} else {
 			// need some way to signal error
 			callback(NULL);

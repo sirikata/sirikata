@@ -41,7 +41,6 @@
 #include <sirikata/core/transfer/CacheMap.hpp>
 #include <sirikata/core/queue/ThreadSafeQueue.hpp>
 #include <sirikata/core/util/Thread.hpp>
-#include <sirikata/core/transfer/RemoteFileId.hpp>
 
 namespace Sirikata {
 namespace Transfer {
@@ -80,10 +79,10 @@ private:
 	struct DiskRequest {
 		enum Operation {OPREAD, OPWRITE, OPDELETE, OPEXIT} op;
 
-		DiskRequest(Operation op, const RemoteFileId &myURI, const Range &myRange)
-			:op(op), fileId(myURI), toRead(myRange) {}
+		DiskRequest(Operation op, const Fingerprint &id, const Range &myRange)
+			:op(op), fileId(id), toRead(myRange) {}
 
-		RemoteFileId fileId;
+		Fingerprint fileId;
 		Range toRead;
 		TransferCallback finished;
 		DenseDataPtr data; // if NULL, read data.
@@ -98,11 +97,11 @@ public:
 	void workerThread(); // defined in DiskCache.cpp
 	void unserialize(); // defined in DiskCache.cpp
 
-	void readDataFromDisk(const RemoteFileId &fileURI,
+	void readDataFromDisk(const Fingerprint &fileId,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		std::tr1::shared_ptr<DiskRequest> req (
-				new DiskRequest(DiskRequest::OPREAD, fileURI, requestedRange));
+				new DiskRequest(DiskRequest::OPREAD, fileId, requestedRange));
 		req->finished = callback;
 
 		mRequestQueue.push(req);
@@ -148,12 +147,12 @@ public:
 protected:
 	virtual void populateCache(const Fingerprint& fileId, const DenseDataPtr &data) {
 		std::tr1::shared_ptr<DiskRequest> req (
-                    new DiskRequest(DiskRequest::OPWRITE, RemoteFileId(fileId, URI()), *data));
+                    new DiskRequest(DiskRequest::OPWRITE, fileId, *data));
 		req->data = data;
 
 		mRequestQueue.push(req);
 
-		CacheLayer::populateParentCaches(req->fileId.fingerprint(), data);
+		CacheLayer::populateParentCaches(req->fileId, data);
 	}
 
 	virtual void destroyCacheEntry(const Fingerprint &fileId, CacheEntry *cacheLayerData, cache_usize_type releaseSize) {
@@ -161,7 +160,7 @@ protected:
 			// don't want to erase the disk cache when exiting the program.
 			std::string fileName = fileId.convertToHexString();
 			std::tr1::shared_ptr<DiskRequest> req
-                            (new DiskRequest(DiskRequest::OPDELETE, RemoteFileId(fileId, URI()), Range(true)));
+                            (new DiskRequest(DiskRequest::OPDELETE, fileId, Range(true)));
 		}
 		CacheData *toDelete = static_cast<CacheData*>(cacheLayerData);
 		delete toDelete;
@@ -186,7 +185,7 @@ public:
 
 	virtual ~DiskCacheLayer() {
 		std::tr1::shared_ptr<DiskRequest> req
-			(new DiskRequest(DiskRequest::OPEXIT, RemoteFileId(Fingerprint(), URI()), Range(true)));
+			(new DiskRequest(DiskRequest::OPEXIT, Fingerprint(), Range(true)));
 		boost::unique_lock<boost::mutex> sleep_cv(destroyLock);
 		mRequestQueue.push(req);
 		destroyCV.wait(sleep_cv); // we know the thread has terminated.
@@ -203,14 +202,14 @@ public:
 		CacheLayer::purgeFromCache(fileId);
 	}
 
-	virtual void getData(const RemoteFileId &fileId,
+	virtual void getData(const Fingerprint &fileId,
 			const Range &requestedRange,
 			const TransferCallback&callback) {
 		bool haveRange = false;
 		{
 			CacheMap::read_iterator iter(mFiles);
 
-			if (iter.find(fileId.fingerprint())) {
+			if (iter.find(fileId)) {
 				const CacheData *rlist = static_cast<const CacheData*>(*iter);
 				haveRange = rlist->contains(requestedRange);
 			}

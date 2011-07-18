@@ -13,6 +13,7 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <boost/bind.hpp>
 #include <sirikata/core/transfer/HttpTransferHandler.hpp>
+#include <sirikata/core/transfer/URL.hpp>
 
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpNameHandler);
 AUTO_SINGLETON_INSTANCE(Sirikata::Transfer::HttpChunkHandler);
@@ -169,8 +170,7 @@ void HttpChunkHandler::get(std::tr1::shared_ptr<RemoteFileMetadata> file,
     }
 
     //Check to see if it's in the cache first
-    RemoteFileId tempId(file->getFingerprint(), URI());
-    SharedChunkCache::getSingleton().getCache()->getData(tempId, chunk->getRange(), std::tr1::bind(
+    SharedChunkCache::getSingleton().getCache()->getData(file->getFingerprint(), chunk->getRange(), std::tr1::bind(
             &HttpChunkHandler::cache_check_callback, this, _1, file, chunk, callback));
 }
 
