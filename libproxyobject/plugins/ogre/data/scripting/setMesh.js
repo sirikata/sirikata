@@ -89,6 +89,10 @@ SetMesh.toggleVisible = toggleVisible;
          * Callback function for ajax request, pushes each thumbnail, full path, and title into a 2-dimensional array
          */
         function allMeshesFunc(dataGotten, status, xhr) {
+            if (!dataGotten) {
+                nextStart = null;
+                return;
+            }
             nextStart = dataGotten.next_start;
             for (var s in dataGotten.content_items) {
                 if (typeof (dataGotten.content_items[s].metadata.types.original.thumbnail) != 'undefined') {
