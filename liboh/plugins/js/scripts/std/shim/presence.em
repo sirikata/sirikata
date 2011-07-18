@@ -87,6 +87,7 @@ function (idToDelete)
 system.__presence_constructor__.prototype.proxResultSet = {};
 
 
+
 Object.defineProperty(system.__presence_constructor__.prototype, "position",
                       {
                           get: function() { return this.getPosition(); },
@@ -456,6 +457,94 @@ system.__presence_constructor__.prototype.__getType = function()
      presence.prototype.setOrientation = function(v) {
          // Multiply in additional transformation
          orig_setOrientation.apply(this, [v.mul(this.modelOrientation)]);
+     };
+
+})();
+
+(function() {
+     // Override settings with numbers in them to check for invalid values
+     //
+     // NOTE: This *must* come after the previous overrides of
+     // get/setOrientation since it accepts a more flexible set of
+     // arguments
+
+     var orig_setQueryAngle = system.__presence_constructor__.prototype.setQueryAngle;
+     var orig_setPosition = system.__presence_constructor__.prototype.setPosition;
+     var orig_setVelocity = system.__presence_constructor__.prototype.setVelocity;
+     var orig_setOrientation = system.__presence_constructor__.prototype.setOrientation;
+     var orig_setOrientationVel = system.__presence_constructor__.prototype.setOrientationVel;
+     var orig_setScale = system.__presence_constructor__.prototype.setScale;
+
+     var infiniteOrNaN = function(v) {
+         return (!isFinite(v) || isNaN(v));
+     };
+
+     system.__presence_constructor__.prototype.setQueryAngle = function(v) {
+         if (typeof(v) !== 'number')
+             throw new TypeError('presence.setQueryAngle expects a number');
+         if (infiniteOrNaN(v) || v < 0 || v > 12.5664)
+             throw new RangeError('presence.setQueryAngle expects a value between 0 and 12.5664');
+
+         return orig_setQueryAngle.apply(this, [v]);
+     };
+
+     system.__presence_constructor__.prototype.setPosition = function(v) {
+         // Support a convenient shorthand for setting to the origin
+         if (v === 0) return orig_setPosition.apply(this, [new util.Vec3(0,0,0)]);
+
+         if (typeof(v) !== 'object' || typeof(v.x) !== 'number' || typeof(v.y) !== 'number' || typeof(v.z) !== 'number')
+             throw new TypeError('presence.setPosition expects a Vec3 or object with x, y, and z fields that are numbers');
+         if (infiniteOrNaN(v.x) || infiniteOrNaN(v.y) || infiniteOrNaN(v.z))
+             throw new RangeError('presence.setPosition expects values to be finite and not NaNs');
+
+         return orig_setPosition.apply(this, [v]);
+     };
+
+     system.__presence_constructor__.prototype.setVelocity = function(v) {
+         // Support a convenient shorthand for setting to the origin
+         if (v === 0) return orig_setVelocity.apply(this, [new util.Vec3(0,0,0)]);
+
+         if (typeof(v) !== 'object' || typeof(v.x) !== 'number' || typeof(v.y) !== 'number' || typeof(v.z) !== 'number')
+             throw new TypeError('presence.setVelocity expects a Vec3 or object with x, y, and z fields that are numbers');
+         if (infiniteOrNaN(v.x) || infiniteOrNaN(v.y) || infiniteOrNaN(v.z))
+             throw new RangeError('presence.setVelocity expects values to be finite and not NaNs');
+
+         return orig_setVelocity.apply(this, [v]);
+     };
+
+
+     system.__presence_constructor__.prototype.setOrientation = function(v) {
+         // Support a convenient shorthand for setting to the origin
+         if (v === 0) return orig_setOrientation.apply(this, [new util.Quaternion()]);
+
+         if (typeof(v) !== 'object' || typeof(v.x) !== 'number' || typeof(v.y) !== 'number' || typeof(v.z) !== 'number' || typeof(v.w) !== 'number')
+             throw new TypeError('presence.setOrientation expects a Quaternion or object with x, y, z, and w fields that are numbers');
+         if (infiniteOrNaN(v.x) || infiniteOrNaN(v.y) || infiniteOrNaN(v.z) || infiniteOrNaN(v.w))
+             throw new RangeError('presence.setOrientation expects values to be finite and not NaNs');
+
+         return orig_setOrientation.apply(this, [v]);
+     };
+
+     system.__presence_constructor__.prototype.setOrientationVel = function(v) {
+         // Support a convenient shorthand for setting to the origin
+         if (v === 0) return orig_setOrientationVel.apply(this, [new util.Quaternion()]);
+
+         if (typeof(v) !== 'object' || typeof(v.x) !== 'number' || typeof(v.y) !== 'number' || typeof(v.z) !== 'number' || typeof(v.w) !== 'number')
+             throw new TypeError('presence.setOrientationVel expects a Quaternion or object with x, y, z, and w fields that are numbers');
+         if (infiniteOrNaN(v.x) || infiniteOrNaN(v.y) || infiniteOrNaN(v.z) || infiniteOrNaN(v.w))
+             throw new RangeError('presence.setOrientationVel expects values to be finite and not NaNs');
+
+         return orig_setOrientationVel.apply(this, [v]);
+     };
+
+
+     system.__presence_constructor__.prototype.setScale = function(v) {
+         if (typeof(v) !== 'number')
+             throw new TypeError('presence.setScale expects a number');
+         if (infiniteOrNaN(v))
+             throw new RangeError('presence.setScale expects value to be finite and not NaN');
+
+         return orig_setScale.apply(this, [v]);
      };
 
 })();
