@@ -53,7 +53,7 @@ std.graphics.AnimationInfo = system.Class.extend(
         // Send a message to all current members of the chat group
         sendAll: function(msg) {
             for(var i = 0; i < this._subscription_group.length; i++) {
-                system.__debugPrint("Sending anim msg to " + this._subscription_group[i] + " \n");
+                //system.__debugPrint("Sending anim msg to " + this._subscription_group[i] + " \n");
                 msg >> this._subscription_group[i] >> [];
             }
         },
@@ -66,11 +66,11 @@ std.graphics.AnimationInfo = system.Class.extend(
 
         // Handler for animation msgs from others.
         onAnimationMessage: function(msg, sender) {
-            system.__debugPrint("Received anim msg: " + msg.vis_addr + " : " + msg.anim_name + "\n");
+            //system.__debugPrint("Received anim msg: " + msg.vis_addr + " : " + msg.anim_name + "\n");
           
             var visibleMap = system.getProxSet(system.self);
             for (var key in visibleMap) {
-              system.__debugPrint(key + " compared to "  + msg.vis_addr + "\n");
+              //system.__debugPrint(key + " compared to "  + msg.vis_addr + "\n");
               if (msg.vis_addr == key) {
                 this._simulator.startAnimation(visibleMap[key], msg.anim_name, true);
               }
@@ -86,7 +86,7 @@ std.graphics.AnimationInfo = system.Class.extend(
                     return;
             }
 
-            system.__debugPrint("Adding "  + sender + " to subscription group\n");
+            //system.__debugPrint("Adding "  + sender + " to subscription group\n");
 
             this._subscription_group.push(sender);
             var p = new util.Pattern("animation_info");
@@ -110,7 +110,7 @@ std.graphics.AnimationInfo = system.Class.extend(
 
         // Reply to probes for what protocols we support.
         onTestMessage: function(msg, sender) {
-            system.__debugPrint("Replying to intro msg\n");
+            //system.__debugPrint("Replying to intro msg\n");
             msg.makeReply( { "support_animation": "yes" } ) >> [];
         }
     }
