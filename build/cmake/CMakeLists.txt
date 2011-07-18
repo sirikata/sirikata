@@ -243,7 +243,6 @@ GET_FILENAME_COMPONENT(DEMO_SCENES_DIR ${DEMO_DIR}/scenes ABSOLUTE)
 
 SET(BUILD_DIR ${TOP_LEVEL}/build/cmake)
 SET(GENERATED_FILES_DIR ${BUILD_DIR}/generated)
-SET(ScriptsRoot ${TOP_LEVEL}/liboh/scripts)
 
 SET(SirikataProtocolDirectory ${GENERATED_FILES_DIR})
 SET(SIRIKATA_OGRE_DATA_DIR ${TOP_LEVEL}/libproxyobject/plugins/ogre/data)
@@ -2847,16 +2846,6 @@ INSTALL(DIRECTORY
         PATTERN "*.hh" EXCLUDE
         PATTERN "*.gch" EXCLUDE
 )
-
-
-INSTALL(DIRECTORY
-          # note: the trailing slashes avoid prepending the directory name
-          # itself to the installed files
-          ${ScriptsRoot}
-        DESTINATION lib/
-        PATTERN "*.cs" EXCLUDE
-        PATTERN "*.pyc" EXCLUDE)
-
 
 # get the name of the binaries for running tests
 IF(WIN32)
