@@ -2,6 +2,15 @@
 //note: this file is imported as js.  All js operators are valid here,
 //but things like +,-, etc. aren't over-written.
 
+
+//note: this is just a documentation hack to get jsdoc to pick up util documentation.
+if (typeof(util) == 'undefined')
+{
+    /** @namespace */
+    util = {};
+}
+
+
 (function()
 {
     var internalUtilRand = std.core.bind(util.rand,util);
@@ -277,15 +286,19 @@
           return internalUtilPattern.apply(this,arguments);
       };
 
+
     
       /**
+       @namespace 
+       
        @param x
        @param y
        @param z
        @param w
 
-       @return quaternion object
+       Quaternion should be assumed to only have .x, .y, .z, and .w. 
        
+       @return a quaternion object
        */
       util.Quaternion = function()
       {
@@ -293,11 +306,14 @@
       };
 
       /**
+       @namespace
+       
        @param x
        @param y
        @param z
 
        @return a vec3 object
+        Vec3 should be assumed to only have .x, .y, and .z. 
        */
       util.Vec3 = function()
       {

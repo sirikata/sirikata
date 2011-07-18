@@ -33,18 +33,6 @@
 
 /* Quaternion should be assumed to only have .x, .y, .z, and .w. */
 
-if(util.Quaternion == undefined)
-{
-  
-  /** @namespace 
-   * Quaternion should be assumed to only have .x, .y, .z, and .w. 
-  */
-  // this is just fake. Should never be executed here, else something is
-  // actually wrong with the system. I added this just for the
-  // documentation hack ;-)
-  util.Quaternion = new Object();
-}
-
 
 /** @constant.
  *  Identity quaternion representing no rotation.

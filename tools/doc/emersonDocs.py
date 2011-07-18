@@ -17,6 +17,18 @@ def runJSDoc(emroot, outFold):
     envir["JSDOCDIR"] = jsdocDir
     subprocess.Popen(cmd.split(), env=envir).communicate()[0]
 
+
+'''
+  Must be run with two parameters:
+
+    -outFold string: name of a directory where you want to put
+     generated documentation files.  (note: if directory doesn't
+     exist, we create it.)
+     
+    -emroot string: path to the Emerson cpp root directory.  For
+     example, as of commit 853abe811, you should point to
+     <path to local sirikata>/liboh/plugins/js/
+'''
 if __name__ == "__main__":
     outFold = None
     emroot = None

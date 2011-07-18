@@ -31,13 +31,6 @@
  */
 
 
-if(util.Vec3 == undefined)
-{
-  /** @namespace 
-    * Vec3 should be assumed to only have .x, .y, and .z. */
-  util.Vec3 = new Object();
-}
-
 
 
 /** @function
