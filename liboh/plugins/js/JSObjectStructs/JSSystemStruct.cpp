@@ -62,6 +62,11 @@ v8::Handle<v8::Value> JSSystemStruct::storageRead(const OH::Storage::Key& key, v
     return associatedContext->storageRead(key, cb);
 }
 
+v8::Handle<v8::Value> JSSystemStruct::sendSandbox(const String& msgToSend, JSContextStruct* destination)
+{
+    return associatedContext->sendSandbox(msgToSend,destination);
+}
+
 
 v8::Handle<v8::Value> JSSystemStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb)
 {
@@ -166,6 +171,17 @@ v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct
 
     return associatedContext->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
+
+v8::Handle<v8::Value> JSSystemStruct::setSandboxMessageCallback(v8::Persistent<v8::Function> callback)
+{
+    return associatedContext->setSandboxMessageCallback(callback);
+}
+
+v8::Handle<v8::Value> JSSystemStruct::setPresenceMessageCallback(v8::Persistent<v8::Function> callback)
+{
+    return associatedContext->setPresenceMessageCallback(callback);
+}
+
 
 
 v8::Handle<v8::Value> JSSystemStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool isSuspended)

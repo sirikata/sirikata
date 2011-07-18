@@ -34,7 +34,7 @@ class JSProxyData;
 
 struct JSContextStruct : public JSSuspendable, public Liveness
 {
-    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID);
+    JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext);
     ~JSContextStruct();
 
     //looks in current context and returns the current context as pointer to
@@ -72,7 +72,16 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> storageRead(const OH::Storage::Key& key, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb);
 
+    /**
+       @param {string} serialized message to send
+       @param {JSContextStruct*} destination.  (If null, means send to parent).
 
+       Sends a message from this sandbox to the sandbox associated with
+       destination.  If destination is null, sends to parent.
+     */
+    v8::Handle<v8::Value> sendSandbox(const String& msgToSend, JSContextStruct* destination);
+    
+    
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
 
 
@@ -134,6 +143,14 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //wth jscontextstruct.  registers this handler as well through struct_registerSuspendable
     v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
 
+
+    /**
+       msgObj is the JS object message that is being delivered from sender to
+       me.  Dispatches the onSandboxMessage handler that is bound to newly
+       created contexts.
+     */
+    void receiveSandboxMessage(v8::Local<v8::Object> msgObj, JSContextStruct* sender);
+    
 
     /**
        @param {JSPresenceStruct} jspres Each context (other than the root) is
@@ -206,6 +223,24 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     void httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpManager::HttpRespPtr httpResp);
     v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
 
+
+    v8::Handle<v8::Value> setSandboxMessageCallback(v8::Persistent<v8::Function> callback);
+    v8::Handle<v8::Value> setPresenceMessageCallback(v8::Persistent<v8::Function> callback);
+
+    
+    //Each entity consists of a sandbox tree.  mParentContext points to the
+    //parent of the current sandbox.  (Can be null for root sandbox.)  Can
+    //access children sandboxes through associatedSuspendables map.
+    JSContextStruct* mParentContext;
+
+    //Should always check if empty before using.  Contains function to dispatch
+    //if we ever receive a sandbox message.  Takes two arguments: 1: decoded
+    //sandbox message (should just be an object); 2: sandbox object for sender
+    //of message; if parent sent message, then the second field is null (which
+    //should agree with sandbox.PARENT set in std/shim/sandbox.em
+    v8::Persistent<v8::Function> sandboxMessageCallback;
+    v8::Persistent<v8::Function> presenceMessageCallback;
+    
 private:
     uint32 mContextID;
 
@@ -265,6 +300,7 @@ private:
 
     void flushQueuedSuspendablesToChange();
 
+    
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \
     String fname (funcName);               \
@@ -281,6 +317,18 @@ private:
 
 
 }; //end class
+
+
+#define INLINE_CONTEXT_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo) \
+    JSContextStruct* whereWriteTo;                                      \
+    {                                                                   \
+        String _errMsg = "In " #whereError "cannot convert " #whichArg " to sandbox struct"; \
+        whereWriteTo = JSContextStruct::decodeContextStruct(toConvert,_errMsg); \
+        if (whereWriteTo == NULL)                                       \
+            V8_EXCEPTION_STRING(_errMsg);                               \
+    }
+
+
 
 typedef std::vector<JSContextStruct*> ContextVector;
 typedef ContextVector::iterator ContextVecIter;

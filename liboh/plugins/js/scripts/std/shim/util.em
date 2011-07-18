@@ -273,19 +273,7 @@ if (typeof(util) == 'undefined')
           return internalUtilAbs.apply(undefined,arguments);
       };
 
-
-      /**
-       @param name to match
-       @param value to match (can be null)
-       @param proto to match (can be null)
-
-       @return pattern object
-       */
-      util.Pattern =function()
-      {
-          return internalUtilPattern.apply(this,arguments);
-      };
-
+    
 
     
       /**
@@ -378,4 +366,5 @@ if (typeof(util) == 'undefined')
         throw new Error('Invalid type passed to Base64.decodeURL.');
     };
 
+    system.require('std/shim/utilMessaging.em');
 })();

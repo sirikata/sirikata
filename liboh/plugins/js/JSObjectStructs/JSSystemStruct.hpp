@@ -57,6 +57,20 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canCreateEnt();
     v8::Handle<v8::Value> struct_canEval();
 
+    /**
+       @param {v8::Object} msgToSend
+       @param {JSContextStruct*} destination.  (If null, means send to parent).
+
+       Sends a message from the sandbox associated with this system object to
+       the sandbox associated with destination.  If destination is null, sends
+       to parent.
+       
+     */
+    v8::Handle<v8::Value> sendSandbox(const String& msgToSend, JSContextStruct* destination);
+
+    v8::Handle<v8::Value> setSandboxMessageCallback(v8::Persistent<v8::Function> callback);
+    v8::Handle<v8::Value> setPresenceMessageCallback(v8::Persistent<v8::Function> callback);
+    
 
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWatching, JSProxyData* addParams)
     {

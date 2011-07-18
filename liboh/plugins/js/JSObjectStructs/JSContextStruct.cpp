@@ -26,10 +26,11 @@
 namespace Sirikata {
 namespace JS {
 
-JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID)
+JSContextStruct::JSContextStruct(JSObjectScript* parent, JSPresenceStruct* whichPresence, SpaceObjectReference home,uint32 capNum,v8::Handle<v8::ObjectTemplate> contGlobTempl, uint32 contextID,JSContextStruct* parentContext)
  : JSSuspendable(),
    jsObjScript(parent),
    mContext(v8::Context::New(NULL, contGlobTempl)),
+   mParentContext(parentContext),
    mContextID(contextID),
    hasOnConnectedCallback(false),
    hasOnDisconnectedCallback(false),
@@ -105,6 +106,23 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
     httpObj->Set(v8::String::New("data"), strToUint16Str(dataStr));
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(true), httpObj};
     jsObjScript->invokeCallback(this,cb, 2, argv);
+}
+
+
+v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSContextStruct* destination)
+{
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendSandbox,jsObjScript);
+    
+    //note if destination is null, and have no parent, throw error.
+    if (destination == NULL)
+    {
+        if (mParentContext == NULL)
+            V8_EXCEPTION_CSTR("Error sending sandbox root sandbox does not have a parent to send to");
+
+        destination = mParentContext;
+    }
+    
+    return emerScript->sendSandbox(msgToSend, getContextID(), destination->getContextID());
 }
 
 
@@ -246,6 +264,7 @@ void JSContextStruct::createContextObjects()
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 
+    
     //Always load the shim layer.
     //import shim
     jsObjScript->import("std/shim.em",this,false);
@@ -282,13 +301,31 @@ v8::Handle<v8::Value> JSContextStruct::struct_createQuaternion(Quaternion& toCre
 }
 
 
+v8::Handle<v8::Value> JSContextStruct::setSandboxMessageCallback(v8::Persistent<v8::Function> callback)
+{
+    if (!sandboxMessageCallback.IsEmpty())
+        sandboxMessageCallback.Dispose();
+
+    sandboxMessageCallback = callback;
+    return v8::Undefined();
+}
+
+v8::Handle<v8::Value> JSContextStruct::setPresenceMessageCallback(v8::Persistent<v8::Function> callback)
+{
+    if (!presenceMessageCallback.IsEmpty())
+        presenceMessageCallback.Dispose();
+
+    presenceMessageCallback = callback;
+    return v8::Undefined();
+}
+
+
 
 
 v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendMessage,jsObjScript);
-    //emerScript->sendScriptCommMessageReliable(
-    //jspl->getSporef(),jspres->getSporef(), serialized_message);
+
     if (! emerScript->isStopped())
         emerScript->sendScriptCommMessageReliable(jspres->getSporef(),  jspl->getSporef(),serialized_message);
 
@@ -572,6 +609,13 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     if (hasOnDisconnectedCallback)
         cbOnDisconnected.Dispose();
 
+    if (!sandboxMessageCallback.IsEmpty())
+        sandboxMessageCallback.Dispose();
+
+    if (!presenceMessageCallback.IsEmpty())
+        presenceMessageCallback.Dispose();
+
+    
     mContext.Dispose();
     inClear = false;
     return handle_scope.Close(returner);
@@ -622,22 +666,25 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
     associatedSuspendables.erase(iter);
 
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
+    
+    // //if it's an event handler struct, we also need to ensure that it is removed
+    // //from EmersonScript.  Calling emerScript->deleteHandler will kill the
+    // //event handler and free its memory.  Otherwise, we can free it directly here.
+//     JSEventHandlerStruct* jsev = dynamic_cast<JSEventHandlerStruct*>(toDeregister);
+//     if (jsev != NULL)
+//     {
+//         if (emerScript == NULL)
+//         {
+//             JSLOG(error, "should not be deregistering an event listener from headless script.");
+//             return;
+//         }
 
-    //if it's an event handler struct, we also need to ensure that it is removed
-    //from EmersonScript.  Calling emerScript->deleteHandler will kill the
-    //event handler and free its memory.  Otherwise, we can free it directly here.
-    JSEventHandlerStruct* jsev = dynamic_cast<JSEventHandlerStruct*>(toDeregister);
-    if (jsev != NULL)
-    {
-        if (emerScript == NULL)
-        {
-            JSLOG(error, "should not be deregistering an event listener from headless script.");
-            return;
-        }
-
-        emerScript->deleteHandler(jsev);
-        return;
-    }
+//         std::cout<<"\n\nTrying to delete event handler\n\n";
+//         assert(false);
+        
+// //        emerScript->deleteHandler(jsev);
+//         return;
+//     }
 
     //handle presence clear.
     JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (toDeregister);
@@ -652,7 +699,6 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
         emerScript->deletePres(jspres);
         return;
     }
-
 
 
     //if it's just a timer or a context, can delete without requesting
@@ -811,7 +857,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* pr
         presStruct = associatedPresence;
     JSContextStruct* new_jscs      = NULL;
 
-    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canSendTo,capNum,new_jscs);
+    v8::Local<v8::Object> returner = jsObjScript->createContext(presStruct,canSendTo,capNum,new_jscs,this);
     //register the new context as a child of the previous one
     struct_registerSuspendable(new_jscs);
     return returner;
@@ -842,11 +888,12 @@ v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const Patt
 {
     //constructor of new_handler should take care of registering with context as
     //a suspendable.
-    JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this,issusp);
+    // JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this,issusp);
 
-    CHECK_EMERSON_SCRIPT_ERROR(emerScript,makeEventHandler,jsObjScript);
-    emerScript->registerHandler(new_handler);
-    return emerScript->makeEventHandlerObject(new_handler,this);
+    // CHECK_EMERSON_SCRIPT_ERROR(emerScript,makeEventHandler,jsObjScript);
+    // emerScript->registerHandler(new_handler);
+    // return emerScript->makeEventHandlerObject(new_handler,this);
+    return v8::Undefined();
 }
 
 

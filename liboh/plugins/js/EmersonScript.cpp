@@ -143,13 +143,8 @@ void EmersonScript::resetScript()
     //before cler presences, take all
     mResetting = false;
     mPresences.clear();
-    mEventHandlers.clear();
-    mQueuedHandlerEventsAdd.clear();
-    mQueuedHandlerEventsDelete.clear();
     mImportedFiles.clear();
     mContext->struct_rootReset();
-    flushQueuedHandlerEvents();
-
 
     //replay all prox sets to each presence
     for (std::map<SpaceObjectReference, std::vector<JSVisibleStruct*> >::iterator presIter = resettingVisiblesResultSet.begin();
@@ -582,34 +577,6 @@ void EmersonScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSCo
     invokeCallback(jscont, funcToCall, 1,&js_pres);
 }
 
-//tries to add the handler struct to the list of event handlers.
-//if am in the middle of processing an event handler, defers the
-//addition to after the event has finished.
-void EmersonScript::registerHandler(JSEventHandlerStruct* jsehs)
-{
-    if ( mHandlingEvent)
-    {
-        //means that we're in the process of handling an event, and therefore
-        //cannot push onto the event handlers list.  instead, add it to another
-        //vector, which are additional changes to make after we've tried to
-        //match all events.
-        mQueuedHandlerEventsAdd.push_back(jsehs);
-    }
-    else
-        mEventHandlers.push_back(jsehs);
-
-}
-
-
-//for debugging
-void EmersonScript::printAllHandlers()
-{
-    std::cout<<"\nDEBUG: printing all handlers\n";
-    for (int s=0; s < (int) mEventHandlers.size(); ++s)
-        mEventHandlers[s]->printHandler();
-
-    std::cout<<"\n\n\n";
-}
 
 
 
@@ -648,7 +615,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
 
     if (! parsed)
         return false;
-
+    
     return deserializeMsgAndDispatch(src,dst,js_msg);
 }
 
@@ -657,48 +624,53 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
 
 bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
 {
-
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(mContext->mContext);
-    v8::Local<v8::Object> obj = v8::Object::New();
-
-    v8::Handle<v8::Object> msgSender = createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,mContext->mContext);
-
-
-
-    //try deserialization
-    bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,obj);
-
-    if (! deserializeWorks)
-    {
-        JSLOG(error, "Deserialization Failed!!");
-        return false;
-    }
-
-
-    // Checks if matches some handler.  Try to dispatch the message
-    bool matchesSomeHandler = false;
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 
-    for (int s=0; s < (int) mEventHandlers.size(); ++s)
+    //FIXME: Don't forget to handle the case where a context is cleared from
+    //within a callback.  Will invalidate iterator.  Fix this
+    //lkjs;
+    
+    for (std::map<uint32,JSContextStruct*>::iterator contIter = mContStructMap.begin();
+         contIter != mContStructMap.end();++contIter)
     {
-        if ((mResetting) || (mKilling))
-            break;
-
-        if (mEventHandlers[s]->matches(obj,src,dst))
+        JSContextStruct* receiver = contIter->second;
+        if (receiver->canReceiveMessagesFor(dst))
         {
-            // Adding support for the knowing the message properties too
-            int argc = 3;
-            Handle<Value> argv[3] = { obj, msgSender, v8::String::New (dst.toString().c_str(), dst.toString().size()) };
-            TryCatch try_catch;
-            invokeCallback(mContext, NULL, mEventHandlers[s]->cb, argc, argv);
+            //If callback for presence messages on receiver doesn't exist, then don't do
+            //anything, just return.
+            if (receiver->presenceMessageCallback.IsEmpty())
+                continue;
+            
+            v8::HandleScope handle_scope;
+            v8::Context::Scope context_scope (receiver->mContext);
+            
+           v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,receiver->mContext);
+           v8::Local<v8::Object> msgObj = v8::Object::New();
 
-            matchesSomeHandler = true;
+            
+            //try deserialization
+           bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,msgObj);
+
+           if (! deserializeWorks)
+           {
+               JSLOG(error, "Deserialization Failed!!");
+               mHandlingEvent =false;
+               return false;
+           }
+                
+           v8::Handle<v8::Value> argv[3];
+           argv[0] =msgObj;
+           argv[1] = msgSender;
+           argv[2] = v8::String::New (dst.toString().c_str(), dst.toString().size());
+
+           invokeCallback(receiver,receiver->presenceMessageCallback,3,argv);
+
         }
     }
+
     mHandlingEvent = false;
-    flushQueuedHandlerEvents();
+
 
     //if one of the actions that your handler took was to call reset, then reset
     //the entire script.
@@ -707,10 +679,6 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
 
     if (mKilling)
         killScript();
-
-    if (!matchesSomeHandler) {
-        JSLOG(detailed,"Message did not match any handler patterns");
-    }
 
     return true;
 }
@@ -731,82 +699,69 @@ void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const 
 }
 
 
-//This function takes care of all of the event handling changes that were queued
-//while we were trying to match event happenings.
-//adds all outstanding changes and then deletes all outstanding in that order.
-void EmersonScript::flushQueuedHandlerEvents()
+v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32 senderID, uint32 receiverID)
 {
-
-    //Adding
-    for (int s=0; s < (int)mQueuedHandlerEventsAdd.size(); ++s)
-    {
-        //add handlers requested to be added during matching of handlers
-        mEventHandlers.push_back(mQueuedHandlerEventsAdd[s]);
-    }
-    mQueuedHandlerEventsAdd.clear();
-
-
-    //deleting
-    for (int s=0; s < (int)mQueuedHandlerEventsDelete.size(); ++s)
-    {
-        //remove handlers requested to be deleted during matching of handlers
-        removeHandler(mQueuedHandlerEventsDelete[s]);
-    }
-
-
-    for (int s=0; s < (int) mQueuedHandlerEventsDelete.size(); ++s)
-    {
-        //actually delete the patterns
-        //have to do this sort of tortured structure with comparing against
-        //nulls in order to prevent deleting something twice (a user may have
-        //tried to get rid of this handler multiple times).
-        if (mQueuedHandlerEventsDelete[s] != NULL)
-        {
-            deleteHandler(mQueuedHandlerEventsDelete[s]);
-            mQueuedHandlerEventsDelete[s] = NULL;
-        }
-    }
-    mQueuedHandlerEventsDelete.clear();
+    //posting task so that still get asynchronous messages.
+    mParent->getIOService()->post(std::tr1::bind(&EmersonScript::processSandboxMessage, this,msgToSend,senderID,receiverID));
+    return v8::Undefined();
 }
 
-
-
-void EmersonScript::removeHandler(JSEventHandlerStruct* toRemove)
+void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID)
 {
-    JSEventHandlerList::iterator iter = mEventHandlers.begin();
-    while (iter != mEventHandlers.end())
-    {
-        if ((*iter) == toRemove)
-        {
-            (*iter)->clear();
-            iter = mEventHandlers.erase(iter);
-        }
-        else
-            ++iter;
-    }
-}
-
-//takes in an event handler, if not currently handling an event, removes the
-//handler from the vector and deletes it.  Otherwise, adds the handler for
-//removal and deletion later.
-void EmersonScript::deleteHandler(JSEventHandlerStruct* toDelete)
-{
-    //if the handler is already in the process of being cleared, do not
-    //something else will already delete it.  To avoid double-delete, return
-    //here.
-    if (toDelete->getIsCleared())
+    //FIXME: there's a chance that when post was called in sendSandbox, the
+    //sandbox sender was destroyed and then a new one created with the same
+    //senderID.  That's exceptionally unlikely, but may want to fix just in
+    //case.
+    
+    //check to ensure that sender and receiver still exist.  If either don't,
+    //then drop the mesage.
+    std::map<uint32,JSContextStruct*>::iterator senderFinder = mContStructMap.find(senderID);
+    if (senderFinder == mContStructMap.end())
         return;
 
-    if (mHandlingEvent)
-    {
-        mQueuedHandlerEventsDelete.push_back(toDelete);
+    JSContextStruct* sender = senderFinder->second;
+    
+    std::map<uint32,JSContextStruct*>::iterator receiverFinder = mContStructMap.find(receiverID);
+    if (receiverFinder == mContStructMap.end())
         return;
+
+    JSContextStruct* receiver = receiverFinder->second;
+
+    //If callback for sandbox messages on receiver doesn't exist, then don't do
+    //anything, just return.
+    if (receiver->sandboxMessageCallback.IsEmpty())
+        return;
+
+    
+    //deserialize the message to an object
+    Sirikata::JS::Protocol::JSMessage js_msg;
+    bool parsed = js_msg.ParseFromArray(msgToSend.data(), msgToSend.size());
+    if (!parsed)
+        return;
+    
+    v8::HandleScope handle_scope;
+    v8::Local<v8::Object> msgObj = v8::Object::New();
+
+    bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,msgObj);
+    if (! deserializeWorks)
+        return;
+
+
+    v8::Handle<v8::Value> argv[2];
+    argv[0] =msgObj;
+
+    if (receiver->mParentContext == sender)
+        argv[1] =  v8::Null();
+    else
+    {
+        v8::Local<v8::Object> senderObj =mManager->mContextTemplate->NewInstance();
+        senderObj->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(sender));
+        senderObj->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
+        argv[1] = senderObj;
     }
 
-    removeHandler(toDelete);
-    toDelete->clear();
-    delete toDelete;
-    toDelete = NULL;
+    
+    invokeCallback(receiver,receiver->sandboxMessageCallback,2,argv);
 }
 
 
@@ -847,25 +802,6 @@ void EmersonScript::deletePres(JSPresenceStruct* toDelete)
     delete toDelete;
 }
 
-
-
-//This function takes in a jseventhandler, and wraps a javascript object with
-//it.  The function is called by registerEventHandler in JSSystem, which returns
-//the js object this function creates to the user.
-v8::Handle<v8::Object> EmersonScript::makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs)
-{
-    v8::Handle<v8::Context> ctx = (jscs == NULL) ? mContext->mContext : jscs->mContext;
-    v8::Context::Scope context_scope(ctx);
-    v8::HandleScope handle_scope;
-
-    v8::Handle<v8::Object> returner =mManager->mHandlerTemplate->NewInstance();
-
-    returner->SetInternalField(JSHANDLER_JSEVENTHANDLER_FIELD, External::New(evHand));
-    returner->SetInternalField(JSHANDLER_JSOBJSCRIPT_FIELD, External::New(this));
-    returner->SetInternalField(TYPEID_FIELD,External::New(new String (JSHANDLER_TYPEID_STRING)));
-
-    return handle_scope.Close(returner);
-}
 
 
 //takes the c++ object jspres, creates a new visible object out of it, if we

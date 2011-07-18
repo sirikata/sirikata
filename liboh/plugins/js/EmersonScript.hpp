@@ -46,7 +46,6 @@
 #include <v8.h>
 
 #include "JSPattern.hpp"
-#include "JSObjectStructs/JSEventHandlerStruct.hpp"
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"
@@ -225,23 +224,14 @@ public:
     v8::Handle<v8::Value> requestReset(JSContextStruct* jscont, const std::map <SpaceObjectReference,std::vector <SpaceObjectReference> > & proxSetVis);
 
 
-    /** Register an event pattern matcher and handler. */
-    void registerHandler(JSEventHandlerStruct* jsehs);
-    v8::Handle<v8::Object> makeEventHandlerObject(JSEventHandlerStruct* evHand, JSContextStruct* jscs);
-
-
     /**
        Timers and context suspendables are killed and deleted in contexts.
-       However, EventHandlers and presences are also stored in EmersonScript,
+       However, presences are also stored in EmersonScript,
        and EmersonScript must be told to kill them and remove them.
-
-       All other suspendables can be killed from their context struct.
-       JSEventHandlers cannot be because we need to ensure that we're out of the
-       event loop before removing it from the list of events and killing it.
+       
        And JSPresences, we need to remove from our list of presences and ask
        hosted object to remove it.
-     */
-    void deleteHandler(JSEventHandlerStruct* toDelete);
+    */
     void deletePres(JSPresenceStruct* toDelete);
 
 
@@ -266,6 +256,16 @@ public:
         return emHttpPtr;
     }
 
+    
+    /**
+       msgToSend contains a serialized v8 object that will be sent from sandbox
+       with id sendingSandbox to sandbox with id receivingSandbox.  Posts dow
+       into processSandboxMessage, which actually dispatches the message in the
+       correct context.
+
+       Returns undefined.
+     */
+    v8::Handle<v8::Value> sendSandbox(const String& msgToSend, uint32 senderID, uint32 receiverID);
 
 
 private:
@@ -282,10 +282,6 @@ private:
     //Called internally by script when guaranteed to be outside of handler
     //execution loop.
     void killScript();
-
-    typedef std::vector<JSEventHandlerStruct*> JSEventHandlerList;
-    JSEventHandlerList mEventHandlers;
-
     void resetScript();
 
     /*
@@ -297,16 +293,9 @@ private:
 
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src);
 
-    void flushQueuedHandlerEvents();
     bool mHandlingEvent;
     bool mResetting;
     bool mKilling;
-    JSEventHandlerList mQueuedHandlerEventsAdd;
-    JSEventHandlerList mQueuedHandlerEventsDelete;
-
-
-    //Does not delete handler.  Removes it from the eventHandlerList.
-    void removeHandler(JSEventHandlerStruct* toRemove);
 
 
     //This function returns to you the current value of present token and
@@ -315,13 +304,20 @@ private:
     //so that don't start inadvertently returning the DEFAULT_PRESENCE_TOKEN;
     HostedObject::PresenceToken incrementPresenceToken();
 
-
-    void  printAllHandlers();
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);
 
     // Adds/removes presences from the javascript's system.presences array.
     //returns the jspresstruct associated with new object
     JSPresenceStruct* addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token);
+
+    /**
+       Tries to decode string as a v8 object.  Lookup senderID and receiverID in
+       mContStructMap to find associated JSContextStructs.  If they don't exist,
+       silently drop.  If they do, then check if sender has a callback for
+       sandbox messages defined on it.  If it does, then call it with the
+       deserialized message object in it.
+     */
+    void processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID);
 
 
    /**

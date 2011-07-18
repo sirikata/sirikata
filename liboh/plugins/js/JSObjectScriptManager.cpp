@@ -235,6 +235,8 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
     mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
+    mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
+    
     mSystemTemplate->Set(v8::String::New("js_import"), v8::FunctionTemplate::New(JSSystem::root_jsimport));
     mSystemTemplate->Set(v8::String::New("js_require"), v8::FunctionTemplate::New(JSSystem::root_jsrequire));
 
@@ -250,6 +252,8 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("storageWrite"),v8::FunctionTemplate::New(JSSystem::storageWrite));
     mSystemTemplate->Set(v8::String::New("storageRead"),v8::FunctionTemplate::New(JSSystem::storageRead));
 
+    mSystemTemplate->Set(v8::String::New("setSandboxMessageCallback"),v8::FunctionTemplate::New(JSSystem::setSandboxMessageCallback));
+    mSystemTemplate->Set(v8::String::New("setPresenceMessageCallback"),v8::FunctionTemplate::New(JSSystem::setPresenceMessageCallback));
 
     mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
 

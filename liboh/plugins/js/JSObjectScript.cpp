@@ -233,7 +233,8 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
     v8::HandleScope handle_scope;
 
     SpaceObjectReference sporef = SpaceObjectReference::null();
-    mContext = new JSContextStruct(this, NULL,sporef, Capabilities::getFullCapabilities(),mManager->mContextGlobalTemplate,contIDTracker);
+    mContext = new JSContextStruct(this, NULL,sporef, Capabilities::getFullCapabilities(),mManager->mContextGlobalTemplate,contIDTracker,NULL);
+    
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
@@ -658,6 +659,7 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
 }
 
 
+
 /*
   This function takes the string associated with cb, re-compiles it in the
   passed-in context, and then passes it back out.  (Note, enclose the function
@@ -1041,12 +1043,12 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
     return absoluteImport(full_filename, full_base,jscont,isJS);
 }
 
-v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField)
+v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField, JSContextStruct* creator)
 {
     v8::HandleScope handle_scope;
 
     v8::Local<v8::Object> returner =mManager->mContextTemplate->NewInstance();
-    internalContextField = new JSContextStruct(this,jspres,canSendTo,capNum,mManager->mContextGlobalTemplate,contIDTracker);
+    internalContextField = new JSContextStruct(this,jspres,canSendTo,capNum,mManager->mContextGlobalTemplate,contIDTracker,creator);
     mContStructMap[contIDTracker] = internalContextField;
     ++contIDTracker;
 

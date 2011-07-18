@@ -13,6 +13,11 @@
   {
 
       /**
+       Used as a constant for sending messages to your parent sandbox.
+       */
+      sandbox.PARENT = null;
+      
+      /**
        Calling suspends sandbox. (Until resume is called, no code within sandbox will execute.)
        */
       sandbox.prototype.suspend = function()

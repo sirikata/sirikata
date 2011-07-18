@@ -42,6 +42,13 @@ if(system == undefined)
   system = new Object();
 }
 
+
+
+/**@ignore
+ Each presence entry object manages the proximity result set for a presence.
+ @param {string} sporef The space object reference for the presence, presObj.
+ @param {presence} presObj The actual js presence object.
+ */
 function PresenceEntry(sporef, presObj)
 {
     this.sporef  = sporef;
@@ -164,6 +171,9 @@ function PresenceEntry(sporef, presObj)
      var baseSystem = __system;
      var isResetting = false;
      var isKilling   = false;
+
+     var sboxMessageManager = null;
+     var presMessageManager = null;
      
      system = {};
 
@@ -267,7 +277,59 @@ function PresenceEntry(sporef, presObj)
          return baseSystem.storageErase.apply(baseSystem, arguments);
      };
 
+     /**
+      @ignore
+      */
+     system.__setSandboxMessageManager = function(sbox_message_manager)
+     {
+         sboxMessageManager = sbox_message_manager;
+         baseSystem.setSandboxMessageCallback(sboxMessageManager.handleMessage);
+     };
 
+     /**
+      @ignore
+      */
+     system.__setPresenceMessageManager = function(pres_message_manager)
+     {
+         presMessageManager = pres_message_manager;
+         baseSystem.setPresenceMessageCallback(presMessageManager.handleMessage);
+     };
+
+          
+      /** @ignore
+       Call to register a message handler for a message to a presence.
+       */
+      system.registerHandler = function (callback,pattern,sender)
+      {
+          if (presMessageManager === null)
+              throw new Error('Error: presence message manager is not yet initialized.  Cannot register a handler yet.');
+
+          var wrappedCallback = this.__wrapRegHandler(callback);
+          return presMessageManager.registerHandler(wrappedCallback,pattern,sender);
+      };
+
+
+     /**@ignore 
+      */
+     system.registerSandboxMessageHandler = function (callback,pattern,sender)
+     {
+          if (sboxMessageManager === null)
+              throw new Error('Error: sandbox message manager is not yet initialized.  Cannot register a handler yet.');
+          
+          return presMessageManager.registerHandler(callback,pattern,sender);
+      };
+     
+     
+     
+     
+     /**
+      @ignore
+      */
+     system.__setPresenceMessageCallback = function()
+     {
+         return baseSystem.setPresenceMessageCallback.apply(baseSystem,arguments);
+     };
+     
      
      //restore manipulations
      /** Set the script to execute when this object is restored after a crash.
@@ -424,17 +486,6 @@ function PresenceEntry(sporef, presObj)
       system.eval = function()
       {
           baseSystem.eval.apply(baseSystem,arguments);
-      };
-
-      // Not exposing this
-      /** @ignore */
-      system.registerHandler = function (callback,pattern,sender,issusp)
-      {
-          var wrappedCallback = this.__wrapRegHandler(callback);
-          if (typeof(issusp) =='undefined')
-              return baseSystem.registerHandler(wrappedCallback,pattern,sender);
-
-          return baseSystem.registerHandler(wrappedCallback,pattern,sender,issusp);
       };
 
       // Not exposing this
@@ -793,7 +844,27 @@ function PresenceEntry(sporef, presObj)
           };
 
 
+     /**
+      Tries to send a message, msg, from the sandbox that system is
+      instantiated in to sbox.
+
+      @param {object} msg The message to deliver to sbox.
       
+      @param {sandbox|sandbox.PARENT} (optional) sbox Should either be
+      a sandbox object or should be the parent sandbox identifier.
+      Marks the intended destination of msg.  If undefined, just sends
+      to parent.
+
+      */
+     system.sendSandbox = function(msg,sbox)
+     {
+         if (typeof(sbox) == 'undefined')
+             return baseSystem.sendSandbox(msg,sandbox.Parent);
+             
+         return baseSystem.sendSandbox(msg,sbox);
+     };
+
+     
       /** @ignore */
       system.__hidden_createEntity = function(/** util.Vec3 */ position, /** String */ scriptOption, /** String */ scriptString, /** String */ mesh, /** Number */ scale, /** Number */ solidAngle)
       {

@@ -80,7 +80,7 @@ public:
 
     //this function returns a context with
 
-    v8::Local<v8::Object> createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField);
+    v8::Local<v8::Object> createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField, JSContextStruct* creator);
 
 
     void initialize(const String& args, const String& script,int32 maxResThresh);
@@ -167,7 +167,6 @@ public:
 
     JSContextStruct* rootContext() const { return mContext; }
 
-
     /**
        Returns true if stop has ever been called on JSObjectScript.
      */
@@ -215,7 +214,7 @@ protected:
     // Each context has an id that is assigned from this variable.
     uint32 contIDTracker;
     std::map<uint32,JSContextStruct*> mContStructMap;
-
+    
 
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
@@ -285,7 +284,6 @@ protected:
     v8::Handle<v8::Value> ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
     v8::Handle<v8::Value> executeJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Function> funcInCtx,int argc, v8::Handle<v8::Object>*target, v8::Handle<v8::Value> argv[]);
     v8::Handle<v8::Value> compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb);
-
 
 
     void  printStackFrame(std::stringstream&, v8::Local<v8::StackFrame>);

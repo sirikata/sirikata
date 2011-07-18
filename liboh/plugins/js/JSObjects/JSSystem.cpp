@@ -83,6 +83,83 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
 }
 
 
+//single argument should be a function.
+v8::Handle<v8::Value> setSandboxMessageCallback(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        V8_EXCEPTION_CSTR("Setting callbacks for messages from sandboxes requires exactly one argument.");
+    
+    //get jssystemstruct
+    INLINE_SYSTEM_CONV_ERROR(args.This(),sendSandbox,this,jssys);
+
+    v8::Handle<v8::Value> cbVal = args[0];
+    if (!cbVal -> IsFunction())
+        V8_EXCEPTION_CSTR("Error in setSandboxMessageCallback.  First argument should be a function.");
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cbVal);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+    return jssys->setSandboxMessageCallback(cb_persist);
+}
+
+v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        V8_EXCEPTION_CSTR("Setting callbacks for messages from presences requires exactly one argument.");
+    
+    //get jssystemstruct
+    INLINE_SYSTEM_CONV_ERROR(args.This(),sendSandbox,this,jssys);
+
+    v8::Handle<v8::Value> cbVal = args[0];
+    if (!cbVal -> IsFunction())
+        V8_EXCEPTION_CSTR("Error in setPresenceMessageCallback.  First argument should be a function.");
+
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cbVal);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+    return jssys->setPresenceMessageCallback(cb_persist);
+}
+
+
+
+/**
+   First argument should contain a message object that will be
+   serialized and sent to another sandbox on same entity.
+   
+   Second argument should either be == null (send to parent), or should contain
+   a sandbox object.
+ */
+v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    
+    if (args.Length() != 2)
+        V8_EXCEPTION_CSTR("Send sandbox requires exactly two arguments");
+
+
+    //get jssystemstruct
+    INLINE_SYSTEM_CONV_ERROR(args.This(),sendSandbox,this,jssys);
+
+    //decode message object.
+    if (! args[0]->IsObject())
+        V8_EXCEPTION_CSTR("Error.  Message to send must be an object.");
+
+    Local<v8::Object> v8MsgObject = args[0]->ToObject();
+    String serializedMessage = JSSerializer::serializeObject(v8MsgObject);
+
+    
+    //recipeint == null implies send to parent (if it exists).
+    JSContextStruct* recipient = NULL;
+    if (! args[1]->IsNull())
+    {
+        //if it isn't null then we should be trying to send to another sandbox.
+        //try to decode that sandbox here.  if decode fails, throw error.
+        INLINE_CONTEXT_CONV_ERROR(args[1],sendSandbox,2,rec);
+        recipient = rec;
+    }
+
+    
+    return handle_scope.Close(jssys->sendSandbox(serializedMessage,recipient));
+}
+
 
 v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args)
 {

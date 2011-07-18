@@ -33,6 +33,7 @@ v8::Handle<v8::Value> createVisFromAddress(const v8::Handle<v8::Value>& addressF
 v8::Handle<v8::Value> createVisFromFull(const v8::Arguments& args);
 
 v8::Handle<v8::Value> root_headless(const v8::Arguments& args);
+v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args);
 
 v8::Handle<v8::Value> debug_fileWrite(const v8::Arguments& args);
 v8::Handle<v8::Value> debug_fileRead(const v8::Arguments& args);
@@ -42,6 +43,8 @@ v8::Handle<v8::Value> root_killEntity(const v8::Arguments& args);
 v8::Handle<v8::Value> root_http(const v8::Arguments& args);
 
 
+v8::Handle<v8::Value> setSandboxMessageCallback(const v8::Arguments& args);
+v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args);
 
 //storage functions
 v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args);
