@@ -870,7 +870,7 @@ function PresenceEntry(sporef, presObj)
             var orientVel = new util.Quaternion (0,0,0,1); //identity.
             var orientTime = '0';
             var physics = '';
-            var scale = this.self.getScale();
+            var scale = 1.0;
             var isCleared = false;
             var contextID = null;
             var isConnected = true;
