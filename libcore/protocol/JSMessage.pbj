@@ -4,13 +4,6 @@
 package Sirikata.JS.Protocol;
 
 
-
-message StringMapProperty {
-    repeated string keys=2;
-    repeated string values=3;
-}
-
-
 message JSFunctionObject{
     required int32 func_id = 1;
     required string f_value = 2;
@@ -22,7 +15,6 @@ message JSFieldValue
 	optional string s_value = 1;
 	optional int32 i_value = 2;
         optional JSMessage o_value = 3;
-//        optional string f_value = 4;
         optional JSFunctionObject f_value = 4;
         optional bool b_value = 5;
 	optional int32 ui_value = 6;
@@ -45,8 +37,6 @@ message JSField
 
         required string name = 1;
 	optional JSFieldValue value = 2; // could be a blank value
-	optional string prototype = 3;
-
 }
 
 message JSMessage

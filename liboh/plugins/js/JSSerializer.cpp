@@ -90,12 +90,6 @@ void JSSerializer::serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::J
 
     Sirikata::JS::Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
     jsf_value.set_s_value(cStrMsgBody2);
-
-    v8::Local<v8::String> proto = v8Func->ObjectProtoToString();
-    INLINE_STR_CONV(proto,cStrMsgBody3, "error decoding string in serializeFunction");
-
-    jsf.set_prototype(cStrMsgBody3);
-
 }
 
 //namespace {

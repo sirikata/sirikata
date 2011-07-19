@@ -46,7 +46,6 @@
 #include "JSSerializer.hpp"
 #include "JSPattern.hpp"
 
-#include "JS_JSMessage.pbj.hpp"
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSGlobal.hpp"
 #include "JSObjects/JSFields.hpp"

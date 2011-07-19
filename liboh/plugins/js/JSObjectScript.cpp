@@ -56,7 +56,6 @@
 #include <vector>
 #include <set>
 #include "JSObjects/JSFields.hpp"
-#include "JS_JSMessage.pbj.hpp"
 #include "emerson/EmersonUtil.h"
 #include "emerson/EmersonException.h"
 #include "emerson/Util.h"
@@ -215,7 +214,7 @@ JSObjectScript::ScopedEvalContext::~ScopedEvalContext() {
 void JSObjectScript::initialize(const String& args, const String& script,int32 maxResThresh)
 {
     maxResourceThresh =maxResThresh;
-    
+
     InitializeClassOptions(
         "jsobjectscript", this,
         // Default value allows us to use std libs in the build tree, starting
@@ -241,7 +240,7 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
     v8::Context::Scope context_scope(mContext->mContext);
     if (!script.empty()) {
         JSLOG(detailed,"Have an initial script to execute.  Executing.");
-        
+
         EvalContext& ctx = mEvalContextStack.top();
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
@@ -515,7 +514,7 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
     if (is_emerson)
     {
         String em_script_str_new = em_script_str;
-        
+
         if(em_script_str.empty())
         {
             postEvalOps();
@@ -888,7 +887,7 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
     if (!checkResourcesCPP())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Detected a potential infinite loop in imports.  Aborting.")));
 
-    
+
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(jscont ? jscont->mContext : mContext->mContext);
 
@@ -953,12 +952,12 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
     JSLOG(detailed, "Importing: " << filename);
 
     std::string* fileToFind= NULL;
-    
+
     if (! isJS)
         fileToFind =  extensionize(filename);
     else
         fileToFind = new String(filename);
-    
+
     if(fileToFind == NULL)
     {
       std::string errMsg = "Cannot import " + filename + ". Illegal file extension.";
@@ -1014,7 +1013,7 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
         return v8::Undefined();
         }
     }
-    
+
     return absoluteImport(full_filename, full_base,jscont,isJS);
 }
 
