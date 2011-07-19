@@ -20,7 +20,7 @@ if (typeof(std.simpleStorage) != 'undefined')
     //contains the script to execute on restore in its script field.
     var mScript = { };
 
-    
+
     //query backend with this index to retrieve mPres object, which lists
     //all presences that we have.
     var presKeyName   =     'pPresKeyName';
@@ -30,14 +30,14 @@ if (typeof(std.simpleStorage) != 'undefined')
     //last elements of the array contain next elements to be processed
     var queuedPresOpers= [];
     //Keys contain all presence sporefs.  Can use these to restore our presences.
-    var mPres   = { };        
-    
+    var mPres   = { };
 
-    
+
+
     std.simpleStorage.setField = function(fieldName,fieldVal)
     {
         var keyName = prepender + fieldName;
-        std.persist.checkpointPartialPersist(fieldVal,keyName);            
+        std.persist.checkpointPartialPersist(fieldVal,keyName);
     };
     std.simpleStorage.write = std.simpleStorage.setField;
 
@@ -46,7 +46,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         system.storageErase(prepender + fieldName);
     };
     std.simpleStorage.erase = std.simpleStorage.eraseField;
-    
+
     std.simpleStorage.readField = function(fieldName,cb,def)
     {
         std.persist.restoreFromAsync(prepender + fieldName,
@@ -59,7 +59,7 @@ if (typeof(std.simpleStorage) != 'undefined')
                                      });
     };
     std.simpleStorage.read = std.simpleStorage.readField;
-    
+
     std.simpleStorage.setPresence = function (presToRestore)
     {
         //cannot process current presence because already performing a
@@ -76,7 +76,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         //ensures this presence is added to our list of presences
         var presName = presToRestore.toString();
         mPres[presName] = true;
-        
+
         // //callback to execute if setPresence works correctly.
         // //essentially all it does is that it begins processing
         // //next presence event.
@@ -89,7 +89,7 @@ if (typeof(std.simpleStorage) != 'undefined')
             processNextPresenceEvent();
         };
 
-        
+
         std.persist.persistMany([[mPres,presKeyName],
                                 [presToRestore,presName]], finishedCB);
 
@@ -109,7 +109,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         //locks other presence operations from occurring.
         presOperInProgress = true;
 
-        var presName = presToRestore.toString();        
+        var presName = presToRestore.toString();
 
         //FIXME: currently cannot batch erase and write operations simultaneously.
         //As a result, mPres and actual presences in backend could get out of sync.
@@ -126,8 +126,8 @@ if (typeof(std.simpleStorage) != 'undefined')
                 presOperInProgress = false;
                 processNextPresenceEvent();
             };
-            
-            
+
+
             if (success)
             {
                 delete mPres[presName];
@@ -141,7 +141,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         system.storageErase(presName,finishedErasePres);
     };
 
-    
+
 
     /**
      Pops the next operation to be processed
@@ -152,7 +152,7 @@ if (typeof(std.simpleStorage) != 'undefined')
             return;
 
         var toProcess = queuedPresOpers.pop();
-        
+
         if (toProcess[0] == 'add')
             std.simpleStorage.setPresence(toProcess[1]);
         else
@@ -165,10 +165,10 @@ if (typeof(std.simpleStorage) != 'undefined')
         var newScript =  ("(" + newScriptFunc + ")();");
         if (typeof(executeOnSet) === 'undefined')
             executeOnSet = false;
-        
+
         mScript.script = newScript;
         system.setRestoreScript('system.require("std/shim/restore/simpleStorage.em");');
-        
+
         var cbFunc = function(){ };
         if (executeOnSet)
             cbFunc = function(){ system.eval(newScript);  };
@@ -176,7 +176,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         std.persist.checkpointPartialPersist(mScript,scriptKeyName,cbFunc);
     };
 
-    
+
     std.simpleStorage.readScript = function(cb,def)
     {
         std.persist.restoreFromAsync(scriptKeyName,
@@ -199,7 +199,7 @@ if (typeof(std.simpleStorage) != 'undefined')
     //restores the script
     function finishOnRestorePresences()
     {
-        std.simpleStorage.readScript(onRestoreScript,"");        
+        std.simpleStorage.readScript(onRestoreScript,"");
     }
 
 
@@ -212,31 +212,42 @@ if (typeof(std.simpleStorage) != 'undefined')
     {
         if (success)
             mPres = allPres;
-        
+
         restorePresences();
     }
 
     //keeps track of all the presences that we have already restored.
     var allRestored = {};
 
-    //called each time 
-    function restorePresences(success,pres)
+    //called each time
+    function restorePresences()
     {
 
-        for (var s in mPres)
-        {
+        // Callback & data to handle synchronizing all the parallel restoration + connection requests
+        var num_outstanding = 0;
+        var finishRestorePresence = function(presName,success,pres) {
+            if (!success) {
+                throw new Error('Failed to restore or connect presence ' + presName + ". Bailing on restoration -- this object's script will *not* be executed.");
+            }
+
+            num_outstanding--;
+            if (num_outstanding == 0) {
+                finishOnRestorePresences();
+            }
+        };
+
+        // Fire off requests for any presences not yet connected
+        for (var s in mPres) {
             //if we've already restored this presence ignore it.
             if (s in allRestored)
                 continue;
-            //restore this presence, but call return so that we
-            //don't yet restore script (in finishOnRestorePresences).
+            num_outstanding++;
             allRestored[s] = true;
-            std.persist.restoreFromAsync(s,restorePresences);
-            return;
+            std.persist.restoreFromAsync(s,std.core.bind(finishRestorePresence,undefined,s));
         }
-        //if had no presences to restore, or they all had already been restored,
-        //will call finishOnRestorePresences(), which just restores the script.
-        finishOnRestorePresences();
+        
+        // Special case: no presences to restore.
+        if (num_outstanding == 0) finishOnRestorePresences();
     }
 
     std.persist.restoreFromAsync(presKeyName,onPresKeyRestored);
