@@ -34,16 +34,16 @@ if (typeof(std.simpleStorage) != 'undefined')
 
 
 
-    std.simpleStorage.setField = function(fieldName,fieldVal)
+    std.simpleStorage.setField = function(fieldName,fieldVal,cb)
     {
         var keyName = prepender + fieldName;
-        std.persist.checkpointPartialPersist(fieldVal,keyName);
+        std.persist.checkpointPartialPersist(fieldVal,keyName,cb);
     };
     std.simpleStorage.write = std.simpleStorage.setField;
 
-    std.simpleStorage.eraseField = function(fieldName)
+    std.simpleStorage.eraseField = function(fieldName, cb)
     {
-        system.storageErase(prepender + fieldName);
+        system.storageErase(prepender + fieldName, cb);
     };
     std.simpleStorage.erase = std.simpleStorage.eraseField;
 
