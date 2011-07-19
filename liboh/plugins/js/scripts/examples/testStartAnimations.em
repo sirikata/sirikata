@@ -9,7 +9,7 @@ function meshLoaded(pres) {
   var animationList = pres.getAnimationList();
   
   if (animationList.length > 0)
-    simulator.startAnimation(pres,animationList[1]);
+    simulator.startAnimation(pres,animationList[0]);
   
 }
 

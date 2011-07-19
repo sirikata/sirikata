@@ -725,8 +725,8 @@ public:
 
 class SkeletonManualLoader : public Ogre::ManualResourceLoader {
 public:
-    SkeletonManualLoader(MeshdataPtr meshdata)
-      : mdptr(meshdata), skeletonLoaded(false)
+  SkeletonManualLoader(MeshdataPtr meshdata, const std::set<String>& animationList)
+    : mdptr(meshdata), skeletonLoaded(false), animations(animationList)
     {
     }
 
@@ -946,7 +946,7 @@ public:
         // as we encounter them and then adjust them, adding tracks
         // for different bones, as we go.
         typedef std::map<String, Ogre::Animation*> AnimationMap;
-        AnimationMap animations;
+        AnimationMap animationMap;
 
         // Bones
         // Basic root bone, no xform
@@ -961,7 +961,7 @@ public:
 
         std::tr1::unordered_map<uint32, Matrix4x4f> ibmMap;
 
-        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) ) {
+        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) ) {          
 
           // We need to work backwards from the joint_idx (index into
           // mdptr->joints) to the index of the joint in this skin controller
@@ -969,15 +969,14 @@ public:
           uint32 skin_joint_idx = 0;
           for(skin_joint_idx = 0; skin_joint_idx < skin.joints.size(); skin_joint_idx++) {
             if (skin.joints[skin_joint_idx] == joint_idx) break;
-          }
-          // If we couldn't find it, its not bound for this animation/submesh
-          //if (skin_joint_idx >= skin.joints.size()) continue;
+          }            
 
           Matrix4x4f ibm = Matrix4x4f::identity();
           if (skin_joint_idx < skin.joints.size()) {
             // Get the bone's inverse bind-pose matrix and store it in the ibmMap.
             ibm = skin.inverseBindMatrices[skin_joint_idx];
           }
+          
           ibmMap[joint_id] = ibm;
 
           /* Now construct the bone hierarchy. First implement the transform hierarchy from root to the bone's node. */
@@ -1000,78 +999,95 @@ public:
             }
           }
 
-          /* Finally create the actual bone */
-          bone = bone->createChild(joint_id);
+          const Node& node = mdptr->nodes[ mdptr->joints[joint_idx] ];          
+
+          /* Finally create the actual bone */                              
+          
+          bone = bone->createChild(joint_id);          
 
           bones[joint_id] = bone;
 
-          const Node& node = mdptr->nodes[ mdptr->joints[joint_idx] ];
-
-          for(Node::AnimationMap::const_iterator anim_it = node.animations.begin(); anim_it != node.animations.end(); anim_it++) {
+          for (std::set<String>::const_iterator anim_it = animations.begin(); anim_it != animations.end(); anim_it++) {
             // Find/create the animation
-            const String& anim_name = anim_it->first;
+            const String& anim_name = *anim_it;
+            
+            if (animationMap.find(anim_name) == animationMap.end())
+              animationMap[anim_name] = skel->createAnimation(anim_name, 0.0);
+            Ogre::Animation* anim = animationMap[anim_name];
 
-
-            const TransformationKeyFrames& anim_key_frames = anim_it->second;
-            if (animations.find(anim_name) == animations.end())
-              animations[anim_name] = skel->createAnimation(anim_name, 0.0);
-            Ogre::Animation* anim = animations[anim_name];
-
-            // Add track, making sure we set the length long
-            // enough to support this new track
-
-            Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);
             Ogre::Vector3 startPos(0,0,0);
             Ogre::Quaternion startOrientation(1,0,0,0);
             Ogre::Vector3 startScale(1,1,1);
 
-            bool firstRun = false;
-            for(uint32 key_it = 0; key_it < anim_key_frames.inputs.size() ; key_it++) {
-              float32 key_time = anim_key_frames.inputs[key_it];
+            // If this node has associated animation keyframes with this name, then use those keyframes.
+            if (node.animations.find(anim_name) != node.animations.end()) {
+              const TransformationKeyFrames& anim_key_frames = node.animations.find(anim_name)->second;
+
+              // Add track, making sure we set the length long
+              // enough to support this new track
+
+              Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);            
+            
+              for(uint32 key_it = 0; key_it < anim_key_frames.inputs.size() ; key_it++) {
+                float32 key_time = anim_key_frames.inputs[key_it];
+
+                anim->setLength( std::max(anim->getLength(), key_time) );
+                Matrix4x4f mat =  anim_key_frames.outputs[key_it] * ibm * bsm;
+
+                if (parent_id != 0) {
+                  //need to cancel out the effect of BSM*IBM from the parent in the hierarchy
+                  Matrix4x4f parentI_inv;
+                  invert(parentI_inv, ibmMap[parent_id]);
+
+                  mat = B_inv * parentI_inv * mat;
+                }
+
+                bool ret = getTRS(mat, translate, rotate, scale);
+                assert(ret);
+
+                if (ret ) {
+                  //Set the transform for the keyframe.
+                  Ogre::TransformKeyFrame* key = track->createNodeKeyFrame(key_time);
+
+                  key->setTranslate( translate - startPos );
+
+                  Ogre::Quaternion quat = startOrientation.Inverse() *  rotate;
+
+                  key->setRotation( quat );
+                  key->setScale( scale );
+                }              
+              }
+            }
+            else { //otherwise, just create a single keyframe using the node's transform.
+              Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);            
+              
+              float32 key_time = 0;
 
               anim->setLength( std::max(anim->getLength(), key_time) );
-              Matrix4x4f mat =  anim_key_frames.outputs[key_it] * ibm * bsm;
+              Matrix4x4f mat =  node.transform * ibm * bsm;
 
               if (parent_id != 0) {
                 //need to cancel out the effect of BSM*IBM from the parent in the hierarchy
                 Matrix4x4f parentI_inv;
                 invert(parentI_inv, ibmMap[parent_id]);
-
+                
                 mat = B_inv * parentI_inv * mat;
               }
-
+              
               bool ret = getTRS(mat, translate, rotate, scale);
               assert(ret);
-
-              if (ret && firstRun) {
-                //Set the first frame relative to which the next frames will be displayed.
-                startPos = translate;
-                startOrientation = rotate;
-                startScale = scale;
-
+              
+              if (ret ) {
+                //Set the transform for the keyframe.
                 Ogre::TransformKeyFrame* key = track->createNodeKeyFrame(key_time);
-
-                key->setTranslate( translate );
-
-                Ogre::Quaternion quat =  rotate;
-
-                key->setRotation( quat );
-                key->setScale( scale );
-              }
-
-              if (ret && !firstRun) {
-                // The relative transform for the remaining frames after the first frame.
-                Ogre::TransformKeyFrame* key = track->createNodeKeyFrame(key_time);
-
+                
                 key->setTranslate( translate - startPos );
-
+                
                 Ogre::Quaternion quat = startOrientation.Inverse() *  rotate;
-
+                
                 key->setRotation( quat );
                 key->setScale( scale );
               }
-
-              firstRun = false;
             }
           }
         }
@@ -1087,6 +1103,8 @@ private:
     MeshdataPtr mdptr;
 
     bool skeletonLoaded;
+
+    const std::set<String>& animations;
 };
 
 class MeshdataManualLoader : public Ogre::ManualResourceLoader {
@@ -1634,7 +1652,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
             Ogre::SkeletonManager& skel_mgr = Ogre::SkeletonManager::getSingleton();
             Ogre::ManualResourceLoader *reload;
             skel = Ogre::SkeletonPtr(skel_mgr.create(meshname+"_skeleton",Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME, true,
-                    (reload=new SkeletonManualLoader(mdptr))));
+                                                     (reload=new SkeletonManualLoader(mdptr, mAnimationList))));
             reload->prepareResource(&*skel);
             reload->loadResource(&*skel);
 

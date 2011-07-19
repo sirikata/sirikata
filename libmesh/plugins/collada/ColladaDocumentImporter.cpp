@@ -254,7 +254,7 @@ namespace Sirikata { namespace Models {
               bool animationFormatSupported = true;
 
               std::tr1::unordered_map<String, std::map<float32, std::vector<Matrix4x4f> > > animationMatrices;
-              bool& hasAnimations = mMesh->hasAnimations;
+              bool hasAnimations = false;              
                             
               for(int ti = 0; animationFormatSupported && ti < curnode.node->getTransformations().getCount(); ti++) {
                 COLLADAFW::Transformation* joint_xform = curnode.node->getTransformations()[ti];
@@ -281,6 +281,7 @@ namespace Sirikata { namespace Models {
                     
                     if (!hasAnimations) { 
                       hasAnimations = true;
+                      mMesh->hasAnimations = true;
                     }
 
                     std::vector<Matrix4x4f>& trs = animationMatrices[anim_curve.name][frameTime];
