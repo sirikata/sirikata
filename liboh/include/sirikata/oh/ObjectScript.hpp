@@ -34,6 +34,7 @@
 
 #include <sirikata/core/util/Logging.hpp>
 #include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/core/service/Service.hpp>
 
 namespace Sirikata {
 
@@ -41,12 +42,15 @@ namespace Sirikata {
     can be passed on to a script.
     @see ObjectScriptManager for how to instantiate one of these.
 */
-class SIRIKATA_OH_EXPORT ObjectScript {
+class SIRIKATA_OH_EXPORT ObjectScript : public Service {
   public:
 
     /// Destructor: called from the plugin itself.
     virtual ~ObjectScript(){}
 
+    // Sirikata::Service Interface
+    virtual void start() {}
+    virtual void stop() {}
 
     // This will update the addressables for the entity.
     //Addressables depend upon the space the presence is
@@ -60,13 +64,13 @@ class SIRIKATA_OH_EXPORT ObjectScript {
       false otherwise.  Also processes the message it receives if can decode it.
      */
     virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload) { return true;};
-    
+
      virtual String scriptType() const { return scriptType_;}
      virtual String scriptOptions() const {return scriptOptions_;}
      virtual void scriptTypeIs(String _scriptType) { scriptType_ = _scriptType;}
      virtual void scriptOptionsIs(String _scriptOptions) {scriptOptions_ = _scriptOptions;}
-     
-     
+
+
   protected:
      String scriptType_;
      String scriptOptions_;

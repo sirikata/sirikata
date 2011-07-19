@@ -111,6 +111,7 @@ HostedObjectPtr ObjectHost::createObject(const String& script_type, const String
 
 HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_type, const String& script_opts, const String& script_contents) {
     HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
+    ho->start();
     // NOTE: This condition has been carefully thought through. Since you can
     // get a script into a dead state anyway, we only trigger defaults when the
     // script type is empty. This basically covers the case where an object
@@ -295,6 +296,12 @@ void ObjectHost::stop() {
     for(SpaceSessionManagerMap::iterator it = mSessionManagers.begin(); it != mSessionManagers.end(); it++) {
         SessionManager* sm = it->second;
         sm->stop();
+    }
+
+    for (HostedObjectMap::iterator iter = mHostedObjects.begin();
+         iter != mHostedObjects.end();
+         ++iter) {
+        iter->second->stop();
     }
 }
 

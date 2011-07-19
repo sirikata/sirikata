@@ -477,18 +477,31 @@ void EmersonScript::create_entity(EntityCreateInfo& eci)
     );
 }
 
-
 EmersonScript::~EmersonScript()
 {
-    if (mContext != NULL)
-    {
-        v8::HandleScope handle_scope;
-        mContext->clear();
-        delete mContext;
-        mContext = NULL;
-    }
 }
 
+
+void EmersonScript::start() {
+    JSObjectScript::start();
+}
+
+void EmersonScript::stop() {
+    JSObjectScript::stop();
+
+    mParent->removeListener((SessionEventListener*)this);
+
+    // Clean up ProxyCreationListeners. We subscribe for each presence in
+    // onConnected, so we need to run through all presences (stored in the
+    // HostedObject) and clear out ourselfs as a listener
+    HostedObject::SpaceObjRefVec spaceobjrefs;
+    mParent->getSpaceObjRefs(spaceobjrefs);
+    //default connections.
+    for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++) {
+        ProxyManagerPtr proxy_manager = mParent->getProxyManager(space_it->space(), space_it->object());
+        if (proxy_manager) proxy_manager->removeListener(this);
+    }
+}
 
 bool EmersonScript::valid() const
 {
@@ -538,7 +551,7 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent
     //correctly.
     jstimer->setPersistentObject(returner);
 
-    
+
     return handle_scope.Close(returner);
 }
 
@@ -930,7 +943,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
     JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
-    
+
     if (*psrp.mIsConnected)
     {
         mParent->connect(psrp.mSporef->space(),

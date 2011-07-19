@@ -98,6 +98,8 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 {
     TimeSteppedSimulation* sim = NULL;
 
+    if (stopped()) return sim;
+
     PresenceDataMap::iterator psd_it = mPresenceData->find(sporef);
     assert (psd_it != mPresenceData->end());
 
@@ -122,6 +124,20 @@ HostedObject::~HostedObject() {
 
 const UUID& HostedObject::id() const {
     return mID;
+}
+
+void HostedObject::start() {
+    // Not really any need for the start call -- its always going to be invoked
+    // immediately after construction.
+}
+
+void HostedObject::stop() {
+    if (mObjectScript)
+        mObjectScript->stop();
+}
+
+bool HostedObject::stopped() const {
+    return mContext->stopped();
 }
 
 void HostedObject::destroy()
@@ -279,12 +295,17 @@ bool myisalphanum(char c) {
 
 void HostedObject::initializeScript(const String& script_type, const String& args, const String& script)
 {
-    if (mObjectScript) {
-        SILOG(oh,warn,"[HO] Ignored initializeScript because script already exists for object");
+    if (stopped()) {
+        HO_LOG(warn,"Ignoring script initialization after stop was requested.");
         return;
     }
 
-    SILOG(oh,detailed,"[HO] Creating a script object for object");
+    if (mObjectScript) {
+        HO_LOG(warn,"Ignored initializeScript because script already exists for object");
+        return;
+    }
+
+    HO_LOG(detailed,"Creating a script object for object");
 
     static ThreadIdCheck scriptId=ThreadId::registerThreadGroup(NULL);
     assertThreadGroup(scriptId);
@@ -302,13 +323,14 @@ void HostedObject::initializeScript(const String& script_type, const String& arg
         }
         else
         {
-            SILOG(oh,debug,"[HO] Failed to create script for object because incorrect script type");
+            HO_LOG(debug,"[HO] Failed to create script for object because incorrect script type");
         }
     }
     ObjectScriptManager *mgr = mObjectHost->getScriptManager(script_type);
     if (mgr) {
-        SILOG(oh,insane,"[HO] Creating script for object with args of "<<args);
+        HO_LOG(insane,"[HO] Creating script for object with args of "<<args);
         mObjectScript = mgr->createObjectScript(this->getSharedPtr(), args, script);
+        mObjectScript->start();
         mObjectScript->scriptTypeIs(script_type);
         mObjectScript->scriptOptionsIs(args);
     }
@@ -340,6 +362,11 @@ void HostedObject::connect(
         const ObjectReference& orefID,
         PresenceToken token)
 {
+    if (stopped()) {
+        HO_LOG(warn,"Ignoring HostedObject connection request after system stop requested.");
+        return;
+    }
+
     if (spaceID == SpaceID::null())
         return;
 
@@ -398,6 +425,11 @@ void HostedObject::addSimListeners(PerPresenceData& pd, const String& simName,Ti
 
 void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& obj, ObjectHost::ConnectionInfo info)
 {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring connection success after system stop requested.");
+        return;
+    }
+
     // FIXME this never gets cleaned out on disconnect
     mSSTDatagramLayers.push_back(
         BaseDatagramLayerType::createDatagramLayer(
@@ -411,9 +443,6 @@ void HostedObject::handleConnected(const SpaceID& space, const ObjectReference& 
     mContext->mainStrand->post(
         std::tr1::bind(&HostedObject::handleConnectedIndirect, this, space, obj, info)
     );
-
-
-
 }
 
 
@@ -438,7 +467,7 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     TimedMotionQuaternion local_orient(localTime(space, info.orient.updateTime()), info.orient.value());
     ProxyObjectPtr self_proxy = createProxy(self_objref, self_objref, Transfer::URI(info.mesh), local_loc, local_orient, info.bnds, info.physics,info.queryAngle,0);
 
-    
+
     // Use to initialize PerSpaceData
     PresenceDataMap::iterator psd_it = mPresenceData->find(self_objref);
     PerPresenceData& psd = psd_it->second;
@@ -450,7 +479,6 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
     //a JSObjectScript for this hostedobject
     bindODPPort(space,obj,Services::LISTEN_FOR_SCRIPT_BEGIN);
     HO_LOG(detailed,"Connected object " << obj << " to space " << space << " waiting on notice");
-
 }
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
@@ -485,6 +513,11 @@ void HostedObject::initializePerPresenceData(PerPresenceData& psd, ProxyObjectPt
 
 void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectReference& oref)
 {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring disconnection request after system stop requested.");
+        return;
+    }
+
     PresenceDataMap::iterator where;
     where=mPresenceData->find(SpaceObjectReference(spaceID, oref));
     if (where!=mPresenceData->end()) {
@@ -497,12 +530,22 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
 }
 
 void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc) {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring disconnection callback after system stop requested.");
+        return;
+    }
+
     notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
     disconnectFromSpace(spaceobj.space(), spaceobj.object());
 }
 
 
 void HostedObject::receiveMessage(const SpaceID& space, const Protocol::Object::ObjectMessage* msg) {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring received message after system stop requested.");
+        return;
+    }
+
     // Convert to ODP runtime format
     ODP::Endpoint src_ep(space, ObjectReference(msg->source_object()), msg->source_port());
     ODP::Endpoint dst_ep(space, ObjectReference(msg->dest_object()), msg->dest_port());
@@ -652,6 +695,11 @@ void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr pr
 }
 
 bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, const std::string& payload) {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring location update after system stop requested.");
+        return false;
+    }
+
     Sirikata::Protocol::Frame frame;
     bool parse_success = frame.ParseFromString(payload);
     if (!parse_success) return false;
@@ -669,7 +717,7 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
     for(int32 idx = 0; idx < contents.update_size(); idx++) {
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
-        
+
         ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
         SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
@@ -687,6 +735,11 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
 
 bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, const std::string& payload)
 {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring proximity update after system stop requested.");
+        return false;
+    }
+
     Sirikata::Protocol::Prox::ProximityResults contents;
     bool parse_success = contents.ParseFromString(payload);
     if (!parse_success)
@@ -717,7 +770,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             String phy = (addition.has_physics() ? addition.physics() : "");
 
             uint64 proxyAddSeqNo = addition.seqno();
-            
+
             ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(),spaceobj.object());
             if (!proxy_manager)
             {
@@ -744,7 +797,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
                 processLocationUpdate(space, proxy_obj, proxyAddSeqNo, false, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
             }
-            
+
             // Always mark the object as valid (either revalidated, or just
             // valid for the first time)
             if (proxy_obj) proxy_obj->validate();
@@ -787,14 +840,14 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
             }
             else {
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);
-                
+
                 if (proxy_obj) {
                     //hold on to the removed proxy object's internal data for a
                     //little extra time in case get a re-addition proxy message, and
                     //the loc messages that had already been processed for proxy_obj
                     //arrived before the removal.
                     mOrphanLocUpdates.addUpdateFromExisting(removed_obj_ref, proxy_obj);
-                    
+
                     proxy_manager->destroyObject(proxy_obj);
 
                     if (mObjectScript)
@@ -893,30 +946,37 @@ ProxyObjectPtr HostedObject::self(const SpaceObjectReference& sor)
 // ODP::Service Interface
 ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref, ODP::PortID port)
 {
+    if (stopped()) return NULL;
     return mDelegateODPService->bindODPPort(space, objref, port);
 }
 
 ODP::Port* HostedObject::bindODPPort(const SpaceObjectReference& sor, ODP::PortID port) {
+    if (stopped()) return NULL;
     return mDelegateODPService->bindODPPort(sor, port);
 }
 
 ODP::Port* HostedObject::bindODPPort(const SpaceID& space, const ObjectReference& objref) {
+    if (stopped()) return NULL;
     return mDelegateODPService->bindODPPort(space, objref);
 }
 
 ODP::Port* HostedObject::bindODPPort(const SpaceObjectReference& sor) {
+    if (stopped()) return NULL;
     return mDelegateODPService->bindODPPort(sor);
 }
 
 ODP::PortID HostedObject::unusedODPPort(const SpaceID& space, const ObjectReference& objref) {
+    if (stopped()) return NULL;
     return mDelegateODPService->unusedODPPort(space, objref);
 }
 
 ODP::PortID HostedObject::unusedODPPort(const SpaceObjectReference& sor) {
+    if (stopped()) return NULL;
     return mDelegateODPService->unusedODPPort(sor);
 }
 
 void HostedObject::registerDefaultODPHandler(const ODP::MessageHandler& cb) {
+    if (stopped()) return;
     mDelegateODPService->registerDefaultODPHandler(cb);
 }
 
@@ -946,6 +1006,7 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
 {
     assert(source_ep.space() == dest_ep.space());
     SpaceObjectReference sporef(source_ep.space(), source_ep.object());
+    if (stopped()) return false;
     return mObjectHost->send(sporef,source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(),dest_ep.port(), payload);
 }
 
@@ -1112,6 +1173,11 @@ void HostedObject::requestPhysicsUpdate(const SpaceID& space, const ObjectRefere
 
 
 void HostedObject::requestQueryUpdate(const SpaceID& space, const ObjectReference& oref, SolidAngle new_angle) {
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring query update request after system stop.");
+        return;
+    }
+
     Protocol::Prox::QueryRequest request;
     request.set_query_angle(new_angle.asFloat());
     std::string payload = serializePBJMessage(request);
@@ -1143,6 +1209,12 @@ void HostedObject::requestQueryRemoval(const SpaceID& space, const ObjectReferen
 }
 
 void HostedObject::updateLocUpdateRequest(const SpaceID& space, const ObjectReference& oref, const TimedMotionVector3f* const loc, const TimedMotionQuaternion* const orient, const BoundingSphere3f* const bounds, const String* const mesh, const String* const phy) {
+
+    if (stopped()) {
+        HO_LOG(detailed,"Ignoring loc update request after system stop.");
+        return;
+    }
+
     assert(mPresenceData->find(SpaceObjectReference(space, oref)) != mPresenceData->end());
     PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
 

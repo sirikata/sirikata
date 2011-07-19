@@ -75,7 +75,7 @@ class PerPresenceData;
 typedef std::tr1::weak_ptr<HostedObject> HostedObjectWPtr;
 typedef std::tr1::shared_ptr<HostedObject> HostedObjectPtr;
 
-class SIRIKATA_OH_EXPORT HostedObject : public VWObject {
+class SIRIKATA_OH_EXPORT HostedObject : public VWObject, public Service {
 //------- Private inner classes
 
     struct PrivateCallbacks;
@@ -140,6 +140,11 @@ public:
      */
     const UUID& id() const;
 
+    // Sirikata::Service interface
+    virtual void start();
+    virtual void stop();
+
+    bool stopped() const;
 private:
 //------- Private member functions:
     // When a connection to a space is setup, initialize it to handle default behaviors
@@ -365,12 +370,12 @@ public:
     /**
        Any time that we get a prox removal call, we first save the existing
        proxy object's data to the orphan manager.  If we get a prox addition
-       call on the same object before the proxy object's data is removed, 
+       call on the same object before the proxy object's data is removed,
        the orphan manager will return these data to us to process.  (by process,
-       I mean update the pos, bounds, orient, etc. for the proxy object).  
+       I mean update the pos, bounds, orient, etc. for the proxy object).
      */
     void processOrphanedProxyData(const SpaceObjectReference& sporef, ProxyObjectPtr proxy_obj,OrphanLocUpdateManager::OrphanedProxData* opd);
-    
+
     // Helper for creating the correct type of proxy
 
     ProxyObjectPtr createProxy(const SpaceObjectReference& objref, const SpaceObjectReference& owner_objref, const Transfer::URI& meshuri, TimedMotionVector3f& tmv, TimedMotionQuaternion& tmvq, const BoundingSphere3f& bounds, const String& physics,const SolidAngle& queryAngle,uint64 seqNo);

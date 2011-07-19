@@ -24,6 +24,9 @@ JSVisibleManager::JSVisibleManager(EmersonScript* eScript)
 
 JSVisibleManager::~JSVisibleManager()
 {
+    // Stop tracking all known objects to clear out all listeners and state.
+    while(!mProxies.empty())
+        stopTrackingVis( mProxies.begin()->first );
 }
 
 
@@ -34,7 +37,7 @@ JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& w
         toCreateFrom = createProxyPtr( whatsVisible, nullProxyPtr);
     else
         toCreateFrom = createProxyPtr( whatsVisible, JSProxyPtr(addParams));
-    
+
     return new JSVisibleStruct(toCreateFrom);
 }
 
@@ -58,7 +61,7 @@ void JSVisibleManager::removeListeners(const SpaceObjectReference& toRemoveListe
     emerScript->mParent->getSpaceObjRefs(sporefVec);
 
     ProxyObjectPtr returner;
-    
+
     for (std::vector<SpaceObjectReference>::iterator spIter = sporefVec.begin();
          spIter != sporefVec.end(); ++spIter)
     {
@@ -78,7 +81,7 @@ JSProxyPtr JSVisibleManager::createProxyPtr(const SpaceObjectReference& whatsVis
     SporefProxyMapIter proxIter = mProxies.find(whatsVisible);
     if (proxIter != mProxies.end())
         return JSProxyPtr(proxIter->second);
-    
+
     ProxyObjectPtr ptr= getMostUpToDate(whatsVisible);
 
     // Had a proxy object that HostedObject was monitoring.  Load it into
@@ -99,13 +102,13 @@ JSProxyPtr JSVisibleManager::createProxyPtr(const SpaceObjectReference& whatsVis
     {
         if (addParams->sporefToListenTo != whatsVisible)
             JSLOG(error, "Erorr in createVisStruct of JSVisibleManager.  Expected sporefs of new visible should match whatsVisible");
-        
+
         JSProxyPtr returner (new JSProxyData(emerScript,addParams));
         mProxies[whatsVisible] = JSProxyWPtr(returner);
         return returner;
     }
 
-    
+
     //Have no record of this visible.  Creating a new entry just for it.
     JSProxyPtr returner ( new JSProxyData(emerScript));
     returner->sporefToListenTo = whatsVisible;
@@ -119,7 +122,7 @@ JSProxyPtr JSVisibleManager::createProxyPtr(const SpaceObjectReference& whatsVis
 void JSVisibleManager::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef)
 {
     INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(jspd,sporef,updateLocation);
-    
+
     jspd->sporefToListenTo = sporef;
     jspd->mLocation        = newLocation;
     jspd->mOrientation     = newOrient;
@@ -145,7 +148,7 @@ void JSVisibleManager::onSetScale (ProxyObjectPtr proxy, float32 newScale ,const
 void JSVisibleManager::onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef)
 {
     INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(jspd,sporef,onSetMesh);
-    jspd->mPhysics  = newphy;    
+    jspd->mPhysics  = newphy;
 }
 
 
@@ -156,7 +159,7 @@ ProxyObjectPtr JSVisibleManager::getMostUpToDate(const SpaceObjectReference& spo
     emerScript->mParent->getSpaceObjRefs(sporefVec);
 
     ProxyObjectPtr returner;
-    
+
     for (std::vector<SpaceObjectReference>::iterator spIter = sporefVec.begin();
          spIter != sporefVec.end(); ++spIter)
     {
@@ -164,7 +167,7 @@ ProxyObjectPtr JSVisibleManager::getMostUpToDate(const SpaceObjectReference& spo
 
         if (!poPtr)
             continue;
-        
+
         if (!returner)
             returner = poPtr;
         else
@@ -198,7 +201,7 @@ bool JSVisibleManager::isVisible(const SpaceObjectReference& sporef)
 {
     if (getMostUpToDate(sporef))
         return true;
-    
+
     return false;
 }
 

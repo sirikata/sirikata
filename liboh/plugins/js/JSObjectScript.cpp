@@ -269,6 +269,20 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage
 }
 
 
+void JSObjectScript::start() {
+}
+
+void JSObjectScript::stop() {
+    // This clear has to happen before ~JSObjectScript because it can call
+    // virtual functions which need to be dispatched to subclasses
+    // (i.e. EmersonScript).
+    if (mContext != NULL)
+    {
+        v8::HandleScope handle_scope;
+        mContext->clear();
+    }
+}
+
 v8::Handle<v8::Value> JSObjectScript::storageBeginTransaction(JSContextStruct* jscont) {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );
     mStorage->beginTransaction(mInternalID);
@@ -467,6 +481,12 @@ bool JSObjectScript::isRootContext(JSContextStruct* jscont)
 
 JSObjectScript::~JSObjectScript()
 {
+    if (mContext != NULL)
+    {
+        // Should have been cleared in stop()
+        delete mContext;
+        mContext = NULL;
+    }
 }
 
 

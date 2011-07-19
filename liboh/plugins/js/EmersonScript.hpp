@@ -74,10 +74,14 @@ public:
     EmersonScript(HostedObjectPtr ho, const String& args, const String& script, JSObjectScriptManager* jMan);
     virtual ~EmersonScript();
 
+    // Sirikata::Service Interface
+    virtual void start();
+    virtual void stop();
+
     // SessionEventListener Interface
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name,HostedObject::PresenceToken token);
     virtual void onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name);
-    
+
     //called by JSPresenceStruct.  requests the parent HostedObject disconnect
     //the presence associated with jspres
     void requestDisconnect(JSPresenceStruct* jspres);
@@ -99,9 +103,9 @@ public:
      */
     virtual bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload);
 
-    
+
     /**
-       Callback for unreliable messages.  
+       Callback for unreliable messages.
        Payload should be able to be parsed into JS::Proctocol::JSMessage.  If it
        can be, and deserialization is successful, processes the scripting
        message. (via deserializeMsgAndDispatch.)
@@ -119,7 +123,7 @@ public:
 
     v8::Handle<v8::Value> restorePresence(PresStructRestoreParams& psrp,JSContextStruct* jsctx);
 
-    
+
 
     /** Returns true if this script is valid, i.e. if it was successfully loaded
      *  and initialized.
@@ -137,14 +141,14 @@ public:
 
     /**
        Sends a message over the odp port from local presence that has sporef
-       from to some other presence in world with sporef receiver.  
+       from to some other presence in world with sporef receiver.
 
        Gets port to send over as value of mMessagingPortMap associated with key
        from.
      */
     void sendMessageToEntityUnreliable(const SpaceObjectReference& receiver, const SpaceObjectReference& from, const std::string& msgBody);
 
-    
+
     //takes the c++ object jspres, creates a new visible object out of it, if we
     //don't already have a c++ visible object associated with it (if we do, use
     //that one), wraps that c++ object in v8, and returns it as a v8 object to
@@ -185,8 +189,8 @@ public:
 
     /**
        Creates a JSVisibleStruct and wraps it in a persistent v8 object that is
-       returned.  
-       
+       returned.
+
        @param {SpaceObjectReference} visibleObj Will make a JSVisibleStruct out
        of this spaceobjectreference.
 
@@ -216,7 +220,7 @@ public:
        visibles in an entity's prox result set.  The key of this map is the
        visible whose prox set is contained in the value of the map (ie in the
        vector).
-       
+
      */
     v8::Handle<v8::Value> requestReset(JSContextStruct* jscont, const std::map <SpaceObjectReference,std::vector <SpaceObjectReference> > & proxSetVis);
 
@@ -236,11 +240,11 @@ public:
        event loop before removing it from the list of events and killing it.
        And JSPresences, we need to remove from our list of presences and ask
        hosted object to remove it.
-     */    
+     */
     void deleteHandler(JSEventHandlerStruct* toDelete);
     void deletePres(JSPresenceStruct* toDelete);
 
-    
+
     void resetPresence(JSPresenceStruct* jspresStruct);
 
 
@@ -262,8 +266,8 @@ public:
         return emHttpPtr;
     }
 
-    
-    
+
+
 private:
 
     /**
@@ -271,7 +275,7 @@ private:
        visibile is now within presence with sporef proxTo's result set.
      */
     void notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo);
-    
+
     //wraps internal c++ jsvisiblestruct in a v8 object
     v8::Persistent<v8::Object> createVisiblePersistent(JSVisibleStruct* jsvis, v8::Handle<v8::Context> ctxToCreateIn);
 
@@ -290,7 +294,7 @@ private:
      */
     bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
 
-    
+
     v8::Handle<v8::Object> getMessageSender(const ODP::Endpoint& src);
 
     void flushQueuedHandlerEvents();
@@ -319,7 +323,7 @@ private:
     //returns the jspresstruct associated with new object
     JSPresenceStruct* addConnectedPresence(const SpaceObjectReference& sporef,HostedObject::PresenceToken token);
 
-    
+
    /**
       Deserializes the jsmessage that a presence on this entity with
       sporef dst received from a presence in the world with sporef src.
@@ -328,7 +332,7 @@ private:
       callbacks.
    */
     bool deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
-    
+
     //looks through all previously connected presneces (located in mPresences).
     //returns the corresponding jspresencestruct that has a spaceobjectreference
     //that matches sporef.
@@ -357,15 +361,15 @@ private:
        with.
 
        Note: visibleManager class takes care of deleting memory allocated for
-       JSVisibleStructs.  
+       JSVisibleStructs.
      */
     std::map<SpaceObjectReference,std::vector<JSVisibleStruct*> >resettingVisiblesResultSet;
-    
+
     typedef std::vector<JSPresenceStruct*> PresenceVec;
     PresenceVec mUnconnectedPresences;
 
 
-    
+
     EmersonHttpPtr emHttpPtr;
 };
 

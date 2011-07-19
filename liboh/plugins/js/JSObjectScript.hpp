@@ -84,7 +84,11 @@ public:
 
 
     void initialize(const String& args, const String& script,int32 maxResThresh);
-    
+
+    // Sirikata::Service Interface
+    virtual void start();
+    virtual void stop();
+
     /** Print the given string to the current output. */
     void print(const String& str);
 
@@ -164,7 +168,7 @@ public:
     JSContextStruct* rootContext() const { return mContext; }
 
 
-    
+
 
 protected:
 
