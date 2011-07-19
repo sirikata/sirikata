@@ -40,6 +40,12 @@ std.persist.NameService = function()
       */
      this.DNE = -99;
 
+    /** Not Available. This indicates that the name has been
+     * registered because its ID is known, but it hasn't finished
+     * loading from storage yet.
+     */
+    this.NA = -98;
+
      /**
       Prints all objects that we're responsible for and their names 
       */
@@ -80,12 +86,19 @@ std.persist.NameService = function()
          for (var s in namesToObjects)
          {
              // NOTE: This *must* be strict equality.
-             if (obj === namesToObjects[s])
+             if (obj == namesToObjects[s])
                  return s;
          }
 
          return this.DNE;
      };
+
+    /** Insert a name as not yet available, i.e. provide a promise
+     *  that it will be provided later.
+     */
+    this.insertNA = function(name) {
+        namesToObjects[name] = this.NA;
+    };
 
       /**
        @param objToInsert into name service.

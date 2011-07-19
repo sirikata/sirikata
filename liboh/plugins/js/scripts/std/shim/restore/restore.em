@@ -15,9 +15,11 @@ if (typeof(std.persist) === 'undefined')
 
      var mRestoring = false;
 
-     function registerPresenceStillRestoring(presObjID)
+     function registerPresenceStillRestoring(keyName, presObjID)
      {
-         allPresStillRest[presObjID] = presObjID;
+         if (allPresStillRest[keyName] === undefined)
+             allPresStillRest[keyName] = {};
+         allPresStillRest[keyName][presObjID] = presObjID;
      }
 
 
@@ -38,15 +40,17 @@ if (typeof(std.persist) === 'undefined')
 
       @param nameService nameService used during restoration.
       */
-     function afterRestored(presObjID,nameService,cb)
+     function afterRestored(keyName,presObjID,nameService,cb)
      {
          var returner = function()
          {
              //insert the presence into nameService;
              nameService.insertObjectWithName(system.self,presObjID);
-             delete allPresStillRest[presObjID];
-             if (Object.keys(allPresStillRest).length == 0)
+             delete allPresStillRest[keyName][presObjID];
+             if (Object.keys(allPresStillRest[keyName]).length == 0) {
+                 delete allPresStillRest[keyName];
                  cb(true, null); // Not sure about this being null....
+             }
         };
          return returner;
      }
@@ -64,7 +68,6 @@ if (typeof(std.persist) === 'undefined')
      {
          if (!checkIsTriplet(triplet))
          {
-             system.prettyprint(triplet);
              throw new Error('Error in tripletGetIndexName.  Requires triplet to be passed in');
          }
 
@@ -159,7 +162,7 @@ if (typeof(std.persist) === 'undefined')
 
          var fixedObj = nameService.lookupObject(ptrId);
          if (fixedObj == nameService.DNE)
-             throw new Error('Error in fixSinglePtr.  Have no record of object that you are trying to point to.');
+             throw new Error('Error in fixSinglePtr.  Have no record of object that you are trying to point to: ' + fixedObj);
 
          localCopyToPoint[index] = fixedObj;
      };
@@ -210,6 +213,11 @@ if (typeof(std.persist) === 'undefined')
       */
      function fixReferences(keyName, ptrId, ptrsToFix, nameService, cb)
      {
+         // Before starting the read, insert the object as a
+         // known-but-not-yet-available object in the name
+         // service. This should prevent others from starting another
+         // read on it but won't make it available yet.
+         nameService.insertNA(ptrId);
          readObject(
              keyName,ptrId,
              std.core.bind(finishFixReferences, undefined, keyName, ptrId, ptrsToFix, nameService, cb) // + success, object
@@ -228,8 +236,9 @@ if (typeof(std.persist) === 'undefined')
          if (id != ptrId) //throw new Error('Error: ptrId and object id must be identical');
              cb(false);
 
-         if (nameService.lookupObject(ptrId) != nameService.DNE) // throw new Error("Error.  Called fixReferences on an object I've already visited");
-             cb(false);
+         if (nameService.lookupObject(ptrId) != nameService.NA) {
+             throw new Error("Error. Called fixReferences on unknown object or object I've already seen: " + keyName);
+         }
 
          var type = unfixedObj['type'];
          if (type == std.persist.FUNCTION_OBJECT_TYPE_STRING)
@@ -390,9 +399,9 @@ if (typeof(std.persist) === 'undefined')
          //presence, and not to continue with later stages of
          //restoration (fixing looped object pointers) until the
          //system has connected this presence.
-         registerPresenceStillRestoring(ptrId);
+         registerPresenceStillRestoring(keyName, ptrId);
 
-         var onConnectCB = afterRestored(ptrId,nameService,cb);
+         var onConnectCB = afterRestored(keyName,ptrId,nameService,cb);
          system.restorePresence(
              toRestoreFrom.sporef,
              toRestoreFrom.pos,
@@ -503,25 +512,32 @@ if (typeof(std.persist) === 'undefined')
                  {
                      var ptrIdInner  = tripletGetValue(unfixedObj[s]);
                      var ptrObj = nameService.lookupObject(ptrIdInner);
-                     if (ptrObj != nameService.DNE)
-                     {
-                         //already have the object.  just link to it.
-                         returner[index] = ptrObj;
-                     }
-                     else
+                     if (ptrObj == nameService.DNE)
                      {
                          //will have to register this pointer to be fixed up
                          registerFixupObjectPointer( ptrIdInner ,index,returner,ptrsToFix);
+
+                         // We need to request the data from storage since we didn't even know about it yet
                          unfinished_fields += 1;
                          fixReferences(keyName,ptrIdInner,ptrsToFix,nameService, std.core.bind(finish_field_cb, undefined));
+                     }
+                     else if (ptrObj == nameService.NA) {
+                         //will have to register this pointer to be fixed up, but the request for data is already out
+                         registerFixupObjectPointer( ptrIdInner ,index,returner,ptrsToFix);
+                     }
+                     else
+                     {
+                         //already have the object.  just link to it.
+                         returner[index] = ptrObj;
                      }
                  }
              }
          }
 
          // Special case for empty objects
-         if (unfinished_fields == 0)
+         if (unfinished_fields == 0) {
              cb(true, returner);
+         }
      };
 
 
@@ -580,14 +596,17 @@ if (typeof(std.persist) === 'undefined')
 
      var finishRestoreFromAndGetNamesAsync = function (keyName,id,cb, ptrsToFix, nameService, timeout, success, returner) {
          // Clear timeout since we've either succeeded or permanently failed
-         timeout.clear();
+         if (!timeout.cleared) {
+             timeout.clear();
+             timeout.cleared = true;
+         }
 
          if (!success) {
              mRestoring = false;
              cb(false);
              return;
          }
-         if (Object.keys(allPresStillRest).length != 0) {
+         if (allPresStillRest[keyName] !== undefined && Object.keys(allPresStillRest[keyName]).length != 0) {
              system.print("Error: Shouldn't get finishRestoreFromAndGetNamesAsync callback until all presences are restored.\n");
              mRestoring = false;
              cb(false);
