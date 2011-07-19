@@ -890,7 +890,6 @@ SET(ProtocolBuffersSourcesInternal
   ${ProtocolBuffersRoot}/Migration
   ${ProtocolBuffersRoot}/OSeg
   ${ProtocolBuffersRoot}/Forwarder
-  ${ProtocolBuffersRoot}/CDN
   )
 
 # Based on dependencies, generate arguments for protocol buffers generation
