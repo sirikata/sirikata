@@ -91,15 +91,6 @@ util.Quaternion.prototype.equal = function(rhs){
     return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z) && (this.w === rhs.w));
 };
 
-/**
- Just calls equal.
- @see equal 
- */
-util.Quaternion.prototype.identical = function(rhs){
-    return this.equal(rhs);
-};
-
-
 
 /**
   @function
