@@ -79,7 +79,8 @@ std.persist.NameService = function()
      {
          for (var s in namesToObjects)
          {
-             if (obj == namesToObjects[s])
+             // NOTE: This *must* be strict equality.
+             if (obj === namesToObjects[s])
                  return s;
          }
 
