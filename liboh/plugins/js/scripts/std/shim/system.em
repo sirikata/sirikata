@@ -893,8 +893,26 @@ function PresenceEntry(sporef, presObj)
                 if ('pos' in firstArg)
                     pos = firstArg['pos'];
 
+                if ('position' in firstArg)
+                    pos = firstArg['position'];
+
+                if ('vel' in firstArg)
+                    vel = firstArg['vel'];
+
+                if ('velocity' in firstArg)
+                    vel = firstArg['velocity'];
+
+                if ('orientVel' in firstArg)
+                    orientVel = firstArg['orientVel'];
+
+                if ('orientationVel' in firstArg)
+                    orientVel = firstArg['orientationVel'];
+
                 if ('orient' in firstArg)
                     orient = firstArg['orient'];
+
+                if ('orientation' in firstArg)
+                    orient = firstArg['orientation'];
 
                 if ('mesh' in firstArg)
                     mesh = firstArg['mesh'];
