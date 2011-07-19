@@ -686,8 +686,8 @@ ENDIF()
 FIND_PACKAGE(GooglePerfTools)
 SET(GOOGLE_PERFTOOLS_SETTING_LIBRARIES)
 IF(GOOGLE_PERFTOOLS_FOUND)
-  SET(GOOGLE_PERFTOOLS_SETTING "TCMALLOC"
-    CACHE STRING "Google perftools setting to enable. This links to the appropriate libraries, but you are still responsible for setting the environment variable to enable the tool. Options are TCMALLOC, HEAP, CPU"
+  SET(GOOGLE_PERFTOOLS_SETTING "NONE"
+    CACHE STRING "Google perftools setting to enable. This links to the appropriate libraries, but you are still responsible for setting the environment variable to enable the tool. Options are NONE, TCMALLOC, HEAP, CPU. Default is NONE because tcmalloc can cause issues on 64-bit Linux systems, which is a very common configuration."
     )
 
   IF("${GOOGLE_PERFTOOLS_SETTING}" STREQUAL "TCMALLOC")
@@ -696,6 +696,8 @@ IF(GOOGLE_PERFTOOLS_FOUND)
     SET(GOOGLE_PERFTOOLS_SETTING_LIBRARIES ${GOOGLE_PERFTOOLS_HEAPPROFILE_LIBRARIES})
   ELSEIF("${GOOGLE_PERFTOOLS_SETTING}" STREQUAL "CPU")
     SET(GOOGLE_PERFTOOLS_SETTING_LIBRARIES ${GOOGLE_PERFTOOLS_CPUPROFILE_LIBRARIES})
+  ELSE() # NONE or invalid setting
+    SET(GOOGLE_PERFTOOLS_SETTING_LIBRARIES)
   ENDIF()
 ENDIF()
 
