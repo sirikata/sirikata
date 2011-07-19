@@ -275,6 +275,16 @@ if (typeof(std.persist) === 'undefined')
              return;
          }
 
+
+         // Note that we use a separate set of ptrs and do a fixup
+         // here because multiple fields in a presence might point to
+         // the same object (e.g. identical strings). In that case, we
+         // need to fix up pointers before we can use the object
+         // safely. Note that this currently only works because we
+         // don't serialize any extra fields on presences. When we do,
+         // we can't do ptr fixups until the entire object graph is
+         // restored.
+         //
          //perform the fixups for the objects that this presence was
          //trying to point to.  (Eg. pos object, vel obj, etc.)
          performPtrFinalFixups(pToFix,nameService);
@@ -382,6 +392,15 @@ if (typeof(std.persist) === 'undefined')
              return;
          }
 
+         // Note that we use a separate set of ptrs and do a fixup
+         // here because multiple fields in a presence might point to
+         // the same object (e.g. identical strings). In that case, we
+         // need to fix up pointers before we can use the object
+         // safely. Note that this currently only works because we
+         // don't serialize any extra fields on presences. When we do,
+         // we can't do ptr fixups until the entire object graph is
+         // restored.
+         //
          //perform the fixups for the objects that this presence was
          //trying to point to.  (Eg. pos object, vel obj, etc.)
          performPtrFinalFixups(pToFix,nameService);
