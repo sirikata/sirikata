@@ -224,7 +224,8 @@ void Entity::setDynamic(bool dyn) {
 }
 
 void Entity::checkDynamic() {
-    setDynamic(this->isDynamic());
+    bool isDyn = this->isDynamic();
+    setDynamic(isDyn);
 }
 
 void Entity::setVisible(bool vis) {
@@ -290,6 +291,8 @@ void Entity::addToScene(Ogre::SceneNode *newParent) {
 bool Entity::isDynamic() const {
     return (mCurrentAnimation != NULL);
 }
+
+
 
 void Entity::tick(const Time& t, const Duration& deltaTime) {
     if (mCurrentAnimation)
@@ -1533,7 +1536,8 @@ void Entity::createMesh(Liveness::Token alive) {
 
     // first reset any animations.
     setAnimation("");
-    setDynamic(false);
+
+    setDynamic(isMobile());
     if (mCurrentAnimation) {
       mCurrentAnimation->setEnabled(false);
       mCurrentAnimation = NULL;

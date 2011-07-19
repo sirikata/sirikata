@@ -79,7 +79,8 @@ public:
     virtual float32 priority();
     virtual void tick(const Time& t, const Duration& deltaTime);
     virtual bool isDynamic() const;
-
+    virtual bool isMobile() const;
+    
     ProxyObject &getProxy() const {
         return *mProxy;
     }

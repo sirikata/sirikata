@@ -71,6 +71,7 @@ void ProxyEntity::initializeToProxy(const ProxyObjectPtr &ppo) {
     mProxy->ProxyObjectProvider::addListener(this);
     mProxy->PositionProvider::addListener(this);
     mProxy->MeshProvider::addListener(this);
+    checkDynamic();
 }
 
 BoundingSphere3f ProxyEntity::bounds() {
@@ -88,7 +89,12 @@ void ProxyEntity::tick(const Time& t, const Duration& deltaTime) {
 }
 
 bool ProxyEntity::isDynamic() const {
-    return Entity::isDynamic() || !getProxy().isStatic();
+    return Entity::isDynamic() || isMobile();
+}
+
+bool ProxyEntity::isMobile() const
+{
+    return !getProxy().isStatic();
 }
 
 ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
@@ -97,6 +103,7 @@ ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
 
 void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
     SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
+
     setOgrePosition(Vector3d(newLocation.position()));
     setOgreOrientation(newOrient.position());
     updateScale( newBounds.radius() );

@@ -153,7 +153,9 @@ public:
     // include the base classes implementation when checking whether the object
     // is static.
     virtual bool isDynamic() const;
-
+    // Check if the object is mobile.
+    virtual bool isMobile() const = 0;
+    
     static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
     void removeFromScene();

@@ -628,14 +628,15 @@ void HostedObject::processLocationUpdate( const SpaceObjectReference& sporef,Pro
         phy = update.physics();
         phyptr = &phy;
     }
-
     processLocationUpdate(sporef.space(), proxy_obj, seqno, false, locptr, orientptr, boundsptr, meshptr, phyptr);
 }
+
 
 void HostedObject::processLocationUpdate(const SpaceID& space, ProxyObjectPtr proxy_obj, uint64 seqno, bool predictive, TimedMotionVector3f* loc, TimedMotionQuaternion* orient, BoundingSphere3f* bounds, String* mesh, String* phy) {
 
     if (loc)
         proxy_obj->setLocation(*loc, seqno);
+
 
     if (orient)
         proxy_obj->setOrientation(*orient, seqno);
@@ -740,7 +741,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 // shouldn't get overwritten.
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
                 String* phy_ptr = (addition.has_physics() ? &phy : NULL);
-                processLocationUpdate(space, proxy_obj, proxyAddSeqNo, true, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
+
+                processLocationUpdate(space, proxy_obj, proxyAddSeqNo, false, &loc, &orient, &bnds, mesh_ptr, phy_ptr);
             }
             
             // Always mark the object as valid (either revalidated, or just
@@ -846,6 +848,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
 
     // Then we repeat it all for the sake of listeners who only pay attention to
     // updates from, e.g., PositionListener or MeshListener.
+
     proxy_obj->setLocation(tmv, seqNo);
     proxy_obj->setOrientation(tmq, seqNo);
     proxy_obj->setBounds(bs, seqNo);

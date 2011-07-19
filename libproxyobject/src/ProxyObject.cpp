@@ -107,7 +107,10 @@ bool ProxyObject::isStatic() const {
 
 
 void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, bool predictive) {
-    if (seqno < mUpdateSeqno[LOC_POS_PART] && !predictive) return;
+    if (seqno < mUpdateSeqno[LOC_POS_PART] && !predictive)
+    {
+        return;
+    }
 
     if (!predictive) mUpdateSeqno[LOC_POS_PART] = seqno;
 

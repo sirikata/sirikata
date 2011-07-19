@@ -69,7 +69,8 @@ public:
     // Entity Interface
     virtual BoundingSphere3f bounds() { return BoundingSphere3f(Vector3f(0,0,0), 1.f); }
     virtual float32 priority() { return 1.f; }
-
+    virtual bool isMobile() const { return false;}
+    
     // Entity Listener Interface
     virtual void entityLoaded(Entity* ent, bool success) {
         if (!mScreenshot.empty()) {
