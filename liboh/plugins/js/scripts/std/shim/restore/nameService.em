@@ -86,43 +86,6 @@ std.persist.NameService = function()
          return this.DNE;
      };
 
-
-     /**
-      @param objIndex object reference to index into hierarchyMap
-      @param markedMap contains a map indexed on object references
-      that point to all the names of objects that are marked
-      @throw Throws an exception if the object that we're entering a
-      markedMap for does not have an entry in objectsToNames.
-      */
-      this.enterSubtreeObjects = function (objIndex, markedMap)
-      {
-          if (this.lookupName(objIndex) == this.DNE)
-              throw new Error('Error.  Not tracking this object in nameService when calling enterMarkedMap');
-
-          hierarchyMap[objIndex] = markedMap; //marked map includes current object
-      };
-
-
-      /**
-       Checks hierarchyMap to see if objIndex has an entry in it that
-       contains all the objects that are in its subtree.  If it does,
-       returns subtree.  If it does not, returns DNE.
-
-       @param objIndex object refernce to index into hierarchyMap
-       @returns DNE if have no record for objIndex in hierarchyMap.
-       Returns a map containing all the object references (as keys) and
-       names (as values) of the objects reachable from this object.
-       */
-     this.lookupSubtreeObjects = function(objIndex)
-     {
-         throw new Error('Error in lookupSubtreeObjects');
-          if (objIndex in hierarchyMap)
-              return hierarchyMap[objIndex];
-
-          return this.DNE;
-      };
-
-
       /**
        @param objToInsert into name service.
        @return Returns the name for the object.
