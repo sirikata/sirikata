@@ -1,6 +1,6 @@
 
 system.require('std/default.em');
-
+system.require('std/shim/restore/simpleStorage.em');
 
 /**
  Whenever someone sends a touch message to me, I create a new entity next to me.
@@ -28,3 +28,9 @@ function birthEntity()
 
 
 birthEntity << { 'action': 'touch':};    
+
+function onRestore()
+{
+    system.require('test/testBirthingTower.em');
+}
+system.timeout(5, function(){std.simpleStorage.setScript(onRestore.toString(),false);});
