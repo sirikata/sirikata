@@ -327,6 +327,7 @@ void Object::handleLocationSubstreamRead(SSTStreamPtr s, std::stringstream* prev
         // Clear out callback so we aren't responsible for any remaining
         // references to s
         s->registerReadCallback(0);
+        s->close(false);
     }
 }
 

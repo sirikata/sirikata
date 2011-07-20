@@ -150,8 +150,9 @@ void LocationService::handleLocationUpdateSubstreamRead(const UUID& source, SSTS
         // relying on this parsing as an indicator
         delete prevdata;
         // Clear out callback so we aren't responsible for any remaining
-        // references to s
+        // references to s, and close the stream
         s->registerReadCallback(0);
+        s->close(false);
     }
 }
 

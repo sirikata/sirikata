@@ -103,8 +103,9 @@ void EmersonMessagingManager::handleScriptCommStreamRead(SSTStreamPtr sstptr, st
         // relying on this parsing as an indicator
         delete prevdata;
         // Clear out callback so we aren't responsible for any remaining
-        // references to sstptr
+        // references to sstptr, and close the stream
         sstptr->registerReadCallback(0);
+        sstptr->close(false);
     }
 }
 
