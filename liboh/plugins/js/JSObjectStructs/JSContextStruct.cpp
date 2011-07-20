@@ -289,7 +289,8 @@ v8::Handle<v8::Value> JSContextStruct::sendMessageNoErrorHandler(JSPresenceStruc
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendMessage,jsObjScript);
     //emerScript->sendScriptCommMessageReliable(
     //jspl->getSporef(),jspres->getSporef(), serialized_message);
-    emerScript->sendScriptCommMessageReliable(jspres->getSporef(),  jspl->getSporef(),serialized_message);
+    if (! emerScript->isStopped())
+        emerScript->sendScriptCommMessageReliable(jspres->getSporef(),  jspl->getSporef(),serialized_message);
 
     //emerScript->sendMessageToEntityUnreliable(jspl->getSporef(),jspres->getSporef(),serialized_message);
     return v8::Undefined();

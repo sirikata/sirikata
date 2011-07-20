@@ -264,7 +264,8 @@ JSObjectScript::JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage
    contIDTracker(0),
    mManager(jMan),
    mStorage(storage),
-   mPersistedObjectSet(persisted_set)
+   mPersistedObjectSet(persisted_set),
+   stopCalled(false)
 {
 }
 
@@ -273,6 +274,7 @@ void JSObjectScript::start() {
 }
 
 void JSObjectScript::stop() {
+    stopCalled = true;
     // This clear has to happen before ~JSObjectScript because it can call
     // virtual functions which need to be dispatched to subclasses
     // (i.e. EmersonScript).
@@ -284,6 +286,12 @@ void JSObjectScript::stop() {
         mContext = NULL;
     }
 }
+
+bool JSObjectScript::isStopped()
+{
+    return stopCalled;
+}
+
 
 v8::Handle<v8::Value> JSObjectScript::storageBeginTransaction(JSContextStruct* jscont) {
     if (mStorage == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );

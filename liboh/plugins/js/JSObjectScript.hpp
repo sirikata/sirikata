@@ -168,6 +168,10 @@ public:
     JSContextStruct* rootContext() const { return mContext; }
 
 
+    /**
+       Returns true if stop has ever been called on JSObjectScript.
+     */
+    bool isStopped();
 
 
 protected:
@@ -304,6 +308,10 @@ protected:
      */
     int32 maxResourceThresh;
 
+    /**
+       Will be true after stop method is called.
+     */
+    bool stopCalled;
 
 };
 
