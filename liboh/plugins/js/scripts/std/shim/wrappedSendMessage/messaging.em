@@ -362,9 +362,13 @@ if (typeof(std.messaging) != 'undefined')
         if (typeof(oldMsg.streamID) == 'number')
             streamID = oldMsg.streamID;
 
+        // Only allow one call to makeReply
+        var once = false;
 
         var returner = function(newMsg)
         {
+            if (once) throw new Error('You can only reply to a message once.');
+            once = true;
             var smp = new SenderMessagePair(system.self,newMsg);
             return new SenderMessageReceiver(smp, sndr,streamID);
         };

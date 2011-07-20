@@ -445,8 +445,11 @@ function PresenceEntry(sporef, presObj)
           {
               system.__setBehindSelf(system._selfMap[receiver].presObj);
               std.messaging.seqNumManager.updateSeqNumberOnReceivedMessage(system.self,sender,msg);
-//              std.messaging.seqNumManager.updateSeqNumberOnReceivedMessage(system.self,sender,streamID,newMsg.seqNo);
-              msg.makeReply = std.messaging.makeReply(msg,sender);
+              // We may invoke this multiple times because we might
+              // have multiple handlers. To ensure the reply code can
+              // properly throw an exception if we try to reply twice,
+              // keep an existing makeReply if we have it.
+              if (msg.makeReply === undefined) msg.makeReply = std.messaging.makeReply(msg,sender);
               
               toCallback(msg,sender,receiver);
           };
