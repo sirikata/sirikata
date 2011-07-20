@@ -420,10 +420,14 @@ void Forwarder::receiveWeightUpdateMessage(Message* msg) {
 
     Sirikata::Protocol::Forwarder::WeightUpdate weight_update;
     bool parsed = parsePBJMessage(&weight_update, msg->payload());
+    // Could delete now, except for logging invalid messages -- delete
+    // separately for each case.
     if (!parsed) {
         LOG_INVALID_MESSAGE(forwarder, error, msg->payload());
+        delete msg;
         return;
     }
+    delete msg;
 
     SILOG(forwarder,insane,"Received weights: " << source << " -> " << mContext->id() <<
         " server_pair_total_weight: " << weight_update.server_pair_total_weight() <<
