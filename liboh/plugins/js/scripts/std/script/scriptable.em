@@ -76,23 +76,37 @@ function() {
             // our C++ code are fine)
             excep = std.core.deepCopy(ex);
         }
+
+        // This is the old version, not using makeReply. Now
+        // deprecated, but leaving in so old scripts/clients continue
+        // to work
         var retmsg = {
-            reply : 'script',
-            value : result,
-            exception : excep
+            'reply' : 'script',
+            'value' : result,
+            'exception' : excep,
+            'deprecated' : true
         };
         retmsg >> sender >> [];
+
+        // This is the new version and is the one you should actually
+        // use now. Note that it *doesn't* contain the reply: 'script'
+        // field. We don't need it since the reply is automatically
+        // matched (more conservatively than the old style as well),
+        // but also so that old style matching doesn't match this
+        // message.
+        var retmsg_new = {
+            'value' : result,
+            'exception' : excep
+        };
+        msg.makeReply(retmsg_new) >> [];
     };
 
     ns.Scriptable.prototype._handlePrint = function() {
-        
-        
         var print_msg = {
-            request: 'print',
-            print: (arguments.length == 1 ? arguments[0] : arguments)
+            'request': 'print',
+            'print': (arguments.length == 1 ? arguments[0] : arguments)
         };
         print_msg >> this._printer >> [];
-
     };
 
     ns.Scriptable.prototype._handlePrinterTimeout = function() {

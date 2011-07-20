@@ -94,8 +94,6 @@ function() {
             system.print('Close\n'); // FIXME
         }
         else if (evt == 'ExecScript') {
-
-
             // ExecScript Command Value
             var target = this._scriptedObjects[objid];
             if (!target) {
@@ -103,17 +101,25 @@ function() {
                 return;
             }
 
-
             var request = {
                 request : 'script',
                 script : val
             };
 
-            request >> target >> [];
+            request >> target >> [ std.core.bind(this._handleScriptReply, this) ];
         }
     };
 
     ns.Scripter.prototype._handleScriptReply = function(msg, sender) {
+        // We potentially get two reply messages, but we might need to
+        // actually use either one of them (if the Scriptable only
+        // supports old messages, we *must* use the old message,
+        // otherwise we should use the new message). We prefer using
+        // the new messages, and can safely ignore the old messages if
+        // they contain a deprecated field, since that means the new
+        // version of the reply should also arrive.
+        if (msg.deprecated) return;
+
         var win = this._scriptingWindow;
 
         if (msg.value !== undefined)

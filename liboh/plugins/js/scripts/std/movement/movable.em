@@ -74,12 +74,15 @@ function() {
         if (only_self && !sender.checkEqual(system.self))
             return;
 
+        var handled = false;
         for(var f in msg) {
             var handler = this._handlers[f];
-            if (handler)
+            if (handler) {
                 handler(msg, sender);
+                handled = true;
+            }
         }
-        msg.makeReply({}) >> [];
+        if (handled) msg.makeReply({}) >> [];
     };
 
     std.movement.Movable.prototype._handleStop = function(msg, sender) {
