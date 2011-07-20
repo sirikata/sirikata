@@ -68,7 +68,7 @@ class JSVisibleManager : public ProxyCreationListener,
 {
 public:
     JSVisibleManager(EmersonScript* eScript);
-    ~JSVisibleManager();
+    virtual ~JSVisibleManager();
 
 
 

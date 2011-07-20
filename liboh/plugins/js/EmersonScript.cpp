@@ -362,7 +362,7 @@ void EmersonScript::killScript()
         //storage.
         setRestoreScript(mContext,"",emptyCB);
     }
-
+    stop();
     mParent->destroy();
 }
 

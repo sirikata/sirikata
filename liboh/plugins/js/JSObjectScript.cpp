@@ -280,6 +280,8 @@ void JSObjectScript::stop() {
     {
         v8::HandleScope handle_scope;
         mContext->clear();
+        delete mContext;
+        mContext = NULL;
     }
 }
 
@@ -481,12 +483,6 @@ bool JSObjectScript::isRootContext(JSContextStruct* jscont)
 
 JSObjectScript::~JSObjectScript()
 {
-    if (mContext != NULL)
-    {
-        // Should have been cleared in stop()
-        delete mContext;
-        mContext = NULL;
-    }
 }
 
 
