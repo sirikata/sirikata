@@ -93,7 +93,7 @@ protected:
     PresenceDataMap *mPresenceData;
 
     int mNextSubscriptionID;
-
+    bool destroyed;
 
     ODP::DelegateService* mDelegateODPService;
 

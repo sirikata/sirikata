@@ -74,6 +74,7 @@ HostedObject::HostedObject(ObjectHostContext* ctx, ObjectHost*parent, const UUID
    mObjectScript(NULL),
    mPresenceData(new PresenceDataMap),
    mNextSubscriptionID(0),
+   destroyed(false),
    mOrphanLocUpdates(ctx, ctx->mainStrand, Duration::seconds(10))
 {
     mContext->add(&mOrphanLocUpdates);
@@ -137,7 +138,7 @@ void HostedObject::stop() {
 }
 
 bool HostedObject::stopped() const {
-    return mContext->stopped();
+    return (mContext->stopped() || destroyed);
 }
 
 void HostedObject::destroy()
@@ -151,6 +152,7 @@ void HostedObject::destroy()
         mObjectHost->unregisterHostedObject(iter->first);
 
     mPresenceData->clear();
+    destroyed = true;
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
@@ -1011,6 +1013,7 @@ bool HostedObject::delegateODPPortSend(const ODP::Endpoint& source_ep, const ODP
     assert(source_ep.space() == dest_ep.space());
     SpaceObjectReference sporef(source_ep.space(), source_ep.object());
     if (stopped()) return false;
+
     return mObjectHost->send(sporef,source_ep.space(), source_ep.port(), dest_ep.object().getAsUUID(),dest_ep.port(), payload);
 }
 
