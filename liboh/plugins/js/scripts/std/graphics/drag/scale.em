@@ -53,8 +53,10 @@ std.graphics.ScaleDragHandler = std.graphics.DragHandler.extend(
         onMouseDrag: function(evt) {
             if (!this._dragging) return;
 
-            if (!this._dragging.dragScale)
+            if (!this._dragging.dragScale) {
                 this._dragging.dragScale = this._dragging.getScale();
+                this._startScale = this._dragging.dragScale;
+            }
 
             var cameraAxis = this._graphics.cameraDirection();
 
@@ -65,9 +67,27 @@ std.graphics.ScaleDragHandler = std.graphics.DragHandler.extend(
 
         /** @memberOf std.graphics.ScaleDragHandler */
         onMouseRelease: function(evt) {
-            if (this._dragging)
+            if (this._dragging) {
+                if (this._startScale && 'addUndoAction' in this._graphics) {
+                    this._graphics.addUndoAction({
+                        movable: this._dragging,
+                        start: this._startScale,
+                        end: this._dragging.getScale()
+                    }, this);
+                }
+                this._startScale = null;
                 this._dragging.dragScale = null;
+            }
+
             this._lastClickAxis = null;
+        },
+
+        undo: function(action) {
+            action.movable.setScale(action.start);
+        },
+
+        redo: function(action) {
+            action.movable.setScale(action.end);
         }
     }
 );

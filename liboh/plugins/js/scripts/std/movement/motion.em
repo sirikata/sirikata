@@ -31,6 +31,29 @@ motion.util._isQuat = function(obj) {
 			'__getType' in obj && obj.__getType() == 'quat');
 };
 
+motion.util._isVisible = function(obj) {
+    return (typeof(obj) !== 'undefined' && '__getType' in obj &&
+            (obj.__getType() == 'presence' || obj.__getType() == 'visible'));
+};
+
+motion.util._mass = function(pres) {
+    if('mass' in pres)
+        return pres.mass;
+    else if('physics' in pres && 'mass' in pres.physics)
+        return pres.physics.mass;
+    else
+        return 1 * u.kg;
+};
+
+motion.util._inertia = function(pres) {
+    if('inertia' in pres)
+        return pres.inertia;
+        // TODO: how is moment of inertia tensor handled in Bullet interface?
+    else
+        // treat as sphere by default
+        return .4 * motion.util._mass(pres) * pres.scale * pres.scale;
+};
+
 /**
  * Motion controllers operate on repeating timers.  The last (optional)
  * argument to every class of controller specifies the repeat period at
@@ -253,6 +276,55 @@ motion.OrientationVel = motion.Motion.extend({
 });
 
 /**
+ * @class A controller that applies angular acceleration to a presence.
+ * @param presence The presence to control
+ * @param oAccelFn A function that should return the angular acceleration on
+ *      the presence at any point in time, as a vector or a quaternion.  If
+ *      oAccelFn returns undefined ("return;"), the acceleration will be
+ *      unchanged from the last call.  If accelFn itself is undefined (or not
+ *      provided), the controller will use the value of
+ *      presence.orientationAccel, which if assigned externally, should be a
+ *      vector (axis with magnitude).
+ * @param period (optional =defaultPeriod) The period at which the
+ *		angular acceleration is updated
+ */
+motion.OrientationAccel = motion.Motion.extend({
+	init: function(presence, oAccelFn, period) {
+		var self = this;
+		if(typeof(presence.orientationAccel) === 'undefined')
+			presence.orientationAccel = <0, 0, 0>;
+		if(typeof(oAccelFn) === 'undefined')
+			oAccelFn = function(p) { return p.orientationAccel; };
+		else if(typeof(oAccelFn) !== 'function')
+			throw('second argument "oAccelFn" to motion.Acceleration (' +
+					system.core.pretty(oAccelFn) +
+					' is not a function or undefined');
+		
+		var callback = function(p) {
+			var oAccel = oAccelFn(p);
+			if(motion.util._isVector(oAccel))
+				p.orientationAccel = oAccel;
+            else if(motion.util._isQuat(oAccel))
+                p.orientationAccel = oAccel.axis().scale(oAccel.length());
+			else if(typeof(oAccel) != 'undefined')
+				throw('in motion.Acceleration callback: oAccelFn should return ' +
+						'a vector, a quaternion or undefined (instead got ' +
+						std.core.pretty(oAccel) + ')');
+			
+            var angVel = p.orientationVel.axis().scale(p.orientationVel.length());
+			angVel = angVel + p.orientationAccel.scale(self.period);
+            var mag = angVel.length();
+            if(mag < 1e-8)
+                p.orientationVel = new util.Quaternion();
+            else
+                p.orientationVel = (new util.Quaternion(angVel.div(mag),
+                        1)).scale(mag);
+		};
+		this._super(presence, callback, period);
+	}
+});
+
+/**
  * The default acceleration of an object under a Gravity controller.
  * @constant
  */
@@ -319,7 +391,7 @@ motion.Spring = motion.Acceleration.extend({
 					"') is not a vector or presence");
 		
 		var accelFn = function(p) {
-			var mass = ('mass' in p ? p.mass : 1);
+			var mass = motion.util._mass(p);
 		
 			var disp = (p.position - anchorFn());
 			var len = disp.length();
@@ -336,16 +408,7 @@ motion.Spring = motion.Acceleration.extend({
 	}
 });
 
-/**
- * The default number of collisions the Collision controller attempts to
- * detect before giving up.  After a collision, the Collision controller will
- * call the response function and check for collisions again.  This could
- * result in an infinite loop if a presence is tightly confined, so the
- * controller requires a limit to the number of iterations through which this
- * loop is sustained.
- * @constant
- */
-motion.defaultMaxCollisions = 4;
+motion._allCollisions = [];
 
 /**
  * @class A generic controller to detect and respond to collisions.
@@ -356,34 +419,69 @@ motion.defaultMaxCollisions = 4;
  *		"colliding presence")
  * @param testFn A function that should detect any collisions when called
  *		repeatedly and return one in the form of a "collision object"
- * @param responseFn A function to be called when a collision happens; should
- *		return true to request further collision detection or false to stop.
- * @param maxCollisions (optional =defaultMaxCollisions) The number of
- *		successive collisions to detect for each tick of the repeating timer
+ * @param responseFn A function to be called when a collision happens
  * @param period (optional =defaultPeriod) The period at which to check for
  *		collisions
  *
  * @see collision.em
  */
 motion.Collision = motion.Motion.extend({
-	init: function(presence, testFn, responseFn, maxCollisions, period) {
+	init: function(presence, testFn, responseFn, period) {
 		var self = this;
 		
 		self.testFn = testFn;
 		self.responseFn = responseFn;
-		self.maxCollisions = maxCollisions || motion.defaultMaxCollisions;
+		
+        var onCollisionMessage = function(message, sender) {
+            // make sure that collision is always from the receiving object's
+            // perspective
+            if(message.collision.other.id === presence.toString()) {
+                var temp = message.collision.self;
+                message.collision.other = message.collision.self;
+                message.collision.self = temp;
+                message.collision.normal = message.collision.normal.neg();
+            }
+
+            motion._allCollisions.push(message.collision);
+
+            self.responseFn(presence, message.collision);
+        };
+
+        self.collisionHandler = (onCollisionMessage <<
+                [{'action':'collision':},
+                {'id':presence.toString():},
+                {'collision'::}]);
 		
 		var testCollision = function(p) {
-			for(var collNum = 0; collNum < self.maxCollisions; collNum++)
-			{
 				var collision = self.testFn(p);
-				if(!collision || !self.responseFn(collision)) {
-					break;
+            if(collision) {
+                {
+                    action: 'collision',
+                    id: collision.self.id,
+                    collision: collision
+                } >> system.createVisible(collision.self.id) >> [];
+
+                if(typeof(collision.other.id) === 'string') {
+                    {
+                        action: 'collision',
+                        id: collision.other.id,
+                        collision: collision
+                    } >> system.createVisible(collision.other.id) >> [];
 				}
 			}
 		};
 		
 		this._super(presence, testCollision, period);
+	},
+
+    suspend: function() {
+        self.collisionHandler.suspend();
+        this._super();
+    },
+
+    reset: function() {
+        self.colisionHandler.reset();
+        this._super();
 	}
 });
 
@@ -444,4 +542,57 @@ motion.LookForward = motion.Orientation.extend({
 		};
 		this._super(presence, lookForward, period);
 	}
+});
+
+/**
+ * @class A controller that applies force and optionally torque to a presence.
+ * @param presence The presence to control
+ * @param force The force to apply, as a vector or as a function that returns a
+ *      vector when called.
+ * @param position (optional =presence's position) The position (in world
+ *      coordinates) at which to apply the force, as a vector, a visible whose
+ *      position is tracked, or a function that returns a vector when called.
+ *      If position is undefined or not given, the position of the presence is
+ *      used (and therefore no torque is exerted).
+ * @param period The period at which to change the presence's velocities when
+ *      applying force and torque.
+ */
+motion.ForceTorque = motion.Acceleration.extend({
+    init: function(presence, force, position, period) {
+        var forceFn;
+        if(typeof(force) === 'function')
+            forceFn = force;
+        else if(motion.util._isVec(force))
+            forceFn = function(p) { return force; };
+        else
+			throw("Second argument 'force' to motion.ForceTorque constructor ('" +
+					std.core.pretty(force) +
+					"') is not a function or vector");
+
+        var posFn;
+        if(typeof(position) === 'function')
+            posFn = position;
+        else if(typeof(position) === 'undefined')
+            posFn = function(p) { return p.position; };
+        else if(motion.util._isVec(position))
+            posFn = function(p) { return position; };
+        else if(motion.util._isVisible(position))
+            posFn = function(p) { return position.position; };
+        else
+			throw("Second argument 'position' to motion.ForceTorque constructor ('" +
+					std.core.pretty(position) +
+					"') is not a vector, visible, function, or undefined");
+        
+        var accelFn = function(p) {
+            return <0, 0, 0>;
+            // return forceFn(p).div(motion.util._mass(p));
+        };
+        var oAccelFn = function(p) {
+            return p.orientation.inverse().mul((posFn(p) -
+					p.position).cross(forceFn(p))).div(motion.util._inertia(p));
+        };
+
+        this.oAccel = new motion.OrientationAccel(presence, oAccelFn, period);
+        this._super(presence, accelFn, period);
+    }
 });

@@ -59,8 +59,10 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
         onMouseDrag: function(evt) {
             if (!this._dragging) return;
 
-            if (!this._dragging.dragPosition)
+            if (!this._dragging.dragPosition) {
                 this._dragging.dragPosition = this._dragging.getPosition();
+                this._startPosition = this._dragging.dragPosition;
+            }
 
             var centerAxis = this._graphics.cameraDirection();
             var clickAxis = this._graphics.cameraDirection(evt.x, evt.y);
@@ -82,9 +84,25 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
 
         /** @memberOf std.graphics.MoveDragHandler */
         onMouseRelease: function(evt) {
-            if (this._dragging)
+            if (this._dragging) {
+                if (this._startPosition && 'addUndoAction' in this._graphics) {
+                    this._graphics.addUndoAction({
+                        movable: this._dragging,
+                        start: this._startPosition,
+                        end: this._dragging.dragPosition
+                    }, this);
+                }
                 this._dragging.dragPosition = null;
+            }
             this._lastClickAxis = null;
+        },
+
+        undo: function(action) {
+            action.movable.setPosition(action.start);
+        },
+
+        redo: function(action) {
+            action.movable.setPosition(action.end);
         }
     }
 );

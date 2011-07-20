@@ -31,6 +31,7 @@
  */
 
 system.require('graphics.em');
+system.require('undo.em');
 system.require('std/movement/pursue.em');
 system.require('std/script/scripter.em');
 system.require('inputbinding.em');
@@ -150,6 +151,8 @@ function() {
         this._binding.addAction('startFreeRotate', std.core.bind(this.startFreeRotate, this));
         this._binding.addAction('freeRotateDrag', std.core.bind(this.freeRotateDrag, this));
         this._binding.addAction('freeRotateRelease', std.core.bind(this.freeRotateRelease, this));
+        this._binding.addAction('undo', std.core.bind(this.undo, this));
+        this._binding.addAction('redo', std.core.bind(this.redo, this));
 
         /** Bindings are an *ordered* list of keys and actions. Keys
          *  are a combination of the type of event, the primary key
@@ -173,6 +176,9 @@ function() {
             { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
             { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
             { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
+
+            { key: ['button-pressed', 'z', 'ctrl' ], action: 'undo' },
+            { key: ['button-pressed', 'y', 'ctrl' ], action: 'redo' },
 
             { key: ['mouse-click', 2], action: 'pickObject' },
             { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
@@ -406,5 +412,13 @@ function() {
         this.startX = null;
         this.startY = null;
         this.startOrientation = null;
+    };
+
+    std.graphics.DefaultGraphics.prototype.undo = function(evt) {
+        this._simulator.undo();
+    };
+
+    std.graphics.DefaultGraphics.prototype.redo = function(evt) {
+        this._simulator.redo();
     };
 })();

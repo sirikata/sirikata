@@ -92,8 +92,10 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
         onMouseDrag: function(evt) {
             if (!this._dragging) return;
 
-            if (!this._dragging.dragOrientation)
+            if (!this._dragging.dragOrientation) {
                 this._dragging.dragOrientation = this._dragging.getOrientation();
+                this._startOrientation = this._dragging.dragOrientation;
+            }
 
             var endingDir = this._spherePos(evt);
             if (!this._startingDir || !endingDir) return;
@@ -107,9 +109,27 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
 
         /** @memberOf std.graphics.RotateDragHandler */
         onMouseRelease: function(evt) {
-            if (this._dragging)
+            if (this._dragging) {
+                if (this._startOrientation && 'addUndoAction' in this._graphics) {
+                    this._graphics.addUndoAction({
+                        movable: this._dragging,
+                        start: this._startOrientation,
+                        end: this._dragging.getOrientation()
+                    }, this);
+                }
+                this._startOrientation = null;
                 this._dragging.dragOrientation = null;
+            }
+
             this._lastClickAxis = null;
+        },
+
+        undo: function(action) {
+            action.movable.setOrientation(action.start);
+        },
+
+        redo: function(action) {
+            action.movable.setOrientation(action.end);
         }
     }
 );
