@@ -79,10 +79,13 @@ void SQLiteObjectFactory::generate() {
                 sqlite3_column_bytes(value_query_stmt, 3)
             );
 
-            HostedObjectPtr obj = mOH->createObject(
-                UUID(object_str, UUID::HexString()),
-                script_type, script_args, script_contents
-            );
+            if (!script_type.empty())
+            {
+                HostedObjectPtr obj = mOH->createObject(
+                    UUID(object_str, UUID::HexString()),
+                    script_type, script_args, script_contents
+                );
+            }
 
             step_rc = sqlite3_step(value_query_stmt);
         }
