@@ -167,6 +167,10 @@ public:
     void create_entity(EntityCreateInfo& eci);
 
 
+    //JSContextStructs request the JSObjectScript to call finishClear on them
+    //when doing so won't invalidate any iterators on the JSObjectScript.
+    virtual void registerContextForClear(JSContextStruct* jscont);
+    
 
     //handling basic datatypes for JSPresences
     void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
@@ -364,7 +368,10 @@ private:
     typedef std::vector<JSPresenceStruct*> PresenceVec;
     PresenceVec mUnconnectedPresences;
 
-
+    //we do not want to invalidate message receiving iterator, so keep separate
+    //tabs of all the context structs that we were supposed to delete when we
+    //received a message.
+    std::vector<JSContextStruct*> contextsToClear;
 
     EmersonHttpPtr emHttpPtr;
 };

@@ -577,10 +577,23 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     if (getIsCleared())
         return v8::Boolean::New(true);
 
+
+    jsObjScript->registerContextForClear(this);
+    return v8::Boolean::New(true);
+}
+
+
+//should be called from the jsobjectscript once we've been given the all-clear
+//to clear the context.
+void JSContextStruct::finishClear()
+{
     //should lose all of its http queries. when clear it.
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
     if (emerScript != NULL)
+    {
+        
         emerScript->getEmersonHttpPtr()->deregisterContext(this);
+    }
 
 
     v8::HandleScope handle_scope;
@@ -616,7 +629,6 @@ v8::Handle<v8::Value> JSContextStruct::clear()
     
     mContext.Dispose();
     inClear = false;
-    return handle_scope.Close(returner);
 }
 
 

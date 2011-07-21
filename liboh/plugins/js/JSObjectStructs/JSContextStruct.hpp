@@ -48,8 +48,13 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //ready for garbage collection)  (also clears all suspendables in the context).
     virtual v8::Handle<v8::Value> suspend();
     virtual v8::Handle<v8::Value> resume();
-    virtual v8::Handle<v8::Value> clear();
 
+    //clear requests the jsobjectscript to begin to clear the context.
+    //JSObjectScript calls finishClear, where all other suspendables are cleared
+    //and the internal state of this object is removed.
+    virtual v8::Handle<v8::Value> clear();
+    void finishClear();
+    
     v8::Handle<v8::Value>  struct_suspendContext();
     v8::Handle<v8::Value>  struct_resumeContext();
 

@@ -106,6 +106,11 @@ public:
     v8::Handle<v8::Value> require(const String& filename,JSContextStruct* jscont,bool isJS);
 
 
+    //JSContextStructs request the JSObjectScript to call finishClear on them
+    //when doing so won't invalidate any iterators on the JSObjectScript.
+    virtual void registerContextForClear(JSContextStruct* jscont);
+    
+    
     v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
     v8::Handle<v8::Value> storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont);

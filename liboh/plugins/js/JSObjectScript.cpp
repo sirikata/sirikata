@@ -384,6 +384,12 @@ void JSObjectScript::setRestoreScriptCallback(JSContextStruct* jscont, v8::Persi
     invokeCallback(jscont, cb, argc, argv);
 }
 
+//can instantly finish the clear operation in JSObjectScript because not in the
+//midst of handling any events that might invalidate iterators.
+void JSObjectScript::registerContextForClear(JSContextStruct* jscont)
+{
+    jscont->finishClear();
+}
 
 v8::Handle<v8::Value> JSObjectScript::setRestoreScript(JSContextStruct* jscont, const String& script, v8::Handle<v8::Function> cb) {
     if (mPersistedObjectSet == NULL) return v8::ThrowException( v8::Exception::Error(v8::String::New("No persistent storage available.")) );

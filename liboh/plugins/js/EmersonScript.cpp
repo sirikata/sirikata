@@ -618,7 +618,15 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     return deserializeMsgAndDispatch(src,dst,js_msg);
 }
 
-
+void EmersonScript::registerContextForClear(JSContextStruct* jscont)
+{
+    if (mHandlingEvent)
+    {
+        contextsToClear.push_back(jscont);
+    }
+    else
+        jscont->finishClear();
+}
 
 
 bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
@@ -626,14 +634,22 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 
-    //FIXME: Don't forget to handle the case where a context is cleared from
-    //within a callback.  Will invalidate iterator.  Fix this
-    //lkjs;
-    
+    //creating a new context or destroying an old one would invalidate
+    //mContStructMap iterator.  So when we receive a message, we first copy
+    //existing contextstructs and then run through all of them, invoking their
+    //callbacks.  Only after doing this do we delet contexts.
+    std::vector<JSContextStruct*> currentContexts;
     for (std::map<uint32,JSContextStruct*>::iterator contIter = mContStructMap.begin();
          contIter != mContStructMap.end();++contIter)
     {
-        JSContextStruct* receiver = contIter->second;
+        currentContexts.push_back(contIter->second);
+    }
+
+    for (std::vector<JSContextStruct*>::iterator curContIter = currentContexts.begin();
+         curContIter != currentContexts.end();
+         ++curContIter)
+    {
+        JSContextStruct* receiver = *curContIter;
         if (receiver->canReceiveMessagesFor(dst))
         {
             //If callback for presence messages on receiver doesn't exist, then don't do
@@ -668,7 +684,14 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
 
     mHandlingEvent = false;
 
-
+    for (std::vector<JSContextStruct*>::iterator toClearIter = contextsToClear.begin();
+         toClearIter != contextsToClear.end();
+         ++toClearIter)
+    {
+        (*toClearIter)->finishClear();
+    }
+    contextsToClear.clear();
+    
     //if one of the actions that your handler took was to call reset, then reset
     //the entire script.
     if (mResetting)
