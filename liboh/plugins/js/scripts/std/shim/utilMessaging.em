@@ -175,7 +175,7 @@ util.HandlerPatternSenderTriple.prototype.deRegister = function()
 
 util.HandlerPatternSenderTriple.prototype.clear = function()
 {
-    system.__debugPrint  ('\nWARN: Clear is not defined in util.HandlerPatternSenderTriple yet\n');
+    return this.deRegister();
 };
 
 

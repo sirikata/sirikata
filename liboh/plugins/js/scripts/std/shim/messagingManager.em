@@ -60,8 +60,8 @@
         if (typeof(handlerOrCallback) ==='function')
             handlerOrCallback = new util.Handler(handlerOrCallback);
         
-        var newTriple = new util.HandlerPatternSenderTriple(handlerOrCallback,pattern,sender);
-        
+        var newTriple = new util.HandlerPatternSenderTriple(handlerOrCallback,pattern,sender,this);
+
         this.insertIntoHandlers (newTriple);
         return newTriple;
     };
@@ -71,7 +71,7 @@
      Run through all registered message handlers, and remove from
      allMessageHanders array if strictly equal to toDeregister.
      */
-    MessageReceiveManager.prototype.deregister = function (toDeregister)
+    MessageReceiveManager.prototype.deRegister = function (toDeregister)
     {
         for (var s in this.allMessageHandlers)
         {
