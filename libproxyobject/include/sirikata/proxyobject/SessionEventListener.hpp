@@ -55,6 +55,12 @@ public:
      */
     virtual void onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token) {};
 
+    /** Invoked upon migration. Streams to the space are invalidated.
+     *  \param from the SessionEventProvider the event originates from
+     *  \param name the name of the object in the space
+     */
+    virtual void onMigrated(SessionEventProviderPtr from, const SpaceObjectReference& name, int64 token) {};
+
     /** Invoked upon disconnection.
      *  \param from the SessionEventProvider the event originates from
      *  \param name the name of the object in the space

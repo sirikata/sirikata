@@ -389,7 +389,7 @@ void HostedObject::connect(
         queryAngle,
         std::tr1::bind(&HostedObject::handleConnected, this, _1, _2, _3),
         std::tr1::bind(&HostedObject::handleMigrated, this, _1, _2, _3),
-        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, token),
+        std::tr1::bind(&HostedObject::handleStreamCreated, this, _1, _2, token),
         std::tr1::bind(&HostedObject::handleDisconnected, this, _1, _2)
     );
 }
@@ -488,7 +488,7 @@ void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& o
 
 
 
-void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token) {
+void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token) {
     HO_LOG(detailed,"Handling new SST stream from space server for " << spaceobj);
     SSTStreamPtr sstStream = mObjectHost->getSpaceStream(spaceobj.space(), spaceobj.object());
 
@@ -501,7 +501,10 @@ void HostedObject::handleStreamCreated(const SpaceObjectReference& spaceobj, Pre
         );
     }
     HO_LOG(detailed,"Notifying of connected object " << spaceobj.object() << " to space " << spaceobj.space());
-    notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
+    if (after == SessionManager::Connected)
+        notify(&SessionEventListener::onConnected, getSharedPtr(), spaceobj, token);
+    else if (after == SessionManager::Migrated)
+        notify(&SessionEventListener::onMigrated, getSharedPtr(), spaceobj, token);
 }
 
 

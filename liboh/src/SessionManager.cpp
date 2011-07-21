@@ -169,15 +169,16 @@ void SessionManager::ObjectConnections::handleConnectError(const SpaceObjectRefe
     mObjectInfo[sporef_objid].connectedCB(parent->mSpace, sporef_objid.object(), NullServerID, ci);
 }
 
-void SessionManager::ObjectConnections::handleConnectStream(const SpaceObjectReference& sporef_objid, bool do_cb) {
+void SessionManager::ObjectConnections::handleConnectStream(const SpaceObjectReference& sporef_objid, ConnectionEvent after, bool do_cb) {
     if (do_cb) {
-        mObjectInfo[sporef_objid].streamCreatedCB( mObjectInfo[sporef_objid].connectedAs );
+        mObjectInfo[sporef_objid].streamCreatedCB( mObjectInfo[sporef_objid].connectedAs, after );
     }
     else {
         mDeferredCallbacks.push_back(
             std::tr1::bind(
                 mObjectInfo[sporef_objid].streamCreatedCB,
-                mObjectInfo[sporef_objid].connectedAs
+                mObjectInfo[sporef_objid].connectedAs,
+                after
             )
         );
     }
@@ -864,7 +865,7 @@ void SessionManager::handleObjectFullyConnected(const SpaceID& space, const Obje
     SSTStream::connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random
         SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
-        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj, Connected)
     );
 }
 
@@ -876,7 +877,7 @@ void SessionManager::handleObjectFullyMigrated(const SpaceID& space, const Objec
     SSTStream::connectStream(
         SSTEndpoint(spaceobj, 0), // Local port is random
         SSTEndpoint(SpaceObjectReference(space, ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
-        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+        std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj, Migrated)
     );
 }
 
@@ -889,7 +890,7 @@ SessionManager::SSTStreamPtr SessionManager::getSpaceStream(const ObjectReferenc
 }
 
 
-void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference spaceobj) {
+void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference spaceobj, ConnectionEvent after) {
     using std::tr1::placeholders::_1;
     using std::tr1::placeholders::_2;
 
@@ -900,7 +901,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
         SSTStream::connectStream(
             SSTEndpoint(spaceobj, 0), // Local port is random
             SSTEndpoint(SpaceObjectReference(spaceobj.space(), ObjectReference::spaceServiceID()), OBJECT_SPACE_PORT),
-            std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj)
+            std::tr1::bind( &SessionManager::spaceConnectCallback, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, spaceobj, after)
         );
         return;
     }
@@ -910,7 +911,7 @@ void SessionManager::spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectRe
 
     assert(mTimeSyncClient != NULL);
     bool time_synced = mTimeSyncClient->valid();
-    mObjectConnections.handleConnectStream(spaceobj, time_synced);
+    mObjectConnections.handleConnectStream(spaceobj, after, time_synced);
 }
 
 } // namespace Sirikata

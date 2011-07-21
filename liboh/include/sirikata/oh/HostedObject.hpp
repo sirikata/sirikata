@@ -267,7 +267,7 @@ public:
 
     bool handleEntityCreateMessage(const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference bodyData);
     void handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server);
-    void handleStreamCreated(const SpaceObjectReference& spaceobj, PresenceToken token);
+    void handleStreamCreated(const SpaceObjectReference& spaceobj, SessionManager::ConnectionEvent after, PresenceToken token);
     void handleDisconnected(const SpaceObjectReference& spaceobj, Disconnect::Code cc);
 
   public:

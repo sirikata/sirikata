@@ -100,7 +100,6 @@ public:
         SolidAngle queryAngle;
     };
 
-
     //use this function to request the object host to send a disconnect message
     //to space for object
     void disconnectObject(const SpaceID& space, const ObjectReference& oref);
@@ -112,7 +111,7 @@ public:
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
-    typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&, SessionManager::ConnectionEvent after)> StreamCreatedCallback;
     // Notifies the ObjectHost of object connection that was closed, including a
     // reason.
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;

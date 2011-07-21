@@ -71,6 +71,12 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
         SolidAngle queryAngle;
     };
 
+    enum ConnectionEvent {
+        Connected,
+        Migrated,
+        Disconnected
+    };
+
     // Callback indicating that a connection to the server was made
     // and it is available for sessions
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, const ConnectionInfo&)> ConnectedCallback;
@@ -78,7 +84,7 @@ class SIRIKATA_OH_EXPORT SessionManager : public Service, private ODP::DelegateS
     // as the object host starts the transition and no additional notification is given since, for all
     // intents and purposes this is the point at which the transition happens
     typedef std::tr1::function<void(const SpaceID&, const ObjectReference&, ServerID)> MigratedCallback;
-    typedef std::tr1::function<void(const SpaceObjectReference&)> StreamCreatedCallback;
+    typedef std::tr1::function<void(const SpaceObjectReference&, ConnectionEvent after)> StreamCreatedCallback;
     typedef std::tr1::function<void(const SpaceObjectReference&, Disconnect::Code)> DisconnectedCallback;
 
     typedef std::tr1::function<void(const Sirikata::Protocol::Object::ObjectMessage&)> ObjectMessageCallback;
@@ -295,7 +301,7 @@ private:
 
         void handleConnectError(const SpaceObjectReference& sporef_objid);
 
-        void handleConnectStream(const SpaceObjectReference& sporef_objid, bool do_cb);
+        void handleConnectStream(const SpaceObjectReference& sporef_objid, ConnectionEvent after, bool do_cb);
 
         void remove(const SpaceObjectReference& obj);
 
@@ -358,7 +364,7 @@ private:
 
     bool mShuttingDown;
 
-    void spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference obj);
+    void spaceConnectCallback(int err, SSTStreamPtr s, SpaceObjectReference obj, ConnectionEvent after);
     std::map<ObjectReference, SSTStreamPtr> mObjectToSpaceStreams;
 
 }; // class SessionManager
