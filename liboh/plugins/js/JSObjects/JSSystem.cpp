@@ -6,7 +6,6 @@
 #include "../JSObjectScript.hpp"
 
 #include "../JSSerializer.hpp"
-#include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSContextStruct.hpp"
 #include "JSFields.hpp"
 #include "JSObjectsUtils.hpp"
@@ -1608,106 +1607,6 @@ v8::Handle<v8::Value> root_timeout(const v8::Arguments& args)
 
     return jsfake->struct_createTimeout(native_dur, cb_persist, contID,timeRemaining,isSuspended,isCleared);
 }
-
-
-/** Registers a handler to be invoked for events that match the
- *  specified pattern, where the pattern is a list of individual
- *  rules.
- *
- *   @param cb: callback to invoke, with event as parameter
- *   @param  object target: target of callback (this pointer when invoked), or null for the global (root) object
- *   @param pattern[] pattterns: Array of Pattern rules to match
- *   @param sender: a visible object if want to match only messages from a
- *   particular sender, or null if want to match messages from any sender.
- */
-v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args)
-{
-    v8::HandleScope handle_scope;
-
-    if ((args.Length() != 3) && (args.Length() != 4))
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Need exactly 3 or 4 args.  <function, callback to execute when event associated with handler fires>, <pattern: array of pattern rules to match or null if can match all>, <a sender to match even to><(optional) bool: whether handler is suspended>")) );
-
-    // Changing the sequence of the arguments so as to get the same
-    // as is generated in emerson
-
-    v8::Handle<v8::Value> cb_val     = args[0];
-    v8::Handle<v8::Value> pattern    = args[1];
-    v8::Handle<v8::Value> sender_val = args[2];
-
-    // Pattern
-    PatternList native_patterns;
-    if (! pattern->IsNull())
-    {
-        if (PatternValidate(pattern))
-        {
-            Pattern single_pattern = PatternExtract(pattern);
-            native_patterns.push_back(single_pattern);
-        }
-        else if (pattern->IsArray())
-        {
-            v8::Handle<v8::Array> pattern_array( v8::Handle<v8::Array>::Cast(pattern) );
-            if (pattern_array->Length() == 0)
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern array must contain at least one element.")) );
-            for(uint32 pat_idx = 0; pat_idx < pattern_array->Length(); pat_idx++)
-            {
-            Local<Value> pattern_element = pattern_array->Get(pat_idx);
-            if (!PatternValidate(pattern_element))
-                return v8::ThrowException( v8::Exception::Error(v8::String::New("Found non-pattern element in array of patterns.")) );
-            Pattern single_pattern = PatternExtract(pattern_element);
-            native_patterns.push_back(single_pattern);
-            }
-        }
-    }
-    else
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Pattern argument must be pattern or array of patterns.")) );
-
-
-    // Sender
-    if (! sender_val->IsNull())  //means that it's a valid sender
-    {
-        String errorMessage = "[JS] Error in ScriptRegisterHandler of JSSystem.cpp.  Having trouble decoding sender.  ";
-        JSPositionListener* jsposlist = decodeJSPosListener(sender_val,errorMessage);
-
-        if (jsposlist == NULL)
-            return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-    }
-
-
-    v8::Handle<v8::Object> sender = v8::Handle<v8::Object>::Cast(sender_val);
-    v8::Persistent<v8::Object> sender_persist = v8::Persistent<v8::Object>::New(sender);
-
-
-    // Function
-    if (!cb_val->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid parameters passed to registerHandler().  Must contain callback function.")) );
-
-
-    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
-    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
-
-
-    //now decode system
-    String errorMessageDecodeRoot = "Error decoding the system object from root_registerHandler.  ";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageDecodeRoot);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageDecodeRoot.c_str())));
-
-    if (args.Length() == 3)
-        return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, false));
-
-
-    v8::Handle<v8::Value> suspVal = args[3];
-    String errMsgDecodeSusp = "Error decoding suspended argument when registering handler with system.  ";
-    bool isSuspended;
-    bool decodeSusp = decodeBool(suspVal, isSuspended, errMsgDecodeSusp);
-
-    if (! decodeSusp)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsgDecodeSusp.c_str())));
-
-    return handle_scope.Close(jsfake->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist, isSuspended));
-}
-
 
 
 /**

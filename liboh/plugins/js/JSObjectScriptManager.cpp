@@ -41,10 +41,9 @@
 #include "JSObjects/JSSystem.hpp"
 
 #include "JSObjects/JSUtilObj.hpp"
-#include "JSObjects/JSHandler.hpp"
 #include "JSObjects/JSTimer.hpp"
 #include "JSSerializer.hpp"
-#include "JSPattern.hpp"
+
 
 #include "JSObjects/JSPresence.hpp"
 #include "JSObjects/JSGlobal.hpp"
@@ -155,8 +154,6 @@ void JSObjectScriptManager::createUtilTemplate()
     mUtilTemplate->Set(v8::String::New("mul"),v8::FunctionTemplate::New(JSUtilObj::ScriptMult));
     mUtilTemplate->Set(v8::String::New("mod"),v8::FunctionTemplate::New(JSUtilObj::ScriptMod));
     mUtilTemplate->Set(v8::String::New("equal"),v8::FunctionTemplate::New(JSUtilObj::ScriptEqual));
-
-    mUtilTemplate->Set(v8::String::New("Pattern"), mPatternTemplate);
     mUtilTemplate->Set(v8::String::New("Quaternion"), mQuaternionTemplate);
     mUtilTemplate->Set(v8::String::New("Vec3"), mVec3Template);
 
@@ -177,12 +174,8 @@ void JSObjectScriptManager::createTemplates()
     v8::HandleScope handle_scope;
     mVec3Template        = v8::Persistent<v8::FunctionTemplate>::New(CreateVec3Template());
     mQuaternionTemplate  = v8::Persistent<v8::FunctionTemplate>::New(CreateQuaternionTemplate());
-    mPatternTemplate     = v8::Persistent<v8::FunctionTemplate>::New(CreatePatternTemplate());
 
     createUtilTemplate();
-
-
-    createHandlerTemplate();
     createVisibleTemplate();
 
     createTimerTemplate();
@@ -231,7 +224,6 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("__debugFileWrite"),v8::FunctionTemplate::New(JSSystem::debug_fileWrite));
     mSystemTemplate->Set(v8::String::New("__debugFileRead"),v8::FunctionTemplate::New(JSSystem::debug_fileRead));
     mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
-    mSystemTemplate->Set(v8::String::New("registerHandler"),v8::FunctionTemplate::New(JSSystem::root_registerHandler));
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
     mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
@@ -498,32 +490,6 @@ void JSObjectScriptManager::createPresenceTemplate()
   v8::Local<v8::ObjectTemplate> instance_t = mPresenceTemplate->InstanceTemplate();
   instance_t->SetInternalFieldCount(PRESENCE_FIELD_COUNT);
 
-}
-
-
-
-//a handler is returned whenever you register a handler in system.
-//should be able to print data of handler (pattern + cb),
-//should be able to cancel handler    -----> canceling handler kills this
-//object.  remove this pattern from being checked for.
-//should be able to renew handler     -----> Re-register handler.
-/*
-  EMERSON!: handler
- */
-void JSObjectScriptManager::createHandlerTemplate()
-{
-    v8::HandleScope handle_scope;
-    mHandlerTemplate = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-
-    // one field is the JSObjectScript associated with it
-    // the other field is a pointer to the associated JSEventHandler.
-    mHandlerTemplate->SetInternalFieldCount(JSHANDLER_FIELD_COUNT);
-    mHandlerTemplate->Set(v8::String::New("printContents"), v8::FunctionTemplate::New(JSHandler::_printContents));
-    mHandlerTemplate->Set(v8::String::New("suspend"),v8::FunctionTemplate::New(JSHandler::_suspend));
-    mHandlerTemplate->Set(v8::String::New("isSuspended"),v8::FunctionTemplate::New(JSHandler::_isSuspended));
-    mHandlerTemplate->Set(v8::String::New("resume"),v8::FunctionTemplate::New(JSHandler::_resume));
-    mHandlerTemplate->Set(v8::String::New("clear"),v8::FunctionTemplate::New(JSHandler::_clear));
-    mHandlerTemplate->Set(v8::String::New("getAllData"),v8::FunctionTemplate::New(JSHandler::getAllData));
 }
 
 

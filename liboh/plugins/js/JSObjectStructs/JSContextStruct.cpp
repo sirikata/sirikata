@@ -9,8 +9,6 @@
 #include "JSSuspendable.hpp"
 #include "../JSLogging.hpp"
 #include "JSUtilStruct.hpp"
-#include "JSEventHandlerStruct.hpp"
-#include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
 #include "../JSUtil.hpp"
 #include <sirikata/core/util/Vector3.hpp>
@@ -666,25 +664,6 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
     associatedSuspendables.erase(iter);
 
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
-    
-    // //if it's an event handler struct, we also need to ensure that it is removed
-    // //from EmersonScript.  Calling emerScript->deleteHandler will kill the
-    // //event handler and free its memory.  Otherwise, we can free it directly here.
-//     JSEventHandlerStruct* jsev = dynamic_cast<JSEventHandlerStruct*>(toDeregister);
-//     if (jsev != NULL)
-//     {
-//         if (emerScript == NULL)
-//         {
-//             JSLOG(error, "should not be deregistering an event listener from headless script.");
-//             return;
-//         }
-
-//         std::cout<<"\n\nTrying to delete event handler\n\n";
-//         assert(false);
-        
-// //        emerScript->deleteHandler(jsev);
-//         return;
-//     }
 
     //handle presence clear.
     JSPresenceStruct* jspres = dynamic_cast<JSPresenceStruct*> (toDeregister);
@@ -704,7 +683,6 @@ void JSContextStruct::struct_deregisterSuspendable (JSSuspendable* toDeregister)
     //if it's just a timer or a context, can delete without requesting
     //Emerscript to do anything special.
     delete toDeregister;
-
 }
 
 
@@ -877,25 +855,6 @@ v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci
     emerScript->create_entity(eci);
     return v8::Undefined();
 }
-
-
-
-
-//creates a new jseventhandlerstruct and wraps it in a js object
-//registers the jseventhandlerstruct both with this context and
-//jsobjectscript
-v8::Handle<v8::Value>  JSContextStruct::struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool issusp)
-{
-    //constructor of new_handler should take care of registering with context as
-    //a suspendable.
-    // JSEventHandlerStruct* new_handler= new JSEventHandlerStruct(native_patterns, cb_persist,sender_persist,this,issusp);
-
-    // CHECK_EMERSON_SCRIPT_ERROR(emerScript,makeEventHandler,jsObjScript);
-    // emerScript->registerHandler(new_handler);
-    // return emerScript->makeEventHandlerObject(new_handler,this);
-    return v8::Undefined();
-}
-
 
 
 

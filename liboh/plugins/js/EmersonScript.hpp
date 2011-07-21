@@ -45,7 +45,7 @@
 
 #include <v8.h>
 
-#include "JSPattern.hpp"
+
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectStructs/JSVisibleStruct.hpp"

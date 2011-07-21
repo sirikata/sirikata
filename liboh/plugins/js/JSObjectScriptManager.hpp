@@ -66,7 +66,7 @@ public:
     OptionSet* getOptions() const { return mOptions; }
 
 
-    v8::Persistent<v8::ObjectTemplate> mHandlerTemplate;
+
     v8::Persistent<v8::FunctionTemplate> mVisibleTemplate;
 
     v8::Persistent<v8::FunctionTemplate> mPresenceTemplate;
@@ -85,7 +85,6 @@ private:
     ObjectHostContext* mContext;
 
     void createVisibleTemplate();
-    void createHandlerTemplate();
     void createPresenceTemplate();
     void createContextTemplate();
     void createUtilTemplate();

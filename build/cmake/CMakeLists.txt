@@ -1951,10 +1951,8 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSQuaternion.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSUtilObj.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSObjectsUtils.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSHandler.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSTimer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSGlobal.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSPattern.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSSerializer.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSVisibleManager.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSContextStruct.cpp
@@ -1966,7 +1964,6 @@ SET(LIBOH_PLUGIN_JS_SOURCES
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSSuspendable.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSCapabilitiesConsts.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSTimerStruct.cpp
-  ${LIBOH_PLUGIN_JS_DIR}/JSObjectStructs/JSEventHandlerStruct.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSContext.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSVisible.cpp
   ${LIBOH_PLUGIN_JS_DIR}/JSObjects/JSPresence.cpp

@@ -5,8 +5,6 @@
 #include "JSSystemStruct.hpp"
 #include "JSContextStruct.hpp"
 #include "../JSObjects/JSFields.hpp"
-#include "JSEventHandlerStruct.hpp"
-#include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
 #include "JSPositionListener.hpp"
 #include "JSPresenceStruct.hpp"
@@ -182,16 +180,6 @@ v8::Handle<v8::Value> JSSystemStruct::setPresenceMessageCallback(v8::Persistent<
     return associatedContext->setPresenceMessageCallback(callback);
 }
 
-
-
-v8::Handle<v8::Value> JSSystemStruct::struct_makeEventHandlerObject(const PatternList& native_patterns,v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool isSuspended)
-{
-    if (!canRecv)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to receive messages.")));
-
-
-    return associatedContext->struct_makeEventHandlerObject(native_patterns, cb_persist, sender_persist,isSuspended);
-}
 
 JSContextStruct* JSSystemStruct::getContext()
 {

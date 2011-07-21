@@ -7,8 +7,6 @@
 #include "../JSSystemNames.hpp"
 #include "../JSObjects/JSFields.hpp"
 #include "JSSuspendable.hpp"
-#include "JSEventHandlerStruct.hpp"
-#include "../JSPattern.hpp"
 #include "../JSEntityCreateInfo.hpp"
 #include "../JSUtil.hpp"
 #include <sirikata/core/util/Vector3.hpp>
@@ -84,12 +82,6 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
 
-
-    //creates a new jseventhandlerstruct and wraps it in a js object
-    //registers the jseventhandlerstruct both with this context and
-    //jsobjectscript
-    v8::Handle<v8::Value>  struct_makeEventHandlerObject(const PatternList& native_patterns, v8::Persistent<v8::Function> cb_persist, v8::Persistent<v8::Object> sender_persist,bool issusp);
-
     //create presence with mesh associated with string newMesh, and initFunction
     //to be called when presence is connected
     v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn);
@@ -138,11 +130,6 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //string argument is the filename that we're trying to open and execute
     //contents of.
     v8::Handle<v8::Value>  struct_require(const String& toRequireFrom,bool isJS);
-
-    //requests jsobjscript to create an event handler in the context associated
-    //wth jscontextstruct.  registers this handler as well through struct_registerSuspendable
-    v8::Handle<v8::Value>  struct_makeEventHandlerObject(JSEventHandlerStruct* jsehs);
-
 
     /**
        msgObj is the JS object message that is being delivered from sender to

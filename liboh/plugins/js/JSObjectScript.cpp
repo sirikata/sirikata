@@ -41,7 +41,6 @@
 #include "JSObjectScriptManager.hpp"
 
 #include "JSSerializer.hpp"
-#include "JSObjectStructs/JSEventHandlerStruct.hpp"
 #include <string>
 #include "JSUtil.hpp"
 #include "JSObjects/JSVec3.hpp"

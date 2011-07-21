@@ -3,7 +3,6 @@
 #include <v8.h>
 #include "../JSSerializer.hpp"
 #include "JSObjectsUtils.hpp"
-#include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
 #include <math.h>

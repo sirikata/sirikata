@@ -64,7 +64,6 @@ v8::Handle<v8::Value> root_jsrequire(const v8::Arguments& args);
 v8::Handle<v8::Value> commonRequire(const v8::Arguments& args,bool isJS);
 v8::Handle<v8::Value> root_getPosition(const v8::Arguments& args);
 
-v8::Handle<v8::Value> root_registerHandler(const v8::Arguments& args);
 v8::Handle<v8::Value> root_timeout(const v8::Arguments& args);
 v8::Handle<v8::Value> root_sendHome(const v8::Arguments& args);
 v8::Handle<v8::Value> root_print(const v8::Arguments& args);

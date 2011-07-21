@@ -3,7 +3,6 @@
 #include "../JSObjectScript.hpp"
 #include "../JSSerializer.hpp"
 #include "JSObjectsUtils.hpp"
-#include "JSHandler.hpp"
 #include "JSVec3.hpp"
 #include "../JSUtil.hpp"
 #include "../JSObjectStructs/JSContextStruct.hpp"

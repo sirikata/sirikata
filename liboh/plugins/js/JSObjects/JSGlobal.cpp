@@ -6,7 +6,6 @@
 #include "../JSObjectScript.hpp"
 
 #include "../JSSerializer.hpp"
-#include "../JSPattern.hpp"
 #include "../JSObjectStructs/JSContextStruct.hpp"
 #include "JSFields.hpp"
 #include "JSObjectsUtils.hpp"

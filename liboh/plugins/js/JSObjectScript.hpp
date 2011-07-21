@@ -45,8 +45,7 @@
 
 #include <v8.h>
 
-#include "JSPattern.hpp"
-#include "JSObjectStructs/JSEventHandlerStruct.hpp"
+
 #include <sirikata/proxyobject/ProxyCreationListener.hpp>
 #include "JSObjects/JSInvokableObject.hpp"
 #include "JSEntityCreateInfo.hpp"
