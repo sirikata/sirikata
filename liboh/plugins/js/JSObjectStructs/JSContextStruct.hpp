@@ -154,9 +154,12 @@ struct JSContextStruct : public JSSuspendable, public Liveness
        May be SpaceObjectReference::null.  Used for the sendHome call.
 
        @param {uint32} capNum Capabilities granted to knew sandbox.
-       
+
      */
     v8::Handle<v8::Value> struct_createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum);
+
+    // Trigger an event handler
+    v8::Handle<v8::Value> struct_event(v8::Persistent<v8::Function>& cb);
 
     //create a timer that will fire cb in dur seconds from now,
     v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);

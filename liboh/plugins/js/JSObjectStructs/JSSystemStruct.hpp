@@ -84,7 +84,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
     v8::Handle<v8::Value> httpRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, String request, v8::Persistent<v8::Function> cb);
-    
+
 
     v8::Handle<v8::Value> struct_print(const String& msg);
     v8::Handle<v8::Value> struct_sendHome(const String& toSend);
@@ -116,6 +116,8 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
 
+    // Trigger an event handler
+    v8::Handle<v8::Value> struct_event(v8::Persistent<v8::Function>& cb);
 
     //create a timer that will fire in dur seconds from now, that will bind the
     //this parameter to target and that will fire the callback cb.
@@ -132,7 +134,7 @@ private:
     //associated data
     JSContextStruct* associatedContext;
     bool canSend, canRecv, canImport, canCreatePres,canCreateEnt,canEval,canProxCallback,canProxChangeQuery,canCreateSandbox,canGui,canHttp;
-    
+
 };
 
 

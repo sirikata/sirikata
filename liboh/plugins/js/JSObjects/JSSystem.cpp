@@ -1086,7 +1086,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (! sporefDecoded)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
-    
+
     TimedMotionVector3f mPos;
     specificErrMsg = baseErrMsg + "timed motion vector.";
     bool mPosDecoded = decodeTimedMotionVector(posArg,velArg,posTimeArg,mPos,specificErrMsg);
@@ -1215,7 +1215,7 @@ v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
 {
     if (args.Length() != 4)
         return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence><position><space>")));
-    
+
     //check args.
     //mesh arg
     String newMesh = "";
@@ -1449,7 +1449,7 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 
     String errorMessageWhichArg,errorMessage,errorMessageBase;
     errorMessageBase = "Error creating sandbox.  ";
-    
+
 
     //jssystem decode
     String errorMsgSystem  = "Error decoding system when creating new context.  ";
@@ -1519,6 +1519,31 @@ v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
     ScriptOrigin origin = args.Callee()->GetScriptOrigin();
 
     return jsfake->struct_eval(native_contents,&origin);
+}
+
+
+/** Emits an event.
+    @param callback The function to invoke once "time" number of seconds have passed
+ */
+v8::Handle<v8::Value> root_event(const v8::Arguments& args) {
+    if ((args.Length() != 1))
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("event() should only take a function handler to invoke.")) );
+
+    v8::Handle<v8::Value> cb_val = args[0];
+
+    //just returns the ScriptTimeout function
+    String errorMessage      =  "Error decoding system in root_event of JSSystem.cpp.  ";
+    JSSystemStruct* jsfake = JSSystemStruct::decodeSystemStruct(args.This(),errorMessage);
+    if (jsfake == NULL)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+
+    // Function
+    if (!cb_val->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Argument to event() must be a function.")) );
+    v8::Handle<v8::Function> cb = v8::Handle<v8::Function>::Cast(cb_val);
+    v8::Persistent<v8::Function> cb_persist = v8::Persistent<v8::Function>::New(cb);
+
+    return jsfake->struct_event(cb_persist);
 }
 
 

@@ -821,6 +821,14 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
     return returner;
 }
 
+v8::Handle<v8::Value> JSContextStruct::struct_event(v8::Persistent<v8::Function>& cb)
+{
+    //the timer that's created automatically registers as a suspendable with
+    //this context.
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,event,jsObjScript);
+    return emerScript->create_event(cb, this);
+}
+
 
 
 //create a timer that will fire in dur seconds from now, that will bind the

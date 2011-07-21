@@ -231,7 +231,7 @@ v8::Handle<v8::Value> JSTimerStruct::struct_getAllData()
 void JSTimerStruct::evaluateCallback()
 {
     Liveness::Token token=mLiveness.livenessToken();
-    emerScript->handleTimeoutContext(cb,jsContStruct);
+    emerScript->invokeCallbackInContext(emerScript->livenessToken(), cb, jsContStruct);
     if (token) {
         if (mContext->stopped()) {
             JSLOG(warn, "Timer evaluateCallback invoked after stop request, ignoring...");

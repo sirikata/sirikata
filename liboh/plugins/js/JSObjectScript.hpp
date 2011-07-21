@@ -55,7 +55,7 @@
 #include "JSObjectStructs/JSContextStruct.hpp"
 #include "JSObjectScriptManager.hpp"
 #include "EmersonHttpManager.hpp"
-
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -64,7 +64,7 @@ namespace JS {
 
 void printException(v8::TryCatch& try_catch);
 
-class JSObjectScript : public ObjectScript
+class JSObjectScript : public ObjectScript, public Liveness
 {
 public:
     JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id);

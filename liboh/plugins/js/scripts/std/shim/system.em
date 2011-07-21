@@ -526,6 +526,20 @@ function PresenceEntry(sporef, presObj)
       };
 
 
+     /** Trigger an event handler. The handler will be added to the event queue
+      *  and invoked later, i.e. on a different stack than the current one.
+      * 
+      *  @param {function} handler the event handler to invoke.
+      *  @returns {boolean} true on success, false if the system is shutting down
+      *  @throws {TypeError} if anything besides a function is provided
+      */
+     system.event = function(handler) {
+         if (typeof(handler) !== 'function')
+             throw new TypeError('system.event only supports functions');
+
+         return baseSystem.event.apply(baseSystem, arguments);
+     };
+
       /** @function
        @param time number of seconds to wait before executing the callback
        @param callback The function to invoke once "time" number of seconds have passed

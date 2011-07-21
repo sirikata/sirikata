@@ -110,7 +110,12 @@ public:
        message. (via deserializeMsgAndDispatch.)
      */
     void handleScriptCommUnreliable (const ODP::Endpoint& src, const ODP::Endpoint& dst, MemoryReference payload);
-    void handleTimeoutContext(v8::Persistent<v8::Function> cb,JSContextStruct* jscontext);
+
+
+    // Post this function to an IOService to add an event to be handled. Must
+    // take liveness token because while waiting to be processed the object may,
+    // e.g., be killed.
+    void invokeCallbackInContext(Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext);
 
 
     //function gets called when presences are connected.  functToCall is the
@@ -154,6 +159,8 @@ public:
     //user
     v8::Persistent<v8::Object> presToVis(JSPresenceStruct* jspres, JSContextStruct* jscont);
 
+    // Create event handler
+    v8::Handle<v8::Value> create_event(v8::Persistent<v8::Function>& cb, JSContextStruct* jscont);
 
     /** Set a timeout with a callback. */
     v8::Handle<v8::Value> create_timeout(double period, v8::Persistent<v8::Function>& cb,JSContextStruct* jscont);

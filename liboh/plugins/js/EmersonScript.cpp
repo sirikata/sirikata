@@ -526,6 +526,18 @@ Time EmersonScript::getHostedTime()
 }
 
 
+v8::Handle<v8::Value> EmersonScript::create_event(v8::Persistent<v8::Function>& cb, JSContextStruct* jscont) {
+    if (mParent->context()->stopped()) {
+        JSLOG(warn, "Not creating event because shutdown was requested.");
+        return v8::Boolean::New(false);
+    }
+
+    mParent->context()->mainStrand->post(
+        std::tr1::bind(&EmersonScript::invokeCallbackInContext, this, livenessToken(), cb, jscont)
+    );
+    return v8::Boolean::New(true);
+}
+
 
 v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared, JSContextStruct* jscont)
 {
@@ -555,8 +567,10 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period, v8::Persisten
 
 
 //third arg may be null to evaluate in global context
-void EmersonScript::handleTimeoutContext(v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
+void EmersonScript::invokeCallbackInContext(Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
+    if (!alive) return;
+
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscontext->mContext);
     TryCatch try_catch;

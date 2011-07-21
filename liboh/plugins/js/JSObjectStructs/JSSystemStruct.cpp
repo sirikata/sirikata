@@ -265,6 +265,9 @@ v8::Handle<v8::Value> JSSystemStruct::struct_reset(const std::map<SpaceObjectRef
 }
 
 
+v8::Handle<v8::Value> JSSystemStruct::struct_event(v8::Persistent<v8::Function>& cb) {
+    return associatedContext->struct_event(cb);
+}
 
 
 //create a timer that will fire in dur seconds from now, that will bind the

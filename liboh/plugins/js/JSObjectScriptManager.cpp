@@ -226,11 +226,12 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("__debugFileWrite"),v8::FunctionTemplate::New(JSSystem::debug_fileWrite));
     mSystemTemplate->Set(v8::String::New("__debugFileRead"),v8::FunctionTemplate::New(JSSystem::debug_fileRead));
     mSystemTemplate->Set(v8::String::New("sendHome"),v8::FunctionTemplate::New(JSSystem::root_sendHome));
+    mSystemTemplate->Set(v8::String::New("event"), v8::FunctionTemplate::New(JSSystem::root_event));
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
     mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
     mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
-    
+
     mSystemTemplate->Set(v8::String::New("js_import"), v8::FunctionTemplate::New(JSSystem::root_jsimport));
     mSystemTemplate->Set(v8::String::New("js_require"), v8::FunctionTemplate::New(JSSystem::root_jsrequire));
 
