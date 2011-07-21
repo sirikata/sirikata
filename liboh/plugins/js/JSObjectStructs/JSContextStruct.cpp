@@ -873,13 +873,6 @@ v8::Handle<v8::Value> JSContextStruct::struct_createContext(JSPresenceStruct* pr
 }
 
 
-
-v8::Handle<v8::Value> JSContextStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn)
-{
-    CHECK_EMERSON_SCRIPT_ERROR(emerScript,createPresence,jsObjScript);
-    return emerScript->create_presence(newMesh,initFunc,this, poser, spaceToCreateIn);
-}
-
 v8::Handle<v8::Value> JSContextStruct::struct_createEntity(EntityCreateInfo& eci)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,createEntity,jsObjScript);

@@ -87,9 +87,6 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
 
-    //create presence with mesh associated with string newMesh, and initFunction
-    //to be called when presence is connected
-    v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn);
 
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);

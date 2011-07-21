@@ -956,36 +956,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 }
 
 
-//takes in a string corresponding to the new presence's mesh and a function
-//callback to run when the presence is connected.
-v8::Handle<v8::Value> EmersonScript::create_presence(const String& newMesh, v8::Handle<v8::Function> callback, JSContextStruct* jsctx, const Vector3d& poser, const SpaceID& spaceToCreateIn)
-{
-    if (jsctx == NULL)
-        jsctx = mContext;
-
-    v8::Context::Scope context_scope(jsctx->mContext);
-
-    //presuming that we are connecting to the same space;
-    //arbitrarily saying that we'll just be on top of the root object.
-    Location startingLoc(poser,Quaternion::identity(),Vector3f(0,0,0),Vector3f(0,1,0),0);
-
-    //Arbitrarily saying that we're just going to use a simple bounding sphere.
-    BoundingSphere3f bs = BoundingSphere3f(Vector3f::nil(), 1);
-
-    HostedObject::PresenceToken presToke = incrementPresenceToken();
-    mParent->connect(spaceToCreateIn,startingLoc,bs, newMesh, "", SolidAngle::Max,UUID::null(),ObjectReference::null(),presToke);
-
-
-
-    //create a presence object associated with this presence and return it;
-    JSPresenceStruct* presToAdd = new JSPresenceStruct(this,callback,jsctx,presToke);
-
-    //v8::Persistent<v8::Object>js_pres = jsctx->addToPresencesArray(presToAdd);
-    mUnconnectedPresences.push_back(presToAdd);
-
-    return v8::Undefined();
-}
-
 //This function returns to you the current value of present token and incrmenets
 //presenceToken so that get a unique one each time.  If presenceToken is equal
 //to default_presence_token, increments one beyond it so that don't start inadvertently

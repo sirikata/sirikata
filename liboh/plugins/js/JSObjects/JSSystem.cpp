@@ -1199,62 +1199,6 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 }
 
 
-/**
-   @param String that contains a uri for a mesh for the new presence.
-   @param Function to be called when presence gets connected to the world.
-   (Function has form func (pres), where pres contains the presence just
-   connected.)
-   @return Returns nothing.
-
-   Note: throws an exception if sandbox does not have capability to create
-   presences.
-   Note 2: Presence's initial position is the same as the presence that created
-   it.  Scale is set to 1.
-*/
-v8::Handle<v8::Value> root_createPresence(const v8::Arguments& args)
-{
-    if (args.Length() != 4)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when trying to create presence through system object.  create_presence requires two arguments: <string mesh uri> <initialization function for presence><position><space>")));
-
-    //check args.
-    //mesh arg
-    String newMesh = "";
-    String errorMessage = "Error decoding first argument of create_presence.  Should be a string corresponding to mesh uri.  ";
-    bool stringDecodeSuccessful = decodeString(args[0], newMesh, errorMessage);
-    if (! stringDecodeSuccessful)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
-
-    //callback function arg
-    if (! args[1]->IsFunction())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that the second argument passed in be a function")));
-
-    //position argument
-    if (! Vec3ValValidate(args[2]))
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error while creating new presence through system object.  create_presence requires that third argument passed in be a vec3.")));
-
-    Vector3d poser = Vec3ValExtract(args[2]);
-
-    //space argument
-    String spaceStr;
-    String errSpaceMsg = "Error in create presence decoding string corresponding to space.  ";
-    bool strDecode = decodeString(args[3],spaceStr,errSpaceMsg);
-    if (!strDecode )
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errSpaceMsg.c_str())));
-
-    SpaceID toCreateIn(spaceStr);
-
-
-    //decode root
-    String errorMessageFRoot = "Error decoding the system object from root_createPresence.  ";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(),errorMessageFRoot);
-
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
-
-    return jsfake->struct_createPresence(newMesh, v8::Handle<v8::Function>::Cast(args[1]),poser,toCreateIn);
-}
-
-
 
 /**
    @param Vec3 (eg. new util.Vec3(0,0,0);).  Corresponds to position to place

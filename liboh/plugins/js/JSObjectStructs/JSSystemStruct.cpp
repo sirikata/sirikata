@@ -287,18 +287,6 @@ v8::Handle<v8::Value> JSSystemStruct::struct_createTimeout(double period,v8::Per
 //if have the capability to create presences, create a new presence with
 //mesh newMesh and executes initFunc, which gets executed onConnected.
 //if do not have the capability, throws an error.
-
-v8::Handle<v8::Value> JSSystemStruct::struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn)
-{
-    if (! canCreatePres)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to create presences.")));
-
-    return associatedContext->struct_createPresence(newMesh, initFunc,poser,spaceToCreateIn);
-}
-
-//if have the capability to create presences, create a new presence with
-//mesh newMesh and executes initFunc, which gets executed onConnected.
-//if do not have the capability, throws an error.
 v8::Handle<v8::Value> JSSystemStruct::struct_createEntity(EntityCreateInfo& eci)
 {
     if (! canCreateEnt)

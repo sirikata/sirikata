@@ -281,7 +281,6 @@ void JSObjectScriptManager::createSystemTemplate()
     //this doesn't work now.
     mSystemTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::root_scriptEval));
     mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
-    mSystemTemplate->Set(v8::String::New("create_presence"), v8::FunctionTemplate::New(JSSystem::root_createPresence));
 
 
     mSystemTemplate->Set(v8::String::New("create_entity_no_space"), v8::FunctionTemplate::New(JSSystem::root_createEntityNoSpace));

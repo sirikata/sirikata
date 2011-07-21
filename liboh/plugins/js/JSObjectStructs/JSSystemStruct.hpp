@@ -91,10 +91,6 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_import(const String& toImportFrom,bool isJS);
     v8::Handle<v8::Value> struct_require(const String& toRequireFrom,bool isJS);
 
-    //if have the capability to create presences, create a new presence with
-    //mesh newMesh and executes initFunc, which gets executed onConnected.
-    //if do not have the capability, throws an error.
-    v8::Handle<v8::Value> struct_createPresence(const String& newMesh, v8::Handle<v8::Function> initFunc,const Vector3d& poser, const SpaceID& spaceToCreateIn);
 
     //if have the capability to create presences, create a new presence with
     //mesh newMesh and executes initFunc, which gets executed onConnected.
