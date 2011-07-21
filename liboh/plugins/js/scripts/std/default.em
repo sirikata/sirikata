@@ -48,7 +48,8 @@ std.simpleStorage.setScript(
 
         var init = function() {
             var storeFunc = function() {
-                std.simpleStorage.writePresence(system.self);
+                if (system.self.getIsConnected())
+                    std.simpleStorage.writePresence(system.self);
             };
             storageTimer = std.core.RepeatingTimer(60, storeFunc);
             storeFunc(); // Force immediate storage
