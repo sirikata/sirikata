@@ -102,7 +102,7 @@ class OgreSystem: public OgreRenderer, protected SessionEventListener
         int& returnSubMesh,
         IntersectResult *returnIntersectResult, bool texcoord,
         int which=0,
-        bool ignore_self = true) const;
+        SpaceObjectReference ignore = SpaceObjectReference::null()) const;
 
     Mesh::VisualPtr mDefaultMesh;
 public:
@@ -154,7 +154,7 @@ public:
                      Vector3f&returnNormal,
                      int&subent,
         int which=0,
-        bool ignore_self = true) const;
+        SpaceObjectReference ignore = SpaceObjectReference::null()) const;
 
 
     virtual void windowResized(Ogre::RenderWindow *rw);

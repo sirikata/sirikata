@@ -137,9 +137,16 @@ function() {
         this.invoke('screenshot');
     };
 
-    /** Pick at the given location for an object. Stores the hit point which can be retrieved with pickedPosition(). */
-    std.graphics.Graphics.prototype.pick = function(x, y, ignore_self) {
-        var result = this.invoke('pick', x, y, ignore_self);
+    /** Pick at the given location for an object. Stores the hit point which can be retrieved with pickedPosition(). 
+     *  @param {number} x the x-coorindate on screen
+     *  @param {number} y the y-coordinate on screen
+     *  @param {visible|presence|bool} ignore indicates whether to ignore some
+     *  object, either by specifying the object or if a bool is provided, it
+     *  indicates the presence that allocated the graphics object should be
+     *  ignored.
+     */
+    std.graphics.Graphics.prototype.pick = function(x, y, ignore) {
+        var result = this.invoke('pick', x, y, ignore);
         if (result.object) {
             this._pickedPosition = new util.Vec3(result.position.x, result.position.y, result.position.z);
             return result.object;

@@ -298,10 +298,10 @@ Entity* OgreSystem::rayTrace(const Vector3d &position,
     double &returnResult,
     Vector3f&returnNormal,
     int&subent,
-    int which, bool ignore_self) const{
+    int which, SpaceObjectReference ignore) const{
 
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
-    return internalRayTrace(traceFrom,false,resultCount,returnResult,returnNormal, subent,NULL,false,which, ignore_self);
+    return internalRayTrace(traceFrom,false,resultCount,returnResult,returnNormal, subent,NULL,false,which,ignore);
 }
 
 ProxyEntity* OgreSystem::getEntity(const SpaceObjectReference &proxyId) const {
@@ -327,14 +327,14 @@ bool OgreSystem::queryRay(const Vector3d&position,
     int resultCount=0;
     int subent;
     Ogre::Ray traceFrom(toOgre(position, getOffset()), toOgre(direction));
-    ProxyEntity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0,true);
+    ProxyEntity * retval=internalRayTrace(traceFrom,false,resultCount,returnDistance,returnNormal,subent,NULL,false,0,mPresenceID);
     if (retval != NULL) {
         returnName= retval->getProxy().getObjectReference();
         return true;
     }
     return false;
 }
-ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which, bool ignore_self) const {
+ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbOnly,int&resultCount,double &returnresult, Vector3f&returnNormal, int& returnSubMesh, IntersectResult *intersectResult, bool texcoord, int which, SpaceObjectReference ignore) const {
     Ogre::RaySceneQuery* mRayQuery;
     mRayQuery = mSceneManager->createRayQuery(Ogre::Ray());
     mRayQuery->setRay(traceFrom);
@@ -356,7 +356,7 @@ ProxyEntity *OgreSystem::internalRayTrace(const Ogre::Ray &traceFrom, bool aabbO
         if (foundEntity != NULL) {
             ProxyEntity *ourEntity = ProxyEntity::fromMovableObject(result.movable);
             if (!ourEntity) continue;
-            if (ourEntity->id() == mPresenceID.toString() && ignore_self) continue;
+            if (ourEntity->id() == ignore.toString()) continue;
         }
 
         RayTraceResult rtr(result.distance,result.movable);
@@ -699,9 +699,16 @@ boost::any OgreSystem::pick(vector<boost::any>& params) {
 
     float x = Invokable::anyAsNumeric(params[1]);
     float y = Invokable::anyAsNumeric(params[2]);
-    bool ignore_self = (params.size() > 3 && Invokable::anyIsBoolean(params[3])) ? Invokable::anyAsBoolean(params[3]) : true;
+    // We support bool ignore_self or SpaceObjectReference as third
+    SpaceObjectReference ignore = SpaceObjectReference::null();
+    if (params.size() > 3) {
+        if (Invokable::anyIsBoolean(params[3]) && Invokable::anyAsBoolean(params[3]))
+            ignore = mPresenceID;
+        else if (Invokable::anyIsObject(params[3]))
+            ignore = Invokable::anyAsObject(params[3]);
+    }
     Vector3f hitPoint;
-    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1, ignore_self, &hitPoint);
+    SpaceObjectReference result = mMouseHandler->pick(Vector2f(x,y), 1, ignore, &hitPoint);
 
     Invokable::Dict pick_result;
     pick_result["object"] = Invokable::asAny(result);
