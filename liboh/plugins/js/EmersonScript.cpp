@@ -663,9 +663,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
            argv[0] =msgObj;
            argv[1] = msgSender;
            argv[2] = v8::String::New (dst.toString().c_str(), dst.toString().size());
-
            invokeCallback(receiver,receiver->presenceMessageCallback,3,argv);
-
         }
     }
 

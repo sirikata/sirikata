@@ -19,12 +19,12 @@
      one of their patterns matches msg.
      
      */
-    MessageReceiveManager.prototype.handleMessage= function(msg,sender)
+    MessageReceiveManager.prototype.handleMessage= function(msg,sender,receiver)
     {
         for (var s in this.allMessageHandlers)
         {
             if (this.allMessageHandlers[s] != null)
-                this.allMessageHandlers[s].tryDispatch(msg,sender);
+                this.allMessageHandlers[s].tryDispatch(msg,sender,receiver);
         }
     };
 
@@ -113,8 +113,6 @@
 
     var sboxMessageManager = new MessageReceiveManager();
     var presMessageManager = new MessageReceiveManager();
-
-
     
     //register manager with system to receive any presence messages.
     system.__setPresenceMessageManager(presMessageManager);

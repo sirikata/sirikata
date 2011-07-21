@@ -283,7 +283,11 @@ function PresenceEntry(sporef, presObj)
      system.__setSandboxMessageManager = function(sbox_message_manager)
      {
          sboxMessageManager = sbox_message_manager;
-         baseSystem.setSandboxMessageCallback(sboxMessageManager.handleMessage);
+         var sboxMessageCallback = function(msg,sender)
+         {
+             sboxMessageManager.handleMessage(msg,sender);
+         };
+         baseSystem.setSandboxMessageCallback(sboxMessageCallback);
      };
 
      /**
@@ -292,7 +296,11 @@ function PresenceEntry(sporef, presObj)
      system.__setPresenceMessageManager = function(pres_message_manager)
      {
          presMessageManager = pres_message_manager;
-         baseSystem.setPresenceMessageCallback(presMessageManager.handleMessage);
+         var presMessageCallback = function(msg,sender,receiver)
+         {
+             presMessageManager.handleMessage(msg,sender,receiver);
+         };
+         baseSystem.setPresenceMessageCallback(presMessageCallback);
      };
 
           
@@ -487,6 +495,7 @@ function PresenceEntry(sporef, presObj)
       {
           baseSystem.eval.apply(baseSystem,arguments);
       };
+
 
       // Not exposing this
       /** @ignore */

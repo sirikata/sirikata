@@ -52,7 +52,7 @@ util.Pattern.prototype.__getType = function()
  */
 util.Handler = function(callback)
 {
-    this.isSuspended = false;
+    this.isSusp = false;
     this.callback    = callback;
 };
 
@@ -60,12 +60,17 @@ util.Handler.type = 'handler';
 
 util.Handler.prototype.suspend = function ()
 {
-    this.isSuspended = true;
+    this.isSusp = true;
 };
 
 util.Handler.prototype.resume = function()
 {
-    this.isSuspended = false;
+    this.isSusp = false;
+};
+
+util.Handler.prototype.isSuspended = function()
+{
+    return this.isSusp;
 };
 
 util.Handler.prototype.dispatch = function(msgObj,msgSender)
@@ -195,15 +200,15 @@ util.HandlerPatternSenderTriple.prototype.matchesPattern = function(msg)
     
     var returner = true;
     for (var s in this.pattern)
-        returner = returner && this.patterns[s].matchesPattern(msg);
+        returner = returner && this.pattern[s].matchesPattern(msg);
 
     return returner;
 };
 
 
-util.HandlerPatternSenderTriple.prototype.tryDispatch = function(msg,sender)
+util.HandlerPatternSenderTriple.prototype.tryDispatch = function(msg,sender,receiver)
 {
     if ((! this.handler.isSuspended()) && (this.matchesPattern(msg)))
-        this.handler.dispatch(msg,sender);
+        this.handler.dispatch(msg,sender,receiver);
 };
 
