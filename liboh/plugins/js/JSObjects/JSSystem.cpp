@@ -1087,19 +1087,42 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
 
-    TimedMotionVector3f mPos;
-    specificErrMsg = baseErrMsg + "timed motion vector.";
-    bool mPosDecoded = decodeTimedMotionVector(posArg,velArg,posTimeArg,mPos,specificErrMsg);
-    if (! mPosDecoded)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    Nullable<Time> mPositionTime;
+    if (! posTimeArg->IsNull())
+    {
+        INLINE_TIME_CONV_ERROR(posTimeArg,restorePresences,4,posTime);
+        mPositionTime.setValue(posTime);
+    }
+
+    if (! Vec3ValValidate(posArg))
+        V8_EXCEPTION_CSTR("Cannot decode position arg in restore presence as vector");
+    Vector3f mPosition(Vec3ValExtract(posArg));
+    
 
 
-    TimedMotionQuaternion mOrient;
-    specificErrMsg = baseErrMsg + "timed motion quaternion.";
-    bool mOrientDecoded = decodeTimedMotionQuat(orientArg,orientVelArg,orientTimeArg,mOrient,specificErrMsg);
-    if (! mOrientDecoded)
-        return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+    if (! Vec3ValValidate(velArg))
+        V8_EXCEPTION_CSTR("Cannot decode velocity arg in restore presence as vector");
+    Vector3f mVelocity(Vec3ValExtract(velArg));
+    
+    
 
+    Nullable<Time> mOrientTime;
+    if (! orientTimeArg->IsNull())
+    {
+        INLINE_TIME_CONV_ERROR(orientTimeArg,restorePresences,7,orientTime);
+        mOrientTime.setValue(orientTime);
+    }
+
+
+    if (! QuaternionValValidate(orientArg))
+        V8_EXCEPTION_CSTR("Cannot decode orientation arg in restore presence as quaternion");
+    Quaternion mOrient(QuaternionValExtract(orientArg));
+    
+
+    if (! QuaternionValValidate(orientVelArg))
+        V8_EXCEPTION_CSTR("Cannot decode orientation velocity arg in restore presence as quaterinion");
+    Quaternion mOrientVelocity(QuaternionValExtract(orientVelArg));
+        
 
     String mesh;
     specificErrMsg = baseErrMsg + "mesh.";
@@ -1125,14 +1148,17 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (! isClearedDecodeSuccessful)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
-    bool hasContextID = (! contextIDArg->IsNull());
-    uint32 contextID;
-    if (hasContextID)
+    
+    Nullable<uint32> contextID;
+    if (! contextIDArg->IsNull())
     {
+        uint32 cid;
         specificErrMsg = baseErrMsg + "contextID.";
-        bool contextIDDecodeSuccessful = decodeUint32(contextIDArg, contextID, specificErrMsg);
+        bool contextIDDecodeSuccessful = decodeUint32(contextIDArg, cid, specificErrMsg);
         if (! contextIDDecodeSuccessful)
             return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
+
+        contextID.setValue(cid);
     }
 
     bool isConnected;
@@ -1143,9 +1169,9 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
 
 
     specificErrMsg = baseErrMsg + "connectedCallback.";
-    v8::Handle<v8::Function>connCB;
+    Nullable<v8::Handle<v8::Function> > connCB;
     if (connectedCallbackArg->IsFunction())
-        connCB = v8::Handle<v8::Function>::Cast(connectedCallbackArg);
+        connCB.setValue(v8::Handle<v8::Function>::Cast(connectedCallbackArg));
     else if (! connectedCallbackArg->IsNull())
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
@@ -1156,17 +1182,17 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
 
-    Vector3f suspendedVelocity;
+    Nullable<Vector3f> suspendedVelocity;
     specificErrMsg = baseErrMsg + "suspendedVelocity.";
     if (!Vec3ValValidate(suspendedVelocityArg))
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
-    suspendedVelocity = Vec3ValExtractF(suspendedVelocityArg);
+    suspendedVelocity.setValue(Vec3ValExtractF(suspendedVelocityArg));
 
-    Quaternion suspendedOrientationVelocity;
+    Nullable<Quaternion>     suspendedOrientationVelocity;
     specificErrMsg = baseErrMsg + "suspendedOrientationVelocity.";
     if (!QuaternionValValidate(suspendedOrientationVelocityArg))
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
-    suspendedOrientationVelocity = QuaternionValExtract(suspendedOrientationVelocityArg);
+    suspendedOrientationVelocity.setValue( QuaternionValExtract(suspendedOrientationVelocityArg));
 
 
     INLINE_SA_CONV_ERROR(solidAngleQueryArg,restorePresence,16,queryAngle);
@@ -1178,21 +1204,26 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
 
+    
     PresStructRestoreParams restParams(
-        &mSporef,
-        &mPos,
-        &mOrient,
-        &mesh,
-        &physics,
-        &scale,
-        &isCleared,
-        (hasContextID ? &contextID : NULL),
-        &isConnected,
-        (connCB.IsEmpty() ? NULL : &connCB),
-        &isSuspended,
-        &suspendedVelocity,
-        &suspendedOrientationVelocity,
-        &queryAngle
+        mSporef,
+        mPositionTime,
+        mPosition,
+        mVelocity,
+        mOrientTime,
+        mOrient,
+        mOrientVelocity,
+        mesh,
+        physics,
+        scale,
+        isCleared,
+        contextID, 
+        isConnected,
+        connCB,
+        isSuspended,
+        suspendedVelocity,
+        suspendedOrientationVelocity,
+        queryAngle
     );
 
     return handle_scope.Close(jssys->restorePresence(restParams));

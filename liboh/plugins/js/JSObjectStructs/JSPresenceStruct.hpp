@@ -7,6 +7,7 @@
 #include "JSContextStruct.hpp"
 #include "JSSuspendable.hpp"
 #include "JSPositionListener.hpp"
+#include <sirikata/core/util/Nullable.hpp>
 
 namespace Sirikata {
 namespace JS {
@@ -14,49 +15,64 @@ namespace JS {
 
 struct PresStructRestoreParams
 {
-    PresStructRestoreParams(
-        SpaceObjectReference* sporef,
-        TimedMotionVector3f* tmv3f,TimedMotionQuaternion* tmq,
-        String* mesh,String* physics,double* scale,
-        bool *isCleared,uint32* contID,bool* isConnected,
-        v8::Handle<v8::Function>* connCallback,
-        bool* isSuspended,Vector3f* suspendedVelocity,Quaternion* suspendedOrientationVelocity,
-        SolidAngle* sa
-    )
-        : mSporef(sporef),
-          mTmv3f(tmv3f),
-          mTmq(tmq),
-          mMesh(mesh),
-          mPhysics(physics),
-          mScale(scale),
-          mIsCleared(isCleared),
-          mContID(contID),
-          mIsConnected(isConnected),
-          mConnCallback(connCallback),
-          mIsSuspended(isSuspended),
-          mSuspendedVelocity(suspendedVelocity),
-          mSuspendedOrientationVelocity(suspendedOrientationVelocity),
-          mQuery(sa)
+    PresStructRestoreParams(const SpaceObjectReference& _sporef,
+        const Nullable<Time>& _positionTime,
+        const Vector3f& _position,
+        const Vector3f& _velocity,
+        const Nullable<Time>& _orientTime,
+        const Quaternion& _orient,
+        const Quaternion& _orientVelocity,
+        const String& _mesh,
+        const String& _physics,
+        const double& _scale,
+        const bool& _isCleared,
+        const Nullable<uint32>& _contID,
+        const bool& _isConnected,
+        const Nullable<v8::Handle<v8::Function> >& _connCallback,
+        const bool& _isSuspended,
+        const Nullable<Vector3f>& _suspendedVelocity,
+        const Nullable<Quaternion>& _suspendedOrientationVelocity,
+        const SolidAngle& _query)
+     :     sporef(_sporef),
+           positionTime(_positionTime),
+           position(_position),
+           velocity(_velocity),
+           orientTime(_orientTime),
+           orient(_orient),
+           orientVelocity(_orientVelocity),
+           mesh(_mesh),
+           physics(_physics),
+           scale(_scale),
+           isCleared(_isCleared),
+           contID(_contID),
+           isConnected(_isConnected),
+           connCallback(_connCallback),
+           isSuspended(_isSuspended),
+           suspendedVelocity(_suspendedVelocity),
+           suspendedOrientationVelocity(_suspendedOrientationVelocity),
+           query(_query)
     {
     }
 
-    SpaceObjectReference* mSporef;
-    TimedMotionVector3f* mTmv3f;
-    TimedMotionQuaternion* mTmq;
-    String* mMesh;
-    String* mPhysics;
-    double* mScale;
-    bool *mIsCleared;
-    uint32* mContID;
-    bool* mIsConnected;
-    v8::Handle<v8::Function>* mConnCallback;
-    bool* mIsSuspended;
-    Vector3f* mSuspendedVelocity;
-    Quaternion* mSuspendedOrientationVelocity;
-    SolidAngle* mQuery;
+    SpaceObjectReference sporef;
+    Nullable<Time> positionTime;
+    Vector3f position;
+    Vector3f velocity;
+    Nullable<Time> orientTime;
+    Quaternion orient;
+    Quaternion orientVelocity;
+    String mesh;
+    String physics;
+    double scale;
+    bool isCleared;
+    Nullable<uint32> contID;
+    bool isConnected;
+    Nullable<v8::Handle<v8::Function> > connCallback;
+    bool isSuspended;
+    Nullable<Vector3f> suspendedVelocity;
+    Nullable<Quaternion> suspendedOrientationVelocity;
+    SolidAngle query;
 };
-
-
 
 
 //need to forward-declare this so that can reference this inside
@@ -75,7 +91,8 @@ struct JSPresenceStruct : public JSPositionListener,
     JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken);
 
     //restoration constructor
-    JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont);
+    JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq);
+
 
     virtual void fixupSuspendable()
     {}

@@ -915,37 +915,50 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 {
     v8::Context::Scope context_scope(jsctx->mContext);
 
-    //get location
-    Vector3f newPos            = psrp.mTmv3f->extrapolate(mParent->currentLocalTime()).position();
-    Quaternion newOrient       = psrp.mTmq->extrapolate(mParent->currentLocalTime()).position();
-    Vector3f newVel            = psrp.mTmv3f->velocity();
-    Quaternion orientVel       = psrp.mTmq->velocity();
+
+    MotionVector3f motVec(psrp.position,psrp.velocity);
+    TimedMotionVector3f tMotVec(mParent->currentLocalTime(),motVec);
+    if (!psrp.positionTime.isNull())
+    {
+        tMotVec = TimedMotionVector3f (psrp.positionTime.getValue(),motVec);
+        psrp.position = tMotVec.extrapolate(mParent->currentLocalTime()).position();
+    }
+    Vector3d newPosD (psrp.position.x,psrp.position.y,psrp.position.z);
+
+    
+    MotionQuaternion motQuat(psrp.orient,psrp.orientVelocity);
+    TimedMotionQuaternion tMotQuat (mParent->currentLocalTime(), motQuat);
+    if (!psrp.orientTime.isNull())
+    {
+        tMotQuat = TimedMotionQuaternion(psrp.orientTime.getValue(), motQuat);
+        psrp.orient = tMotQuat.extrapolate(mParent->currentLocalTime()).position();
+    }
 
     Vector3f newAngAxis;
     float newAngVel;
-    orientVel.toAngleAxis(newAngVel,newAngAxis);
+    psrp.orientVelocity.toAngleAxis(newAngVel,newAngAxis);
 
-    Vector3d newPosD(newPos.x,newPos.y,newPos.z);
-    Location newLoc(newPosD,newOrient,newVel, newAngAxis,newAngVel);
+    BoundingSphere3f bs = BoundingSphere3f(psrp.position, psrp.scale);
 
-
-    //get bounding sphere
-    BoundingSphere3f bs = BoundingSphere3f(newPos, *psrp.mScale);
+    Location newLoc(newPosD,psrp.orient,psrp.velocity, newAngAxis,newAngVel);
+    
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
-    JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,newPos,presToke,jsctx);
+    JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,psrp.position,
+        presToke,jsctx,tMotVec,tMotQuat);
 
-    if (*psrp.mIsConnected)
+    if (psrp.isConnected)
     {
-        mParent->connect(psrp.mSporef->space(),
+        mParent->connect(psrp.sporef.space(),
             newLoc,
             bs,
-            *psrp.mMesh,
-            *psrp.mPhysics,
-            *psrp.mQuery,
+            psrp.mesh,
+            psrp.physics,
+            psrp.query,
             UUID::null(),
-            psrp.mSporef->object(),
-            presToke);
+            psrp.sporef.object(),
+            presToke
+        );
 
         mUnconnectedPresences.push_back(jspres);
         return v8::Null();
@@ -953,7 +966,10 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     //if is unconnected, return presence now.
     v8::HandleScope handle_scope;
     return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
+
 }
+
+
 
 
 //This function returns to you the current value of present token and incrmenets

@@ -26,6 +26,7 @@ bool decodeInt64(v8::Handle<v8::Value> toDecode, int64& toDecodeTo, String& errM
 bool decodeUint32(v8::Handle<v8::Value> toDecode, uint32& toDecodeTo, String& errMsg);
 bool decodeSolidAngle(v8::Handle<v8::Value> toDecode, SolidAngle& toDecodeTo, String& errMsg);
 bool decodeDouble(v8::Handle<v8::Value> toDecode, double& toDecodeTo, String& errMsg);
+bool decodeTimeFromString (v8::Handle<v8::Value> toDecode, Time& toDecodeTo, String& errorMessage);
 
 void debug_checkCurrentContextX(v8::Handle<v8::Context> ctx, String additionalMessage);
 void printAllPropertyNames(v8::Handle<v8::Object> objToPrint);
@@ -39,6 +40,15 @@ v8::Handle<v8::Value> strToUint16Str(const String& toSerialize);
 
 #define V8_EXCEPTION_CSTR(cstrErrMsg)\
     return v8::ThrowException(v8::Exception::Error(v8::String::New(cstrErrMsg)));
+
+
+#define INLINE_TIME_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
+    Time whereWriteTo;                                                \
+    {                                                                   \
+        String _errMsg = "In " #whereError " cannot convert arg " #whichArg " to Time"; \
+        if (!decodeTimeFromString(toConvert,whereWriteTo,_errMsg))        \
+            V8_EXCEPTION_STRING(_errMsg);                               \
+    }
 
 #define INLINE_DOUBLE_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo)\
     double whereWriteTo;                                                \

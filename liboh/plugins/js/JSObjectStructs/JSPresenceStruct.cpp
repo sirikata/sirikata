@@ -50,34 +50,40 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
 }
 
 //use this constructor when we are restoring a presence.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont)
- : JSPositionListener(parent->createProxyPtr(*psrp.mSporef,nullProxyPtr)),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq)
+ : JSPositionListener(parent->createProxyPtr(psrp.sporef,nullProxyPtr)),
    JSSuspendable(),
    isConnected(false),
    hasConnectedCallback(false),
    mPresenceToken(presToken),
    mContext(NULL)
 {
-    jpp->mLocation = *psrp.mTmv3f;
-    jpp->mOrientation = *psrp.mTmq;
-    jpp->mMesh = *psrp.mMesh;
-    jpp->mBounds = BoundingSphere3f( center  ,* psrp.mScale);
-    jpp->mPhysics = "";
-    mQuery       = *psrp.mQuery;
 
-    mSuspendedVelocity = *psrp.mSuspendedVelocity;
-    mSuspendedOrientationVelocity = *psrp.mSuspendedOrientationVelocity;
+    jpp->mLocation    = tmv;
+    jpp->mOrientation = tmq;
 
-    if (psrp.mConnCallback != NULL)
+    
+    jpp->mMesh    = psrp.mesh;
+    jpp->mBounds  = BoundingSphere3f( center  ,psrp.scale);
+    jpp->mPhysics = psrp.physics;
+    mQuery        = psrp.query;
+
+    if (!psrp.suspendedVelocity.isNull())
+        mSuspendedVelocity = psrp.suspendedVelocity.getValue();
+
+    if (!psrp.suspendedOrientationVelocity.isNull())
+        mSuspendedOrientationVelocity = psrp.suspendedOrientationVelocity.getValue();
+
+    if (!psrp.connCallback.isNull())
     {
         hasConnectedCallback = true;
-        mOnConnectedCallback = v8::Persistent<v8::Function>::New(*psrp.mConnCallback);
+        mOnConnectedCallback = v8::Persistent<v8::Function>::New(psrp.connCallback.getValue());
     }
 
-    if (*psrp.mIsSuspended)
+    if (psrp.isSuspended)
         suspend();
 
-    if (*psrp.mIsCleared)
+    if (psrp.isCleared)
         clear();
 
 
@@ -85,9 +91,9 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams
     //if mContID != jscont->getContextID, means that we were restoring a
     //presence, and should be restoring a presence that was in a different
     //sandbox than the one we're in.
-    if ((psrp.mContID != NULL) && (*psrp.mContID != jscont->getContextID()))
+    if ((! psrp.contID.isNull()) && (psrp.contID.getValue() != jscont->getContextID()))
     {
-        mContID = *psrp.mContID;
+        mContID = psrp.contID.getValue();
         parent->registerFixupSuspendable(this,mContID);
         JSLOG(fatal,"Restoring a presence with multiple sandboxes doesn't work right now. You won't be able to receive messages properly...");
     }

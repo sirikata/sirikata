@@ -963,9 +963,9 @@ function PresenceEntry(sporef, presObj)
 
             var orient = system.self.getOrientation();
             var vel = new util.Vec3(0,0,0);
-            var posTime = "0";
+            var posTime = null;
             var orientVel = new util.Quaternion (0,0,0,1); //identity.
-            var orientTime = '0';
+            var orientTime = null;
             var physics = '';
             var scale = 1.0;
             var isCleared = false;
