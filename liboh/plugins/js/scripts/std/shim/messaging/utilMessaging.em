@@ -1,3 +1,21 @@
+/**
+ Defines util.Pattern, util.Handler, and
+ util.HandlerPatternSenderTriple.  These classes are used for setting
+ up handlers when receiving messages from presences or sandboxes.
+ 
+ A HandlerPatternSenderTriple gets created in response to the system
+ calls system.registerHandler or system.registerSandboxMessageHandler.
+ This object is entered into a messaging manager and is also retured
+ to the user.  The user can deregister and clear the HPST object so
+ that its handler never fires in response to messages (and can suspend
+ and resume it as well).  Whenever a messaging manager receives a
+ message, it checks whether the HPST's pattern matches the message and
+ fires its handler if the message does match.
+
+
+ */
+
+
 
 /**
  @namespace

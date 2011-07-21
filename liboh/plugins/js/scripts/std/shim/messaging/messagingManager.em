@@ -1,3 +1,18 @@
+/**
+ Creates two MessageReceiveManagers (MRMs) and registers one for
+ sandbox messages and one for messages from presences with the system
+ object.
+
+ An MRM keeps a collection of HandlerPatternSenderTriples (HPSTs).
+ Whenever we receive a message, system calls the MRMs handleMessage
+ function.  The MRM checks all the patterns of its HPSTs to see if
+ they match the message object.  If they do, it dispatches to the
+ method.
+ 
+ */
+
+
+
 (function()
 {
     function MessageReceiveManager()

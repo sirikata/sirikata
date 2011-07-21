@@ -1,4 +1,8 @@
 
+system.require('std/shim/messaging/utilMessaging.em');
+system.require('std/shim/messaging/messagingManager.em');
+
+
 
 
 if (typeof(std) == 'undefined')
@@ -23,7 +27,7 @@ if (typeof(std.messaging) != 'undefined')
     var DEFAULT_TIME_TO_WAIT = 5;
     
     std.messaging ={};
-    system.require('std/shim/wrappedSendMessage/seqNumManager.em');
+    system.require('std/shim/messaging/seqNumManager.em');
 
 
     /**
@@ -427,6 +431,7 @@ if (typeof(std.messaging) != 'undefined')
         return addOpenHandler(recString,senderString,seqNo,streamID,respHandler,onNoRespTimeout);
         
     };
-    
 }
 )();
+
+

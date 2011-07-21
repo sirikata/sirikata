@@ -366,5 +366,4 @@ if (typeof(util) == 'undefined')
         throw new Error('Invalid type passed to Base64.decodeURL.');
     };
 
-    system.require('std/shim/utilMessaging.em');
 })();
