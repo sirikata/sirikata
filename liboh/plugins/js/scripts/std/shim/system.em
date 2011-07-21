@@ -324,7 +324,7 @@ function PresenceEntry(sporef, presObj)
           if (sboxMessageManager === null)
               throw new Error('Error: sandbox message manager is not yet initialized.  Cannot register a handler yet.');
           
-          return presMessageManager.registerHandler(callback,pattern,sender);
+          return sboxMessageManager.registerHandler(callback,pattern,sender);
       };
      
      
@@ -859,7 +859,7 @@ function PresenceEntry(sporef, presObj)
 
       @param {object} msg The message to deliver to sbox.
       
-      @param {sandbox|sandbox.PARENT} (optional) sbox Should either be
+      @param {sandbox|util.sandbox.PARENT} (optional) sbox Should either be
       a sandbox object or should be the parent sandbox identifier.
       Marks the intended destination of msg.  If undefined, just sends
       to parent.

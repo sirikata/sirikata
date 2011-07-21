@@ -738,6 +738,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
         return;
     
     v8::HandleScope handle_scope;
+    v8::Context::Scope context_scope(receiver->mContext);
     v8::Local<v8::Object> msgObj = v8::Object::New();
 
     bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,msgObj);

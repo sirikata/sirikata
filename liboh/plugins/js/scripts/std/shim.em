@@ -46,6 +46,7 @@ system.require('std/core/bind.em');
 system.js_require('std/shim/util.em');
 system.require('std/shim/utilMessaging.em');
 system.require('std/shim/wrappedSendMessage/messaging.em');
+system.require('std/shim/sandbox.em');
 system.require('std/shim/system.em');
 system.require('std/shim/messagingManager.em');
 system.require('std/shim/class.em');

@@ -1,4 +1,18 @@
 
+
+/**
+ Used as a constant for sending messages to your parent sandbox.
+ */
+if (typeof (util) === 'undefined')
+    util = {   };
+
+if (typeof(util.sandbox) === 'undefined')
+    util.sandbox =  {     };
+
+
+util.sandbox.PARENT = null;
+      
+
 {
   /** @class A sandbox provides a safe execution environment so you
    *  can run untrusted code, e.g. code shipped to you by another
@@ -11,11 +25,6 @@
    */
   var sandbox = function()
   {
-
-      /**
-       Used as a constant for sending messages to your parent sandbox.
-       */
-      sandbox.PARENT = null;
       
       /**
        Calling suspends sandbox. (Until resume is called, no code within sandbox will execute.)
