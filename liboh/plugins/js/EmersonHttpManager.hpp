@@ -1,4 +1,6 @@
-
+// Copyright (c) 2011 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #ifndef __EMERSON_HTTP_MANAGER_HPP__
 #define __EMERSON_HTTP_MANAGER_HPP__
@@ -8,8 +10,11 @@
 #include <v8.h>
 #include <sirikata/core/util/SelfWeakPtr.hpp>
 
-namespace Sirikata{
-namespace JS{
+namespace Sirikata {
+
+class Context;
+
+namespace JS {
 
 class EmersonHttpManager;
 class JSContextStruct;
@@ -22,13 +27,13 @@ class EmersonHttpManager : public SelfWeakPtr<EmersonHttpManager>
 {
 public:
     typedef uint32 EmersonHttpToken;
-    
-    EmersonHttpManager(Sirikata::Network::IOService* ioserve);
+
+    EmersonHttpManager(Sirikata::Context* ctx);
     ~EmersonHttpManager();
 
     typedef std::tr1::shared_ptr<Transfer::HttpManager::HttpResponse> HttpRespPtr;
-    
-    
+
+
     /*
       Whenever a context is destroyed, removes its entry from ctxTokeMap.  For
       all allbacks in tokeCBMap that are outstanding for this context, call
@@ -45,7 +50,7 @@ public:
 
        If never sent a request from this from this context (ie,
        ctxTokeMap[jscont] is undefined), creates a new element in ctxTokeMap
-       indexed by jscont.  
+       indexed by jscont.
 
        Appends token associated with request to entry in ctxTokeMap[jscont].
        Also, creates a new entry in tokeCBMap that associates this request's
@@ -66,7 +71,7 @@ private:
     typedef std::map<EmersonHttpToken, ContextCBPair> TokenCBMap;
     typedef TokenCBMap::iterator TokenCBMapIter;
 
-    typedef std::map<JSContextStruct*, TokenMap> ContextTokenMap;  
+    typedef std::map<JSContextStruct*, TokenMap> ContextTokenMap;
     typedef ContextTokenMap::iterator ContextTokenMapIter;
 
     //to ensure uniqueness, makeRequest should be the only function (outside of
@@ -112,11 +117,11 @@ private:
 
 
 
-    
+
     //If have outstanding requests, this pointer will have a pointer to self.
     //If don't, then it has an empty ptr.  Allows this to garbage collect properly
     EmersonHttpPtr managerLiveness;
-    Sirikata::Network::IOService* mIO;
+    Sirikata::Context* mContext;
 };
 
 static EmersonHttpPtr nullEmersonHttpPtr;

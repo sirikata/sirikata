@@ -7,19 +7,20 @@
 #include "JSContextStruct.hpp"
 #include <v8.h>
 #include <sirikata/core/network/IOTimer.hpp>
-#include <sirikata/core/network/IOService.hpp>
 #include "JSSuspendable.hpp"
 #include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata {
+
+class Context;
+
 namespace JS {
 
-struct JSTimerStruct : public JSSuspendable
-{
+struct JSTimerStruct : public JSSuspendable {
+    JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
+        JSContextStruct* jscont, Sirikata::Context* ctx, uint32 contID,
+        double timeRemaining, bool isSuspended, bool isCleared);
 
-
-    JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared);
-    
     ~JSTimerStruct();
 
     static JSTimerStruct* decodeTimerStruct(v8::Handle<v8::Value> toDecode,String& errorMessage);
@@ -34,12 +35,12 @@ public:
     virtual v8::Handle<v8::Value>clear();
 
     v8::Handle<v8::Value> struct_getAllData();
-    
+
     EmersonScript* emerScript;
     v8::Persistent<v8::Function> cb;
     JSContextStruct* jsContStruct;
 private:
-    Sirikata::Network::IOService* ios;
+    Sirikata::Context* mContext;
     Liveness mLiveness;
     Sirikata::Network::IOTimerPtr mDeadlineTimer;
 public:
@@ -48,7 +49,7 @@ public:
     double mTimeRemaining; //when restoring a timer, will fire in this many more
                            //seconds.
 
-    
+
     virtual void fixSuspendableToContext(JSContextStruct* toAttachTo);
 
 
@@ -56,7 +57,7 @@ public:
        When the only reference to a timer are weak (ie, no emerson objects
        directly point at it, this function gets called.  The first argument
        contains the persistent object pointing to the timer.  The second should
-       just be null.  
+       just be null.
      */
     static void timerWeakReferenceCleanup(v8::Persistent<v8::Value> containsTimer, void* otherArg);
 
@@ -67,18 +68,18 @@ public:
        future [eg, it isn't suspended and its parent context isn't suspended]),
        then delete the timer right then and there.  Otherwise, delete it after
        it fires.  (Mark killAfterFire to be true.)
-       @param iotimer is a keepalive token to the IOTimer. 
-              If the struct is GC'd then this will no longer resolve to a 
+       @param iotimer is a keepalive token to the IOTimer.
+              If the struct is GC'd then this will no longer resolve to a
               shared reference and this class is dead.
      */
     void noReference(const Liveness::Token &token);
 
     /**
        Every time a timer struct is created, the next line should set its
-       persistent object. 
+       persistent object.
      */
     void setPersistentObject(v8::Persistent<v8::Object>);
-    
+
 private:
     /**
        Need to know when to clean up timer struct.  Have made Emerson objects
@@ -104,7 +105,7 @@ private:
        collector tries to delete the internal field of mPersistentHandle.
      */
     v8::Persistent<v8::Object> mPersistentHandle;
-    
+
 };
 
 

@@ -7,22 +7,22 @@
 #include "../JSLogging.hpp"
 #include <sirikata/core/network/IOTimer.hpp>
 #include <sirikata/core/network/Asio.hpp>
-#include <sirikata/core/network/IOService.hpp>
+#include <sirikata/core/service/Context.hpp>
 #include "JSSuspendable.hpp"
 #include "Util.hpp"
 
 namespace Sirikata {
 namespace JS {
 
-
-
-JSTimerStruct::JSTimerStruct(EmersonScript*eobj,Duration dur,v8::Persistent<v8::Function>& callback,JSContextStruct* jscont,Sirikata::Network::IOService* ioserve,uint32 contID, double timeRemaining, bool isSuspended,bool isCleared)
+JSTimerStruct::JSTimerStruct(EmersonScript* eobj, Duration dur, v8::Persistent<v8::Function>& callback,
+    JSContextStruct* jscont, Sirikata::Context* ctx, uint32 contID,
+    double timeRemaining, bool isSuspended,bool isCleared)
  :JSSuspendable(),
   emerScript(eobj),
   cb(callback),
   jsContStruct(jscont),
-  ios(ioserve),
-  mDeadlineTimer(Sirikata::Network::IOTimer::create(*ioserve)),
+  mContext(ctx),
+  mDeadlineTimer(Sirikata::Network::IOTimer::create(*ctx->ioService)),
   timeUntil(dur),
   mTimeRemaining(timeRemaining),
   killAfterFire(false),
@@ -233,10 +233,16 @@ void JSTimerStruct::evaluateCallback()
     Liveness::Token token=mLiveness.livenessToken();
     emerScript->handleTimeoutContext(cb,jsContStruct);
     if (token) {
+        if (mContext->stopped()) {
+            JSLOG(warn, "Timer evaluateCallback invoked after stop request, ignoring...");
+            noTimerWaiting=true; // Allow cleanup, see notes below
+            return;
+        }
+
         //if we were told to kill the timer after firing, then check kill conditions
         //again in noReference.
         if (killAfterFire)
-            ios->post(std::tr1::bind(&JSTimerStruct::noReference,this,token));
+            mContext->mainStrand->post(std::tr1::bind(&JSTimerStruct::noReference,this,token));
 
         //means that we have no pending timer operation.
         // Note that since this allows the JS GC thread to destroy this object

@@ -170,7 +170,7 @@ public:
     //JSContextStructs request the JSObjectScript to call finishClear on them
     //when doing so won't invalidate any iterators on the JSObjectScript.
     virtual void registerContextForClear(JSContextStruct* jscont);
-    
+
 
     //handling basic datatypes for JSPresences
     void setVisualFunction(const SpaceObjectReference sporef, const std::string& newMeshString);
@@ -232,7 +232,7 @@ public:
        Timers and context suspendables are killed and deleted in contexts.
        However, presences are also stored in EmersonScript,
        and EmersonScript must be told to kill them and remove them.
-       
+
        And JSPresences, we need to remove from our list of presences and ask
        hosted object to remove it.
     */
@@ -260,7 +260,7 @@ public:
         return emHttpPtr;
     }
 
-    
+
     /**
        msgToSend contains a serialized v8 object that will be sent from sandbox
        with id sendingSandbox to sandbox with id receivingSandbox.  Posts dow

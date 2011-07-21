@@ -1,18 +1,19 @@
-
+// Copyright (c) 2011 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #include "EmersonHttpManager.hpp"
 #include "JSLogging.hpp"
 #include "JSObjectStructs/JSContextStruct.hpp"
+#include <sirikata/core/service/Context.hpp>
 
-namespace Sirikata{
-namespace JS{
+namespace Sirikata {
+namespace JS {
 
-
-
-EmersonHttpManager::EmersonHttpManager(Sirikata::Network::IOService* ioserve)
+EmersonHttpManager::EmersonHttpManager(Sirikata::Context* ctx)
  : SelfWeakPtr<EmersonHttpManager>(),
    currentToken(0),
-   mIO(ioserve)
+   mContext(ctx)
 {
     managerLiveness = nullEmersonHttpPtr;
 }
@@ -20,7 +21,7 @@ EmersonHttpManager::EmersonHttpManager(Sirikata::Network::IOService* ioserve)
 EmersonHttpManager::~EmersonHttpManager()
 {}
 
-EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::Network::Address addr,     Transfer::HttpManager::HTTP_METHOD method, std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
+EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::Network::Address addr, Transfer::HttpManager::HTTP_METHOD method, std::string req,v8::Persistent<v8::Function> cb, JSContextStruct* jscont)
 {
     ++currentToken;
 
@@ -44,7 +45,6 @@ EmersonHttpManager::EmersonHttpToken EmersonHttpManager::makeRequest(Sirikata::N
 
 void EmersonHttpManager::deregisterContext(JSContextStruct* toDeregister)
 {
-
     //get list of all tokens that were associated with the context we're
     //de-registering
     ContextTokenMapIter findCtxTokensIter = ctxTokeMap.find(toDeregister);
@@ -53,7 +53,7 @@ void EmersonHttpManager::deregisterContext(JSContextStruct* toDeregister)
         JSLOG(detailed,"No outstanding http requests for context that is de-registering.");
         return;
     }
-    
+
     //contains all tokens assocaited with this context
     TokenMap tknMap= findCtxTokensIter->second;
 
@@ -85,7 +85,11 @@ void EmersonHttpManager::deregisterContext(JSContextStruct* toDeregister)
 
 void EmersonHttpManager::receiveHttpResponse(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
-    mIO->post(std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
+    if (mContext->stopped()) {
+        JSLOG(warn, "Received HTTP response after shutdown request, ignoring...");
+        return;
+    }
+    mContext->mainStrand->post(std::tr1::bind(&EmersonHttpManager::postReceiveResp, this, respToken,hrp, error, boost_error));
 }
 
 void EmersonHttpManager::debugPrintContextMap()
@@ -114,7 +118,7 @@ void EmersonHttpManager::debugPrintTokenMap()
 
 void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr hrp,Transfer::HttpManager::ERR_TYPE error,const boost::system::error_code& boost_error)
 {
-    
+
     //first lookup token in outstanding token map to find corresponding context
     //and callback
     TokenCBMapIter tokeFindIt = tokeCBMap.find(respToken);
@@ -151,8 +155,8 @@ void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr 
         else
             findTokeCtxIter->second.erase(eraseTokenIter);
     }
-        
-    
+
+
     //cannot execute callback if suspended.  And never will.
     if (! jscont->getIsSuspended())
     {
@@ -183,10 +187,8 @@ void EmersonHttpManager::postReceiveResp(EmersonHttpToken respToken,HttpRespPtr 
     cb.Dispose();
     tokeCBMap.erase(tokeFindIt);
 
-
     if (tokeCBMap.empty())
         managerLiveness = nullEmersonHttpPtr;
-
 }
 
 

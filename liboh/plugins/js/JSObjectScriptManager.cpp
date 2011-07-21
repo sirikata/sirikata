@@ -52,6 +52,8 @@
 #include "JSSystemNames.hpp"
 #include "JSObjects/JSContext.hpp"
 
+#include "JSLogging.hpp"
+
 #include <sirikata/core/network/IOServiceFactory.hpp>
 #include <sirikata/core/network/IOService.hpp>
 #include <sirikata/core/network/IOWork.hpp>
@@ -500,6 +502,12 @@ void JSObjectScriptManager::loadMesh(const Transfer::URI& uri, MeshLoadCallback 
         VisualWPtr w_mesh = it->second;
         VisualPtr mesh = w_mesh.lock();
         if (mesh) {
+            // Ideally we shouldn't get here if we already shutdown, but check
+            // just in case
+            if (mContext->stopped()) {
+                JSLOG(warn, "Load mesh called after shutdown request, ignoring successful callback...");
+                return;
+            }
             mContext->mainStrand->post(std::tr1::bind(cb, mesh));
             return;
         }

@@ -87,7 +87,7 @@ EmersonScript::EmersonScript(HostedObjectPtr ho, const String& args, const Strin
    mKilling(false),
    mCreateEntityPort(NULL),
    presenceToken(HostedObject::DEFAULT_PRESENCE_TOKEN +1),
-   emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ho->context()->ioService))
+   emHttpPtr(EmersonHttpManager::construct<EmersonHttpManager> (ho->context()))
 {
     int32 resourceMax = mManager->getOptions()->referenceOption("emer-resource-max")->as<int32> ();
     JSObjectScript::initialize(args, script,resourceMax);
@@ -529,8 +529,7 @@ Time EmersonScript::getHostedTime()
 
 v8::Handle<v8::Value> EmersonScript::create_timeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared, JSContextStruct* jscont)
 {
-    Network::IOService* ioserve = mParent->getIOService();
-    JSTimerStruct* jstimer = new JSTimerStruct(this,Duration::seconds(period),cb,jscont,ioserve,contID, timeRemaining,isSuspended,isCleared);
+    JSTimerStruct* jstimer = new JSTimerStruct(this,Duration::seconds(period),cb,jscont,mParent->context(),contID, timeRemaining,isSuspended,isCleared);
 
     v8::HandleScope handle_scope;
 
