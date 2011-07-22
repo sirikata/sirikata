@@ -243,6 +243,11 @@ void Proximity::newSession(ObjectSession* session) {
 }
 
 void Proximity::sessionClosed(ObjectSession* session) {
+    // Prox strand may  have some state to clean up
+    mProxStrand->post(
+        std::tr1::bind(&Proximity::handleDisconnectedObject, this, session->id().getAsUUID())
+    );
+
     ObjectProxStreamMap::iterator prox_stream_it = mObjectProxStreams.find(session->id().getAsUUID());
     if (prox_stream_it != mObjectProxStreams.end()) {
         prox_stream_it->second->disable();
@@ -600,7 +605,7 @@ void Proximity::removeQuery(UUID obj) {
 
     // Update the prox thread
     mProxStrand->post(
-        std::tr1::bind(&Proximity::handleRemoveObjectQuery, this, obj)
+        std::tr1::bind(&Proximity::handleRemoveObjectQuery, this, obj, true)
     );
 
     // Update min query angle, and update remote queries if necessary
@@ -804,34 +809,22 @@ void Proximity::poll() {
 
 
 
-void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
+// Note that we pass through seqPtr from the prox thread because it is
+// stored in ProxStreamInfo, and those are Prox-thread-only structs.
+void Proximity::handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
     // We check the cache when we get the request, but also check it here since
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
 
-    ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(subscriber);
-    SeqNoPtr seqPtr = infoPtr->getSeqNoPtr(observed);
     mLocService->subscribe(subscriber, observed, seqPtr);
 }
 
 void Proximity::handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed) {
-
-    ObjectProxStreamMap::iterator proxStreamIter  = mObjectProxStreams.find(subscriber);
-    if (proxStreamIter != mObjectProxStreams.end())
-        proxStreamIter->second->removeSeqNoPtr(observed);
-    else
-        PROXLOG(detailed, "Warning: trying to remove an object's subscription for a substream info that doesn't exist.");
-
     mLocService->unsubscribe(subscriber, observed);
 }
-void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
-    ObjectProxStreamMap::iterator proxStreamIter  = mObjectProxStreams.find(subscriber);
-    if (proxStreamIter != mObjectProxStreams.end())
-        proxStreamIter->second->removeAllObjSeqNoPtrs();
-    else
-        PROXLOG(detailed, "Warning: trying to remove all subscriptions for a substream info that doesn't exist.");
 
+void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
     mLocService->unsubscribe(subscriber);
 }
 
@@ -1030,6 +1023,7 @@ void Proximity::generateObjectQueryEvents(Query* query) {
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     UUID query_id = mInvertedObjectQueries[query];
+    SeqNoInfo* infoPtr = getOrCreateSeqNoInfo(query_id);
 
     QueryEventList evts;
     query->popEvents(evts);
@@ -1049,7 +1043,7 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid)
+                        std::tr1::bind(&Proximity::handleAddObjectLocSubscription, this, query_id, objid, infoPtr->getSeqNoPtr(objid))
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
@@ -1058,7 +1052,6 @@ void Proximity::generateObjectQueryEvents(Query* query) {
 
                     //query_id contains the uuid of the object that is receiving
                     //the proximity message that obj_id has been added.
-                    ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(query_id);
                     uint64 seqNo = infoPtr->getSeqNo(objid);
                     addition.set_seqno (seqNo);
 
@@ -1087,6 +1080,9 @@ void Proximity::generateObjectQueryEvents(Query* query) {
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 UUID objid = evt.removals()[ridx].id();
                 count++;
+                // Clear out seqno and let main strand remove loc
+                // subcription
+                infoPtr->removeSeqNoPtr(objid);
                 mContext->mainStrand->post(
                     std::tr1::bind(&Proximity::handleRemoveObjectLocSubscription, this, query_id, objid)
                 );
@@ -1094,7 +1090,6 @@ void Proximity::generateObjectQueryEvents(Query* query) {
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object( objid );
 
-                ProxStreamInfoPtr infoPtr = getOrCreateAndGetProxStreamIterFromObjsStreams(query_id);
                 uint64 seqNo = infoPtr->getSeqNo(objid);
                 removal.set_seqno (seqNo);
             }
@@ -1112,19 +1107,23 @@ void Proximity::generateObjectQueryEvents(Query* query) {
 }
 
 
-Proximity::ProxStreamInfoPtr Proximity::getOrCreateAndGetProxStreamIterFromObjsStreams(const UUID& obj_id)
+Proximity::SeqNoInfo* Proximity::getOrCreateSeqNoInfo(const UUID& obj_id)
 {
-    //query_id contains the uuid of the object that is receiving
-    //the proximity message that obj_id has been added.
-    ObjectProxStreamMap::iterator proxStreamIter  = mObjectProxStreams.find(obj_id);
-    if (proxStreamIter == mObjectProxStreams.end())
-    {
-        //create a new prox stream just for this subscriber
-        proxStreamIter = mObjectProxStreams.insert( ObjectProxStreamMap::value_type(obj_id, ProxStreamInfoPtr(new ProxStreamInfo())) ).first;
-    }
-    return proxStreamIter->second;
+    // obj_id == querier
+    ObjectSeqNoInfoMap::iterator proxSeqNoIt = mObjectSeqNos.find(obj_id);
+    if (proxSeqNoIt == mObjectSeqNos.end())
+        proxSeqNoIt = mObjectSeqNos.insert( ObjectSeqNoInfoMap::value_type(obj_id, new SeqNoInfo()) ).first;
+    return proxSeqNoIt->second;
 }
 
+void Proximity::eraseSeqNoInfo(const UUID& obj_id)
+{
+    // obj_id == querier
+    ObjectSeqNoInfoMap::iterator proxSeqNoIt = mObjectSeqNos.find(obj_id);
+    if (proxSeqNoIt == mObjectSeqNos.end()) return;
+    delete proxSeqNoIt->second;
+    mObjectSeqNos.erase(proxSeqNoIt);
+}
 
 
 void Proximity::handleUpdateServerQuery(const ServerID& server, const TimedMotionVector3f& loc, const BoundingSphere3f& bounds, const SolidAngle& angle) {
@@ -1242,9 +1241,10 @@ void Proximity::handleUpdateObjectQuery(const UUID& object, const TimedMotionVec
     }
 }
 
-void Proximity::handleRemoveObjectQuery(const UUID& object) {
+void Proximity::handleRemoveObjectQuery(const UUID& object, bool notify_main_thread) {
+    // Clear out queries
     for(int i = 0; i < NUM_OBJECT_CLASSES; i++) {
-        if (mServerQueryHandler[i] == NULL) continue;
+        if (mObjectQueryHandler[i] == NULL) continue;
 
         ObjectQueryMap::iterator it = mObjectQueries[i].find(object);
         if (it == mObjectQueries[i].end()) continue;
@@ -1255,9 +1255,22 @@ void Proximity::handleRemoveObjectQuery(const UUID& object) {
         delete q; // Note: Deleting query notifies QueryHandler and unsubscribes.
     }
 
-    mContext->mainStrand->post(
-        std::tr1::bind(&Proximity::handleRemoveAllObjectLocSubscription, this, object)
-    );
+    // Clear out sequence numbers
+    eraseSeqNoInfo(object);
+
+    // Optionally let the main thread know to clear its communication state
+    if (notify_main_thread) {
+        // There's no corresponding removeAllSeqNoPtr because we
+        // should have erased it above.
+        mContext->mainStrand->post(
+            std::tr1::bind(&Proximity::handleRemoveAllObjectLocSubscription, this, object)
+        );
+    }
+}
+
+void Proximity::handleDisconnectedObject(const UUID& object) {
+    // Clear out query state if it exists
+    handleRemoveObjectQuery(object, false);
 }
 
 bool Proximity::handlerShouldHandleObject(bool is_static_handler, bool is_global_handler, const UUID& obj_id, bool is_local, const TimedMotionVector3f& pos, const BoundingSphere3f& region, float maxSize) {
