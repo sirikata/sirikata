@@ -75,12 +75,11 @@ using namespace std;
 namespace Sirikata {
 namespace JS {
 
-
-
+void printException(v8::TryCatch& try_catch, EmersonLineMap* lineMap);
 
 namespace {
 
-String exceptionAsString(v8::TryCatch& try_catch) {
+String exceptionAsString(v8::TryCatch& try_catch, EmersonLineMap* lineMap) {
     stringstream os;
 
     v8::HandleScope handle_scope;
@@ -93,6 +92,14 @@ String exceptionAsString(v8::TryCatch& try_catch) {
         v8::String::Utf8Value filename(message->GetScriptResourceName());
         const char* filename_string = ToCString(filename);
         int linenum = message->GetLineNumber();
+        if (lineMap != NULL) {
+            for (EmersonLineMap::iterator i = lineMap->begin(); i != lineMap->end(); i++)
+                JSLOG(error, "js line " << i->first << " -> emerson line " << i->second);
+
+            EmersonLineMap::iterator iter = lineMap->find(linenum);
+            if (iter != lineMap->end())
+                linenum = iter->second;
+        }
         os << filename_string << ':' << linenum << ": " << exception_string << "\n";
         // Print line of source code.
         v8::String::Utf8Value sourceline(message->GetSourceLine());
@@ -114,7 +121,6 @@ String exceptionAsString(v8::TryCatch& try_catch) {
     }
     return os.str();
 }
-
 
 
 /** Note that this return value isn't guaranteed to return anything. If an
@@ -144,7 +150,7 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
 
         printException(try_catch);
         if (exc != NULL)
-            *exc = exceptionAsString(try_catch);
+            *exc = exceptionAsString(try_catch, NULL);
 
 
         return v8::Handle<v8::Value>();
@@ -160,9 +166,13 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
 
 }
 
-void printException(v8::TryCatch& try_catch) {
-    String eas = exceptionAsString(try_catch);
+void printException(v8::TryCatch& try_catch, EmersonLineMap* lineMap) {
+    String eas = exceptionAsString(try_catch, lineMap);
     JSLOG(error, "Uncaught exception:\n" << eas);
+}
+
+void printException(v8::TryCatch& try_catch) {
+    printException(try_catch, NULL);
 }
 
 
@@ -543,6 +553,7 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(ctx);
+    EmersonLineMap lineMap;
 
     TryCatch try_catch;
 
@@ -577,9 +588,7 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
             int em_compile_err = 0;
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
 
-            JSLOG(detailed, "COMPILING");
             String js_script_str;
-            EmersonLineMap lineMap;
             bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(),
                                                         js_script_str, em_compile_err, handleEmersonRecognitionError,
                                                         &lineMap);
@@ -644,7 +653,7 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
     v8::Handle<v8::Value> result = script->Run();
 
     if (try_catch.HasCaught()) {
-        printException(try_catch);
+        printException(try_catch, &lineMap);
         postEvalOps();
         if (return_exc)
             return handle_scope.Close(try_catch.Exception());

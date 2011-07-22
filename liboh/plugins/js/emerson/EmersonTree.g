@@ -26,6 +26,7 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "Util.h"
+    
     #define APP(s) \
         { \
             const char* str = s; \
@@ -38,18 +39,25 @@ options
             current_line += numNewlines; \
         }
 
+    #define LINE_DEBUG 0
+    
     #define LINE(num) \
         { \
             if (lineIndex >= linesSize) { \
                 linesSize *= 2; \
-                emersonLines = (int*)realloc(emersonLines, linesSize); \
-                jsLines = (int*)realloc(jsLines, linesSize); \
+                emersonLines = (int*)realloc(emersonLines, linesSize * sizeof(int)); \
+                jsLines = (int*)realloc(jsLines, linesSize * sizeof(int)); \
+            } \
+            if (LINE_DEBUG) { \
+                char buffer[128]; \
+                sprintf(buffer, "/* em line \%d, js line \%d */", num, current_line); \
+                program_string->append(program_string, buffer); \
             } \
             emersonLines[lineIndex] = num; \
             jsLines[lineIndex] = current_line; \
             lineIndex++; \
         }
-
+        
     #define CHECK_RESOURCES()                 \
     {                                         \
     APP("\nif ( ! __checkResources8_8_3_1__() )\n");  \
@@ -181,13 +189,13 @@ functionExpression
 	
 formalParameterList
   : ^(FUNC_PARAMS
-                (id1=Identifier {APP((const char*)$id1.text->chars); })
+                (id1=Identifier { LINE($id1.line); APP((const char*)$id1.text->chars); })
                 
 	       (
                  {
                    APP(", ");
                  }
-                 id2=Identifier {APP((const char*)$id2.text->chars);}
+                 id2=Identifier { LINE($id2.line); APP((const char*)$id2.text->chars);}
 		)*
       )
   ;
@@ -268,6 +276,7 @@ variableDeclaration
             VAR
             Identifier 
             {
+                LINE($Identifier.line);
                 APP((const char*)$Identifier.text->chars);
             }
             
@@ -285,10 +294,12 @@ variableDeclarationNoIn
         ^(
             VAR
 			{
+                LINE($VAR.line);
                 APP("var ");
 			}
             Identifier 
             {
+                LINE($Identifier.line);
                 APP((const char*)$Identifier.text->chars);
             }
             
@@ -470,6 +481,7 @@ continueStatement
         (
             Identifier
             {
+                LINE($Identifier.line);
                 APP((const char*)$Identifier.text->chars);
             }
         )?
@@ -486,6 +498,7 @@ breakStatement
         (
             Identifier
             {
+                LINE($Identifier.line);
                 APP((const char*)$Identifier.text->chars);
             }
         )?
@@ -684,6 +697,7 @@ catchBlock
             }
             Identifier
             {
+                LINE($Identifier.line);
                 APP((const char*)$Identifier.text->chars);
                 APP( ")\n");
                 APP(" {  \n");
@@ -772,15 +786,15 @@ scope
         : conditionalExpression
         | ^(
             (
-                ASSIGN                { $assignmentExpression::op = " = ";    }
-                | MULT_ASSIGN         { $assignmentExpression::op = " *= ";  }
-                | DIV_ASSIGN          { $assignmentExpression::op = " /= ";  }
-                | MOD_ASSIGN          { $assignmentExpression::op = " \%= ";  }
-                | ADD_ASSIGN          { $assignmentExpression::op = " += ";  } 
-                | SUB_ASSIGN          { $assignmentExpression::op = " -= ";  } 
-                | AND_ASSIGN          { $assignmentExpression::op = " &= "; }
-                | EXP_ASSIGN          { $assignmentExpression::op  = " ^= "; }
-                | OR_ASSIGN           { $assignmentExpression::op = " |= "; } 
+                ASSIGN                { LINE($ASSIGN.line); $assignmentExpression::op = " = ";    }
+                | MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " *= ";  }
+                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " /= ";  }
+                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " \%= ";  }
+                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " += ";  } 
+                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " -= ";  } 
+                | AND_ASSIGN          { LINE($AND_ASSIGN.line); $assignmentExpression::op = " &= "; }
+                | EXP_ASSIGN          { LINE($EXP_ASSIGN.line); $assignmentExpression::op  = " ^= "; }
+                | OR_ASSIGN           { LINE($OR_ASSIGN.line); $assignmentExpression::op = " |= "; } 
             )
 
             leftHandSideExpression 
@@ -803,19 +817,19 @@ scope
         : conditionalExpressionNoIn
         | ^(
           (
-            ASSIGN        { $assignmentExpressionNoIn::op = " = ";    }
-            | MULT_ASSIGN { $assignmentExpressionNoIn::op = " *= ";   }
-            | DIV_ASSIGN  { $assignmentExpressionNoIn::op = " /= ";   }
-            | MOD_ASSIGN  { $assignmentExpressionNoIn::op = " \%= ";  }
-            | ADD_ASSIGN  { $assignmentExpressionNoIn::op = " += ";   } 
-            | SUB_ASSIGN  { $assignmentExpressionNoIn::op = " -= ";   } 
-            | AND_ASSIGN  { $assignmentExpressionNoIn::op = " &= ";   }
-            | EXP_ASSIGN  { $assignmentExpressionNoIn::op  = " ^= ";  }
-            | OR_ASSIGN   { $assignmentExpressionNoIn::op = " |= ";   } 
+            ASSIGN        { LINE($ASSIGN.line); $assignmentExpressionNoIn::op = " = ";    }
+            | MULT_ASSIGN { LINE($MULT_ASSIGN.line); $assignmentExpressionNoIn::op = " *= ";   }
+            | DIV_ASSIGN  { LINE($DIV_ASSIGN.line); $assignmentExpressionNoIn::op = " /= ";   }
+            | MOD_ASSIGN  { LINE($MOD_ASSIGN.line); $assignmentExpressionNoIn::op = " \%= ";  }
+            | ADD_ASSIGN  { LINE($ADD_ASSIGN.line); $assignmentExpressionNoIn::op = " += ";   } 
+            | SUB_ASSIGN  { LINE($SUB_ASSIGN.line); $assignmentExpressionNoIn::op = " -= ";   } 
+            | AND_ASSIGN  { LINE($AND_ASSIGN.line); $assignmentExpressionNoIn::op = " &= ";   }
+            | EXP_ASSIGN  { LINE($EXP_ASSIGN.line); $assignmentExpressionNoIn::op  = " ^= ";  }
+            | OR_ASSIGN   { LINE($OR_ASSIGN.line); $assignmentExpressionNoIn::op = " |= ";   } 
            )
            
            leftHandSideExpression
-           {                                  
+           {
                  APP(" ");
                  APP($assignmentExpressionNoIn::op);
                  APP(" ");
@@ -838,7 +852,7 @@ newExpression
         
         
 propertyReferenceSuffix1
-: Identifier { APP((const char*)$Identifier.text->chars);} 
+: Identifier { LINE($Identifier.line); APP((const char*)$Identifier.text->chars);} 
 ;
 
 indexSuffix1
@@ -848,10 +862,10 @@ indexSuffix1
 memberExpression
 : primaryExpression
 |functionExpression
-| ^(DOT memberExpression { APP("."); } propertyReferenceSuffix1 )
-| ^(ARRAY_INDEX memberExpression { APP("[ "); } indexSuffix1 { APP(" ] "); })
-| ^(NEW { APP("new "); } memberExpression arguments)
-| ^(DOT { APP(".");} memberExpression)
+| ^(DOT memberExpression { LINE($DOT.line); APP("."); } propertyReferenceSuffix1 )
+| ^(ARRAY_INDEX memberExpression { LINE($ARRAY_INDEX.line); APP("[ "); } indexSuffix1 { APP(" ] "); })
+| ^(NEW { LINE($NEW.line); APP("new "); } memberExpression arguments)
+| ^(DOT { LINE($DOT.line); APP(".");} memberExpression)
 ;
 
 memberExpressionSuffix
@@ -861,8 +875,8 @@ memberExpressionSuffix
 
 callExpression
  : ^(CALL memberExpression arguments) 
- | ^(ARRAY_INDEX callExpression {APP("[ "); } indexSuffix1 { APP(" ]"); })
- | ^(DOT callExpression { APP(".");} propertyReferenceSuffix1)
+ | ^(ARRAY_INDEX callExpression { LINE($ARRAY_INDEX.line); APP("[ "); } indexSuffix1 { APP(" ]"); })
+ | ^(DOT callExpression { LINE($DOT.line); APP(".");} propertyReferenceSuffix1)
  | ^(CALL callExpression arguments)
 ;
 	
@@ -875,9 +889,9 @@ callExpressionSuffix
 	;
 
 arguments
-  : ^(ARGLIST {APP("( )"); })
+  : ^(ARGLIST { LINE($ARGLIST.line);  APP("( )"); })
   | ^(ARGLIST 
-       { APP("( "); }
+       { LINE($ARGLIST.line); APP("( "); }
        (expression)
        { APP(" )"); }
      )
@@ -1452,7 +1466,8 @@ postfixExpression
 primaryExpression
 	: 'this' {APP("this");}
 	| Identifier 
-	  { 
+	  {
+            LINE($Identifier.line);
             APP((const char*)$Identifier.text->chars);
 	  }
         | dollarExpression
@@ -1469,6 +1484,7 @@ primaryExpression
 vectorLiteral
         : ^(VECTOR
             {
+                LINE($VECTOR.line);
                 APP("( new util.Vec3(");
             }
             (exp1=vectorLiteralField
@@ -1494,7 +1510,7 @@ vectorLiteral
 vectorLiteralField
         : additiveExpression
 //        : ternaryExpression
-        | NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
+        | NumericLiteral { LINE($NumericLiteral.line); APP((const char*)$NumericLiteral.text->chars);}
         | callExpression
         | memberExpression
         ;
@@ -1646,17 +1662,22 @@ nameValueProto
 propertyNameAndValue
 	: ^(NAME_VALUE 
           propertyName 
-           {	APP(" : ");}
+           { LINE($NAME_VALUE.line); APP(" : ");}
 	  expression)
 	;
 
 propertyName
-	: Identifier {  APP((const char*)$Identifier.text->chars); }
+	: Identifier { LINE($Identifier.line); APP((const char*)$Identifier.text->chars); }
 	| StringLiteral
           {
+             LINE($StringLiteral.line);
              APP((const char*)$StringLiteral.text->chars);  
           }
-	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
+	| NumericLiteral
+          {
+             LINE($NumericLiteral.line);
+             APP((const char*)$NumericLiteral.text->chars);
+          }
 	;
 
 // primitive literal definition.
@@ -1680,7 +1701,7 @@ literal
               }
               else APP((const char*)$StringLiteral.text->chars);
         }
-	| NumericLiteral {APP((const char*)$NumericLiteral.text->chars);}
+	| NumericLiteral { LINE($NumericLiteral.line); APP((const char*)$NumericLiteral.text->chars);}
 	;
 	
 
