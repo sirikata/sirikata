@@ -171,7 +171,7 @@ var addObject = function(objid) {
         curEditor = new Editor(objid);
     }
     else {
-        $('#edittabs').tabs('select', i);
+        $('#edittabs').tabs('select', edidx);
     }
 };
 Scripter.addObject = addObject;
