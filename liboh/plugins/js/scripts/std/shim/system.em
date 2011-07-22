@@ -912,10 +912,17 @@ function PresenceEntry(sporef, presObj)
 
       
         /** @function
-         @description This function call creates a new presence for
-         the entity running this script.  Note: Presence's initial
-         position is the same as the presence that created it. Scale
-         is set to 1.
+         @description Creates a new presence for the entity. There are
+         two ways to invoke this method. You can pass it an object
+         containing properties to set (e.g. with fields 'position',
+         'orientation', etc) or pass it a fixed set of arguments
+         (mesh, callback, position, space). Only the first method
+         allows setting all properties of the presence and is
+         preferred. In both cases, the second argument can be a
+         callback to be invoked when the presence is connected.
+
+         By default, the presence's intial position is the same as the
+         presence that created it and its scale is 1.
 
          @throws {Exception} if sandbox does not have capability to
          create presences.
@@ -923,7 +930,7 @@ function PresenceEntry(sporef, presObj)
          @see system.canCreatePresence
 
          
-         @param {string or object} If string, will try to decode
+         @param {string or object} firstArg If string, will try to decode
          string as a mesh a uri for the new presence and callback
          argument is required.  If it's an object, we read the fields
          of the object for presence initialization information.  The
@@ -933,7 +940,7 @@ function PresenceEntry(sporef, presObj)
          Any of these parameters that are undefined default to taking
          the equivalent value of system.self.
 
-         @param {optional} callback function to be called when
+         @param {function} [callback] function to be called when
          presence gets connected to the world. (Function has form func
          (pres), where pres contains the presence just connected.)
          @param {optional} A position for the new presence.
@@ -941,7 +948,12 @@ function PresenceEntry(sporef, presObj)
          @param {optional} A space to create the new presence in.
          Unspecified defaults to same space as self.
 
-         @return Returns nothing.
+         @param {Vec3} [position] requested initial position for the
+         presence. Ignored when using an object to specify settings.
+
+         @param {string} [space] the space to connect to.
+
+         @return Nothing.
          */
         system.createPresence = function (firstArg, callback, position, space)
         {
