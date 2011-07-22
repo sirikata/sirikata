@@ -121,7 +121,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
 v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSContextStruct* destination)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,sendSandbox,jsObjScript);
-    
+
     //note if destination is null, and have no parent, throw error.
     if (destination == NULL)
     {
@@ -130,7 +130,7 @@ v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSCo
 
         destination = mParentContext;
     }
-    
+
     return emerScript->sendSandbox(msgToSend, getContextID(), destination->getContextID());
 }
 
@@ -273,7 +273,7 @@ void JSContextStruct::createContextObjects()
     util_obj->SetInternalField(UTIL_TEMPLATE_UTILSTRUCT_FIELD,External::New(mUtil));
     util_obj->SetInternalField(TYPEID_FIELD,External::New(new String(UTIL_TYPEID_STRING)));
 
-    
+
     //Always load the shim layer.
     //import shim
     jsObjScript->import("std/shim.em",this,false);
@@ -499,6 +499,7 @@ v8::Handle<v8::Value> JSContextStruct::struct_rootReset()
 
     inClear = false;
     //recreate system and mcontext objects
+    v8::HandleScope handle_scope;
     mContext = v8::Context::New(NULL, mContGlobTempl);
     createContextObjects();
 
@@ -602,7 +603,7 @@ void JSContextStruct::finishClear()
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
     if (emerScript != NULL)
     {
-        
+
         emerScript->getEmersonHttpPtr()->deregisterContext(this);
     }
 
@@ -637,7 +638,7 @@ void JSContextStruct::finishClear()
     if (!presenceMessageCallback.IsEmpty())
         presenceMessageCallback.Dispose();
 
-    
+
     mContext.Dispose();
     inClear = false;
 }
