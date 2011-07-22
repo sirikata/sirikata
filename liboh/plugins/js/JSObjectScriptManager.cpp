@@ -568,12 +568,16 @@ void JSObjectScriptManager::finishMeshDownload(const Transfer::URI& uri, VisualP
 
 JSObjectScriptManager::~JSObjectScriptManager()
 {
-    mParsingThread->join();
-    delete mParsingThread;
-    Network::IOServiceFactory::destroyIOService(mParsingIOService);
+    if (mContext != NULL) {
+        // These only allocated if we're not headless.
 
-    delete mModelFilter;
-    delete mModelParser;
+        mParsingThread->join();
+        delete mParsingThread;
+        Network::IOServiceFactory::destroyIOService(mParsingIOService);
+
+        delete mModelFilter;
+        delete mModelParser;
+    }
 }
 
 
