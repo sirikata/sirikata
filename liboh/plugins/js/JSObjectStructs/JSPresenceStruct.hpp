@@ -8,7 +8,7 @@
 #include "JSSuspendable.hpp"
 #include "JSPositionListener.hpp"
 #include <sirikata/core/util/Nullable.hpp>
-
+#include "../JSObjects/JSObjectsUtils.hpp"
 namespace Sirikata {
 namespace JS {
 
@@ -194,6 +194,7 @@ private:
 
     ContextVector associatedContexts;
     void clearPreviousConnectedCB();
+};
 
 #define checkCleared(funcName)  \
     String fname (funcName);    \
@@ -202,7 +203,12 @@ private:
         String errorMessage = "Error when calling " + fname + " on presence.  The presence has already been cleared."; \
         return v8::ThrowException(v8::Exception::Error(v8::String::New(errorMessage.c_str()))); \
     }
-};
+
+
+#define INLINE_CHECK_IS_CONNECTED_ERROR(where)                          \
+    if (! isConnected)                                                  \
+        V8_EXCEPTION_CSTR("Error in " #where " presence was disconnected when called.");
+
 
 typedef std::vector<JSPresenceStruct*> JSPresVec;
 typedef JSPresVec::iterator JSPresVecIter;

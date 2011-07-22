@@ -189,11 +189,8 @@ ProxyManagerPtr HostedObject::getProxyManager(const SpaceID& space, const Object
     SpaceObjectReference toFind(space,oref);
     PresenceDataMap::const_iterator it = mPresenceData->find(toFind);
     if (it == mPresenceData->end())
-    {
-        ProxyManagerPtr returner;
-        return returner;
+        return ProxyManagerPtr();
 
-    }
     return it->second.proxyManager;
 }
 
@@ -725,6 +722,9 @@ bool HostedObject::handleLocationMessage(const SpaceObjectReference& spaceobj, c
         Sirikata::Protocol::Loc::LocationUpdate update = contents.update(idx);
 
         ProxyManagerPtr proxy_manager = getProxyManager(spaceobj.space(), spaceobj.object());
+        if (!proxy_manager)
+            HO_LOG(warn,"Hosted Object received a message for a presence without a proximity manager.");
+
         SpaceObjectReference observed(spaceobj.space(), ObjectReference(update.object()));
         ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(observed);
 
@@ -1056,6 +1056,12 @@ void HostedObject::requestOrientationDirectionUpdate(const SpaceID& space, const
 Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    if (!proxy_obj)
+    {
+        HO_LOG(warn,"Requesting quat vel for missing proxy.  Returning blank.");
+        return Quaternion();
+    }
+
     return proxy_obj->getOrientationSpeed();
 }
 
@@ -1063,6 +1069,13 @@ Quaternion HostedObject::requestCurrentQuatVel(const SpaceID& space, const Objec
 Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    if (!proxy_obj)
+    {
+        HO_LOG(warn,"Requesting orientation for missing proxy.  Returning blank.");
+        return Quaternion();
+    }
+
+    
     Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     return curLoc.getOrientation();
 }
@@ -1070,6 +1083,13 @@ Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const O
 Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
+    if (!proxy_obj)
+    {
+        HO_LOG(warn,"Requesting current orientation for missing proxy.  Returning blank.");
+        return Quaternion();
+    }
+
+    
     Quaternion returner  = proxy_obj->getOrientationSpeed();
     return returner;
 }
@@ -1113,7 +1133,20 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
 {
 
     ProxyManagerPtr proxy_manager = getProxyManager(space,oref);
+
+    if (!proxy_manager)
+    {
+        HO_LOG(warn,"Requesting mesh without proxy manager. Doing nothing");
+        return false;
+    }
+    
     ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
+
+    if (! proxy_obj)
+    {
+        HO_LOG(warn,"Requesting mesh for disconnected. Doing nothing");
+        return false;
+    }
 
     tUri = proxy_obj->getMesh();
     return true;
@@ -1141,8 +1174,18 @@ void HostedObject::requestOrientationUpdate(const SpaceID& space, const ObjectRe
     updateLocUpdateRequest(space, oref, NULL, &orient, NULL, NULL, NULL);
 }
 
+
+
 BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const ObjectReference& oref) {
     ProxyObjectPtr proxy_obj = getProxy(space,oref);
+
+    if (!proxy_obj)
+    {
+        HO_LOG(warn,"Requesting bounding sphere for missing proxy.  Returning blank.");
+        return BoundingSphere3f();
+    }
+
+    
     return proxy_obj->getBounds();
 }
 
@@ -1157,6 +1200,13 @@ void HostedObject::requestMeshUpdate(const SpaceID& space, const ObjectReference
 
 const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const ObjectReference& oref) {
     ProxyObjectPtr proxy_obj = getProxy(space, oref);
+    if (!proxy_obj)
+    {
+        HO_LOG(warn,"Requesting physics for missing proxy.  Returning blank.");
+        return "";
+    }
+
+    
     return proxy_obj->getPhysics();
 }
 
@@ -1248,6 +1298,14 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
     PerPresenceData& pd = (mPresenceData->find(SpaceObjectReference(space, oref)))->second;
 
     ProxyObjectPtr self_proxy = getProxy(space, oref);
+
+    if (!self_proxy)
+    {
+        HO_LOG(warn,"Requesting sendLocUpdateRequest for missing self proxy.  Doing nothing.");
+        return;
+    }
+
+    
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
@@ -1316,7 +1374,12 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
 Location HostedObject::getLocation(const SpaceID& space, const ObjectReference& oref)
 {
     ProxyObjectPtr proxy = getProxy(space, oref);
-    assert(proxy);
+    if (!proxy)
+    {
+        HO_LOG(warn,"Requesting getLocation for missing proxy.  Doing nothing.");
+        return Location();
+    }
+
     Location currentLoc = proxy->globalLocation(currentSpaceTime(space));
     return currentLoc;
 }

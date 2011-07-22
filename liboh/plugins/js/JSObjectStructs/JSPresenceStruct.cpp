@@ -274,16 +274,22 @@ void JSPresenceStruct::clearPreviousConnectedCB()
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOrientation)
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setOrientation");
     jpp->emerScript->setOrientationFunction(getSporef(),newOrientation);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion newOrientationVel)
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setOrientationVel");
     jpp->emerScript->setOrientationVelFunction(getSporef(),newOrientationVel);
     return v8::Undefined();
 }
 
+
+
+//FIXME: should store query angle locally instead of requiring a request through
+//EmersonScript to hosted object.
 SolidAngle JSPresenceStruct::getQueryAngle()
 {
     return jpp->emerScript->getQueryAngle(getSporef());
@@ -291,11 +297,13 @@ SolidAngle JSPresenceStruct::getQueryAngle()
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("getQueryAngle");
     return v8::Number::New(getQueryAngle().asFloat());
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryAngle");
     jpp->emerScript->setQueryAngleFunction(getSporef(), new_qa);
     mQuery = new_qa;
     return v8::Undefined();
@@ -303,12 +311,15 @@ v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 
 v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
     jpp->emerScript->setVisualScaleFunction(getSporef(), new_scale);
     return v8::Undefined();
 }
 
+
 v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setPosition");
     jpp->emerScript->setPositionFunction(getSporef(), newPos);
     return v8::Undefined();
 }
@@ -318,6 +329,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
     return jpp->emerScript->getPhysicsFunction(getSporef());
 }
 v8::Handle<v8::Value> JSPresenceStruct::setPhysicsFunction(const String& phy) {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setPhysics");
     jpp->emerScript->setPhysicsFunction(getSporef(), phy);
     return v8::Undefined();
 }
@@ -357,6 +369,7 @@ void JSPresenceStruct::disconnectCalledFromObjScript()
 
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {
+    INLINE_CHECK_IS_CONNECTED_ERROR("setMesh");
     jpp->emerScript->setVisualFunction(getSporef(), urilocation);
     return v8::Undefined();
 }
@@ -396,10 +409,7 @@ void JSPresenceStruct::addAssociatedContext(JSContextStruct* toAdd)
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {
-    if (!getIsConnected())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Error when calling setVelocity on presence.  The presence is not connected to any space, and therefore has no velocity to set.")));
-
-
+    INLINE_CHECK_IS_CONNECTED_ERROR("setVelocity");
     jpp->emerScript->setVelocityFunction(getSporef(),newVel);
     return v8::Undefined();
 }
