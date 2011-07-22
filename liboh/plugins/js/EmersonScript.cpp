@@ -642,7 +642,7 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
 
     if (! parsed)
         return false;
-    
+
     return deserializeMsgAndDispatch(src,dst,js_msg);
 }
 
@@ -690,14 +690,14 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
             //anything, just return.
             if (receiver->presenceMessageCallback.IsEmpty())
                 continue;
-            
+
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
-            
+
            v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,receiver->mContext);
            v8::Local<v8::Object> msgObj = v8::Object::New();
 
-            
+
             //try deserialization
            bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,msgObj);
 
@@ -707,7 +707,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
                mHandlingEvent =false;
                return false;
            }
-                
+
            v8::Handle<v8::Value> argv[3];
            argv[0] =msgObj;
            argv[1] = msgSender;
@@ -725,7 +725,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
         (*toClearIter)->finishClear();
     }
     contextsToClear.clear();
-    
+
     //if one of the actions that your handler took was to call reset, then reset
     //the entire script.
     if (mResetting)
@@ -766,7 +766,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
     //sandbox sender was destroyed and then a new one created with the same
     //senderID.  That's exceptionally unlikely, but may want to fix just in
     //case.
-    
+
     //check to ensure that sender and receiver still exist.  If either don't,
     //then drop the mesage.
     std::map<uint32,JSContextStruct*>::iterator senderFinder = mContStructMap.find(senderID);
@@ -774,7 +774,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
         return;
 
     JSContextStruct* sender = senderFinder->second;
-    
+
     std::map<uint32,JSContextStruct*>::iterator receiverFinder = mContStructMap.find(receiverID);
     if (receiverFinder == mContStructMap.end())
         return;
@@ -786,13 +786,13 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
     if (receiver->sandboxMessageCallback.IsEmpty())
         return;
 
-    
+
     //deserialize the message to an object
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromArray(msgToSend.data(), msgToSend.size());
     if (!parsed)
         return;
-    
+
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(receiver->mContext);
     v8::Local<v8::Object> msgObj = v8::Object::New();
@@ -815,7 +815,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
         argv[1] = senderObj;
     }
 
-    
+
     invokeCallback(receiver,receiver->sandboxMessageCallback,2,argv);
 }
 
@@ -915,6 +915,18 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
 {
     v8::Context::Scope context_scope(jsctx->mContext);
 
+    // Sometimes, we might call restore presence on a presence that already
+    //exists and might even be connected, e.g. if system.reset() is called on a
+    //script that tries to restore from object storage (the presence isn't
+    //deleted by reset, but when the script finds the presence in storage it
+    //invokes restore presence). Its not clear whether we should use the
+    //existing settings or override them with the restored values, so for now,
+    //if we find the presence we just return it directly.
+    PresenceMapIter piter = mPresences.find(psrp.sporef);
+    if (piter != mPresences.end()) {
+        v8::HandleScope handle_scope;
+        return handle_scope.Close(wrapPresence(piter->second,&(jsctx->mContext)));
+    }
 
     MotionVector3f motVec(psrp.position,psrp.velocity);
     TimedMotionVector3f tMotVec(mParent->currentLocalTime(),motVec);
@@ -925,7 +937,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     }
     Vector3d newPosD (psrp.position.x,psrp.position.y,psrp.position.z);
 
-    
+
     MotionQuaternion motQuat(psrp.orient,psrp.orientVelocity);
     TimedMotionQuaternion tMotQuat (mParent->currentLocalTime(), motQuat);
     if (!psrp.orientTime.isNull())
@@ -941,7 +953,7 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     BoundingSphere3f bs = BoundingSphere3f(psrp.position, psrp.scale);
 
     Location newLoc(newPosD,psrp.orient,psrp.velocity, newAngAxis,newAngVel);
-    
+
 
     HostedObject::PresenceToken presToke = incrementPresenceToken();
     JSPresenceStruct* jspres = new JSPresenceStruct(this,psrp,psrp.position,
@@ -966,7 +978,6 @@ v8::Handle<v8::Value> EmersonScript::restorePresence(PresStructRestoreParams& ps
     //if is unconnected, return presence now.
     v8::HandleScope handle_scope;
     return handle_scope.Close(wrapPresence(jspres,&(jsctx->mContext)));
-
 }
 
 
