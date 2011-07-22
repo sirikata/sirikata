@@ -21,34 +21,180 @@ util.Vec3 = function (x,y,z)
         print(this.z);
         print("\n\n");
     };
-};
 
-util.minus = function (a,b)
-{
-    //super primitive checking to see if a is a vector
-    if (typeof(a) == 'object')
+    this.add = function(rhs)
     {
-        //comment out next line and uncomment out line after when running through emerson.  Uncomment next line and uncomment next if running rhino
-        return new util.Vec3(a.x-b.x, a.y-b.y, a.z-b.z);            
-        //return <a.x-b.x, a.y-b.y, a.z-b.z>;            
-    }
+        return new util.Vec3(this.x + rhs.x, this.y + rhs.y, this.z + rhs.z);
+    };
 
-    return a-b;
-};
-
-
-util.plus = function(a,b)
-{
-    //super primitive checking to see if a is a vector
-    if (typeof(a) == 'object')
+    this.sub = function(rhs)
     {
-        //comment out next line and uncomment out line after when running through emerson.  Uncomment next line and uncomment next if running rhino
-        return new util.Vec3(a.x+b.x,  a.y+b.y,a.z+b.z);            
-        //return <a.x+b.x,  a.y+b.y,a.z+b.z>;            
-    }
+        return new util.Vec3(this.x - rhs.x, this.y - rhs.y, this.z - rhs.z);
+    };
 
-    return a+b;
+    this.scale = function(rhs) {
+        return new util.Vec3(this.x * rhs, this.y * rhs, this.z * rhs);
+    };
+
+    
+    this.mul = function(rhs) {
+        if (typeof(rhs) === "number")
+            return this.scale(rhs);
+        return this.componentMultiply(rhs);
+    };
+
+    this.div = function(rhs) {
+        return new util.Vec3(this.x / rhs, this.y / rhs, this.z / rhs);
+    };
+
+
+    this.equal = function(rhs){
+        if (rhs == null)
+            return false;
+
+        //want to prevent general case of saying that a vector is equal to a quaternion.
+        if (typeof (rhs.w) != 'undefined')
+            return false;
+    
+        return ((this.x === rhs.x) && (this.y === rhs.y) && (this.z === rhs.z));
+    };
+    
 };
+
+
+/**
+     Overloads the '+' operator.
+
+     Checks if lhs has a plus function defined on it.  If it does, then
+     calls lhs.plus(rhs).  If it doesn't, call javascript version of +
+     */
+    util.plus = function (lhs, rhs)
+    {
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.add) == 'function')
+                return lhs.add(rhs);
+        }
+
+        return lhs + rhs;
+    };
+
+
+    /**
+     Overloads the '-' operator.
+     
+     Checks if lhs has a sub function defined on it.  If it does, then
+     calls lhs.sub(rhs).  If it doesn't, javascript version of -.
+     */
+    util.sub = function (lhs,rhs)
+    {
+        if ((lhs != null)&&(typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.sub) == 'function')
+                return lhs.sub(rhs);
+        }
+        
+        return lhs - rhs;
+    };
+
+    /**
+     Overloads the '/' operator.
+
+     Checks if lhs has a div function defined on it.  If it does, then
+     returns lhs.div(rhs).  Otherwise, returns normal js division.
+     */
+    util.div = function (lhs,rhs)
+    {
+        if ((lhs != null)&&(typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.div) == 'function')
+                return lhs.div(rhs);
+        }
+        
+        return lhs/rhs;
+    };
+
+    /**
+     Overloads the '*' operator.
+
+     Checks if lhs has a mul function defined on it.  If it does, then
+     returns lhs.mul(rhs).  Otherwise, returns normal js *.
+     */
+    util.mul = function (lhs,rhs)
+    {
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.mul) == 'function')
+                return lhs.mul(rhs);
+        }
+        
+        return lhs* rhs;
+    };
+
+    /**
+     Overloads the '%' operator.
+
+     Checks if lhs has a mod function defined on it.  If it does, then
+     returns lhs.mod(rhs).  Otherwise, returns normal js modulo.
+     */
+    util.mod = function (lhs,rhs)
+    {
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.mod) == 'function')
+                return lhs.mod(rhs);
+        }
+        
+        return lhs % rhs;
+    };
+
+
+    util.equal = function (lhs,rhs)
+    {
+        if ((lhs !=null) && (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.equal)  =='function')
+                return lhs.equal(rhs);
+        }
+        
+        return (lhs == rhs);
+    };
+
+    util.notEqual = function (lhs,rhs)
+    {
+        if ((lhs != null)&& (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.notEqual) == 'function')
+                return lhs.notEqual(rhs);
+        }
+        
+        return (lhs != rhs);
+    };
+
+    util.identical = function (lhs,rhs)
+    {
+        if ((lhs !== null) && (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.identical) == 'function')
+                return lhs.identical(rhs);
+        }
+        
+        return (lhs === rhs);
+    };
+
+    util.notIdentical = function (lhs,rhs)
+    {
+        if ((lhs != null) && (typeof(lhs) != 'undefined'))
+        {
+            if (typeof(lhs.notIdentical) == 'function')
+                return lhs.notIdentical(rhs);
+        }
+        
+        return (lhs !== rhs);
+    };
+    
+
+
 
 util.patInc = 0;
 
