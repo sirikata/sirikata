@@ -35,7 +35,7 @@ pANTLR3_STRING emerson_printAST(pANTLR3_BASE_TREE tree)
     return emerson_printAST(tree,EmersonParserTokenNames);
 }
 
-
+/*
 bool emerson_compile(const char* em_script_str, std::string& toCompileTo)
 {
     FILE* no_dbg = NULL;
@@ -44,16 +44,18 @@ bool emerson_compile(const char* em_script_str, std::string& toCompileTo)
 
 bool emerson_compile(const char* em_script_str, std::string& toCompileTo, FILE* dbg) {
     int errorNum;
-    return emerson_compile(em_script_str,toCompileTo, errorNum, dbg);
+    return emerson_compile(em_script_str,toCompileTo, errorNum, dbg, NULL);
 }
-
+*/
 // This version of the function should be called from the main compiler
 
-bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo, int& errorNum, EmersonErrorFuncType error_cb) {
-    return emerson_compile(_originalFile, em_script_str, toCompileTo,errorNum, error_cb, NULL);
+bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo,
+                     int& errorNum, EmersonErrorFuncType error_cb, EmersonLineMap* lineMap) {
+    return emerson_compile(_originalFile, em_script_str, toCompileTo,errorNum, error_cb, NULL, lineMap);
 }
 
-bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo, int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg)
+bool emerson_compile(std::string _originalFile, const char* em_script_str, std::string& toCompileTo,
+                     int& errorNum, EmersonErrorFuncType errorFunction, FILE* dbg, EmersonLineMap* lineMap)
 {
   _emersonInfo = new EmersonInfo();
   if(_originalFile.size() > 0 )
@@ -68,16 +70,16 @@ bool emerson_compile(std::string _originalFile, const char* em_script_str, std::
 
   _emersonInfo->mismatchTokenFunctionIs(&myRecoverFromMismatchedToken);
 
-  return emerson_compile(em_script_str, toCompileTo,errorNum, dbg);
+  return emerson_compile(em_script_str, toCompileTo,errorNum, dbg, lineMap);
 }
 
 bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum) {
-    return emerson_compile(em_script_str, toCompileTo,errorNum, NULL);
+    return emerson_compile(em_script_str, toCompileTo,errorNum, NULL, NULL);
 }
 
 // This is mor basic version of the function. Should be called from else where
 
-bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum, FILE* dbg)
+bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& errorNum, FILE* dbg, EmersonLineMap* lineMap)
 {
     if (dbg != NULL) fprintf(dbg, "Trying to compile \n %s\n", em_script_str);
 
@@ -173,12 +175,20 @@ bool emerson_compile(const char* em_script_str, std::string& toCompileTo, int& e
         treePsr= EmersonTreeNew(nodes);
         _treeParser = treePsr;
 
-        
-        ANTLR3_STRING_struct* mString = treePsr->program(treePsr);
+        EmersonTree_program_return returnValues = treePsr->program(treePsr);
+        ANTLR3_STRING_struct* mString = returnValues.return_str;
         char* intermediate = (char*)mString->chars;
         int sizeCode = mString->len;
         toCompileTo = std::string(intermediate,sizeCode);
         returner = true;
+
+        if (lineMap != NULL) {
+            for (int i = 0; i < returnValues.numLines; i++) {
+                (*lineMap)[returnValues.jsLines[i]] = returnValues.emersonLines[i];
+            }
+        }
+        free(returnValues.jsLines);
+        free(returnValues.emersonLines);
         
         if (dbg != NULL) fprintf(dbg, "The generated code is \n %s \n", toCompileTo.c_str());
 

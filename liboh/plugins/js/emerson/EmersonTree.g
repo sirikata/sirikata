@@ -26,8 +26,29 @@ options
     #include <string.h>
     #include <antlr3.h>
     #include "Util.h"
-    #define APP(s)  program_string->append(program_string, s);
+    #define APP(s) \
+        { \
+            const char* str = s; \
+            int len = strlen(str); \
+            int numNewlines = 0; \
+            for (int i = 0; i < len; i++) \
+                if (str[i] == '\n') \
+                    numNewlines++; \
+            program_string->append(program_string, str); \
+            current_line += numNewlines; \
+        }
 
+    #define LINE(num) \
+        { \
+            if (lineIndex >= linesSize) { \
+                linesSize *= 2; \
+                emersonLines = (int*)realloc(emersonLines, linesSize); \
+                jsLines = (int*)realloc(jsLines, linesSize); \
+            } \
+            emersonLines[lineIndex] = num; \
+            jsLines[lineIndex] = current_line; \
+            lineIndex++; \
+        }
 
     #define CHECK_RESOURCES()                 \
     {                                         \
@@ -50,21 +71,31 @@ options
     #endif
 }
 
-@members
+@members    
 {
     pANTLR3_STRING program_string;
-    ANTLR3_UINT32 program_line;
-    ANTLR3_UINT32 line_pos;
+    int current_line;
+    int* emersonLines;
+    int* jsLines;
+    int linesSize;
+    int lineIndex;
     extern pEmersonTree _treeParser;
     
 }
 
 
-program returns [pANTLR3_STRING  s]
+program returns [pANTLR3_STRING return_str, int* emersonLines, int* jsLines, int numLines]
 	:^(PROG 
             {
                 pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
                 program_string = factory->newRaw(factory);
+                
+                linesSize = 40;
+                lineIndex = 0;
+                emersonLines = (int*)malloc(linesSize * sizeof(int));
+                jsLines = (int*)malloc(linesSize * sizeof(int));
+    
+                current_line = 1;
             }
             (
               sourceElements
@@ -72,7 +103,10 @@ program returns [pANTLR3_STRING  s]
             )?
          )
          {
-            s = program_string;
+            retval.return_str = program_string;
+            retval.emersonLines = emersonLines;
+            retval.jsLines = jsLines;
+            retval.numLines = lineIndex;
          }
 	;
 
@@ -90,6 +124,7 @@ sourceElement
 functionDeclaration
 	: ^( FUNC_DECL
               {
+                LINE($FUNC_DECL.line);
                 APP("function ");
               }
               Identifier
@@ -116,6 +151,7 @@ functionDeclaration
 functionExpression
 	: ^( FUNC_EXPR 
 	     {
+               LINE($FUNC_EXPR.line);
                APP("function ");
              }
              (			
@@ -207,6 +243,7 @@ variableStatement
 	:  ^( 
             VARLIST
             {
+                LINE($VARLIST.line);
                 APP("var ");
             }
             variableDeclarationList
@@ -281,7 +318,7 @@ expressionStatement
 ifStatement
 	: ^(IF 
             {
-                
+                LINE($IF.line);
                 APP(" if ");
                 APP(" ( ");
             }
@@ -320,6 +357,7 @@ doWhileStatement
 	: ^( 
             DO
             {
+                LINE($DO.line); 
                 APP(" do ");  						  
                 //resource checking
                 APP("{\n");
@@ -341,6 +379,7 @@ whileStatement
 	: ^(
             WHILE
             {
+                LINE($WHILE.line); 
                 APP(" while ( ");
             }
             expression 
@@ -361,6 +400,7 @@ forStatement
 	: ^(
             FOR 
             {
+                LINE($FOR.line); 
                 APP(" for ( ");
             }
             (^(FORINIT forStatementInitialiserPart))?
@@ -394,6 +434,7 @@ forInStatement
 	: ^(
         FORIN 
         {
+            LINE($FORIN.line);
             APP(" for ( ");
         }
 
@@ -439,6 +480,7 @@ breakStatement
     : ^(
         BREAK
         {
+            LINE($BREAK.line);
             APP("break ");
         }
         (
@@ -455,6 +497,7 @@ returnStatement
     : ^(
         RETURN 
         {
+            LINE($RETURN.line);
             APP("return ");
         }
         (		
@@ -465,7 +508,7 @@ returnStatement
 	
 withStatement
     : ^(WITH 
-          {APP("with ( ");}
+          {LINE($WITH.line); APP("with ( ");}
 
           expression 
           {APP(" )");}
@@ -480,6 +523,7 @@ switchStatement
     : ^(
         SWITCH 
         {
+            LINE($SWITCH.line); 
             APP(" switch ( ");
         }
         expression 
@@ -593,6 +637,7 @@ caseClauseSeenDefault
 defaultClause
     :^(DEFAULT
         {
+            LINE($DEFAULT.line); 
             APP("default: ");
         }
         statementList?
@@ -605,6 +650,7 @@ defaultClause
 throwStatement
     : ^(THROW
         {
+            LINE($THROW.line); 
             APP("throw ");
         }
         expression
@@ -617,6 +663,7 @@ throwStatement
 tryStatement
         : ^(TRY
             {
+                LINE($TRY.line); 
                 APP("try\n");
             }
             statementBlock
@@ -632,6 +679,7 @@ catchFinallyBlock
 catchBlock
         : ^(CATCH
             {
+                LINE($CATCH.line); 
                 APP("catch (");
             }
             Identifier
@@ -654,6 +702,7 @@ catchBlock
 finallyBlock
         : ^(FINALLY
             {
+                LINE($FINALLY.line); 
                 APP("finally \n");
                 APP(" {  \n");  
                 APP(" if ( system.__isResetting() ) \n { \n");
@@ -678,6 +727,7 @@ memAndCallExpression
 catchClause
 	: ^(CATCH 
 	    {
+                      LINE($CATCH.line); 
 					  APP(" catch ( ");
 					}
 	    Identifier 
@@ -694,6 +744,7 @@ catchClause
 finallyClause
 	: ^( FINALLY 
 	   {
+                  LINE($FINALLY.line); 
 				  APP(" finally ");
 
 				}

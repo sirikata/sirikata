@@ -577,8 +577,12 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
             int em_compile_err = 0;
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
 
+            JSLOG(detailed, "COMPILING");
             String js_script_str;
-            bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(), js_script_str,em_compile_err, handleEmersonRecognitionError);
+            EmersonLineMap lineMap;
+            bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(),
+                                                        js_script_str, em_compile_err, handleEmersonRecognitionError,
+                                                        &lineMap);
 
 
             if (successfullyCompiled)
