@@ -13,10 +13,15 @@ std.core.QueryDistance = system.Class.extend({
         this.addFunc = addFunction;
         this.removeFunc = removeFunction;
         this.pres = presence;
-        this.foundObjects = new Array();
+        //indexed by toString of visibles.
+        this.foundObjects = {};
+
+        this.isStopped = false;
         
         var func = std.core.bind(this.proxAddFunc, this);
-        presence.onProxAdded(func);
+        var removeFunc = std.core.bind(this.proxRemoveFunc,this);
+        presence.onProxAdded(func,true);
+        presence.onProxRemoved(removeFunc);
         presence.setQueryAngle(.01);
         
         var pollFunc = std.core.bind(this.distancePoll, this);
@@ -27,27 +32,50 @@ std.core.QueryDistance = system.Class.extend({
         var visible = new Object();
         visible.presence = presence;
         visible.distance = presence.dist(this.pres.getPosition());
-        for (var i = 0; i < this.foundObjects.length; i++) {
-            if (this.foundObjects[i].presence.toString() == presence.toString())
-                return;
-        }
-        if (visible.distance <= this.distance) {
+        if (presence.toString() in this.foundObjects)
+            return;
+
+        if ((visible.distance <= this.distance) && (!this.isStopped)) {
             this.addFunc(presence);
         }
-        this.foundObjects.push(visible);
+        this.foundObjects[presence.toString()] = visible;
     },
+
+
+    proxRemoveFunc: function(presence) {
+        if (presence.toString() in this.foundObjects)
+        {
+            var visible = this.foundObjects[presence.toString()];
+            if (this.removeFunc && (visible.distance <= this.distance) && (! this.isStopped))
+            {
+                //means that presence previously had been within query and
+                //that we need to actuall call removeFunc.
+                this.removeFunc(presence);                    
+            }
+
+            //actually remove visible from set that we were tracking.
+            delete this.foundObjects[presence.toString()];
+        }
+    },
+
+                                                 
+                                                 
     distancePoll: function() {
-        for (var i in this.foundObjects) {
+        for (var i in this.foundObjects)
+        {
             var visible = this.foundObjects[i];
             var currentDistance = visible.presence.dist(this.pres.getPosition());
             if (this.addFunc && visible.distance > this.distance && 
-                currentDistance <= this.distance) {
+                currentDistance <= this.distance  && (! this.isStopped)) {
                 //If the object used to be > Distance but is now within it.
-                this.addFunc(this.visible.presence);
+                
+                this.addFunc(visible.presence);
             }
 
-            if (this.removeFunc && this.visible.distance <= this.distance &&
-                visible.presence.dist(this.pres.getPosition()) > this.distance) {
+            if (this.removeFunc && visible.distance <= this.distance &&
+                visible.presence.dist(this.pres.getPosition()) > this.distance &&
+               (!this.isStopped))
+            {
                 //If the object used to be <= Distance but is now outside it.
                 this.removeFunc(visible.presence);  
             }
@@ -55,12 +83,14 @@ std.core.QueryDistance = system.Class.extend({
         }
    },
    StopDistanceQuery: function() {
-      this.timerName.suspend();
+       this.isStopped = true;
+       this.timerName.suspend();
    },
    SetDistanceQueryRate: function(time) {
-      this.timerName.suspend();
-      var repTimer = new std.core.RepeatingTimer(time, this.distancePoll);
-      this.timerName = repTimer;
+       this.timerName.suspend();
+       var repTimer = new std.core.RepeatingTimer(time, this.distancePoll);
+       this.timerName = repTimer;
+       this.isStopped = false;
    }
 });
 
