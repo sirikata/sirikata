@@ -33,7 +33,7 @@
 #ifndef _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 #define _SIRIKATA_JS_OBJECT_SCRIPT_MANAGER_HPP_
 
-
+#include "Platform.hpp"
 #include <sirikata/oh/ObjectScriptManager.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/transfer/TransferMediator.hpp>
@@ -51,7 +51,7 @@ namespace JS {
 
 class JSObjectScript;
 
-class JSObjectScriptManager : public ObjectScriptManager {
+class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScriptManager : public ObjectScriptManager {
 public:
     static ObjectScriptManager* createObjectScriptManager(ObjectHostContext* ctx, const Sirikata::String& arguments);
 

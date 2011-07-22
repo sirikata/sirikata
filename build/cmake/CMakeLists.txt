@@ -1982,13 +1982,13 @@ ADD_PLUGIN_TARGET(scripting-js
                     TARGET_CXXFLAGS  ${BERKELIUM_CFLAGS}
                     LIBRARIES ${V8_LIBRARIES} ${SIRIKATA_OH_LIB} ${SIRIKATA_CORE_LIB} ${ANTLR_LIBRARIES}
 		    VERSION_INFO ${SIRIKATA_VERSION_SETTINGS}
+                    DEFINE SIRIKATA_SCRIPTING_JS_BUILD
                     )
 SET(PLUGIN_INSTALL_LIST ${PLUGIN_INSTALL_LIST} scripting-js)
 ENDIF()
 
 
 SET(EMHEADLESS_SOURCES
-  ${LIBOH_PLUGIN_JS_SOURCES}
   ${LIBOH_PLUGIN_JS_DIR}/headless/EMHeadless.cpp
   )
  
@@ -2235,11 +2235,15 @@ IF(V8_FOUND)
   ADD_EXECUTABLE(emheadless ${EMHEADLESS_SOURCES})
   SET_TARGET_PROPERTIES(emheadless PROPERTIES ${COMPILE_DEFS_OPT})
   SET_TARGET_PROPERTIES(emheadless PROPERTIES ${SIRIKATA_VERSION_SETTINGS})
+  # This kind of weirdly links against the scripting-js plugin. This
+  # avoids having to compile everything twice since emheadless just
+  # instantiates a JSObjectScriptManager and JSObjectScript.
   TARGET_LINK_LIBRARIES(emheadless
     ${Boost_LIBRARIES}
     ${V8_LIBRARIES}
     ${SIRIKATA_OH_LIB}
     ${SIRIKATA_CORE_LIB}
+    scripting-js
     ${ANTLR_LIBRARIES}
     )
 ENDIF(V8_FOUND)

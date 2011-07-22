@@ -34,7 +34,7 @@
 #define __SIRIKATA_JS_OBJECT_SCRIPT_HPP__
 
 
-
+#include "Platform.hpp"
 #include <string>
 #include <sirikata/oh/ObjectScript.hpp>
 #include <sirikata/oh/ObjectScriptManager.hpp>
@@ -64,7 +64,7 @@ namespace JS {
 
 void printException(v8::TryCatch& try_catch);
 
-class JSObjectScript : public ObjectScript, public Liveness
+class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScript : public ObjectScript, public Liveness
 {
 public:
     JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id);
@@ -109,8 +109,8 @@ public:
     //JSContextStructs request the JSObjectScript to call finishClear on them
     //when doing so won't invalidate any iterators on the JSObjectScript.
     virtual void registerContextForClear(JSContextStruct* jscont);
-    
-    
+
+
     v8::Handle<v8::Value> storageBeginTransaction(JSContextStruct* jscont);
     v8::Handle<v8::Value> storageCommit(JSContextStruct* jscont, v8::Handle<v8::Function> cb);
     v8::Handle<v8::Value> storageWrite(const OH::Storage::Key& key, const String& toWrite, v8::Handle<v8::Function> cb, JSContextStruct* jscont);
@@ -218,7 +218,7 @@ protected:
     // Each context has an id that is assigned from this variable.
     uint32 contIDTracker;
     std::map<uint32,JSContextStruct*> mContStructMap;
-    
+
 
     // EvalContext tracks the current state w.r.t. eval-related statements which
     // may change in response to user actions (changing directory) or due to the
