@@ -93,9 +93,6 @@ String exceptionAsString(v8::TryCatch& try_catch, EmersonLineMap* lineMap) {
         const char* filename_string = ToCString(filename);
         int linenum = message->GetLineNumber();
         if (lineMap != NULL) {
-            for (EmersonLineMap::iterator i = lineMap->begin(); i != lineMap->end(); i++)
-                JSLOG(error, "js line " << i->first << " -> emerson line " << i->second);
-
             EmersonLineMap::iterator iter = lineMap->find(linenum);
             if (iter != lineMap->end())
                 linenum = iter->second;
