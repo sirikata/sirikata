@@ -220,6 +220,11 @@ bool OgreSystem::translateToDisplayViewport(float32 x, float32 y, float32* ox, f
 }
 
 OgreSystem::~OgreSystem() {
+    if (mViewer) {
+        ProxyManagerPtr proxyManager = mViewer->presence(mPresenceID);
+        proxyManager->removeListener(this);
+    }
+
     decrefcount();
     destroyMouseHandler();
 }
