@@ -1,7 +1,8 @@
 
 #include "EmersonMessagingManager.hpp"
 #include "JSLogging.hpp"
-
+#include <sirikata/core/network/Frame.hpp>
+#include "Protocol_Frame.pbj.hpp"
 
 namespace Sirikata{
 namespace JS{
@@ -96,16 +97,27 @@ void EmersonMessagingManager::handleScriptCommStreamRead(SSTStreamPtr sstptr, st
 {
     prevdata->write((const char*)buffer, length);
 
-    //if can decode message, then pass it along, and perform cleanup
-    if (handleScriptCommRead(sstptr->remoteEndPoint().endPoint, sstptr->localEndPoint().endPoint, prevdata->str()))
+    while(true)
     {
-        // FIXME we should be getting a callback on stream close instead of
-        // relying on this parsing as an indicator
-        delete prevdata;
-        // Clear out callback so we aren't responsible for any remaining
-        // references to sstptr, and close the stream
-        sstptr->registerReadCallback(0);
-        sstptr->close(false);
+        std::string msg = Network::Frame::parse(*prevdata);
+        
+        // If we don't have a full message, just wait for more
+        if (msg.empty())
+            return;
+
+        //otherwise, try to handle it.
+        if (! handleScriptCommRead(sstptr->remoteEndPoint().endPoint, sstptr->localEndPoint().endPoint, msg))
+            JSLOG(error, "Error in messaging manager.  Cannot decode a message that had a full frame");
+
+
+        //perform cleanup and return if no more data is in pipe.
+        if (prevdata->eof())
+        {
+            delete prevdata;
+            sstptr->registerReadCallback(0);
+            sstptr->close(false);
+            return;
+        }
     }
 }
 
@@ -184,7 +196,7 @@ void EmersonMessagingManager::writeMessageSubstream(int err, SSTStreamPtr subStr
         return;
     }
 
-    writeData(subStreamPtr, msg, sender, receiver);
+    writeData(subStreamPtr, Network::Frame::write(msg), sender, receiver);
 }
 
 void EmersonMessagingManager::writeData(SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
@@ -210,7 +222,6 @@ void EmersonMessagingManager::writeData(SSTStreamPtr streamPtr, const String& ms
     else
         streamPtr->close(false);
 }
-
 
 
 } //end namespace js
