@@ -54,8 +54,8 @@ std.simpleStorage.setScript(
             storageTimer = std.core.RepeatingTimer(60, storeFunc);
             storeFunc(); // Force immediate storage
         };
-        if (system.self == system)
-            system.onPresenceConnected(function() { init(); });
-        else
+        if (system.self)
             init();
+        else
+            system.onPresenceConnected(function() { init(); });
     },false);

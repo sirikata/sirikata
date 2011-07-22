@@ -57,7 +57,12 @@ std.simpleStorage.setScript(
             simulator = new std.graphics.DefaultGraphics(system.self, 'ogregraphics');
         };
 
-        if (system.self == system)
+        if (system.self)
+        {
+            //already have a connected presence, use it.
+            init();
+        }
+        else
         {
             //if do not have a connected presence
             system.onPresenceConnected(
@@ -67,10 +72,6 @@ std.simpleStorage.setScript(
                 }
             );
         }
-        else
-        {
-            //already have a connected presence, use it.
-            init();
-        }
+
         
     }, false);

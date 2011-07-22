@@ -379,7 +379,7 @@ function PresenceEntry(sporef, presObj)
       //data
       system._selfMap = { };
 
-      system.__behindSelf = system;
+      system.__behindSelf = undefined;
 
       system.__setBehindSelf = function(toSetTo)
       {

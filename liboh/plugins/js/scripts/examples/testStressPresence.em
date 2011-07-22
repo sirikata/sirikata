@@ -99,4 +99,4 @@ function initTimers() {
 }
 
 system.onPresenceConnected(initTimers);
-if (system.self !== system) initTimers();
+if (system.self) initTimers();
