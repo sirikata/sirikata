@@ -41,6 +41,13 @@ util.Vec3.prototype.__getType = function()
     return 'vec3';
 };
 
+/** Make a copy of this vector.
+ *  @returns a copy of this Vec3.
+ */
+util.Vec3.prototype.clone = function() {
+    return new util.Vec3(this.x, this.y, this.z);
+};
+
 /** @function 
   @return negation of this vector
 */

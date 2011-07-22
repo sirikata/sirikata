@@ -39,7 +39,14 @@
  */
 util.Quaternion.prototype.identity = new util.Quaternion(0, 0, 0, 1);
 
-/** @function 
+/** Make a copy of this quaternion.
+ *  @returns a copy of this Quaternion.
+ */
+util.Quaternion.prototype.clone = function() {
+    return new util.Quaternion(this.x, this.y, this.z, this.w);
+};
+
+/** @function
 @return quaternion sum of the two quaternions*/
 util.Quaternion.prototype.add = function(rhs) {
     return new util.Quaternion(this.x + rhs.x, this.y + rhs.y, this.z + rhs.z, this.w + rhs.w);
