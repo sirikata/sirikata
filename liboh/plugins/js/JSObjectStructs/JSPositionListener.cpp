@@ -227,6 +227,11 @@ v8::Handle<v8::Value> JSPositionListener::loadMesh(JSContextStruct* ctx, v8::Han
 void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token ctx_alive, JSContextStruct* ctx, v8::Persistent<v8::Function> cb, Mesh::VisualPtr data) {
     if (!alive || !ctx_alive) return;
 
+    if (jpp->emerScript->isStopped()) {
+        JSLOG(warn, "Ignoring load mesh callback after shutdown request.");
+        return;
+    }
+
     mVisual = data;
 
     v8::HandleScope handle_scope;

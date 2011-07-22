@@ -181,6 +181,11 @@ void EmersonScript::resetPresence(JSPresenceStruct* jspresStruct)
 //is outside of querier's standing query registered to pinto).
 void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const SpaceObjectReference& querier)
 {
+    if (isStopped()) {
+        JSLOG(warn, "Ignoring proximity removal callback after shutdown request.");
+        return;
+    }
+
     JSLOG(detailed,"Notified that object "<<proximateObject->getObjectReference()<<" went out of query of "<<querier<<".  Mostly just ignoring it.");
 
 
@@ -276,6 +281,11 @@ void EmersonScript::printMPresences()
 
 void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectReference& proxTo)
 {
+    if (isStopped()) {
+        JSLOG(warn, "Ignoring proximity addition callback after shutdown request.");
+        return;
+    }
+
     // Invoke user callback
     PresenceMapIter iter = mPresences.find(proxTo);
     if (iter == mPresences.end())
@@ -582,6 +592,11 @@ void EmersonScript::invokeCallbackInContext(Liveness::Token alive, v8::Persisten
 //connection and disconnection events
 void EmersonScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSContextStruct* jscont, JSPresenceStruct* jspres)
 {
+    if (isStopped()) {
+        JSLOG(warn, "Ignoring presence callback after shutdown request.");
+        return;
+    }
+
     v8::HandleScope handle_scope;
     v8::Context::Scope(jscont->mContext);
     TryCatch try_catch;
@@ -644,6 +659,12 @@ void EmersonScript::registerContextForClear(JSContextStruct* jscont)
 
 bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
 {
+    if (isStopped()) {
+        JSLOG(warn, "Ignoring message after shutdown request.");
+        // Regardless of whether we can or not, just say we can't decode it.
+        return false;
+    }
+
     //cannot affect the event handlers when we are executing event handlers.
     mHandlingEvent = true;
 

@@ -59,6 +59,12 @@ v8::Handle<v8::Value> JSContextStruct::httpRequest(Sirikata::Network::Address ad
 
 void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& failureReason )
 {
+    // FIXME we really shouldn't need this, but JSObjectScript doesn't hold
+    if (jsObjScript->isStopped()) {
+        JSLOG(warn, "Ignoring http failure callback after shutdown request.");
+        return;
+    }
+
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(false), v8::String::New(failureReason.c_str(),failureReason.size())};
@@ -68,6 +74,11 @@ void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& fai
 
 void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpManager::HttpRespPtr httpResp)
 {
+    if (jsObjScript->isStopped()) {
+        JSLOG(warn, "Ignoring http success callback after shutdown request.");
+        return;
+    }
+
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Object> httpObj = v8::Object::New();
