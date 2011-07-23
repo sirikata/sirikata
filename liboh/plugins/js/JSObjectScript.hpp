@@ -155,7 +155,7 @@ public:
     //         stack. Otherwise, V8 gets stuck with an uncaught
     //         exception and fails on future V8 calls.
     v8::Handle<v8::Value> internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc = false);
-    v8::Handle<v8::Function> functionValue(const String& em_script_str);
+    v8::Local<v8::Function> functionValue(const String& em_script_str);
 
     // Print an exception "to" the script, i.e. using its system.print
     // method. This is useful for callbacks which are executed directly from C++

@@ -1086,7 +1086,8 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,con
 
 
 
-v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_str)
+
+v8::Local<v8::Function> JSObjectScript::functionValue(const String& js_script_str)
 {
   v8::HandleScope handle_scope;
 
@@ -1097,20 +1098,16 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
 
   const std::string new_code = sstream.str();
   counter++;
-
-  std::cout<<"\n\nDEBUG: This is the script string: "<<js_script_str<<"\n\n";
   
   v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, new_code, &origin, false));
-  v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
-  v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
-
-
-  INLINE_STR_CONV(pf->ToString(),afterStr,"");
-  std::cout<<"\nDEBUG: This is the script string after: "<<afterStr<<"\n\n";
-
+  if (!v->IsFunction())
+  {
+      assert(false);
+  }
   
-  return pf;
+  v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
+  return handle_scope.Close(f);
 }
 
 

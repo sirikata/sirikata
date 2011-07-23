@@ -379,21 +379,22 @@ bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver
 
 v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeserialize)
 {
+    v8::HandleScope handle_scope;
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromString(toDeserialize);
 
     if (!parsed)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error deserializing string.")));
 
-    v8::Local<v8::Object> obj = v8::Object::New();
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
+    bool deserializedSuccess;
+    v8::Handle<v8::Object> obj = JSSerializer::deserializeObject(emerScript, js_msg,deserializedSuccess);
 
-   CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
-   bool deserializedSuccess = JSSerializer::deserializeObject(emerScript, js_msg,obj);
-//    bool deserializedSuccess = JSSerializer::deserializeObject(NULL, js_msg,obj);
+
     if (!deserializedSuccess)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
 
-    return obj;
+    return handle_scope.Close(obj);
 }
 
 

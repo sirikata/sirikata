@@ -148,9 +148,8 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toSta
   annotateMessage(jsmessage,toStampWith);
 
   if(v8Val->IsObject())
-  {
       serializeObjectInternal(v8Val, jsmessage,toStampWith,allObjs);
-  }
+
 
   std::string serialized_message;
   jsmessage.SerializeToString(&serialized_message);
@@ -184,7 +183,7 @@ void debug_printSerialized(Sirikata::JS::Protocol::JSMessage jm, String prepend)
 
 std::vector<String> getPropertyNames(v8::Local<v8::Object> obj) {
     std::vector<String> results;
-
+    
     v8::Local<v8::Array> properties = obj->GetPropertyNames();
     for(uint32 i = 0; i < properties->Length(); i++) {
         v8::Local<v8::Value> prop_name = properties->Get(i);
@@ -203,23 +202,20 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
     if (obj->GetPrototype()->IsUndefined() || obj->GetPrototype()->IsNull())
         return all_props;
 
-    //lkjs;
-    if (! obj->GetPrototype()->IsObject())
-        assert(false);
-
-    if ( v8::Local<v8::Object>::Cast(obj->GetPrototype()).IsEmpty())
-        assert(false);
-    
     std::vector<String> results;
     std::vector<String> prototype_props = getPropertyNames(v8::Local<v8::Object>::Cast(obj->GetPrototype()));
 
+    // //necessary because getPropertyNames won't return "prototype" for functions.
+    if (obj->Has(v8::String::New("prototype")))
+        results.push_back("prototype");
 
+    
     for(std::vector<String>::size_type i = 0; i < all_props.size(); i++) {
         if (std::find(prototype_props.begin(), prototype_props.end(), all_props[i]) == prototype_props.end())
             results.push_back(all_props[i]);
     }
 
-    results.push_back("prototype");
+    results.push_back(JSSERIALIZER_PROTOTYPE_NAME);
     return results;
 }
 
@@ -281,6 +277,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         }
     }
 
+
     std::vector<String> properties = getOwnPropertyNames(v8Obj);
 
     for( unsigned int i = 0; i < properties.size(); i++)
@@ -288,7 +285,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         String prop_name = properties[i];
 
         v8::Local<v8::Value> prop_val;
-        if (properties[i] == "prototype")
+        if (properties[i] == JSSERIALIZER_PROTOTYPE_NAME)
             prop_val = v8Obj->GetPrototype();
         else
             prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
@@ -450,7 +447,7 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
                 JSLOG(error, "error deserializing object pointing to "<< objid<< ". No record of that label.");
                 return false;
             }
-            if (objpointer.name != "prototype")
+            if (objpointer.name != JSSERIALIZER_PROTOTYPE_NAME)
                 objpointer.parent->Set(v8::String::New(objpointer.name.c_str(), objpointer.name.size()), finder->second);
             else
             {
@@ -465,67 +462,39 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
 }
 
 
-bool JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo)
+v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,bool& deserializeSuccessful)
 {
-
     v8::HandleScope handle_scope;
     ObjectMap labeledObjs;
     FixupMap  toFixUp;
-    v8::Handle<v8::Object> tmpParent;
 
+    v8::Handle<v8::Object> deserializeTo;
+    
     //if we're deserializing to a function, we need to know rigth off the bat,
     //and change toDeserializeTo to be a function.
     if (jsmessage.has_f_value())
-    {
         deserializeTo = emerScript->functionValue(jsmessage.f_value());
-        if (deserializeTo->IsFunction())
-        {
-            INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-            std::cout<<"\nDEBUG: BEFORE full deserialization: "<<afterStr<<"\n\n";
-        }
-        else
-            assert(false);
-    }
+    else
+        deserializeTo = v8::Object::New();
+
 
     //if can't handle first stage of deserialization, don't even worry about
     //fixups
     labeledObjs[jsmessage.msg_id()] = deserializeTo;
     if (! deserializeObjectInternal(emerScript, jsmessage,deserializeTo, labeledObjs,toFixUp))
-        return false;
+        return handle_scope.Close(deserializeTo);
 
-    //debugging
-    if (jsmessage.has_f_value())
-    {
-        if (deserializeTo->IsFunction())
-        {
-            INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-            std::cout<<"\nDEBUG: This is the script string after full deserialization: "<<afterStr<<"\n\n";
-        }
-        else
-            assert(false);
-
-
-    }
     
     
     //return whether fixups worked or not.
-    bool returner = deserializePerformFixups(labeledObjs,toFixUp);
-    return returner;
+    deserializeSuccessful = deserializePerformFixups(labeledObjs,toFixUp);
+    return handle_scope.Close(deserializeTo);
 }
 
 
 
 bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo, ObjectMap& labeledObjs,FixupMap& toFixUp)
 {
-
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in middle of deserialization: "<<afterStr<<"\n\n";
-    }
-    
-    Nullable<int32> idValue;
-    
     //check if there is a typeid field and what is the value for it
     bool isVisible = false;
     bool isSystem = false;
@@ -549,12 +518,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
     }
 
 
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 2 deserialization: "<<afterStr<<"\n\n";
-    }
-
     
     if (isSystem) {
         static String sysFieldname = "builtin";
@@ -566,13 +529,7 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
     }
 
 
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 3 deserialization: "<<afterStr<<"\n\n";
-    }
 
-    
     if(isVisible)
     {
       SpaceObjectReference visibleObj;
@@ -586,16 +543,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
           visibleObj = SpaceObjectReference(jsvalue.s_value());
 
       }
-
-
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 4 deserialization: "<<afterStr<<"\n\n";
-    }
-
-      
-
 
       //error if not in context, won't be able to create a new v8 object.
       //should just abort here before seg faulting.
@@ -612,26 +559,10 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       return true;
     }
 
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 5 deserialization: "<<afterStr<<"\n\n";
-    }
-
-
 
     
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
-
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 6 deserialization: "<<afterStr<<"\n\n";
-    }
-
-
-        
         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
 
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
@@ -658,8 +589,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
         {
             //check if what is to be serialized is a function or a plain-old object
             Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
-
-            v8::HandleScope handle_scope;
             v8::Handle<v8::Object> intDesObj;
             //we're dealing with a function
             if (internal_js_message.has_f_value())
@@ -667,7 +596,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             else
                 intDesObj = v8::Object::New();
 
-            idValue.setValue(jsvalue.o_value().msg_id());
             JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
             val = intDesObj;
             labeledObjs[jsvalue.o_value().msg_id()] = intDesObj;
@@ -678,19 +606,10 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             v8::Handle<v8::Object> intDesObj(intDesArr);
             Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.a_value();
 
-            idValue.setValue(jsvalue.a_value().msg_id());
             JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
             val = intDesObj;
             labeledObjs[jsvalue.a_value().msg_id()] = intDesObj;
         }
-        // else if(jsvalue.has_f_value())
-        // {
-        // lkjs; delete later;
-        //     v8::HandleScope handle_scope;
-        //     val = emerScript->functionValue(jsvalue.f_value().f_value());
-        //     //add the function to already-labeled objects
-        //     labeledObjs[jsvalue.f_value().func_id()] = v8::Handle<v8::Object>::Cast(val);
-        // }
         else if(jsvalue.has_d_value())
         {
             val = v8::Number::New(jsvalue.d_value());
@@ -705,44 +624,16 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             continue;
         }
 
-
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 7 deserialization: "<<afterStr<<"\n\n";
-    }
-
-        if (fieldname == "prototype")
+        if (fieldname == JSSERIALIZER_PROTOTYPE_NAME)
         {
             if (!val.IsEmpty() && !val->IsUndefined() && !val->IsNull())
-            {
-                std::cout<<"\nGot into set prototype\n";
                 deserializeTo->SetPrototype(val);
-            }
         }
         else {
-
-            std::cout<<"\n\nDID NOT GET A PROTOTYPE: "<< fieldname<<"\n";
             if (!val.IsEmpty())
                 deserializeTo->Set(fieldkey, val);
         }
-
-
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string in 8 deserialization: "<<afterStr<<"\n\n";
     }
-
-        
-    }
-
-    if (deserializeTo->IsFunction())
-    {
-        INLINE_STR_CONV(v8::Handle<v8::Function>::Cast(deserializeTo)->ToString(),afterStr,"");
-        std::cout<<"\nDEBUG: This is the script string at end of deserialization: "<<afterStr<<"\n\n";
-    }
-    
     return true;
 }
 

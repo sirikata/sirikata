@@ -18,6 +18,12 @@ namespace JS {
 const static int32 JSSERIALIZER_TOKEN= 30130;
 const static char* JSSERIALIZER_TOKEN_FIELD_NAME = "__JSSERIALIZER_TOKEN_FIELD_NAME&*^%$__";
 
+//Mult identify prototype of objects uniquely.  Cannot use "prototype" because
+//functions have prototype objects.  Must use a word that cannot be used to name
+//any other field.  Going with "this".
+const static char* JSSERIALIZER_PROTOTYPE_NAME= "this";
+
+
 //typedef std::map<int32,v8::Handle<v8::Object> >
 typedef std::vector<v8::Handle<v8::Object > > ObjectVec;
 typedef ObjectVec::iterator ObjectVecIter;
@@ -74,9 +80,7 @@ class JSSerializer
 
 public:
     static std::string serializeObject(v8::Local<v8::Value> v8Val,int32 toStamp = 0);
-    static bool deserializeObject(EmersonScript*, Sirikata::JS::Protocol::JSMessage jsmessage,v8::Handle<v8::Object>& deserializeTo);
-
-
+    static v8::Handle<v8::Object> deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,bool& deserializeSuccessful);
 };
 
 }}//end namespaces

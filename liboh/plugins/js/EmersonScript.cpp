@@ -659,6 +659,7 @@ void EmersonScript::registerContextForClear(JSContextStruct* jscont)
 
 bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
 {
+    
     if (isStopped()) {
         JSLOG(warn, "Ignoring message after shutdown request.");
         // Regardless of whether we can or not, just say we can't decode it.
@@ -695,11 +696,10 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
             v8::Context::Scope context_scope (receiver->mContext);
 
            v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,receiver->mContext);
-           v8::Local<v8::Object> msgObj = v8::Object::New();
-
 
             //try deserialization
-           bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,msgObj);
+           bool deserializeWorks;
+           v8::Handle<v8::Object> msgObj = JSSerializer::deserializeObject( this, js_msg,deserializeWorks);
 
            if (! deserializeWorks)
            {
@@ -795,9 +795,9 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
 
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(receiver->mContext);
-    v8::Local<v8::Object> msgObj = v8::Object::New();
 
-    bool deserializeWorks = JSSerializer::deserializeObject( this, js_msg,msgObj);
+    bool deserializeWorks;
+    v8::Handle<v8::Object> msgObj = JSSerializer::deserializeObject( this, js_msg,deserializeWorks);
     if (! deserializeWorks)
         return;
 
