@@ -387,8 +387,9 @@ v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeseria
 
     v8::Local<v8::Object> obj = v8::Object::New();
 
-    CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
-    bool deserializedSuccess = JSSerializer::deserializeObject(emerScript, js_msg,obj);
+   CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
+   bool deserializedSuccess = JSSerializer::deserializeObject(emerScript, js_msg,obj);
+//    bool deserializedSuccess = JSSerializer::deserializeObject(NULL, js_msg,obj);
     if (!deserializedSuccess)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
 

@@ -55,10 +55,6 @@ class JSSerializer
 
     static void unmarkSerialized(ObjectVec& toUnmark);
 
-    static void serializeFunction(v8::Local<v8::Function> v8Func, Sirikata::JS::Protocol::JSMessage&,int32& toStampWith,ObjectVec& allObjs);
-
-    static void serializeFunctionInternal(v8::Local<v8::Function> funcToSerialize, Sirikata::JS::Protocol::IJSFieldValue& field_to_put_in, int32& toStampWith);
-
 
     static void serializeVisible(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
     static void fillVisible(Sirikata::JS::Protocol::IJSMessage&, const SpaceObjectReference& listenTo);// Reused by serializePresence

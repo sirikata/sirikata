@@ -1094,15 +1094,22 @@ v8::Handle<v8::Function> JSObjectScript::functionValue(const String& js_script_s
   std::stringstream sstream;
   sstream <<  " __emerson_deserialized_function_" << counter << "__ = " << js_script_str << ";";
 
-  //const std::string new_code = std::string("(function () { return ") + js_script_str + "}());";
-  // The function name is not required. It is being put in because emerson is not compiling "( function() {} )"; correctly
+
   const std::string new_code = sstream.str();
   counter++;
 
+  std::cout<<"\n\nDEBUG: This is the script string: "<<js_script_str<<"\n\n";
+  
   v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, new_code, &origin, false));
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   v8::Persistent<v8::Function> pf = v8::Persistent<v8::Function>::New(f);
+
+
+  INLINE_STR_CONV(pf->ToString(),afterStr,"");
+  std::cout<<"\nDEBUG: This is the script string after: "<<afterStr<<"\n\n";
+
+  
   return pf;
 }
 
