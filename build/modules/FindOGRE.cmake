@@ -51,19 +51,21 @@ IF(WIN32)  # Windows
 
   SET(OGRE_FOUND FALSE)
 
-  IF(OGRE_ROOT AND EXISTS "${OGRE_ROOT}")
-    SET(OGRE_LIBRARY_DIRS ${OGRE_ROOT}/lib/Release ${OGRE_ROOT}/lib/Debug ${OGRE_ROOT}/lib)
-    SET(OGRE_LIBRARIES
-        debug OgreMain_d.lib
-        optimized OgreMain.lib)
-    SET(OGRE_LDFLAGS)
-    SET(OGRE_INCLUDE_DIRS ${OGRE_ROOT}/include ${OGRE_ROOT}/samples/include)
-    SET(OGRE_CFLAGS)
+  IF(OGRE_ROOT AND EXISTS ${OGRE_ROOT})
 
-    SET(OGRE_FOUND TRUE)
-    SET(OGRE_ZIP_PATH ${OGRE_ROOT}/data/OgreCore.zip)
+    IF (EXISTS ${OGRE_ROOT}/include/OgrePrerequisites.h)
+      SET(OGRE_LIBRARY_DIRS ${OGRE_ROOT}/lib/Release ${OGRE_ROOT}/lib/Debug ${OGRE_ROOT}/lib)
+      SET(OGRE_LIBRARIES
+          debug OgreMain_d.lib
+          optimized OgreMain.lib)
+      SET(OGRE_LDFLAGS)
+      SET(OGRE_INCLUDE_DIRS ${OGRE_ROOT}/include ${OGRE_ROOT}/samples/include)
+      SET(OGRE_CFLAGS)
 
-  ENDIF(OGRE_ROOT AND EXISTS "${OGRE_ROOT}")
+      SET(OGRE_FOUND TRUE)
+      SET(OGRE_ZIP_PATH ${OGRE_ROOT}/data/OgreCore.zip)
+    ENDIF()
+  ENDIF()
 
 ELSEIF(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")  # OS X
 
