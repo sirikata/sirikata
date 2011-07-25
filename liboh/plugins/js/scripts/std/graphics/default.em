@@ -32,6 +32,7 @@
 
 system.require('graphics.em');
 system.require('undo.em');
+system.require('axes.em');
 system.require('std/movement/pursue.em');
 system.require('std/script/scripter.em');
 system.require('inputbinding.em');
@@ -101,6 +102,7 @@ function() {
             scale: new std.graphics.ScaleDragHandler(this._simulator)
         };
 
+        this._simulator.createAxes(system.self);
 
         this._binding = new std.graphics.InputBinding();
         this._simulator.inputHandler.onAnything = std.core.bind(this._binding.dispatch, this._binding);
@@ -154,6 +156,11 @@ function() {
         this._binding.addAction('undo', std.core.bind(this.undo, this));
         this._binding.addAction('redo', std.core.bind(this.redo, this));
 
+        this._binding.addAction('axesToggleRotate', std.core.bind(this.axesToggleRotate, this));
+        this._binding.addAction('axesSnapGlobal', std.core.bind(this.axesSnapGlobal, this));
+        this._binding.addAction('axesSnapLocal', std.core.bind(this.axesSnapLocal, this));
+        this._binding.addAction('orientDefault', std.core.bind(this.orientDefault, this));
+
         /** Bindings are an *ordered* list of keys and actions. Keys
          *  are a combination of the type of event, the primary key
          *  for the event (key or mouse button), and modifiers.
@@ -179,6 +186,11 @@ function() {
 
             { key: ['button-pressed', 'z', 'ctrl' ], action: 'undo' },
             { key: ['button-pressed', 'y', 'ctrl' ], action: 'redo' },
+
+            { key: ['button-pressed', 'r', 'ctrl' ], action: 'axesToggleRotate' },
+            { key: ['button-pressed', 'g', 'ctrl' ], action: 'axesSnapGlobal' },
+            { key: ['button-pressed', 'g', 'alt' ], action: 'axesSnapLocal' },
+            { key: ['button-pressed', '0', 'ctrl' ], action: 'orientDefault' },
 
             { key: ['mouse-click', 2], action: 'pickObject' },
             { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
@@ -329,6 +341,9 @@ function() {
         if (clicked) {
             this._selected = clicked;
             this._simulator.bbox(this._selected, true);
+            this._simulator._axes.follow(clicked);
+        } else {
+            this._simulator._axes.follow(null);
         }
     };
 
@@ -361,6 +376,7 @@ function() {
     std.graphics.DefaultGraphics.prototype.forwardMouseDragToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
         this._propertybox.HandleUpdateProperties(this._selected);
+        this._simulator._axes.follow(this._selected);
     };
 
     /** @function */
@@ -405,6 +421,7 @@ function() {
             this._pres.getOrientation().zAxis().scale(-1), <0, 1, 0>));
         this.updateCameraOffset();
         this._moverot.reeval();
+        this._simulator._axes.follow(simulator._selected);
     };
 
     /** @function */
@@ -421,4 +438,34 @@ function() {
     std.graphics.DefaultGraphics.prototype.redo = function(evt) {
         this._simulator.redo();
     };
+
+    std.graphics.DefaultGraphics.prototype.axesToggleRotate = function(evt) {
+        this._simulator._axes.toggleRotateMode();
+    };
+
+    std.graphics.DefaultGraphics.prototype.axesSnapGlobal = function(evt) {
+        this._simulator._axes.snapGlobal();
+    };
+
+    std.graphics.DefaultGraphics.prototype.axesSnapLocal = function(evt) {
+        this._simulator._axes.snapLocal();
+    };
+
+    std.graphics.DefaultGraphics.prototype.orientDefault = function(evt) {
+        var vis = this._selected;
+        if(!vis)
+            return;
+        var orient = vis.orientation;
+        var movable = new std.movement.MovableRemote(vis);
+        movable.setOrientation(new util.Quaternion());
+        this._simulator.addUndoAction({}, {
+            undo: function(action) {
+                movable.setOrientation(orient);
+            },
+            redo: function(action) {
+                movable.setOrientation(new util.Quaternion());
+            }
+        });
+    }
+    
 })();

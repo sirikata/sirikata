@@ -89,7 +89,7 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
                     this._graphics.addUndoAction({
                         movable: this._dragging,
                         start: this._startPosition,
-                        end: this._dragging.dragPosition
+                        end: this._dragging.getPosition()
                     }, this);
                 }
                 this._dragging.dragPosition = null;
