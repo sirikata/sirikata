@@ -497,14 +497,17 @@ void EmersonScript::stop() {
 
     // Clean up ProxyCreationListeners. We subscribe for each presence in
     // onConnected, so we need to run through all presences (stored in the
-    // HostedObject) and clear out ourselfs as a listener
-    HostedObject::SpaceObjRefVec spaceobjrefs;
-    mParent->getSpaceObjRefs(spaceobjrefs);
-    //default connections.
-    for(HostedObject::SpaceObjRefVec::const_iterator space_it = spaceobjrefs.begin(); space_it != spaceobjrefs.end(); space_it++) {
-        ProxyManagerPtr proxy_manager = mParent->getProxyManager(space_it->space(), space_it->object());
+    // HostedObject) and clear out ourselfs as a listener. Note that we have to
+    // use our own list of presences (don't use HostedObject::getSpaceObjRefs)
+    // because we track presences *after* space-stream connection whereas the
+    // HostedObject tracks them after the initial connected reply message from
+    // the space.
+    for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++) {
+        const SpaceObjectReference& spaceobj = it->first;
+        ProxyManagerPtr proxy_manager = mParent->getProxyManager(spaceobj.space(), spaceobj.object());
         if (proxy_manager) proxy_manager->removeListener(this);
     }
+    mPresences.clear();
 }
 
 bool EmersonScript::valid() const
@@ -847,6 +850,10 @@ void EmersonScript::deletePres(JSPresenceStruct* toDelete)
     {
         if (pIter->second == toDelete)
         {
+            const SpaceObjectReference& spaceobj = pIter->first;
+            ProxyManagerPtr proxy_manager = mParent->getProxyManager(spaceobj.space(), spaceobj.object());
+            if (proxy_manager) proxy_manager->removeListener(this);
+
             mPresences.erase(pIter);
             break;
         }
