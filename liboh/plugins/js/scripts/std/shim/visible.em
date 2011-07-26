@@ -105,11 +105,13 @@
       visible.prototype.getScale = function(){
       };
 
-      /**
-       @return String containing the space id and visible id for the visible.  Can use this string as an address through which can send messages.
+      /** Get a string representation of this visible -- a
+       *  combination of the space and object identifiers which
+       *  uniquely identify it.
+       *  @returns {string} a unique string identifier for this
+       *  visible.
        */
-      visible.prototype.toString = function(){
-      };
+      visible.prototype.toString = function() {};
 
 
       /**

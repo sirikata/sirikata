@@ -390,6 +390,13 @@ system.__presence_constructor__.prototype.__getType = function()
        */
       presence.prototype.getPresenceID = function(){};
 
+      /** Get a string representation of this presence -- a
+       *  combination of the space and object identifiers which
+       *  uniquely identify it.
+       *  @returns {string} a unique string identifier for this
+       *  presence.
+       */
+      presence.prototype.toString = function() {};
 
       /** @function
        *  @description Requests that the mesh for this model is

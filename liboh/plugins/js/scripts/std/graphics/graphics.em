@@ -123,7 +123,7 @@ function() {
       this.invoke('startAnimation', vis, anim_name);
   
       if (!responseToMsg)
-        this._animationInfo.sendAnimationInfo("AnimationInfo", vis.getVisibleID() + ":" + vis.getSpaceID(), anim_name);
+        this._animationInfo.sendAnimationInfo("AnimationInfo", vis.toString(), anim_name);
     };
 
 

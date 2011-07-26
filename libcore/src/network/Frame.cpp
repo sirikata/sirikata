@@ -83,6 +83,15 @@ std::string Frame::parse(std::stringstream& data) {
     if (!result.empty()) {
         // Read off the right amount of data from the stringstream
         data.ignore( sizeof(uint32) + result.size() );
+#if SIRIKATA_PLATFORM == PLATFORM_WINDOWS
+        // FIXME Temporary windows fix. Using data.str() will return a full
+        // underlying buffer, not the remaining data in the stream, on
+        // Windows. This mostly resolves the issue b forcing it to check the
+        // next character, resulting in EOF when we've decoded a single message
+        // from the stream, which is how we're currently using these frames on
+        // substreams.
+        data.peek();
+#endif
     }
 
     return result;
