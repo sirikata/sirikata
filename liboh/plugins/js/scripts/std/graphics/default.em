@@ -124,6 +124,7 @@ function() {
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
 
         this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
+        this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
 
         this._binding.addToggleAction('moveForward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, -1)), 1, -1);
         this._binding.addToggleAction('moveBackward', std.core.bind(this.moveSelf, this, new util.Vec3(0, 0, 1)), 1, -1);
@@ -195,6 +196,7 @@ function() {
             { key: ['mouse-click', 2], action: 'pickObject' },
             { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
             { key: ['button-pressed', 'return'], action: 'actOnObject' },
+            { key: ['button-pressed', 't', 'ctrl' ], action: 'teleportToObj' },
 
             { key: ['button-pressed', 'c' ], action: 'toggleCameraMode' },
 
@@ -351,6 +353,25 @@ function() {
     std.graphics.DefaultGraphics.prototype.actOnObject = function(evt) {
         if (this._selected)
             { 'action' : 'touch' } >> this._selected >> [];
+    }
+    
+    /** @function */
+    std.graphics.DefaultGraphics.prototype.teleportToObj = function(evt) {
+        if (this._selected) {
+            var dir = this._selected.getPosition() - this._pres.getPosition();
+            dir = dir.normal();
+            var self = this;
+            this._selected.loadMesh(function() {
+                var hit = std.raytrace.raytrace(null, self._pres.getPosition(), dir, self._selected, null);
+                if (hit) {
+                    system.__debugPrint('hit ' + std.core.pretty(hit) + '\n');
+                    self._pres.setPosition(hit.sub(dir.scale(3)));
+                } else {
+                    self._pres.setPosition(this._selected.getPosition());
+                }
+                self._pres.setOrientation(util.Quaternion.fromLookAt(dir));
+            });
+        }
     }
 
     /** @function */
