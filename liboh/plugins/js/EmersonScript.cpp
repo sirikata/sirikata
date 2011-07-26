@@ -228,6 +228,7 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 
 }
 
+
 v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,JSProxyData* addParams, v8::Handle<v8::Context> ctx)
 {
     JSVisibleStruct* jsvis =  createVisStruct(visibleObj,addParams);
@@ -576,6 +577,7 @@ v8::Handle<v8::Value> EmersonScript::create_timeout(double period, v8::Persisten
 }
 
 
+
 //third arg may be null to evaluate in global context
 void EmersonScript::invokeCallbackInContext(Liveness::Token alive, v8::Persistent<v8::Function> cb, JSContextStruct* jscontext)
 {
@@ -679,6 +681,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     {
         currentContexts.push_back(contIter->second);
     }
+
 
     for (std::vector<JSContextStruct*>::iterator curContIter = currentContexts.begin();
          curContIter != currentContexts.end();

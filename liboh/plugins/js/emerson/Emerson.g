@@ -47,6 +47,7 @@ tokens
     WHEN_CHECKED_LIST_SUBSEQUENT;
     WHEN_PRED;
     VECTOR;
+    QUATERNION;
     NOOP;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
@@ -630,6 +631,7 @@ unaryExpression
 primaryExpression
 	: 'this'
         | (vectorLiteral) => vectorLiteral
+        | (quaternionLiteral) => quaternionLiteral
 	| Identifier
         | dollarExpression
 	| literal
@@ -643,7 +645,12 @@ vectorLiteral
         : '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* '>' -> ^(VECTOR $e1 $e2 $e3)
         ;
 
-//lkjs;
+quaternionLiteral
+        : '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* ',' LTERM* e4=vectorLiteralField LTERM*'>' -> ^(QUATERNION $e1 $e2 $e3 $e4)
+        ;
+
+        
+
 //lkjs;
 vectorLiteralField
         : additiveExpression

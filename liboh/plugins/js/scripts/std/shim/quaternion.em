@@ -37,19 +37,20 @@
 /** @constant.
  *  Identity quaternion representing no rotation.
  */
-util.Quaternion.prototype.identity = new util.Quaternion(0, 0, 0, 1);
+//util.Quaternion.prototype.identity = new util.Quaternion(0, 0, 0, 1);
+util.Quaternion.prototype.identity = <0, 0, 0, 1>;
 
 /** Make a copy of this quaternion.
  *  @returns a copy of this Quaternion.
  */
 util.Quaternion.prototype.clone = function() {
-    return new util.Quaternion(this.x, this.y, this.z, this.w);
+    return < this.x, this.y, this.z, this.w>;
 };
 
 /** @function
 @return quaternion sum of the two quaternions*/
 util.Quaternion.prototype.add = function(rhs) {
-    return new util.Quaternion(this.x + rhs.x, this.y + rhs.y, this.z + rhs.z, this.w + rhs.w);
+    return <this.x + rhs.x, this.y + rhs.y, this.z + rhs.z, this.w + rhs.w>;
 };
 
 /** @function
@@ -64,7 +65,7 @@ util.Quaternion.prototype.__getType = function()
 @return quaternion difference of the two quaternions
 */
 util.Quaternion.prototype.sub = function(rhs) {
-    return new util.Quaternion(this.x - rhs.x, this.y - rhs.y, this.z - rhs.z, this.w - rhs.w);
+    return <this.x - rhs.x, this.y - rhs.y, this.z - rhs.z, this.w - rhs.w>;
 };
 
 /** 
@@ -72,7 +73,7 @@ util.Quaternion.prototype.sub = function(rhs) {
   @return Returns the negation of the quaternion
 */
 util.Quaternion.prototype.neg = function() {
-    return new util.Quaternion(-this.x, -this.y, -this.z, -this.w);
+    return <-this.x, -this.y, -this.z, -this.w>;
 };
 
 /**
@@ -113,12 +114,12 @@ util.Quaternion.prototype.mul = function(rhs) {
     {
         if (typeof(rhs.w) === 'number') {
             // Quaternion
-            return new util.Quaternion(
+            return <
                 this.w*rhs.x + this.x*rhs.w + this.y*rhs.z - this.z*rhs.y,
                 this.w*rhs.y + this.y*rhs.w + this.z*rhs.x - this.x*rhs.z,
                 this.w*rhs.z + this.z*rhs.w + this.x*rhs.y - this.y*rhs.x,
                 this.w*rhs.w - this.x*rhs.x - this.y*rhs.y - this.z*rhs.z
-            );
+            >;
         }
         else { // Vec3
             var quat_axis = new util.Vec3(this.x, this.y, this.z);
@@ -138,7 +139,7 @@ util.Quaternion.prototype.mul = function(rhs) {
   @return A quaternion scaled by the scalar parameter
 */
 util.Quaternion.prototype.scale = function(rhs) {
-    return new util.Quaternion(this.x*rhs, this.y*rhs, this.z*rhs, this.w*rhs);
+    return <this.x*rhs, this.y*rhs, this.z*rhs, this.w*rhs>;
 };
 
 /**
@@ -175,8 +176,8 @@ util.Quaternion.prototype.normal = function() {
 util.Quaternion.prototype.inverse = function() {
     var len = this.lengthSquared();
     if (len>1e-8)
-        return new util.Quaternion(-this.x/len,-this.y/len,-this.z/len,this.w/len);
-    return new util.Quaternion(0.0, 0.0, 0.0, 0.0);
+        return <-this.x/len,-this.y/len,-this.z/len,this.w/len>;
+    return <0.0, 0.0, 0.0, 0.0>;
 };
 util.Quaternion.prototype.inv = util.Quaternion.prototype.inverse;
 
@@ -271,7 +272,7 @@ util.Quaternion.fromLookAt = function(direction, up) {
     up = up || <0, 1, 0>;
     
     if (direction.lengthSquared() < 1e-08)
-        return new util.Quaternion(0, 0, 0, 1);
+        return <0, 0, 0, 1>;
     direction = direction.normal();
 
     // Orient the -z axis to be along direction.
@@ -280,8 +281,8 @@ util.Quaternion.fromLookAt = function(direction, up) {
 	if(quatAxis.lengthSquared() > 0.001 || direction.dot(defaultForward) > 0) {
         // defaultForward and direction are either not colinear, or are colinear
         // but are pointing in the same direction.
-		var firstQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
-											1 + direction.dot(defaultForward));
+		var firstQuat = <quatAxis.x, quatAxis.y, quatAxis.z,
+											1 + direction.dot(defaultForward)>;
 	} else {
         // defaultForward and direction are pointing in opposite directions.
 		var firstQuat = new util.Quaternion(<0, 1, 0>, Math.PI);
@@ -297,8 +298,8 @@ util.Quaternion.fromLookAt = function(direction, up) {
         var yAxis = firstQuat.yAxis();
         var quatAxis = yAxis.cross(newUp);
         if (quatAxis.lengthSquared() > 0.01 || yAxis.dot(newUp) > 0) {
-            secondQuat = new util.Quaternion(quatAxis.x, quatAxis.y, quatAxis.z,
-                                             1 + yAxis.dot(newUp));
+            secondQuat = <quatAxis.x, quatAxis.y, quatAxis.z,
+                                             1 + yAxis.dot(newUp)>;
         } else {
             secondQuat = new util.Quaternion(direction, Math.PI);
         }

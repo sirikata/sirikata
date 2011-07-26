@@ -1477,6 +1477,7 @@ primaryExpression
         | patternLiteral
 	| ^(PAREN { APP("( "); } expression { APP(" )");})
         | vectorLiteral
+        | quaternionLiteral
 	;
 
 
@@ -1506,6 +1507,37 @@ vectorLiteral
         ;       
 
 
+
+quaternionLiteral
+        : ^(QUATERNION
+            {
+                LINE($QUATERNION.line);
+                APP("( new util.Quaternion(");
+            }
+            (exp1=vectorLiteralField
+              {
+                  APP(",");
+              }
+            )
+            (exp2=vectorLiteralField
+              {
+                  APP(",");
+              }
+            )
+            (exp3=vectorLiteralField
+              {
+                  APP(",");
+              }
+            )
+            (exp4=vectorLiteralField
+              {
+                  APP(") )");
+              }
+            )
+           )
+        ;       
+
+        
         
 vectorLiteralField
         : additiveExpression
