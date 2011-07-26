@@ -934,9 +934,13 @@ void Server::handleMigrationEvent(const UUID& obj_id) {
             mObjects.erase(obj_id);
             mContext->timeSeries->report(mTimeSeriesObjects, mObjects.size());
             ObjectReference obj(obj_id);
-            notify(&ObjectSessionListener::sessionClosed, mObjectSessions[obj]);
-            delete mObjectSessions[obj];
-            mObjectSessions.erase(obj);
+
+            ObjectSessionMap::iterator session_it = mObjectSessions.find(obj);
+            if (session_it != mObjectSessions.end()) {
+                notify(&ObjectSessionListener::sessionClosed, session_it->second);
+                delete session_it->second;
+                mObjectSessions.erase(session_it);
+            }
         }
     }
 
