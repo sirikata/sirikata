@@ -52,12 +52,6 @@ struct SIRIKATA_EXPORT Frame {
      *  and does nothing to the argument if it does not have a whole packet.
      */
     static std::string parse(std::string& data);
-
-    /** Checks if a full message is available. Returns the contents and removes
-     *  them from the argument if it has a whole packet; returns an empty string
-     *  and does nothing to the argument if it does not have a whole packet.
-     */
-    static std::string parse(std::stringstream& data);
 };
 
 } // namespace Network

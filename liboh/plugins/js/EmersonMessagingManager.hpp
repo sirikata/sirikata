@@ -53,7 +53,7 @@ private:
     //reading helpers
     void createScriptCommListenerStreamCB(const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream);
     void handleIncomingSubstream(int err, SSTStreamPtr streamPtr);
-    void handleScriptCommStreamRead(SSTStreamPtr sstptr, std::stringstream* prevdata, uint8* buffer, int length);
+    void handleScriptCommStreamRead(SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length);
 
     //writing helper
     void scriptCommWriteStreamConnectedCB(const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr);

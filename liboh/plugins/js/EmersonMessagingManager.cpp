@@ -87,38 +87,31 @@ void EmersonMessagingManager::createScriptCommListenerStreamCB(const SpaceObject
 void EmersonMessagingManager::handleIncomingSubstream(int err, SSTStreamPtr streamPtr) {
     if (err != SST_IMPL_SUCCESS) return;
 
-    std::stringstream* msgStream = new std::stringstream();
+    String* msgBuf = new String();
     streamPtr->registerReadCallback(
-        std::tr1::bind(&EmersonMessagingManager::handleScriptCommStreamRead, this, streamPtr, msgStream, _1, _2) );
+        std::tr1::bind(&EmersonMessagingManager::handleScriptCommStreamRead, this, streamPtr, msgBuf, _1, _2) );
 }
 
 //Gets executed whenever have additional data to read.
-void EmersonMessagingManager::handleScriptCommStreamRead(SSTStreamPtr sstptr, std::stringstream* prevdata, uint8* buffer, int length)
+void EmersonMessagingManager::handleScriptCommStreamRead(SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length)
 {
-    prevdata->write((const char*)buffer, length);
+    prevdata->append((const char*)buffer, length);
 
-    while(true)
-    {
-        std::string msg = Network::Frame::parse(*prevdata);
-        
-        // If we don't have a full message, just wait for more
-        if (msg.empty())
-            return;
+    // We should only ever get one message per substream, so there's no need to
+    // loop and we can clean up as soon as we parse a message successfully.
+    std::string msg = Network::Frame::parse(*prevdata);
 
-        //otherwise, try to handle it.
-        if (! handleScriptCommRead(sstptr->remoteEndPoint().endPoint, sstptr->localEndPoint().endPoint, msg))
-            JSLOG(error, "Error in messaging manager.  Cannot decode a message that had a full frame");
+    // If we don't have a full message, just wait for more
+    if (msg.empty())
+        return;
 
+    //otherwise, try to handle it.
+    if (! handleScriptCommRead(sstptr->remoteEndPoint().endPoint, sstptr->localEndPoint().endPoint, msg))
+        JSLOG(error, "Error in messaging manager.  Cannot decode a message that had a full frame");
 
-        //perform cleanup and return if no more data is in pipe.
-        if (prevdata->eof())
-        {
-            delete prevdata;
-            sstptr->registerReadCallback(0);
-            sstptr->close(false);
-            return;
-        }
-    }
+    delete prevdata;
+    sstptr->registerReadCallback(0);
+    sstptr->close(false);
 }
 
 

@@ -570,9 +570,8 @@ void HostedObject::handleLocationSubstream(const SpaceObjectReference& spaceobj,
 }
 
 void HostedObject::handleProximitySubstream(const SpaceObjectReference& spaceobj, int err, SSTStreamPtr s) {
-    std::stringstream** prevdataptr = new std::stringstream*;
-    *prevdataptr = new std::stringstream();
-    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, prevdataptr, _1, _2) );
+    String* prevdata = new String();
+    s->registerReadCallback( std::tr1::bind(&HostedObject::handleProximitySubstreamRead, this, spaceobj, s, prevdata, _1, _2) );
 }
 
 void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream* prevdata, uint8* buffer, int length) {
@@ -588,17 +587,11 @@ void HostedObject::handleLocationSubstreamRead(const SpaceObjectReference& space
     }
 }
 
-void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, std::stringstream** prevdataptr, uint8* buffer, int length) {
-    std::stringstream* prevdata = *prevdataptr;
-    prevdata->write((const char*)buffer, length);
+void HostedObject::handleProximitySubstreamRead(const SpaceObjectReference& spaceobj, SSTStreamPtr s, String* prevdata, uint8* buffer, int length) {
+    prevdata->append((const char*)buffer, length);
 
     while(true) {
         std::string msg = Network::Frame::parse(*prevdata);
-        if (prevdata->eof()) {
-            delete prevdata;
-            prevdata = new std::stringstream();
-            *prevdataptr = prevdata;
-        }
 
         // If we don't have a full message, just wait for more
         if (msg.empty()) return;
@@ -1075,7 +1068,7 @@ Quaternion HostedObject::requestCurrentOrientation(const SpaceID& space, const O
         return Quaternion();
     }
 
-    
+
     Location curLoc = proxy_obj->extrapolateLocation(currentLocalTime());
     return curLoc.getOrientation();
 }
@@ -1089,7 +1082,7 @@ Quaternion HostedObject::requestCurrentOrientationVel(const SpaceID& space, cons
         return Quaternion();
     }
 
-    
+
     Quaternion returner  = proxy_obj->getOrientationSpeed();
     return returner;
 }
@@ -1139,7 +1132,7 @@ bool HostedObject::requestMeshUri(const SpaceID& space, const ObjectReference& o
         HO_LOG(warn,"Requesting mesh without proxy manager. Doing nothing");
         return false;
     }
-    
+
     ProxyObjectPtr  proxy_obj     = proxy_manager->getProxyObject(SpaceObjectReference(space,oref));
 
     if (! proxy_obj)
@@ -1185,7 +1178,7 @@ BoundingSphere3f HostedObject::requestCurrentBounds(const SpaceID& space,const O
         return BoundingSphere3f();
     }
 
-    
+
     return proxy_obj->getBounds();
 }
 
@@ -1206,7 +1199,7 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
         return "";
     }
 
-    
+
     return proxy_obj->getPhysics();
 }
 
@@ -1305,7 +1298,7 @@ void HostedObject::sendLocUpdateRequest(const SpaceID& space, const ObjectRefere
         return;
     }
 
-    
+
     // Generate and send an update to Loc
     Protocol::Loc::Container container;
     Protocol::Loc::ILocationUpdateRequest loc_request = container.mutable_update_request();
