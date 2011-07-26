@@ -18,9 +18,10 @@ namespace JS {
 //this constructor is called when we ask the space to create a presence for us.
 //we give the space the token presenceToken, which it ships back when connection
 //is completed.
-JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback,JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
- : JSPositionListener(nullProxyPtr),
+JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Function> connectedCallback, JSContextStruct* ctx, HostedObject::PresenceToken presenceToken)
+ : JSPositionListener(JSProxyPtr(new JSProxyData())),
    JSSuspendable(),
+   mParent(parent),
    mOnConnectedCallback(v8::Persistent<v8::Function>::New(connectedCallback)),
    mContID(ctx->getContextID()),
    isConnected(false),
@@ -36,8 +37,9 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, v8::Handle<v8::Functio
 //use this constructor if we already have a presence that is connected to the
 //space with spaceObjectRecference _sporef
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectReference& _sporef, JSContextStruct* ctx,HostedObject::PresenceToken presenceToken)
- : JSPositionListener(parent->createProxyPtr(_sporef,nullProxyPtr)),
+ : JSPositionListener(parent->getOrCreateProxyPtr(_sporef)),
    JSSuspendable(),
+   mParent(parent),
    mContID(ctx->getContextID()),
    isConnected(true),
    hasConnectedCallback(false),
@@ -51,21 +53,20 @@ JSPresenceStruct::JSPresenceStruct(EmersonScript* parent, const SpaceObjectRefer
 
 //use this constructor when we are restoring a presence.
 JSPresenceStruct::JSPresenceStruct(EmersonScript* parent,PresStructRestoreParams& psrp,Vector3f center, HostedObject::PresenceToken presToken,JSContextStruct* jscont, const TimedMotionVector3f& tmv, const TimedMotionQuaternion& tmq)
- : JSPositionListener(parent->createProxyPtr(psrp.sporef,nullProxyPtr)),
+ : JSPositionListener(parent->getOrCreateProxyPtr(psrp.sporef)),
    JSSuspendable(),
+   mParent(parent),
    isConnected(false),
    hasConnectedCallback(false),
    mPresenceToken(presToken),
    mContext(NULL)
 {
-
     jpp->mLocation    = tmv;
     jpp->mOrientation = tmq;
-
-    
     jpp->mMesh    = psrp.mesh;
     jpp->mBounds  = BoundingSphere3f( center  ,psrp.scale);
     jpp->mPhysics = psrp.physics;
+
     mQuery        = psrp.query;
 
     if (!psrp.suspendedVelocity.isNull())
@@ -222,7 +223,7 @@ v8::Handle<v8::Value> JSPresenceStruct::disconnect()
     clearPreviousConnectedCB();
     isConnected = false;
 
-    jpp->emerScript->requestDisconnect(this);
+    mParent->requestDisconnect(this);
     return v8::Boolean::New(true);
 }
 
@@ -237,11 +238,11 @@ HostedObject::PresenceToken JSPresenceStruct::getPresenceToken()
     return mPresenceToken;
 }
 
-void JSPresenceStruct::connect(const SpaceObjectReference& _sporef, JSProxyPtr newJPP)
+void JSPresenceStruct::connect(const SpaceObjectReference& _sporef)
 {
-    //set the jpp of jspositionlistener to be a non-empty value now that we
-    //actually have a sporef to associate with.
-    setSharedProxyDataPtr(   newJPP);
+    // We need to update our JSProxyPtr since before the connect we didn't even
+    // know what our SpaceObjectReference would be.
+    jpp = mParent->getOrCreateProxyPtr(_sporef);
 
     v8::HandleScope handle_scope;
 
@@ -256,7 +257,7 @@ void JSPresenceStruct::connect(const SpaceObjectReference& _sporef, JSProxyPtr n
 void JSPresenceStruct::callConnectedCallback()
 {
     if (hasConnectedCallback)
-        jpp->emerScript->handlePresCallback(mOnConnectedCallback,mContext,this);
+        mParent->handlePresCallback(mOnConnectedCallback,mContext,this);
 
 
     if (mContext != NULL)
@@ -275,14 +276,14 @@ void JSPresenceStruct::clearPreviousConnectedCB()
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationFunction(Quaternion newOrientation)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientation");
-    jpp->emerScript->setOrientationFunction(getSporef(),newOrientation);
+    mParent->setOrientationFunction(getSporef(),newOrientation);
     return v8::Undefined();
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion newOrientationVel)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setOrientationVel");
-    jpp->emerScript->setOrientationVelFunction(getSporef(),newOrientationVel);
+    mParent->setOrientationVelFunction(getSporef(),newOrientationVel);
     return v8::Undefined();
 }
 
@@ -292,7 +293,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setOrientationVelFunction(Quaternion new
 //EmersonScript to hosted object.
 SolidAngle JSPresenceStruct::getQueryAngle()
 {
-    return jpp->emerScript->getQueryAngle(getSporef());
+    return mParent->getQueryAngle(getSporef());
 }
 
 v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
@@ -304,7 +305,7 @@ v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryAngle()
 v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setQueryAngle");
-    jpp->emerScript->setQueryAngleFunction(getSporef(), new_qa);
+    mParent->setQueryAngleFunction(getSporef(), new_qa);
     mQuery = new_qa;
     return v8::Undefined();
 }
@@ -312,7 +313,7 @@ v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
 v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setScale");
-    jpp->emerScript->setVisualScaleFunction(getSporef(), new_scale);
+    mParent->setVisualScaleFunction(getSporef(), new_scale);
     return v8::Undefined();
 }
 
@@ -320,17 +321,17 @@ v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 v8::Handle<v8::Value> JSPresenceStruct::struct_setPosition(Vector3f newPos)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setPosition");
-    jpp->emerScript->setPositionFunction(getSporef(), newPos);
+    mParent->setPositionFunction(getSporef(), newPos);
     return v8::Undefined();
 }
 
 
 v8::Handle<v8::Value> JSPresenceStruct::getPhysicsFunction() {
-    return jpp->emerScript->getPhysicsFunction(getSporef());
+    return mParent->getPhysicsFunction(getSporef());
 }
 v8::Handle<v8::Value> JSPresenceStruct::setPhysicsFunction(const String& phy) {
     INLINE_CHECK_IS_CONNECTED_ERROR("setPhysics");
-    jpp->emerScript->setPhysicsFunction(getSporef(), phy);
+    mParent->setPhysicsFunction(getSporef(), phy);
     return v8::Undefined();
 }
 
@@ -370,7 +371,7 @@ void JSPresenceStruct::disconnectCalledFromObjScript()
 v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setMesh");
-    jpp->emerScript->setVisualFunction(getSporef(), urilocation);
+    mParent->setVisualFunction(getSporef(), urilocation);
     return v8::Undefined();
 }
 
@@ -378,7 +379,7 @@ v8::Handle<v8::Value>JSPresenceStruct::setVisualFunction(String urilocation)
 //returns this presence as a visible object.
 v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
 {
-    return jpp->emerScript->presToVis(this,mContext);
+    return mParent->presToVis(this,mContext);
 }
 
 
@@ -389,10 +390,10 @@ v8::Persistent<v8::Object>  JSPresenceStruct::toVisible()
 v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
 {
     v8::HandleScope scope;
-    JSInvokableObject::JSInvokableObjectInt* invokableObj = jpp->emerScript->runSimulation(getSporef(),simname);
+    JSInvokableObject::JSInvokableObjectInt* invokableObj = mParent->runSimulation(getSporef(),simname);
 
-    v8::Local<v8::Object> tmpObj = jpp->emerScript->manager()->mInvokableObjectTemplate->NewInstance();
-    tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(jpp->emerScript));
+    v8::Local<v8::Object> tmpObj = mParent->manager()->mInvokableObjectTemplate->NewInstance();
+    tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
     tmpObj->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
     return tmpObj;
@@ -410,7 +411,7 @@ void JSPresenceStruct::addAssociatedContext(JSContextStruct* toAdd)
 v8::Handle<v8::Value> JSPresenceStruct::struct_setVelocity(const Vector3f& newVel)
 {
     INLINE_CHECK_IS_CONNECTED_ERROR("setVelocity");
-    jpp->emerScript->setVelocityFunction(getSporef(),newVel);
+    mParent->setVelocityFunction(getSporef(),newVel);
     return v8::Undefined();
 }
 

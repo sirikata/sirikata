@@ -208,7 +208,7 @@ public:
        with sporef visibleObj, will try to fill in JSVisibleStruct data with
        these values (note: if NULL), fills in default values.
      */
-    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj,JSProxyData* addParams, v8::Handle<v8::Context> ctx);
+    v8::Persistent<v8::Object> createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams, v8::Handle<v8::Context> ctx);
 
 
     v8::Handle<v8::Value> findVisible(const SpaceObjectReference& proximateObj);
@@ -351,7 +351,7 @@ private:
     ODP::Port* mCreateEntityPort;
 
 
-    void callbackUnconnected(const SpaceObjectReference& name, HostedObject::PresenceToken token);
+    void callbackUnconnected(ProxyObjectPtr proxy, HostedObject::PresenceToken token);
     HostedObject::PresenceToken presenceToken;
 
     typedef std::map<SpaceObjectReference, JSPresenceStruct*> PresenceMap;

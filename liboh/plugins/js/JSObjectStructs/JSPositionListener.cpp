@@ -24,14 +24,8 @@ JSPositionListener::JSPositionListener(JSProxyPtr _jpp)
 {
 }
 
-
 JSPositionListener::~JSPositionListener()
 {
-}
-
-void JSPositionListener::setSharedProxyDataPtr( JSProxyPtr _jpp)
-{
-    jpp = _jpp;
 }
 
 v8::Handle<v8::Value> JSPositionListener::struct_getAllData()

@@ -108,7 +108,7 @@ struct JSPresenceStruct : public JSPositionListener,
        positionlistener for this presence.  Now that we know sporef, we also
        know the proxy ptr should set in position listener.
      */
-    void connect(const SpaceObjectReference& _sporef, std::tr1::shared_ptr<JSProxyData> newJPP);
+    void connect(const SpaceObjectReference& _sporef);
     void disconnectCalledFromObjScript();
 
 
@@ -168,6 +168,7 @@ struct JSPresenceStruct : public JSPositionListener,
     }
 
 private:
+    EmersonScript* mParent;
     uint32 mContID;
 
     //this function checks if we have a callback associated with this presence.

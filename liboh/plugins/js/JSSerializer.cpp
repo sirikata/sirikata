@@ -554,7 +554,7 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       v8::Handle<v8::Context> ctx = v8::Context::GetCurrent();
 
       //create the vis obj through objScript
-      deserializeTo = emerScript->createVisiblePersistent(visibleObj,NULL,ctx);
+      deserializeTo = emerScript->createVisiblePersistent(visibleObj, JSProxyPtr(), ctx);
 
       return true;
     }

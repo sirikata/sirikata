@@ -290,7 +290,7 @@ v8::Handle<v8::Value>  JSContextStruct::checkHeadless()
 }
 
 
-v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching,JSProxyData* addParams)
+v8::Handle<v8::Value> JSContextStruct::struct_create_vis(const SpaceObjectReference& sporefWatching, JSProxyPtr addParams)
 {
     CHECK_EMERSON_SCRIPT_ERROR(emerScript,create_vis,jsObjScript);
     return emerScript->createVisiblePersistent(sporefWatching, addParams, mContext);

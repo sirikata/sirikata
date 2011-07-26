@@ -4,50 +4,45 @@
 
 #include <map>
 #include <sirikata/core/util/Platform.hpp>
-//the above include file already includes <tr1/memory> via <boost/tr1/memory.hpp> 
-#include "JSObjectStructs/JSVisibleStruct.hpp"
+#include <sirikata/core/util/SpaceObjectReference.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyCreationListener.hpp>
+#include <sirikata/proxyobject/PositionListener.hpp>
+#include <sirikata/proxyobject/MeshListener.hpp>
+#include "JSUtil.hpp"
 
 namespace Sirikata{
 namespace JS{
 
 class EmersonScript;
+class JSVisibleStruct;
+
 class JSProxyData;
 typedef std::tr1::weak_ptr<JSProxyData>   JSProxyWPtr;
 typedef std::tr1::shared_ptr<JSProxyData> JSProxyPtr;
 
-static JSProxyPtr nullProxyPtr;
-
-struct JSProxyData
-{
-
-    JSProxyData(EmersonScript* eScript)
-     : emerScript(eScript)
-    {
-    }
-
-    JSProxyData(EmersonScript* eScript,const SpaceObjectReference& _sporefToListenTo,const TimedMotionVector3f& _mLocation,const TimedMotionQuaternion& _mOrientation, const BoundingSphere3f& _mBounds,const String& _mMesh, const String& _mPhysics)
-     : emerScript(eScript),
-       sporefToListenTo(_sporefToListenTo),
-       mLocation(_mLocation),
-       mOrientation(_mOrientation),
-       mBounds(_mBounds),
-       mMesh(_mMesh),
-       mPhysics(_mPhysics)
-    {
-    }
-
-    JSProxyData(EmersonScript* eScript, JSProxyPtr from)
-     : emerScript(eScript),
-       sporefToListenTo(from->sporefToListenTo),
-       mLocation(from->mLocation),
-       mOrientation(from->mOrientation),
-       mBounds(from->mBounds),
-       mMesh(from->mMesh),
-       mPhysics(from->mPhysics)
-    {
-    }
-
+struct JSProxyData {
+public:
+    // Default constructor, indicates empty information for when we need a
+    // placeholder but don't even have a real identifier from the space yet.
+    JSProxyData();
+    // Regular constructors representing real data (although possibly from
+    // restored data, i.e. not valid according to the space).
+    JSProxyData(EmersonScript* eScript, const SpaceObjectReference& from);
+    JSProxyData(EmersonScript* eScript, ProxyObjectPtr from);
+    JSProxyData(EmersonScript* eScript, const SpaceObjectReference& from, JSProxyPtr fromData);
     ~JSProxyData();
+
+    // Called for *ProxyObject* references.
+    void incref(JSProxyPtr self);
+    void decref();
+
+    void updateFrom(ProxyObjectPtr from);
+
+    // Indicates whether this presence is visible to a presence or not, i.e. if
+    // any ProxyObject still exists for it.
+    bool visibleToPresence() const;
+
 
     EmersonScript*                  emerScript;
     SpaceObjectReference      sporefToListenTo;
@@ -56,12 +51,40 @@ struct JSProxyData
     BoundingSphere3f                   mBounds;
     String                               mMesh;
     String                            mPhysics;
+
+private:
+    // Number of references to this JSProxyData *by ProxyObjectPtrs*
+    // (not by v8 objects). We use a slightly confusing setup to
+    // manage the lifetime of the object. The refcount forces this
+    // object to maintain a shared_ptr to itself, guaranteeing it'll
+    // stay alive. For each v8 visible, there is also a shared_ptr.
+    int32 refcount;
+    JSProxyPtr selfPtr;
 };
 
 
-
-
-
+/** JSVisibleManager manages the data underlying visibles and presences in
+ *  Emerson. For each visible, there isn't currently one canonical visible
+ *  object in Emerson. Instead, we can create many of them on demand as we need
+ *  them, pointing at the single, internal JSProxyData. JSProxyData is saved in
+ *  the JSVisibleManager as a weak pointer so it can be cleaned up automatically
+ *  when v8 cleans up all visibles pointing to the data. Visibles and presences
+ *  maintain shared pointers to keep them alive while those objects need them,
+ *  and their C++ data structures are cleaned up automatically when v8 collects
+ *  the JavaScript objects.
+ *
+ *  JSProxyDatas represent the current known state for a
+ *  visible. Information could be coming from multiple ProxyObjects,
+ *  or even none at all, e.g. if we found out about the visible via a
+ *  message. JSProxyData is created due to new ProxyObjects or due to
+ *  createVisStruct calls (in that case containing empty
+ *  information). Either of two things keep the JSProxyData alive:
+ *  living ProxyObjectPtrs (through reference count + shared_ptr) and
+ *  existing v8 visible/presence objects (through shared_ptr to JSProxyData).
+ *  This setup allows us to trivially manage listening to
+ *  ProxyObjects, always update the JSProxyData as we get updates from
+ *  ProxyObjects, and makes dealing with v8 garbage collection easy.
+ */
 class JSVisibleManager : public ProxyCreationListener,
                          public PositionListener,
                          public MeshListener
@@ -69,8 +92,6 @@ class JSVisibleManager : public ProxyCreationListener,
 public:
     JSVisibleManager(EmersonScript* eScript);
     virtual ~JSVisibleManager();
-
-
 
     /**
        Creates a new visible struct with sporef whatsVisible.  First checks if
@@ -80,80 +101,54 @@ public:
        not, then tries to load from addParams.  If addParams is null, then just
        creates a blank proxy data object with whatsVisible as its sporef.
      */
-    JSVisibleStruct* createVisStruct(const SpaceObjectReference& whatsVisible, JSProxyData* addParams= NULL);
+    JSVisibleStruct* createVisStruct(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams = JSProxyPtr());
+
+    // Get or create a JSProxyData for this object. Without data specified, this
+    // will result in some default values.  This *doesn't* affect reference
+    // count at all -- you can get a JSProxyPtr back that has just been
+    // initialized with a ProxyObjectPtr refcount of 0, meaning if you release
+    // the JSProxyPtr it will be completely cleaned up.
+    JSProxyPtr getOrCreateProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr data = JSProxyPtr());
 
 
-    /**
-       If ho does not have a proxy obj with whatsVisible as its sporef, checks
-       addParams if addParams is non-null, returned proxyptr will be
-       initialized with the data in addParams.  Otherwise, what's returned will
-       have defaults for all its position, velocity, etc. fields (likely 0s.).
-     */
-    JSProxyPtr createProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams);
-
-
-
-    /**
-       If a new proxy object is available and its sporef is in mProxies, update
-       mProxies and with the new proxies fields and set JSVisibleManager as a
-       listener for it.
-     */
+    // ProxyCreationListener Interface
+    //  - Creates or increments and decrements refcount of
+    //    JSProxyData. Updates data.
     virtual void onCreateProxy(ProxyObjectPtr p);
-
-    /**
-       If sporef of p exists in mProxies, then at some point, we must have
-       registered JSVisibleManager as a position and mesh listener for p.
-       De-register JSVisibleManager on destruction.
-     */
     virtual void onDestroyProxy(ProxyObjectPtr p);
-    /**
-       Don't need to do anything for destroyed because we catch destruction from onDestroyProxy.
-     */
-    virtual void destroyed()
-    {}
 
-
+    // PositionListener
+    //  - Updates JSProxyData state
+    //  - Destruction ignored, handled by onDestroyProxy
     virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
+    virtual void destroyed(){}
+
+    // MeshListener Interface
+    //  - Updates JSProxyData state
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
     virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef);
     virtual void onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef);
 
-    /**
-       The destructor of the visible object should call this function with its
-       sporef as argument.
 
-       Removes corresponding entry from mProxies and de-registers all listeners
-       that were registered through objecthostproxymanager.
-     */
-    void stopTrackingVis(const SpaceObjectReference& sporef);
-
+    // Indicate whether this object is still visible to on of your presences or
+    // not.
     bool isVisible(const SpaceObjectReference& sporef);
-
-private:
-
-
-    /**
-       Runs through all the presences on this entity.  For each presence, checks
-       if have a proxy object associated with sporef.  Return the proxy object
-       with the most up to date position update.
-    */
-    ProxyObjectPtr getMostUpToDate(const SpaceObjectReference& sporef);
-
-    /**
-       Sets JSVisibleManager.hpp as a listener for all proxy objects that have
-       sporef toSetListenersFor.
-     */
-    void setListeners(const SpaceObjectReference& toSetListenersFor);
-
-    /**
-       Removes JSVisibleManager.hpp from being a listener for all proxy objects
-       that have the sporef toRemoveListenersFor.
-     */
-    void removeListeners(const SpaceObjectReference& toRemoveListenersFor);
-
-
-
     v8::Handle<v8::Value> isVisibleV8(const SpaceObjectReference& sporef);
+private:
+    // Friend JSProxyData so it can tell us to remove it.
+    friend class JSProxyData;
+
+
+    // Utility for initialializing a JSProxyData from a ProxyObject. Only used
+    // internally to manage the lifetime based on ProxyObject
+    // creation/destruction.
+    JSProxyPtr getOrCreateProxyPtr(ProxyObjectPtr proxy);
+
+    // Clean up our references to a JSProxyData. Only ever invoked by
+    // JSProxyData's destructor when there are no more references to
+    // it.
+    void removeProxyData(const SpaceObjectReference& sporef);
+
 
     EmersonScript* emerScript;
 
@@ -161,34 +156,9 @@ private:
     typedef SporefProxyMap::iterator SporefProxyMapIter;
     SporefProxyMap mProxies;
 
+    typedef std::tr1::unordered_set<ProxyObjectPtr, ProxyObject::Hasher> TrackedObjectsMap;
+    TrackedObjectsMap mTrackedObjects;
 };
-
-
-/**
-   @param nameProxy After calling this, nameProxy will be a shared pointer
-   (pointing to JSProxyData), with
-   the most up-to-date data associated with the sporef with name nameToMatch in mProxies.
-   @param {sporef} nameToMatch Searches mProxies for JSProxyData* with the key
-   nameToMatch.  If finds one, loads that JSProxyData into nameProxy.
-   Otherwise, creates a new one, and inserts it.
-   @param {String} errorWhere Should be the name of the function that is calling
-   this macro.  Prints logging information if receive a position update,
-   etc. for proxy objects that we didn't realize had already been created.
- */
-#define INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(nameProxy,nameToMatch,errorWhere) \
-JSProxyPtr nameProxy;\
-{\
-    SporefProxyMapIter iter = mProxies.find(nameToMatch);\
-    if (iter == mProxies.end())\
-    {\
-        JSLOG(error,"Error in " #errorWhere "of JSVisibleManager.  Should have received a createProxy call for sporef before an update.  Adding element in case.");\
-\
-        nameProxy =JSProxyPtr(new JSProxyData(emerScript)); \
-        mProxies[nameToMatch] = JSProxyWPtr(nameProxy); \
-    }\
-    else\
-        nameProxy = JSProxyPtr(iter->second);    \
-}
 
 } //end namespace js
 } //end namespace sirikata

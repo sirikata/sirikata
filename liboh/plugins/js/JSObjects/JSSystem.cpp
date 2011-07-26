@@ -87,7 +87,7 @@ v8::Handle<v8::Value> setSandboxMessageCallback(const v8::Arguments& args)
 {
     if (args.Length() != 1)
         V8_EXCEPTION_CSTR("Setting callbacks for messages from sandboxes requires exactly one argument.");
-    
+
     //get jssystemstruct
     INLINE_SYSTEM_CONV_ERROR(args.This(),sendSandbox,this,jssys);
 
@@ -104,7 +104,7 @@ v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args)
 {
     if (args.Length() != 1)
         V8_EXCEPTION_CSTR("Setting callbacks for messages from presences requires exactly one argument.");
-    
+
     //get jssystemstruct
     INLINE_SYSTEM_CONV_ERROR(args.This(),sendSandbox,this,jssys);
 
@@ -122,14 +122,14 @@ v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args)
 /**
    First argument should contain a message object that will be
    serialized and sent to another sandbox on same entity.
-   
+
    Second argument should either be == null (send to parent), or should contain
    a sandbox object.
  */
 v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
 {
     v8::HandleScope handle_scope;
-    
+
     if (args.Length() != 2)
         V8_EXCEPTION_CSTR("Send sandbox requires exactly two arguments");
 
@@ -144,7 +144,7 @@ v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
     Local<v8::Object> v8MsgObject = args[0]->ToObject();
     String serializedMessage = JSSerializer::serializeObject(v8MsgObject);
 
-    
+
     //recipeint == null implies send to parent (if it exists).
     JSContextStruct* recipient = NULL;
     if (! args[1]->IsNull())
@@ -155,7 +155,7 @@ v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
         recipient = rec;
     }
 
-    
+
     return handle_scope.Close(jssys->sendSandbox(serializedMessage,recipient));
 }
 
@@ -550,7 +550,7 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str())));
 
     if  (args.Length() == 1)
-        return jssys->struct_create_vis(sporefVisWatching,NULL);
+        return jssys->struct_create_vis(sporefVisWatching, JSProxyPtr());
 
 
     // //decode second arg: sporef watching from
@@ -607,15 +607,14 @@ v8::Handle<v8::Value> root_createVisible(const v8::Arguments& args)
 
 
     //do not delete this bcause it gets put into a shared pointer.
-    JSProxyData* jspd = new JSProxyData(NULL, //note, do not need to point at
-                                             //emerScript here.
-        sporefVisWatching,
-        location,
-        orientation,
-        bsph,
-        meshString,
-        physicsString);
-
+    //note, do not need to point at
+    //emerScript here.
+    JSProxyPtr jspd(new JSProxyData(NULL, sporefVisWatching));
+    jspd->mLocation = location;
+    jspd->mOrientation = orientation;
+    jspd->mBounds = bsph;
+    jspd->mMesh = meshString;
+    jspd->mPhysics = physicsString;
 
     v8::Handle<v8::Value> returner = jssys->struct_create_vis(sporefVisWatching,jspd);
     return handle_scope.Close(returner);
@@ -1097,14 +1096,14 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (! Vec3ValValidate(posArg))
         V8_EXCEPTION_CSTR("Cannot decode position arg in restore presence as vector");
     Vector3f mPosition(Vec3ValExtract(posArg));
-    
+
 
 
     if (! Vec3ValValidate(velArg))
         V8_EXCEPTION_CSTR("Cannot decode velocity arg in restore presence as vector");
     Vector3f mVelocity(Vec3ValExtract(velArg));
-    
-    
+
+
 
     Nullable<Time> mOrientTime;
     if (! orientTimeArg->IsNull())
@@ -1117,12 +1116,12 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (! QuaternionValValidate(orientArg))
         V8_EXCEPTION_CSTR("Cannot decode orientation arg in restore presence as quaternion");
     Quaternion mOrient(QuaternionValExtract(orientArg));
-    
+
 
     if (! QuaternionValValidate(orientVelArg))
         V8_EXCEPTION_CSTR("Cannot decode orientation velocity arg in restore presence as quaterinion");
     Quaternion mOrientVelocity(QuaternionValExtract(orientVelArg));
-        
+
 
     String mesh;
     specificErrMsg = baseErrMsg + "mesh.";
@@ -1148,7 +1147,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (! isClearedDecodeSuccessful)
         return v8::ThrowException(v8::Exception::Error(v8::String::New(specificErrMsg.c_str())));
 
-    
+
     Nullable<uint32> contextID;
     if (! contextIDArg->IsNull())
     {
@@ -1204,7 +1203,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessageFRoot.c_str() )));
 
-    
+
     PresStructRestoreParams restParams(
         mSporef,
         mPositionTime,
@@ -1217,7 +1216,7 @@ v8::Handle<v8::Value> root_restorePresence(const v8::Arguments& args)
         physics,
         scale,
         isCleared,
-        contextID, 
+        contextID,
         isConnected,
         connCB,
         isSuspended,

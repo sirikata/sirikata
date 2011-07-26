@@ -151,7 +151,12 @@ private:
     void initializePerPresenceData(PerPresenceData& psd, ProxyObjectPtr selfproxy);
 public:
 
-    /** Get a set of spaces the object is currently connected to. */
+    /** Get a set of spaces the object is currently connected to.
+     *  NOTE: Be very careful with this. It reports everything connected,
+     *  including presences where we haven't established the SST stream with the
+     *  space, which lots of listeners (including SessionEventListeners) rely
+     *  on.
+     */
     typedef std::vector<SpaceObjectReference> SpaceObjRefVec;
     void getSpaceObjRefs(SpaceObjRefVec& ss) const;
     void getProxySpaceObjRefs(const SpaceObjectReference& sporef,SpaceObjRefVec& ss) const;

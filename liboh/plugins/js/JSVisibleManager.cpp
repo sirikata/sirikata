@@ -4,15 +4,79 @@
 #include "JSObjectStructs/JSPresenceStruct.hpp"
 #include "EmersonScript.hpp"
 
-
 namespace Sirikata{
 namespace JS{
 
+JSProxyData::JSProxyData()
+ : emerScript(NULL),
+   refcount(0),
+   selfPtr()
+{
+}
+
+JSProxyData::JSProxyData(EmersonScript* eScript, const SpaceObjectReference& from)
+ : emerScript(eScript),
+   sporefToListenTo(from),
+   refcount(0),
+   selfPtr()
+{
+}
+
+JSProxyData::JSProxyData(EmersonScript* eScript, ProxyObjectPtr from)
+ : emerScript(eScript),
+   sporefToListenTo(from->getObjectReference()),
+   refcount(0),
+   selfPtr()
+{
+    updateFrom(from);
+}
+
+JSProxyData::JSProxyData(EmersonScript* eScript, const SpaceObjectReference& from, JSProxyPtr fromData)
+ : emerScript(eScript),
+   sporefToListenTo(from),
+   mLocation(fromData->mLocation),
+   mOrientation(fromData->mOrientation),
+   mBounds(fromData->mBounds),
+   mMesh(fromData->mMesh),
+   mPhysics(fromData->mPhysics),
+   refcount(0),
+   selfPtr()
+{
+}
 
 JSProxyData::~JSProxyData()
 {
+    // We're guaranteed by shared_ptrs and our reference counting that
+    // this destructor is only called once there are no more
+    // ProxyObjectPtrs and no v8 visibles referring to this data,
+    // allowing us to clear this out of the JSVisibleManager.
     if (emerScript)
-        emerScript->stopTrackingVis(sporefToListenTo);
+        emerScript->removeProxyData(sporefToListenTo);
+}
+
+void JSProxyData::incref(JSProxyPtr self) {
+    selfPtr = self;
+    refcount++;
+}
+
+void JSProxyData::decref() {
+    assert(refcount > 0);
+    refcount--;
+    if (refcount == 0) selfPtr.reset();
+}
+
+void JSProxyData::updateFrom(ProxyObjectPtr from) {
+    assert(sporefToListenTo  == from->getObjectReference());
+
+    mLocation = from->getTimedMotionVector();
+    mOrientation = from->getTimedMotionQuaternion();
+    mBounds = from->getBounds();
+    mMesh = from->getMesh();
+    mPhysics = from->getPhysics();
+}
+
+bool JSProxyData::visibleToPresence() const {
+    return refcount > 0;
 }
 
 
@@ -25,221 +89,135 @@ JSVisibleManager::JSVisibleManager(EmersonScript* eScript)
 JSVisibleManager::~JSVisibleManager()
 {
     // Stop tracking all known objects to clear out all listeners and state.
-    while(!mProxies.empty())
-        stopTrackingVis( mProxies.begin()->first );
+    while(!mTrackedObjects.empty()) {
+        ProxyObjectPtr toFakeDestroy = *(mTrackedObjects.begin());
+        onDestroyProxy(toFakeDestroy);
+    }
+
+    // Some proxies may not have gotten cleared out if there are still
+    // references to it, e.g. from objects not yet collected by v8. In this
+    // case, don't destroy them, but set them up so they won't try to invoke
+    // methods in this object anymore, just getting cleaned up naturally when
+    // there are no more references to them.
+    for(SporefProxyMap::iterator pit = mProxies.begin(); pit != mProxies.end(); pit++) {
+        // Clearing this blocks it from getting back to us.
+        pit->second.lock()->emerScript = NULL;
+    }
+    mProxies.clear();
 }
 
 
-JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& whatsVisible,JSProxyData* addParams)
-{
-    JSProxyPtr toCreateFrom;
-    if (addParams == NULL)
-        toCreateFrom = createProxyPtr( whatsVisible, nullProxyPtr);
-    else
-        toCreateFrom = createProxyPtr( whatsVisible, JSProxyPtr(addParams));
-
+JSVisibleStruct* JSVisibleManager::createVisStruct(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams) {
+    JSProxyPtr toCreateFrom = getOrCreateProxyPtr(whatsVisible, addParams);
     return new JSVisibleStruct(toCreateFrom);
 }
 
-
-void JSVisibleManager::stopTrackingVis(const SpaceObjectReference& sporef)
-{
-    SporefProxyMapIter iter = mProxies.find(sporef);
-    if (iter == mProxies.end())
-    {
-        JSLOG(error, "Error in stopTrackingVis.  Requesting to stop tracking a visible that we had not previously been tracking.");
-        return;
-    }
-    mProxies.erase(iter);
-    removeListeners(sporef);
-}
-
-
-void JSVisibleManager::removeListeners(const SpaceObjectReference& toRemoveListenersFor)
-{
-    std::vector<SpaceObjectReference> sporefVec;
-    emerScript->mParent->getSpaceObjRefs(sporefVec);
-
-    ProxyObjectPtr returner;
-
-    for (std::vector<SpaceObjectReference>::iterator spIter = sporefVec.begin();
-         spIter != sporefVec.end(); ++spIter)
-    {
-        ProxyObjectPtr poPtr = emerScript->mParent->getProxyManager(spIter->space(),spIter->object())->getProxyObject(toRemoveListenersFor);
-
-        if (!poPtr)
-            continue;
-
-        poPtr->PositionProvider::removeListener(this);
-        poPtr->MeshProvider::removeListener(this);
-    }
-}
-
-
-JSProxyPtr JSVisibleManager::createProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams)
-{
+JSProxyPtr JSVisibleManager::getOrCreateProxyPtr(const SpaceObjectReference& whatsVisible, JSProxyPtr addParams) {
+    // If we have proxy data already, ignore the additional parameters
+    // (since they only come from previously stored objects) and
+    // return the existing data.
     SporefProxyMapIter proxIter = mProxies.find(whatsVisible);
-    if (proxIter != mProxies.end())
-        return JSProxyPtr(proxIter->second);
-
-    ProxyObjectPtr ptr= getMostUpToDate(whatsVisible);
-
-    // Had a proxy object that HostedObject was monitoring.  Load it into
-    // mProxies and returning.
-    if (ptr)
-    {
-        JSProxyPtr jspd (new JSProxyData(emerScript,whatsVisible,ptr->getTimedMotionVector(),ptr->getTimedMotionQuaternion(),ptr->getBounds(),ptr->getMesh().toString(),ptr->getPhysics()));
-
-        mProxies[whatsVisible] = JSProxyWPtr(jspd);
-        setListeners(whatsVisible);
-        return jspd;
+    if (proxIter != mProxies.end()) {
+        JSProxyPtr ret = proxIter->second.lock();
+        // Based on our memory management, it shouldn't be possible for it to
+        // remain as a weak pointer in our data structure but have no other
+        // references.
+        assert(ret);
+        return ret;
     }
 
-    //hosted object does not have a visible with sporef whatsVisible.
-
-    //load additional data on the visible from addParams
-    if (addParams != nullProxyPtr)
-    {
-        if (addParams->sporefToListenTo != whatsVisible)
-            JSLOG(error, "Erorr in createVisStruct of JSVisibleManager.  Expected sporefs of new visible should match whatsVisible");
-
-        JSProxyPtr returner (new JSProxyData(emerScript,addParams));
-        mProxies[whatsVisible] = JSProxyWPtr(returner);
-        return returner;
+    JSProxyPtr returner;
+    if (addParams) {
+        assert(addParams->sporefToListenTo == whatsVisible);
+        returner = JSProxyPtr(new JSProxyData(emerScript, whatsVisible, addParams));
     }
-
-
-    //Have no record of this visible.  Creating a new entry just for it.
-    JSProxyPtr returner ( new JSProxyData(emerScript));
-    returner->sporefToListenTo = whatsVisible;
+    else {
+        returner = JSProxyPtr(new JSProxyData(emerScript, whatsVisible));
+    }
     mProxies[whatsVisible] = JSProxyWPtr(returner);
     return returner;
 }
 
-
-
-
-void JSVisibleManager::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef)
-{
-    INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(jspd,sporef,updateLocation);
-
-    jspd->sporefToListenTo = sporef;
-    jspd->mLocation        = newLocation;
-    jspd->mOrientation     = newOrient;
-    jspd->mBounds          = newBounds;
-}
-
-
-
-void JSVisibleManager::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef)
-{
-    INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(jspd,sporef,onSetMesh);
-    jspd->mMesh  = newMesh.toString();
-}
-
-
-void JSVisibleManager::onSetScale (ProxyObjectPtr proxy, float32 newScale ,const SpaceObjectReference& sporef)
-{
-    INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(jspd,sporef,onSetScale);
-    jspd->mBounds = BoundingSphere3f(jspd->mBounds.center(),newScale);
-}
-
-
-void JSVisibleManager::onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef)
-{
-    INLINE_GET_OR_CREATE_NEW_JSPROXY_DATA(jspd,sporef,onSetMesh);
-    jspd->mPhysics  = newphy;
-}
-
-
-
-ProxyObjectPtr JSVisibleManager::getMostUpToDate(const SpaceObjectReference& sporef)
-{
-    std::vector<SpaceObjectReference> sporefVec;
-    emerScript->mParent->getSpaceObjRefs(sporefVec);
-
-    ProxyObjectPtr returner;
-
-    for (std::vector<SpaceObjectReference>::iterator spIter = sporefVec.begin();
-         spIter != sporefVec.end(); ++spIter)
-    {
-        ProxyObjectPtr poPtr = emerScript->mParent->getProxyManager(spIter->space(),spIter->object())->getProxyObject(sporef);
-
-        if (!poPtr)
-            continue;
-
-        if (!returner)
-            returner = poPtr;
-        else
-        {
-            //set returner to the proxyobjptr with the freshest position update.
-            if(returner->getTimedMotionVector().updateTime() < poPtr->getTimedMotionVector().updateTime())
-                returner = poPtr;
-        }
+JSProxyPtr JSVisibleManager::getOrCreateProxyPtr(ProxyObjectPtr proxy) {
+    // If we have data already, update it (new proxy should have
+    // up-to-date info).
+    SporefProxyMapIter proxIter = mProxies.find(proxy->getObjectReference());
+    if (proxIter != mProxies.end()) {
+        JSProxyPtr ret = proxIter->second.lock();
+        ret->updateFrom(proxy);
+        return ret;
     }
+
+    JSProxyPtr returner (new JSProxyData(emerScript, proxy));
+    mProxies[proxy->getObjectReference()] = JSProxyWPtr(returner);
     return returner;
 }
 
-void JSVisibleManager::setListeners(const SpaceObjectReference& toSetListenersFor)
-{
-    std::vector<SpaceObjectReference> sporefVec;
-    emerScript->mParent->getSpaceObjRefs(sporefVec);
-    for (std::vector<SpaceObjectReference>::iterator spIter = sporefVec.begin();
-         spIter != sporefVec.end(); ++spIter)
-    {
-        ProxyObjectPtr poPtr = emerScript->mParent->getProxyManager(spIter->space(),spIter->object())->getProxyObject(toSetListenersFor);
-        if (!poPtr)
-            continue;
-
-        poPtr->PositionProvider::addListener(this);
-        poPtr->MeshProvider::addListener(this);
-    }
+void JSVisibleManager::removeProxyData(const SpaceObjectReference& sporef) {
+    SporefProxyMapIter proxIter = mProxies.find(sporef);
+    assert(proxIter != mProxies.end());
+    mProxies.erase(proxIter);
 }
+
+
+
+void JSVisibleManager::onCreateProxy(ProxyObjectPtr p) {
+    JSProxyPtr data = getOrCreateProxyPtr(p);
+    data->incref(data);
+    p->PositionProvider::addListener(this);
+    p->MeshProvider::addListener(this);
+    mTrackedObjects.insert(p);
+}
+
+void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
+{
+    JSProxyPtr data = getOrCreateProxyPtr(p);
+    data->decref();
+
+    p->PositionProvider::removeListener(this);
+    p->MeshProvider::removeListener(this);
+
+    mTrackedObjects.erase(p);
+}
+
+void JSVisibleManager::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds, const SpaceObjectReference& sporef)
+{
+    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
+    data->mLocation = newLocation;
+    data->mOrientation = newOrient;
+    data->mBounds = newBounds;
+}
+
+void JSVisibleManager::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef)
+{
+    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
+    data->mMesh = newMesh.toString();
+}
+
+void JSVisibleManager::onSetScale (ProxyObjectPtr proxy, float32 newScale, const SpaceObjectReference& sporef)
+{
+    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
+    data->mBounds = BoundingSphere3f(data->mBounds.center(), newScale);
+}
+
+void JSVisibleManager::onSetPhysics (ProxyObjectPtr proxy, const String& newphy,const SpaceObjectReference& sporef)
+{
+    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
+    data->mPhysics = newphy;
+}
+
 
 
 bool JSVisibleManager::isVisible(const SpaceObjectReference& sporef)
 {
-    if (getMostUpToDate(sporef))
-        return true;
-
-    return false;
+    JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
+    return data->visibleToPresence();
 }
 
 v8::Handle<v8::Value> JSVisibleManager::isVisibleV8(const SpaceObjectReference& sporef)
 {
     return v8::Boolean::New(isVisible(sporef));
 }
-
-
-void JSVisibleManager::onCreateProxy(ProxyObjectPtr p)
-{
-    SporefProxyMapIter findIt = mProxies.find(p->getObjectReference());
-    if (findIt != mProxies.end())
-    {
-        //listen for updats from p as well as updating data in mProxies
-        p->PositionProvider::addListener(this);
-        p->MeshProvider::addListener(this);
-
-        JSProxyPtr ptr (findIt->second);
-        ptr->mLocation    = p->getTimedMotionVector();
-        ptr->mOrientation = p->getTimedMotionQuaternion();
-        ptr->mBounds      = p->getBounds();
-        ptr->mMesh        = p->getMesh().toString();
-        ptr->mPhysics     = p->getPhysics();
-    }
-}
-
-
-void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
-{
-    SporefProxyMapIter findIt = mProxies.find(p->getObjectReference());
-    if (findIt != mProxies.end())
-    {
-        p->PositionProvider::removeListener(this);
-        p->MeshProvider::removeListener(this);
-    }
-}
-
 
 }//end namespace JS
 }//end namespace Sirikata

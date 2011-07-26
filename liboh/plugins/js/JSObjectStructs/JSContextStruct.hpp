@@ -13,7 +13,7 @@
 #include <sirikata/oh/Storage.hpp>
 #include <sirikata/core/util/Liveness.hpp>
 #include "../EmersonHttpManager.hpp"
-
+#include "../JSVisibleManager.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -28,7 +28,6 @@ class JSUtilStruct;
 class JSPositionListener;
 class JSSystemStruct;
 struct PresStructRestoreParams;
-class JSProxyData;
 
 struct JSContextStruct : public JSSuspendable, public Liveness
 {
@@ -54,7 +53,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //and the internal state of this object is removed.
     virtual v8::Handle<v8::Value> clear();
     void finishClear();
-    
+
     v8::Handle<v8::Value>  struct_suspendContext();
     v8::Handle<v8::Value>  struct_resumeContext();
 
@@ -64,7 +63,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //this context
     v8::Handle<v8::Object> struct_getSystem();
 
-    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing,JSProxyData* addParams);
+    v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWathcing, JSProxyPtr addParams);
 
     v8::Handle<v8::Value> killEntity();
 
@@ -83,8 +82,8 @@ struct JSContextStruct : public JSSuspendable, public Liveness
        destination.  If destination is null, sends to parent.
      */
     v8::Handle<v8::Value> sendSandbox(const String& msgToSend, JSContextStruct* destination);
-    
-    
+
+
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
 
 
@@ -139,7 +138,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
        created contexts.
      */
     void receiveSandboxMessage(v8::Local<v8::Object> msgObj, JSContextStruct* sender);
-    
+
 
     /**
        @param {JSPresenceStruct} jspres Each context (other than the root) is
@@ -219,7 +218,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> setSandboxMessageCallback(v8::Persistent<v8::Function> callback);
     v8::Handle<v8::Value> setPresenceMessageCallback(v8::Persistent<v8::Function> callback);
 
-    
+
     //Each entity consists of a sandbox tree.  mParentContext points to the
     //parent of the current sandbox.  (Can be null for root sandbox.)  Can
     //access children sandboxes through associatedSuspendables map.
@@ -232,7 +231,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     //should agree with sandbox.PARENT set in std/shim/sandbox.em
     v8::Persistent<v8::Function> sandboxMessageCallback;
     v8::Persistent<v8::Function> presenceMessageCallback;
-    
+
 private:
     uint32 mContextID;
 
@@ -292,7 +291,7 @@ private:
 
     void flushQueuedSuspendablesToChange();
 
-    
+
     //working with presence wrappers: check if associatedPresence is null and throw exception if is.
 #define NullPresenceCheck(funcName)        \
     String fname (funcName);               \

@@ -5,6 +5,7 @@
 #include <v8.h>
 #include <sirikata/core/util/Liveness.hpp>
 #include <sirikata/mesh/Visual.hpp>
+#include "../JSVisibleManager.hpp"
 
 namespace Sirikata {
 namespace JS {
@@ -62,14 +63,6 @@ public:
     SpaceObjectReference getSporef();
 
 
-    /**
-       This call mostly exists for presences, which don't know their sporefs
-       (and hence their proxy data ptrs) until after they've connected to the
-       world.  JSPresenceStruct can set it here.
-     */
-    void setSharedProxyDataPtr(    std::tr1::shared_ptr<JSProxyData>_jpp);
-
-
 protected:
     v8::Handle<v8::Value> wrapSporef(SpaceObjectReference sporef);
     std::tr1::shared_ptr<JSProxyData> jpp;
@@ -81,7 +74,7 @@ private:
 
     //private constructor.  Can only be made through serializer,
     //JSVisibleStruct, or JSPresenceStruct.
-    JSPositionListener(    std::tr1::shared_ptr<JSProxyData> _jpp);
+    JSPositionListener(JSProxyPtr _jpp);
 
     // Invoked after loading is complete, invokes callback if all necessary
     // components are still alive.

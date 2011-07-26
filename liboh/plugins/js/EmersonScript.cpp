@@ -228,10 +228,9 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
 
 }
 
-
-v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj,JSProxyData* addParams, v8::Handle<v8::Context> ctx)
+v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams, v8::Handle<v8::Context> ctx)
 {
-    JSVisibleStruct* jsvis =  createVisStruct(visibleObj,addParams);
+    JSVisibleStruct* jsvis = createVisStruct(visibleObj, addParams);
     return createVisiblePersistent(jsvis,ctx);
 }
 
@@ -380,7 +379,8 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     proxy_manager->addListener(this);
     // Proxies for the object connected are created before this occurs, so we
     // need to manually notify of it:
-    this->onCreateProxy( proxy_manager->getProxyObject(name) );
+    ProxyObjectPtr self_proxy = proxy_manager->getProxyObject(name);
+    this->onCreateProxy(self_proxy);
 
     //register for scripting messages from user
     SpaceID space_id = name.space();
@@ -415,30 +415,24 @@ void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectR
     {
         //means that we've connected a presence and should finish by calling
         //connection callback
-        callbackUnconnected(name,token);
+        callbackUnconnected(self_proxy,token);
     }
 }
 
 
-void EmersonScript::callbackUnconnected(const SpaceObjectReference& name, HostedObject::PresenceToken token)
+void EmersonScript::callbackUnconnected(ProxyObjectPtr proxy, HostedObject::PresenceToken token)
 {
     for (PresenceVec::iterator iter = mUnconnectedPresences.begin(); iter != mUnconnectedPresences.end(); ++iter)
     {
         if (token == (*iter)->getPresenceToken())
         {
-
             JSPresenceStruct* pstruct = *iter;
-            mPresences[name] = pstruct;
-            //before the presence was connected, didn't have a sporef, and
-            //had to set presence's position listener with a blank proxyptr.
-            //can now set it with a real one that listens as it moves/changes in
-            //the world.
-            JSProxyPtr proxPtr  =  createProxyPtr(name, nullProxyPtr);
+            mPresences[proxy->getObjectReference()] = pstruct;
 
             mUnconnectedPresences.erase(iter);
             // Make sure this call is last since it invokes a callback which
             // could in turn call connect requests and modify mUnconnectedPresences.
-            pstruct->connect(name,proxPtr);
+            pstruct->connect(proxy->getObjectReference());
             return;
         }
     }
@@ -664,7 +658,7 @@ void EmersonScript::registerContextForClear(JSContextStruct* jscont)
 
 bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
 {
-    
+
     if (isStopped()) {
         JSLOG(warn, "Ignoring message after shutdown request.");
         // Regardless of whether we can or not, just say we can't decode it.
@@ -701,7 +695,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
 
-           v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()),NULL,receiver->mContext);
+            v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()), JSProxyPtr() ,receiver->mContext);
 
             //try deserialization
            bool deserializeWorks;
