@@ -46,10 +46,12 @@ OrphanLocUpdateManager::OrphanLocUpdateManager(Context* ctx, Network::IOStrand* 
 }
 
 OrphanLocUpdateManager::~OrphanLocUpdateManager() {
-    for(ObjectUpdateMap::iterator it = mUpdates.begin(); it != mUpdates.end(); ) {
+    for(ObjectUpdateMap::iterator it = mUpdates.begin(); it != mUpdates.end(); it++) {
         UpdateInfoList& info_list = it->second;
-        for(UpdateInfoList::iterator up_it = info_list.begin(); up_it != info_list.end(); up_it++)
-            delete up_it->value;
+        for(UpdateInfoList::iterator up_it = info_list.begin(); up_it != info_list.end(); up_it++) {
+            if (up_it->value != NULL) delete up_it->value;
+            if (up_it->opd != NULL) delete up_it->opd;
+        }
     }
     mUpdates.clear();
 }
@@ -70,7 +72,7 @@ void OrphanLocUpdateManager::addUpdateFromExisting(const SpaceObjectReference&ob
 
     UpdateInfo ui;
     ui.value = NULL;
-    
+
     ui.opd = new OrphanedProxData(proxyPtr->getTimedMotionVector(),
         proxyPtr->getUpdateSeqNo(ProxyObject::LOC_POS_PART),
         proxyPtr->getTimedMotionQuaternion(),
@@ -81,7 +83,7 @@ void OrphanLocUpdateManager::addUpdateFromExisting(const SpaceObjectReference&ob
         proxyPtr->getUpdateSeqNo(ProxyObject::LOC_BOUNDS_PART),
         proxyPtr->getPhysics(),
         proxyPtr->getUpdateSeqNo(ProxyObject::LOC_PHYSICS_PART));
-        
+
     ui.expiresAt = mContext->simTime() + mTimeout;
     info_list.push_back(ui);
 }
@@ -93,7 +95,7 @@ OrphanLocUpdateManager::UpdateInfoList OrphanLocUpdateManager::getOrphanUpdates(
 
     ObjectUpdateMap::iterator it = mUpdates.find(obj);
     if (it == mUpdates.end()) return results;
-    
+
     const UpdateInfoList& info_list = it->second;
 
     for(UpdateInfoList::const_iterator up_it = info_list.begin(); up_it != info_list.end(); up_it++)
@@ -131,7 +133,7 @@ void OrphanLocUpdateManager::poll() {
                 delete info_list.begin()->value;
             if (info_list.begin()->opd != NULL)
                 delete info_list.begin()->opd;
-            
+
             info_list.erase(info_list.begin());
         }
 
