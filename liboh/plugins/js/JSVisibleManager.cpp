@@ -71,7 +71,7 @@ void JSProxyData::updateFrom(ProxyObjectPtr from) {
     mLocation = from->getTimedMotionVector();
     mOrientation = from->getTimedMotionQuaternion();
     mBounds = from->getBounds();
-    mMesh = from->getMesh();
+    mMesh = from->getMesh().toString();
     mPhysics = from->getPhysics();
 }
 
