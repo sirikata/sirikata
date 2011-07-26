@@ -50,6 +50,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
      mLoc(Time::null(), MotionVector3f(Vector3f::nil(), Vector3f::nil())),
      mOrientation(Time::null(), MotionQuaternion(Quaternion::identity(), Quaternion::identity())),
      mParent(vwobj),
+     mParentPresenceID(owner_sor),
      mMeshURI()
 {
     assert(mParent);
@@ -152,11 +153,11 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
 {
     if (seqno < mUpdateSeqno[LOC_BOUNDS_PART] && !predictive)
         return;
-    
+
     if (!predictive)
         mUpdateSeqno[LOC_BOUNDS_PART] = seqno;
 
-    
+
     mBounds = bnds;
     PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     ProxyObjectPtr ptr = getSharedPtr();

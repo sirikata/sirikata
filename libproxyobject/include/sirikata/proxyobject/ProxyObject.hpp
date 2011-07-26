@@ -122,7 +122,7 @@ public:
 
 
     uint64 getUpdateSeqNo(LOC_PARTS);
-    
+
 private:
     const SpaceObjectReference mID;
     ProxyManager *const mManager;
@@ -135,6 +135,7 @@ private:
     BoundingSphere3f mBounds;
 
     VWObjectPtr mParent;
+    const SpaceObjectReference mParentPresenceID;
     ODP::Port* mDefaultPort; // Default port used to send messages to the object
                              // this ProxyObject represents
 
@@ -172,6 +173,9 @@ public:
     /// Returns the ProxyManager that owns this object. There is currently one ProxyManager per Space per ObjectHost.
     inline ProxyManager *getProxyManager() const {
         return mManager;
+    }
+    inline const SpaceObjectReference getOwnerPresenceID() const {
+        return mParentPresenceID;
     }
 
     /// Returns the last updated position for this object.
@@ -283,6 +287,25 @@ public:
 
     virtual void setPhysics(const String& rhs, uint64 seqno, bool predictive = false);
     virtual const String& getPhysics() const;
+
+
+    unsigned int hash() const {
+        return getOwnerPresenceID().hash() ^ getObjectReference().hash();
+    }
+
+    class Hasher{
+    public:
+        size_t operator() (const ProxyObject& p) const {
+            return p.hash();
+        }
+        size_t operator() (ProxyObject* p) const {
+            return p->hash();
+        }
+        size_t operator() (const ProxyObjectPtr& p) const {
+            return p->hash();
+        }
+    };
+
 };
 }
 #endif
