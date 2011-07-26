@@ -222,27 +222,7 @@ system.require('std/graphics/graphics.em');
      }
 
      std.graphics.Graphics.prototype.onAxesCreated = function(msg, sender) {
-         if(typeof(this._axes) === 'undefined')
-             this._axes = {};
-
-         this._axes.follow = function(vis) {
-             if(vis)
-                 {request: 'axes', id: vis.toString()} >> sender >> [];
-             else
-                 {request: 'axes', id: ''} >> sender >> [];
-         };
-
-         this._axes.toggleRotateMode = function() {
-             {request: 'axes', mode: 'toggle'} >> sender >> [];
-         };
-
-         this._axes.snapLocal = function() {
-             {request: 'axes', snap: 'local'} >> sender >> [];
-         }
-
-         this._axes.snapGlobal = function() {
-             {request: 'axes', snap: 'global'} >> sender >> [];
-         }
+         this._axesVisible = sender;
      };
 
      std.graphics.Graphics.prototype.createAxes = function(self) {
@@ -252,5 +232,30 @@ system.require('std/graphics/graphics.em');
                                    {avatar: self},
                                    self.queryAngle, redAxisMesh, 1);
      };
+
+     std.graphics.Graphics.prototype._axes = {};
+
+     std.graphics.Graphics.prototype._axes.follow = function(vis) {
+         if (!this._axesVisible) return;
+         if(vis)
+             {request: 'axes', id: vis.toString()} >> this._axesVisible >> [];
+         else
+             {request: 'axes', id: ''} >> this._axesVisible >> [];
+     };
+
+     std.graphics.Graphics.prototype._axes.toggleRotateMode = function() {
+         if (!this._axesVisible) return;
+         {request: 'axes', mode: 'toggle'} >> this._axesVisible >> [];
+     };
+
+     std.graphics.Graphics.prototype._axes.snapLocal = function() {
+         if (!this._axesVisible) return;
+         {request: 'axes', snap: 'local'} >> this._axesVisible >> [];
+     }
+
+     std.graphics.Graphics.prototype._axes.snapGlobal = function() {
+         if (!this._axesVisible) return;
+         {request: 'axes', snap: 'global'} >> this._axesVisible >> [];
+     }
 
 })();
