@@ -1103,7 +1103,7 @@ v8::Local<v8::Function> JSObjectScript::functionValue(const String& js_script_st
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, new_code, &origin, false));
   if (!v->IsFunction())
   {
-      assert(false);
+      v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, "function(){}", &origin, false));
   }
   
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
