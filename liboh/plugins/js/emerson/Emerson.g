@@ -48,6 +48,7 @@ tokens
     WHEN_PRED;
     VECTOR;
     QUATERNION;
+    QUATERNION_AXISANGLE;
     NOOP;
     DOLLAR_EXPRESSION; //used to grab object by reference instead of value in when statements.
     TRY;
@@ -647,6 +648,8 @@ vectorLiteral
 
 quaternionLiteral
         : '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* ',' LTERM* e4=vectorLiteralField LTERM*'>' -> ^(QUATERNION $e1 $e2 $e3 $e4)
+        | '<' LTERM* e1=vectorLiteralField LTERM* ',' LTERM* e2=vectorLiteralField LTERM* ',' LTERM* e3=vectorLiteralField LTERM* ';' LTERM* e4=vectorLiteralField LTERM*'>' -> ^(QUATERNION_AXISANGLE $e1 $e2 $e3 $e4)
+        | '<' LTERM* e1=vectorLiteralField LTERM* ';' LTERM* e2=vectorLiteralField LTERM*'>' -> ^(QUATERNION_AXISANGLE $e1 $e2)
         ;
 
         

@@ -284,7 +284,7 @@ util.Quaternion.fromLookAt = function(direction, up) {
 											1 + direction.dot(defaultForward)>;
 	} else {
         // defaultForward and direction are pointing in opposite directions.
-		var firstQuat = new util.Quaternion(<0, 1, 0>, Math.PI);
+		var firstQuat = <0, 1, 0; Math.PI>;
 	}
     firstQuat = firstQuat.normal();
 
@@ -300,10 +300,10 @@ util.Quaternion.fromLookAt = function(direction, up) {
             secondQuat = <quatAxis.x, quatAxis.y, quatAxis.z,
                                              1 + yAxis.dot(newUp)>;
         } else {
-            secondQuat = new util.Quaternion(direction, Math.PI);
+            secondQuat = <direction; Math.PI>;
         }
     } else {
-        secondQuat = new util.Quaternion(0, 0, 0, 1);
+        secondQuat = <0, 0, 0, 1>;
     }
     secondQuat = secondQuat.normal();
 

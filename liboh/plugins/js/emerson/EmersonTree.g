@@ -1601,6 +1601,49 @@ quaternionLiteral
               }
             )
            )
+        | ^(QUATERNION_AXISANGLE
+            {
+                LINE($QUATERNION_AXISANGLE.line);
+                APP("( new util.Quaternion(");
+            }
+            (exp1=vectorLiteralField
+              {
+                  APP(",");
+              }
+            )
+            (exp2=vectorLiteralField
+              {
+                  APP(") )");
+              }
+            )
+           )
+        | ^(QUATERNION_AXISANGLE
+            {
+                LINE($QUATERNION_AXISANGLE.line);
+                APP("( new util.Quaternion(new util.Vec3(");
+            }
+            (exp1=vectorLiteralField
+              {
+                  APP(",");
+              }
+            )
+            (exp2=vectorLiteralField
+              {
+                  APP(",");
+              }
+            )
+            (exp3=vectorLiteralField
+              {
+                  APP("),");
+              }
+            )
+            (exp4=vectorLiteralField
+              {
+                  APP(") )");
+              }
+            )
+           )
+
         ;       
 
         
