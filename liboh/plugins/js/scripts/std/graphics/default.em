@@ -45,6 +45,7 @@ system.require('std/graphics/physics.em');
 system.require('std/graphics/propertybox.em');
 system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
+system.require('std/graphics/dragControls.em');
 
 (
 function() {
@@ -76,6 +77,7 @@ function() {
         this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
         this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
         this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+        this._loadingUIs++; this._dragControls = new std.graphics.DragControls(this, ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
         this._camera.reinit();
@@ -87,6 +89,7 @@ function() {
         this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
+        this._loadingUIs++; this._dragControls.onReset(ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
         this._loadingUIs--;
@@ -122,6 +125,7 @@ function() {
         this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
 
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
+        this._binding.addAction('toggleDragControls', std.core.bind(this.toggleDragControls, this));
 
         this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
         this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
@@ -157,11 +161,6 @@ function() {
         this._binding.addAction('undo', std.core.bind(this.undo, this));
         this._binding.addAction('redo', std.core.bind(this.redo, this));
 
-        this._binding.addAction('axesToggleRotate', std.core.bind(this.axesToggleRotate, this));
-        this._binding.addAction('axesSnapGlobal', std.core.bind(this.axesSnapGlobal, this));
-        this._binding.addAction('axesSnapLocal', std.core.bind(this.axesSnapLocal, this));
-        this._binding.addAction('orientDefault', std.core.bind(this.orientDefault, this));
-
         /** Bindings are an *ordered* list of keys and actions. Keys
          *  are a combination of the type of event, the primary key
          *  for the event (key or mouse button), and modifiers.
@@ -184,14 +183,10 @@ function() {
             { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
             { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
             { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
+            { key: ['button-pressed', 'd', 'ctrl' ], action: 'toggleDragControls' },
 
             { key: ['button-pressed', 'z', 'ctrl' ], action: 'undo' },
             { key: ['button-pressed', 'y', 'ctrl' ], action: 'redo' },
-
-            { key: ['button-pressed', 'r', 'ctrl' ], action: 'axesToggleRotate' },
-            { key: ['button-pressed', 'g', 'ctrl' ], action: 'axesSnapGlobal' },
-            { key: ['button-pressed', 'g', 'alt' ], action: 'axesSnapLocal' },
-            { key: ['button-pressed', '0', 'ctrl' ], action: 'orientDefault' },
 
             { key: ['mouse-click', 2], action: 'pickObject' },
             { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
@@ -296,6 +291,10 @@ function() {
     /** @function */
     std.graphics.DefaultGraphics.prototype.togglePropertyBox = function() {
         this._propertybox.TogglePropertyBox();
+    };
+
+    std.graphics.DefaultGraphics.prototype.toggleDragControls = function() {
+        this._dragControls.toggle();
     };
 
     /** @function */
@@ -460,8 +459,16 @@ function() {
         this._simulator.redo();
     };
 
-    std.graphics.DefaultGraphics.prototype.axesToggleRotate = function(evt) {
-        this._simulator._axes.toggleRotateMode();
+    std.graphics.DefaultGraphics.prototype.axesRotateMode = function(evt) {
+        this._simulator._axes.rotateMode();
+    };
+
+    std.graphics.DefaultGraphics.prototype.axesMoveMode = function(evt) {
+        this._simulator._axes.moveMode();
+    };
+
+    std.graphics.DefaultGraphics.prototype.axesOffMode = function(evt) {
+        this._simulator._axes.offMode();
     };
 
     std.graphics.DefaultGraphics.prototype.axesSnapGlobal = function(evt) {

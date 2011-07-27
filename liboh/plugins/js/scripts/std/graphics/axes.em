@@ -25,6 +25,8 @@ system.require('std/graphics/graphics.em');
          var rotateMeshes = {x: 'meerkat:///wmonroe4/red_gimbal.dae/optimized/red_gimbal.dae',
                            y: 'meerkat:///wmonroe4/green_gimbal.dae/optimized/green_gimbal.dae',
                            z: 'meerkat:///wmonroe4/blue_gimbal.dae/optimized/blue_gimbal.dae'};
+         var offMeshes = {x: '', y: '', z: ''};
+
          var orientations = {x: new util.Quaternion(<0, 0, -1>, Math.PI / 2),
                              y: new util.Quaternion(),
                              z: new util.Quaternion(<1, 0, 0>, Math.PI / 2)};
@@ -50,8 +52,12 @@ system.require('std/graphics/graphics.em');
 
              follow << [{'request':'axes':},
                                {'id'::}];
-             toggleRotateMode << [{'request':'axes':},
-                                  {'mode':'toggle':}];
+             rotateMode << [{'request':'axes':},
+                                  {'mode':'rotate':}];
+             moveMode << [{'request':'axes':},
+                                  {'mode':'move':}];
+             offMode << [{'request':'axes':},
+                                  {'mode':'off':}];
              snapLocal << [{'request':'axes':},
                            {'snap':'local':}];
              snapGlobal << [{'request':'axes':},
@@ -64,16 +70,14 @@ system.require('std/graphics/graphics.em');
              presence.modelOrientation = orientations.x;
              axes.x = presence;
              axisIDs[presence.toString()] = true;
-             system.createPresence('meerkat:///wmonroe4/green_axis.dae/optimized/green_axis.dae',
-                                   onGreenConnected);
+             system.createPresence(axisMeshes.y, onGreenConnected);
          }
 
          function onGreenConnected(presence) {
              presence.modelOrientation = orientations.y;
              axes.y = presence;
              axisIDs[presence.toString()] = true;
-             system.createPresence('meerkat:///wmonroe4/blue_axis.dae/optimized/blue_axis.dae',
-                                   onBlueConnected);
+             system.createPresence(axisMeshes.z, onBlueConnected);
          }
 
          function onBlueConnected(presence) {
@@ -90,14 +94,7 @@ system.require('std/graphics/graphics.em');
              var axis = system.self.orientation.mul(
                      system.self.modelOrientation.mul(<0, 1, 0>));
              var delta = axis.scale(axis.dot(msg.position - system.self.position));
-             if(mode == 'move') {
-                 system.self.position = system.self.position + delta;
-
-                 for(var a in axes)
-                     axes[a].position = system.self.position;
-                 if(movable)
-                     movable.setPosition(system.self.position);
-             } else /* mode == 'rotate' */ {
+             if(mode == 'rotate') {
                  var quatDelta = new util.Quaternion(delta.normal(),
                                                      delta.length() * ROTATE_FACTOR /
                                                      system.self.scale);
@@ -108,6 +105,13 @@ system.require('std/graphics/graphics.em');
                      axes[a].orientation = system.self.orientation;
                  if(movable)
                      movable.setOrientation(system.self.orientation);
+             } else /* mode == 'move' (or rarely, mode == 'off') */ {
+                 system.self.position = system.self.position + delta;
+
+                 for(var a in axes)
+                     axes[a].position = system.self.position;
+                 if(movable)
+                     movable.setPosition(system.self.position);
              }
              msg.makeReply({}) >> [];
          }
@@ -185,12 +189,27 @@ system.require('std/graphics/graphics.em');
              }
          }
 
-         function toggleRotateMode(msg, sender) {
-             mode = (mode == 'move' ? 'rotate' : 'move');
-             axisMeshes = (mode == 'move' ? moveMeshes : rotateMeshes);
+         function setMode(modeName) {
+             mode = modeName;
+             axisMeshes = {
+                 move: moveMeshes,
+                 rotate: rotateMeshes,
+                 off: offMeshes
+             }[mode];
+
              for(var a in axes)
                  if(axes[a].mesh != '')
                      axes[a].mesh = axisMeshes[a];
+         }
+
+         function rotateMode(msg, sender) {
+             setMode('rotate');
+         }
+         function moveMode(msg, sender) {
+             setMode('move');
+         }
+         function offMode(msg, sender) {
+             setMode('off');
          }
 
          function snapLocal(msg, sender) {
@@ -243,19 +262,29 @@ system.require('std/graphics/graphics.em');
              {request: 'axes', id: ''} >> this._axesVisible >> [];
      };
 
-     std.graphics.Graphics.prototype._axes.toggleRotateMode = function() {
+     std.graphics.Graphics.prototype._axes.rotateMode = function() {
          if (!this._axesVisible) return;
-         {request: 'axes', mode: 'toggle'} >> this._axesVisible >> [];
+         {request: 'axes', mode: 'rotate'} >> this._axesVisible >> [];
+     };
+
+     std.graphics.Graphics.prototype._axes.moveMode = function() {
+         if (!this._axesVisible) return;
+         {request: 'axes', mode: 'move'} >> this._axesVisible >> [];
+     };
+
+     std.graphics.Graphics.prototype._axes.offMode = function() {
+         if (!this._axesVisible) return;
+         {request: 'axes', mode: 'off'} >> this._axesVisible >> [];
      };
 
      std.graphics.Graphics.prototype._axes.snapLocal = function() {
          if (!this._axesVisible) return;
          {request: 'axes', snap: 'local'} >> this._axesVisible >> [];
-     }
+     };
 
      std.graphics.Graphics.prototype._axes.snapGlobal = function() {
          if (!this._axesVisible) return;
          {request: 'axes', snap: 'global'} >> this._axesVisible >> [];
-     }
+     };
 
 })();
