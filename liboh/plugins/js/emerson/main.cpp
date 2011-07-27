@@ -198,6 +198,11 @@ int main	(int argc, char *argv[])
     emerson_init();
 
     const char* em_script = read_file(fName);
+    if (em_script == NULL) {
+        std::cerr << "Failed to open file " << fName << ". Pass -f and a filename "
+                  << "to compile a file." << std::endl;
+        return 1;
+    }
     string em_script_str = string(em_script);
     delete[] em_script;
     string em_script_str_new = em_script_str;

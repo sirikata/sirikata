@@ -668,13 +668,13 @@ dollarExpression
 // arrayLiteral definition.
 arrayLiteral
   : '[' LTERM* (expression)? LTERM* ']' -> ^(ARRAY_LITERAL expression?)
-  | '[' LTERM* e1=expression (',' LTERM* e2=expression)* LTERM* ']' -> ^(ARRAY_LITERAL expression expression*)
+  | '[' LTERM* e1=expression (',' LTERM* e2=expression)* (','?) LTERM* ']' -> ^(ARRAY_LITERAL expression expression*)
   ;
        
 // objectLiteral definition.
 objectLiteral
   : '{' LTERM* propertyNameAndValue? LTERM* '}' -> ^(OBJ_LITERAL propertyNameAndValue?)
-  | '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
+  | '{' LTERM* p1=propertyNameAndValue (',' LTERM* p2=propertyNameAndValue)* (','?) LTERM*     '}' -> ^(OBJ_LITERAL propertyNameAndValue propertyNameAndValue*) 
   ;
 
 // patternLiteral definition
