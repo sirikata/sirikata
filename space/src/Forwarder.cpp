@@ -132,8 +132,8 @@ Forwarder::Forwarder(SpaceContext* ctx)
   //Don't need to do anything special for destructor
   Forwarder::~Forwarder()
   {
-      for(ODPRouterMap::iterator it = mODPRouters.begin(); it != mODPRouters.end(); it++)
-          delete it->second;
+      // We don't need to delete these because they are added to
+      // mOutgoingMessages as a service queue, so they will be deleted there.
       mODPRouters.clear();
 
       delete mOSegCacheUpdateRouter;
