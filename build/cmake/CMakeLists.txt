@@ -2468,7 +2468,6 @@ SET(SIRIKATA_BINARY_INSTALL_TARGETS
           ${CPPOH_BINARY}
           cseg
           emerson
-          emheadless
           pinto
           )
 IF(OGRE_FOUND AND sdl_FOUND)
@@ -2479,6 +2478,12 @@ IF(OGRE_FOUND AND sdl_FOUND)
 )
 ENDIF()
 
+IF(V8_FOUND)
+  SET(SIRIKATA_BINARY_INSTALL_TARGETS
+    ${SIRIKATA_BINARY_INSTALL_TARGETS}
+    emheadless
+    )
+ENDIF()
 
 INSTALL(TARGETS
   ${SIRIKATA_BINARY_INSTALL_TARGETS}
