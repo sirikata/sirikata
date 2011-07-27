@@ -120,16 +120,16 @@ system.require('std/graphics/graphics.em');
              /*
              var axis = system.self.orientation.mul(
                      system.self.modelOrientation.mul(<0, 1, 0>));
-             system.__debugPrint('axis: ' + std.core.pretty(axis) + '\n');
+             //system.__debugPrint('axis: ' + std.core.pretty(axis) + '\n');
              var target = msg.orient.mul(<0, 1, 0>);
-             system.__debugPrint('target: ' + std.core.pretty(target) + '\n');
+             //system.__debugPrint('target: ' + std.core.pretty(target) + '\n');
              var corrAxis = target.cross(axis);
-             system.__debugPrint('corr: ' + std.core.pretty(corrAxis) + '\n');
+             //system.__debugPrint('corr: ' + std.core.pretty(corrAxis) + '\n');
              var correction = (new util.Quaternion(corrAxis.x, corrAxis.y,
                                                   corrAxis.z, 1 +
                                                   target.dot(axis))).normal();
              var newOrient = correction.mul(msg.orient);
-             system.__debugPrint('new y: ' + std.core.pretty(newOrient.mul(<0, 1, 0>)) + '\n\n');
+             //system.__debugPrint('new y: ' + std.core.pretty(newOrient.mul(<0, 1, 0>)) + '\n\n');
              system.self.orientation = newOrient.mul(system.self.
                                        modelOrientation.inverse());
               */
@@ -222,7 +222,7 @@ system.require('std/graphics/graphics.em');
      }
 
      std.graphics.Graphics.prototype.onAxesCreated = function(msg, sender) {
-         this._axesVisible = sender;
+         this._axes._axesVisible = sender;
      };
 
      std.graphics.Graphics.prototype.createAxes = function(self) {
