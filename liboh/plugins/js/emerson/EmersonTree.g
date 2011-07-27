@@ -839,6 +839,70 @@ scope
            )
        ;
 
+additiveAssignmentExpression
+        : multiplicativeAssignmentExpression
+        | ^(
+             ADD_ASSIGN
+             {
+             }
+             e1=additiveAssignmentExpression
+             {
+                APP(" = util.plus( " );
+                APP((const char*)$e1.text->chars);
+                APP(" , ");
+             }
+             multiplicativeAssignmentExpression
+             {
+                APP( " ) ");
+             }
+            ) 
+        | ^(SUB_ASSIGN
+            {
+            }
+             e1=additiveAssignmentExpression 
+             {
+                APP(" = util.sub( " );
+                APP((const char*)$e1.text->chars);
+                APP(" , ");
+             }
+             multiplicativeAssignmentExpression
+             {
+                APP(" ) ");
+             }
+            ) 
+	;
+
+multiplicativeAssignmentExpression
+        : unaryExpression
+        | ^( MULT_ASSIGN
+             {
+             } 
+             e1=multiplicativeAssignmentExpression 
+             {
+                APP(" = util.mul( " );
+                APP((const char*)$e1.text->chars);
+                APP(" , ");
+             }
+             unaryExpression
+             {
+                APP(" ) ");
+             }
+            )
+        | ^( DIV_ASSIGN
+            {
+            }
+            e1=multiplicativeAssignmentExpression
+            {
+                APP(" = util.div( " );
+                APP((const char*)$e1.text->chars);
+                APP(" , ");
+            }
+            unaryExpression
+            {
+                APP(" ) ");
+            }
+           )
+      ;
        
 leftHandSideExpression
 	: callExpression
@@ -928,10 +992,12 @@ assignmentOperator
 
 conditionalExpressionNoIn
         : msgRecvConstructNoIn
+        | additiveAssignmentExpression
         ;
 
 conditionalExpression
         : msgRecvConstruct
+        | additiveAssignmentExpression
         ;
         
 msgRecvConstruct

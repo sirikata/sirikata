@@ -14,6 +14,13 @@ var b = <2,d-1,88>;
 (a-a).print();
 (b-a).print();
 
+var c = a;
+c += b;
+c.print();
+var d = a;
+d -= b;
+d.print();
+
 // util.plus(a,a).print();
 // util.plus(b,a).print();
 // util.plus(b,b).print();
