@@ -50,11 +50,22 @@ public:
     virtual void generate();
 
 private:
+    void connectObjects();
+
+    struct ObjectInfo {
+        UUID id;
+        String scriptType;
+        String scriptArgs;
+        String scriptContents;
+    };
+
     ObjectHostContext* mContext;
     ObjectHost* mOH;
     SpaceID mSpace;
     String mDBFilename;
     int32 mConnectRate;
+    typedef std::queue<ObjectInfo> ObjectInfoQueue;
+    ObjectInfoQueue mIncompleteObjects;
 };
 
 } // namespace Sirikata

@@ -332,12 +332,8 @@ void CSVObjectFactory::generate()
 
 void CSVObjectFactory::connectObjects()
 {
-
     if (mContext->stopped())
-    {
-        std::cout<<"\n\nContext stopped.  Will not get anywhere\n\n";
         return;
-    }
 
     for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
         ObjectConnectInfo oci = mIncompleteObjects.front();

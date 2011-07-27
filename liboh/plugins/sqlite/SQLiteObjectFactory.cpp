@@ -43,7 +43,7 @@ SQLiteObjectFactory::SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh,
    mOH(oh),
    mSpace(space),
    mDBFilename(filename),
-   mConnectRate(100)
+   mConnectRate(25)
 {
 }
 
@@ -51,7 +51,7 @@ void SQLiteObjectFactory::generate() {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
     sqlite3_busy_timeout(db->db(), 1000);
 
-    
+
     String value_query = "SELECT object, script_type, script_args, script_contents FROM ";
     value_query += "\"" TABLE_NAME "\"";
     int rc;
@@ -81,10 +81,12 @@ void SQLiteObjectFactory::generate() {
 
             if (!script_type.empty())
             {
-                HostedObjectPtr obj = mOH->createObject(
-                    UUID(object_str, UUID::HexString()),
-                    script_type, script_args, script_contents
-                );
+                ObjectInfo info;
+                info.id = UUID(object_str, UUID::HexString());
+                info.scriptType = script_type;
+                info.scriptArgs = script_args;
+                info.scriptContents = script_contents;
+                mIncompleteObjects.push(info);
             }
 
             step_rc = sqlite3_step(value_query_stmt);
@@ -98,6 +100,28 @@ void SQLiteObjectFactory::generate() {
 
     rc = sqlite3_finalize(value_query_stmt);
     SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
+
+    connectObjects();
 }
 
+void SQLiteObjectFactory::connectObjects() {
+    if (mContext->stopped())
+        return;
+
+    for(int32 i = 0; i < mConnectRate && !mIncompleteObjects.empty(); i++) {
+        ObjectInfo info = mIncompleteObjects.front();
+        mIncompleteObjects.pop();
+
+        HostedObjectPtr obj = mOH->createObject(
+            info.id, info.scriptType, info.scriptArgs, info.scriptContents
+        );
+    }
+
+    if (!mIncompleteObjects.empty())
+        mContext->mainStrand->post(
+            Duration::seconds(1.f),
+            std::tr1::bind(&SQLiteObjectFactory::connectObjects, this)
+        );
 }
+
+} // namespace Sirikata
