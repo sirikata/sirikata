@@ -399,7 +399,7 @@ propertyReferenceSuffix1
 memberExpression
 	: (primaryExpression -> primaryExpression) ( LTERM* propertyReferenceSuffix1 -> ^( DOT  $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
 	| (functionExpression -> functionExpression) (LTERM* propertyReferenceSuffix1 -> ^( DOT $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1))*
-	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
+	| ('new' LTERM* expr=memberExpression LTERM* arguments -> ^(NEW $expr arguments)) (LTERM* propertyReferenceSuffix1 -> ^(DOT $memberExpression propertyReferenceSuffix1) | LTERM* indexSuffix1 -> ^(ARRAY_INDEX $memberExpression indexSuffix1) )*  
         ;
 
 
