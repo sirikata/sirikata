@@ -828,13 +828,13 @@ void Proximity::handleRemoveAllObjectLocSubscription(const UUID& subscriber) {
     mLocService->unsubscribe(subscriber);
 }
 
-void Proximity::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
+void Proximity::handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr) {
     // We check the cache when we get the request, but also check it here since
     // the observed object may have been removed between the request to add this
     // subscription and its actual execution.
     if (!mLocService->contains(observed)) return;
 
-    mLocService->subscribe(subscriber, observed, SeqNoPtr(new SeqNo(0)));
+    mLocService->subscribe(subscriber, observed, seqPtr);
 }
 void Proximity::handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed) {
     mLocService->unsubscribe(subscriber, observed);
@@ -944,6 +944,7 @@ void Proximity::generateServerQueryEvents(Query* query) {
     uint32 max_count = GetOptionValue<uint32>(PROX_MAX_PER_RESULT);
 
     ServerID sid = mInvertedServerQueries[query];
+    SeqNoInfo* infoPtr = getOrCreateSeqNoInfo(sid);
 
     QueryEventList evts;
     query->popEvents(evts);
@@ -964,11 +965,14 @@ void Proximity::generateServerQueryEvents(Query* query) {
                     count++;
 
                     mContext->mainStrand->post(
-                        std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, objid)
+                        std::tr1::bind(&Proximity::handleAddServerLocSubscription, this, sid, objid, infoPtr->getSeqNoPtr(objid))
                     );
 
                     Sirikata::Protocol::Prox::IObjectAddition addition = event_results.add_addition();
                     addition.set_object( objid );
+
+                    uint64 seqNo = infoPtr->getSeqNo(objid);
+                    addition.set_seqno (seqNo);
 
                     TimedMotionVector3f loc = mLocCache->location(objid);
                     Sirikata::Protocol::ITimedMotionVector msg_loc = addition.mutable_location();
@@ -994,11 +998,16 @@ void Proximity::generateServerQueryEvents(Query* query) {
             for(uint32 ridx = 0; ridx < evt.removals().size(); ridx++) {
                 UUID objid = evt.removals()[ridx].id();
                 count++;
+
+                infoPtr->removeSeqNoPtr(objid);
                 mContext->mainStrand->post(
                     std::tr1::bind(&Proximity::handleRemoveServerLocSubscription, this, sid, objid)
                 );
+
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object(objid);
+                uint64 seqNo = infoPtr->getSeqNo(objid);
+                removal.set_seqno (seqNo);
             }
 
             evts.pop_front();
@@ -1104,6 +1113,25 @@ void Proximity::generateObjectQueryEvents(Query* query) {
         );
         mObjectResults.push(obj_msg);
     }
+}
+
+
+Proximity::SeqNoInfo* Proximity::getOrCreateSeqNoInfo(const ServerID server_id)
+{
+    // server_id == querier
+    ServerSeqNoInfoMap::iterator proxSeqNoIt = mServerSeqNos.find(server_id);
+    if (proxSeqNoIt == mServerSeqNos.end())
+        proxSeqNoIt = mServerSeqNos.insert( ServerSeqNoInfoMap::value_type(server_id, new SeqNoInfo()) ).first;
+    return proxSeqNoIt->second;
+}
+
+void Proximity::eraseSeqNoInfo(const ServerID server_id)
+{
+    // server_id == querier
+    ServerSeqNoInfoMap::iterator proxSeqNoIt = mServerSeqNos.find(server_id);
+    if (proxSeqNoIt == mServerSeqNos.end()) return;
+    delete proxSeqNoIt->second;
+    mServerSeqNos.erase(proxSeqNoIt);
 }
 
 

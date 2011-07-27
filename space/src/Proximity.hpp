@@ -290,7 +290,7 @@ private:
     void handleAddObjectLocSubscription(const UUID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
     void handleRemoveObjectLocSubscription(const UUID& subscriber, const UUID& observed);
     void handleRemoveAllObjectLocSubscription(const UUID& subscriber);
-    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed);
+    void handleAddServerLocSubscription(const ServerID& subscriber, const UUID& observed, SeqNoPtr seqPtr);
     void handleRemoveServerLocSubscription(const ServerID& subscriber, const UUID& observed);
     void handleRemoveAllServerLocSubscription(const ServerID& subscriber);
 
@@ -323,6 +323,8 @@ private:
 
        Gets or creates sequence number information for the given querier.
      */
+    SeqNoInfo* getOrCreateSeqNoInfo(const ServerID server_id);
+    void eraseSeqNoInfo(const ServerID server_id);
     SeqNoInfo* getOrCreateSeqNoInfo(const UUID& obj_id);
     void eraseSeqNoInfo(const UUID& obj_id);
 
@@ -424,6 +426,8 @@ private:
     bool mObjectDistance; // Using distance queries
 
     // Track SeqNo info for each querier
+    typedef std::tr1::unordered_map<ServerID, SeqNoInfo*> ServerSeqNoInfoMap;
+    ServerSeqNoInfoMap mServerSeqNos;
     typedef std::tr1::unordered_map<UUID, SeqNoInfo*, UUID::Hasher> ObjectSeqNoInfoMap;
     ObjectSeqNoInfoMap mObjectSeqNos;
 
