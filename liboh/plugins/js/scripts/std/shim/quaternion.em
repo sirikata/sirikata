@@ -34,11 +34,10 @@
 /* Quaternion should be assumed to only have .x, .y, .z, and .w. */
 
 
-/** @constant.
+/** @constant
  *  Identity quaternion representing no rotation.
  */
-//util.Quaternion.prototype.identity = new util.Quaternion(0, 0, 0, 1);
-util.Quaternion.prototype.identity = <0, 0, 0, 1>;
+util.Quaternion.identity = <0, 0, 0, 1>;
 
 /** Make a copy of this quaternion.
  *  @returns a copy of this Quaternion.
