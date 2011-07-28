@@ -10,7 +10,7 @@ import subprocess
 import os
 import datetime
 import time
-
+import signal
 
 CSV_DB_FILENAME = 'unit_test_csv_db.db';
 RUN_OUTPUT_FILENAME = 'runOutput';
@@ -19,17 +19,13 @@ RUN_OUTPUT_FILENAME = 'runOutput';
 class CSVTest(singleTest.SingleTest):
 
     '''
-    
-    @param {Array}  additionalCMDLineArgs Specify any additional
-    arguments you want to provide to cpp_oh.  Note do not specify
-    object-factory or object-factory-opts (they're being used by this class).
+    @see singleTest.SingleTest
     '''
-    def __init__(self,testName,entityConstructorInfo=[],errorConditions=[], additionalCMDLineArgs=[]):
-        self.testName = testName;
-        self.errorConditions = errorConditions;
-        self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
-        self.additionalCMDLineArgs = additionalCMDLineArgs;
+    def __init__(self,testName,entityConstructorInfo=None,errorConditions=None, additionalCMDLineArgs=None,howLongToRunInSeconds=singleTest.DEFAULT_TEST_TIME_IN_SECONDS, touches=None):
+        
+        singleTest.SingleTest.__init__(self,testName,errorConditions,additionalCMDLineArgs,howLongToRunInSeconds,touches);
 
+        self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
         
     def addEntityConstructorInfo(self,eci):
         self.csvGen.addEntity(eci);
@@ -56,7 +52,7 @@ class CSVTest(singleTest.SingleTest):
     binary/executale to run.
 
     '''
-    def runTest(self,outputFilename,dirtyFolderName,cppohPath, cppohBinName, howLongToRunInSeconds):
+    def runTest(self,outputFilename,dirtyFolderName,cppohPath, cppohBinName):
         dbFilename = os.path.join(dirtyFolderName,CSV_DB_FILENAME);
         runOutputFilename = os.path.join(dirtyFolderName,RUN_OUTPUT_FILENAME);
         
@@ -66,10 +62,7 @@ class CSVTest(singleTest.SingleTest):
         self.additionalCMDLineArgs.append('--object-factory-opts=--db='+ os.path.abspath(dbFilename));
 
 
-        
-        
-        print('\n\n******************************\n');
-        print('\nRunning test ' + self.testName + '\n');
+        print('Running test ' + self.testName + '\n');
         outputCatcher = open(runOutputFilename,'w');
 
         popenCall =['./'+cppohBinName];
@@ -79,21 +72,25 @@ class CSVTest(singleTest.SingleTest):
         prevDir = os.getcwd();
         os.chdir(cppohPath);
         start = datetime.datetime.now();
-        proc = subprocess.Popen(popenCall,  stdout=outputCatcher, stderr=outputCatcher);
 
         
+        proc = subprocess.Popen(popenCall,stdout=outputCatcher, stderr=subprocess.STDOUT);
+        signalSent = False;
         while proc.poll() is None:
             time.sleep(1)
             now = datetime.datetime.now();
-            if (now - start).seconds > howLongToRunInSeconds:
-                proc.kill();
-        
+            if (((now - start).seconds > self.howLongToRunInSeconds) and (not signalSent)):
+                sys.stdout.flush();
+                signalSent = True;
+                print('Sending sighup to object host');
+                sys.stderr.flush();
+                proc.send_signal(signal.SIGHUP);
 
-        outputCatcher.flush();
+                
         outputCatcher.close();
         os.chdir(prevDir);
         
-        print('\nAnalyzing test ' + self.testName + '\n');
+        print('Analyzing test ' + self.testName + '\n');
         self.analyzeOutput(runOutputFilename, outputFilename);
         print('\nDone with test ' + self.testName + '\n');
         

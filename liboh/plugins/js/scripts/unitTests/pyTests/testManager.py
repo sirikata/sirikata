@@ -2,13 +2,14 @@
 
 import os;
 import shutil;
+import time;
 
 DEFAULT_OUTPUT_FILENAME = 'unitTestResults.txt';
 DEFAULT_CPPOH_PATH = '../../../../../build/cmake/';
 DEFAULT_CPPOH_BIN_NAME = 'cppoh_d';
 
 DEFAULT_DIRTY_FOLDER = 'pyTests/DIRTY_UNIT_TEST_DIR';
-DEFAULT_TIME_TO_RUN_IN_SECONDS  =  20;
+
 
 
 class TestManager:
@@ -22,7 +23,7 @@ class TestManager:
         for s in testArrayToAdd:
             self.addTest(s);
 
-    def runAllTests(self, outputFilename=DEFAULT_OUTPUT_FILENAME,cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME, timeToRunInSeconds=DEFAULT_TIME_TO_RUN_IN_SECONDS):
+    def runAllTests(self, outputFilename=DEFAULT_OUTPUT_FILENAME,cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME):
         numTests = len(self.mTests);
         count = 1;
 
@@ -40,7 +41,7 @@ class TestManager:
 
             
             os.mkdir(DEFAULT_DIRTY_FOLDER);
-            s.runTest(outputFilename,DEFAULT_DIRTY_FOLDER,cppohPath,cppohBinName,timeToRunInSeconds);
+            s.runTest(outputFilename,DEFAULT_DIRTY_FOLDER,cppohPath,cppohBinName);
             shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
             

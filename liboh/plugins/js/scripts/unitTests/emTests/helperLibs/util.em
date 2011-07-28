@@ -41,7 +41,7 @@
 
      UnitTest.prototype.fail = function(toPrint)
      {
-         __internalPrint(this.testName,UNIT_TEST_FAILURE_SUCCESS,toPrint);
+         __internalPrint(this.testName,UNIT_TEST_HEADER_FAILURE,toPrint);
      };
 
      

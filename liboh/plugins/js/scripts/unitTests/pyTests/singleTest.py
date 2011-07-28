@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 
+DEFAULT_TEST_TIME_IN_SECONDS=20;
+
 
 class SingleTest:
     
@@ -16,15 +18,36 @@ class SingleTest:
     then we report that the test has failed.  Otherwise, we report a
     success.
 
-    @param {String} additionalCMDLineArgs Specify any additional
-    arguments you want to provide to cpp_oh.  Note do not specify
-    object-factory or object-factory-opts (they're being used by this class).
+    @param {Array} additionalCMDLineArgs Specify any additional
+    arguments you want to provide to cpp_oh.  Each element of the
+    array should correspond to an arg.
+
+    @param {Int} howLongToRunInSeconds Number of seconds to run test simulation for
+
+    @param {Array} touches An array of strings.  Each element
+    indicates a potential call that could have caused problem if test failed.
     '''
     
-    def __init__(self,testName, errorConditions=[], additionalCMDLineArgs=''):
+    def __init__(self,testName, errorConditions=None, additionalCMDLineArgs=None,howLongToRunInSeconds=DEFAULT_TEST_TIME_IN_SECONDS, touches=None):
         self.testName = testName;
-        self.errorConditions = errorConditions;
-        self.additionalCMDLineArgs = '';
+
+        if (errorConditions == None):
+            self.errorConditions = [];
+        else:
+            self.errorConditions = errorConditions;
+
+        if (additionalCMDLineArgs == None):
+            self.additionalCMDLineArgs = [];
+        else:
+            self.additionalCMDLineArgs = additionalCMDLineArgs;
+
+        
+        self.howLongToRunInSeconds = howLongToRunInSeconds;
+
+        if (touches == None):
+            self.touches = [];
+        else:
+            self.touches = touches;
 
     '''
     @see errorConditions param of __init__
@@ -63,8 +86,9 @@ class SingleTest:
         fullFile = open(filenameToAnalyze,'r').read();
 
         outputFile = open(fNameAppendResTo,'a');
-        outputFile.write('**************************\n');
-        outputFile.write('Performing test for ' + self.testName + '\n');
+        stringToPrint = "";
+        stringToPrint += '**************************\n'
+        stringToPrint += 'Performing test for ' + self.testName + '\n';
         
 
         failed = False;
@@ -74,24 +98,31 @@ class SingleTest:
             results.append([s.getName(), errorReturner]);
             failed = (failed or errorReturner.getErrorExists());
 
-        outputFile.write('result:  ');
+
+        stringToPrint += 'result:  '
         if (failed):
-            outputFile.write('FAILED');
+            stringToPrint += 'FAILED';
+            stringToPrint += '\nCalls made by test: \n';
+            for s in self.touches:
+                stringToPrint += s + ',';
         else:
-            outputFile.write('PASSED');
+            stringToPrint += 'PASSED';
 
-        outputFile.write('\n\nDetailed information: \n');
+        stringToPrint += '\n\nDetailed information: \n';
         for s in results:
-            outputFile.write('\t' + s[0] + ':    ');
+            stringToPrint += '\t' + s[0] + ':    '
             if (s[1].getErrorExists()):
-                outputFile.write(' FAILED\n');
-                outputFile.write('\t\tinfo: ' + s[1].getErrorMessage());
+                stringToPrint += ' FAILED\n';
+                stringToPrint += '\t\tinfo: ' + s[1].getErrorMessage();
             else:
-                outputFile.write(' PASSED');
+                stringToPrint += ' PASSED';
+                
 
-            outputFile.write('\n');
+            stringToPrint += '\n';
             
 
+        outputFile.write(stringToPrint);
+        print(stringToPrint);
         outputFile.flush();
         outputFile.close();
         
