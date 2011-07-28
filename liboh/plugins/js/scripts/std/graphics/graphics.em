@@ -126,6 +126,14 @@ function() {
         this._animationInfo.sendAnimationInfo("AnimationInfo", vis.toString(), anim_name);
     };
 
+    std.graphics.Graphics.prototype.stopAnimation = function(vis, responseToMsg) {
+      this.invoke('stopAnimation', vis);
+
+      if (!responseToMsg)
+        this._animationInfo.sendAnimationInfo("AnimationInfo", vis.toString(), "");
+    };
+
+
 
     /** Request that the OH shut itself down, i.e. that the entire application exit. */
     std.graphics.Graphics.prototype.quit = function() {
