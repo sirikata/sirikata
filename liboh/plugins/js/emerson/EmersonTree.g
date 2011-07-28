@@ -1808,4 +1808,3 @@ literal
         }
 	| NumericLiteral { LINE($NumericLiteral.line); APP((const char*)$NumericLiteral.text->chars);}
 	;
-	
