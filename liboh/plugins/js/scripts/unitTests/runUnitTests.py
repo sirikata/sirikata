@@ -34,6 +34,29 @@ def runAll():
     
     testArray.append(basicTest);
 
+
+    #timeoutTest: see documentation in unitTests/emTests/timeoutTest.em
+    #Tests: timeout, self, onPresenceConnected, Date
+    timeoutTestInfo = CSVConstructorInfo(script_type=stringWrap("js"),
+                                         script_contents=stringWrap("system.import('unitTests/emTests/timeoutTest.em');"));
+    timeoutTest = csvTest.CSVTest("timeoutTest",
+                                  touches=['timeout',
+                                           'self',
+                                           'onPresenceConnected',
+                                           'Date'],
+                                  
+                                  entityConstructorInfo=[timeoutTestInfo],
+                                  
+                                  errorConditions=[basicErrors.SegFaultError,
+                                                   basicErrors.BusError,
+                                                   basicErrors.AssertError,
+                                                   basicErrors.UnitTestNoSuccessError,
+                                                   basicErrors.UnitTestFailError],
+                                             
+                                  howLongToRunInSeconds=100);
+
+    testArray.append(timeoutTest);
+                                  
     
     #proximityAdded test: see documentation in unitTests/emTests/proximityAdded.em.
     #Tests: onProxAdded, setQueryAngle, setVelocity, createPresence,

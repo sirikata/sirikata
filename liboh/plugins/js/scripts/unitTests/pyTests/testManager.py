@@ -33,7 +33,8 @@ class TestManager:
         
         for s in self.mTests:
             print('\nRunning test ' + str(count) + ' of ' + str(numTests) + '\n');
-            ++count;
+            count += 1;
+
 
             #if the dirty folder already exists then delete it first
             if(os.path.exists(DEFAULT_DIRTY_FOLDER)):

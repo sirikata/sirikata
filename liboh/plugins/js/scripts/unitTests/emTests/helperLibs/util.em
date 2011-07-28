@@ -48,7 +48,10 @@
  })();
 
 
-
+/**
+ Waits timeToWait seconds, then executes beforeKillFunc, then kills
+ whichever entity called killAfterTime.
+ */
 function killAfterTime(timeToWait, beforeKillFunc)
 {
     var onTimeout = function()
@@ -59,4 +62,30 @@ function killAfterTime(timeToWait, beforeKillFunc)
         system.killEntity();  
     };
     system.timeout(timeToWait,onTimeout);
+}
+
+
+/**
+ 
+ @param {object} sucObj An object with string indices and boolean
+ values.  If one of the values is false, then we use unitTestObj to
+ print a failure message with the index string as the failure message.
+ If *all* items in sucObj are true, then prints success message.
+
+ @param {UnitTest object} unitTestObj.  @see UnitTest.
+
+ */
+function printSuccessObject(sucObj, unitTestObj)
+{
+    var success = true;
+    for (var s in sucObj)
+    {
+        if (!sucObj[s])
+        {
+            success= false;
+            unitTestObj.fail(s);
+        }
+    }
+    if (success)
+        unitTestObj.success(' succeeded!');
 }
