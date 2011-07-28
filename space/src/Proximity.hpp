@@ -183,67 +183,6 @@ private:
     typedef Sirikata::AtomicValue<uint32> SeqNo;
     typedef std::tr1::shared_ptr<SeqNo> SeqNoPtr;
 
-    // SeqNoInfos track sequence numbers for each querier. This struct
-    // is used only in the prox thread, but the SeqNos (which are
-    // thread safe) are passed to the main thread as well (so they can
-    // be used in Loc).
-    struct SeqNoInfo {
-    private:
-        //sequence number is shared with location service so that object host
-        //can distinguish ordering of prox added/removed events from location
-        //updates.
-
-        typedef std::map<UUID,SeqNoPtr> ObjSeqNoMap;
-        typedef ObjSeqNoMap::iterator ObjSeqNoMapIter;
-        ObjSeqNoMap seqnoObjMap;
-
-    public:
-        /**
-           @param {UUID} objID the id for the object that is now visible.  Ie,
-           the object who we will send a message to another object *about*.
-
-           If don't have a record for this object, then insert one, and return a
-           new sequence number pointer for it.
-         */
-        SeqNoPtr getSeqNoPtr(const UUID& objID)
-        {
-            ObjSeqNoMapIter findObjIDIter = seqnoObjMap.find(objID);
-            if (findObjIDIter == seqnoObjMap.end())
-            {
-                SeqNoPtr returner =  SeqNoPtr(new SeqNo(0));
-                seqnoObjMap[objID] = returner;
-                return returner;
-            }
-
-            return findObjIDIter->second;
-        }
-
-        /**
-           Returns the sequence number for the stream to objID.  Also increments
-           the sequnece number for this stream.
-         */
-        uint64 getSeqNo(const UUID& objID)
-        {
-            SeqNoPtr sPtr = getSeqNoPtr(objID);
-            return (*sPtr)++;
-        }
-
-        /**
-           @see getSeqNoPtr
-         */
-        void removeSeqNoPtr(const UUID& objID)
-        {
-            ObjSeqNoMapIter eraseObjIDIter= seqnoObjMap.find(objID);
-            if (eraseObjIDIter != seqnoObjMap.end())
-                seqnoObjMap.erase(eraseObjIDIter);
-        }
-
-        void removeAllObjSeqNoPtrs()
-        {
-            seqnoObjMap.clear();
-        }
-    };
-
 
     void handleObjectProximityMessage(const UUID& objid, void* buffer, uint32 length);
 
@@ -323,9 +262,9 @@ private:
 
        Gets or creates sequence number information for the given querier.
      */
-    SeqNoInfo* getOrCreateSeqNoInfo(const ServerID server_id);
+    SeqNoPtr getOrCreateSeqNoInfo(const ServerID server_id);
     void eraseSeqNoInfo(const ServerID server_id);
-    SeqNoInfo* getOrCreateSeqNoInfo(const UUID& obj_id);
+    SeqNoPtr getOrCreateSeqNoInfo(const UUID& obj_id);
     void eraseSeqNoInfo(const UUID& obj_id);
 
     typedef std::set<UUID> ObjectSet;
@@ -426,9 +365,9 @@ private:
     bool mObjectDistance; // Using distance queries
 
     // Track SeqNo info for each querier
-    typedef std::tr1::unordered_map<ServerID, SeqNoInfo*> ServerSeqNoInfoMap;
+    typedef std::tr1::unordered_map<ServerID, SeqNoPtr> ServerSeqNoInfoMap;
     ServerSeqNoInfoMap mServerSeqNos;
-    typedef std::tr1::unordered_map<UUID, SeqNoInfo*, UUID::Hasher> ObjectSeqNoInfoMap;
+    typedef std::tr1::unordered_map<UUID, SeqNoPtr, UUID::Hasher> ObjectSeqNoInfoMap;
     ObjectSeqNoInfoMap mObjectSeqNos;
 
 
