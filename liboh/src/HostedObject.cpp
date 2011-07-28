@@ -482,7 +482,23 @@ void HostedObject::handleConnectedIndirect(const SpaceID& space, const ObjectRef
 
 void HostedObject::handleMigrated(const SpaceID& space, const ObjectReference& obj, ServerID server)
 {
-    NOT_IMPLEMENTED(ho);
+    // When we switch space servers, the ProxyObject's sequence
+    // numbers will no longer match because this information isn't
+    // moved with the object. Since we shouldn't get more updates from
+    // the original server, we reset all the ProxyObjects *owned* by
+    // this object to have seqno = 0 so they will start fresh for the
+    // new space server.
+    ProxyManagerPtr proxy_manager = getProxyManager(space, obj);
+    if (!proxy_manager) {
+        HO_LOG(error, "Got migrated message but don't have a ProxyManager for the object.");
+        return;
+    }
+    std::vector<SpaceObjectReference> proxy_names;
+    proxy_manager->getAllObjectReferences(proxy_names);
+    for(std::vector<SpaceObjectReference>::iterator it = proxy_names.begin(); it != proxy_names.end(); it++) {
+        ProxyObjectPtr proxy = proxy_manager->getProxyObject(*it);
+        proxy->reset();
+    }
 }
 
 
@@ -785,10 +801,6 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 proxy_obj = createProxy(proximateID, spaceobj, meshuri, loc, orient, bnds, phy,SolidAngle::Max,proxyAddSeqNo);
             }
             else {
-                // Reset so that updates from this new "session" for this proxy
-                // get applied
-                proxy_obj->reset();
-
                 // We need to handle optional values properly -- they
                 // shouldn't get overwritten.
                 String* mesh_ptr = (addition.has_mesh() ? &mesh : NULL);
@@ -841,6 +853,14 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                 ProxyObjectPtr proxy_obj = proxy_manager->getProxyObject(removed_obj_ref);
 
                 if (proxy_obj) {
+                    // NOTE: We *don't* reset the proxy object
+                    // here. Resetting it puts the seqnos back at 0,
+                    // but if we get an addition while still on this
+                    // space server, we actually want the old ones to
+                    // stay in place, in case of unordered prox/loc
+                    // updates. Resetting only happens when we move
+                    // across space servers (see handleMigrated).
+
                     //hold on to the removed proxy object's internal data for a
                     //little extra time in case get a re-addition proxy message, and
                     //the loc messages that had already been processed for proxy_obj
