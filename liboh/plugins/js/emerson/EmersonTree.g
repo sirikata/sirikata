@@ -782,16 +782,31 @@ scope
 {
   const char* op;
 }
-
         : conditionalExpression
         | ^(
             (
+                  MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " util.mul ";  }
+                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " util.div ";  }
+                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " util.mod ";  }
+                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " util.plus ";  } 
+                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " util.sub ";  } 
+            )
+            e1=leftHandSideExpression 
+            {
+                APP(" = ");
+                APP($assignmentExpression::op);
+                APP(" ( ");
+                APP((const char*)$e1.text->chars);
+                APP(" , ");
+            }
+            assignmentExpression
+            {
+                APP(" ) ");
+            }
+           )
+        | ^(
+            (
                 ASSIGN                { LINE($ASSIGN.line); $assignmentExpression::op = " = ";    }
-                | MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " *= ";  }
-                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " /= ";  }
-                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " \%= ";  }
-                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " += ";  } 
-                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " -= ";  } 
                 | AND_ASSIGN          { LINE($AND_ASSIGN.line); $assignmentExpression::op = " &= "; }
                 | EXP_ASSIGN          { LINE($EXP_ASSIGN.line); $assignmentExpression::op  = " ^= "; }
                 | OR_ASSIGN           { LINE($OR_ASSIGN.line); $assignmentExpression::op = " |= "; } 
@@ -814,95 +829,46 @@ scope
 {
   const char* op;
 }
-        : conditionalExpressionNoIn
+        : conditionalExpression
         | ^(
-          (
-            ASSIGN        { LINE($ASSIGN.line); $assignmentExpressionNoIn::op = " = ";    }
-            | MULT_ASSIGN { LINE($MULT_ASSIGN.line); $assignmentExpressionNoIn::op = " *= ";   }
-            | DIV_ASSIGN  { LINE($DIV_ASSIGN.line); $assignmentExpressionNoIn::op = " /= ";   }
-            | MOD_ASSIGN  { LINE($MOD_ASSIGN.line); $assignmentExpressionNoIn::op = " \%= ";  }
-            | ADD_ASSIGN  { LINE($ADD_ASSIGN.line); $assignmentExpressionNoIn::op = " += ";   } 
-            | SUB_ASSIGN  { LINE($SUB_ASSIGN.line); $assignmentExpressionNoIn::op = " -= ";   } 
-            | AND_ASSIGN  { LINE($AND_ASSIGN.line); $assignmentExpressionNoIn::op = " &= ";   }
-            | EXP_ASSIGN  { LINE($EXP_ASSIGN.line); $assignmentExpressionNoIn::op  = " ^= ";  }
-            | OR_ASSIGN   { LINE($OR_ASSIGN.line); $assignmentExpressionNoIn::op = " |= ";   } 
-           )
-           
-           leftHandSideExpression
-           {
-                 APP(" ");
-                 APP($assignmentExpressionNoIn::op);
-                 APP(" ");
-           }
-
-           assignmentExpressionNoIn
-           )
-       ;
-
-additiveAssignmentExpression
-        : multiplicativeAssignmentExpression
-        | ^(
-             ADD_ASSIGN
-             {
-             }
-             e1=additiveAssignmentExpression
-             {
-                APP(" = util.plus( " );
-                APP((const char*)$e1.text->chars);
-                APP(" , ");
-             }
-             multiplicativeAssignmentExpression
-             {
-                APP( " ) ");
-             }
-            ) 
-        | ^(SUB_ASSIGN
-            {
-            }
-             e1=additiveAssignmentExpression 
-             {
-                APP(" = util.sub( " );
-                APP((const char*)$e1.text->chars);
-                APP(" , ");
-             }
-             multiplicativeAssignmentExpression
-             {
-                APP(" ) ");
-             }
-            ) 
-	;
-
-multiplicativeAssignmentExpression
-        : unaryExpression
-        | ^( MULT_ASSIGN
-             {
-             } 
-             e1=multiplicativeAssignmentExpression 
-             {
-                APP(" = util.mul( " );
-                APP((const char*)$e1.text->chars);
-                APP(" , ");
-             }
-             unaryExpression
-             {
-                APP(" ) ");
-             }
+            (
+                  MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " util.mul ";  }
+                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " util.div ";  }
+                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " util.mod ";  }
+                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " util.plus ";  } 
+                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " util.sub ";  } 
             )
-        | ^( DIV_ASSIGN
+            e1=leftHandSideExpression 
             {
-            }
-            e1=multiplicativeAssignmentExpression
-            {
-                APP(" = util.div( " );
+                APP(" = ");
+                APP($assignmentExpression::op);
+                APP(" ( ");
                 APP((const char*)$e1.text->chars);
                 APP(" , ");
             }
-            unaryExpression
+            assignmentExpression
             {
                 APP(" ) ");
             }
            )
-      ;
+        | ^(
+            (
+                ASSIGN                { LINE($ASSIGN.line); $assignmentExpression::op = " = ";    }
+                | AND_ASSIGN          { LINE($AND_ASSIGN.line); $assignmentExpression::op = " &= "; }
+                | EXP_ASSIGN          { LINE($EXP_ASSIGN.line); $assignmentExpression::op  = " ^= "; }
+                | OR_ASSIGN           { LINE($OR_ASSIGN.line); $assignmentExpression::op = " |= "; } 
+            )
+
+            leftHandSideExpression 
+            {
+                APP(" ");
+                APP($assignmentExpression::op);
+                APP(" ");
+            }
+            assignmentExpression
+           )
+          ;
+
        
 leftHandSideExpression
 	: callExpression
@@ -992,12 +958,10 @@ assignmentOperator
 
 conditionalExpressionNoIn
         : msgRecvConstructNoIn
-        | additiveAssignmentExpression
         ;
 
 conditionalExpression
         : msgRecvConstruct
-        | additiveAssignmentExpression
         ;
         
 msgRecvConstruct
@@ -1845,6 +1809,3 @@ literal
 	| NumericLiteral { LINE($NumericLiteral.line); APP((const char*)$NumericLiteral.text->chars);}
 	;
 	
-
-
-
