@@ -97,6 +97,8 @@ protected:
     // And we track this because it's more efficient than looping through all
     // available animations on the mesh.
     Ogre::AnimationState* mCurrentAnimation;
+    String mInitialAnimationName;
+
 
     AssetDownloadTaskPtr mAssetDownload;
 

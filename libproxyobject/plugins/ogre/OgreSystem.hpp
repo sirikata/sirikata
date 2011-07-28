@@ -230,6 +230,7 @@ public:
     boost::any getAnimationList(std::vector<boost::any>& params);
 
     boost::any startAnimation(std::vector<boost::any>& params);
+    boost::any stopAnimation(std::vector<boost::any>& params);
 
 
     ~OgreSystem();

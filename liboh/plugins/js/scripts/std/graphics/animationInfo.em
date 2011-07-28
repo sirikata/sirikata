@@ -44,6 +44,8 @@ std.graphics.AnimationInfo = system.Class.extend(
 
             this._simulator = sim;
 
+            this._animation_map = new Array();
+
             var p  = new util.Pattern("name", "support_animation");
             std.core.bind(this.onTestMessage, this) << p;
            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
@@ -60,8 +62,13 @@ std.graphics.AnimationInfo = system.Class.extend(
 
         // Handles requests from the UI to send a chat messages.
         sendAnimationInfo: function(cmd, vis_addr, anim_name) {
-            if (cmd == 'AnimationInfo' && vis_addr && anim_name)
+            if (!anim_name)
+              anim_name="";
+
+            if (cmd == 'AnimationInfo' && vis_addr) {
                 this.sendAll( { 'animation_info' : '1', 'vis_addr' : vis_addr, 'anim_name' : anim_name } );
+                this._animation_map[vis_addr] = anim_name;
+            }
         },
 
         // Handler for animation msgs from others.
@@ -70,7 +77,6 @@ std.graphics.AnimationInfo = system.Class.extend(
           
             var visibleMap = system.getProxSet(system.self);
             for (var key in visibleMap) {
-              //system.__debugPrint(key + " compared to "  + msg.vis_addr + "\n");
               if (msg.vis_addr == key) {
                 this._simulator.startAnimation(visibleMap[key], msg.anim_name, true);
               }
@@ -86,11 +92,16 @@ std.graphics.AnimationInfo = system.Class.extend(
                     return;
             }
 
-            //system.__debugPrint("Adding "  + sender + " to subscription group\n");
 
             this._subscription_group.push(sender);
             var p = new util.Pattern("animation_info");
             std.core.bind(this.onAnimationMessage, this) << p << sender;
+           
+            for (var i in this._animation_map) {
+              //system.__debugPrint("sending introductory anim msg: " + i + " : " + this._animation_map[i] + "\n");
+              var msg = { 'animation_info' : '1', 'vis_addr' : i, 'anim_name' : this._animation_map[i] };
+              msg >> sender >> [];
+            }
         },
 
         proxAddedCallback: function(new_addr_obj) {
@@ -110,7 +121,6 @@ std.graphics.AnimationInfo = system.Class.extend(
 
         // Reply to probes for what protocols we support.
         onTestMessage: function(msg, sender) {
-            //system.__debugPrint("Replying to intro msg\n");
             msg.makeReply( { "support_animation": "yes" } ) >> [];
         }
     }

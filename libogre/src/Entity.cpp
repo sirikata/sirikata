@@ -116,7 +116,8 @@ Entity::Entity(OgreRenderer *scene, const String& name)
    mSceneNode(scene->getSceneManager()->createSceneNode( ogreMeshName(name) )),
    mMovingIter(scene->mMovingEntities.end()),
    mVisible(true),
-   mCurrentAnimation(NULL)
+   mCurrentAnimation(NULL),
+   mInitialAnimationName("")
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
 
@@ -238,9 +239,15 @@ void Entity::setAnimation(const String& name) {
     if (mCurrentAnimation) {
         mCurrentAnimation->setEnabled(false);
         mCurrentAnimation = NULL;
+        setDynamic(isMobile());
     }
 
     if (name.empty()) return;
+
+    if (mOgreObject == NULL) {
+      mInitialAnimationName = name;
+      return;
+    }
 
     if (mAnimationList.count(name) == 0) {
       return;
@@ -1729,6 +1736,11 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
             mSceneNode->addChild(xformnode);
             //light->setDebugDisplayEnabled(true);
         }
+    }
+
+    if (!mInitialAnimationName.empty()) {
+      setAnimation(mInitialAnimationName);
+      mInitialAnimationName = "";
     }
 }
 

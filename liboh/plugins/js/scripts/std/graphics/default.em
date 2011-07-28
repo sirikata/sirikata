@@ -262,6 +262,11 @@ function() {
         return this._simulator.startAnimation(vis, anim);
     };
 
+    /** Stop the animation on this entity. */
+    std.graphics.DefaultGraphics.prototype.stopAnimation = function(vis) {
+        return this._simulator.stopAnimation(vis);
+    };
+
 
     /** Request that the given script text be added as a module in the UI. */
     std.graphics.DefaultGraphics.prototype.addGUITextModule = function(name, js_text, cb) {

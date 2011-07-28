@@ -572,6 +572,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return getAnimationList(params);
     else if (name == "startAnimation")
         return startAnimation(params);
+    else if (name == "stopAnimation")
+        return stopAnimation(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -757,6 +759,20 @@ boost::any OgreSystem::startAnimation(std::vector<boost::any>& params) {
 
   Entity* ent = mSceneEntities.find(objid.toString())->second;
   ent->setAnimation(animation_name);
+
+  return boost::any();
+}
+
+boost::any OgreSystem::stopAnimation(std::vector<boost::any>& params) {
+  if (params.size() < 2) return boost::any();
+  if (!Invokable::anyIsObject(params[1])) return boost::any();  
+
+  SpaceObjectReference objid = Invokable::anyAsObject(params[1]);  
+
+  if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
+
+  Entity* ent = mSceneEntities.find(objid.toString())->second;
+  ent->setAnimation("");
 
   return boost::any();
 }
