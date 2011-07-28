@@ -126,7 +126,7 @@ tokens
     SEND_CONSTRUCT;
     SENDER_CONSTRUCT;
     SEND_CONSTRUCT_NO_IN;
-    SENDER_CONSTRUCT_NO_IN;
+    SENDER_CONSTRUCT_NO_IN;     
 }
 
 
@@ -633,7 +633,6 @@ primaryExpression
 	: 'this'
         | (vectorLiteral) => vectorLiteral
         | (quaternionLiteral) => quaternionLiteral
-    | Keyword
 	| Identifier
         | dollarExpression
 	| literal
@@ -686,10 +685,7 @@ patternLiteral
   : '{' LTERM* nameValueProto? LTERM* '}' -> ^(PATTERN_LITERAL nameValueProto?)
   | '{' LTERM*  p1=nameValueProto (',' LTERM* p2=nameValueProto)* LTERM* '}' -> ^(PATTERN_LITERAL nameValueProto nameValueProto*)
   ;
-    
-Keyword
-  : '__checkResources8_8_3_1__';
-  
+
 propertyNameAndValue
         : propertyName LTERM* ':' LTERM* expression -> ^(NAME_VALUE propertyName expression)
         ;
@@ -825,7 +821,7 @@ fragment IdentifierPart
         | UnicodeDigit
 	| UnicodeConnectorPunctuation
 	;
-
+	
 fragment UnicodeLetter		// Any character in the Unicode categories "Uppercase letter (Lu)", 
 	: '\u0041'..'\u005A'	// "Lowercase letter (Ll)", "Titlecase letter (Lt)",
 	| '\u0061'..'\u007A'	// "Modifier letter (Lm)", "Other letter (Lo)", or "Letter number (Nl)".
