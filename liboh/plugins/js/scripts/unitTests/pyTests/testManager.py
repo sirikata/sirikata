@@ -23,7 +23,7 @@ class TestManager:
         for s in testArrayToAdd:
             self.addTest(s);
 
-    def runAllTests(self, outputFilename=DEFAULT_OUTPUT_FILENAME,cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME):
+    def runAllTests(self, outputFilename=DEFAULT_OUTPUT_FILENAME,cppohPath=DEFAULT_CPPOH_PATH, cppohBinName=DEFAULT_CPPOH_BIN_NAME,saveOutput=False):
         numTests = len(self.mTests);
         count = 1;
 
@@ -41,9 +41,13 @@ class TestManager:
                 shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
             
-            os.mkdir(DEFAULT_DIRTY_FOLDER);
-            s.runTest(outputFilename,DEFAULT_DIRTY_FOLDER,cppohPath,cppohBinName);
-            shutil.rmtree(DEFAULT_DIRTY_FOLDER);
+            # os.mkdir(DEFAULT_DIRTY_FOLDER);
+            folderName = os.path.join(DEFAULT_DIRTY_FOLDER, s.testName);
+            os.makedirs(folderName);
+            s.runTest(outputFilename,folderName,cppohPath,cppohBinName);
+
+            if (not saveOutput):
+                shutil.rmtree(DEFAULT_DIRTY_FOLDER);
 
             
             

@@ -55,7 +55,7 @@ def runAll():
                                              
                                   howLongToRunInSeconds=100);
 
-    testArray.append(timeoutTest);
+    #testArray.append(timeoutTest);
                                   
     
     #proximityAdded test: see documentation in unitTests/emTests/proximityAdded.em.
@@ -101,18 +101,16 @@ def runAll():
                                          howLongToRunInSeconds=50
                                          );
     
-    testArray.append(proximityAddedTest);
+    #testArray.append(proximityAddedTest);
 
 
     
-                    
-
     
 
     ##create manager and populate it with test array.
     manager = testManager.TestManager();
     manager.addTestArray(testArray);
-    manager.runAllTests();
+    manager.runAllTests(saveOutput=True);
     
 
 if __name__ == "__main__":
