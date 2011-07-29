@@ -13,7 +13,7 @@ import basicErrors
 
 from csvConstructorInfo import *
 
-def runAll():
+def runAll(saveOutput=False):
 
     testArray = [];
 
@@ -55,8 +55,31 @@ def runAll():
                                              
                                   howLongToRunInSeconds=100);
 
-    #testArray.append(timeoutTest);
+    testArray.append(timeoutTest);
+
+
+
+    ##httpTest: see documentation in unitTests/emTests/httpTest.em
+    httpTestInfo = CSVConstructorInfo(script_type=stringWrap("js"),
+                                      script_contents=stringWrap("system.import('unitTests/emTests/httpTest.em');"));
+    httpTest = csvTest.CSVTest("httpTest",
+                                  touches=['http',
+                                           'timeout'
+                                           ],
                                   
+                                  entityConstructorInfo=[httpTestInfo],
+                                  
+                                  errorConditions=[basicErrors.SegFaultError,
+                                                   basicErrors.BusError,
+                                                   basicErrors.AssertError,
+                                                   basicErrors.UnitTestNoSuccessError,
+                                                   basicErrors.UnitTestFailError],
+                                             
+                                  howLongToRunInSeconds=30);
+
+    testArray.append(httpTest);
+
+    
     
     #proximityAdded test: see documentation in unitTests/emTests/proximityAdded.em.
     #Tests: onProxAdded, setQueryAngle, setVelocity, createPresence,
@@ -101,7 +124,7 @@ def runAll():
                                          howLongToRunInSeconds=50
                                          );
     
-    #testArray.append(proximityAddedTest);
+    testArray.append(proximityAddedTest);
 
 
     
@@ -110,11 +133,21 @@ def runAll():
     ##create manager and populate it with test array.
     manager = testManager.TestManager();
     manager.addTestArray(testArray);
-    manager.runAllTests(saveOutput=True);
+    manager.runAllTests(saveOutput=saveOutput);
     
 
 if __name__ == "__main__":
-    runAll();
+
+    saveOutput = False;
+    
+    for s in range (1, len(sys.argv)):
+        if (sys.argv[s] == '--saveOutput'):
+            saveOutput=True;
+
+    runAll(saveOutput);
+        
+                        
+    
 
 
     

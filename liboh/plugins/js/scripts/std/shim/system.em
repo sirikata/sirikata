@@ -236,10 +236,20 @@ function PresenceEntry(sporef, presObj)
 
       system.__wrapHttpHandler = function (toCallback)
       {
-          var curSelf = system.self.toString();
+          var selfDefined = false;
+          if (typeof(system.self) != 'undefined')
+          {
+              selfDefined = true;
+              var curSelf = system.self.toString();
+          }
+          
           var returner = function (success,failure)
           {
-              system.__setBehindSelf(system._selfMap[curSelf].presObj);
+              if (selfDefined)
+                  system.__setBehindSelf(system._selfMap[curSelf].presObj);
+              else
+                  system.__setBehindSelf(undefined);
+
               toCallback(success,failure);
           };
           return std.core.bind(returner,this);
