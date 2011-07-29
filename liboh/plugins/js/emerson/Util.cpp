@@ -197,8 +197,9 @@ std::string emerson_escapeMultiline(const char* stringSequence)
 {
   std::string s = replaceAllInstances(std::string(stringSequence), "\"","\\\"");
 
+  s = replaceAllInstances(s,"\r\n","\n");
+  s = replaceAllInstances(s,"\r","\n");
   s = replaceAllInstances(s,"\n","\\n\"+\n\"");
-  //s = replaceAllInstances(std::string(stringSequence),"\r","\\\\r");
 
   return s;
 }
