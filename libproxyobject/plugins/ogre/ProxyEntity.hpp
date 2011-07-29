@@ -96,7 +96,7 @@ public:
 
     // ProxyObjectListener
     virtual void validated();
-    virtual void invalidated();
+    virtual void invalidated(bool permanent);
     virtual void destroyed();
 
     // interface from MeshListener

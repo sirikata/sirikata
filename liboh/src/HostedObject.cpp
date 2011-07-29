@@ -846,6 +846,8 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
 
             SpaceObjectReference removed_obj_ref(spaceobj.space(),
                 ObjectReference(removal.object()));
+            bool permanent = (removal.has_type() && (removal.type() == Sirikata::Protocol::Prox::ObjectRemoval::Permanent));
+
             if (mPresenceData->find(removed_obj_ref) != mPresenceData->end()) {
                 SILOG(oh,detailed,"Ignoring self removal from proximity results.");
             }
@@ -872,7 +874,7 @@ bool HostedObject::handleProximityMessage(const SpaceObjectReference& spaceobj, 
                     if (mObjectScript)
                         mObjectScript->notifyProximateGone(proxy_obj,spaceobj);
 
-                    proxy_obj->invalidate();
+                    proxy_obj->invalidate(permanent);
                 }
             }
 

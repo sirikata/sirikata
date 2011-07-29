@@ -80,7 +80,7 @@ public:
     virtual void validated() = 0;
     // Invoked when the object falls out of the result set. No further updates
     // will be received.
-    virtual void invalidated() = 0;
+    virtual void invalidated(bool permanent) = 0;
     // Invoked when the ProxyObject is actually destroyed.
     virtual void destroyed() = 0;
 };
@@ -232,7 +232,7 @@ public:
      *  messages can still be sent and the last values of properties are
      *  available, no further updates will be received.
      */
-    void invalidate();
+    void invalidate(bool permanent);
 
     /// Gets the parent ProxyObject. This may return null!
     ProxyObjectPtr getParentProxy() const;

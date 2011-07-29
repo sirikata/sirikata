@@ -123,9 +123,16 @@ void ProxyEntity::validated() {
     processMesh( mProxy->getMesh() );
 }
 
-void ProxyEntity::invalidated() {
-    // To mask very quick removal/addition sequences, defer unloading
-    mDestroyTimer->wait(Duration::seconds(1));
+void ProxyEntity::invalidated(bool permanent) {
+    // If the the object really disconnected, it'll be marked as a permanent
+    // removal. If it just left the result set then it should still be in the
+    // world and shouldn't hurt to leave it around for awhile, and we'll get
+    // less flickering if we try to mask an removal/addition pair due to quick
+    // changes/data structure rearrangement by the space server.
+    if (permanent)
+        handleDestroyTimeout();
+    else
+        mDestroyTimer->wait(Duration::seconds(15));
 }
 
 void ProxyEntity::handleDestroyTimeout() {

@@ -74,8 +74,8 @@ void ProxyObject::validate() {
     ProxyObjectProvider::notify(&ProxyObjectListener::validated);
 }
 
-void ProxyObject::invalidate() {
-    ProxyObjectProvider::notify(&ProxyObjectListener::invalidated);
+void ProxyObject::invalidate(bool permanent) {
+    ProxyObjectProvider::notify(&ProxyObjectListener::invalidated, permanent);
 }
 
 void ProxyObject::destroy() {

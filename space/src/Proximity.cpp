@@ -1007,6 +1007,11 @@ void Proximity::generateServerQueryEvents(Query* query) {
                 removal.set_object(objid);
                 uint64 seqNo = (*seqNoPtr)++;
                 removal.set_seqno (seqNo);
+                removal.set_type(
+                    (evt.removals()[ridx].permanent() == QueryEvent::Permanent)
+                    ? Sirikata::Protocol::Prox::ObjectRemoval::Permanent
+                    : Sirikata::Protocol::Prox::ObjectRemoval::Transient
+                );
             }
 
             evts.pop_front();
@@ -1096,9 +1101,13 @@ void Proximity::generateObjectQueryEvents(Query* query) {
 
                 Sirikata::Protocol::Prox::IObjectRemoval removal = event_results.add_removal();
                 removal.set_object( objid );
-
                 uint64 seqNo = (*seqNoPtr)++;
                 removal.set_seqno (seqNo);
+                removal.set_type(
+                    (evt.removals()[ridx].permanent() == QueryEvent::Permanent)
+                    ? Sirikata::Protocol::Prox::ObjectRemoval::Permanent
+                    : Sirikata::Protocol::Prox::ObjectRemoval::Transient
+                );
             }
             evts.pop_front();
         }
