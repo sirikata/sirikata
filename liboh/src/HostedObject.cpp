@@ -1218,7 +1218,8 @@ const String& HostedObject::requestCurrentPhysics(const SpaceID& space,const Obj
     if (!proxy_obj)
     {
         HO_LOG(warn,"Requesting physics for missing proxy.  Returning blank.");
-        return "";
+        static String empty;
+        return empty;
     }
 
 
