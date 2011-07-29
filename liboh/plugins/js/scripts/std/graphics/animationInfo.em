@@ -30,6 +30,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+if (typeof(std) === "undefined") std = {};
+if (typeof(std.graphics) === "undefined") /** @namespace*/ std.graphics = {};
+
+
 system.require("std/library.em");
 
 /** The AnimationInfo class enables the graphics system to send out
@@ -42,17 +46,19 @@ std.graphics.AnimationInfo = system.Class.extend(
 
             this._subscription_group = [];
 
-            this._simulator = sim;
+            if (sim) {
+              this._simulator = sim;
+            }
 
             this._animation_map = new Array();
 
             var p  = new util.Pattern("name", "support_animation");
             std.core.bind(this.onTestMessage, this) << p;
-           this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
+            this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
         },
 
 
-        // Send a message to all current members of the chat group
+        // Send a message to all subscribers of animation information.
         sendAll: function(msg) {
             for(var i = 0; i < this._subscription_group.length; i++) {
                 //system.__debugPrint("Sending anim msg to " + this._subscription_group[i] + " \n");
@@ -60,10 +66,11 @@ std.graphics.AnimationInfo = system.Class.extend(
             }
         },
 
-        // Handles requests from the UI to send a chat messages.
+        // Handles requests to send an animation info messages.
         sendAnimationInfo: function(cmd, vis_addr, anim_name) {
-            if (!anim_name)
+            if (!anim_name) {
               anim_name="";
+            }
 
             if (cmd == 'AnimationInfo' && vis_addr) {
                 this.sendAll( { 'animation_info' : '1', 'vis_addr' : vis_addr, 'anim_name' : anim_name } );
@@ -73,6 +80,8 @@ std.graphics.AnimationInfo = system.Class.extend(
 
         // Handler for animation msgs from others.
         onAnimationMessage: function(msg, sender) {
+            if (!this._simulator) return;
+
             //system.__debugPrint("Received anim msg: " + msg.vis_addr + " : " + msg.anim_name + "\n");
           
             var visibleMap = system.getProxSet(system.self);
@@ -107,6 +116,7 @@ std.graphics.AnimationInfo = system.Class.extend(
         proxAddedCallback: function(new_addr_obj) {
             if(system.self.toString() == new_addr_obj.toString())
                 return;
+
 
             this.sendIntro(new_addr_obj, 5);
         },
