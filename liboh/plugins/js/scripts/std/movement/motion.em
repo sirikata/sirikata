@@ -475,12 +475,12 @@ motion.Collision = motion.Motion.extend({
 	},
 
     suspend: function() {
-        self.collisionHandler.suspend();
+        this.collisionHandler.suspend();
         this._super();
     },
 
     reset: function() {
-        self.colisionHandler.reset();
+        this.collisionHandler.reset();
         this._super();
 	}
 });
