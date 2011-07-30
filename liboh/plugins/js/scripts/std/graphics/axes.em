@@ -30,8 +30,8 @@ system.require('std/graphics/graphics.em');
          var orientations = {x: new util.Quaternion(<0, 0, -1>, Math.PI / 2),
                              y: new util.Quaternion(),
                              z: new util.Quaternion(<1, 0, 0>, Math.PI / 2)};
-         var axisMeshes = moveMeshes;
-         var mode = 'move';
+         var axisMeshes = offMeshes;
+         var mode = 'off';
          var axes = {};
          var axisIDs = {};
          var movable = null;

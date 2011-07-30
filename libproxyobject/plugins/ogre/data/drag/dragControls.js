@@ -9,11 +9,11 @@ sirikata.ui('DragControls', function() {
 
     $('<div id="drag-control-ui" title="Drag controls">' +
       '    <div id="axes-mode"><form>' +
-      '        <input type="radio" id="move" name="radio" checked="checked" />' +
+      '        <input type="radio" id="move" name="radio" />' +
       '            <label for="move">Move</label>' +
       '        <input type="radio" id="rotate" name="radio" />' +
       '            <label for="rotate">Rotate</label>' +
-      '        <input type="radio" id="off" name="radio" />' +
+      '        <input type="radio" id="off" name="radio" checked="checked" />' +
       '            <label for="off">Off</label>' +
       '    </form></div>' +
       '    <div id="axes-snap"><form>' +
