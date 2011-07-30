@@ -64,7 +64,8 @@ namespace JS {
 
 void printException(v8::TryCatch& try_catch);
 
-class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScript : public ObjectScript, public Liveness
+// NOTE: virtual on Liveness because EmersonMessagingManager also uses it
+class SIRIKATA_SCRIPTING_JS_EXPORT JSObjectScript : public ObjectScript, public virtual Liveness
 {
 public:
     JSObjectScript(JSObjectScriptManager* jMan, OH::Storage* storage, OH::PersistedObjectSet* persisted_set, const UUID& internal_id);

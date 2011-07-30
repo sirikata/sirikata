@@ -15,6 +15,29 @@ EmersonMessagingManager::EmersonMessagingManager(Network::IOService* ios)
 
 EmersonMessagingManager::~EmersonMessagingManager()
 {
+    // Close all streams, clear out listeners
+    // FIXME Unfortunately, while this is what we *should* do, none of it is
+    // currently safe because of #392. When it is, we can fill this in and get
+    // rid of some liveness tokens.
+    /*
+    for(PresenceStreamMap::iterator pres_it = mStreams.begin(); pres_it != mStreams.end(); pres_it++) {
+        // Stop listening for new streams
+        const SpaceObjectReference& pres_id = pres_it->first;
+        SSTStream::listen(
+            0,
+            EndPoint<SpaceObjectReference>(pres_id,OBJECT_SCRIPT_COMMUNICATION_PORT)
+        );
+
+        // Stop listening for substreams on the streams we have, close them
+        StreamMap& pres_streams = pres_it->second;
+        for(StreamMap::iterator it = pres_streams.begin(); it != pres_streams.end(); it++) {
+            SSTStreamPtr stream = it->second;
+            stream->listenSubstream(OBJECT_SCRIPT_COMMUNICATION_PORT, 0);
+            stream->close(false);
+        }
+    }
+    */
+    mStreams.clear();
 }
 
 void EmersonMessagingManager::presenceConnected(const SpaceObjectReference& connPresSporef)
@@ -23,7 +46,9 @@ void EmersonMessagingManager::presenceConnected(const SpaceObjectReference& conn
 
     //create a listener for scripting messages to presence with sporef connPresSporef.
     SSTStream::listen(
-        std::tr1::bind(&EmersonMessagingManager::createScriptCommListenerStreamCB,this,connPresSporef,_1,_2),
+        std::tr1::bind(&EmersonMessagingManager::createScriptCommListenerStreamCB,this,
+            livenessToken(), connPresSporef,_1,_2
+        ),
         EndPoint<SpaceObjectReference>(connPresSporef,OBJECT_SCRIPT_COMMUNICATION_PORT));
 }
 
@@ -46,7 +71,10 @@ void EmersonMessagingManager::setupNewStream(SSTStreamPtr sstStream) {
     // top level stream goes unused.
     sstStream->listenSubstream(
         OBJECT_SCRIPT_COMMUNICATION_PORT,
-        std::tr1::bind(&EmersonMessagingManager::handleIncomingSubstream, this, _1, _2)
+        std::tr1::bind(
+            &EmersonMessagingManager::handleIncomingSubstream, this,
+            livenessToken(), _1, _2
+        )
     );
 
     // Then figure out whether to save it for ourselves
@@ -74,8 +102,10 @@ SSTStreamPtr EmersonMessagingManager::getStream(const SpaceObjectReference& pres
 }
 
 //Gets executed whenever a new stream connects to presence with sporef toListenFrom.
-void EmersonMessagingManager::createScriptCommListenerStreamCB(const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream)
+void EmersonMessagingManager::createScriptCommListenerStreamCB(Liveness::Token alive, const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream)
 {
+    if (!alive) return;
+
     if (err != SST_IMPL_SUCCESS)
     {
         JSLOG(error,"Error in createScriptCommListenerStreamCB.  Stream could not be created.");
@@ -84,17 +114,29 @@ void EmersonMessagingManager::createScriptCommListenerStreamCB(const SpaceObject
     setupNewStream(sstStream);
 }
 
-void EmersonMessagingManager::handleIncomingSubstream(int err, SSTStreamPtr streamPtr) {
+void EmersonMessagingManager::handleIncomingSubstream(Liveness::Token alive, int err, SSTStreamPtr streamPtr) {
+    if (!alive) return;
+
     if (err != SST_IMPL_SUCCESS) return;
 
     String* msgBuf = new String();
     streamPtr->registerReadCallback(
-        std::tr1::bind(&EmersonMessagingManager::handleScriptCommStreamRead, this, streamPtr, msgBuf, _1, _2) );
+        std::tr1::bind(&EmersonMessagingManager::handleScriptCommStreamRead, this,
+            livenessToken(), streamPtr, msgBuf, _1, _2
+        )
+    );
 }
 
 //Gets executed whenever have additional data to read.
-void EmersonMessagingManager::handleScriptCommStreamRead(SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length)
+void EmersonMessagingManager::handleScriptCommStreamRead(Liveness::Token alive, SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length)
 {
+    if (!alive) {
+        delete prevdata;
+        sstptr->registerReadCallback(0);
+        sstptr->close(false);
+        return;
+    }
+
     prevdata->append((const char*)buffer, length);
 
     // We should only ever get one message per substream, so there's no need to
@@ -124,7 +166,7 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
     // If we have a stream
     SSTStreamPtr streamPtr = getStream(sender, receiver);
     if (streamPtr) {
-        writeMessage(streamPtr, msg, sender, receiver);
+        writeMessage(livenessToken(), streamPtr, msg, sender, receiver);
         return true;
     }
 
@@ -138,6 +180,7 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
         //what to do when the connection is created.
         std::tr1::bind(
             &EmersonMessagingManager::scriptCommWriteStreamConnectedCB, this,
+            livenessToken(),
             msg, sender,receiver, _1, _2
         )
     );
@@ -146,8 +189,10 @@ bool EmersonMessagingManager::sendScriptCommMessageReliable(const SpaceObjectRef
 }
 
 
-void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr)
+void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(Liveness::Token alive, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr)
 {
+    if (!alive) return;
+
     //if connection failure, just try to re-connect.
     if (err != SST_IMPL_SUCCESS)
     {
@@ -159,6 +204,7 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(const String& msg
                                                                     //comm port
             std::tr1::bind(
                 &EmersonMessagingManager::scriptCommWriteStreamConnectedCB, this,
+                livenessToken(),
                 msg, sender, receiver, _1, _2
             )  //what to do when the connection is created.
         );
@@ -166,22 +212,25 @@ void EmersonMessagingManager::scriptCommWriteStreamConnectedCB(const String& msg
     }
 
     setupNewStream(streamPtr);
-    writeMessage(streamPtr, msg, sender,receiver);
+    writeMessage(livenessToken(), streamPtr, msg, sender,receiver);
 }
 
-void EmersonMessagingManager::writeMessage(SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+void EmersonMessagingManager::writeMessage(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+    if (!alive) return;
 
     // FIXME we're not pushing data directly here because it doesn't seem like
     // you can actually find out how much data was successfully pushed in. what
     // if we have a very large message?
     streamPtr->createChildStream(
-        std::tr1::bind(&EmersonMessagingManager::writeMessageSubstream, this, _1, _2, msg, sender, receiver),
+        std::tr1::bind(&EmersonMessagingManager::writeMessageSubstream, this, alive, _1, _2, msg, sender, receiver),
         NULL, 0,
         OBJECT_SCRIPT_COMMUNICATION_PORT, OBJECT_SCRIPT_COMMUNICATION_PORT
     );
 }
 
-void EmersonMessagingManager::writeMessageSubstream(int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+void EmersonMessagingManager::writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+    if (!alive) return;
+
     if (err != SST_IMPL_SUCCESS) {
         // Try the whole process over, starting from scratch in case the stream
         // changed
@@ -189,10 +238,12 @@ void EmersonMessagingManager::writeMessageSubstream(int err, SSTStreamPtr subStr
         return;
     }
 
-    writeData(subStreamPtr, Network::Frame::write(msg), sender, receiver);
+    writeData(livenessToken(), subStreamPtr, Network::Frame::write(msg), sender, receiver);
 }
 
-void EmersonMessagingManager::writeData(SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+void EmersonMessagingManager::writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver) {
+    if (!alive) return;
+
     int bytesWritten = streamPtr->write((uint8*) msg.data(), msg.size());
     //errored out: log message and abort.
     if (bytesWritten == -1)
@@ -208,7 +259,7 @@ void EmersonMessagingManager::writeData(SSTStreamPtr streamPtr, const String& ms
         String restToWrite = msg.substr(bytesWritten);
         retryTimer->wait(
             Duration::milliseconds((int64)20),
-            std::tr1::bind(&EmersonMessagingManager::writeData, this, streamPtr, restToWrite, sender, receiver)
+            std::tr1::bind(&EmersonMessagingManager::writeData, this, livenessToken(), streamPtr, restToWrite, sender, receiver)
         );
         JSLOG(detailed,"More sript data to write to stream.  Queueing future write operation.");
     }

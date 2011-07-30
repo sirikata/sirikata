@@ -8,6 +8,7 @@
 #include <sirikata/core/network/ObjectMessage.hpp>
 #include <string>
 #include <sstream>
+#include <sirikata/core/util/Liveness.hpp>
 
 namespace Sirikata{
 namespace JS{
@@ -17,7 +18,8 @@ class EmersonScript;
 typedef Stream<SpaceObjectReference> SSTStream;
 typedef SSTStream::Ptr SSTStreamPtr;
 
-class EmersonMessagingManager
+// NOTE: virtual on Liveness because JSObjectScript also uses it
+class EmersonMessagingManager : public virtual Liveness
 {
 public:
     EmersonMessagingManager(Network::IOService* ios);
@@ -51,17 +53,17 @@ private:
     SSTStreamPtr getStream(const SpaceObjectReference& pres, const SpaceObjectReference& remote);
 
     //reading helpers
-    void createScriptCommListenerStreamCB(const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream);
-    void handleIncomingSubstream(int err, SSTStreamPtr streamPtr);
-    void handleScriptCommStreamRead(SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length);
+    void createScriptCommListenerStreamCB(Liveness::Token alive, const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream);
+    void handleIncomingSubstream(Liveness::Token alive, int err, SSTStreamPtr streamPtr);
+    void handleScriptCommStreamRead(Liveness::Token alive, SSTStreamPtr sstptr, String* prevdata, uint8* buffer, int length);
 
     //writing helper
-    void scriptCommWriteStreamConnectedCB(const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr);
+    void scriptCommWriteStreamConnectedCB(Liveness::Token alive, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver, int err, SSTStreamPtr streamPtr);
 
     // Writes a message to a *substream* of the given stream
-    void writeMessage(SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
-    void writeMessageSubstream(int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
-    void writeData(SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
+    void writeMessage(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
+    void writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
+    void writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
 
     //map of existing presences.  value doesn't matter, just want a quick way of
     //checking if particular presences are connected.
