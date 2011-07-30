@@ -24,7 +24,8 @@
      UnitTest = function (testName)
      {
          this.testName = testName;
-         __beginTestPrint(this.testName);         
+         __beginTestPrint(this.testName);
+         this.hasFailed = false;
      };
 
 
@@ -42,6 +43,7 @@
      UnitTest.prototype.fail = function(toPrint)
      {
          __internalPrint(this.testName,UNIT_TEST_HEADER_FAILURE,toPrint);
+         hasFailed = true;
      };
 
      

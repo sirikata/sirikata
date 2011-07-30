@@ -127,6 +127,39 @@ def runAll(saveOutput=False):
     testArray.append(proximityAddedTest);
 
 
+    ##createPresenceTest
+    csvCreatePresEntInfo = CSVConstructorInfo(
+        script_type=stringWrap("js"),
+        script_contents=stringWrap("system.import('unitTests/emTests/createPresenceTest.em');"),
+        pos_x=numWrap(20),
+        pos_y=numWrap(0),
+        pos_z=numWrap(0),
+        scale=numWrap(1)
+        );
+    
+    createPresenceTest = csvTest.CSVTest("createPresence",
+                                         
+                                         touches=['createPresence',
+                                                  'onCreatePresence',
+                                                  'vector and quat syntax',
+                                                  'timeout',
+                                                  'system.presences'
+                                                  ],
+                                         
+                                         entityConstructorInfo=[csvCreatePresEntInfo],
+                                             
+                                         errorConditions=[basicErrors.SegFaultError,
+                                                          basicErrors.BusError,
+                                                          basicErrors.AssertError,
+                                                          basicErrors.UnitTestNoSuccessError,
+                                                          basicErrors.UnitTestFailError],
+                                             
+                                         howLongToRunInSeconds=50
+                                         );
+    
+    testArray.append(createPresenceTest);
+    
+
     
     
 
