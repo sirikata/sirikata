@@ -34,7 +34,8 @@ successObject = {
 };
 
 
-system.onPresenceConnected(stage1);
+//system.onPresenceConnected(stage1);
+stage1();
 
 function stage1()
 {
