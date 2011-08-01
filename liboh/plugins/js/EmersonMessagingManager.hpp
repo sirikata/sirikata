@@ -1,4 +1,6 @@
-
+// Copyright (c) 2011 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #ifndef __EMERSON_MESSAGING_MANAGER_HPP__
 #define __EMERSON_MESSAGING_MANAGER_HPP__
@@ -22,7 +24,7 @@ typedef SSTStream::Ptr SSTStreamPtr;
 class EmersonMessagingManager : public virtual Liveness
 {
 public:
-    EmersonMessagingManager(Network::IOService* ios);
+    EmersonMessagingManager(Context* ctx);
     virtual ~EmersonMessagingManager();
 
     //EmersonScript must know what to do with messages that we receive.
@@ -65,6 +67,9 @@ private:
     void writeMessageSubstream(Liveness::Token alive, int err, SSTStreamPtr subStreamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
     void writeData(Liveness::Token alive, SSTStreamPtr streamPtr, const String& msg, const SpaceObjectReference& sender, const SpaceObjectReference& receiver);
 
+
+    Context* mMainContext;
+
     //map of existing presences.  value doesn't matter, just want a quick way of
     //checking if particular presences are connected.
     std::map<SpaceObjectReference, bool> allPres;
@@ -73,10 +78,6 @@ private:
     typedef std::tr1::unordered_map<SpaceObjectReference, SSTStreamPtr, SpaceObjectReference::Hasher> StreamMap;
     typedef std::tr1::unordered_map<SpaceObjectReference, StreamMap, SpaceObjectReference::Hasher> PresenceStreamMap;
     PresenceStreamMap mStreams;
-
-    //used for retrying messages that haven't completely sent.
-    Network::IOTimerPtr retryTimer;
-
 };
 
 } //end namespace js

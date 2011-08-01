@@ -1,3 +1,6 @@
+// Copyright (c) 2011 Sirikata Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can
+// be found in the LICENSE file.
 
 #include "EmersonMessagingManager.hpp"
 #include "JSLogging.hpp"
@@ -8,8 +11,8 @@ namespace Sirikata{
 namespace JS{
 
 
-EmersonMessagingManager::EmersonMessagingManager(Network::IOService* ios)
- : retryTimer(Network::IOTimer::create(ios))
+EmersonMessagingManager::EmersonMessagingManager(Context* ctx)
+ : mMainContext(ctx)
 {
 }
 
@@ -257,7 +260,7 @@ void EmersonMessagingManager::writeData(Liveness::Token alive, SSTStreamPtr stre
     {
         //retry write infinitely
         String restToWrite = msg.substr(bytesWritten);
-        retryTimer->wait(
+        mMainContext->mainStrand->post(
             Duration::milliseconds((int64)20),
             std::tr1::bind(&EmersonMessagingManager::writeData, this, livenessToken(), streamPtr, restToWrite, sender, receiver)
         );
