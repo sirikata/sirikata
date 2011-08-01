@@ -56,8 +56,10 @@ class CoordinateSegmentation;
  */
 class SIRIKATA_SPACE_EXPORT SpaceContext : public Context {
 public:
-    SpaceContext(ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
+    SpaceContext(const String& name, ServerID _id, Network::IOService* ios, Network::IOStrand* strand, const Time& epoch, Trace::Trace* _trace, const Duration& duration = Duration::zero());
     ~SpaceContext();
+
+    const String& name() { return mName; }
 
     ServerID id() const {
         return mID.read();
@@ -85,6 +87,8 @@ private:
     friend class Forwarder; // Allow forwarder to set mRouter and mDispatcher
     friend class MockForwarder; // Same for mock forwarder
     friend class Server;
+
+    const String mName;
 
     Sirikata::AtomicValue<ServerID> mID;
 

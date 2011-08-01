@@ -43,14 +43,16 @@ class ObjectHost;
 
 class SIRIKATA_OH_EXPORT ObjectHostContext : public Context {
 public:
-    ObjectHostContext(ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
+    ObjectHostContext(const String& name, ObjectHostID _id, Network::IOService* ios, Network::IOStrand* strand, Trace::Trace* _trace, const Time& epoch, const Duration& simlen = Duration::zero());
     ~ObjectHostContext();
 
     ObjectHostID id;
     ObjectHost* objectHost;
     OHTrace* ohtrace() const { return mOHTrace; }
+    const String& name() { return mName; }
 
 private:
+    const String mName;
     OHTrace* mOHTrace;
 }; // class ObjectHostContext
 

@@ -57,8 +57,26 @@
 #include <sirikata/core/odp/DelegatePort.hpp>
 #include <sirikata/core/util/KnownServices.hpp>
 
+#define SPACE_LOG(lvl,msg) SILOG(space, lvl, "[SPACE] " << msg)
+
 namespace Sirikata
 {
+
+namespace {
+// Helper for filling in version info for connection responses
+void fillVersionInfo(Sirikata::Protocol::Session::IVersionInfo vers_info, SpaceContext* ctx) {
+    vers_info.set_name(ctx->name());
+    vers_info.set_version(SIRIKATA_VERSION);
+    vers_info.set_major(SIRIKATA_VERSION_MAJOR);
+    vers_info.set_minor(SIRIKATA_VERSION_MINOR);
+    vers_info.set_revision(SIRIKATA_VERSION_REVISION);
+    vers_info.set_vcs_version(SIRIKATA_GIT_REVISION);
+}
+void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
+    SPACE_LOG(info, "Object host connection " << (vers_info.has_name() ? vers_info.name() : "(unknown)") << " version " << (vers_info.has_version() ? vers_info.version() : "(unknown)") << " (" << (vers_info.has_vcs_version() ? vers_info.vcs_version() : "") << ")");
+}
+} // namespace
+
 
 Server::Server(SpaceContext* ctx, Authenticator* auth, Forwarder* forwarder, LocationService* loc_service, CoordinateSegmentation* cseg, Proximity* prox, ObjectSegmentation* oseg, Address4* oh_listen_addr)
  : ODP::DelegateService( std::tr1::bind(&Server::createDelegateODPPort, this, std::tr1::placeholders::_1, std::tr1::placeholders::_2, std::tr1::placeholders::_3) ),
@@ -388,6 +406,9 @@ void Server::handleSessionMessage(const ObjectHostConnectionManager::ConnectionI
 
     // Connect or migrate messages
     if (session_msg.has_connect()) {
+        if (session_msg.connect().has_version())
+            logVersionInfo(session_msg.connect().version());
+
         if (session_msg.connect().type() == Sirikata::Protocol::Session::Connect::Fresh)
         {
             handleConnect(oh_conn_id, *msg, session_msg.connect());
@@ -440,6 +461,7 @@ void Server::retryHandleConnect(const ObjectHostConnectionManager::ConnectionID&
 void Server::sendConnectError(const ObjectHostConnectionManager::ConnectionID& oh_conn_id, const UUID& obj_id) {
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    fillVersionInfo(response.mutable_version(), mContext);
     response.set_response( Sirikata::Protocol::Session::ConnectResponse::Error );
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
@@ -490,6 +512,7 @@ void Server::handleConnect(const ObjectHostConnectionManager::ConnectionID& oh_c
         // Create and send redirect reply
         Sirikata::Protocol::Session::Container response_container;
         Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+        fillVersionInfo(response.mutable_version(), mContext);
         response.set_response( Sirikata::Protocol::Session::ConnectResponse::Redirect );
         response.set_redirect(loc_server);
 
@@ -579,6 +602,7 @@ void Server::finishAddObject(const UUID& obj_id)
     // Send reply back indicating that the connection was successful
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    fillVersionInfo(response.mutable_version(), mContext);
     response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
     Sirikata::Protocol::ITimedMotionVector resp_loc = response.mutable_loc();
     resp_loc.set_t( loc.updateTime() );
@@ -809,6 +833,7 @@ void Server::handleMigration(const UUID& obj_id)
     // Send reply back indicating that the migration was successful
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    fillVersionInfo(response.mutable_version(), mContext);
     response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(
@@ -1070,6 +1095,7 @@ void Server::processAlreadyMigrating(const UUID& obj_id)
     // Send reply back indicating that the migration was successful
     Sirikata::Protocol::Session::Container response_container;
     Sirikata::Protocol::Session::IConnectResponse response = response_container.mutable_connect_response();
+    fillVersionInfo(response.mutable_version(), mContext);
     response.set_response( Sirikata::Protocol::Session::ConnectResponse::Success );
 
     Sirikata::Protocol::Object::ObjectMessage* obj_response = createObjectMessage(

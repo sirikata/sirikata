@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
     Network::IOStrand* mainStrand = ios->createStrand();
 
 
-    SpaceContext* space_context = new SpaceContext(server_id, ios, mainStrand, start_time, gTrace, duration);
+    SpaceContext* space_context = new SpaceContext("space", server_id, ios, mainStrand, start_time, gTrace, duration);
 
     String timeseries_type = GetOptionValue<String>(OPT_TRACE_TIMESERIES);
     String timeseries_options = GetOptionValue<String>(OPT_TRACE_TIMESERIES_OPTIONS);

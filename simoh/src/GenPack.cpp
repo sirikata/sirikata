@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     Network::IOService* ios = Network::IOServiceFactory::makeIOService();
     Network::IOStrand* mainStrand = ios->createStrand();
 
-    ObjectHostContext* ctx = new ObjectHostContext(ObjectHostID(1), ios, mainStrand, gTrace, start_time, duration);
+    ObjectHostContext* ctx = new ObjectHostContext("genpack", ObjectHostID(1), ios, mainStrand, gTrace, start_time, duration);
     ObjectFactory* obj_factory = new ObjectFactory(ctx, region, duration);
 
     // Nothing actually runs here -- we only cared about getting the

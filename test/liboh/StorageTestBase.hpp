@@ -92,7 +92,7 @@ public:
         _work = new Network::IOWork(*_ios, "StorageTest");
         Time start_time = Timer::now(); // Just for stats in ObjectHostContext.
         Duration duration = Duration::zero(); // Indicates to run forever.
-        _ctx = new ObjectHostContext(oh_id, _ios, _mainStrand, _trace, start_time, duration);
+        _ctx = new ObjectHostContext("test", oh_id, _ios, _mainStrand, _trace, start_time, duration);
 
         _storage = OH::StorageFactory::getSingleton().getConstructor(_type)(_ctx, _args);
 

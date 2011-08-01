@@ -40,11 +40,27 @@
 #include "Protocol_Session.pbj.hpp"
 #include <sirikata/core/util/Platform.hpp>
 
-#define OH_LOG(level,msg) SILOG(oh,level,msg)
+#define OH_LOG(level,msg) SILOG(oh,level,"[SESSION] " << msg)
 
 using namespace Sirikata::Network;
 
 namespace Sirikata {
+
+namespace {
+// Helper for filling in version info for connection responses
+void fillVersionInfo(Sirikata::Protocol::Session::IVersionInfo vers_info, ObjectHostContext* ctx) {
+    vers_info.set_name(ctx->name());
+    vers_info.set_version(SIRIKATA_VERSION);
+    vers_info.set_major(SIRIKATA_VERSION_MAJOR);
+    vers_info.set_minor(SIRIKATA_VERSION_MINOR);
+    vers_info.set_revision(SIRIKATA_VERSION_REVISION);
+    vers_info.set_vcs_version(SIRIKATA_GIT_REVISION);
+}
+void logVersionInfo(Sirikata::Protocol::Session::VersionInfo vers_info) {
+    OH_LOG(info, "Connection to space server " << (vers_info.has_name() ? vers_info.name() : "(unknown)") << " version " << (vers_info.has_version() ? vers_info.version() : "(unknown)") << " (" << (vers_info.has_vcs_version() ? vers_info.vcs_version() : "") << ")");
+}
+} // namespace
+
 
 // ObjectInfo Implementation
 SessionManager::ObjectConnections::ObjectInfo::ObjectInfo()
@@ -397,6 +413,7 @@ void SessionManager::openConnectionStartSession(const SpaceObjectReference& spor
 
     Sirikata::Protocol::Session::Container session_msg;
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Fresh);
     connect_msg.set_object(sporef_uuid.object().getAsUUID());
     Sirikata::Protocol::ITimedMotionVector loc = connect_msg.mutable_loc();
@@ -469,6 +486,7 @@ void SessionManager::openConnectionStartMigration(const SpaceObjectReference& sp
 
     Sirikata::Protocol::Session::Container session_msg;
     Sirikata::Protocol::Session::IConnect connect_msg = session_msg.mutable_connect();
+    fillVersionInfo(connect_msg.mutable_version(), mContext);
     connect_msg.set_type(Sirikata::Protocol::Session::Connect::Migration);
     connect_msg.set_object(sporef_obj_id.object().getAsUUID());
     if (!send(
@@ -783,6 +801,9 @@ void SessionManager::handleSessionMessage(Sirikata::Protocol::Object::ObjectMess
 
     if (session_msg.has_connect_response()) {
         Sirikata::Protocol::Session::ConnectResponse conn_resp = session_msg.connect_response();
+
+        if (conn_resp.has_version())
+            logVersionInfo(conn_resp.version());
 
         //UUID obj = msg->dest_object();
 
