@@ -330,6 +330,11 @@ private:
     void processSandboxMessage(const String& msgToSend, uint32 senderID, uint32 receiverID);
 
 
+    /**
+       Removes jscont from context map and tells it to finish its clear methods.
+     */
+    void finishContextClear(JSContextStruct* jscont);
+
    /**
       Deserializes the jsmessage that a presence on this entity with
       sporef dst received from a presence in the world with sporef src.

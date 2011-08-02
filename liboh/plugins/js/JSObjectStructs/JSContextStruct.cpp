@@ -606,10 +606,8 @@ void JSContextStruct::finishClear()
     //should lose all of its http queries. when clear it.
     EmersonScript* emerScript = dynamic_cast<EmersonScript*> (jsObjScript);
     if (emerScript != NULL)
-    {
-
         emerScript->getEmersonHttpPtr()->deregisterContext(this);
-    }
+
 
 
     v8::HandleScope handle_scope;

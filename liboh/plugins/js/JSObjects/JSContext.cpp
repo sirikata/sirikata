@@ -72,21 +72,17 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
     if (args.Length() == 0)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptExecute through context.  Require first argument to be a function.  Later arguments should be arguments for that function.")));
 
-    //ensure first argument is function.
-    v8::Handle<v8::Value> func_args = args[0];
-    if (! func_args->IsFunction())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptExecute through context.  Require first argument to be a function")));
 
     //FIXME: need to check if the arguments passed on the scriptexecute call match the arguments required by the function;
     INLINE_DECODE_CONTEXT_ERROR(args.This(),execute,jscont);
 
 
-    
-    // String errorMessage = "Error in ScriptExecute of context.  ";
-    // JSContextStruct* jscontstruct = JSContextStruct::decodeContextStruct(args.This(), errorMessage);
-    // if (jscontstruct == NULL)
-    //     return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str(),errorMessage.length())));
+    //ensure first argument is function.
+    v8::Handle<v8::Value> func_args = args[0];
+    if (! func_args->IsFunction())
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Invalid arguments to ScriptExecute through context.  Require first argument to be a function")));
 
+    
     //first argument is a function
     //subsequent arguments are the arguments to that function
 
@@ -102,7 +98,6 @@ v8::Handle<v8::Value> ScriptExecute(const v8::Arguments& args)
 void setNullContext(const v8::Arguments& args)
 {
     v8::Handle<v8::Object> mContext = args.This();
-
     //grabs the internal pattern
     //(which has been saved as a pointer to JSTimerStruct
     if (mContext->InternalFieldCount() > 0)
