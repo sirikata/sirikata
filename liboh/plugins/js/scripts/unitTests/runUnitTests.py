@@ -4,7 +4,7 @@ import sys;
 
 import pyTests.testManager as testManager
 import pyTests.csvTest as csvTest
-from dbGen.csvConstructorInfo import *
+from dbGen.csvConstructorInfo import CSVConstructorInfo
 import dbGen.basicGenerators as basicGenerators
 import errorConditions.basicErrors as basicErrors
 
@@ -30,8 +30,8 @@ def registerTests():
 
     #timeoutTest: see documentation in unitTests/emTests/timeoutTest.em
     #Tests: timeout, self, onPresenceConnected, Date
-    timeoutTestInfo = CSVConstructorInfo(script_type=stringWrap("js"),
-                                         script_contents=stringWrap("system.import('unitTests/emTests/timeoutTest.em');"));
+    timeoutTestInfo = CSVConstructorInfo(script_type="js",
+                                         script_contents="system.import('unitTests/emTests/timeoutTest.em');");
     timeoutTest = csvTest.CSVTest("timeoutTest",
                                   touches=['timeout',
                                            'self',
@@ -45,8 +45,8 @@ def registerTests():
 
 
     ##httpTest: see documentation in unitTests/emTests/httpTest.em
-    httpTestInfo = CSVConstructorInfo(script_type=stringWrap("js"),
-                                      script_contents=stringWrap("system.import('unitTests/emTests/httpTest.em');"));
+    httpTestInfo = CSVConstructorInfo(script_type="js",
+                                      script_contents="system.import('unitTests/emTests/httpTest.em');");
     httpTest = csvTest.CSVTest("httpTest",
                                   touches=['http',
                                            'timeout'
@@ -61,22 +61,12 @@ def registerTests():
     #proximityAdded test: see documentation in unitTests/emTests/proximityAdded.em.
     #Tests: onProxAdded, setQueryAngle, setVelocity, createPresence,
     #       getProxSet, timeout, onPresenceConnected
-    otherEntInfo = CSVConstructorInfo(
-        pos_x=numWrap(10),
-        pos_y=numWrap(0),
-        pos_z=numWrap(0),
-        scale=numWrap(1),
-        solid_angle=numWrap(100)
-        );
+    otherEntInfo = CSVConstructorInfo(pos_x=10, pos_y=0, pos_z=0, solid_angle=100);
 
     csvProxAddedEntInfo = CSVConstructorInfo(
-        script_type=stringWrap("js"),
-        script_contents=stringWrap("system.import('unitTests/emTests/proximityAdded.em');"),
-        pos_x=numWrap(0),
-        pos_y=numWrap(0),
-        pos_z=numWrap(0),
-        scale=numWrap(1),
-        solid_angle=numWrap(100)
+        script_type="js",
+        script_contents="system.import('unitTests/emTests/proximityAdded.em');",
+        pos_x=0, pos_y=0, pos_z=0, solid_angle=100
         );
 
     proximityAddedTest = csvTest.CSVTest("proximityAdded",
@@ -96,12 +86,9 @@ def registerTests():
 
     ##createPresenceTest
     csvCreatePresEntInfo = CSVConstructorInfo(
-        script_type=stringWrap("js"),
-        script_contents=stringWrap("system.import('unitTests/emTests/createPresenceTest.em');"),
-        pos_x=numWrap(20),
-        pos_y=numWrap(0),
-        pos_z=numWrap(0),
-        scale=numWrap(1)
+        script_type="js",
+        script_contents="system.import('unitTests/emTests/createPresenceTest.em');",
+        pos_x=20, pos_y=0, pos_z=0
         );
 
     createPresenceTest = csvTest.CSVTest("createPresence",
