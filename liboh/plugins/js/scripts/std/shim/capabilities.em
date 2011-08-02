@@ -6,10 +6,10 @@ if (typeof (std) ===  'undefined')
 
 util.Capabilities = function()
 {
-    this.capPerms = 1;
+    this.capPerms = 0;
 
     for (var s =0; s < arguments.length; ++s)
-        this.capPerms +=arguments[s];            
+        this.capPerms = this.capPerms + arguments[s];
 };
 
 
@@ -36,9 +36,8 @@ util.Capabilities.prototype.__getType = function()
 
 util.Capabilities.prototype.createSandbox = function(presence,visible)
 {
-    var permProduct=this.capPerms;
     return system.__createSandbox(presence,
                                   visible,
-                                  permProduct);
+                                  this.capPerms);
 };
 

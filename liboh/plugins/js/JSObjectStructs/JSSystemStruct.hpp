@@ -146,16 +146,16 @@ private:
    If scripter is trying to request capabilities that the initial sandbox he/she
    is creating does not have, strips those capabilities.
  */
-#define INLINE_CAPABILITY_STRIP(permNum,capName,localCapName)\
-    {                                                        \
-        if (! localCapName)                                  \
-        {                                                    \
-            if (permNum % Capabilities::capName == 0)                   \
+#define INLINE_CAPABILITY_STRIP(permNum,capName,localCapName)           \
+    {                                                                   \
+        if (! localCapName)                                             \
+        {                                                               \
+            if (permNum & Capabilities::capName)                        \
             {                                                           \
                 /*means trying to set this capability when don't have it in the base*/ \
                 /*sandbox.  We should strip it.*/                       \
                 JSLOG(info,"Trying to exceed capability " #capName " when creating sandbox.  Stripping this capability"); \
-                permNum /= Capabilities::capName;                       \
+                permNum -= Capabilities::capName;                       \
             }                                                           \
         }                                                               \
     }

@@ -20,7 +20,7 @@ void setNullContext(const v8::Arguments& args);
 #define INLINE_DECODE_CONTEXT_ERROR(toConvert,whereError,whereWriteTo)            \
     JSContextStruct* whereWriteTo = NULL;                                         \
     {                                                                           \
-        String _errMsg = "In " #whereError " of timer.  Cannot complete because likely already cleared this sandbox."; \
+        String _errMsg = "In " #whereError " of sandbox.  Cannot complete because likely already cleared this sandbox."; \
         whereWriteTo = JSContextStruct::decodeContextStruct(toConvert,_errMsg);   \
         if (whereWriteTo == NULL)                                               \
         {              \
