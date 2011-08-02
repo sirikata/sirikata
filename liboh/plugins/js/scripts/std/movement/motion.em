@@ -136,8 +136,8 @@ motion.Acceleration = motion.Motion.extend({
 		if(typeof(accelFn) === 'undefined')
 			accelFn = function(p) { return p.accel; };
 		else if(typeof(accelFn) !== 'function')
-			throw('second argument "accelFn" to motion.Acceleration (' +
-					system.core.pretty(accelFn) +
+			throw new Error('second argument "accelFn" to motion.Acceleration (' +
+					std.core.pretty(accelFn) +
 					' is not a function or undefined');
 		
 		var callback = function(p) {
@@ -145,7 +145,7 @@ motion.Acceleration = motion.Motion.extend({
 			if(motion.util._isVector(accel))
 				p.accel = accel;
 			else if(typeof(accel) != 'undefined')
-				throw('in motion.Acceleration callback: accelFn should return ' +
+				throw new Error('in motion.Acceleration callback: accelFn should return ' +
 						'a vector or undefined (instead got ' +
 						std.core.pretty(accel) + ')');
 			
@@ -167,16 +167,16 @@ motion.Acceleration = motion.Motion.extend({
  */
 motion.Velocity = motion.Motion.extend({
 	init: function(presence, velFn, period) {
-		if(typeof(accelFn) !== 'function')
-			throw('second argument "velFn" to motion.Velocity (' +
-					system.core.pretty(velFn) + ') is not a function');
+		if(typeof(velFn) !== 'function')
+			throw new Error('second argument "velFn" to motion.Velocity (' +
+					std.core.pretty(velFn) + ') is not a function');
 		
 		var callback = function(p) {
 			var vel = velFn(p);
 			if(motion.util._isVector(vel))
 				p.velocity = vel;
 			else if(typeof(vel) != 'undefined')
-				throw('in motion.Velocity callback: velFn should return ' +
+				throw new Error('in motion.Velocity callback: velFn should return ' +
 						'a vector or undefined (instead got ' +
 						std.core.pretty(vel) + ')');
 		};
@@ -199,15 +199,15 @@ motion.Velocity = motion.Motion.extend({
 motion.Position = motion.Motion.extend({
 	init: function(presence, posFn, period) {
 		if(typeof(posFn) !== 'function')
-			throw('second argument "posFn" to motion.Position (' +
-					system.core.pretty(posFn) + ') is not a function');
+			throw new Error('second argument "posFn" to motion.Position (' +
+					std.core.pretty(posFn) + ') is not a function');
 		
 		var callback = function(p) {
 			var pos = posFn(p);
 			if(motion.util._isVector(pos))
 				p.position = pos;
 			else if(typeof(pos) != 'undefined')
-				throw('in motion.Position callback: posFn should return ' +
+				throw new Error('in motion.Position callback: posFn should return ' +
 						'a vector or undefined (instead got ' +
 						std.core.pretty(pos) + ')');
 		};
@@ -230,15 +230,15 @@ motion.Position = motion.Motion.extend({
 motion.Orientation = motion.Motion.extend({
 	init: function(presence, orientFn, period) {
 		if(typeof(orientFn) !== 'function')
-			throw('second argument "orientFn" to motion.Orientation (' +
-					system.core.pretty(orientFn) + ') is not a function');
+			throw new Error('second argument "orientFn" to motion.Orientation (' +
+					std.core.pretty(orientFn) + ') is not a function');
 		
 		var callback = function(p) {
 			var orient = orientFn(p);
 			if(motion.util._isQuat(orient))
 				p.orientation = orient;
 			else if(typeof(orient) != 'undefined')
-				throw('in motion.Orientation callback: orientFn should return ' +
+				throw new Error('in motion.Orientation callback: orientFn should return ' +
 						'a quaternion or undefined (instead got ' +
 						std.core.pretty(orient) + ')');
 		};
@@ -259,15 +259,15 @@ motion.Orientation = motion.Motion.extend({
 motion.OrientationVel = motion.Motion.extend({
 	init: function(presence, oVelFn, period) {
 		if(typeof(oVelFn) !== 'function')
-			throw('second argument "oVelFn" to motion.Orientation (' +
-					system.core.pretty(oVelFn) + ') is not a function');
+			throw new Error('second argument "oVelFn" to motion.Orientation (' +
+					std.core.pretty(oVelFn) + ') is not a function');
 		
 		var callback = function(p) {
 			var oVel = oVelFn(p);
 			if(motion.util._isQuat(oVel))
 				p.orientationVel = oVel;
 			else if(typeof(oVel) != 'undefined')
-				throw('in motion.Orientation callback: oVelFn should return ' +
+				throw new Error('in motion.Orientation callback: oVelFn should return ' +
 						'a quaternion or undefined (instead got ' +
 						std.core.pretty(oVel) + ')');
 		};
@@ -296,8 +296,8 @@ motion.OrientationAccel = motion.Motion.extend({
 		if(typeof(oAccelFn) === 'undefined')
 			oAccelFn = function(p) { return p.orientationAccel; };
 		else if(typeof(oAccelFn) !== 'function')
-			throw('second argument "oAccelFn" to motion.Acceleration (' +
-					system.core.pretty(oAccelFn) +
+			throw new Error('second argument "oAccelFn" to motion.Acceleration (' +
+					std.core.pretty(oAccelFn) +
 					' is not a function or undefined');
 		
 		var callback = function(p) {
@@ -307,7 +307,7 @@ motion.OrientationAccel = motion.Motion.extend({
             else if(motion.util._isQuat(oAccel))
                 p.orientationAccel = oAccel.axis().scale(oAccel.length());
 			else if(typeof(oAccel) != 'undefined')
-				throw('in motion.Acceleration callback: oAccelFn should return ' +
+				throw new Error('in motion.Acceleration callback: oAccelFn should return ' +
 						'a vector, a quaternion or undefined (instead got ' +
 						std.core.pretty(oAccel) + ')');
 			
@@ -386,7 +386,7 @@ motion.Spring = motion.Acceleration.extend({
 		else if(typeof(anchor) === 'object' && 'position' in self.anchor)
 			anchorFn = function() { return self.anchor.position; };
 		else
-			throw("Second argument 'anchor' to motion.Spring constructor ('" +
+			throw new Error("Second argument 'anchor' to motion.Spring constructor ('" +
 					std.core.pretty(anchor) +
 					"') is not a vector or presence");
 		
@@ -565,7 +565,7 @@ motion.ForceTorque = motion.Acceleration.extend({
         else if(motion.util._isVec(force))
             forceFn = function(p) { return force; };
         else
-			throw("Second argument 'force' to motion.ForceTorque constructor ('" +
+			throw new Error("Second argument 'force' to motion.ForceTorque constructor ('" +
 					std.core.pretty(force) +
 					"') is not a function or vector");
 
@@ -579,7 +579,7 @@ motion.ForceTorque = motion.Acceleration.extend({
         else if(motion.util._isVisible(position))
             posFn = function(p) { return position.position; };
         else
-			throw("Second argument 'position' to motion.ForceTorque constructor ('" +
+			throw new Error("Second argument 'position' to motion.ForceTorque constructor ('" +
 					std.core.pretty(position) +
 					"') is not a vector, visible, function, or undefined");
         
