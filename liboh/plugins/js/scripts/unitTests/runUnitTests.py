@@ -13,14 +13,16 @@ import basicErrors
 
 from csvConstructorInfo import *
 
-def runAll(saveOutput=False):
+manager = None
+
+def registerTests():
 
     testArray = [];
 
     '''
     This is where you add in you tests.
     '''
-    
+
     #create basic test: single entity runs for 10 seconds and shuts
     #down.
     basicTest = csvTest.CSVTest("basicTest",
@@ -31,7 +33,7 @@ def runAll(saveOutput=False):
                                  basicErrors.UnitTestNoSuccessError],
                                 howLongToRunInSeconds=20
                                 );
-    
+
     testArray.append(basicTest);
 
 
@@ -44,15 +46,15 @@ def runAll(saveOutput=False):
                                            'self',
                                            'onPresenceConnected',
                                            'Date'],
-                                  
+
                                   entityConstructorInfo=[timeoutTestInfo],
-                                  
+
                                   errorConditions=[basicErrors.SegFaultError,
                                                    basicErrors.BusError,
                                                    basicErrors.AssertError,
                                                    basicErrors.UnitTestNoSuccessError,
                                                    basicErrors.UnitTestFailError],
-                                             
+
                                   howLongToRunInSeconds=100);
 
     testArray.append(timeoutTest);
@@ -66,21 +68,21 @@ def runAll(saveOutput=False):
                                   touches=['http',
                                            'timeout'
                                            ],
-                                  
+
                                   entityConstructorInfo=[httpTestInfo],
-                                  
+
                                   errorConditions=[basicErrors.SegFaultError,
                                                    basicErrors.BusError,
                                                    basicErrors.AssertError,
                                                    basicErrors.UnitTestNoSuccessError,
                                                    basicErrors.UnitTestFailError],
-                                             
+
                                   howLongToRunInSeconds=30);
 
     testArray.append(httpTest);
 
-    
-    
+
+
     #proximityAdded test: see documentation in unitTests/emTests/proximityAdded.em.
     #Tests: onProxAdded, setQueryAngle, setVelocity, createPresence,
     #       getProxSet, timeout, onPresenceConnected
@@ -91,7 +93,7 @@ def runAll(saveOutput=False):
         scale=numWrap(1),
         solid_angle=numWrap(100)
         );
-    
+
     csvProxAddedEntInfo = CSVConstructorInfo(
         script_type=stringWrap("js"),
         script_contents=stringWrap("system.import('unitTests/emTests/proximityAdded.em');"),
@@ -101,9 +103,9 @@ def runAll(saveOutput=False):
         scale=numWrap(1),
         solid_angle=numWrap(100)
         );
-    
+
     proximityAddedTest = csvTest.CSVTest("proximityAdded",
-                                         
+
                                          touches=['onProxAdded',
                                                   'setQueryAngle',
                                                   'setVelocity',
@@ -111,19 +113,19 @@ def runAll(saveOutput=False):
                                                   'getProxSet',
                                                   'timeout',
                                                   'onPresenceConnected'],
-                                         
+
                                          entityConstructorInfo=[otherEntInfo,
                                                                 csvProxAddedEntInfo],
-                                             
+
                                          errorConditions=[basicErrors.SegFaultError,
                                                           basicErrors.BusError,
                                                           basicErrors.AssertError,
                                                           basicErrors.UnitTestNoSuccessError,
                                                           basicErrors.UnitTestFailError],
-                                             
+
                                          howLongToRunInSeconds=50
                                          );
-    
+
     testArray.append(proximityAddedTest);
 
 
@@ -136,51 +138,55 @@ def runAll(saveOutput=False):
         pos_z=numWrap(0),
         scale=numWrap(1)
         );
-    
+
     createPresenceTest = csvTest.CSVTest("createPresence",
-                                         
+
                                          touches=['createPresence',
                                                   'onCreatePresence',
                                                   'vector and quat syntax',
                                                   'timeout',
                                                   'system.presences'
                                                   ],
-                                         
+
                                          entityConstructorInfo=[csvCreatePresEntInfo],
-                                             
+
                                          errorConditions=[basicErrors.SegFaultError,
                                                           basicErrors.BusError,
                                                           basicErrors.AssertError,
                                                           basicErrors.UnitTestNoSuccessError,
                                                           basicErrors.UnitTestFailError],
-                                             
+
                                          howLongToRunInSeconds=50
                                          );
-    
+
     testArray.append(createPresenceTest);
-    
 
-    
-    
-
-    ##create manager and populate it with test array.
+    global manager
     manager = testManager.TestManager();
     manager.addTestArray(testArray);
+
+def runSome(testNames,saveOutput=False):
+    global manager
+    manager.runSomeTests(testNames, saveOutput=saveOutput);
+
+def runAll(saveOutput=False):
+    global manager
     manager.runAllTests(saveOutput=saveOutput);
-    
+
 
 if __name__ == "__main__":
 
     saveOutput = False;
-    
+
+    testsToRun = []
     for s in range (1, len(sys.argv)):
         if (sys.argv[s] == '--saveOutput'):
             saveOutput=True;
+        else:
+            testsToRun.append(sys.argv[s])
 
-    runAll(saveOutput);
-        
-                        
-    
-
-
-    
+    registerTests()
+    if len(testsToRun):
+        runSome(testsToRun, saveOutput)
+    else:
+        runAll(saveOutput);
