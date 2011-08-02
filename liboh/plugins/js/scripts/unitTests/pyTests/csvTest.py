@@ -20,10 +20,8 @@ class CSVTest(singleTest.SingleTest):
     '''
     @see singleTest.SingleTest
     '''
-    def __init__(self,testName,entityConstructorInfo=None,errorConditions=None, additionalCMDLineArgs=None,howLongToRunInSeconds=singleTest.DEFAULT_TEST_TIME_IN_SECONDS, touches=None):
-        
-        singleTest.SingleTest.__init__(self,testName,errorConditions,additionalCMDLineArgs,howLongToRunInSeconds,touches);
-
+    def __init__(self, name, entityConstructorInfo=None, **kwargs):
+        singleTest.SingleTest.__init__(self,name=name,**kwargs)
         self.csvGen = csvGenerator.CSVGenerator(entityConstructorInfo);
         
     def addEntityConstructorInfo(self,eci):
@@ -78,12 +76,16 @@ class CSVTest(singleTest.SingleTest):
         while proc.poll() is None:
             time.sleep(1)
             now = datetime.datetime.now();
-            if (((now - start).seconds > self.howLongToRunInSeconds) and (not signalSent)):
+            if (((now - start).seconds > self.duration) and (not signalSent)):
                 sys.stdout.flush();
                 signalSent = True;
                 print('Sending sighup to object host');
                 sys.stderr.flush();
                 proc.send_signal(signal.SIGHUP);
+                proc.wait()
+                # Print a notification that we had to kill this process
+                print >>outputCatcher
+                print >>outputCatcher, 'UNIT_TEST_TIMEOUT'
 
                 
         outputCatcher.close();

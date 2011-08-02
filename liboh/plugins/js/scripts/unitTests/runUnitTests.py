@@ -22,10 +22,7 @@ def registerTests():
     #down.
     basicTest = csvTest.CSVTest("basicTest",
                                 [basicGenerators.KillAfterTenSecondsEntity],
-                                [basicErrors.SegFaultError,
-                                 basicErrors.BusError,
-                                 basicErrors.AssertError],
-                                howLongToRunInSeconds=20
+                                duration=20
                                 );
 
     testArray.append(basicTest);
@@ -40,15 +37,8 @@ def registerTests():
                                            'self',
                                            'onPresenceConnected',
                                            'Date'],
-
                                   entityConstructorInfo=[timeoutTestInfo],
-
-                                  errorConditions=[basicErrors.SegFaultError,
-                                                   basicErrors.BusError,
-                                                   basicErrors.AssertError,
-                                                   basicErrors.UnitTestFailError],
-
-                                  howLongToRunInSeconds=100);
+                                  duration=100);
 
     testArray.append(timeoutTest);
 
@@ -61,15 +51,8 @@ def registerTests():
                                   touches=['http',
                                            'timeout'
                                            ],
-
                                   entityConstructorInfo=[httpTestInfo],
-
-                                  errorConditions=[basicErrors.SegFaultError,
-                                                   basicErrors.BusError,
-                                                   basicErrors.AssertError,
-                                                   basicErrors.UnitTestFailError],
-
-                                  howLongToRunInSeconds=30);
+                                  duration=30);
 
     testArray.append(httpTest);
 
@@ -97,7 +80,6 @@ def registerTests():
         );
 
     proximityAddedTest = csvTest.CSVTest("proximityAdded",
-
                                          touches=['onProxAdded',
                                                   'setQueryAngle',
                                                   'setVelocity',
@@ -105,18 +87,10 @@ def registerTests():
                                                   'getProxSet',
                                                   'timeout',
                                                   'onPresenceConnected'],
-
                                          entityConstructorInfo=[otherEntInfo,
                                                                 csvProxAddedEntInfo],
-
-                                         errorConditions=[basicErrors.SegFaultError,
-                                                          basicErrors.BusError,
-                                                          basicErrors.AssertError,
-                                                          basicErrors.UnitTestFailError],
-
-                                         howLongToRunInSeconds=50
+                                         duration=50
                                          );
-
     testArray.append(proximityAddedTest);
 
 
@@ -131,22 +105,14 @@ def registerTests():
         );
 
     createPresenceTest = csvTest.CSVTest("createPresence",
-
                                          touches=['createPresence',
                                                   'onCreatePresence',
                                                   'vector and quat syntax',
                                                   'timeout',
                                                   'system.presences'
                                                   ],
-
                                          entityConstructorInfo=[csvCreatePresEntInfo],
-
-                                         errorConditions=[basicErrors.SegFaultError,
-                                                          basicErrors.BusError,
-                                                          basicErrors.AssertError,
-                                                          basicErrors.UnitTestFailError],
-
-                                         howLongToRunInSeconds=50
+                                         duration=50
                                          );
 
     testArray.append(createPresenceTest);

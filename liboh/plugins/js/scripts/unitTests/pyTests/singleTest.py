@@ -1,14 +1,20 @@
 #!/usr/bin/python
 
-
-DEFAULT_TEST_TIME_IN_SECONDS=20;
-
+import errorConditions.basicErrors as basicErrors
 
 class SingleTest:
-    
+    DefaultErrorConditions = [
+        basicErrors.SegFaultError,
+        basicErrors.BusError,
+        basicErrors.AssertError,
+        basicErrors.ExceptionError,
+        basicErrors.TimedOutError
+        ]
+    DefaultDuration = 20
+
     '''
     
-    @param {String} testName identifies the name of the test that
+    @param {String} name identifies the name of the test that
     we're running.
     
     @param {Array} (optional) errorConditions Each element of the
@@ -22,14 +28,14 @@ class SingleTest:
     arguments you want to provide to cpp_oh.  Each element of the
     array should correspond to an arg.
 
-    @param {Int} howLongToRunInSeconds Number of seconds to run test simulation for
+    @param {Int} duration Number of seconds to run test simulation for
 
     @param {Array} touches An array of strings.  Each element
     indicates a potential call that could have caused problem if test failed.
     '''
     
-    def __init__(self,testName, errorConditions=None, additionalCMDLineArgs=None,howLongToRunInSeconds=DEFAULT_TEST_TIME_IN_SECONDS, touches=None):
-        self.testName = testName;
+    def __init__(self, name, errorConditions=DefaultErrorConditions, additionalCMDLineArgs=None, duration=DefaultDuration, touches=None):
+        self.testName = name;
 
         if (errorConditions == None):
             self.errorConditions = [];
@@ -42,22 +48,13 @@ class SingleTest:
             self.additionalCMDLineArgs = additionalCMDLineArgs;
 
         
-        self.howLongToRunInSeconds = howLongToRunInSeconds;
+        self.duration = duration;
 
         if (touches == None):
             self.touches = [];
         else:
             self.touches = touches;
 
-    '''
-    @see errorConditions param of __init__
-    '''
-    def addErrorCondition(self,errToAdd):
-        self.errorConditions.append(errToAdd);
-
-    def addArrayOfErrorConditions(self,arrayErrToAdd):
-        for s in arrayErrToAdd:
-            self.addErrorCondition(s);
 
     '''
     Don't know how to make this function like a purely virtual
