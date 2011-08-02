@@ -24,8 +24,7 @@ def registerTests():
                                 [basicGenerators.KillAfterTenSecondsEntity],
                                 [basicErrors.SegFaultError,
                                  basicErrors.BusError,
-                                 basicErrors.AssertError,
-                                 basicErrors.UnitTestNoSuccessError],
+                                 basicErrors.AssertError],
                                 howLongToRunInSeconds=20
                                 );
 
@@ -47,7 +46,6 @@ def registerTests():
                                   errorConditions=[basicErrors.SegFaultError,
                                                    basicErrors.BusError,
                                                    basicErrors.AssertError,
-                                                   basicErrors.UnitTestNoSuccessError,
                                                    basicErrors.UnitTestFailError],
 
                                   howLongToRunInSeconds=100);
@@ -69,7 +67,6 @@ def registerTests():
                                   errorConditions=[basicErrors.SegFaultError,
                                                    basicErrors.BusError,
                                                    basicErrors.AssertError,
-                                                   basicErrors.UnitTestNoSuccessError,
                                                    basicErrors.UnitTestFailError],
 
                                   howLongToRunInSeconds=30);
@@ -115,7 +112,6 @@ def registerTests():
                                          errorConditions=[basicErrors.SegFaultError,
                                                           basicErrors.BusError,
                                                           basicErrors.AssertError,
-                                                          basicErrors.UnitTestNoSuccessError,
                                                           basicErrors.UnitTestFailError],
 
                                          howLongToRunInSeconds=50
@@ -148,7 +144,6 @@ def registerTests():
                                          errorConditions=[basicErrors.SegFaultError,
                                                           basicErrors.BusError,
                                                           basicErrors.AssertError,
-                                                          basicErrors.UnitTestNoSuccessError,
                                                           basicErrors.UnitTestFailError],
 
                                          howLongToRunInSeconds=50
