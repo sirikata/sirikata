@@ -143,6 +143,7 @@ function stage5()
         mTest.success('All checks passed');
 
     system.__debugPrint('\n\n\n\n');
+    system.killEntity();
 }
 
 

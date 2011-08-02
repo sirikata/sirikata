@@ -11,5 +11,4 @@ function onKill()
 {
     mTest.success('about to kill.');
 }
-killAfterTime(10,onKill);
-
+killAfterTime(1,onKill);

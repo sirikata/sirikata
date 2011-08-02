@@ -106,8 +106,7 @@ function stage1()
         system.createPresence(presType3);
         system.createPresence(presType4);
     }
-    system.timeout(20,stage4);
-    
+    system.timeout(4,stage4);    
 }
 
 
@@ -129,7 +128,8 @@ function stage4()
     {
         mTest.success('Success on presence creater side');
     }
-        
+
+    system.killEntity();
 }
 
 function testFloatWithinTolerance(lhs,rhs)
@@ -249,4 +249,3 @@ function presVelTypeCallbackFactory(typeName)
     };
     return returner;
 }
-

@@ -33,13 +33,14 @@ successObject = {
     'googleQueryParams':false
 };
 
+var callbacks_left = 0;
 
 //system.onPresenceConnected(stage1);
 stage1();
 
 function stage1()
 {
-    system.timeout(30,endTimeout);
+    system.timeout(30,finish);
 
     //issue query to google
     url = 'http://www.google.com';
@@ -55,9 +56,9 @@ function stage1()
     std.http.basicGet(url,callbackFunctionFactory('googleQueryParams'));
 }
 
-
 function callbackFunctionFactory(callbackSite)
 {
+    callbacks_left++;
     var returner = function (success,data)
     {
         var worked = true;
@@ -66,29 +67,31 @@ function callbackFunctionFactory(callbackSite)
             successObject[callbackSite] = false;
             mTest.fail('Callback failed on ' + callbackSite);
             worked = false;
-            return;
         }
-        if (data.statusCode != 200)
+        else if (data.statusCode != 200)
         {
             system.__debugPrint('\n\nstatus code: ' + data.statusCode.toString() + '\n\n');
             successObject[callbackSite] = false;
             mTest.fail('Callback did not receive http 200 for ' + callbackSite);
-            worked = false;
         }
-        if (data.data.length <=0)
+        else if (data.data.length <=0)
         {
             successObject[callbackSite] = false;
             mTest.fail('Callback did not receive http 200 for ' + callbackSite);
-            worked = false;
         }
 
         if (worked)
             successObject[callbackSite] = true;
+
+        callbacks_left--;
+        if (callbacks_left == 0)
+            finish();
     };
     return returner;
 }
 
-function endTimeout()
+function finish()
 {
     printSuccessObject(successObject,mTest);
+    system.killEntity();
 }

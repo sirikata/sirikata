@@ -94,9 +94,9 @@ successObject = {
 
 //timers being measured should fire within .3 seconds of when they were requested to.
 timerTolerance = .2;
-timerTolerancePeriod = 4;
+timerTolerancePeriod = 1;
 loggedSystemSelf = null;
-timesToRepeatStage2And3 =10;
+timesToRepeatStage2And3 = 10;
 countTimesExecutedStage2And3 = 0;
 shortExecuted = false;
 
@@ -105,7 +105,7 @@ function stage1()
 {
     system.__debugPrint('\nstage1\n');
     loggedSystemSelf = system.self.toString();
-    system.timeout(5,stage2);
+    system.timeout(1,stage2);
 }
 
 function stage2()
@@ -144,7 +144,7 @@ function stage4()
     system.__debugPrint('\nstage4\n');
     checkSelf();
     system.timeout(1,shortTimeoutCallback);
-    system.timeout(1.5,stage5);
+    system.timeout(2,stage5);
 }
 
 
@@ -168,7 +168,7 @@ function stage6()
 {
     system.__debugPrint('\nstage6\n');
     checkSelf();
-    system.timeout(5, stage7);
+    system.timeout(2, stage7);
     var shortTimeOut = system.timeout(1, shortTimeoutCallback);
     shortTimeOut.clear();
 }
@@ -188,7 +188,7 @@ function stage7()
     shortExecuted = false;
 
     checkSelf();
-    system.timeout(5,stage8);
+    system.timeout(2,stage8);
     stage7_shortTimeOut = system.timeout(1,shortTimeoutCallback);
     stage7_shortTimeOut.suspend();
 }
@@ -208,8 +208,9 @@ function stage8()
     shortExecuted = false;
 
     checkSelf();
+    // reset -> 1 second
     stage7_shortTimeOut.reset();
-    system.timeout(5,stage9);
+    system.timeout(2,stage9);
 }
 
 function stage9()
@@ -225,6 +226,7 @@ function stage9()
         successObject['timerReset'] = true;            
 
     printSuccessObject(successObject,mTest);
+    system.killEntity();
 }
 
 
