@@ -536,10 +536,13 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
         return;
     }
 
+    SpaceObjectReference sporef(spaceID, oref);
+
     PresenceDataMap::iterator where;
-    where=mPresenceData->find(SpaceObjectReference(spaceID, oref));
+    where=mPresenceData->find(sporef);
     if (where!=mPresenceData->end()) {
         mPresenceData->erase(where);
+        mObjectHost->unregisterHostedObject(sporef);
         //need to actually send a disconnection request to the space;
         mObjectHost->disconnectObject(spaceID,oref);
     } else {

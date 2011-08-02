@@ -270,6 +270,13 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid)
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
         mHostedObjects.erase(iter);
+
+        // This may not always be the best policy, but for now, if we run out of
+        // all objects then its safe to try to shutdown. Without a remote admin
+        // interface or something, its going to be impossible for any *new* work
+        // to get started (although some remaining work may finish out).
+        if (mHostedObjects.empty() && !mContext->stopped())
+            mContext->shutdown();
     }
 }
 
