@@ -232,6 +232,7 @@ void JSPositionListener::finishLoadMesh(Liveness::Token alive, Liveness::Token c
     v8::Context::Scope context_scope(ctx->mContext);
     TryCatch try_catch;
     jpp->emerScript->invokeCallback(ctx, cb);
+    jpp->emerScript->postCallbackChecks();
 }
 
 namespace {

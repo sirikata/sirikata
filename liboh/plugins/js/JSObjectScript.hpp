@@ -170,6 +170,11 @@ public:
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]);
     v8::Handle<v8::Value> invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb);
 
+    // Hook to invoke after a callback is invoked. Allows you to check for
+    // conditions that may be set during the callback (kill requested, reset,
+    // etc).
+    virtual void postCallbackChecks() {}
+
     JSContextStruct* rootContext() const { return mContext; }
 
     /**

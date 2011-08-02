@@ -277,6 +277,7 @@ public:
     v8::Handle<v8::Value> sendSandbox(const String& msgToSend, uint32 senderID, uint32 receiverID);
 
 
+    virtual void postCallbackChecks();
 private:
 
     /**

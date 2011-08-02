@@ -240,7 +240,7 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
 
     SpaceObjectReference sporef = SpaceObjectReference::null();
     mContext = new JSContextStruct(this, NULL,sporef, Capabilities::getFullCapabilities(),mManager->mContextGlobalTemplate,contIDTracker,NULL);
-    
+
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
 
@@ -342,6 +342,7 @@ void JSObjectScript::storageCommitCallback(JSContextStruct* jscont, v8::Persiste
     int argc = 2;
     v8::Handle<v8::Value> argv[2] = { js_success, js_rs };
     invokeCallback(jscont, cb, argc, argv);
+    postCallbackChecks();
 }
 
 v8::Handle<v8::Value> JSObjectScript::storageErase(const OH::Storage::Key& key, v8::Handle<v8::Function> cb, JSContextStruct* jscont)
@@ -399,6 +400,7 @@ void JSObjectScript::setRestoreScriptCallback(JSContextStruct* jscont, v8::Persi
     int argc = 1;
     v8::Handle<v8::Value> argv[1] = { js_success };
     invokeCallback(jscont, cb, argc, argv);
+    postCallbackChecks();
 }
 
 //can instantly finish the clear operation in JSObjectScript because not in the
@@ -1098,14 +1100,14 @@ v8::Local<v8::Function> JSObjectScript::functionValue(const String& js_script_st
 
   const std::string new_code = sstream.str();
   counter++;
-  
+
   v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
   v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, new_code, &origin, false));
   if (!v->IsFunction())
   {
       v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, "function(){}", &origin, false));
   }
-  
+
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   return handle_scope.Close(f);
 }

@@ -69,6 +69,7 @@ void JSContextStruct::httpFail(v8::Persistent<v8::Function> cb,const String& fai
     v8::Context::Scope context_scope(mContext);
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(false), v8::String::New(failureReason.c_str(),failureReason.size())};
     jsObjScript->invokeCallback(this,cb, 2, argv);
+    jsObjScript->postCallbackChecks();
 }
 
 
@@ -115,6 +116,7 @@ void JSContextStruct::httpSuccess(v8::Persistent<v8::Function> cb,EmersonHttpMan
     httpObj->Set(v8::String::New("data"), strToUint16Str(dataStr));
     v8::Handle<v8::Value> argv[2] = { v8::Boolean::New(true), httpObj};
     jsObjScript->invokeCallback(this,cb, 2, argv);
+    jsObjScript->postCallbackChecks();
 }
 
 

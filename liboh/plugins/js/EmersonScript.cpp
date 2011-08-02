@@ -226,6 +226,7 @@ void  EmersonScript::notifyProximateGone(ProxyObjectPtr proximateObject, const S
         printException(try_catch);
     }
 
+    postCallbackChecks();
 }
 
 v8::Persistent<v8::Object> EmersonScript::createVisiblePersistent(const SpaceObjectReference& visibleObj, JSProxyPtr addParams, v8::Handle<v8::Context> ctx)
@@ -320,6 +321,8 @@ void EmersonScript::notifyProximate(JSVisibleStruct* proxVis, const SpaceObjectR
     if (try_catch.HasCaught()) {
         printException(try_catch);
     }
+
+    postCallbackChecks();
 }
 
 
@@ -370,6 +373,15 @@ void EmersonScript::killScript()
     mParent->destroy();
 }
 
+void EmersonScript::postCallbackChecks() {
+    //if one of the actions that your handler took was to call reset, then reset
+    //the entire script.
+    if (mResetting)
+        resetScript();
+
+    if (mKilling)
+        killScript();
+}
 
 void EmersonScript::onConnected(SessionEventProviderPtr from, const SpaceObjectReference& name, HostedObject::PresenceToken token)
 {
@@ -584,6 +596,7 @@ void EmersonScript::invokeCallbackInContext(Liveness::Token alive, v8::Persisten
     v8::Context::Scope(jscontext->mContext);
     TryCatch try_catch;
     invokeCallback( (jscontext == NULL ? mContext : jscontext), cb);
+    postCallbackChecks();
 }
 
 //calls funcToCall in jscont, binding jspres bound as first arg.
@@ -601,6 +614,7 @@ void EmersonScript::handlePresCallback( v8::Handle<v8::Function> funcToCall,JSCo
     TryCatch try_catch;
     v8::Handle<v8::Value> js_pres =wrapPresence(jspres,&(jscont->mContext));
     invokeCallback(jscont, funcToCall, 1,&js_pres);
+    postCallbackChecks();
 }
 
 
@@ -726,13 +740,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     }
     contextsToClear.clear();
 
-    //if one of the actions that your handler took was to call reset, then reset
-    //the entire script.
-    if (mResetting)
-        resetScript();
-
-    if (mKilling)
-        killScript();
+    postCallbackChecks();
 
     return true;
 }
@@ -817,6 +825,7 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
 
 
     invokeCallback(receiver,receiver->sandboxMessageCallback,2,argv);
+    postCallbackChecks();
 }
 
 
