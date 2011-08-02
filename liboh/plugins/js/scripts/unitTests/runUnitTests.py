@@ -1,17 +1,12 @@
 #!/usr/bin/python
 
 import sys;
-sys.path.append('pyTests/');
-sys.path.append('dbGen/');
-sys.path.append('errorConditions/');
 
-import testManager
-import csvTest
-import csvConstructorInfo
-import basicGenerators
-import basicErrors
-
-from csvConstructorInfo import *
+import pyTests.testManager as testManager
+import pyTests.csvTest as csvTest
+from dbGen.csvConstructorInfo import *
+import dbGen.basicGenerators as basicGenerators
+import errorConditions.basicErrors as basicErrors
 
 manager = None
 

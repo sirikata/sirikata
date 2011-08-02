@@ -2,10 +2,9 @@
 
 
 import sys
-sys.path.append("../dbGen/")
 
-import singleTest
-import csvGenerator
+import pyTests.singleTest as singleTest
+import dbGen.csvGenerator as csvGenerator
 import subprocess
 import os
 import datetime
@@ -103,4 +102,3 @@ class CSVTest(singleTest.SingleTest):
         
         
     
-
