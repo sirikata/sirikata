@@ -36,9 +36,17 @@ options
                 if (str[i] == '\n') \
                     numNewlines++; \
             program_string->append(program_string, str); \
+            if (capture) \
+                capture_string->append(capture_string, str); \
             current_line += numNewlines; \
         }
 
+    #define START_CAPTURE() \
+        capture_string->set(capture_string, ""); \
+        capture = true;
+
+    #define STOP_CAPTURE() capture = false;
+    
     #define LINE_DEBUG 0
     
     #define LINE(num) \
@@ -82,11 +90,13 @@ options
 @members    
 {
     pANTLR3_STRING program_string;
+    pANTLR3_STRING capture_string;
     int current_line;
     int* emersonLines;
     int* jsLines;
     int linesSize;
     int lineIndex;
+    bool capture;
     extern pEmersonTree _treeParser;
     
 }
@@ -97,6 +107,7 @@ program returns [pANTLR3_STRING return_str, int* emersonLines, int* jsLines, int
             {
                 pANTLR3_STRING_FACTORY factory = antlr3StringFactoryNew();
                 program_string = factory->newRaw(factory);
+                capture_string = factory->newRaw(factory);
                 
                 linesSize = 40;
                 lineIndex = 0;
@@ -785,18 +796,19 @@ scope
         : conditionalExpression
         | ^(
             (
-                  MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " util.mul ";  }
-                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " util.div ";  }
-                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " util.mod ";  }
-                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " util.plus ";  } 
-                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " util.sub ";  } 
+                  MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " util.mul "; START_CAPTURE();  }
+                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " util.div "; START_CAPTURE(); }
+                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " util.mod "; START_CAPTURE(); }
+                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " util.plus "; START_CAPTURE();  } 
+                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " util.sub "; START_CAPTURE(); } 
             )
             e1=leftHandSideExpression 
             {
+                STOP_CAPTURE();
                 APP(" = ");
                 APP($assignmentExpression::op);
                 APP(" ( ");
-                APP((const char*)$e1.text->chars);
+                APP((const char*)capture_string->chars);
                 APP(" , ");
             }
             assignmentExpression
@@ -832,25 +844,25 @@ scope
         : conditionalExpression
         | ^(
             (
-                  MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " util.mul ";  }
-                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " util.div ";  }
-                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " util.mod ";  }
-                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " util.plus ";  } 
-                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " util.sub ";  } 
+                  MULT_ASSIGN         { LINE($MULT_ASSIGN.line); $assignmentExpression::op = " util.mul "; START_CAPTURE();  }
+                | DIV_ASSIGN          { LINE($DIV_ASSIGN.line); $assignmentExpression::op = " util.div "; START_CAPTURE(); }
+                | MOD_ASSIGN          { LINE($MOD_ASSIGN.line); $assignmentExpression::op = " util.mod "; START_CAPTURE(); }
+                | ADD_ASSIGN          { LINE($ADD_ASSIGN.line); $assignmentExpression::op = " util.plus "; START_CAPTURE();  } 
+                | SUB_ASSIGN          { LINE($SUB_ASSIGN.line); $assignmentExpression::op = " util.sub "; START_CAPTURE(); } 
             )
             e1=leftHandSideExpression 
             {
+                STOP_CAPTURE();
                 APP(" = ");
                 APP($assignmentExpression::op);
                 APP(" ( ");
-                APP((const char*)$e1.text->chars);
+                APP((const char*)capture_string->chars);
                 APP(" , ");
             }
             assignmentExpression
             {
                 APP(" ) ");
-            }
-           )
+            }           )
         | ^(
             (
                 ASSIGN                { LINE($ASSIGN.line); $assignmentExpression::op = " = ";    }
