@@ -610,7 +610,7 @@ boost::any OgreSystem::createWindow(const String& window_name, bool is_html, boo
     WebView* ui_wv = wvManager->getWebView(window_name);
     if(!ui_wv)
     {
-        ui_wv = wvManager->createWebView(window_name, window_name, width, height, OverlayPosition(RP_TOPLEFT));
+        ui_wv = wvManager->createWebView(mContext, window_name, window_name, width, height, OverlayPosition(RP_TOPLEFT));
         if (is_html)
             ui_wv->loadHTML(content);
         else if (is_file)
@@ -658,6 +658,7 @@ boost::any OgreSystem::addModuleToUI(std::vector<boost::any>& params) {
 
     // Note the ../, this is because that loadModule executes from within data/chrome
     mMouseHandler->mUIWidgetView->evaluateJS("loadModule('../" + html_url + "')");
+    mMouseHandler->mUIWidgetView->defaultEvent(window_name + "-__ready");
     Invokable* inn = mMouseHandler->mUIWidgetView;
     return Invokable::asAny(inn);
 }
@@ -673,6 +674,7 @@ boost::any OgreSystem::addTextModuleToUI(std::vector<boost::any>& params) {
 
     // Note that we assume escaped js
     mMouseHandler->mUIWidgetView->evaluateJS("loadModuleText(" + module_js + ")");
+    mMouseHandler->mUIWidgetView->defaultEvent(window_name + "-__ready");
     Invokable* inn = mMouseHandler->mUIWidgetView;
     return Invokable::asAny(inn);
 }
@@ -765,9 +767,9 @@ boost::any OgreSystem::startAnimation(std::vector<boost::any>& params) {
 
 boost::any OgreSystem::stopAnimation(std::vector<boost::any>& params) {
   if (params.size() < 2) return boost::any();
-  if (!Invokable::anyIsObject(params[1])) return boost::any();  
+  if (!Invokable::anyIsObject(params[1])) return boost::any();
 
-  SpaceObjectReference objid = Invokable::anyAsObject(params[1]);  
+  SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
 
   if (mSceneEntities.find(objid.toString()) == mSceneEntities.end()) return boost::any();
 

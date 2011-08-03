@@ -130,7 +130,9 @@ public:
 	/**
 	* Creates a WebView.
 	*/
-    WebView* createWebView(const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height,
+    WebView* createWebView(
+        Context* ctx,
+        const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height,
 	        const OverlayPosition &webViewPosition,	bool asyncRender = false, int maxAsyncRenderRate = 70,
 	        Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0,
 	        const WebView::WebViewBorderSize& border = WebView::mDefaultBorder);
@@ -139,7 +141,9 @@ public:
 	/**
 	* Creates a WebView from a given Berkelium::Window.
 	*/
-	WebView* createWebViewPopup(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
+	WebView* createWebViewPopup(
+            Context* ctx,
+            const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 		Berkelium::Window *newwin, Tier tier = TIER_MIDDLE, Ogre::Viewport* viewport = 0);
 #endif
 	/**
@@ -147,7 +151,9 @@ public:
 	* Instead, you handle the material and apply it to anything you like. Mouse input for WebViewMaterials should be
 	* injected via the WebView::injectMouse_____ API calls instead of the global WebViewManager::injectMouse_____ calls.
 	*/
-	WebView* createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
+	WebView* createWebViewMaterial(
+            Context* ctx,
+            const std::string &webViewName, unsigned short width, unsigned short height,
 		bool asyncRender = false, int maxAsyncRenderRate = 70, Ogre::FilterOptions texFiltering = Ogre::FO_ANISOTROPIC);
 
 	/**
@@ -252,20 +258,6 @@ public:
 
 	void setDefaultViewport(Ogre::Viewport* newViewport);
 
-
-    enum NavigationAction {
-        NavigateNewTab,
-        NavigateBack,
-        NavigateForward,
-        NavigateRefresh,
-        NavigateHome,
-        NavigateGo,
-        NavigateCommand,
-        NavigateHelp,
-        NavigateDelete
-    };
-    void navigate(NavigationAction action);
-    void navigate(NavigationAction action, const String& arg);
 
     const std::string &getBaseDir() const {
         return baseDirectory;

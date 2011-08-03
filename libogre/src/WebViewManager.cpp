@@ -199,7 +199,7 @@ void WebViewManager::Update()
 }
 
 
-WebView* WebViewManager::createWebView(const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport, const WebView::WebViewBorderSize& border)
+WebView* WebViewManager::createWebView(Context* ctx, const std::string &webViewName, const std::string& webViewType,unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,bool asyncRender, int maxAsyncRenderRate, Tier tier, Ogre::Viewport* viewport, const WebView::WebViewBorderSize& border)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
 		OGRE_EXCEPT(Ogre::Exception::ERR_RT_ASSERTION_FAILED,
@@ -220,7 +220,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, const std
 		zOrder = highestZOrder + 1;
 
 
-        WebView* newWebView = new WebView(webViewName, webViewType,width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
+        WebView* newWebView = new WebView(ctx, webViewName, webViewType,width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport, border);
         newWebView->createWebView(false);
 	activeWebViews[webViewName] = newWebView;
@@ -229,7 +229,7 @@ WebView* WebViewManager::createWebView(const std::string &webViewName, const std
 }
 
 #ifdef HAVE_BERKELIUM
-WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
+WebView* WebViewManager::createWebViewPopup(Context* ctx, const std::string &webViewName, unsigned short width, unsigned short height, const OverlayPosition &webViewPosition,
 		Berkelium::Window *newwin, Tier tier, Ogre::Viewport* viewport)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
@@ -250,7 +250,7 @@ WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsi
 	if(highestZOrder != -1)
 		zOrder = highestZOrder + 1;
 
-        WebView* newWebView = new WebView(webViewName, "___popup___", width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
+        WebView* newWebView = new WebView(ctx, webViewName, "___popup___", width, height, webViewPosition, (Ogre::uchar)zOrder, tier,
             viewport? viewport : defaultViewport);
         newWebView->initializeWebView(newwin, false);
 	activeWebViews[webViewName] = newWebView;
@@ -259,7 +259,7 @@ WebView* WebViewManager::createWebViewPopup(const std::string &webViewName, unsi
         return newWebView;
 }
 #endif //HAVE_BERKELIUM
-WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, unsigned short width, unsigned short height,
+WebView* WebViewManager::createWebViewMaterial(Context* ctx, const std::string &webViewName, unsigned short width, unsigned short height,
 			bool asyncRender, int maxAsyncRenderRate, Ogre::FilterOptions texFiltering)
 {
 	if(activeWebViews.find(webViewName) != activeWebViews.end())
@@ -267,7 +267,7 @@ WebView* WebViewManager::createWebViewMaterial(const std::string &webViewName, u
 			"An attempt was made to create a WebView named '" + webViewName + "' when a WebView by the same name already exists!",
 			"WebViewManager::createWebViewMaterial");
 
-        WebView* newWebView = new WebView(webViewName, "___material___", width, height, texFiltering);
+        WebView* newWebView = new WebView(ctx, webViewName, "___material___", width, height, texFiltering);
         newWebView->createWebView(false);
         activeWebViews[webViewName] = newWebView;
         newWebView->bind("event", std::tr1::bind(&WebViewManager::onRaiseWebViewEvent, this, _1, _2));
@@ -661,123 +661,6 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 	isDraggingFocusedWebView = true;
 }
 
-
-void WebViewManager::navigate(NavigationAction action) {
-    // New tab is a special case: it doesn't require a previously focused web view
-    if (action == NavigateNewTab) {
-        static uint32 unique_id = 0;
-        // FIXME ghetto lexical cast because I'm not sure why we have our own version elsewhere
-        char buffer[256];
-        sprintf(buffer, "spawned_%d", unique_id++);
-        String unique_name(buffer);
-        WebView* newwebview = createWebView(unique_name, unique_name, 320, 240, OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE);
-        newwebview->loadURL("http://sirikata.com/");
-//        newwebview->setTransparent(true);
-        focusedNonChromeWebView = newwebview;
-        return;
-    }
-
-    if (focusedNonChromeWebView == NULL)
-        return;
-
-    switch (action) {
-#if defined(HAVE_BERKELIUM)
-    case NavigateBack:
-        focusedNonChromeWebView->evaluateJS("history.go(-1)");
-        break;
-    case NavigateForward:
-        focusedNonChromeWebView->evaluateJS("history.go(1)");
-        break;
-#endif
-#if defined(HAVE_BERKELIUM)
-    case NavigateRefresh:
-        focusedNonChromeWebView->webView->refresh();
-#endif
-        break;
-    case NavigateHome:
-        focusedNonChromeWebView->loadURL("http://www.google.com");
-        break;
-    case NavigateDelete:
-        destroyWebView(focusedNonChromeWebView);
-//        focusedNonChromeWebView->loadURL("");
-//        focusedNonChromeWebView->setTransparent(true);
-        focusedNonChromeWebView=0;
-        break;
-    default:
-        SILOG(ogre,error,"Unknown navigation action from navigate(action).");
-        break;
-    }
-}
-
-
-static void PythonNavigateHandler(const String& target, const String& pythonProgram) {
-    SILOG(ogre, error, "PythonNavigateHandler is unimplemented");
-    SILOG(ogre, error, target);
-    SILOG(ogre, error, pythonProgram);
-}
-
-
-typedef void (*NavigateHandlerProc)(const String& target, const String& args);
-
-
-struct NavigateDispatch {
-    const char *name;
-    NavigateHandlerProc handler;
-};
-
-
-static void NavigateCommandDispatcher(const String& str) {
-    // Dispatch table
-    static const NavigateDispatch dispatchTable[] = {
-        {   "python",   PythonNavigateHandler },
-        {   NULL,       NULL }
-    };
-    static const char *delim = " \t\n\r";
-
-    // Get the command (first word)
-    size_t first = str.find_first_not_of(delim, 0);
-    size_t last  = str.find_first_of(delim);
-    String command(str.substr(first, last - first));
-
-    // Get the target (second word)
-    first = str.find_first_not_of(delim, last);
-    last  = str.find_first_of(delim, first);
-    String target(str.substr(first, last - first));
-
-    // Get the args (remaining text)
-    first = str.find_first_not_of(delim, last);
-    String args(str.substr(first));
-
-    // Look for the command in the table.
-    const char *ccommand = command.c_str();
-    const NavigateDispatch *p;
-    for (p = dispatchTable; p->name != NULL; ++p)
-        if (strcmp(ccommand, p->name) == 0)
-            break;
-
-    // Invoke the handler
-    if (p->handler != NULL)
-        p->handler(target, args);
-}
-
-
-void WebViewManager::navigate(NavigationAction action, const String& arg) {
-#if defined(HAVE_BERKELIUM)
-    switch (action) {
-      case NavigateGo:
-        if (focusedNonChromeWebView)
-            focusedNonChromeWebView->loadURL(arg);
-        break;
-      case NavigateCommand:
-        SILOG(ogre, info, "NavigateCommand: " + arg);
-        NavigateCommandDispatcher(arg);
-        break;
-      default:
-        SILOG(ogre, error, "Unknown navigation action from navigate(action, arg).");
-        break;
-    }
-#endif //HAVE_BERKELIUM
-}
 
 void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& args) {
 #if defined(HAVE_BERKELIUM)

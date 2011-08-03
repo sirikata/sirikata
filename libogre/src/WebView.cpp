@@ -54,10 +54,12 @@ using Berkelium::UTF8String;
 #endif
 
 WebView::WebView(
+    Context* ctx,
     const std::string& name, const std::string& type,
     unsigned short width, unsigned short height,
     const OverlayPosition &viewPosition, Ogre::uchar zOrder, Tier tier,
     Ogre::Viewport* viewport, const WebViewBorderSize& border)
+ : mContext(ctx)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -109,8 +111,11 @@ WebView::WebView(
 #endif
 }
 
-WebView::WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
-			Ogre::FilterOptions texFiltering)
+WebView::WebView(
+    Context* ctx,
+    const std::string& name, const std::string& type, unsigned short width, unsigned short height,
+    Ogre::FilterOptions texFiltering)
+ : mContext(ctx)
 {
 #ifdef HAVE_BERKELIUM
 	webView = 0;
@@ -263,6 +268,14 @@ void WebView::setUpdateViewportCallback(UpdateViewportCallback cb) {
 
 void WebView::setReadyCallback(ReadyCallback cb) {
     mReadyCallback = cb;
+#ifndef HAVE_BERKELIUM
+    // Without berkelium, we'll never get a ready callback. Force one now, but
+    // only after the current event finishes being handled (because this is
+    // called during initialization and callbacks fired in response to this one
+    // may not be registered quite yet).
+    if (mReadyCallback)
+        mContext->mainStrand->post(mReadyCallback);
+#endif
 }
 
 void WebView::setResetReadyCallback(ResetReadyCallback cb) {
@@ -334,7 +347,9 @@ void WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
     if (w == 0) w = 400;
     if (h == 0) h = 400;
 
-    WebView* child_wv = WebViewManager::getSingleton().createWebView(name, name, w, h,
+    WebView* child_wv = WebViewManager::getSingleton().createWebView(
+        mContext,
+        name, name, w, h,
         OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0);
     child_wv->loadURL(url);
     child_wv->setTransparent(false);
@@ -371,6 +386,14 @@ void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const Strin
         else escaped_url.push_back(url[i]);
     }
     evaluateJS( cb_name + "( 'navigate', '" + escaped_url + "')" );
+}
+
+void WebView::defaultEvent(const String& name) {
+#ifndef HAVE_BERKELIUM
+    mContext->mainStrand->post(
+        std::tr1::bind(&WebView::dispatchToDelegate, this, name, JSArguments())
+    );
+#endif
 }
 
 void WebView::handleCloseBrowser(WebView* wv, const JSArguments& args) {
@@ -1001,6 +1024,12 @@ void WebView::resize(int width, int height)
 }
 
 
+void WebView::dispatchToDelegate(const String& name, const JSArguments& args) {
+    std::map<std::string, JSDelegate>::iterator it = delegateMap.find(name);
+    if (it != delegateMap.end())
+        it->second(this, args);
+}
+
 
 #ifdef HAVE_BERKELIUM
 ///////// Berkelium Callbacks...
@@ -1402,30 +1431,29 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
     std::string nameStr(nameUTF8.get<std::string>());
     Berkelium::stringUtil_free(nameUTF8);
     SILOG(webview,detailed,"Handling web view event " << nameStr);
-	std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
+    std::map<std::string, JSDelegate>::iterator i = delegateMap.find(nameStr);
 
-    if(i != delegateMap.end())
-    {
+    if(i != delegateMap.end()) {
         JSArguments argVector;
         std::vector<std::string*> argStorage;
 
         for (size_t j=0;j!=numArgs;++j) {
-
             UTF8String temp = Berkelium::WideToUTF8(args[j].toString());
-						std::string* s = new std::string(temp.get<std::string>());
+            std::string* s = new std::string(temp.get<std::string>());
             argStorage.push_back(s);
             //argVector.push_back(JSArgument(temp.data(), temp.length()));
             argVector.push_back(JSArgument(s->data(), s->length()));
         }
-		    i->second(this, argVector);
+        dispatchToDelegate(nameStr, argVector);
         for (size_t j=0;j<argStorage.size();j++) {
-            //Berkelium::stringUtil_free(argStorage[j]);
-						delete(argStorage[j]);
+            delete(argStorage[j]);
         }
-	}
+    }
     if (replyMsg)
         win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
 }
+
+#endif //HAVE_BERKELIUM
 
 boost::any WebView::invoke(std::vector<boost::any>& params)
 {
@@ -1557,8 +1585,6 @@ void WebView::forwardOnNavigateToInvokable(Invokable* _invokable, const String& 
     params.push_back(Invokable::asAny(String(url)));
     _invokable->invoke(params);
 }
-
-#endif //HAVE_BERKELIUM
 
 
 const WebView::WebViewBorderSize WebView::mDefaultBorder(2,2,25,2);

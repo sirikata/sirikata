@@ -41,6 +41,7 @@
 #include <boost/any.hpp>
 
 #include <sirikata/core/util/Liveness.hpp>
+#include <sirikata/core/service/Context.hpp>
 
 #ifdef HAVE_BERKELIUM
 #include "berkelium/Berkelium.hpp"
@@ -121,6 +122,15 @@ class SIRIKATA_OGRE_EXPORT WebView
 		* @param javascript The Javascript to evaluate/execute.
 		*/
 		void evaluateJS(const std::string& javascript);
+
+                /** If we can't actually render pages, invoke the
+                 *  given callback so that processing can continue. This
+                 *  is useful if you expect an event from the WebView
+                 *  but Berkelium isn't available. Note that this is
+                 *  deferred by posting it so that it will be
+                 *  processed *after* the current event handler exits.
+                 */
+                void defaultEvent(const String& name);
 
                 void setUpdateViewportCallback(UpdateViewportCallback cb);
 
@@ -399,6 +409,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 		static const WebViewBorderSize mDefaultBorder;
 
 	protected:
+                Context* mContext;
 #ifdef HAVE_BERKELIUM
             Berkelium::Window* webView;
 
@@ -514,11 +525,11 @@ class SIRIKATA_OGRE_EXPORT WebView
 		friend class WebViewManager;
 
 
-		WebView(const std::string& name,const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
+		WebView(Context* ctx, const std::string& name,const std::string& type, unsigned short width, unsigned short height, const OverlayPosition &viewPosition,
 			Ogre::uchar zOrder, Tier tier, Ogre::Viewport* viewport, const WebViewBorderSize& border = mDefaultBorder);
 
 
-            WebView(const std::string& name, const std::string& type, unsigned short width, unsigned short height,
+                WebView(Context* ctx, const std::string& name, const std::string& type, unsigned short width, unsigned short height,
 			Ogre::FilterOptions texFiltering);
 
 		~WebView();
@@ -542,6 +553,9 @@ class SIRIKATA_OGRE_EXPORT WebView
 		void updateFade();
 
 		bool isPointOverMe(int x, int y);
+
+        // helper for onJavascriptCallback, defaultEvent
+        void dispatchToDelegate(const String& name, const JSArguments& args);
 
 #ifdef HAVE_BERKELIUM
         void onAddressBarChanged(Berkelium::Window*, URLString url);
@@ -568,11 +582,6 @@ class SIRIKATA_OGRE_EXPORT WebView
 
         void onCreatedWindow(Berkelium::Window*, Berkelium::Window*);
 
-     virtual boost::any invoke(std::vector<boost::any>& params);
-     // Helpers for invokable calls that produce callbacks later
-     void translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
-     void forwardOnNavigateToInvokable(Invokable* _invokable, const String& url);
-
         void onWidgetCreated(Berkelium::Window *win, Berkelium::Widget *newWidget, int zIndex);
         void onWidgetDestroyed(Berkelium::Window *win, Berkelium::Widget *newWidget);
         void onWidgetResize(Berkelium::Window *win, Berkelium::Widget *widg, int w, int h);
@@ -587,6 +596,12 @@ class SIRIKATA_OGRE_EXPORT WebView
             int dx, int dy,
             const Berkelium::Rect &scrollRect);
 #endif // HAVE_BERKELIUM
+
+
+     virtual boost::any invoke(std::vector<boost::any>& params);
+     // Helpers for invokable calls that produce callbacks later
+     void translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
+     void forwardOnNavigateToInvokable(Invokable* _invokable, const String& url);
 
 
         /** Handle a callback from the page saying it is ready. This isn't

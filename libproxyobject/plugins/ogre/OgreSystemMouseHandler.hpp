@@ -98,9 +98,6 @@ private:
 
     void renderStatsUpdateTick(const Task::LocalTime& t);
 
-    void webViewNavigateAction(WebViewManager::NavigationAction action);
-    void webViewNavigateStringAction(WebViewManager::NavigationAction action, const String& arg);
-
     Task::EventResponse deviceListener(Task::EventPtr evbase);
 
     void onUIDirectoryListingFinished(String initial_path,
