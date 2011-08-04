@@ -223,6 +223,15 @@ public:
     boost::any pick(std::vector<boost::any>& params);
     boost::any bbox(std::vector<boost::any>& params);
     boost::any visible(std::vector<boost::any>& params);
+    boost::any axis(std::vector<boost::any>& params);
+    boost::any world2Screen(std::vector<boost::any>& params);
+
+    boost::any newDrawing(std::vector<boost::any>& params);
+    boost::any setMat(std::vector<boost::any>& params);
+    boost::any setInheritOrient(std::vector<boost::any>& params);
+    boost::any setInheritScale(std::vector<boost::any>& params);
+    boost::any setVisible(std::vector<boost::any>& params);
+    boost::any shape(std::vector<boost::any>& params);
 
     boost::any getCamera(std::vector<boost::any>& params);
     boost::any setCameraPosition(std::vector<boost::any>& params);
@@ -238,9 +247,12 @@ public:
 private:
     ResourceDownloadPlanner *dlPlanner;
     void instantiateAllObjects(ProxyManagerPtr pop);
+    double clamp(const double& val);
 
     typedef std::tr1::unordered_map<SpaceObjectReference, ProxyEntity*, SpaceObjectReference::Hasher> EntityMap;
     EntityMap mEntityMap;
+    String currentMat;
+
 };
 
 

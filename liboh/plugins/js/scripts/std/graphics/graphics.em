@@ -264,6 +264,64 @@ function() {
     std.graphics.Graphics.prototype.setCameraOrientation = function(orient) {
         this.invoke('setCameraOrientation', orient.x, orient.y, orient.z, orient.w);
     };
+    
+    std.graphics.Graphics.prototype.axis = function(obj, axis, visible, glbl) {
+        this.invoke('axis', obj, axis.toLowerCase(), visible, glbl);
+    };
+    
+    std.graphics.Graphics.prototype.axes = function(obj, visible, glbl) {
+        this.invoke('axis', obj, 'x', visible, glbl);
+        this.invoke('axis', obj, 'y', visible, glbl);
+        this.invoke('axis', obj, 'z', visible, glbl);
+    };
+    
+    /* convert world coordinates to screen coordinates, return a {x: , y: } object */
+    std.graphics.Graphics.prototype.world2Screen = function(p) {
+        var result = this.invoke('world2Screen', p.x, p.y, p.z);
+        if (result) {
+            return result;
+        } else {
+            return undefined;
+        }
+    };
+    
+    std.graphics.Graphics.prototype.newDrawing = function(drawingName, obj, inheritOrient, inheritScale, visible) {
+        this.invoke("newDrawing", drawingName, obj, inheritOrient, inheritScale, visible);
+    };
+    
+    std.graphics.Graphics.prototype.setMat = function(er, eg, eb, dr, dg, db, sr, sg, sb, ar, ag, ab) {
+        return this.invoke("setMat", er, eg, eb, dr, dg, db, sr, sg, sb, ar, ag, ab);
+    };
+    
+    std.graphics.Graphics.prototype.setInheritOrient = function(drawingName, inheritOrient) {
+        this.invoke("setInheritOrient", drawingName, inheritOrient);
+    };
+    
+    std.graphics.Graphics.prototype.setInheritScale = function(drawingName, inheritScale) {
+        this.invoke("setInheritScale", drawingName, inheritScale);
+    };
+    
+    std.graphics.Graphics.prototype.setVisible = function(drawingName, visible) {
+        this.invoke("setVisible", drawingName, visible);
+    };
+    
+    std.graphics.Graphics.prototype.shape = function(drawingName, clear, type, points) {
+        clear = clear ? true : false;
+        var args = ["shape", drawingName, clear];
+        if (typeof(type) === "number") {
+            args.push(type);
+        }
+        
+        if (points) {
+            for (var i = 0; i < points.length; i++) {
+                args.push(points[i].x);
+                args.push(points[i].y);
+                args.push(points[i].z);
+            }
+        }
+    
+        this.invoke.apply(this, args);
+    };
 
 })();
 

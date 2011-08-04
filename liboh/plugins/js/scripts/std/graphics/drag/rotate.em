@@ -32,6 +32,7 @@
 
 system.require('std/movement/movableremote.em');
 system.require('std/graphics/drag/handler.em');
+system.require('std/graphics/axes.em');
 
 /** @namespace
     RotateDragHandler responds to drag events by moving a selected object.
@@ -83,9 +84,12 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
 
         /** @memberOf std.graphics.RotateDragHandler */
         selected: function(obj, hitpoint, evt) {
+            this._obj = obj ? obj : null;
             this._dragging = obj ?
                 new std.movement.MovableRemote(obj) : null;
             this._startingDir = this._spherePos(evt);
+            this._constraintInited = false;
+            this._constraint = null;
         },
 
         /** @memberOf std.graphics.RotateDragHandler */
@@ -102,6 +106,41 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
 
             var around = endingDir.cross(this._startingDir);
             var angle = util.asin(around.length());
+            
+            if (!this._constraintInited) {
+                if (!std.graphics.axes.getAxes(this._obj)) {
+                    std.graphics.axes.setVisibleAll(this._obj, true);
+                }
+                var axes = std.graphics.axes.getAxes(this._obj);
+                var state = axes.state();
+                var inheritOrient = axes.inheritOrient();
+                var candidates = [[],[]];
+                var count = -1;
+                
+                for (var i = 0; i < 3; i++) {
+                    var vec = std.graphics.axes.Axes.AXES[i].dir;
+                    if (inheritOrient[i]) {
+                        vec = this._startOrientation.mul(vec);
+                    } 
+                    if (state[i]) {
+                        count++;    
+                        candidates[0].push(vec);
+                    } else {
+                        candidates[1].push(vec);
+                    }
+                }
+                
+                if (count > -0.5 && count < 1.5) {
+                    this._constraint = candidates[count][0];
+                }
+                
+                this._constraintInited = true;
+            }
+            
+            if (this._constraint) {
+                around = this._constraint.scale(this._constraint.dot(around));
+            }
+            
 
             var dragRotation = (new util.Quaternion(around, angle)).mul(this._dragging.dragOrientation);
             this._dragging.setOrientation( dragRotation );
@@ -122,6 +161,8 @@ std.graphics.RotateDragHandler = std.graphics.DragHandler.extend(
             }
 
             this._lastClickAxis = null;
+            this._constraint = null;
+            this._constraintInited = false;
         },
 
         undo: function(action) {

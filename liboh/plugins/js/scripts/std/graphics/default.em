@@ -32,7 +32,6 @@
 
 system.require('graphics.em');
 system.require('undo.em');
-system.require('axes.em');
 system.require('std/movement/pursue.em');
 system.require('std/script/scripter.em');
 system.require('inputbinding.em');
@@ -45,7 +44,7 @@ system.require('std/graphics/physics.em');
 system.require('std/graphics/propertybox.em');
 system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
-system.require('std/graphics/dragControls.em');
+system.require('std/graphics/axes.em');
 
 (
 function() {
@@ -77,7 +76,6 @@ function() {
         this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
         this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
         this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
-        this._loadingUIs++; this._dragControls = new std.graphics.DragControls(this, ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
         this._camera.reinit();
@@ -89,7 +87,6 @@ function() {
         this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
-        this._loadingUIs++; this._dragControls.onReset(ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
         this._loadingUIs--;
@@ -104,8 +101,6 @@ function() {
             rotate: new std.graphics.RotateDragHandler(this._simulator),
             scale: new std.graphics.ScaleDragHandler(this._simulator)
         };
-
-        this._simulator.createAxes(system.self);
 
         this._binding = new std.graphics.InputBinding();
         this._simulator.inputHandler.onAnything = std.core.bind(this._binding.dispatch, this._binding);
@@ -125,7 +120,6 @@ function() {
         this._binding.addAction('toggleSetMesh', std.core.bind(this._setMesh.toggle, this._setMesh));
 
         this._binding.addAction('toggleCameraMode', std.core.bind(this.toggleCameraMode, this));
-        this._binding.addAction('toggleDragControls', std.core.bind(this.toggleDragControls, this));
 
         this._binding.addAction('actOnObject', std.core.bind(this.actOnObject, this));
         this._binding.addAction('teleportToObj', std.core.bind(this.teleportToObj, this));
@@ -143,7 +137,11 @@ function() {
         this._binding.addToggleAction('rotateRight', std.core.bind(this.rotateSelf, this, new util.Vec3(0, -1, 0)), 1, -1);
 
         this._binding.addFloat2Action('pickObject', std.core.bind(this.pickObject, this));
-
+        this._binding.addFloat2Action('turnOffAxis', std.core.bind(this.turnOffAxis, this));
+        
+        this._binding.addAction('axesSnapLocal', std.core.bind(this.setAxesInheritOrient, this, true));
+        this._binding.addAction('axesSnapGlobal', std.core.bind(this.setAxesInheritOrient, this, false));
+        
         this._binding.addAction('updatePhysicsProperties', std.core.bind(this.updatePhysicsProperties, this));
 
         this._binding.addAction('startMoveDrag', std.core.bind(this.startDrag, this, this._draggers.move));
@@ -183,11 +181,14 @@ function() {
             { key: ['button-pressed', 'p', 'alt' ], action: 'togglePropertyBox' },
             { key: ['button-pressed', 'l', 'ctrl' ], action: 'togglePresenceList' },
             { key: ['button-pressed', 'j', 'ctrl' ], action: 'toggleSetMesh' },
-            { key: ['button-pressed', 'd', 'ctrl' ], action: 'toggleDragControls' },
+            
+            { key: ['button-pressed', 'g', 'alt' ], action: 'axesSnapLocal' },
+            { key: ['button-pressed', 'g', 'ctrl' ], action: 'axesSnapGlobal' },
 
             { key: ['button-pressed', 'z', 'ctrl' ], action: 'undo' },
             { key: ['button-pressed', 'y', 'ctrl' ], action: 'redo' },
 
+            { key: ['mouse-click', 1, 'shift'], action: 'turnOffAxis' },
             { key: ['mouse-click', 2], action: 'pickObject' },
             { key: ['mouse-click', 2], action: 'scriptSelectedObject' },
             { key: ['button-pressed', 'return'], action: 'actOnObject' },
@@ -228,6 +229,9 @@ function() {
         ];
 
         this._binding.addBindings(bindings);
+
+        std.graphics.axes.init(this._simulator);
+        this._axesInheritOrient = true;
 
         if (cb && typeof(cb) === "function")
             cb(this);
@@ -298,8 +302,16 @@ function() {
         this._propertybox.TogglePropertyBox();
     };
 
-    std.graphics.DefaultGraphics.prototype.toggleDragControls = function() {
-        this._dragControls.toggle();
+    std.graphics.DefaultGraphics.prototype.setAxesInheritOrient = function(inheritOrient) {
+        if (this._axesInheritOrient === inheritOrient) {
+            return;
+        }
+        
+        this._axesInheritOrient = inheritOrient;
+        
+        if (this._selected) {
+            std.graphics.axes.setInheritOrientAll(this._selected, inheritOrient);
+        }
     };
 
     /** @function */
@@ -335,21 +347,40 @@ function() {
         this._moverot.rotate(about, this.defaultRotationalVelocityScaling * val);
     };
 
+    std.graphics.DefaultGraphics.prototype.turnOffAxis = function(x, y) {
+        if (!this._selected) {
+            return;
+        }
+        var axis = std.graphics.axes.pick(this._selected, x, y);
+        if (axis < 0) {
+            return;
+        } else {
+            std.graphics.axes.setVisible(this._selected, axis, false);
+        }
+    };
+
     /** @function */
     std.graphics.DefaultGraphics.prototype.pickObject = function(x, y) {
-        if (this._selected) {
-            this._simulator.bbox(this._selected, false);
-            this._selected = null;
-        }
-
         var ignore_self = this._camera.mode() == 'first';
         var clicked = this._simulator.pick(x, y, ignore_self);
         if (clicked) {
+            if (this._selected) {
+                if (this._selected.toString() != clicked.toString()) {
+                    this._simulator.bbox(this._selected, false);
+                    std.graphics.axes.setVisibleAll(this._selected, false);
+                } else {
+                    return;
+                }
+            }
+            
             this._selected = clicked;
             this._simulator.bbox(this._selected, true);
-            this._simulator._axes.follow(clicked);
-        } else {
-            this._simulator._axes.follow(null);
+            std.graphics.axes.setInheritOrientAll(this._selected, this._axesInheritOrient);
+            std.graphics.axes.setVisibleAll(this._selected, true);
+        } else if (this._selected) {
+            this._simulator.bbox(this._selected, false);
+            std.graphics.axes.setVisibleAll(this._selected, false);
+            this._selected = null;
         }
     };
 
@@ -401,7 +432,6 @@ function() {
     std.graphics.DefaultGraphics.prototype.forwardMouseDragToDragger = function(evt) {
         if (this._dragger) this._dragger.onMouseDrag(evt);
         this._propertybox.HandleUpdateProperties(this._selected);
-        this._simulator._axes.follow(this._selected);
     };
 
     /** @function */
@@ -446,7 +476,6 @@ function() {
             this._pres.getOrientation().zAxis().scale(-1), <0, 1, 0>));
         this.updateCameraOffset();
         this._moverot.reeval();
-        this._simulator._axes.follow(simulator._selected);
     };
 
     /** @function */
@@ -464,25 +493,6 @@ function() {
         this._simulator.redo();
     };
 
-    std.graphics.DefaultGraphics.prototype.axesRotateMode = function(evt) {
-        this._simulator._axes.rotateMode();
-    };
-
-    std.graphics.DefaultGraphics.prototype.axesMoveMode = function(evt) {
-        this._simulator._axes.moveMode();
-    };
-
-    std.graphics.DefaultGraphics.prototype.axesOffMode = function(evt) {
-        this._simulator._axes.offMode();
-    };
-
-    std.graphics.DefaultGraphics.prototype.axesSnapGlobal = function(evt) {
-        this._simulator._axes.snapGlobal();
-    };
-
-    std.graphics.DefaultGraphics.prototype.axesSnapLocal = function(evt) {
-        this._simulator._axes.snapLocal();
-    };
 
     std.graphics.DefaultGraphics.prototype.orientDefault = function(evt) {
         var vis = this._selected;
@@ -499,6 +509,6 @@ function() {
                 movable.setOrientation(new util.Quaternion());
             }
         });
-    }
+    };
     
 })();

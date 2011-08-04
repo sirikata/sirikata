@@ -172,6 +172,53 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     mMouseHandler->mUIWidgetView->setReadyCallback( std::tr1::bind(&OgreSystem::handleUIReady, this) );
     mMouseHandler->mUIWidgetView->setResetReadyCallback( std::tr1::bind(&OgreSystem::handleUIResetReady, this) );
     mMouseHandler->mUIWidgetView->setUpdateViewportCallback( std::tr1::bind(&OgreSystem::handleUpdateUIViewport, this, _1, _2, _3, _4) );
+
+    vector<boost::any> temp;
+    setMat(temp);
+
+    Ogre::MaterialPtr mat = Ogre::MaterialManager::getSingleton().create("x-axis-pos-mat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mat->setReceiveShadows(false);
+    mat->getTechnique(0)->setLightingEnabled(true);
+    mat->getTechnique(0)->getPass(0)->setDiffuse(0.3, 0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setSelfIllumination(0.3, 0, 0);
+    mat->setPointSize(5);
+
+    mat = Ogre::MaterialManager::getSingleton().create("y-axis-pos-mat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mat->setReceiveShadows(false);
+    mat->getTechnique(0)->setLightingEnabled(true);
+    mat->getTechnique(0)->getPass(0)->setDiffuse(0, 0, 0.3, 0);
+    mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setSelfIllumination(0, 0, 0.3);
+
+    mat = Ogre::MaterialManager::getSingleton().create("z-axis-pos-mat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mat->setReceiveShadows(false);
+    mat->getTechnique(0)->setLightingEnabled(true);
+    mat->getTechnique(0)->getPass(0)->setDiffuse(0, 0.3, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setSelfIllumination(0, 0.3, 0);
+
+    mat = Ogre::MaterialManager::getSingleton().create("x-axis-neg-mat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mat->setReceiveShadows(false);
+    mat->getTechnique(0)->setLightingEnabled(true);
+    mat->getTechnique(0)->getPass(0)->setDiffuse(0.5, 0.25, 0.25, 0);
+    mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setSelfIllumination(0.5, 0.25, 0.25);
+
+    mat = Ogre::MaterialManager::getSingleton().create("y-axis-neg-mat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mat->setReceiveShadows(false);
+    mat->getTechnique(0)->setLightingEnabled(true);
+    mat->getTechnique(0)->getPass(0)->setDiffuse(0.25, 0.25, 0.5, 0);
+    mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setSelfIllumination(0.25, 0.25, 0.5);
+
+    mat = Ogre::MaterialManager::getSingleton().create("z-axis-neg-mat", Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+    mat->setReceiveShadows(false);
+    mat->getTechnique(0)->setLightingEnabled(true);
+    mat->getTechnique(0)->getPass(0)->setDiffuse(0.25, 0.5, 0.25, 0);
+    mat->getTechnique(0)->getPass(0)->setAmbient(0, 0, 0);
+    mat->getTechnique(0)->getPass(0)->setSelfIllumination(0.25, 0.5, 0.25);
+
     return true;
 }
 
@@ -560,6 +607,20 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return pick(params);
     else if (name == "bbox")
         return bbox(params);
+    else if (name == "axis")
+        return axis(params);
+    else if (name == "world2Screen")
+        return world2Screen(params);
+    else if (name == "newDrawing")
+        return newDrawing(params);
+    else if (name == "setMat")
+        return setMat(params);
+    else if (name == "setInheritOrient")
+        return setInheritOrient(params);
+    else if (name == "setVisible")
+        return setVisible(params);
+    else if (name == "shape")
+        return shape(params);
     else if (name == "visible")
         return visible(params);
     else if (name == "camera")
@@ -574,6 +635,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return startAnimation(params);
     else if (name == "stopAnimation")
         return stopAnimation(params);
+    else if (name == "setInheritScale")
+        return setInheritScale(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -870,6 +933,314 @@ boost::any OgreSystem::setCameraOrientation(vector<boost::any>& params) {
         w = Invokable::anyAsNumeric(params[4]);
 
     mPrimaryCamera->setOrientation(Quaternion(x, y, z, w, Quaternion::XYZW()));
+
+    return boost::any();
+}
+
+boost::any OgreSystem::world2Screen(vector<boost::any>& params) {
+    if (mPrimaryCamera == NULL) return boost::any();
+    if (params.size() < 4) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1]) || !Invokable::anyIsNumeric(params[2]) || !Invokable::anyIsNumeric(params[3])) return boost::any();
+
+    double x = Invokable::anyAsNumeric(params[1]),
+           y = Invokable::anyAsNumeric(params[2]),
+           z = Invokable::anyAsNumeric(params[3]);
+
+    Ogre::Camera *ogreCamera = mPrimaryCamera->getOgreCamera();
+    Ogre::Vector3 hcsPos = ogreCamera->getProjectionMatrix() * (ogreCamera->getViewMatrix() * Ogre::Vector3(x, y, z));
+
+    //if (fabs(hcsPos.x) > 1 || fabs(hcsPos.y) > 1) return boost::any();
+
+    Invokable::Dict screenPos;
+    screenPos["x"] = Invokable::asAny(hcsPos.x);
+    screenPos["y"] = Invokable::asAny(hcsPos.y);
+
+    return Invokable::asAny(screenPos);
+}
+
+boost::any OgreSystem::shape(vector<boost::any>& params) {
+    if (mSceneManager == NULL) return boost::any();
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[2]))return boost::any();
+
+    String objName = Invokable::anyAsString(params[1]) + "-obj";
+    if (!mSceneManager->hasManualObject(objName)) return boost::any();
+    Ogre::ManualObject *obj = mSceneManager->getManualObject(objName);
+
+    bool clear = Invokable::anyAsBoolean(params[2]);
+    if (clear)
+        obj->clear();
+
+    if (params.size() < 10) return boost::any();
+    if (!Invokable::anyIsNumeric(params[3])) return boost::any();
+    int type = (int) floor(Invokable::anyAsNumeric(params[3]));
+    Ogre::RenderOperation::OperationType opType;
+    if (type == 2)
+        opType = Ogre::RenderOperation::OT_LINE_LIST;
+    else if (type == 3)
+        opType = Ogre::RenderOperation::OT_LINE_STRIP;
+    else
+        return boost::any();
+
+
+    obj->begin(currentMat, opType);
+    for (vector<boost::any>::size_type i = 4; i < params.size() - 2; i += 3) {
+        if (!Invokable::anyIsNumeric(params[i]) || !Invokable::anyIsNumeric(params[i+1]) || !Invokable::anyIsNumeric(params[i+2]))
+            continue;
+
+        double x = Invokable::anyAsNumeric(params[i]);
+        double y = Invokable::anyAsNumeric(params[i+1]);
+        double z = Invokable::anyAsNumeric(params[i+2]);
+
+        obj->position(x, y, z);
+    }
+    obj->end();
+
+    return boost::any();
+}
+
+boost::any OgreSystem::setVisible(vector<boost::any>& params) {
+    if (mSceneManager == NULL) return boost::any();
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[2])) return boost::any();
+
+    String nodeName = Invokable::anyAsString(params[1]);
+    if (!mSceneManager->hasSceneNode(nodeName)) return boost::any();
+    Ogre::SceneNode *node = mSceneManager->getSceneNode(nodeName);
+
+    bool visible = Invokable::anyAsBoolean(params[2]);
+    node->setVisible(visible);
+    return boost::any();
+}
+
+boost::any OgreSystem::setInheritScale(vector<boost::any>& params) {
+    if (mSceneManager == NULL) return boost::any();
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[2])) return boost::any();
+
+    String nodeName = Invokable::anyAsString(params[1]);
+    if (!mSceneManager->hasSceneNode(nodeName)) return boost::any();
+    Ogre::SceneNode *node = mSceneManager->getSceneNode(nodeName);
+
+    bool val = Invokable::anyAsBoolean(params[2]);
+    node->setInheritOrientation(val);
+    if (val) {
+        const Ogre::Vector3& parentScale = node->getParentSceneNode()->getScale();
+        node->setScale(1 / parentScale.x, 1 / parentScale.y, 1 / parentScale.z);
+    } else {
+        node->setScale(1, 1, 1);
+    }
+
+    return boost::any();
+}
+
+boost::any OgreSystem::setInheritOrient(vector<boost::any>& params) {
+    if (mSceneManager == NULL) return boost::any();
+    if (params.size() < 3) return boost::any();
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[2])) return boost::any();
+
+    String nodeName = Invokable::anyAsString(params[1]);
+    if (!mSceneManager->hasSceneNode(nodeName)) return boost::any();
+    Ogre::SceneNode *node = mSceneManager->getSceneNode(nodeName);
+
+    bool val = Invokable::anyAsBoolean(params[2]);
+    node->setInheritOrientation(val);
+    return boost::any();
+}
+
+double OgreSystem::clamp(const double& val) {
+    if (val > 255) return 255;
+    if (val < 0) return 0;
+    return val;
+}
+
+boost::any OgreSystem::setMat(vector<boost::any>& params) {
+    uint32 er = 0, eg = 0, eb = 0;
+    if (params.size() > 3) {
+        if (Invokable::anyIsNumeric(params[1])
+         && Invokable::anyIsNumeric(params[2])
+         && Invokable::anyIsNumeric(params[3])) {
+            er = (uint32) floor(clamp(Invokable::anyAsNumeric(params[1])));
+            eg = (uint32) floor(clamp(Invokable::anyAsNumeric(params[2])));
+            eb = (uint32) floor(clamp(Invokable::anyAsNumeric(params[3])));
+        }
+    }
+
+    uint32 dr = 0, dg = 0, db = 0;
+    if (params.size() > 6) {
+        if (Invokable::anyIsNumeric(params[4])
+         && Invokable::anyIsNumeric(params[5])
+         && Invokable::anyIsNumeric(params[6])) {
+            dr = (uint32) floor(clamp(Invokable::anyAsNumeric(params[4])));
+            dg = (uint32) floor(clamp(Invokable::anyAsNumeric(params[5])));
+            db = (uint32) floor(clamp(Invokable::anyAsNumeric(params[6])));
+        }
+    }
+
+    uint32 sr = 0, sg = 0, sb = 0;
+    if (params.size() > 9) {
+        if (Invokable::anyIsNumeric(params[7])
+         && Invokable::anyIsNumeric(params[8])
+         && Invokable::anyIsNumeric(params[9])) {
+            sr = (uint32) floor(clamp(Invokable::anyAsNumeric(params[7])));
+            sg = (uint32) floor(clamp(Invokable::anyAsNumeric(params[8])));
+            sb = (uint32) floor(clamp(Invokable::anyAsNumeric(params[9])));
+        }
+    }
+
+    uint32 ar = 0, ag = 0, ab = 0;
+    if (params.size() > 12) {
+        if (Invokable::anyIsNumeric(params[10])
+         && Invokable::anyIsNumeric(params[11])
+         && Invokable::anyIsNumeric(params[12])) {
+            ar = (uint32) floor(clamp(Invokable::anyAsNumeric(params[10])));
+            ag = (uint32) floor(clamp(Invokable::anyAsNumeric(params[11])));
+            ab = (uint32) floor(clamp(Invokable::anyAsNumeric(params[12])));
+        }
+    }
+
+    char buf[64];
+    int ret = sprintf(buf, "%02x-%02x-%02x:%02x-%02x-%02x:%02x-%02x-%02x:%02x-%02x-%02x",
+            er, eg, eb, dr, dg, db, sr, sg, sb, ar, ag, ab);
+    currentMat.clear();
+    currentMat.append(buf);
+
+    if (!Ogre::MaterialManager::getSingleton().resourceExists(currentMat)) {
+         Ogre::MaterialPtr mat = Ogre::MaterialManager::getSingleton().create(currentMat, Ogre::ResourceGroupManager::DEFAULT_RESOURCE_GROUP_NAME);
+        mat->setReceiveShadows(false);
+        mat->getTechnique(0)->setLightingEnabled(true);
+        mat->getTechnique(0)->getPass(0)->setSpecular(sr/255.0, sg/255.0, sb/255.0, 1);
+        mat->getTechnique(0)->getPass(0)->setDiffuse(dr/255.0, dg/255.0, db/255.0, 1);
+        mat->getTechnique(0)->getPass(0)->setAmbient(ar/255.0, ag/255.0, ab/255.0);
+        mat->getTechnique(0)->getPass(0)->setSelfIllumination(er/255.0, eg/255.0, eb/255.0);
+    }
+
+    return Invokable::asAny(currentMat);
+}
+
+boost::any OgreSystem::newDrawing(vector<boost::any>& params) {
+    if (mSceneManager == NULL) return boost::any();
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsString(params[1])) return boost::any();
+    String nodeName = Invokable::anyAsString(params[1]);
+    if (mSceneManager->hasSceneNode(nodeName)) return boost::any();
+    Ogre::SceneNode *parent = mSceneManager->getRootSceneNode();
+    if (params.size() > 2 && Invokable::anyIsObject(params[2])) {
+        SpaceObjectReference objid = Invokable::anyAsObject(params[2]);
+        if (mSceneEntities.find(objid.toString()) != mSceneEntities.end()) {
+            Entity *ent = mSceneEntities.find(objid.toString())->second;
+            parent = ent->getSceneNode();
+        }
+    }
+
+    bool inheritOrient = true;
+    if (params.size() > 3 && Invokable::anyIsBoolean(params[3]))
+        inheritOrient = Invokable::anyAsBoolean(params[3]);
+
+    bool inheritScale = true;
+    if (params.size() > 4 && Invokable::anyIsBoolean(params[4]))
+        inheritScale = Invokable::anyAsBoolean(params[4]);
+
+    bool visible = true;
+    if (params.size() > 5 && Invokable::anyIsBoolean(params[5]))
+        visible = Invokable::anyAsBoolean(params[5]);
+
+    Ogre::ManualObject *obj = mSceneManager->createManualObject(nodeName + "-obj");
+    Ogre::SceneNode *node = parent->createChildSceneNode(nodeName);
+    node->attachObject(obj);
+
+    if (inheritScale) {
+        node->setInheritScale(true);
+        node->setScale(1 / parent->getScale().x, 1 / parent->getScale().y, 1 / parent->getScale().z);
+    } else {
+        node->setInheritScale(false);
+    }
+    node->setInheritOrientation(inheritOrient);
+    node->setVisible(visible);
+
+    return boost::any();
+}
+
+boost::any OgreSystem::axis(vector<boost::any>& params) {
+    if (params.size() < 4) return boost::any();
+    if (!Invokable::anyIsObject(params[1])) return boost::any();
+    if (!Invokable::anyIsString(params[2])) return boost::any();
+    if (!Invokable::anyIsBoolean(params[3])) return boost::any();
+
+    SpaceObjectReference objid = Invokable::anyAsObject(params[1]);
+    String axisName = Invokable::anyAsString(params[2]);
+    bool visible = Invokable::anyAsBoolean(params[3]);
+
+    if (axisName != "x" && axisName != "y" && axisName != "z")
+        return boost::any();
+
+    if (mSceneEntities.find(objid.toString()) == mSceneEntities.end())
+        return boost::any();
+    Entity *ent = mSceneEntities.find(objid.toString())->second;
+    Ogre::SceneNode *parent = ent->getSceneNode();
+    Ogre::SceneNode *child = NULL;
+    Ogre::SceneNode::ChildNodeIterator it = parent->getChildIterator();
+    String nodeName = axisName + objid.toString();
+    while (it.hasMoreElements()) {
+        Ogre::SceneNode *node = dynamic_cast<Ogre::SceneNode *>(it.getNext());
+        if (node->getName() == nodeName) {
+            child = node;
+            break;
+        }
+    }
+
+    if (visible) {
+        if (!child) {
+            Ogre::ManualObject *axisObj = mSceneManager->createManualObject(axisName + "-axis-" + objid.toString());
+            if (axisName == "x") {
+                axisObj->begin("x-axis-neg-mat", Ogre::RenderOperation::OT_LINE_LIST);
+                axisObj->position(-7 * ent->bounds().radius(), 0, 0);
+                axisObj->position(0, 0, 0);
+                axisObj->end();
+                axisObj->begin("x-axis-pos-mat", Ogre::RenderOperation::OT_LINE_LIST);
+                axisObj->position(0, 0, 0);
+                axisObj->position(7 * ent->bounds().radius(), 0, 0);
+                axisObj->end();
+            } else if (axisName == "y") {
+                axisObj->begin("y-axis-neg-mat", Ogre::RenderOperation::OT_LINE_LIST);
+                axisObj->position(0, -7 * ent->bounds().radius(), 0);
+                axisObj->position(0, 0, 0);
+                axisObj->end();
+                axisObj->begin("y-axis-pos-mat", Ogre::RenderOperation::OT_LINE_LIST);
+                axisObj->position(0, 0, 0);
+                axisObj->position(0, 7 * ent->bounds().radius(), 0);
+                axisObj->end();
+            } else {
+                axisObj->begin("z-axis-neg-mat", Ogre::RenderOperation::OT_LINE_LIST);
+                axisObj->position(0, 0, -7 * ent->bounds().radius());
+                axisObj->position(0, 0, 0);
+                axisObj->end();
+                axisObj->begin("z-axis-pos-mat", Ogre::RenderOperation::OT_LINE_LIST);
+                axisObj->position(0, 0, 0);
+                axisObj->position(0, 0, 7 * ent->bounds().radius());
+                axisObj->end();
+            }
+
+            child = parent->createChildSceneNode(nodeName);
+            child->attachObject(axisObj);
+        }
+
+        bool global = false;
+        if (params.size() > 4) {
+            if (Invokable::anyIsBoolean(params[4])) {
+                global = Invokable::anyAsBoolean(params[4]);
+            }
+        }
+        child->setInheritScale(false);
+        child->setInheritOrientation(!global);
+        child->setVisible(true);
+    } else if (child) {
+        child->setVisible(false);
+    }
 
     return boost::any();
 }

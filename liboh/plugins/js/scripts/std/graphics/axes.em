@@ -1,290 +1,290 @@
 /* axes.em
+ * 
+ * Author: Zhihong Xu
  *
- * Author: Will Monroe
- *
- * Restrict an object's motion to take place along a certain axis while
- * dragging.
- *
- * [currently: creates a single axis as its own entity, which can be dragged
- * in any direction and is not attached to another presence]
+ * Restricts an object's motion to certain axes when dragging/rotating
  */
-system.require('std/graphics/graphics.em');
 
 (function() {
-
-     var redAxisMesh = 'meerkat:///wmonroe4/red_axis.dae/optimized/red_axis.dae';
-
-     function axesScript(args) {
-         system.require('std/movement/movableremote.em');
-         system.require('std/movement/units.em');
-         system.require('std/core/repeatingTimer.em');
-
-         var moveMeshes = {x: 'meerkat:///wmonroe4/red_axis.dae/optimized/red_axis.dae',
-                           y: 'meerkat:///wmonroe4/green_axis.dae/optimized/green_axis.dae',
-                           z: 'meerkat:///wmonroe4/blue_axis.dae/optimized/blue_axis.dae'};
-         var rotateMeshes = {x: 'meerkat:///wmonroe4/red_gimbal.dae/optimized/red_gimbal.dae',
-                           y: 'meerkat:///wmonroe4/green_gimbal.dae/optimized/green_gimbal.dae',
-                           z: 'meerkat:///wmonroe4/blue_gimbal.dae/optimized/blue_gimbal.dae'};
-         var offMeshes = {x: '', y: '', z: ''};
-
-         var orientations = {x: new util.Quaternion(<0, 0, -1>, Math.PI / 2),
-                             y: new util.Quaternion(),
-                             z: new util.Quaternion(<1, 0, 0>, Math.PI / 2)};
-         var axisMeshes = offMeshes;
-         var mode = 'off';
-         var axes = {};
-         var axisIDs = {};
-         var movable = null;
-         var updateTimer;
-         var UPDATE_PERIOD = 1 * u.s;
-         var ROTATE_FACTOR = 0.02;
-
-         function onPresenceConnected(presence) {
-             if(presence.mesh.slice(-12) != 'red_axis.dae')
-                 return;
-
-             setPosition << [{'request':'movable':},
-                             {'position'::}];
-             setOrientation << [{'request':'movable':},
-                                {'orient'::}];
-             setScale << [{'request':'movable':},
-                          {'scale'::}];
-
-             follow << [{'request':'axes':},
-                               {'id'::}];
-             rotateMode << [{'request':'axes':},
-                                  {'mode':'rotate':}];
-             moveMode << [{'request':'axes':},
-                                  {'mode':'move':}];
-             offMode << [{'request':'axes':},
-                                  {'mode':'off':}];
-             snapLocal << [{'request':'axes':},
-                           {'snap':'local':}];
-             snapGlobal << [{'request':'axes':},
-                           {'snap':'global':}];
-             forwardScriptRequest << [{'request':'script':}];
-             onRedConnected(presence);
-         }
-
-         function onRedConnected(presence) {
-             presence.modelOrientation = orientations.x;
-             axes.x = presence;
-             axisIDs[presence.toString()] = true;
-             system.createPresence(axisMeshes.y, onGreenConnected);
-         }
-
-         function onGreenConnected(presence) {
-             presence.modelOrientation = orientations.y;
-             axes.y = presence;
-             axisIDs[presence.toString()] = true;
-             system.createPresence(axisMeshes.z, onBlueConnected);
-         }
-
-         function onBlueConnected(presence) {
-             presence.modelOrientation = orientations.z;
-             axes.z = presence;
-             axisIDs[presence.toString()] = true;
-             follow();
-             updateTimer = new std.core.RepeatingTimer(UPDATE_PERIOD,
-                                                       function() { follow(); });
-             {axes: 'created'} >> args.avatar >> [];
-         }
-
-         function setPosition(msg, sender) {
-             var axis = system.self.orientation.mul(
-                     system.self.modelOrientation.mul(<0, 1, 0>));
-             var delta = axis.scale(axis.dot(msg.position - system.self.position));
-             if(mode == 'rotate') {
-                 var quatDelta = new util.Quaternion(delta.normal(),
-                                                     delta.length() * ROTATE_FACTOR /
-                                                     system.self.scale);
-
-                 system.self.orientation = quatDelta.mul(system.self.orientation);
-
-                 for(var a in axes)
-                     axes[a].orientation = system.self.orientation;
-                 if(movable)
-                     movable.setOrientation(system.self.orientation);
-             } else /* mode == 'move' (or rarely, mode == 'off') */ {
-                 system.self.position = system.self.position + delta;
-
-                 for(var a in axes)
-                     axes[a].position = system.self.position;
-                 if(movable)
-                     movable.setPosition(system.self.position);
-             }
-             msg.makeReply({}) >> [];
-         }
-
-         function setOrientation(msg, sender) {
-             /* Quaternions mess everything up!  By all means, try to fix this
-              * code if you're brave.  Right now I've just made moving become
-              * rotating when in rotate mode. (See above).
-              */
-             /*
-             var axis = system.self.orientation.mul(
-                     system.self.modelOrientation.mul(<0, 1, 0>));
-             //system.__debugPrint('axis: ' + std.core.pretty(axis) + '\n');
-             var target = msg.orient.mul(<0, 1, 0>);
-             //system.__debugPrint('target: ' + std.core.pretty(target) + '\n');
-             var corrAxis = target.cross(axis);
-             //system.__debugPrint('corr: ' + std.core.pretty(corrAxis) + '\n');
-             var correction = (new util.Quaternion(corrAxis.x, corrAxis.y,
-                                                  corrAxis.z, 1 +
-                                                  target.dot(axis))).normal();
-             var newOrient = correction.mul(msg.orient);
-             //system.__debugPrint('new y: ' + std.core.pretty(newOrient.mul(<0, 1, 0>)) + '\n\n');
-             system.self.orientation = newOrient.mul(system.self.
-                                       modelOrientation.inverse());
-              */
-
-             system.self.orientation = msg.orient.mul(system.self.
-                                       modelOrientation.inverse());
-             for(a in axes)
-                 axes[a].orientation = system.self.orientation;
-             if(movable)
-                 movable.setOrientation(system.self.orientation);
-
-             msg.makeReply({}) >> [];
-         }
-
-         function setScale(msg, sender) {
-             system.self.scale = msg.scale;
-             for(var a in axes)
-                 axes[a].scale = system.self.scale;
-             if(movable)
-                 movable.setScale(system.self.scale / 2);
-             msg.makeReply({}) >> [];
-         }
-
-         function follow(msg, sender) {
-             if(typeof(msg) === 'undefined') {
-                 if(movable) {
-                     msg = {id: movable._remote.toString()};
-                 } else {
-                     msg = {id: ''};
-                 }
-             }
-
-             if(msg.id !== '') {
-                 if(msg.id in axisIDs)
-                     // selecting an axis shouldn't make it follow itself!
-                     return;
-
-                 if(!movable || movable._remote.toString() != msg.id)
-                     movable = new std.movement.MovableRemote(
-                             system.createVisible(msg.id));
-
-                 for(var a in axes) {
-                     axes[a].mesh = axisMeshes[a];
-                     axes[a].position = movable.getPosition();
-                     axes[a].orientation = movable.getOrientation();
-                     axes[a].scale = movable.getScale() * 2;
-                 }
-             } else {
-                 movable = null;
-                 for(var a in axes) {
-                     axes[a].mesh = '';
-                 }
-             }
-         }
-
-         function setMode(modeName) {
-             mode = modeName;
-             axisMeshes = {
-                 move: moveMeshes,
-                 rotate: rotateMeshes,
-                 off: offMeshes
-             }[mode];
-
-             for(var a in axes)
-                 if(axes[a].mesh != '')
-                     axes[a].mesh = axisMeshes[a];
-         }
-
-         function rotateMode(msg, sender) {
-             setMode('rotate');
-         }
-         function moveMode(msg, sender) {
-             setMode('move');
-         }
-         function offMode(msg, sender) {
-             setMode('off');
-         }
-
-         function snapLocal(msg, sender) {
-             for(var a in axes)
-                 axes[a].modelOrientation = orientations[a];
-
-             follow();
-         }
-
-         function snapGlobal(msg, sender) {
-             if(!movable)
-                 return;
-
-             for(var a in axes)
-                 axes[a].modelOrientation = movable.getOrientation().inverse().
-                                            mul(orientations[a]);
-
-             follow();
-         }
-
-         function forwardScriptRequest(msg, sender) {
-             if(!movable)
-                 return;
-
-             msg >> movable._remote >> [];
-         }
-
-         system.onPresenceConnected(onPresenceConnected);
-     }
-
-     std.graphics.Graphics.prototype.onAxesCreated = function(msg, sender) {
-         this._axes._axesVisible = sender;
-     };
-
-     std.graphics.Graphics.prototype.createAxes = function(self) {
-         std.core.bind(this.onAxesCreated, this) << [{'axes':'created':}];
-
-         system.createEntityScript(<0, 0, 0>, axesScript,
-                                   {avatar: self},
-                                   self.queryAngle, redAxisMesh, 1);
-     };
-
-     std.graphics.Graphics.prototype._axes = {};
-
-     std.graphics.Graphics.prototype._axes.follow = function(vis) {
-         if (!this._axesVisible) return;
-         if(vis)
-             {request: 'axes', id: vis.toString()} >> this._axesVisible >> [];
-         else
-             {request: 'axes', id: ''} >> this._axesVisible >> [];
-     };
-
-     std.graphics.Graphics.prototype._axes.rotateMode = function() {
-         if (!this._axesVisible) return;
-         {request: 'axes', mode: 'rotate'} >> this._axesVisible >> [];
-     };
-
-     std.graphics.Graphics.prototype._axes.moveMode = function() {
-         if (!this._axesVisible) return;
-         {request: 'axes', mode: 'move'} >> this._axesVisible >> [];
-     };
-
-     std.graphics.Graphics.prototype._axes.offMode = function() {
-         if (!this._axesVisible) return;
-         {request: 'axes', mode: 'off'} >> this._axesVisible >> [];
-     };
-
-     std.graphics.Graphics.prototype._axes.snapLocal = function() {
-         if (!this._axesVisible) return;
-         {request: 'axes', snap: 'local'} >> this._axesVisible >> [];
-     };
-
-     std.graphics.Graphics.prototype._axes.snapGlobal = function() {
-         if (!this._axesVisible) return;
-         {request: 'axes', snap: 'global'} >> this._axesVisible >> [];
-     };
-
+    system.require('std/core/namespace.em');
+    system.require('std/graphics/drawing.em');
+    
+    var ax = Namespace('std.graphics.axes');
+    
+    ax.Axes = system.Class.extend({
+        init: function(simulator, obj, inheritOrient, state) {
+            this._sim = simulator;
+            this._obj = obj;
+            this._mesh = this._obj.mesh;
+            if (typeof(inheritOrient) !== "boolean") {
+                inheritOrient = true;
+            }
+            this._inheritOrient = [inheritOrient, inheritOrient, inheritOrient];
+            this._state = state || [true, true, true];
+            this._drawings = new Array();
+            for (var i = 0; i < 3; i++) {
+                this._drawings[i] = new std.graphics.Drawing(simulator, obj, inheritOrient, true, this._state[i]);
+                this._redraw(i);
+            }
+        },
+        
+        /** @function
+          * @description return the state of the axes as an array of booleans corresponding to
+          *              the 3 axes; true indicates that the axis is on.
+          */
+        state: function() {
+            return this._state;
+        },
+        
+        /** @function
+          * @description return the inherit orientation status of the axes as an array of booleans
+          *              corresponding to the 3 axes; true indicates that the axis is in local
+          *              coordinate space and false means that the axis is in global coordinate
+          *              space
+          */
+        inheritOrient: function() {
+            return this._inheritOrient;
+        },
+        
+        /** @function
+          * @description reset the axes. Call this when the mesh of the object changes
+          */
+        reset: function() {
+            for (var i = 0; i < 3; i++) {
+                this._drawings[i].setInheritScale(false);
+                this._redraw(i);
+                this._drawings[i].setInheritScale(true);
+                this._mesh = this._obj.mesh;
+            }
+        },
+         
+       
+        setInheritOrientAll: function(inheritOrient) {
+            for (var i = 0; i < 3; i++) {
+                this.setInheritOrient(i, inheritOrient);
+            }
+        },
+         
+        setInheritOrient: function(axis, inheritOrient) {
+            if (typeof(axis) === "string") {
+                if (axis === 'x' || axis === 'X') {
+                    axis = 0;
+                } else if (axis === 'y' || axis === 'Y') {
+                    axis = 1;
+                } else if (axis === 'z' || axis === 'Z') {
+                    axis = 2;
+                }
+            } else if (typeof(axis) !== "number") {
+                return;
+            }   
+            
+            if (this._inheritOrient[axis] !== inheritOrient) {
+                this._inheritOrient[axis] = inheritOrient;
+                this._drawings[axis].setInheritOrient(inheritOrient);
+            }
+        },
+        
+        setVisibleAll: function(visible) {
+            for (var i = 0; i < 3; i++) {
+                this.setVisible(i, visible);
+            }
+        },
+        
+        setVisible: function(axis, visible) {
+            if (typeof(axis) === "string") {
+                if (axis === 'x' || axis === 'X') {
+                    axis = 0;
+                } else if (axis === 'y' || axis === 'Y') {
+                    axis = 1;
+                } else if (axis === 'z' || axis === 'Z') {
+                    axis = 2;
+                }
+            } else if (typeof(axis) !== "number") {
+                return;
+            }   
+            
+            if (visible && !this._state[axis]) {
+                if (this._mesh !== this._obj.mesh) {
+                    this.reset();
+                }
+                this._drawings[axis].setVisible(true);
+                this._state[axis] = true;
+            } else if (!visible && this._state[axis]) {
+                this._drawings[axis].setVisible(false);
+                this._state[axis] = false;
+            }
+        },
+        
+        /** @function
+          * @description return the index of the axis (0, 1 or 2) clicked on by mouse;
+          *              return -1 if no axis is selected
+          */
+        pick: function(x, y) {
+            var cam = this._sim.camera();
+            var aspectRatio = cam.aspectRatio;
+            var camPos = <cam.position.x, cam.position.y, cam.position.z>;
+            var scale = this._obj.scale * ax.Axes.LEN_SCALE;
+            
+            var bestAxis = -1;
+            var bestDistToCam = Infinity;
+            
+            var sO = this._sim.world2Screen(this._obj.position);
+            sO = <sO.x * aspectRatio, sO.y, 0>;
+            var cursor = <x * aspectRatio, y, 0>.sub(sO);
+            
+            for (var i = 0; i < 3; i++) {
+                if (!this._state[i]) {
+                    continue;
+                }
+            
+                var wrEnd = ax.Axes.AXES[i].dir.scale(scale);
+                if (this._inheritOrient[i]) {
+                    wrEnd = this._obj.orientation.mul(wrEnd);
+                }
+                var wEnd = wrEnd.add(this._obj.position);
+                var sEnd = this._sim.world2Screen(wEnd);
+                sEnd = <sEnd.x * aspectRatio, sEnd.y, 0>;
+                var srEnd = sEnd.sub(sO);
+                var srLen = srEnd.length();
+                var sDir = srEnd.div(srLen);
+                
+                var projLen = cursor.dot(sDir);
+                if (projLen < 0) {
+                    wrEnd = wrEnd.neg();
+                    wEnd = wrEnd.add(this._obj.position);
+                    sEnd = this._sim.world2Screen(wEnd);
+                    sEnd = <sEnd.x * aspectRatio, sEnd.y, 0>;
+                    srEnd = sEnd.sub(sO);
+                    srLen = srEnd.length();
+                    sDir = srEnd.div(srLen);
+                    projLen = cursor.dot(sDir);
+                }
+                
+                
+                var dist = cursor.sub(sDir.scale(projLen)).length();
+                
+                if (dist > 0.03) {
+                    continue;
+                }
+                
+                
+                if (projLen > srLen) {
+                    continue;
+                }
+                
+                var hitPoint;
+                if (util.abs(srLen) < 1e-8) {
+                    hitPoint = this._obj.position;
+                } else {
+                    hitPoint = wrEnd.scale(projLen / srLen).add(this._obj.position);
+                }
+                
+                var distToCam = hitPoint.sub(camPos).length();
+                
+                if (distToCam < bestDistToCam) {
+                    bestAxis = i;
+                    bestDistToCam = distToCam;
+                }
+                
+            }
+            
+            return bestAxis;
+        },
+        
+        _redraw: function(i) {
+            var scale = ax.Axes.LEN_SCALE * this._obj.scale;
+            var dir = ax.Axes.AXES[i].dir.scale(scale);
+            var tip = dir.scale(0.9);
+            var dir1 = ax.Axes.AXES[(i+1)%3].dir.scale(scale * 0.05);
+            var dir2 = ax.Axes.AXES[(i+2)%3].dir.scale(scale * 0.05);
+            var posColor = ax.Axes.AXES[i].posColor;
+            var negColor = ax.Axes.AXES[i].negColor;
+            this._drawings[i].setColor.apply(this._drawings[i], negColor);
+            this._drawings[i].lineList([dir.neg(), <0, 0, 0>], true);
+            this._drawings[i].setColor.apply(this._drawings[i], posColor);
+            this._drawings[i].lineList([<0, 0, 0>, dir]);
+            this._drawings[i].lineStrip([tip.add(dir1), dir, tip.sub(dir1)]);
+            this._drawings[i].lineStrip([tip.add(dir2), dir, tip.sub(dir2)]);
+        }
+        
+        
+    });
+    
+    ax.Axes.LEN_SCALE = 3;
+    ax.Axes.AXES = [{posColor: [128, 0, 0], negColor: [255, 100, 100], dir: <1, 0, 0>},
+                    {posColor: [0, 0, 128], negColor: [100, 100, 255], dir: <0, 1, 0>},
+                    {posColor: [0, 128, 0], negColor: [100, 255, 100], dir: <0, 0, 1>}];
+    
+    ax._map = new Object();
+    
+    ax.init = function(simulator) {
+        ax._sim = simulator;
+    };
+    
+    ax.getAxes = function(obj) {
+        var key = obj.toString();
+        return ax._map[key];
+    };
+    
+    ax.setVisible = function(obj, axis, visible) {
+        var key = obj.toString();
+        
+        if (visible) {
+            if (!ax._map[key]) {
+                ax._map[key] = new ax.Axes(ax._sim, obj, true, [false, false, false]);
+                ax._map[key].setVisible(axis, visible);
+            }
+        } else if (ax._map[key]) {
+            ax._map[key].setVisible(axis, visible);
+        }
+    };
+    
+    ax.setInheritOrient = function(obj, axis, inheritOrient) {
+        var key = obj.toString();
+        if (!ax._map[key]) {
+            ax._map[key] = new ax.Axes(ax._sim, obj, true, [false, false, false]);
+        }
+        ax._map[key].setInheritOrient(axis, inheritOrient);
+    };
+    
+    ax.setVisibleAll = function(obj, visible) {
+        var key = obj.toString();
+        
+        if (visible) {
+            if (!ax._map[key]) {
+                ax._map[key] = new ax.Axes(ax._sim, obj);
+                return;
+            }
+            ax._map[key].setVisibleAll(visible);
+        } else if (ax._map[key]) {
+            ax._map[key].setVisibleAll(visible);
+        }
+    };
+    
+    ax.setInheritOrientAll = function(obj, inheritOrient) {
+        var key = obj.toString();
+        if (!ax._map[key]) {
+            ax._map[key] = new ax.Axes(ax._sim, obj, inheritOrient, [false, false, false]);
+        } else {
+            ax._map[key].setInheritOrientAll(inheritOrient);
+        }
+    };
+    
+    ax.reset = function(obj) {
+        var key = obj.toString();
+        if (!ax._map[key]) {
+            return;
+        }
+        ax._map[key].reset();
+    };
+    
+    ax.pick = function(obj, x, y) {
+        var key = obj.toString();
+        if (!ax._map[key]) {
+            return;
+        }
+        return ax._map[key].pick(x, y);
+    };
+    
+    
 })();

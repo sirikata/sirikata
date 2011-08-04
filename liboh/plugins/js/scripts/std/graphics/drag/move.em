@@ -32,6 +32,7 @@
 
 system.require('std/movement/movableremote.em');
 system.require('std/graphics/drag/handler.em');
+system.require('std/graphics/axes.em');
 
 /** @namespace
     MoveDragHandler responds to drag events by moving a selected object.
@@ -46,13 +47,17 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
         /** @memberOf std.graphics.MoveDragHandler */
         selected: function(obj, hitpoint, evt) {
             if (obj) {
+                this._obj = obj;
                 this._dragging = new std.movement.MovableRemote(obj);
                 this._dragPoint = hitpoint;
             }
             else {
+                this._obj = null;
                 this._dragging = null;
                 this._dragPoint = null;
             }
+            this._localConstraints = null;
+            this._globalConstraints = null;
         },
 
         /** @memberOf std.graphics.MoveDragHandler */
@@ -77,6 +82,61 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
             var start = lastClickAxis.scale(moveDistance);
             var end = clickAxis.scale(moveDistance);
             var toMove = end.sub(start);
+            moveDistance = toMove.length();
+            
+          
+            if (this._localConstraints === null) {
+                this._localConstraints = [];
+                this._globalConstraints = [];
+                if (!std.graphics.axes.getAxes(this._obj)) {
+                    std.graphics.axes.setVisibleAll(this._obj, true);
+                }
+                var axes = std.graphics.axes.getAxes(this._obj);
+                var state = axes.state();
+                var inheritOrient = axes.inheritOrient();
+                for (var i = 0; i < 3; i++) {
+                    if (!state[i]) {
+                        if (inheritOrient[i]) {
+                            for (var j = 0; j < 3; j++) {
+                                if (j === i) {
+                                    this._localConstraints.push(0);
+                                } else {
+                                    this._localConstraints.push(1);
+                                }
+                            }
+                        } else {
+                            for (var j = 0; j < 3; j++) {
+                                if (j === i) {
+                                    this._globalConstraints.push(0);
+                                } else {
+                                    this._globalConstraints.push(1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (this._localConstraints.length > 2) {
+                toMove = this._obj.orientation.inverse().mul(toMove);
+                for (var i = 0; i < this._localConstraints.length - 2; i += 3) {
+                    toMove = <toMove.x * this._localConstraints[i],
+                              toMove.y * this._localConstraints[i+1],
+                              toMove.z * this._localConstraints[i+2]>;
+                }
+                toMove = this._obj.orientation.mul(toMove);
+            }
+            
+            if (this._globalConstraints.length > 2) {
+                for (var i = 0; i < this._globalConstraints.length - 2; i += 3) {
+                    toMove = <toMove.x * this._globalConstraints[i],
+                              toMove.y * this._globalConstraints[i+1],
+                              toMove.z * this._globalConstraints[i+2]>;
+                }
+            }
+            
+            toMove = toMove.normal().scale(moveDistance);
+
             this._dragging.dragPosition = this._dragging.dragPosition.add(toMove);
             this._dragPoint = this._dragPoint.add(toMove);
             this._dragging.setPosition(this._dragging.dragPosition);
@@ -95,6 +155,8 @@ std.graphics.MoveDragHandler = std.graphics.DragHandler.extend(
                 this._dragging.dragPosition = null;
             }
             this._lastClickAxis = null;
+            this._localConstraints = null;
+            this._globalConstraints = null;
         },
 
         undo: function(action) {
