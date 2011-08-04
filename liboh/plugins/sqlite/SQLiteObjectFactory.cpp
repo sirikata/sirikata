@@ -43,7 +43,7 @@ SQLiteObjectFactory::SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh,
    mOH(oh),
    mSpace(space),
    mDBFilename(filename),
-   mConnectRate(25)
+   mConnectRate(1)
 {
 }
 
