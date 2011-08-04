@@ -1279,6 +1279,7 @@ void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
         r = wid->getRect();
     }
     WebViewManager::getSingleton().createWebViewPopup(
+        mContext,
         name, r.width(), r.height(),
         OverlayPosition(r.left(), r.top()),
         newwin, TIER_MIDDLE,
