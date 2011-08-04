@@ -101,8 +101,17 @@ def registerTests():
                                          entityConstructorInfo=[csvCreatePresEntInfo],
                                          duration=50
                                          );
-
     testArray.append(createPresenceTest);
+
+    #userEventTest: tests system.event functionality
+    userEventTestInfo = CSVConstructorInfo(script_type="js",
+                                           script_contents="system.import('unitTests/emTests/userEventTest.em');");
+    userEventTest = csvTest.CSVTest("userEventTest",
+                                  touches=['system.event'],
+                                  entityConstructorInfo=[userEventTestInfo]);
+    testArray.append(userEventTest);
+
+
 
     global manager
     manager = testManager.TestManager();
