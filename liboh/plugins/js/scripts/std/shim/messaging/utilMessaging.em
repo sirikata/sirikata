@@ -171,9 +171,12 @@ util.HandlerPatternSenderTriple = function (handler,pattern,sender,messageManage
         //objects.
         throw new TypeError('Invalid use of HandlerPatternSenderTriple, require Visible object as third argument'); 
     }
+    if (sender !== null)
+        sender = sender.toString();
 
     this.handler = handler;
     //note: pattern array has already been taken care of.
+    //sender is stored as null or the string id of the visible.
     this.sender  = sender;
     this.messageManager = messageManager;
 };
@@ -227,6 +230,11 @@ util.HandlerPatternSenderTriple.prototype.matchesPattern = function(msg)
 util.HandlerPatternSenderTriple.prototype.tryDispatch = function(msg,sender,receiver)
 {
     if ((! this.handler.isSuspended()) && (this.matchesPattern(msg)))
-        this.handler.dispatch(msg,sender,receiver);
+    {
+        if ((this.sender === null) || (this.sender === sender.toString()))
+            this.handler.dispatch(msg,sender,receiver);
+    }
+
+
 };
 

@@ -49,6 +49,7 @@
      */
     MessageReceiveManager.prototype.insertIntoHandlers = function(newTriple)
     {
+        
         //check if can reuse an empty slot: if cannot (if condition), then
         //just push onto array; if can (else condition), then insert into
         //empty slot.

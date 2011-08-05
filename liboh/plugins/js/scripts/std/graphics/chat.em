@@ -40,7 +40,7 @@ std.graphics.Chat = system.Class.extend(
         init: function(pres, sim, init_cb) {
             this._pres = pres;
             this._sim = sim;
-
+            
             this._chat_group = [];
 
             this._sim.addGUIModule(
