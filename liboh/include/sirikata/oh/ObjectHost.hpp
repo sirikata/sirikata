@@ -78,6 +78,7 @@ class SIRIKATA_OH_EXPORT ObjectHost : public ConnectionEventProvider, public Ser
 
     SpaceSessionManagerMap mSessionManagers;
 
+    uint32 mActiveHostedObjects;
     HostedObjectMap mHostedObjects;
 
     PluginManager *mScriptPlugins;
@@ -205,6 +206,8 @@ public:
     void registerHostedObject(const SpaceObjectReference &sporef_uuid, const HostedObjectPtr& obj);
     /// Unregister a private UUID. Done automatically by ~HostedObject.
     void unregisterHostedObject(const SpaceObjectReference& sporef_uuid);
+    /* Notify the ObjectHost that . Only called by HostedObject. */
+    void hostedObjectDestroyed(const UUID& objid);
 
     /** Lookup HostedObject by private UUID. */
     HostedObjectPtr getHostedObject(const SpaceObjectReference &id) const;

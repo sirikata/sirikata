@@ -55,7 +55,8 @@ namespace Sirikata {
 ObjectHost::ObjectHost(ObjectHostContext* ctx, Network::IOService *ioServ, const String&options)
  : mContext(ctx),
    mStorage(NULL),
-   mPersistentSet(NULL)
+   mPersistentSet(NULL),
+   mActiveHostedObjects(0)
 {
     mScriptPlugins=new PluginManager;
     OptionValue *protocolOptions;
@@ -110,6 +111,7 @@ HostedObjectPtr ObjectHost::createObject(const String& script_type, const String
 }
 
 HostedObjectPtr ObjectHost::createObject(const UUID &uuid, const String& script_type, const String& script_opts, const String& script_contents) {
+    mActiveHostedObjects++;
     HostedObjectPtr ho = HostedObject::construct<HostedObject>(mContext, this, uuid);
     ho->start();
     // NOTE: This condition has been carefully thought through. Since you can
@@ -270,14 +272,19 @@ void ObjectHost::unregisterHostedObject(const SpaceObjectReference& sporef_uuid)
     if (iter != mHostedObjects.end()) {
         HostedObjectPtr obj (iter->second);
         mHostedObjects.erase(iter);
-
-        // This may not always be the best policy, but for now, if we run out of
-        // all objects then its safe to try to shutdown. Without a remote admin
-        // interface or something, its going to be impossible for any *new* work
-        // to get started (although some remaining work may finish out).
-        if (mHostedObjects.empty() && !mContext->stopped())
-            mContext->shutdown();
     }
+}
+
+void ObjectHost::hostedObjectDestroyed(const UUID& objid) {
+    // This may not always be the best policy, but for now, if we run out of
+    // all objects then its safe to try to shutdown. Without a remote admin
+    // interface or something, its going to be impossible for any *new* work
+    // to get started (although some remaining work may finish out).  We
+    // actually check for no presences and no HostedObjects. The former should
+    // always be zero if the latter is.
+    mActiveHostedObjects--;
+    if (mHostedObjects.empty() && mActiveHostedObjects == 0 && !mContext->stopped())
+        mContext->shutdown();
 }
 
 

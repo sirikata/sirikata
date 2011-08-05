@@ -121,6 +121,8 @@ HostedObject::~HostedObject() {
 
     if (mPresenceData != NULL)
         delete mPresenceData;
+
+    getObjectHost()->hostedObjectDestroyed(id());
 }
 
 const UUID& HostedObject::id() const {
