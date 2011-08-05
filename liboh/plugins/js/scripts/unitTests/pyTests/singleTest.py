@@ -124,7 +124,7 @@ class SingleTest:
         elif(returnCode == -11):
             returnCodeErrorName = 'Seg fault';
             
-        stringToPrint += 'return code: ' + str(returnCode) + '..........';
+        stringToPrint += '\treturn code: ' + str(returnCode) + '\t';
         if (returnCode < 0):
             stringToPrint += 'FAILED: ' + returnCodeErrorName;
         else:
