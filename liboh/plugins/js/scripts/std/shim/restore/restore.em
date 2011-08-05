@@ -466,7 +466,7 @@ if (typeof(std.persist) === 'undefined')
          var success = true;
          try
          {
-             returner = system.eval(funcAsString);
+             returner = eval(funcAsString);
          }
          catch (excep)
          {

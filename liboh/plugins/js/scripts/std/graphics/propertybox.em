@@ -92,7 +92,7 @@ function () {
         }
         var self_pos = this._self.getPosition();
         var distance = property_pos.sub(self_pos).length();
-        this._propertyWindow.eval(
+        this._propertyWindow.guiEval(
             "updateProperties(" + property_pos['x'] + ","
                                 + property_pos['y'] + ","
                                 + property_pos['z'] + ","
@@ -116,7 +116,7 @@ function () {
 
     pb.PropertyBox.prototype.TogglePropertyBox = function() {
         // If open, close it. If closed, open it.
-        this._propertyWindow.eval("if ($(\"#property-box\").dialog('isOpen')) $(\"#property-box\").dialog('close'); else $(\"#property-box\").dialog('open');");
+        this._propertyWindow.guiEval("if ($(\"#property-box\").dialog('isOpen')) $(\"#property-box\").dialog('close'); else $(\"#property-box\").dialog('open');");
     };
 
 })();

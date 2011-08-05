@@ -1447,30 +1447,39 @@ unaryOps
 | UNARY_PLUS
 | UNARY_MINUS
 | COMPLEMENT
+| EVAL
 | NOT
 ;
 
 
 unaryExpression
+@init
+{
+        bool wasEvalStatement = false;
+}
         : postfixExpression 
-	| ^(
-	
-	    (
-				   DELETE_OP          {  APP("delete ");}
-       | VOID          {   APP("void");}
-       | TYPEOF        {  APP("typeof ");}
-       | PLUSPLUS      {  APP("++");}
-       | MINUSMINUS    {  APP("--");}
-       | UNARY_PLUS    {  APP("+");}
-       | UNARY_MINUS   {  APP("-");}
-       | COMPLEMENT    {  APP("~");}
-       | NOT           {  APP("!");}
-	
-					)
-
-	    unaryExpression
-				)
-	;
+        | ^(
+            (
+               DELETE_OP     {  APP("delete ");}
+             | VOID          {   APP("void");}
+             | TYPEOF        {  APP("typeof ");}
+             | PLUSPLUS      {  APP("++");}
+             | MINUSMINUS    {  APP("--");}
+             | UNARY_PLUS    {  APP("+");}
+             | UNARY_MINUS   {  APP("-");}
+             | COMPLEMENT    {  APP("~");}
+             | NOT           {  APP("!");}
+             | EVAL          {  APP(" (system.__checkAndThrowCanEval(), eval"); wasEvalStatement = true;}
+            )     
+ 	    unaryExpression
+            {
+                if (wasEvalStatement)
+                {
+                    APP(")");
+                }
+            }
+           )
+ 	;
 	
 
 postfixExpression

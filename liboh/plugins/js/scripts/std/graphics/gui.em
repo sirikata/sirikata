@@ -71,7 +71,7 @@ function() {
     };
 
     /** Evaluate the Javascript string inside the GUI context. */
-    std.graphics.GUI.prototype.eval = function(js) {
+    std.graphics.GUI.prototype.guiEval = function(js) {
         this._gui.invoke("eval", js);
     };
 
@@ -122,7 +122,7 @@ function() {
      *   var st = 'hello "Bob"';
      *   gui.call('myfunc', x, st);
      *  is equivalent to
-     *   gui.eval( "myfunc(7, 'hello \"Bob\"');" );
+     *   gui.guiEval( "myfunc(7, 'hello \"Bob\"');" );
      */
     std.graphics.GUI.prototype.call = function() {
         if (arguments.length < 1) return;
@@ -139,7 +139,7 @@ function() {
 
         ev_str += ')';
 
-        this.eval(ev_str);
+        this.guiEval(ev_str);
     };
 
     /** Set the value of a variable in the GUI context. This is just a
@@ -154,7 +154,7 @@ function() {
      */
     std.graphics.GUI.prototype.set = function(varname, value) {
         var ev_str = varname + ' = ' + getGUIJSValue(value) + ';';
-        this.eval(ev_str);
+        this.guiEval(ev_str);
     };
 
     /** Hides the GUI window. */

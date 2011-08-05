@@ -95,6 +95,7 @@ tokens
     DELETE_OP;
     VOID;
     TYPEOF;
+    EVAL;
     PLUSPLUS;
     MINUSMINUS;
     UNARY_PLUS;
@@ -614,6 +615,7 @@ unaryOps
 :'delete' -> ^(DELETE_OP)
 | 'void' -> ^(VOID)
 | 'typeof' -> ^(TYPEOF)
+| 'eval' -> ^(EVAL)
 | '++'  -> ^(PLUSPLUS)
 | '--'  -> ^(MINUSMINUS)
 | '+'   -> ^(UNARY_PLUS)

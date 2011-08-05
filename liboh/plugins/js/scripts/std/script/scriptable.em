@@ -65,7 +65,7 @@ function() {
         var cmd = msg.script;
         var result = undefined, excep = undefined;
         try {
-            result = system.eval(cmd);
+            result = eval(cmd);
         } catch (ex) {
             // Currently, we need to do a deep copy because some
             // fields seem to be some sort of weird built in type (or

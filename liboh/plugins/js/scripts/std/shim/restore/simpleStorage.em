@@ -171,7 +171,7 @@ if (typeof(std.simpleStorage) != 'undefined')
 
         var cbFunc = function(){ };
         if (executeOnSet)
-            cbFunc = function(){ system.eval(newScript);  };
+            cbFunc = function(){ eval(newScript);  };
 
         std.persist.checkpointPartialPersist(mScript,scriptKeyName,cbFunc);
     };
@@ -193,7 +193,7 @@ if (typeof(std.simpleStorage) != 'undefined')
     //evaluates the script once it has been restored.
     function onRestoreScript(scriptToEval)
     {
-        system.eval(scriptToEval);
+        eval(scriptToEval);
     };
 
     //restores the script

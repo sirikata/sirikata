@@ -496,16 +496,16 @@ function PresenceEntry(sporef, presObj)
       };
 
 
-      /** @function
-       @description This function evaluates the emerson string that is passed in as its single argument.
 
-       @param String to eval.
-       */
-      system.eval = function()
-      {
-          baseSystem.eval.apply(baseSystem,arguments);
-      };
-
+     /**
+      Used internally by the compiler.  The compiler calls this check
+      before actually callling eval.
+      */
+     system.__checkAndThrowCanEval = function()
+     {
+         if (!system.canEval())
+             throw new Error ('ERROR: You do not have the capability to eval.');
+     };
 
       // Not exposing this
       /** @ignore */
@@ -819,7 +819,7 @@ function PresenceEntry(sporef, presObj)
                   var tmp = 'throw ' + toThrow.toString() + ';' + str;
                   try
                   {
-                      system.eval(tmp);
+                      eval(tmp);
                   }
                   catch (excep)
                   {
@@ -1097,7 +1097,7 @@ function PresenceEntry(sporef, presObj)
 
       /** @function
        @type Boolean
-       @return TRUE if system.eval() is invokable in the script
+       @return TRUE if eval() is invokable in the script
        */
       system.canEval = function()
       {
