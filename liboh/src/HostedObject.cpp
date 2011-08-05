@@ -117,6 +117,12 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
 
 HostedObject::~HostedObject() {
+    // OrphanLocUpdateManager may need to be stopped, or the context may have
+    // already done it. Either way, we need should unregister with the context
+    if (!mContext->stopped())
+        mOrphanLocUpdates.stop();
+    mContext->remove(&mOrphanLocUpdates);
+
     destroy(false);
 
     if (mPresenceData != NULL)
