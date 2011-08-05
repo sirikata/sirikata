@@ -356,11 +356,11 @@ memAndCallExpression
 
 // expressions
 expression
-        : assignmentExpression  -> ^(EXPR assignmentExpression)
+        : assignmentExpression ( ',' LTERM* assignmentExpression)* -> ^(EXPR assignmentExpression assignmentExpression*)
         ;
 
 expressionNoIn
-        : assignmentExpressionNoIn -> ^(EXPR_NO_IN assignmentExpressionNoIn)
+        : assignmentExpressionNoIn ( ',' LTERM* assignmentExpressionNoIn)* -> ^(EXPR_NO_IN assignmentExpressionNoIn assignmentExpressionNoIn*)
         ;
 
 
@@ -687,12 +687,12 @@ patternLiteral
   ;
 
 propertyNameAndValue
-        : propertyName LTERM* ':' LTERM* expression -> ^(NAME_VALUE propertyName expression)
+        : propertyName LTERM* ':' LTERM* assignmentExpression -> ^(NAME_VALUE propertyName assignmentExpression)
         ;
 
 
 nameValueProto
-    : (propertyName LTERM*) ':'  LTERM* (a1=expression LTERM*)? ':' LTERM* ( a2=expression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
+    : (propertyName LTERM*) ':'  LTERM* (a1=assignmentExpression LTERM*)? ':' LTERM* ( a2=assignmentExpression )? -> ^(NAME_VALUE_PROTO ^(NAME propertyName) (^(VALUE $a1))? (^(PROTO $a2))? )
     | LTERM* ':' LTERM* ':' -> ^(BLANK_NAME_VAL_PROT)
     ;
 

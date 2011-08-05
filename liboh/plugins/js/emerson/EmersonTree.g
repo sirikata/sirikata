@@ -573,48 +573,6 @@ caseBlock
     ;
 
     
-// caseClause
-//     : ^( CASE
-//         {
-//             APP("case ");
-//         }
-//         expression
-//         {
-//             APP(":");
-//         }
-//         statementList?
-//         caseClause?
-//         )
-//     | ^( CASE
-//         {
-//             APP("case ");
-//         }
-//         expression
-//         {
-//             APP(":");
-//         }
-//         statementList?
-//         defaultClause
-//        )
-//     ;
-
-
-
-// caseClauseSeenDefault
-//     : ^( CASE
-//         {
-//             APP("case ");
-//         }
-//         expression
-//         {
-//             APP(":");
-//         }
-//         statementList?
-//         caseClauseSeenDefault?
-//         )
-//     ;
-
-
 
 caseClause
     : ^( CASE
@@ -781,11 +739,27 @@ finallyClause
 
 // expressions
 expression
-        : ^(EXPR assignmentExpression)
+        : ^(EXPR
+            assignmentExpression
+            (
+                {
+                    APP(",");
+                }
+                assignmentExpression
+            )*
+           )
 	;
 	
 expressionNoIn
-	: ^(EXPR_NO_IN  assignmentExpressionNoIn)
+	: ^(EXPR_NO_IN
+            assignmentExpressionNoIn
+            (
+                {
+                    APP(",");
+                }
+                assignmentExpressionNoIn
+            )*
+           )
 	;
 
 assignmentExpression
@@ -1753,7 +1727,7 @@ nameValueProto
               APP(", ");
             }
 
-            expression
+            assignmentExpression
          ))?
 
          (
@@ -1762,7 +1736,7 @@ nameValueProto
             {
               APP(", ");
             }
-            expression
+            assignmentExpression
          ) )?
 
          {
@@ -1778,9 +1752,9 @@ nameValueProto
 
 propertyNameAndValue
 	: ^(NAME_VALUE 
-          propertyName 
-           { LINE($NAME_VALUE.line); APP(" : ");}
-	  expression)
+            propertyName 
+             { LINE($NAME_VALUE.line); APP(" : ");}
+	  assignmentExpression)
 	;
 
 propertyName
