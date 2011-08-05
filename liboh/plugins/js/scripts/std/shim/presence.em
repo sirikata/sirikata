@@ -602,7 +602,7 @@ system.__presence_constructor__.prototype.__getType = function()
      // system right now
      system.__presence_constructor__.prototype.__origLoadMesh = system.__presence_constructor__.prototype.loadMesh;
      system.__presence_constructor__.prototype.loadMesh = function(cb) {
-         system.__loadPresenceMesh(this, cb);
+         system.__loadPresenceMesh(this, system.wrapCallbackForSelf(cb));
      };
      // No need to override unloadMesh since it takes no special parameters
 

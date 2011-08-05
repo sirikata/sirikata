@@ -213,7 +213,33 @@ function PresenceEntry(sporef, presObj)
      {
          return system._selfMap;
      };
-     
+
+     /**
+      @param {string} toChangeTo  The sporef of the presence that we want to change self to.
+      */
+     system.changeSelf  = function(toChangeTo)
+     {
+         if (toChangeTo === undefined) {
+             system.__setBehindSelf(undefined);
+         }
+         else {
+             var p = system._selfMap[toChangeTo];
+             if (p === undefined) throw new Error("Can't change self to " + toChangeTo + " because that presence doesn't exist.");
+             system.__setBehindSelf(p.presObj);
+         }
+     };
+
+     /** Wrap a callback in a function which restores system.self to
+      *  the value when the callback was setup.
+      */
+     system.wrapCallbackForSelf = function(cb) {
+         var oldSelf = system.self;
+
+         return function() {
+             system.__setBehindSelf(oldSelf);
+             cb.apply(undefined, arguments);
+         };
+     };     
 
 
      /**
@@ -231,38 +257,9 @@ function PresenceEntry(sporef, presObj)
       */
      system.basicHttpGet = function(type, url, headers, cb)
      {
-         return baseSystem.http(type,url, headers, system.__wrapHttpHandler(cb));
+         return baseSystem.http(type,url, headers, system.wrapCallbackForSelf(cb));
      };
 
-      system.__wrapHttpHandler = function (toCallback)
-      {
-          var selfDefined = false;
-          if (typeof(system.self) != 'undefined')
-          {
-              selfDefined = true;
-              var curSelf = system.self.toString();
-          }
-          
-          var returner = function (success,failure)
-          {
-              if (selfDefined)
-                  system.__setBehindSelf(system._selfMap[curSelf].presObj);
-              else
-                  system.__setBehindSelf(undefined);
-
-              toCallback(success,failure);
-          };
-          return std.core.bind(returner,this);
-      };
-     
-
-     /**
-      @param {string} toChangeTo  The sporef of the presence that we want to change self to.
-      */
-     system.changeSelf  = function(toChangeTo)
-     {
-         system.__setBehindSelf(system._selfMap[toChangeTo].presObj);
-     };
      
      //storage manipulations
      system.storageBeginTransaction = function()
@@ -271,20 +268,32 @@ function PresenceEntry(sporef, presObj)
      };
      system.storageCommit = function()
      {
-         return baseSystem.storageCommit.apply(baseSystem, arguments);
+         if (arguments.length == 1 && typeof(arguments[0] === 'function'))
+             return baseSystem.storageCommit.apply(baseSystem, [ system.wrapCallbackForSelf(arguments[0]) ]);
+         else
+             return baseSystem.storageCommit.apply(baseSystem, arguments);
      };
 
      system.storageWrite = function()
      {
-         return baseSystem.storageWrite.apply(baseSystem, arguments);
+         if (arguments.length == 3 && typeof(arguments[2] === 'function'))
+             return baseSystem.storageWrite.apply(baseSystem, [ arguments[0], arguments[1], system.wrapCallbackForSelf(arguments[2]) ]);
+         else
+             return baseSystem.storageWrite.apply(baseSystem, arguments);
      };
      system.storageRead = function()
      {
-         return baseSystem.storageRead.apply(baseSystem, arguments);
+         if (arguments.length == 2 && typeof(arguments[1] === 'function'))
+             return baseSystem.storageRead.apply(baseSystem, [ arguments[0], system.wrapCallbackForSelf(arguments[1]) ]);
+         else
+             return baseSystem.storageRead.apply(baseSystem, arguments);
      };
      system.storageErase = function()
      {
-         return baseSystem.storageErase.apply(baseSystem, arguments);
+         if (arguments.length == 2 && typeof(arguments[1] === 'function'))
+             return baseSystem.storageErase.apply(baseSystem, [ arguments[0], system.wrapCallbackForSelf(arguments[1]) ]);
+         else
+             return baseSystem.storageErase.apply(baseSystem, arguments);
      };
 
      /**
@@ -366,7 +375,7 @@ function PresenceEntry(sporef, presObj)
              throw new TypeError('Invalid callback parameter: expected function.');
 
          if (typeof(cb) === 'function')
-             return baseSystem.setRestoreScript.apply(baseSystem, [script, cb]);
+             return baseSystem.setRestoreScript.apply(baseSystem, [script, system.wrapCallbackForSelf(cb)]);
          else
              return baseSystem.setRestoreScript.apply(baseSystem, [script]);
      };
@@ -380,7 +389,7 @@ function PresenceEntry(sporef, presObj)
              throw new TypeError('Invalid callback parameter: expected function.');
 
          if (typeof(cb) === 'function')
-             return baseSystem.setRestoreScript.apply(baseSystem, ['', cb]);
+             return baseSystem.setRestoreScript.apply(baseSystem, ['', system.wrapCallbackForSelf(cb)]);
          else
              return baseSystem.setRestoreScript.apply(baseSystem, ['']);
      };
@@ -547,7 +556,7 @@ function PresenceEntry(sporef, presObj)
          if (typeof(handler) !== 'function')
              throw new TypeError('system.event only supports functions');
 
-         return baseSystem.event.apply(baseSystem, arguments);
+         return baseSystem.event.apply(baseSystem, [ system.wrapCallbackForSelf(handler) ]);
      };
 
       /** @function
@@ -562,29 +571,12 @@ function PresenceEntry(sporef, presObj)
        @return a object representing a handle for this timer. This handle can be used in future to suspend and resume the timer
        */
       system.timeout = function (/**Number*/period, /**function*/callback, /**uint32*/contextId, /**double*/timeRemaining,/**bool*/isSuspended, /**bool*/isCleared)
-      {
-          var selfKey = this.__NULL_TOKEN__;
-          if ((this.self != null ) && (this.self != system))
-              selfKey =  this.self.toString();
-          
-          var wrappedFunction = this.__wrapTimeout(callback,selfKey);
+      {          
+          var wrappedFunction = system.wrapCallbackForSelf(callback);
           if (typeof(isCleared) == 'undefined')
               return baseSystem.timeout(period,wrappedFunction);
 
           return baseSystem.timeout(period,wrappedFunction,contextId,timeRemaining,isSuspended,isCleared);
-      };
-
-
-      /** @ignore */
-      system.__wrapTimeout= function(callback,toStringSelf)
-      {
-          var returner = function()
-          {
-              this.__setBehindSelf(this._selfMap[toStringSelf].presObj);
-              callback();
-          };
-
-          return std.core.bind(returner,this);
       };
 
      

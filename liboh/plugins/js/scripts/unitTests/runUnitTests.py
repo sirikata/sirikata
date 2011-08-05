@@ -111,6 +111,15 @@ def registerTests():
                                   entityConstructorInfo=[userEventTestInfo]);
     testArray.append(userEventTest);
 
+    #selfTest: tests system.self value/restoration after various operations
+    selfTestInfo = CSVConstructorInfo(script_type="js",
+                                      script_contents="system.import('unitTests/emTests/selfTest.em');");
+    selfTest = csvTest.CSVTest("selfTest",
+                               touches=['system.self'],
+                               entityConstructorInfo=[selfTestInfo],
+                               duration=60);
+    testArray.append(selfTest);
+
 
 
     global manager

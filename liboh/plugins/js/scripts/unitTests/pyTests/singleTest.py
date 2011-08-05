@@ -8,7 +8,8 @@ class SingleTest:
         basicErrors.BusError,
         basicErrors.AssertError,
         basicErrors.ExceptionError,
-        basicErrors.TimedOutError
+        basicErrors.TimedOutError,
+        basicErrors.UnitTestFailError
         ]
     DefaultDuration = 20
 
