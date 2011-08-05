@@ -153,7 +153,7 @@ presenceEvents = test(
             function(pres) {
                 if (system.self != pres)
                     mTest.fail('system.self different from onPresenceDisconnected presence');
-                //cb();
+                cb();
             }
         );
 
@@ -162,10 +162,6 @@ presenceEvents = test(
             function(pres) {
                 if (system.self != pres)
                     mTest.fail('system.self different from createPresence callback\'s presence');
-                // FIXME cb should be in onPresenceDisconnected only,
-                // but we don't seem to be getting these callbacks
-                // right now.
-                cb();
                 pres.disconnect();
             }
         );
