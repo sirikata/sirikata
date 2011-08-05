@@ -399,7 +399,6 @@ function() {
             this._selected.loadMesh(function() {
                 var hit = std.raytrace.raytrace(null, self._pres.getPosition(), dir, self._selected, null);
                 if (hit) {
-                    system.__debugPrint('hit ' + std.core.pretty(hit) + '\n');
                     self._pres.setPosition(hit.sub(dir.scale(3)));
                 } else {
                     self._pres.setPosition(this._selected.getPosition());
