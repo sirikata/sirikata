@@ -259,7 +259,7 @@ motion.Orientation = motion.Motion.extend({
 motion.OrientationVel = motion.Motion.extend({
 	init: function(presence, oVelFn, period) {
 		if(typeof(oVelFn) !== 'function')
-			throw new Error('second argument "oVelFn" to motion.Orientation (' +
+			throw new Error('second argument "oVelFn" to motion.OrientationVel (' +
 					std.core.pretty(oVelFn) + ') is not a function');
 		
 		var callback = function(p) {
@@ -296,7 +296,7 @@ motion.OrientationAccel = motion.Motion.extend({
 		if(typeof(oAccelFn) === 'undefined')
 			oAccelFn = function(p) { return p.orientationAccel; };
 		else if(typeof(oAccelFn) !== 'function')
-			throw new Error('second argument "oAccelFn" to motion.Acceleration (' +
+			throw new Error('second argument "oAccelFn" to motion.OrientationAccel (' +
 					std.core.pretty(oAccelFn) +
 					' is not a function or undefined');
 		
@@ -452,21 +452,38 @@ motion.Collision = motion.Motion.extend({
                 {'id':presence.toString():},
                 {'collision'::}]);
 		
+        if(!('handlers' in motion.Collision))
+            motion.Collision.handlers = {};
+        if(!(presence.toString() in motion.Collision.handlers))
+            motion.Collision.handlers[presence.toString()] = [];
+        motion.Collision.handlers[presence.toString()].
+                         push(onCollisionMessage);
+
+        var sendCollisionEvent = function(msg, id) {
+            if(id in motion.Collision.handlers) {
+                for(var i in motion.Collision.handlers[id])
+                    motion.Collision.handlers[id][i](msg);
+            } else {
+                msg >> system.createVisible(id) >> [];
+            }
+        };
+
+
 		var testCollision = function(p) {
 				var collision = self.testFn(p);
             if(collision) {
-                {
+                sendCollisionEvent({
                     action: 'collision',
                     id: collision.self.id,
                     collision: collision
-                } >> system.createVisible(collision.self.id) >> [];
+                }, collision.self.id);
 
                 if(typeof(collision.other.id) === 'string') {
-                    {
+                    sendCollisionEvent({
                         action: 'collision',
                         id: collision.other.id,
                         collision: collision
-                    } >> system.createVisible(collision.other.id) >> [];
+                    }, collision.other.id);
 				}
 			}
 		};
@@ -492,53 +509,38 @@ motion.Collision = motion.Motion.extend({
 motion.defaultUp = <0, 1, 0>;
 
 /**
- * The default orientation of an presence.
- * @constant
- */
-motion.defaultOrientation = new util.Quaternion();
-
-/**
  * @class A controller that always points an object in the direction it is
  *		currently moving.
  *
  * @param presence The presence to control.
- * @param baseOrientation The orientation for the presence that makes it point
- *		along the negative z axis.  This can be used to reorient "sideways"
- *		meshes taken from the CDN.
  * @param up (optional =defaultUp) The direction that the presence will use to
  * 		orient itself so it is right-side up in addition to facing forward
  * @param period (optional =defaultPeriod) The period at which to update the
  * 		presence's orientation.
  */
 motion.LookForward = motion.Orientation.extend({
-	init: function(presence, baseOrientation, up, period) {
+	init: function(presence, up, period) {
 		up = up || motion.defaultUp;
-		baseOrientation = baseOrientation || motion.defaultOrientation;
 		
-		// This section was an attempt to guess an orientation velocity using
-		// the 'accel' field created by some of the other controllers, but it
-		// just seems to make the jittering worse.
-		// TODO: make this feature work
-		/*
 		var useAccel = function(p) {
 			if(!('accel' in p))
 				return;
 			
 			var omega = p.velocity.cross(p.accel).
 					div(p.velocity.lengthSquared());
-			return (new util.Quaternion(omega.normal(), 1)).
-					scale(omega.length());
+                    // TODO: the model orientation adjustment should really be in
+                    // std/shim/presence.em -- one shouldn't need to take into account
+                    // model orientation when setting ovel
+                    return <p.modelOrientation.inv() * p.orientation.inv() *
+                        omega.normal(); 1> * omega.length();
 		};
 		this.oVelController = new motion.OrientationVel(presence, useAccel,
 				period);
-		*/
 		
 		var lookForward = function(p) {
 			if(p.velocity.length() < 1e-8)
 				return;
-			
-			return (util.Quaternion.fromLookAt(p.velocity, up)).
-					mul(baseOrientation);
+                    return util.Quaternion.fromLookAt(p.velocity, up);
 		};
 		this._super(presence, lookForward, period);
 	}
