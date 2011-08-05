@@ -422,10 +422,10 @@ callExpressionSuffix
 	;
 
 arguments
-        : '(' LTERM* (expression)? LTERM* ')' -> ^(ARGLIST expression?)
-	| '(' LTERM* expression (',' LTERM* expression)* LTERM* ')' -> ^(ARGLIST expression expression*)
+        : '(' LTERM* (assignmentExpression)? LTERM* ')' -> ^(ARGLIST assignmentExpression?)
+	| '(' LTERM* assignmentExpression (',' LTERM* assignmentExpression)* LTERM* ')' -> ^(ARGLIST assignmentExpression assignmentExpression*)
 	;
-        
+
 	
 	
 indexSuffix

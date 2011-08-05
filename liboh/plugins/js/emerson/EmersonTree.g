@@ -908,7 +908,7 @@ arguments
   : ^(ARGLIST { LINE($ARGLIST.line);  APP("( )"); })
   | ^(ARGLIST 
        { LINE($ARGLIST.line); APP("( "); }
-       (expression)
+       (assignmentExpression)
        { APP(" )"); }
      )
 
@@ -916,12 +916,12 @@ arguments
       {
           APP("( ");
       }
-      expression
+      assignmentExpression
       (
         {
             APP(", ");
         }
-        expression
+        assignmentExpression
       )*
       {
         APP(" ) ");
