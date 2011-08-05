@@ -1421,6 +1421,7 @@ public:
   {
       if (localEndPoint.port == 0) {
           typename BaseDatagramLayer<EndPointType>::Ptr bdl = BaseDatagramLayer<EndPointType>::getDatagramLayer(localEndPoint.endPoint);
+          if (!bdl) return false;
           localEndPoint.port = bdl->getUnusedPort(localEndPoint.endPoint);
       }
 
@@ -1750,7 +1751,7 @@ private:
     else {
         mConnected = false;
         mState = PENDING_CONNECT;
-    }    
+    }
 
     mInitialDataLength = (length <= MAX_PAYLOAD_SIZE) ? length : MAX_PAYLOAD_SIZE;
     int numBytesBuffered = mInitialDataLength;
