@@ -104,8 +104,6 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
 
-    //calls eval on the system's context associated with this system.
-    v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
 
     v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl);

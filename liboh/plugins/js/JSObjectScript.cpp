@@ -864,19 +864,6 @@ void JSObjectScript::print(const String& str) {
 
 
 
-
-v8::Handle<v8::Value> JSObjectScript::eval(const String& contents, v8::ScriptOrigin* origin,JSContextStruct* jscs)
-{
-    EvalContext& ctx = mEvalContextStack.top();
-    EvalContext new_ctx(ctx);
-
-    if (jscs == NULL)
-        return protectedEval(contents, origin, new_ctx, NULL);
-
-    return protectedEval(contents, origin, new_ctx,jscs);
-}
-
-
 //takes in a name of a file to read from and execute all instructions within.
 //also takes in a context to do so in.  If this context is null, just use
 //mContext instead.

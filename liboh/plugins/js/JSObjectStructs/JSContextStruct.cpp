@@ -424,14 +424,6 @@ bool JSContextStruct::hasPresence(const SpaceObjectReference& sporef)
 }
 
 
-//Tries to eval the emerson code in native_contents that came from origin
-//sOrigin inside of this context.
-v8::Handle<v8::Value> JSContextStruct::struct_eval(const String& native_contents, ScriptOrigin* sOrigin)
-{
-    return jsObjScript->eval(native_contents,sOrigin,this);
-}
-
-
 /*
   This function should be called from system object.  It initiates the reset
   process for all objects and contexts.

@@ -240,15 +240,6 @@ v8::Handle<v8::Value> JSSystemStruct::struct_registerOnPresenceDisconnectedHandl
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::struct_eval(const String& native_contents, ScriptOrigin* sOrigin)
-{
-    if (!canEval)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  You do not have the capability to call eval directly.")));
-
-
-    return associatedContext->struct_eval(native_contents,sOrigin);
-}
-
 v8::Handle<v8::Value> JSSystemStruct::struct_setScript(const String& script)
 {
     return associatedContext->struct_setScript(script);

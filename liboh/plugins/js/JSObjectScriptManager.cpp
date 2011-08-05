@@ -279,7 +279,6 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("killEntity"), v8::FunctionTemplate::New(JSSystem::root_killEntity));
 
     //this doesn't work now.
-    mSystemTemplate->Set(v8::String::New("eval"), v8::FunctionTemplate::New(JSSystem::root_scriptEval));
     mSystemTemplate->Set(v8::String::New("create_context"),v8::FunctionTemplate::New(JSSystem::root_createContext));
 
 

@@ -1470,30 +1470,6 @@ v8::Handle<v8::Value> root_createContext(const v8::Arguments& args)
 
 
 
-/**
-   @param String corresponding to valid Emerson code to execute.
-
-   Executes string within current sandbox.
- */
-v8::Handle<v8::Value> root_scriptEval(const v8::Arguments& args)
-{
-    if (args.Length() != 1)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Eval only takes one parameter: the program text to evaluate.")) );
-
-    v8::Handle<v8::Value> contents = args[0];
-
-    StringCheckAndExtract(native_contents, contents);
-
-
-    String errorMessage       = "Error calling eval in context.  ";
-    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct( args.This(), errorMessage);
-    if (jsfake == NULL)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
-
-    ScriptOrigin origin = args.Callee()->GetScriptOrigin();
-
-    return jsfake->struct_eval(native_contents,&origin);
-}
 
 
 /** Emits an event.

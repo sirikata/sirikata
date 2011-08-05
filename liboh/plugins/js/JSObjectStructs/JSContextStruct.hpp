@@ -161,9 +161,6 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> struct_createTimeout(double period, v8::Persistent<v8::Function>& cb);
     v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
 
-    //Tries to eval the emerson code in native_contents that came from origin
-    //sOrigin inside of this context.
-    v8::Handle<v8::Value> struct_eval(const String& native_contents, ScriptOrigin* sOrigin);
 
     v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl);
 

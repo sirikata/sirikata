@@ -92,8 +92,6 @@ public:
     /** Print the given string to the current output. */
     void print(const String& str);
 
-    /** Eval a string, executing its contents in the root object's scope. */
-    v8::Handle<v8::Value> eval(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
 
     /** Import a file, executing its contents in contextCtx's root object's
      * scope. Pass in NULL to contextCtx to just execute in JSObjectScript's
