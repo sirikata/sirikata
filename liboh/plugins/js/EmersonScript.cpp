@@ -525,10 +525,6 @@ void EmersonScript::start() {
 }
 
 void EmersonScript::stop() {
-    JSObjectScript::stop();
-
-    mParent->removeListener((SessionEventListener*)this);
-
     // Clean up ProxyCreationListeners. We subscribe for each presence in
     // onConnected, so we need to run through all presences (stored in the
     // HostedObject) and clear out ourselfs as a listener. Note that we have to
@@ -536,8 +532,16 @@ void EmersonScript::stop() {
     // because we track presences *after* space-stream connection whereas the
     // HostedObject tracks them after the initial connected reply message from
     // the space.
+    //
+    // NOTE: We put this before JSObjectScript::stop because that triggers the
+    // presences to get removed from mPresences but not unsubscribed.
     for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++)
         unsubscribePresenceEvents(it->first);
+
+    JSObjectScript::stop();
+
+    mParent->removeListener((SessionEventListener*)this);
+
     mPresences.clear();
 }
 
