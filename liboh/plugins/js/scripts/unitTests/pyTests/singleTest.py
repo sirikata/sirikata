@@ -8,6 +8,12 @@ class SingleTest:
         basicErrors.TimedOutError,
         basicErrors.UnitTestFailError
         ]
+    # For tests that expect to timeout because they don't have simple
+    # ending criteria.
+    TimeOutTestErrorConditions = [
+        basicErrors.ExceptionError,
+        basicErrors.UnitTestFailError
+        ]
     DefaultDuration = 20
 
     '''

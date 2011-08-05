@@ -79,6 +79,7 @@ def registerTests():
                                                   'onPresenceConnected'],
                                          entityConstructorInfo=[otherEntInfo,
                                                                 csvProxAddedEntInfo],
+                                         errorConditions = csvTest.CSVTest.TimeOutTestErrorConditions,
                                          duration=25
                                          );
     testArray.append(proximityAddedTest);
