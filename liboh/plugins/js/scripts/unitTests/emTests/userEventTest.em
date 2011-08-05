@@ -16,16 +16,24 @@ var finishTest = function() {
         system.killEntity();
 };
 
-// Just check a single deferred event
-var test1Timeout = system.timeout(
-    1,
+// Using this because finishing before the initial connection causes
+// shutdown problems
+system.onPresenceConnected(
     function() {
-        mTest.fail('Timed out before simple user generated event was executed');
-    }
-);
-system.event(
-    function() {
-        test1Timeout.clear();
-        finishTest();
+
+        // Just check a single deferred event
+        var test1Timeout = system.timeout(
+            1,
+            function() {
+                mTest.fail('Timed out before simple user generated event was executed');
+            }
+        );
+        system.event(
+            function() {
+                test1Timeout.clear();
+                finishTest();
+            }
+        );
+
     }
 );
