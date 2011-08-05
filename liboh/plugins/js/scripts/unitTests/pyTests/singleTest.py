@@ -4,9 +4,6 @@ import errorConditions.basicErrors as basicErrors
 
 class SingleTest:
     DefaultErrorConditions = [
-        basicErrors.SegFaultError,
-        basicErrors.BusError,
-        basicErrors.AssertError,
         basicErrors.ExceptionError,
         basicErrors.TimedOutError,
         basicErrors.UnitTestFailError
@@ -76,11 +73,14 @@ class SingleTest:
     @param {String} fNameAppendResTo filename that we should append the
     results of this test to.
     
+    @param {Int} returnCode the code that the process running the test
+    returned with.  On unix systems, indicates seg faults, bus errors,
+    etc.  On windows, I don't think that this does anything.
     
     Appends success and failure information to file with name
     self.outFName.
     '''
-    def analyzeOutput(self, filenameToAnalyze, fNameAppendResTo):
+    def analyzeOutput(self, filenameToAnalyze, fNameAppendResTo,returnCode):
         fullFile = open(filenameToAnalyze,'r').read();
 
         outputFile = open(fNameAppendResTo,'a');
@@ -89,7 +89,7 @@ class SingleTest:
         stringToPrint += 'Performing test for ' + self.testName + '\n';
         
 
-        failed = False;
+        failed = returnCode < 0;
         results = [];
         for s in self.errorConditions:
             errorReturner = s.performErrorCheck(fullFile);
@@ -117,8 +117,21 @@ class SingleTest:
                 
 
             stringToPrint += '\n';
-            
 
+        returnCodeErrorName= 'look up return code for error name';
+        if (returnCode == -6):
+            returnCodeErrorName = 'Assert fault';
+        elif(returnCode == -11):
+            returnCodeErrorName = 'Seg fault';
+            
+        stringToPrint += 'return code: ' + str(returnCode) + '..........';
+        if (returnCode < 0):
+            stringToPrint += 'FAILED: ' + returnCodeErrorName;
+        else:
+            stringToPrint += 'PASSED.'
+
+        stringToPrint += '\n';
+            
         outputFile.write(stringToPrint);
         print(stringToPrint);
         outputFile.flush();

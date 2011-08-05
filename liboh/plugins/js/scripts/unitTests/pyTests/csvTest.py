@@ -92,7 +92,7 @@ class CSVTest(singleTest.SingleTest):
         os.chdir(prevDir);
         
         print('Analyzing test ' + self.testName + '\n');
-        self.analyzeOutput(runOutputFilename, outputFilename);
+        self.analyzeOutput(runOutputFilename, outputFilename,proc.returncode);
         print('\nDone with test ' + self.testName + '\n');
         
         
