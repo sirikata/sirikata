@@ -352,11 +352,12 @@ JSPresenceStruct::~JSPresenceStruct()
 //called from jsobjectscript.
 void JSPresenceStruct::markDisconnected()
 {
+    bool wasConnected = getIsConnected();
     // We *have* to set this, even if we're already cleared, to get
     // all the disconnection paths working properly.
     isConnected = false;
 
-    if (!getIsCleared() && !getIsConnected()) {
+    if (!getIsCleared() && !wasConnected) {
         JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
         return;
     }
