@@ -310,6 +310,9 @@ private:
         // rather than the space server closing an individual session.
         void handleUnderlyingDisconnect(ServerID sid, const String& reason);
 
+        // Handle a graceful disconnection, notifying other objects
+        void gracefulDisconnect(const SpaceObjectReference& sporef);
+
         // Lookup the server the object is connected to.  With allow_connecting, allows using
         // the server currently being connected to, not just one where a session has been
         // established

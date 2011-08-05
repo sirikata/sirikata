@@ -109,7 +109,9 @@ struct JSPresenceStruct : public JSPositionListener,
        know the proxy ptr should set in position listener.
      */
     void connect(const SpaceObjectReference& _sporef);
-    void disconnectCalledFromObjScript();
+
+    void markDisconnected();
+    void handleDisconnectedCallback();
 
 
     virtual v8::Handle<v8::Value> suspend();

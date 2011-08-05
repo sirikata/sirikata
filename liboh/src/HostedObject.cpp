@@ -117,7 +117,7 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
 
 
 HostedObject::~HostedObject() {
-    destroy();
+    destroy(false);
 
     if (mPresenceData != NULL)
         delete mPresenceData;
@@ -141,8 +141,18 @@ bool HostedObject::stopped() const {
     return (mContext->stopped() || destroyed);
 }
 
-void HostedObject::destroy()
-{
+void HostedObject::destroy(bool need_self) {
+    // Avoid recursive destruction
+    if (destroyed) return;
+
+    // Make sure that we survive the entire duration of this call. Otherwise all
+    // references may be lost, resulting in the destructor getting called
+    // (e.g. when the ObjectScript removes all references) and then we return
+    // here to do more work and we've already been deleted.
+    HostedObjectPtr self_ptr = need_self ? getSharedPtr() : HostedObjectPtr();
+
+    destroyed = true;
+
     if (mObjectScript) {
         delete mObjectScript;
         mObjectScript=NULL;
@@ -152,7 +162,6 @@ void HostedObject::destroy()
         mObjectHost->unregisterHostedObject(iter->first);
 
     mPresenceData->clear();
-    destroyed = true;
 }
 
 Time HostedObject::spaceTime(const SpaceID& space, const Time& t) {
@@ -541,10 +550,13 @@ void HostedObject::disconnectFromSpace(const SpaceID &spaceID, const ObjectRefer
     PresenceDataMap::iterator where;
     where=mPresenceData->find(sporef);
     if (where!=mPresenceData->end()) {
+        // Need to actually send a disconnection request to the space. Note that
+        // this occurse *before* getting rid of the other data so callbacks
+        // invoked as a result still work.
+        mObjectHost->disconnectObject(spaceID,oref);
+
         mPresenceData->erase(where);
         mObjectHost->unregisterHostedObject(sporef);
-        //need to actually send a disconnection request to the space;
-        mObjectHost->disconnectObject(spaceID,oref);
     } else {
         SILOG(cppoh,error,"Attempting to disconnect from space "<<spaceID<<" and object: "<< oref<<" when not connected to it...");
     }
@@ -557,7 +569,12 @@ void HostedObject::handleDisconnected(const SpaceObjectReference& spaceobj, Disc
     }
 
     notify(&SessionEventListener::onDisconnected, getSharedPtr(), spaceobj);
-    disconnectFromSpace(spaceobj.space(), spaceobj.object());
+
+    // Only invoke disconnectFromSpace if we weren't already aware of the
+    // disconnection, i.e. if the disconnect was due to the space and we haven't
+    // cleaned up yet.
+    if (cc == Disconnect::Forced)
+        disconnectFromSpace(spaceobj.space(), spaceobj.object());
 }
 
 

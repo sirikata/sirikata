@@ -206,9 +206,8 @@ v8::Handle<v8::Value> JSPresenceStruct::clear()
         (*iter)->clear();
     associatedContexts.clear();
 
-    clearPreviousConnectedCB();
-
-    isConnected = false;
+    if (getIsConnected())
+        disconnect();
 
     //do not ask emerson script to delete presence here.  the context will get
     //this presence deleted.
@@ -221,8 +220,8 @@ v8::Handle<v8::Value> JSPresenceStruct::clear()
 v8::Handle<v8::Value> JSPresenceStruct::disconnect()
 {
     clearPreviousConnectedCB();
-    isConnected = false;
-
+    // Don't set isConnected = false here, callbacks will set it when it's
+    // actually occurred.
     mParent->requestDisconnect(this);
     return v8::Boolean::New(true);
 }
@@ -351,15 +350,20 @@ JSPresenceStruct::~JSPresenceStruct()
 }
 
 //called from jsobjectscript.
-void JSPresenceStruct::disconnectCalledFromObjScript()
+void JSPresenceStruct::markDisconnected()
 {
-    if (getIsCleared())
-        return;
-
-    if (! getIsConnected())
-        JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
-
+    // We *have* to set this, even if we're already cleared, to get
+    // all the disconnection paths working properly.
     isConnected = false;
+
+    if (!getIsCleared() && !getIsConnected()) {
+        JSLOG(error, "Error when calling disconnect on presence.  The presence wasn't already connected.");
+        return;
+    }
+}
+
+void JSPresenceStruct::handleDisconnectedCallback() {
+    if (getIsCleared()) return;
 
     if (mContext != NULL)
         mContext->checkContextDisconnectCallback(this);

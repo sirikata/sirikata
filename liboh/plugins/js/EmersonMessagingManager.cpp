@@ -40,6 +40,7 @@ EmersonMessagingManager::~EmersonMessagingManager()
         }
     }
     */
+
     mStreams.clear();
 }
 
@@ -64,6 +65,7 @@ void EmersonMessagingManager::presenceDisconnected(const SpaceObjectReference& d
         return;
     }
     allPres.erase(allPresFinder);
+    clearStreams(disconnPresSporef);
 }
 
 void EmersonMessagingManager::setupNewStream(SSTStreamPtr sstStream) {
@@ -102,6 +104,12 @@ SSTStreamPtr EmersonMessagingManager::getStream(const SpaceObjectReference& pres
     StreamMap::iterator it = pres_streams.find(remote);
     if (it != pres_streams.end()) return it->second;
     return SSTStreamPtr();
+}
+
+void EmersonMessagingManager::clearStreams(const SpaceObjectReference& pres) {
+    PresenceStreamMap::iterator pres_it = mStreams.find(pres);
+    if (pres_it != mStreams.end())
+        mStreams.erase(pres_it);
 }
 
 //Gets executed whenever a new stream connects to presence with sporef toListenFrom.

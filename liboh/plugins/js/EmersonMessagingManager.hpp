@@ -54,6 +54,9 @@ private:
     // available.
     SSTStreamPtr getStream(const SpaceObjectReference& pres, const SpaceObjectReference& remote);
 
+    // "Destroy" (i.e. discard reference to) all streams owned by an object
+    void clearStreams(const SpaceObjectReference& pres);
+
     //reading helpers
     void createScriptCommListenerStreamCB(Liveness::Token alive, const SpaceObjectReference& toListenFrom, int err, SSTStreamPtr sstStream);
     void handleIncomingSubstream(Liveness::Token alive, int err, SSTStreamPtr streamPtr);

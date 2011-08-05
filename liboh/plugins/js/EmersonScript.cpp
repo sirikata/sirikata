@@ -462,14 +462,41 @@ void EmersonScript::requestDisconnect(JSPresenceStruct* jspres)
 
 void EmersonScript::onDisconnected(SessionEventProviderPtr from, const SpaceObjectReference& name)
 {
-    JSPresenceStruct* jspres = findPresence(name);
-    //deregister underlying visible manager from listen for proxy creation events on hostedobjectproxymanager
-    mParent->getProxyManager(name.space(),name.object())->removeListener(this);
+    // We need to mark disconnection here so we don't request
+    // disconnection twice, but the callback has to be deferred until later
+    PresenceMap::iterator internal_it = mPresences.find(name);
+    if (internal_it == mPresences.end()) {
+        JSLOG(error,"Got onDisconnected for presence not being tracked");
+    }
+    else {
+        JSPresenceStruct* jspres = internal_it->second;
+        jspres->markDisconnected();
+    }
+
+    // Unregister from ProxyManager events. We maintain the presence data until
+    // it is truly deleted (at destruction or gc) since we might still get
+    // requests for its data
+    unsubscribePresenceEvents(name);
 
     EmersonMessagingManager::presenceDisconnected(name);
 
+    // Defer processing of the disconnect for the presence, making sure that the
+    // disconnection event is executed separately. This is necessary because
+    // this entire process may have been triggered from within a currently
+    // executing callback, resulting in weird results, e.g. if you disconnected,
+    // got a disconnect callback, and in that callback killed the entity. This
+    // could cause conflicting uses of data structures (e.g. live presences)
+    // resulting in double disconnects, etc.
+    mParent->context()->mainStrand->post(std::tr1::bind(&EmersonScript::finishOnDisconnected, this, name));
+}
+
+void EmersonScript::finishOnDisconnected(const SpaceObjectReference& name) {
+    PresenceMap::iterator internal_it = mPresences.find(name);
+    // Because of the delay inprocessing, we may not have the presence anymore.
+    if (internal_it == mPresences.end()) return;
+    JSPresenceStruct* jspres = internal_it->second;
     if (jspres != NULL)
-        jspres->disconnectCalledFromObjScript();
+        jspres->handleDisconnectedCallback();
 }
 
 
@@ -509,11 +536,8 @@ void EmersonScript::stop() {
     // because we track presences *after* space-stream connection whereas the
     // HostedObject tracks them after the initial connected reply message from
     // the space.
-    for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++) {
-        const SpaceObjectReference& spaceobj = it->first;
-        ProxyManagerPtr proxy_manager = mParent->getProxyManager(spaceobj.space(), spaceobj.object());
-        if (proxy_manager) proxy_manager->removeListener(this);
-    }
+    for (PresenceMap::const_iterator it = mPresences.begin(); it != mPresences.end(); it++)
+        unsubscribePresenceEvents(it->first);
     mPresences.clear();
 }
 
@@ -710,7 +734,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     }
 
 
-    
+
     for (std::vector<JSContextStruct*>::iterator curContIter = currentContexts.begin();
          curContIter != currentContexts.end();
          ++curContIter)
@@ -738,7 +762,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
                 mHandlingEvent =false;
                 return false;
             }
-            
+
             v8::Handle<v8::Value> argv[3];
             argv[0] =msgObj;
             argv[1] = msgSender;
@@ -849,7 +873,6 @@ void EmersonScript::processSandboxMessage(const String& msgToSend, uint32 sender
 //requests the HostedObject to remove the presence.
 void EmersonScript::deletePres(JSPresenceStruct* toDelete)
 {
-
     //remove the presence from mUnconnectedPresences
     bool found= true;
     while (found)
@@ -868,22 +891,32 @@ void EmersonScript::deletePres(JSPresenceStruct* toDelete)
     }
 
     //remove the presence from mPresences
-    for (PresenceMapIter pIter = mPresences.begin(); pIter != mPresences.end(); ++pIter)
-    {
-        if (pIter->second == toDelete)
-        {
-            const SpaceObjectReference& spaceobj = pIter->first;
-            ProxyManagerPtr proxy_manager = mParent->getProxyManager(spaceobj.space(), spaceobj.object());
-            if (proxy_manager) proxy_manager->removeListener(this);
+    SpaceObjectReference sporefToDelete = toDelete->getSporef();
 
-            mPresences.erase(pIter);
-            break;
-        }
+    // We might still need to disconnect the presence.
+    if (toDelete->getIsConnected()) {
+        mParent->disconnectFromSpace(sporefToDelete.space(),sporefToDelete.object());
     }
 
-    SpaceObjectReference sporefToDelete = toDelete->getSporef();
-    mParent->disconnectFromSpace(sporefToDelete.space(),sporefToDelete.object());
+    removePresenceData(sporefToDelete);
     delete toDelete;
+}
+
+
+void EmersonScript::unsubscribePresenceEvents(const SpaceObjectReference& name) {
+    PresenceMapIter pIter = mPresences.find(name);
+    if (pIter != mPresences.end()) {
+        ProxyManagerPtr proxy_manager = mParent->getProxyManager(name.space(), name.object());
+        if (proxy_manager) {
+            proxy_manager->removeListener(this);
+        }
+    }
+}
+
+void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelete) {
+    PresenceMapIter pIter = mPresences.find(sporefToDelete);
+    if (pIter != mPresences.end())
+        mPresences.erase(pIter);
 }
 
 

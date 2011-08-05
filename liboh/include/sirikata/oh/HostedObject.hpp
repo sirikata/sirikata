@@ -181,7 +181,7 @@ public:
     /** Removes this HostedObject from the ObjectHost, and destroys the internal shared pointer
       * Safe to reuse for another connection, as long as you hold a shared_ptr to this object.
       */
-    void destroy();
+    void destroy(bool need_self = true);
     /** Gets the ObjectHost (usually one per host).
         See getProxy(space)->getProxyManger() for the per-space object.
     */

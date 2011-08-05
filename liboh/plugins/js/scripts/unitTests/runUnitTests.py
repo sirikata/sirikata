@@ -79,7 +79,7 @@ def registerTests():
                                                   'onPresenceConnected'],
                                          entityConstructorInfo=[otherEntInfo,
                                                                 csvProxAddedEntInfo],
-                                         duration=50
+                                         duration=25
                                          );
     testArray.append(proximityAddedTest);
 
@@ -119,6 +119,15 @@ def registerTests():
                                entityConstructorInfo=[selfTestInfo],
                                duration=60);
     testArray.append(selfTest);
+
+    #presenceEventsTest: tests events triggered on presences' connection and disconnection
+    presenceEventsTestInfo = CSVConstructorInfo(script_type="js",
+                                      script_contents="system.import('unitTests/emTests/presenceEventsTest.em');");
+    presenceEventsTest = csvTest.CSVTest("presenceEventsTest",
+                               touches=['system.createPresence', 'system.onPresenceConnected', 'system.onPresenceDisconnected'],
+                               entityConstructorInfo=[presenceEventsTestInfo],
+                               duration=10);
+    testArray.append(presenceEventsTest);
 
 
 

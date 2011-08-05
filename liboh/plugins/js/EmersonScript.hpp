@@ -280,6 +280,16 @@ public:
     virtual void postCallbackChecks();
 private:
 
+    // Helper for disconnections
+    void unsubscribePresenceEvents(const SpaceObjectReference& name);
+    // Helper for *clearing* presences (not disconnections). When the presence
+    // struct is destroyed (i.e. gc, shutdown), we can then clear out references
+    // to the presence's data.
+    void removePresenceData(const SpaceObjectReference& sporefToDelete);
+    // Helper for disconnections, does the final callback and cleanup of the
+    // presence struct.
+    void finishOnDisconnected(const SpaceObjectReference& name);
+
     /**
        Wraps proxVis in an Emerson visible object and notifies shim layer that a
        visibile is now within presence with sporef proxTo's result set.

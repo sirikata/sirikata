@@ -234,6 +234,11 @@ void SessionManager::ObjectConnections::handleUnderlyingDisconnect(ServerID sid,
     }
 }
 
+void SessionManager::ObjectConnections::gracefulDisconnect(const SpaceObjectReference& sporef) {
+    mObjectInfo[sporef].disconnectedCB(mObjectInfo[sporef].connectedAs, Disconnect::Requested);
+    parent->mObjectDisconnectedCallback(sporef, Disconnect::Requested);
+}
+
 ServerID SessionManager::ObjectConnections::getConnectedServer(const SpaceObjectReference& sporef_obj_id, bool allow_connecting) {
     // FIXME getConnectedServer during migrations?
 
@@ -374,6 +379,8 @@ void SessionManager::disconnect(const SpaceObjectReference& sporef_objid) {
     );
     // FIXME do something on failure
 
+    // Notify of disconnect (requested), then remove
+    mObjectConnections.gracefulDisconnect(sporef_objid);
     mObjectConnections.remove(sporef_objid);
 }
 
