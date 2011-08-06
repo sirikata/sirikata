@@ -1469,13 +1469,13 @@ unaryExpression
              | UNARY_MINUS   {  APP("-");}
              | COMPLEMENT    {  APP("~");}
              | NOT           {  APP("!");}
-             | EVAL          {  APP(" (system.__checkAndThrowCanEval(), eval"); wasEvalStatement = true;}
+             | EVAL          {  APP(" (system.__checkAndThrowCanEval(), eval( system.__emersonCompileString("); wasEvalStatement = true;}
             )     
  	    unaryExpression
             {
                 if (wasEvalStatement)
                 {
-                    APP(")");
+                    APP(")))");
                 }
             }
            )
