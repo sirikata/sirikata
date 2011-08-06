@@ -70,6 +70,7 @@ struct JSSystemStruct
     v8::Handle<v8::Value> setSandboxMessageCallback(v8::Persistent<v8::Function> callback);
     v8::Handle<v8::Value> setPresenceMessageCallback(v8::Persistent<v8::Function> callback);
 
+    v8::Handle<v8::Value> emersonCompileString(const String& toCompile);
 
     v8::Handle<v8::Value> struct_create_vis(const SpaceObjectReference& sporefWatching, JSProxyPtr addParams)
     {

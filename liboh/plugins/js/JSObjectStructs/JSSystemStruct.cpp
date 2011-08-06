@@ -68,10 +68,14 @@ v8::Handle<v8::Value> JSSystemStruct::sendSandbox(const String& msgToSend, JSCon
 
 v8::Handle<v8::Value> JSSystemStruct::setRestoreScript(const String& key, v8::Handle<v8::Function> cb)
 {
-
     return associatedContext->setRestoreScript(key, cb);
 }
 
+
+v8::Handle<v8::Value> JSSystemStruct::emersonCompileString(const String& toCompile)
+{
+    return associatedContext->emersonCompileString(toCompile);
+}
 
 v8::Handle<v8::Value> JSSystemStruct::checkResources()
 {

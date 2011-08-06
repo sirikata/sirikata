@@ -547,7 +547,46 @@ void handleEmersonRecognitionError(struct ANTLR3_BASE_RECOGNIZER_struct* recogni
 }
 }
 
-//Will compile and run code in the context ctx whose source is em_script_str.
+v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompile)
+{
+    HandleScope handle_scope;
+    String em_script_str = toCompile;
+    EmersonLineMap lineMap;
+    
+    if(em_script_str.at(em_script_str.size() -1) != '\n')
+        em_script_str.push_back('\n');
+
+    emerson_init();
+
+    try {
+        int em_compile_err = 0;
+        
+        String js_script_str;
+        bool successfullyCompiled = emerson_compile(String("eval statement"), em_script_str.c_str(),
+            js_script_str, em_compile_err, handleEmersonRecognitionError,
+            &lineMap);
+
+        if (successfullyCompiled)
+        {
+            JSLOG(insane, " Compiled JS script = \n" <<js_script_str);
+            return v8::String::New(js_script_str.c_str());
+        }
+    }
+    catch(EmersonParserException e)
+    {
+        v8::Handle<v8::Value> err = v8::Exception::SyntaxError(v8::String::New(e.toString().c_str()));
+        return v8::ThrowException(err);
+    }
+
+    
+    JSLOG(error, "Got a compiler error in internalEval");
+    return v8::String::New("");
+}
+
+
+
+
+
 v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc)
 {
     v8::HandleScope handle_scope;

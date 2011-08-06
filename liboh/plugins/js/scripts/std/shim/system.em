@@ -243,6 +243,28 @@ function PresenceEntry(sporef, presObj)
 
 
      /**
+      @ignore
+
+      Takes in a string and runs it thorugh the emerson
+      compiler.  Returns the string that the emerson compiler spits
+      out, or throws an error if there is a syntax error, etc.
+
+      Used by eval over-writing in compiler.  (If we just directly
+      called eval on a string, then that string goes straight to JS.
+      We instead turn a call such as:
+
+      eval (someString) into
+
+      eval (system.__emersonCompileString(someString) );
+      
+      */
+     system.__emersonCompileString = function(toCompile)
+     {
+         return baseSystem.__emersonCompileString.apply(baseSystem,arguments);
+     };
+
+
+     /**
       @param {String} type (GET or POST) are only two supported for now.
       @param {String} url or ip address.
       @param {String} headers formatted as a string (with \r\n's ending each line)

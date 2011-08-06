@@ -215,6 +215,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> setSandboxMessageCallback(v8::Persistent<v8::Function> callback);
     v8::Handle<v8::Value> setPresenceMessageCallback(v8::Persistent<v8::Function> callback);
 
+    v8::Handle<v8::Value> emersonCompileString(const String& toCompile);
 
     //Each entity consists of a sandbox tree.  mParentContext points to the
     //parent of the current sandbox.  (Can be null for root sandbox.)  Can

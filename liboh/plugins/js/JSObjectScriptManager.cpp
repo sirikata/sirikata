@@ -251,7 +251,7 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("setPresenceMessageCallback"),v8::FunctionTemplate::New(JSSystem::setPresenceMessageCallback));
 
     mSystemTemplate->Set(v8::String::New("setRestoreScript"),v8::FunctionTemplate::New(JSSystem::setRestoreScript));
-
+    mSystemTemplate->Set(v8::String::New("__emersonCompileString"), v8::FunctionTemplate::New(JSSystem::emersonCompileString));
 
 
     mSystemTemplate->Set(v8::String::New("createVisible"),v8::FunctionTemplate::New(JSSystem::root_createVisible));

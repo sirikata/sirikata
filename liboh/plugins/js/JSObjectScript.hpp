@@ -181,6 +181,13 @@ public:
     bool isStopped();
 
 
+    /**
+       Runs the string toCompile through the emerson parser.  If fails to
+       compile, then returns syntax error.
+     */
+    v8::Handle<v8::Value> emersonCompileString(const String& toCompile);
+    
+
 protected:
 
     // Object host internal identifier for the object associated with

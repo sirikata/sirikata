@@ -160,6 +160,17 @@ v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
 }
 
 
+v8::Handle<v8::Value> emersonCompileString(const v8::Arguments& args)
+{
+    HandleScope handle_scope;
+    if (args.Length() != 1)
+        V8_EXCEPTION_CSTR("emersonCompileString takes in a single argument");
+
+    INLINE_STR_CONV_ERROR(args[0],emersonCompileString,1,strToCompile);
+    INLINE_SYSTEM_CONV_ERROR(args.This(),emersonCompileString,this,jssys);
+    return handle_scope.Close(jssys->emersonCompileString(strToCompile));
+}
+
 v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args)
 {
     if (args.Length() != 0)

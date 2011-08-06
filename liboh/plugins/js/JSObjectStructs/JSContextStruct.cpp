@@ -137,6 +137,10 @@ v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSCo
 }
 
 
+v8::Handle<v8::Value> JSContextStruct::emersonCompileString(const String& toCompile)
+{
+    return jsObjScript->emersonCompileString(toCompile);
+}
 
 v8::Handle<v8::Value> JSContextStruct::storageBeginTransaction()
 {
