@@ -81,6 +81,26 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
 }
 
+v8::Handle<v8::Value> evalInGlobal(const v8::Arguments& args)
+{
+    if (args.Length() != 1)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Eval only takes one parameter: the program text to evaluate.")) );
+
+    v8::Handle<v8::Value> contents = args[0];
+
+    StringCheckAndExtract(native_contents, contents);
+
+
+    String errorMessage       = "Error calling eval in context.  ";
+    JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct( args.This(), errorMessage);
+    if (jsfake == NULL)
+        return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
+
+    ScriptOrigin origin = args.Callee()->GetScriptOrigin();
+    return jsfake->struct_evalInGlobal(native_contents,&origin);
+}
+
+
 
 //single argument should be a function.
 v8::Handle<v8::Value> setSandboxMessageCallback(const v8::Arguments& args)

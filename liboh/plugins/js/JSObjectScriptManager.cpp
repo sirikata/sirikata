@@ -230,6 +230,8 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("timeout"), v8::FunctionTemplate::New(JSSystem::root_timeout));
     mSystemTemplate->Set(v8::String::New("print"), v8::FunctionTemplate::New(JSSystem::root_print));
 
+
+    mSystemTemplate->Set(v8::String::New("__evalInGlobal"), v8::FunctionTemplate::New(JSSystem::evalInGlobal));
     mSystemTemplate->Set(v8::String::New("sendSandbox"), v8::FunctionTemplate::New(JSSystem::root_sendSandbox));
 
     mSystemTemplate->Set(v8::String::New("js_import"), v8::FunctionTemplate::New(JSSystem::root_jsimport));

@@ -1026,6 +1026,18 @@ std::string* JSObjectScript::extensionize(const String filename)
     return fileToFind;
 }
 
+v8::Handle<v8::Value> JSObjectScript::evalInGlobal(const String& contents, v8::ScriptOrigin* origin,JSContextStruct* jscs)
+{
+    EvalContext& ctx = mEvalContextStack.top();
+    EvalContext new_ctx(ctx);
+
+    if (jscs == NULL)
+        return protectedEval(contents, origin, new_ctx, NULL);
+
+    return protectedEval(contents, origin, new_ctx,jscs);
+}
+
+
 v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont, bool isJS)
 {
     JSLOG(detailed, "Importing: " << filename);

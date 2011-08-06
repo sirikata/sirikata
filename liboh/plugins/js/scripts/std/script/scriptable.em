@@ -41,6 +41,7 @@ function() {
 
     var ns = std.script;
 
+    
     /** A Scriptable is an object which listens for messages from
      *  other objects, executes their contents, and replies with the
      *  results.
@@ -65,7 +66,7 @@ function() {
         var cmd = msg.script;
         var result = undefined, excep = undefined;
         try {
-            result = eval(cmd);
+            result = system.__evalInGlobal(cmd);
         } catch (ex) {
             // Currently, we need to do a deep copy because some
             // fields seem to be some sort of weird built in type (or

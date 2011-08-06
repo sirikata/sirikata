@@ -282,6 +282,15 @@ function PresenceEntry(sporef, presObj)
          return baseSystem.http(type,url, headers, system.wrapCallbackForSelf(cb));
      };
 
+     /**
+      @ignore
+      Necessary so that script messages will be evaluated in global object rather than from within scriptable.
+      */
+     system.__evalInGlobal = function(toEval)
+     {
+         return baseSystem.__evalInGlobal.apply(baseSystem, arguments);
+     };
+     
      
      //storage manipulations
      system.storageBeginTransaction = function()

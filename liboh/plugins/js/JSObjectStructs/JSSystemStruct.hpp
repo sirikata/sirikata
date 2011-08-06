@@ -39,7 +39,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_canImport();
 
     v8::Handle<v8::Value> checkResources();
-
+    
+    v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
+    
     v8::Handle<v8::Value> checkHeadless();
 
     v8::Handle<v8::Value> storageBeginTransaction();

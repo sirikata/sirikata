@@ -87,6 +87,9 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> setRestoreScript(const String& key, v8::Handle<v8::Function> cb);
 
 
+    v8::Handle<v8::Value> struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin);
+    
+
     //create presence in the place, and with the script specified in eci
     v8::Handle<v8::Value> struct_createEntity(EntityCreateInfo& eci);
 

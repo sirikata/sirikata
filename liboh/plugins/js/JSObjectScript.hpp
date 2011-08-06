@@ -188,6 +188,11 @@ public:
     v8::Handle<v8::Value> emersonCompileString(const String& toCompile);
     
 
+    /** Eval a string, executing its contents in the root object's scope. */
+    v8::Handle<v8::Value> evalInGlobal(const String& contents, v8::ScriptOrigin* em_script_name,JSContextStruct* jscs);
+ 
+
+    
 protected:
 
     // Object host internal identifier for the object associated with

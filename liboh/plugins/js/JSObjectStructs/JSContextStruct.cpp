@@ -137,6 +137,15 @@ v8::Handle<v8::Value> JSContextStruct::sendSandbox(const String& msgToSend, JSCo
 }
 
 
+
+v8::Handle<v8::Value> JSContextStruct::struct_evalInGlobal(const String& native_contents, ScriptOrigin* sOrigin)
+{
+    return jsObjScript->evalInGlobal(native_contents,sOrigin,this);
+}
+
+
+
+
 v8::Handle<v8::Value> JSContextStruct::emersonCompileString(const String& toCompile)
 {
     return jsObjScript->emersonCompileString(toCompile);
