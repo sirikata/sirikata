@@ -553,7 +553,7 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
     String em_script_str = toCompile;
     EmersonLineMap lineMap;
     
-    if(em_script_str.at(em_script_str.size() -1) != '\n')
+    if(em_script_str.size() > 0 &&em_script_str.at(em_script_str.size() -1) != '\n')
         em_script_str.push_back('\n');
 
     emerson_init();
