@@ -1240,7 +1240,7 @@ function PresenceEntry(sporef, presObj)
           
           if (presCalling.toString()  in this._selfMap)
           {
-              var prevSelfKey = system.self.toString();
+              var prevSelf = system.self;
               var returner = this._selfMap[presCalling.toString()].setProxAddCB(funcToCall);                  
               if (onExisting)
               {
@@ -1249,7 +1249,7 @@ function PresenceEntry(sporef, presObj)
                   for (var s in existing)
                       funcToCall(existing[s]);
                   
-                  system.__setBehindSelf( system._selfMap[prevSelfKey].presObj);
+                  system.__setBehindSelf( prevSelf );
               }
               
               return returner;
