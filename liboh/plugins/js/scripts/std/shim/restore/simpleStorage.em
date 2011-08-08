@@ -32,6 +32,29 @@ if (typeof(std.simpleStorage) != 'undefined')
     //Keys contain all presence sporefs.  Can use these to restore our presences.
     var mPres   = { };
 
+    // Filled in with system-initiated presence
+    var mAutomaticPresence;
+    var mFinishedPresKeyLookup = false;
+
+    // We need to monitor for new presences that we weren't
+    // expecting. If we get one, then the system initiated a
+    // connection without asking us. In that case, we shouldn't have
+    // anything in storage and should be able to immediately invoke
+    // the user's code (giving them the correct system.self). We reset
+    // the callback if we find a presence to restore so that we should
+    // *never* get in here unless it is due to a system-initiated
+    // *connection.
+    system.onPresenceConnected(
+        function() {
+            // If presence key lookup finished unsuccessfully, we can
+            // invoke the user code now, otherwise save system.self so
+            // it can be used when that lookup finishes.
+            if (mFinishedPresKeyLookup)
+                restorePresences();
+            else
+                mAutomaticPresence = system.self;
+        }
+    );
 
 
     std.simpleStorage.setField = function(fieldName,fieldVal,cb)
@@ -210,10 +233,28 @@ if (typeof(std.simpleStorage) != 'undefined')
      */
     function onPresKeyRestored(success,allPres)
     {
-        if (success)
+        // Only continue if we restored presences. Otherwise, we're
+        // using an system-initiated presence and
+        // system.onPresenceConnected path will make sure the user
+        // code gets invoked.
+        if (success) {
+            // Disable onPresenceConnected: should not be getting
+            // system-initiated connection if we have our own in storage.
+            system.onPresenceConnected(undefined);
             mPres = allPres;
-
-        restorePresences();
+            restorePresences();
+        } else {
+            // We may or may not have received the onPresenceConnected
+            // yet. If we did, trigger the callback, otherwise, mark a
+            // flag so the onPresenceConnected callback can trigger
+            // it.
+            if (mAutomaticPresence) {
+                system.changeSelf(mAutomaticPresence);
+                restorePresences();
+            }
+            else
+                mFinishedPresKeyLookup = true;
+        }
     }
 
     //keeps track of all the presences that we have already restored.
@@ -222,7 +263,6 @@ if (typeof(std.simpleStorage) != 'undefined')
     //called each time
     function restorePresences()
     {
-
         // Callback & data to handle synchronizing all the parallel restoration + connection requests
         var num_outstanding = 0;
         var finishRestorePresence = function(presName,success,pres) {
