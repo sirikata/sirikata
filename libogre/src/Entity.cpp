@@ -507,6 +507,7 @@ void Entity::processMesh(Transfer::URI const& meshFile)
     mURI = meshFile;
     mURIString = meshFile.toString();
 
+    SILOG(ogre,detailed,"Loading " << mURIString << "...");
     mAssetDownload =
         AssetDownloadTask::construct(
             mURI, getScene(), this->priority(),
