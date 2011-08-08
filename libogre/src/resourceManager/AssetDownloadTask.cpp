@@ -166,6 +166,19 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
                 return;
             }
         }
+        // Another sanity check: if we have an excessive number of textures,
+        // we're probably going to hit some memory constraints
+        {
+            // Complete arbitrary number
+            if (md->textures.size() > 50) {
+                SILOG(ogre,error, "Mesh with excessive number of textures: " << mAssetURI.toString() << " has " << md->textures.size() << " textures. Ignoring this mesh.");
+                mAsset = Mesh::VisualPtr();
+                mCB();
+                return;
+            }
+        }
+
+
 
         // Special case for no dependent downloads
         if (md->textures.size() == 0) {
