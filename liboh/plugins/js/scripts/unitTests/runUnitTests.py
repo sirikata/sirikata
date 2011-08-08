@@ -131,6 +131,16 @@ def registerTests():
     testArray.append(presenceEventsTest);
 
 
+    #serializationTest: tests objects, arrays, and functions serialized.  does not test certain special objects (presences, visibles, etc.).
+    serializationTestInfo = CSVConstructorInfo(script_type="js",
+                                               script_contents="system.import('unitTests/emTests/serializationTest.em');");
+    serializationTest = csvTest.CSVTest("serializationTest",
+                               touches=['system.onPresenceConnected', 'serialize','deserialize','disconnect'],
+                               entityConstructorInfo=[serializationTestInfo],
+                               duration=10);
+    testArray.append(serializationTest);
+    
+    
 
     global manager
     manager = testManager.TestManager();
