@@ -95,8 +95,9 @@ SetMesh.toggleVisible = toggleVisible;
             }
             nextStart = dataGotten.next_start;
             for (var s in dataGotten.content_items) {
-                if (typeof (dataGotten.content_items[s].metadata.types.original.thumbnail) != 'undefined') {
-                    allMeshes.push([dataGotten.content_items[s].metadata.types.original.thumbnail, dataGotten.content_items[s].full_path, dataGotten.content_items[s].metadata.title]);
+                if (typeof(dataGotten.content_items[s].metadata.types.optimized) == 'object' && 
+                    typeof (dataGotten.content_items[s].metadata.types.optimized.thumbnail) != 'undefined') {
+                    allMeshes.push([dataGotten.content_items[s].metadata.types.optimized.thumbnail, dataGotten.content_items[s].full_path, dataGotten.content_items[s].metadata.title]);
                 }
             }
             loadNext();
