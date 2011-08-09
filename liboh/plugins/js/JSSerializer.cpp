@@ -68,8 +68,7 @@ void JSSerializer::pointOtherObject(int32 int32ToPointTo,Sirikata::JS::Protocol:
 }
 
 
-//namespace {
-//void serializeSystem(v8::Local<v8::Object> jsSystem, Sirikata::JS::Protocol::IJSMessage& jsmessage)
+
 void JSSerializer::serializeSystem(v8::Local<v8::Object> jsSystem, Sirikata::JS::Protocol::IJSMessage& jsmessage,int32& toStampWith,ObjectVec& allObjs)
 {
     std::string err_msg;
@@ -155,6 +154,7 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toSta
   jsmessage.SerializeToString(&serialized_message);
 
   unmarkSerialized(allObjs);
+
   return serialized_message;
 }
 
@@ -209,10 +209,26 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
     if (obj->Has(v8::String::New("prototype")))
         results.push_back("prototype");
 
-    
-    for(std::vector<String>::size_type i = 0; i < all_props.size(); i++) {
-        if (std::find(prototype_props.begin(), prototype_props.end(), all_props[i]) == prototype_props.end())
+
+    v8::Handle<v8::Object> protoObj = v8::Local<v8::Object>::Cast(obj->GetPrototype());
+    for(std::vector<String>::size_type i = 0; i < all_props.size(); i++)
+    {
+        std::vector<String>::iterator propFindIter =
+            std::find(prototype_props.begin(), prototype_props.end(), all_props[i]);
+
+        //this property exists only on the object.
+        if (propFindIter == prototype_props.end())
             results.push_back(all_props[i]);
+        else
+        {
+            v8::Handle<v8::String> fieldName = v8::String::New(propFindIter->c_str(), propFindIter->size());
+            //this property exists on the object and its prototype.  Must check
+            //if the two properties are equal.  If they are, then don't add to
+            //results.  If they are not equal, then add to results.
+            if (! obj->Get(fieldName)->Equals(protoObj->Get(fieldName)))
+                results.push_back(all_props[i]);
+        }
+            
     }
 
     results.push_back(JSSERIALIZER_PROTOTYPE_NAME);
@@ -283,7 +299,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
     for( unsigned int i = 0; i < properties.size(); i++)
     {
         String prop_name = properties[i];
-
+        
         v8::Local<v8::Value> prop_val;
         if (properties[i] == JSSERIALIZER_PROTOTYPE_NAME)
             prop_val = v8Obj->GetPrototype();
@@ -555,7 +571,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
 
       //create the vis obj through objScript
       deserializeTo = emerScript->createVisiblePersistent(visibleObj, JSProxyPtr(), ctx);
-
       return true;
     }
 
@@ -624,6 +639,8 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             continue;
         }
 
+
+        
         if (fieldname == JSSERIALIZER_PROTOTYPE_NAME)
         {
             if (!val.IsEmpty() && !val->IsUndefined() && !val->IsNull())
