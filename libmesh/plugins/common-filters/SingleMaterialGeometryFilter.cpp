@@ -77,7 +77,7 @@ void copySubset(const SubMeshGeometry& orig, const std::vector<int>& prims, SubM
     // With them all marked, form a map to translate from old indices -> new
     // indices. Copy data over as we go.
     std::map<unsigned short, unsigned short> index_map;
-    uint new_index_source = 0;
+    uint32 new_index_source = 0;
     for(int orig_index = 0; orig_index < (int)referenced_indices.size(); orig_index++) {
         if (referenced_indices[orig_index] == false) continue;
         index_map[orig_index] = new_index_source;
