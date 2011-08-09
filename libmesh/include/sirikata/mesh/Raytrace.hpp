@@ -45,7 +45,8 @@ namespace Mesh {
  *  operation in world space, you need to transform the ray into object space,
  *  run the raytrace, and transform the results back.
  *
- *  \param mesh the mesh to test the ray against
+ *  \param vis the mesh to test the ray against
+ *  \parma vis_xform transformation to apply to the mesh
  *  \param ray_start the starting position of the ray to trace
  *  \param ray_dir the direction of the ray to trace
  *  \param t_out the parametric value for the collision, in terms of ray_start
@@ -53,9 +54,9 @@ namespace Mesh {
  *  \param hit_out the point of collision, if one was found
  *  \returns true if a collision was found, false otherwise
  */
-SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
-SIRIKATA_MESH_FUNCTION_EXPORT bool RaytraceType(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
-SIRIKATA_MESH_FUNCTION_EXPORT bool RaytraceType(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
+SIRIKATA_MESH_FUNCTION_EXPORT bool Raytrace(VisualPtr vis, const Matrix4x4f& vis_xform, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
+SIRIKATA_MESH_FUNCTION_EXPORT bool RaytraceType(MeshdataPtr vis, const Matrix4x4f& vis_xform, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
+SIRIKATA_MESH_FUNCTION_EXPORT bool RaytraceType(BillboardPtr vis, const Matrix4x4f& vis_xform, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out);
 
 } // namespace Mesh
 } // namespace Sirikata

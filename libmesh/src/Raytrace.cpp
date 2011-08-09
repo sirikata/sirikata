@@ -298,17 +298,17 @@ bool RaytraceSphere(
     return RaytraceSphere(center, radius, ray_start, ray_dir, false, t_out);
 }
 
-bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(VisualPtr vis, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+bool SIRIKATA_MESH_FUNCTION_EXPORT Raytrace(VisualPtr vis, const Matrix4x4f& vis_xform, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
     MeshdataPtr md(std::tr1::dynamic_pointer_cast<Meshdata>(vis));
-    if (md) return RaytraceType(md, ray_start, ray_dir, t_out, hit_out);
+    if (md) return RaytraceType(md, vis_xform, ray_start, ray_dir, t_out, hit_out);
 
     BillboardPtr bboard(std::tr1::dynamic_pointer_cast<Billboard>(vis));
-    if (bboard) return RaytraceType(bboard, ray_start, ray_dir, t_out, hit_out);
+    if (bboard) return RaytraceType(bboard, vis_xform, ray_start, ray_dir, t_out, hit_out);
 
     return false;
 }
 
-bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(MeshdataPtr mesh, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(MeshdataPtr mesh, const Matrix4x4f& vis_xform, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
     bool found_hit = false;
 
     bool have_hit = false;
@@ -341,7 +341,7 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(MeshdataPtr mesh, const Vector3f
             if (pos.empty()) {
                 pos.resize(geo.positions.size());
                 for(uint32 i = 0; i < geo.positions.size(); i++)
-                    pos[i] = transformInstance * geo.positions[i];
+                    pos[i] = vis_xform * transformInstance * geo.positions[i];
             }
 
             // Now we actually perform checks against transformed
@@ -405,7 +405,7 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(MeshdataPtr mesh, const Vector3f
     return have_hit;
 }
 
-bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(BillboardPtr bboard, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
+bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(BillboardPtr bboard, const Matrix4x4f& vis_xform, const Vector3f& ray_start, const Vector3f& ray_dir, float32* t_out, Vector3f* hit_out) {
     bool found_hit = false;
 
     bool have_hit = false;
@@ -418,7 +418,11 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(BillboardPtr bboard, const Vecto
         // orientation to work from like a camera does).  Instead,
         // raytrace against the bounding sphere.
         have_hit = have_hit ||
-            RaytraceSphere(Vector3f(0, 0, 0), 1.f, ray_start, ray_dir, &t);
+            RaytraceSphere(
+                vis_xform * Vector3f(0, 0, 0),
+                1.f, // FIXME vis_xform' scale component?
+                ray_start, ray_dir, &t
+            );
     }
     else if (bboard->facing == Billboard::FACING_FIXED) {
         // In this case, orientation is fixed, so we just need to
@@ -435,9 +439,9 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(BillboardPtr bboard, const Vecto
         // Now just test against the two triangles of the appropriate size
         have_hit = have_hit ||
             RaytraceTriangle(
-                Vector3f(-width, -height, 0.f),
-                Vector3f(-width, height, 0.f),
-                Vector3f(width, height, 0.f),
+                vis_xform * Vector3f(-width, -height, 0.f),
+                vis_xform * Vector3f(-width, height, 0.f),
+                vis_xform * Vector3f(width, height, 0.f),
                 ray_start, ray_dir,
                 &t
             );
@@ -445,9 +449,9 @@ bool SIRIKATA_MESH_FUNCTION_EXPORT RaytraceType(BillboardPtr bboard, const Vecto
         // we'd need to change this.
         have_hit = have_hit ||
             RaytraceTriangle(
-                Vector3f(-width, -height, 0.f),
-                Vector3f(width, -height, 0.f),
-                Vector3f(width, height, 0.f),
+                vis_xform * Vector3f(-width, -height, 0.f),
+                vis_xform * Vector3f(width, -height, 0.f),
+                vis_xform * Vector3f(width, height, 0.f),
                 ray_start, ray_dir,
                 &t
             );

@@ -284,8 +284,14 @@ v8::Handle<v8::Value> JSPositionListener::untransformedMeshBounds() {
 v8::Handle<v8::Value> JSPositionListener::raytrace(const Vector3f& mesh_ray_start, const Vector3f& mesh_ray_dir) {
     if (!mVisual) return v8::ThrowException(v8::Exception::Error(v8::String::New("Cannot call raytrace before loading the mesh.")));
 
+    // We don't have the scaled-to-unit version, so we need to compute the
+    // scaling factor and pass that through to the raytrace function.
+    double rad;
+    Mesh::ComputeBounds(mVisual, NULL, &rad);
+    Matrix4x4f to_unit = Matrix4x4f::scale(1.f/rad);
+
     float32 t_out; Vector3f hit_out;
-    bool did_hit = Mesh::Raytrace(mVisual, mesh_ray_start, mesh_ray_dir, &t_out, &hit_out);
+    bool did_hit = Mesh::Raytrace(mVisual, to_unit, mesh_ray_start, mesh_ray_dir.normal(), &t_out, &hit_out);
     if (!did_hit) return v8::Undefined();
 
     JSPOSITION_CHECK_IN_CONTEXT_THROW_EXCEP(raytrace,curContext);
