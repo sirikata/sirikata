@@ -180,7 +180,7 @@ void JSVisibleManager::onDestroyProxy(ProxyObjectPtr p)
     mTrackedObjects.erase(p);
 }
 
-void JSVisibleManager::updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds, const SpaceObjectReference& sporef)
+void JSVisibleManager::updateLocation (ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds, const SpaceObjectReference& sporef)
 {
     JSProxyPtr data = getOrCreateProxyPtr(sporef, JSProxyPtr());
     data->mLocation = newLocation;

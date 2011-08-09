@@ -120,8 +120,7 @@ public:
     // PositionListener
     //  - Updates JSProxyData state
     //  - Destruction ignored, handled by onDestroyProxy
-    virtual void updateLocation (const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
-    virtual void destroyed(){}
+    virtual void updateLocation (ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
 
     // MeshListener Interface
     //  - Updates JSProxyData state

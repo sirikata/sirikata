@@ -80,7 +80,7 @@ public:
     virtual void tick(const Time& t, const Duration& deltaTime);
     virtual bool isDynamic() const;
     virtual bool isMobile() const;
-    
+
     ProxyObject &getProxy() const {
         return *mProxy;
     }
@@ -92,12 +92,12 @@ public:
     static ProxyEntity *fromMovableObject(Ogre::MovableObject *obj);
 
     // PositionListener
-    virtual void updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
+    virtual void updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef);
 
     // ProxyObjectListener
-    virtual void validated();
-    virtual void invalidated(bool permanent);
-    virtual void destroyed();
+    virtual void validated(ProxyObjectPtr proxy);
+    virtual void invalidated(ProxyObjectPtr proxy, bool permanent);
+    virtual void destroyed(ProxyObjectPtr proxy);
 
     // interface from MeshListener
     virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);

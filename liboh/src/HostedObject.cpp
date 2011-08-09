@@ -932,7 +932,7 @@ ProxyObjectPtr HostedObject::createProxy(const SpaceObjectReference& objref, con
         proxy_manager = getProxyManager(owner_objref.space(), owner_objref.object());
     }
 
-    ProxyObjectPtr proxy_obj = ProxyObject::construct<ProxyObject> (proxy_manager.get(),objref,getSharedPtr(),owner_objref);
+    ProxyObjectPtr proxy_obj = ProxyObject::construct(proxy_manager.get(),objref,getSharedPtr(),owner_objref);
 
     // The redundancy here is confusing, but is for the sake of simplicity
     // elsewhere. First, we make sure all the values are set properly so that

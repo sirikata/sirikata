@@ -41,6 +41,12 @@
 
 namespace Sirikata {
 
+ProxyObjectPtr ProxyObject::construct(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor) {
+    ProxyObjectPtr res(SelfWeakPtr<ProxyObject>::internalConstruct(new ProxyObject(man, id, vwobj, owner_sor)));
+    res->validate();
+    return res;
+}
+
 ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor)
  :   SelfWeakPtr<ProxyObject>(),
      ProxyObjectProvider(),
@@ -58,7 +64,7 @@ ProxyObject::ProxyObject(ProxyManager *man, const SpaceObjectReference&id, VWObj
 
     reset();
 
-    validate();
+    // Validate is forced in ProxyObject::construct
 }
 
 
@@ -71,16 +77,21 @@ void ProxyObject::reset() {
 }
 
 void ProxyObject::validate() {
-    ProxyObjectProvider::notify(&ProxyObjectListener::validated);
+    ProxyObjectPtr ptr = getSharedPtr();
+    assert(ptr);
+    ProxyObjectProvider::notify(&ProxyObjectListener::validated, ptr);
 }
 
 void ProxyObject::invalidate(bool permanent) {
-    ProxyObjectProvider::notify(&ProxyObjectListener::invalidated, permanent);
+    ProxyObjectPtr ptr = getSharedPtr();
+    assert(ptr);
+    ProxyObjectProvider::notify(&ProxyObjectListener::invalidated, ptr, permanent);
 }
 
 void ProxyObject::destroy() {
-    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed);
-    PositionProvider::notify(&PositionListener::destroyed);
+    ProxyObjectPtr ptr = getSharedPtr();
+    assert(ptr);
+    ProxyObjectProvider::notify(&ProxyObjectListener::destroyed, ptr);
     //FIXME mManager->notify(&ProxyCreationListener::onDestroyProxy);
 }
 
@@ -123,7 +134,9 @@ void ProxyObject::setLocation(const TimedMotionVector3f& reqloc, uint64 seqno, b
     // other update while handling eht requests...
     if (predictive || reqloc.updateTime() >= mLoc.updateTime()) {
         mLoc = reqloc;
-        PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
+        ProxyObjectPtr ptr = getSharedPtr();
+        assert(ptr);
+        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds,mID);
     }
 }
 
@@ -135,7 +148,9 @@ void ProxyObject::setOrientation(const TimedMotionQuaternion& reqorient, uint64 
     // FIXME see relevant comment in setLocation
     if (predictive || reqorient.updateTime() >= mOrientation.updateTime()) {
         mOrientation = reqorient;
-        PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
+        ProxyObjectPtr ptr = getSharedPtr();
+        assert(ptr);
+        PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds,mID);
     }
 }
 
@@ -159,9 +174,9 @@ void ProxyObject::setBounds(const BoundingSphere3f& bnds, uint64 seqno, bool pre
 
 
     mBounds = bnds;
-    PositionProvider::notify(&PositionListener::updateLocation, mLoc, mOrientation, mBounds,mID);
     ProxyObjectPtr ptr = getSharedPtr();
     assert(ptr);
+    PositionProvider::notify(&PositionListener::updateLocation, ptr, mLoc, mOrientation, mBounds,mID);
     MeshProvider::notify (&MeshListener::onSetScale, ptr, mBounds.radius(),mID);
 }
 

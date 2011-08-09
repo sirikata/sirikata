@@ -77,12 +77,12 @@ public:
     // flowing in for this object. Note that this could be called as opposed to
     // the actual creation of the ProxyObject, because the ProxyObject still
     // exists but had already been invalidated.
-    virtual void validated() = 0;
+    virtual void validated(ProxyObjectPtr proxy) = 0;
     // Invoked when the object falls out of the result set. No further updates
     // will be received.
-    virtual void invalidated(bool permanent) = 0;
+    virtual void invalidated(ProxyObjectPtr proxy, bool permanent) = 0;
     // Invoked when the ProxyObject is actually destroyed.
-    virtual void destroyed() = 0;
+    virtual void destroyed(ProxyObjectPtr proxy) = 0;
 };
 
 
@@ -103,6 +103,8 @@ class SIRIKATA_PROXYOBJECT_EXPORT ProxyObject
 {
 
 public:
+    static ProxyObjectPtr construct(ProxyManager *man, const SpaceObjectReference&id, VWObjectPtr vwobj, const SpaceObjectReference& owner_sor);
+
     class SIRIKATA_PROXYOBJECT_EXPORT UpdateNeeded {
     public:
         bool operator()(

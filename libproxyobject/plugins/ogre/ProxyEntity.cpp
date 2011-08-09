@@ -101,7 +101,7 @@ ProxyEntity *ProxyEntity::fromMovableObject(Ogre::MovableObject *movable) {
     return static_cast<ProxyEntity*>( Entity::fromMovableObject(movable) );
 }
 
-void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
+void ProxyEntity::updateLocation(ProxyObjectPtr proxy, const TimedMotionVector3f &newLocation, const TimedMotionQuaternion& newOrient, const BoundingSphere3f& newBounds,const SpaceObjectReference& sporef) {
     SILOG(ogre,detailed,"UpdateLocation "<<this<<" to "<<newLocation.position()<<"; "<<newOrient.position());
 
     setOgrePosition(Vector3d(newLocation.position()));
@@ -110,20 +110,20 @@ void ProxyEntity::updateLocation(const TimedMotionVector3f &newLocation, const T
     checkDynamic();
 }
 
-void ProxyEntity::validated() {
+void ProxyEntity::validated(ProxyObjectPtr ptr) {
     mDestroyTimer->cancel();
 
     // Because this could be a new ProxyEntity, created after a bunch
     // of updates have been received by the ProxyObject, we need to
     // refresh its important data
-    updateLocation( mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds(),SpaceObjectReference::null() );
+    updateLocation( mProxy, mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds(),SpaceObjectReference::null() );
 
     // And the final step is to update the mesh, kicking off the
     // download process.
     processMesh( mProxy->getMesh() );
 }
 
-void ProxyEntity::invalidated(bool permanent) {
+void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
     // If the the object really disconnected, it'll be marked as a permanent
     // removal. If it just left the result set then it should still be in the
     // world and shouldn't hurt to leave it around for awhile, and we'll get
@@ -139,7 +139,7 @@ void ProxyEntity::handleDestroyTimeout() {
     unloadMesh();
 }
 
-void ProxyEntity::destroyed() {
+void ProxyEntity::destroyed(ProxyObjectPtr ptr) {
     // FIXME this is triggered by the ProxyObjectListener interface. But we
     //actually don't want to delete it here, we want to *maybe* mask things for
     //awhile. For now, we just leak this, but clearly this needs to be fixed.
