@@ -81,17 +81,11 @@ typedef std::vector<SkinController> SkinControllerList;
 
 struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
     std::string name;
+
     std::vector<Sirikata::Vector3f> positions;
-
-
     std::vector<Sirikata::Vector3f> normals;
     std::vector<Sirikata::Vector3f> tangents;
     std::vector<Sirikata::Vector4f> colors;
-    std::vector<unsigned int> influenceStartIndex;//a list of where a given position's joint weights start
-    std::vector<unsigned int> jointindices;
-    std::vector<float> weights;
-
-    std::vector<Sirikata::Matrix4x4f> inverseBindMatrices;
 
     struct TextureSet {
         unsigned int stride;
@@ -119,7 +113,6 @@ struct SIRIKATA_MESH_EXPORT SubMeshGeometry {
     void recomputeBounds();
 
     SkinControllerList skinControllers;
-
 
 
     /** Append the given SubMeshGeometry to the end of this one. Use the given
