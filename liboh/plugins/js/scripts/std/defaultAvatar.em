@@ -66,9 +66,9 @@ std.simpleStorage.setScript(
         {
             //if do not have a connected presence
             system.onPresenceConnected(
-                function(pres) {
+                function(pres,toClearPresFunction) {
                     init();
-                    system.onPresenceConnected(function(){});
+                    toClearPresFunction.clear();
                 }
             );
         }

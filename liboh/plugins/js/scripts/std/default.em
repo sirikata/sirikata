@@ -46,16 +46,18 @@ std.simpleStorage.setScript(
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable();
 
-        var init = function() {
+        var init = function(presConnectClearable) {
             var storeFunc = function() {
                 if (system.self.getIsConnected())
                     std.simpleStorage.writePresence(system.self);
             };
             storageTimer = std.core.RepeatingTimer(60, storeFunc);
             storeFunc(); // Force immediate storage
+            if (presConnectClearable !== undefined)
+                presConnectClearable.clear();
         };
         if (system.self)
             init();
         else
-            system.onPresenceConnected(function() { init(); });
+            system.onPresenceConnected(function(pres,toClear) { init(toClear); });
     },false);

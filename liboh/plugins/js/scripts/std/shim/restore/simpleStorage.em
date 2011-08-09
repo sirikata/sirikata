@@ -44,7 +44,7 @@ if (typeof(std.simpleStorage) != 'undefined')
     // the callback if we find a presence to restore so that we should
     // *never* get in here unless it is due to a system-initiated
     // *connection.
-    system.onPresenceConnected(
+    var clearablePresConn = system.onPresenceConnected(
         function() {
             // If presence key lookup finished unsuccessfully, we can
             // invoke the user code now, otherwise save system.self so
@@ -240,7 +240,7 @@ if (typeof(std.simpleStorage) != 'undefined')
         if (success) {
             // Disable onPresenceConnected: should not be getting
             // system-initiated connection if we have our own in storage.
-            system.onPresenceConnected(undefined);
+            clearablePresConn.clear();
             mPres = allPres;
             restorePresences();
         } else {

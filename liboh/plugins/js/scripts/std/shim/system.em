@@ -1148,6 +1148,26 @@ function PresenceEntry(sporef, presObj)
       };
 
 
+     var presConnectedManager ={  };
+     var lastConnectionManagerId = 0;
+     function ClearablePresConnected(idToClear)
+     {
+         this.idToClear = idToClear;
+     }
+     ClearablePresConnected.prototype.clear=function()
+     {
+         if (this.idToClear in presConnectedManager)
+             delete presConnectedManager[this.idToClear];
+     };
+
+     var onPresConnFunc = function(pres)
+     {
+         for (var s in presConnectedManager)
+             presConnectedManager[s](pres, new ClearablePresConnected(s));                 
+     };
+
+     baseSystem.onPresenceConnected(onPresConnFunc);
+     
       /** @function
        @description Registers a callback to be invoked when a presence created within this sandbox gets connected to the world
        @return does not return anything
@@ -1155,9 +1175,14 @@ function PresenceEntry(sporef, presObj)
        */
       system.onPresenceConnected = function(/**Function */callback)
       {
-          baseSystem.onPresenceConnected(this.__wrapPresConnCB(callback));
+          ++lastConnectionManagerId;
+          var cpc = new ClearablePresConnected(lastConnectionManagerId);
+          presConnectedManager[lastConnectionManagerId] = this.__wrapPresConnCB(callback);
+          return cpc;
       };
 
+     
+     
       /** @function
        @description Registers a callback to be invoked when a presence created within this sandbox gets disconnected from the world.
        @return does not return anything
