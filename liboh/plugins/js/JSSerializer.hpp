@@ -23,8 +23,8 @@ const static char* JSSERIALIZER_TOKEN_FIELD_NAME = "__JSSERIALIZER_TOKEN_FIELD_N
 //any other field.  Going with "this".
 const static char* JSSERIALIZER_PROTOTYPE_NAME= "this";
 
+const static char* FUNCTION_CONSTRUCTOR_TEXT = "function Function() { [native code] }";
 
-//typedef std::map<int32,v8::Handle<v8::Object> >
 typedef std::vector<v8::Handle<v8::Object > > ObjectVec;
 typedef ObjectVec::iterator ObjectVecIter;
 

@@ -1117,13 +1117,11 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,con
     mContStructMap[contIDTracker] = internalContextField;
     ++contIDTracker;
 
-
     returner->SetInternalField(CONTEXT_FIELD_CONTEXT_STRUCT, External::New(internalContextField));
     returner->SetInternalField(TYPEID_FIELD,External::New(new String(CONTEXT_TYPEID_STRING)));
 
     return handle_scope.Close(returner);
 }
-
 
 
 

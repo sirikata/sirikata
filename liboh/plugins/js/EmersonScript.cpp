@@ -175,7 +175,6 @@ void EmersonScript::resetPresence(JSPresenceStruct* jspresStruct)
 
 
 
-
 //this is the callback that fires when proximateObject no longer receives
 //updates from loc (ie the object in the world associated with proximate object
 //is outside of querier's standing query registered to pinto).
