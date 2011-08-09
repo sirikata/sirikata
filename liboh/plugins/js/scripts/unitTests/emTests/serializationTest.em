@@ -34,6 +34,8 @@ function runTests()
     populatedArray();
     funcWithFields();
     prototypeObject();
+    prototypeChain();
+    
     if (!hasFailed)
         mTest.success('Got all the way through serializations.');
 
@@ -328,6 +330,26 @@ function prototypeObject()
                 failed('error serializing prototypeobject.  function did not give same values.');
         }
     }
+}
+
+
+//tests to ensure that when we serialize an object with a bunch of
+//prototypes, we re-assemble the prototypes in the correct order.
+function prototypeChain()
+{
+    var a  = {  };
+    var b = { 'field': 'b' };
+    var c = { 'field': 'c' };
+
+    a.__proto__ = b;
+    b.__proto__ = c;
+    c.__proto__ = {}; //default object
+
+
+    var serialized = system.serialize(a);
+    var deserialized = system.deserialize(serialized);
+    if (deserialized.field !== a.field)
+        failed('error serializing and deserializng chained prototypes.');
 }
 
 
