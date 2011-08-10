@@ -42,7 +42,7 @@ using namespace Sirikata;
 using namespace Sirikata::Transfer;
 using namespace Sirikata::Graphics;
 
-#define frequency 0.1
+#define frequency 1.0
 
 namespace Sirikata {
 

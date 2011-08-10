@@ -491,8 +491,11 @@ void Entity::setSelected(bool selected) {
       mSceneNode->showBoundingBox(selected);
 }
 
+void Entity::undisplay() {
+    unloadEntity();
+}
 
-void Entity::processMesh(Transfer::URI const& meshFile)
+void Entity::display(Transfer::URI const& meshFile)
 {
     if (meshFile.empty()) {
         unloadEntity();
@@ -972,7 +975,7 @@ public:
 
         std::tr1::unordered_map<uint32, Matrix4x4f> ibmMap;
 
-        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) ) {          
+        while( joint_it.next(&joint_id, &joint_idx, &pos_xform, &parent_id, transformList) ) {
 
           // We need to work backwards from the joint_idx (index into
           // mdptr->joints) to the index of the joint in this skin controller
@@ -980,14 +983,14 @@ public:
           uint32 skin_joint_idx = 0;
           for(skin_joint_idx = 0; skin_joint_idx < skin.joints.size(); skin_joint_idx++) {
             if (skin.joints[skin_joint_idx] == joint_idx) break;
-          }            
+          }
 
           Matrix4x4f ibm = Matrix4x4f::identity();
           if (skin_joint_idx < skin.joints.size()) {
             // Get the bone's inverse bind-pose matrix and store it in the ibmMap.
             ibm = skin.inverseBindMatrices[skin_joint_idx];
           }
-          
+
           ibmMap[joint_id] = ibm;
 
           /* Now construct the bone hierarchy. First implement the transform hierarchy from root to the bone's node. */
@@ -1010,18 +1013,18 @@ public:
             }
           }
 
-          const Node& node = mdptr->nodes[ mdptr->joints[joint_idx] ];          
+          const Node& node = mdptr->nodes[ mdptr->joints[joint_idx] ];
 
-          /* Finally create the actual bone */                              
-          
-          bone = bone->createChild(joint_id);          
+          /* Finally create the actual bone */
+
+          bone = bone->createChild(joint_id);
 
           bones[joint_id] = bone;
 
           for (std::set<String>::const_iterator anim_it = animations.begin(); anim_it != animations.end(); anim_it++) {
             // Find/create the animation
             const String& anim_name = *anim_it;
-            
+
             if (animationMap.find(anim_name) == animationMap.end())
               animationMap[anim_name] = skel->createAnimation(anim_name, 0.0);
             Ogre::Animation* anim = animationMap[anim_name];
@@ -1037,8 +1040,8 @@ public:
               // Add track, making sure we set the length long
               // enough to support this new track
 
-              Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);            
-            
+              Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);
+
               for(uint32 key_it = 0; key_it < anim_key_frames.inputs.size() ; key_it++) {
                 float32 key_time = anim_key_frames.inputs[key_it];
 
@@ -1066,12 +1069,12 @@ public:
 
                   key->setRotation( quat );
                   key->setScale( scale );
-                }              
+                }
               }
             }
             else { //otherwise, just create a single keyframe using the node's transform.
-              Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);            
-              
+              Ogre::NodeAnimationTrack* track = anim->createNodeTrack(joint_id, bone);
+
               float32 key_time = 0;
 
               anim->setLength( std::max(anim->getLength(), key_time) );
@@ -1081,21 +1084,21 @@ public:
                 //need to cancel out the effect of BSM*IBM from the parent in the hierarchy
                 Matrix4x4f parentI_inv;
                 invert(parentI_inv, ibmMap[parent_id]);
-                
+
                 mat = B_inv * parentI_inv * mat;
               }
-              
+
               bool ret = getTRS(mat, translate, rotate, scale);
               assert(ret);
-              
+
               if (ret ) {
                 //Set the transform for the keyframe.
                 Ogre::TransformKeyFrame* key = track->createNodeKeyFrame(key_time);
-                
+
                 key->setTranslate( translate - startPos );
-                
+
                 Ogre::Quaternion quat = startOrientation.Inverse() *  rotate;
-                
+
                 key->setRotation( quat );
                 key->setScale( scale );
               }

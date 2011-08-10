@@ -157,7 +157,7 @@ public:
     virtual bool isDynamic() const;
     // Check if the object is mobile.
     virtual bool isMobile() const = 0;
-    
+
     static Entity *fromMovableObject(Ogre::MovableObject *obj);
 
     void removeFromScene();
@@ -198,7 +198,10 @@ public:
     void bindTexture(const std::string &textureName, const String& objId);
     void unbindTexture(const std::string &textureName);
 
-    void processMesh(Transfer::URI const& newMesh);
+    // Trigger a download, load, & display of the given mesh.
+    void display(Transfer::URI const& newMesh);
+    // Fully 'undisplay', i.e. hide & unload the mesh.
+    void undisplay();
 
 
     protected:

@@ -46,7 +46,8 @@ using namespace Sirikata::Graphics;
 namespace Sirikata {
 
 DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c)
- : ResourceDownloadPlanner(c)
+ : ResourceDownloadPlanner(c),
+   mMaxLoaded(2500)
 {
 }
 
@@ -55,37 +56,50 @@ DistanceDownloadPlanner::~DistanceDownloadPlanner()
 
 }
 
-vector<DistanceDownloadPlanner::Resource>::iterator DistanceDownloadPlanner::findResource(ProxyObjectPtr p)
-{
-    vector<Resource>::iterator it;
-    for (it = resources.begin(); it != resources.end(); it++) {
-        if (it->proxy == p) return it;
-    }
-    return resources.end();
+void DistanceDownloadPlanner::addResource(Resource* r) {
+    mResources[r->proxy->getObjectReference()] = r;
+    mWaitingResources[r->proxy->getObjectReference()] = r;
+    checkShouldLoadNewResource(r);
 }
 
-void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
+DistanceDownloadPlanner::Resource* DistanceDownloadPlanner::findResource(const SpaceObjectReference& sporef) {
+    ResourceSet::iterator it = mResources.find(sporef);
+    return (it != mResources.end() ? it->second : NULL);
+}
+
+void DistanceDownloadPlanner::removeResource(const SpaceObjectReference& sporef) {
+    ResourceSet::iterator it = mResources.find(sporef);
+    if (it != mResources.end()) {
+        ResourceSet::iterator loaded_it = mLoadedResources.find(sporef);
+        if (loaded_it != mLoadedResources.end()) mLoadedResources.erase(loaded_it);
+
+        ResourceSet::iterator waiting_it = mWaitingResources.find(sporef);
+        if (waiting_it != mWaitingResources.end()) mWaitingResources.erase(waiting_it);
+
+        delete it->second;
+        mResources.erase(it);
+    }
+}
+
+
+void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
     p->MeshProvider::addListener(this);
-    Resource r(mesh, p);
-    resources.push_back(r);
+    addResource(new Resource(mesh, p));
 }
 
 void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
     p->MeshProvider::removeListener(this);
-    vector<Resource>::iterator it = findResource(p);
-    if (it != resources.end()) resources.erase(it);
+    removeResource(p->getObjectReference());
 }
 
 void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile,const SpaceObjectReference& sporef)
 {
-    vector<Resource>::iterator it = findResource(proxy);
-    URI last_file = it->file;
-    it->file = meshFile;
-    it->ready = true;
+    Resource* r = findResource(proxy->getObjectReference());
+    URI last_file = r->file;
+    r->file = meshFile;
     proxy->priority = calculatePriority(proxy);
-    if (it->file != last_file)
-        it->mesh->processMesh(it->file);
+    if (r->file != last_file && r->loaded)
+        r->mesh->display(r->file);
 }
 
 double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
@@ -106,13 +120,77 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
     return priority;
 }
 
+void DistanceDownloadPlanner::checkShouldLoadNewResource(Resource* r) {
+    if (mLoadedResources.size() < mMaxLoaded)
+        loadResource(r);
+}
+
+void DistanceDownloadPlanner::loadResource(Resource* r) {
+    mWaitingResources.erase(r->proxy->getObjectReference());
+    mLoadedResources[r->proxy->getObjectReference()] = r;
+
+    r->loaded = true;
+    r->mesh->display(r->proxy->getMesh());
+}
+
+void DistanceDownloadPlanner::unloadResource(Resource* r) {
+    mLoadedResources.erase(r->proxy->getObjectReference());
+    mWaitingResources[r->proxy->getObjectReference()] = r;
+
+    r->loaded = false;
+    r->mesh->undisplay();
+}
+
 void DistanceDownloadPlanner::poll()
 {
     if (camera == NULL) return;
-    vector<Resource>::iterator it;
 
-    for (it = resources.begin(); it != resources.end(); it++) {
-        it->proxy->priority = calculatePriority(it->proxy);
+    // Update priorities, tracking the largest undisplayed priority and the
+    // smallest displayed priority to decide if we're going to have to swap.
+    float32 mMinLoadedPriority = 1000000, mMaxWaitingPriority = 0;
+    for (ResourceSet::iterator it = mResources.begin(); it != mResources.end(); it++) {
+        Resource* r = it->second;
+        r->proxy->priority = calculatePriority(r->proxy);
+
+        if (r->loaded)
+            mMinLoadedPriority = std::min(mMinLoadedPriority, (float32)r->proxy->priority);
+        else
+            mMaxWaitingPriority = std::max(mMaxWaitingPriority, (float32)r->proxy->priority);
+    }
+
+    // If the min and max computed above are on the wrong sides, then, we need
+    // to do more work to figure out which things to swap between loaded &
+    // waiting.
+    if (mMinLoadedPriority < mMaxWaitingPriority) {
+        std::vector<Resource*> loaded_resource_heap;
+        std::vector<Resource*> waiting_resource_heap;
+
+        for (ResourceSet::iterator it = mResources.begin(); it != mResources.end(); it++) {
+            Resource* r = it->second;
+            if (r->loaded)
+                loaded_resource_heap.push_back(r);
+            else
+                waiting_resource_heap.push_back(r);
+        }
+        std::make_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
+        std::make_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+
+        while(!loaded_resource_heap.empty() && !waiting_resource_heap.empty()) {
+            Resource* min_loaded = loaded_resource_heap.front();
+            std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
+            loaded_resource_heap.pop_back();
+            Resource* max_waiting = waiting_resource_heap.front();
+            std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+            waiting_resource_heap.pop_back();
+
+            if (min_loaded->proxy->priority < max_waiting->proxy->priority) {
+                unloadResource(min_loaded);
+                loadResource(max_waiting);
+            }
+            else {
+                break;
+            }
+        }
     }
 }
 

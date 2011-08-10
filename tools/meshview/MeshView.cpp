@@ -70,7 +70,7 @@ public:
     virtual BoundingSphere3f bounds() { return BoundingSphere3f(Vector3f(0,0,0), 1.f); }
     virtual float32 priority() { return 1.f; }
     virtual bool isMobile() const { return false;}
-    
+
     // Entity Listener Interface
     virtual void entityLoaded(Entity* ent, bool success) {
         if (!mScreenshot.empty()) {
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
     MeshViewEntity* ent = new MeshViewEntity(renderer, GetOptionValue<String>("screenshot"));
     ent->setOgrePosition(Vector3d(0, 0, 0));
     ent->setOgreOrientation(Quaternion::identity());
-    ent->processMesh(Transfer::URI(GetOptionValue<String>("mesh")));
+    ent->display(Transfer::URI(GetOptionValue<String>("mesh")));
 
     ctx->add(ctx);
     ctx->add(renderer);

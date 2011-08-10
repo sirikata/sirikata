@@ -117,10 +117,6 @@ void ProxyEntity::validated(ProxyObjectPtr ptr) {
     // of updates have been received by the ProxyObject, we need to
     // refresh its important data
     updateLocation( mProxy, mProxy->getTimedMotionVector(), mProxy->getTimedMotionQuaternion(), mProxy->getBounds(),SpaceObjectReference::null() );
-
-    // And the final step is to update the mesh, kicking off the
-    // download process.
-    processMesh( mProxy->getMesh() );
 }
 
 void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
@@ -136,7 +132,7 @@ void ProxyEntity::invalidated(ProxyObjectPtr ptr, bool permanent) {
 }
 
 void ProxyEntity::handleDestroyTimeout() {
-    unloadMesh();
+    unloadEntity();
 }
 
 void ProxyEntity::destroyed(ProxyObjectPtr ptr) {

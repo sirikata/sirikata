@@ -64,22 +64,65 @@ public:
     virtual void stop();
 
     struct Resource {
-        Resource(Graphics::Entity *m, ProxyObjectPtr p) : mesh(m), proxy(p) {
-            ready = false;
-        }
+        Resource(Graphics::Entity *m, ProxyObjectPtr p)
+         : mesh(m),
+           proxy(p),
+           loaded(false)
+        {}
         virtual ~Resource(){}
 
         Transfer::URI file;
         Graphics::Entity *mesh;
         ProxyObjectPtr proxy;
-        bool ready;
+        bool loaded;
+
+
+        class Hasher {
+        public:
+            size_t operator() (const Resource& r) const {
+                return r.proxy->hash();
+            }
+        };
+
+        struct MaxHeapComparator {
+            bool operator()(Resource* lhs, Resource* rhs) {
+                return lhs->proxy->priority < rhs->proxy->priority;
+            }
+        };
+        struct MinHeapComparator {
+            bool operator()(Resource* lhs, Resource* rhs) {
+                return lhs->proxy->priority > rhs->proxy->priority;
+            }
+        };
+
     };
 
-    std::vector<Resource>::iterator findResource(ProxyObjectPtr p);
-
 protected:
-    std::vector<Resource> resources;
+    void addResource(Resource* r);
+    Resource* findResource(const SpaceObjectReference& sporef);
+    void removeResource(const SpaceObjectReference& sporef);
+
     virtual double calculatePriority(ProxyObjectPtr proxy);
+
+    void checkShouldLoadNewResource(Resource* r);
+
+    void loadResource(Resource* r);
+    void unloadResource(Resource* r);
+
+
+    int32 mMaxLoaded;
+
+    typedef std::tr1::unordered_map<SpaceObjectReference, Resource*, SpaceObjectReference::Hasher> ResourceSet;
+    // The full list
+    ResourceSet mResources;
+    // Loading has started for these
+    ResourceSet mLoadedResources;
+    // Waiting to be important enough to load
+    ResourceSet mWaitingResources;
+
+    // Heap storage for Resources. Choice between min/max heap is at call time.
+    typedef std::vector<Resource*> ResourceHeap;
+
 
 };
 }
