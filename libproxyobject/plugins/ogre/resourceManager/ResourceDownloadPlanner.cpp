@@ -47,7 +47,8 @@ using namespace Sirikata::Graphics;
 namespace Sirikata {
 
 ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll")
+ : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll"),
+   mMaxLoaded(2500)
 {
     c->add(this);
     camera = NULL;
@@ -87,4 +88,9 @@ void ResourceDownloadPlanner::stop()
 {
 
 }
+
+void ResourceDownloadPlanner::setMaxObjects(int32 new_max) {
+    mMaxLoaded = new_max;
+}
+
 }

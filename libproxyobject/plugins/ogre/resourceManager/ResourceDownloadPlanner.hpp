@@ -67,9 +67,10 @@ public:
     virtual void poll();
     virtual void stop();
 
+    virtual void setMaxObjects(int32 new_max);
 protected:
     Graphics::Camera *camera;
-
+    int32 mMaxLoaded;
 };
 }
 

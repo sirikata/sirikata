@@ -509,5 +509,10 @@ function() {
             }
         });
     };
+
+    std.graphics.DefaultGraphics.prototype.setMaxObjects = function(maxobjs) {
+        this._simulator.setMaxObjects(maxobjs);
+    };
+
     
 })();

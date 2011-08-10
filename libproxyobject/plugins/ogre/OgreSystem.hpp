@@ -241,6 +241,7 @@ public:
     boost::any startAnimation(std::vector<boost::any>& params);
     boost::any stopAnimation(std::vector<boost::any>& params);
 
+    boost::any setMaxObjects(std::vector<boost::any>& params);
 
     ~OgreSystem();
 

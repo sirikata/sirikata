@@ -323,6 +323,14 @@ function() {
         this.invoke.apply(this, args);
     };
 
+    /** Set the maximum number of objects that will be
+     *  displayed. Objects are prioritized intelligently, so nearer &
+     *  larger objects are displayed instead of distant & small ones.
+     */
+    std.graphics.Graphics.prototype.setMaxObjects = function(maxobjs) {
+        this.invoke("setMaxObjects", maxobjs, visible);
+    };
+
 })();
 
 // Import additional utilities that anybody using this class will need.

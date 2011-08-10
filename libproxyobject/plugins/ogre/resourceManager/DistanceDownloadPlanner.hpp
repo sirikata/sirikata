@@ -106,11 +106,14 @@ protected:
 
     void checkShouldLoadNewResource(Resource* r);
 
+    // Checks if changes just due to budgets are possible,
+    // e.g. regardless of priorities, we have waiting objects and free
+    // spots for them.
+    bool budgetRequiresChange() const;
+
     void loadResource(Resource* r);
     void unloadResource(Resource* r);
 
-
-    int32 mMaxLoaded;
 
     typedef std::tr1::unordered_map<SpaceObjectReference, Resource*, SpaceObjectReference::Hasher> ResourceSet;
     // The full list

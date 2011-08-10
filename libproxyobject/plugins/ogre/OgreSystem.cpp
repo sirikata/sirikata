@@ -637,6 +637,8 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return stopAnimation(params);
     else if (name == "setInheritScale")
         return setInheritScale(params);
+    else if (name == "setMaxObjects")
+        return setMaxObjects(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -1244,6 +1246,17 @@ boost::any OgreSystem::axis(vector<boost::any>& params) {
 
     return boost::any();
 }
+
+boost::any OgreSystem::setMaxObjects(vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+    uint32 new_max_objects = Invokable::anyAsNumeric(params[1]);
+
+    dlPlanner->setMaxObjects(new_max_objects);
+
+    return boost::any();
+}
+
 
 }
 }

@@ -46,8 +46,7 @@ using namespace Sirikata::Graphics;
 namespace Sirikata {
 
 DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c)
- : ResourceDownloadPlanner(c),
-   mMaxLoaded(2500)
+ : ResourceDownloadPlanner(c)
 {
 }
 
@@ -121,8 +120,15 @@ double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 }
 
 void DistanceDownloadPlanner::checkShouldLoadNewResource(Resource* r) {
-    if (mLoadedResources.size() < mMaxLoaded)
+    if ((int32)mLoadedResources.size() < mMaxLoaded)
         loadResource(r);
+}
+
+bool DistanceDownloadPlanner::budgetRequiresChange() const {
+    return
+        ((int32)mLoadedResources.size() < mMaxLoaded && !mWaitingResources.empty()) ||
+        ((int32)mLoadedResources.size() > mMaxLoaded && !mLoadedResources.empty());
+
 }
 
 void DistanceDownloadPlanner::loadResource(Resource* r) {
@@ -161,7 +167,11 @@ void DistanceDownloadPlanner::poll()
     // If the min and max computed above are on the wrong sides, then, we need
     // to do more work to figure out which things to swap between loaded &
     // waiting.
-    if (mMinLoadedPriority < mMaxWaitingPriority) {
+    //
+    // Or, if we've just gone under budget (e.g. the max number
+    // allowed increased, objects left the scene, etc) then we also
+    // run this, which will safely add if we're under budget.
+    if (mMinLoadedPriority < mMaxWaitingPriority || budgetRequiresChange()) {
         std::vector<Resource*> loaded_resource_heap;
         std::vector<Resource*> waiting_resource_heap;
 
@@ -175,17 +185,40 @@ void DistanceDownloadPlanner::poll()
         std::make_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
         std::make_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
 
-        while(!loaded_resource_heap.empty() && !waiting_resource_heap.empty()) {
-            Resource* min_loaded = loaded_resource_heap.front();
-            std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
-            loaded_resource_heap.pop_back();
-            Resource* max_waiting = waiting_resource_heap.front();
-            std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
-            waiting_resource_heap.pop_back();
+        while(true) {
+            if ((int32)mLoadedResources.size() < mMaxLoaded && !waiting_resource_heap.empty()) {
+                // If we're under budget, just add to top waiting items
+                Resource* max_waiting = waiting_resource_heap.front();
+                std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+                waiting_resource_heap.pop_back();
 
-            if (min_loaded->proxy->priority < max_waiting->proxy->priority) {
-                unloadResource(min_loaded);
                 loadResource(max_waiting);
+            }
+            else if ((int32)mLoadedResources.size() > mMaxLoaded && !loaded_resource_heap.empty()) {
+                // Otherwise, extract the min and check if we can continue
+                Resource* min_loaded = loaded_resource_heap.front();
+                std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
+                loaded_resource_heap.pop_back();
+
+                unloadResource(min_loaded);
+            }
+            else if (!waiting_resource_heap.empty() && !loaded_resource_heap.empty()) {
+                // They're equal, we're (potentially) exchanging
+                Resource* max_waiting = waiting_resource_heap.front();
+                std::pop_heap(waiting_resource_heap.begin(), waiting_resource_heap.end(), Resource::MaxHeapComparator());
+                waiting_resource_heap.pop_back();
+
+                Resource* min_loaded = loaded_resource_heap.front();
+                std::pop_heap(loaded_resource_heap.begin(), loaded_resource_heap.end(), Resource::MinHeapComparator());
+                loaded_resource_heap.pop_back();
+
+                if (min_loaded->proxy->priority < max_waiting->proxy->priority) {
+                    unloadResource(min_loaded);
+                    loadResource(max_waiting);
+                }
+                else {
+                    break;
+                }
             }
             else {
                 break;
