@@ -104,6 +104,7 @@ bool SQLiteStorage::StorageAction::execute(SQLiteDBPtr db, const Bucket& bucket,
                       }
                   }
               }
+
               rc = sqlite3_finalize(value_query_stmt);
               success = success && !SQLite::check_sql_error(db->db(), rc, NULL, "Error finalizing value query statement");
 
@@ -400,7 +401,7 @@ bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallb
     {
         commitTransaction(bucket, cb);
     }
-
+//    std::cout<<"--------------"<<std::endl;
     return true;
 }
 
