@@ -36,10 +36,11 @@
 
 namespace Sirikata {
 
-Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate)
+Poller::Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate, bool accurate)
  : mStrand(str),
    mTimer( Network::IOTimer::create(str->service()) ),
    mMaxRate(max_rate),
+   mAccurate(accurate),
    mUnschedule(false),
    mCB( mStrand->wrap(std::tr1::bind(&Poller::handleExec, this)) ),
    mUserCB(cb)
@@ -52,9 +53,16 @@ void Poller::start() {
     mStrand->post(mCB);
 }
 
-void Poller::setupNextTimeout() {
+void Poller::setupNextTimeout(const Duration& user_time) {
     if (mMaxRate != Duration::microseconds(0)) {
-        mTimer->wait(mMaxRate);
+        if (user_time > mMaxRate) {
+            // Uh oh, looks like we're going slower than the requested rate. If
+            // this is hit consistently, you're probably doing it wrong.
+            mStrand->post(mCB);
+        }
+        else {
+            mTimer->wait(mMaxRate-user_time);
+        }
     }
     else {
         mStrand->post( mCB );
@@ -66,10 +74,17 @@ void Poller::stop() {
 }
 
 void Poller::handleExec() {
+    static Duration null_offset = Duration::zero();
+    Time start = mAccurate ? Time::now(null_offset) : Time::null();
+
     mUserCB();
 
+    Time finish = mAccurate ? Time::now(null_offset) : Time::null();
+
+    Duration user_time = finish - start;
+
     if (!mUnschedule)
-        setupNextTimeout();
+        setupNextTimeout(user_time);
 }
 
 } // namespace Sirikata

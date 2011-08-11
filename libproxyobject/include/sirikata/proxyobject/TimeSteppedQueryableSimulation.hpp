@@ -43,8 +43,8 @@ class SpaceObjectReference;
 
 class TimeSteppedQueryableSimulation: public TimeSteppedSimulation {
 public:
-    TimeSteppedQueryableSimulation(Context* ctx, const Duration& rate, const String& name)
-     : TimeSteppedSimulation(ctx, rate, name)
+    TimeSteppedQueryableSimulation(Context* ctx, const Duration& rate, const String& name, bool accurate=false)
+     : TimeSteppedSimulation(ctx, rate, name, accurate)
     {
     }
 

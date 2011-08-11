@@ -47,10 +47,20 @@ class Context;
  *  to inherit from the PollingService class.  It serves the same function
  *  but requires a new object for every callback instead of using an existing
  *  service.
+ *
+ *  Normally, the rate of invocations is approximate and essentially assumes
+ *  that your callback will execute very quickly. You can also use a more
+ *  accurate mode that tries to account for the time spent in your callback and
+ *  tries to consistently trigger your callback at the requested period. Even
+ *  with the 'accurate' setting, you're still subject to delays due to the event
+ *  queue and imprecision from the timer. Further, there is overhead for timing
+ *  the user callback. The inaccurate version will only invoke callbacks at a
+ *  slower rate, and usually not by much, so you should only use this in special
+ *  circumstances.
  */
 class SIRIKATA_EXPORT Poller : public Service {
 public:
-    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0));
+    Poller(Network::IOStrand* str, const Network::IOCallback& cb, const Duration& max_rate = Duration::microseconds(0), bool accurate = false);
 
     /** Start polling this service on this strand at the given maximum rate. */
     virtual void start();
@@ -62,12 +72,13 @@ public:
      */
     virtual void stop();
 private:
-    void setupNextTimeout();
+    void setupNextTimeout(const Duration& user_time);
     void handleExec();
 
     Network::IOStrand* mStrand;
     Network::IOTimerPtr mTimer;
     Duration mMaxRate;
+    bool mAccurate;
     bool mUnschedule;
     Network::IOCallback mCB; // Our callback, just saves us from reconstructing it all the time
     Network::IOCallback mUserCB; // The user's callback

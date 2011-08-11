@@ -48,8 +48,8 @@ namespace Sirikata {
 
 class TimeSteppedSimulation: public ProxyCreationListener, public ConnectionEventListener, public PollingService , public Invokable{
 public:
-    TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name)
-     : PollingService(ctx->mainStrand, rate, ctx, name)
+    TimeSteppedSimulation(Context* ctx, const Duration& rate, const String& name, bool accurate=false)
+     : PollingService(ctx->mainStrand, rate, ctx, name, accurate)
     {
     }
     virtual Duration desiredTickRate() const = 0;

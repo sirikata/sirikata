@@ -250,7 +250,7 @@ public:
 
 
 OgreRenderer::OgreRenderer(Context* ctx)
- : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics"),
+ : TimeSteppedQueryableSimulation(ctx, Duration::seconds(1.f/60.f), "Ogre Graphics", true),
    mContext(ctx),
    mQuitRequested(false),
    mQuitRequestHandled(false),
