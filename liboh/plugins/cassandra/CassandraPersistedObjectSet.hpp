@@ -82,7 +82,7 @@ private:
     ObjectHostContext* mContext;
     String mDBHost;
     int mDBPort;
-    String mOHostID;
+    String mOHostID;  // Object Host ID
     CassandraDBPtr mDB;
 
     // FIXME because we don't have proper multithreaded support in cppoh, we
