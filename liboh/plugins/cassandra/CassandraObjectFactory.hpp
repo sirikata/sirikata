@@ -69,7 +69,7 @@ private:
     SpaceID mSpace;
     String mDBHost;
     int mDBPort;
-    String mOHostID;
+    String mOHostID;  // Object host ID
     int32 mConnectRate;
     typedef std::queue<ObjectInfo> ObjectInfoQueue;
     ObjectInfoQueue mIncompleteObjects;

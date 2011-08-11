@@ -67,14 +67,14 @@ CassandraStorage::StorageAction& CassandraStorage::StorageAction::operator=(cons
     return *this;
 }
 
-bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& bucket, ColumnTuples& mColTuples, ColumnNames& mNames, ReadSet* rs) {
+bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& bucket, ColumnTuples& ColTuples, Keys& keys, ReadSet* rs) {
     bool success = true;
     switch(type) {
       case Read:
           {
               try{
                   //(*rs)[key]=db->db()->getColumnValue(bucket.rawHexData(), "Persistence", key);
-                  mNames.push_back(key);
+                  keys.push_back(key);  // push the key into mKeys for batch read
               }
               catch (...){
                   //std::cout <<"Read Exception Caught"<<std::endl;
@@ -86,7 +86,7 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
           {
               try{
                   ColumnTuple tuple(CF_NAME, bucket.rawHexData(), key, *value, false);
-                  mColTuples.push_back(tuple);
+                  ColTuples.push_back(tuple); // push the tuple into mColumnTuples for batch write
                   //db->db()->insertColumn(bucket.rawHexData(), "Persistence", key, value->c_str());
               }
               catch (...){
@@ -99,7 +99,7 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
           {
               try{
                   ColumnTuple tuple(CF_NAME, bucket.rawHexData(), key, "", true);
-                  mColTuples.push_back(tuple);
+                  ColTuples.push_back(tuple);  // push the tuple into mColumnTuples for batch erase
                   //db->db()->remove(bucket.rawHexData(), "Persistence", "", key);
               }
               catch (...){
@@ -143,7 +143,7 @@ void CassandraStorage::initDB() {
 }
 
 bool CassandraStorage::CassandraBeginTransaction() {
-    if (mColumnTuples.size()!=0|| mColumnNames.size()!=0){
+    if (mColumnTuples.size()!=0|| mKeys.size()!=0){
         std::cout<<"Transaction List is not empty"<<std::endl;
         return false;
     }
@@ -152,9 +152,9 @@ bool CassandraStorage::CassandraBeginTransaction() {
 }
 
 bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs) {
-    if(mColumnNames.size()>0){
+    if(mKeys.size()>0){
         try{
-            *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, mColumnNames);
+            *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, mKeys);  // batch read
         }
         catch(...){
             //std::cout <<"Exception Caught when Batch Read"<<std::endl;
@@ -163,14 +163,14 @@ bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, 
     }
     if(mColumnTuples.size()>0){
         try{
-            db->db()->batchMutate(mColumnTuples);
+            db->db()->batchMutate(mColumnTuples);  // batch write/erase
         }
         catch(...){
             std::cout <<"Exception Caught when Batch Write/Erase"<<std::endl;
             return false;
         }
     }
-    mColumnNames.clear();
+    mKeys.clear();
     mColumnTuples.clear();
     return true;
 }
@@ -198,7 +198,7 @@ CassandraStorage::Transaction* CassandraStorage::getTransaction(const Bucket& bu
 
 void CassandraStorage::beginTransaction(const Bucket& bucket) {
     getTransaction(bucket);
-    mColumnNames.clear();
+    mKeys.clear();
     mColumnTuples.clear();
 }
 
@@ -228,7 +228,7 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
     bool success = true;
     success = CassandraBeginTransaction();
     for (Transaction::iterator it = trans->begin(); success && it != trans->end(); it++) {
-        success = success && (*it).execute(mDB, bucket, mColumnTuples, mColumnNames, rs);
+        success = success && (*it).execute(mDB, bucket, mColumnTuples, mKeys, rs);
         if (!success) {
             break;
         }
@@ -241,7 +241,7 @@ void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, C
     if (rs->empty() || !success) {
         delete rs;
         rs = NULL;
-        mColumnNames.clear();
+        mKeys.clear();
         mColumnTuples.clear();
     }
 

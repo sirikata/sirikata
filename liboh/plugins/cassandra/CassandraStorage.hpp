@@ -57,15 +57,15 @@ public:
     virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0);
 
 private:
-    typedef std::tr1::tuple<std::string,  //column family
-                            std::string,  //key
-                            std::string,  //column name
-                            std::string,  //value
+    typedef std::tr1::tuple<std::string,  //Cassandra column family
+                            std::string,  //Cassandra key
+                            std::string,  //Cassandra column name
+                            std::string,  //Cassandra value
                             bool          //true:earse, false:write
                            > ColumnTuple;
 
     typedef std::vector<ColumnTuple> ColumnTuples;
-    typedef std::vector<String> ColumnNames;
+    typedef std::vector<String> Keys;
     typedef std::vector<org::apache::cassandra::Column> Columns;
 
     // StorageActions are individual actions to take, i.e. read, write,
@@ -86,7 +86,7 @@ private:
         StorageAction& operator=(const StorageAction& rhs);
 
         // Executes this action. Assumes the owning CassandraStorage has setup the transaction.
-        bool execute(CassandraDBPtr db, const Bucket& bucket, ColumnTuples& mColTuples, ColumnNames& mNames, ReadSet* rs);
+        bool execute(CassandraDBPtr db, const Bucket& bucket, ColumnTuples& ColTuples, Keys& keys, ReadSet* rs);
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -120,9 +120,9 @@ private:
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
-    ColumnTuples mColumnTuples;
-    ColumnNames mColumnNames;
-    String mDBHost;
+    ColumnTuples mColumnTuples;  //tuples for batch write/erase
+    Keys mKeys;                  //keys for batch read
+    String mDBHost;              //host name or ip address for Cassandra server
     int mDBPort;
     CassandraDBPtr mDB;
 
