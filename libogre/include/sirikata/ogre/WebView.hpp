@@ -522,6 +522,8 @@ class SIRIKATA_OGRE_EXPORT WebView
                 ResetReadyCallback mResetReadyCallback;
                 NavigatedCallback mNavigatedCallback;
 
+                bool mUnresponsive;
+
 		friend class WebViewManager;
 
 
@@ -636,6 +638,13 @@ class SIRIKATA_OGRE_EXPORT WebView
         /** Close child browser by the given name.
          */
         void handleCloseBrowser(WebView* wv, const JSArguments& args);
+
+        // Helper handler for when a webview goes unresponsive.
+        void handleUnresponsiveTimeout(Liveness::Token alive);
+
+        // Does the real work for crashing/unresponsive pages, clearing out old
+        // one and starting up a new copy
+        void restartPage();
 
         };
 }

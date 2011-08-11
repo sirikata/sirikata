@@ -94,6 +94,7 @@ WebView::WebView(
 	texFiltering = Ogre::FO_NONE;
 
         mReady = false;
+        mUnresponsive = false;
 
     mBorderLeft = border.mBorderLeft;
     mBorderRight = border.mBorderRight;
@@ -154,6 +155,7 @@ WebView::WebView(
 	this->texFiltering = texFiltering;
 
         mReady = false;
+        mUnresponsive = false;
 
 	createMaterial();
 }
@@ -1238,7 +1240,31 @@ void WebView::onPaint(Berkelium::Window*win,
 }
 void WebView::onCrashed(Berkelium::Window*) {
     SILOG(webview,error,"WebView crashed: " << viewName);
+    restartPage();
+}
+void WebView::onResponsive(Berkelium::Window*) {
+    SILOG(webview,error,"WebView became responsive again: " << viewName);
+    mUnresponsive = false;
+}
+void WebView::onUnresponsive(Berkelium::Window*) {
+    SILOG(webview,error,"WebView unresponsive: " << viewName);
+    // Start a timer and flag this as unresponsive. In the callback
+    // we'll check the flag and forcibly kill the webview if it
+    // doesn't seem to be coming back.
+    mUnresponsive = true;
+    mContext->mainStrand->post(
+        Duration::seconds(10),
+        std::tr1::bind(&WebView::handleUnresponsiveTimeout, this, livenessToken())
+    );
+}
 
+void WebView::handleUnresponsiveTimeout(Liveness::Token alive) {
+    if (!alive) return;
+    if (!mUnresponsive) return;
+    restartPage();
+}
+
+void WebView::restartPage() {
     // Try to cleanup and reinitialize everything.
     cleanupWebView();
     createWebView(true);
@@ -1252,12 +1278,7 @@ void WebView::onCrashed(Berkelium::Window*) {
     // Make sure webview's transparency setting is correct
     this->setTransparent(isWebViewTransparent);
 }
-void WebView::onResponsive(Berkelium::Window*) {
-    SILOG(webview,error,"WebView became responsive again: " << viewName);
-}
-void WebView::onUnresponsive(Berkelium::Window*) {
-    SILOG(webview,error,"WebView unresponsive: " << viewName);
-}
+
 void WebView::onCreatedWindow(Berkelium::Window*, Berkelium::Window*newwin) {
     std::string name;
     {
