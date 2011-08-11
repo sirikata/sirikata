@@ -33,6 +33,8 @@
 if (typeof(std) === "undefined") /**@namespace */ std = {};
 if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
 
+system.require('std/escape.em');
+
 /**  
  * Converts an object to a string in a 'pretty' format, i.e. so it is
  *  human-readable, multiple lines, and handles indentation. If the
@@ -40,7 +42,7 @@ if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
  *  the normal toString version will be returned.  Generally this
  *  should only be used on small, tree-like objects.
  */
-std.core.pretty = function(obj) {
+std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
     
     var visited = [];
 
@@ -127,7 +129,9 @@ std.core.pretty = function(obj) {
             var key = objectFields(cur.obj)[cur.idx];
             
             var child = cur.obj[key];
-            output += key + ': ';
+            var displaykey = keysInQuotes ? Escape.escapeString(key) : key;
+            output += displaykey + ': ';
+
             if (typeof(child) === "object" && child !== null) {
 
 
@@ -158,7 +162,13 @@ std.core.pretty = function(obj) {
                     obj_stack.push( {obj: child, idx: -1} );
             }
             else
-                output += child;
+            {
+                if (displayQuotes && typeof(child) === 'string')
+                    output += Escape.escapeString(child);
+                else
+                    output += child;
+            }
+            
         }
         else {
             // Close this object
@@ -176,4 +186,9 @@ std.core.pretty = function(obj) {
     }
 
     return output;
+};
+
+
+std.core.quotepretty = function(obj) {
+    return std.core.pretty(obj, true, true);
 };
