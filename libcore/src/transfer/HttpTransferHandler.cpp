@@ -116,7 +116,6 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
     }
 
 
-    FileHeaders emptyHeaders;
     Fingerprint fp = SparseData(response->getData()).computeFingerprint();
 
     //Just treat everything as a single chunk for now
@@ -128,7 +127,7 @@ void HttpNameHandler::request_finished(std::tr1::shared_ptr<HttpManager::HttpRes
 
     SharedChunkCache::getSingleton().getCache()->addToCache(fp, response->getData());
     std::tr1::shared_ptr<RemoteFileMetadata> met(new RemoteFileMetadata(fp, request->getURI(),
-                file_size, chunkList, emptyHeaders));
+            file_size, chunkList, response->getHeaders()));
     callback(met);
 }
 
