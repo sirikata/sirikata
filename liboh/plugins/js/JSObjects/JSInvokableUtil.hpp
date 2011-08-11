@@ -53,8 +53,8 @@ inline boost::any V8ToAny(EmersonScript* parent, v8::Handle<v8::Value> val) {
     /* Pushing only string params for now */
     if(val->IsString())
     {
-      v8::String::AsciiValue str(val);
-      std::string s = std::string(*str);
+      v8::String::Utf8Value str(val);
+      std::string s = FromV8String(str);
       return Invokable::asAny(s);
     }
     else if(val->IsFunction())

@@ -84,13 +84,13 @@ String exceptionAsString(v8::TryCatch& try_catch, EmersonLineMap* lineMap) {
 
     v8::HandleScope handle_scope;
     v8::String::Utf8Value exception(try_catch.Exception());
-    const char* exception_string = ToCString(exception);
+    String exception_string = FromV8String(exception);
     v8::Handle<v8::Message> message = try_catch.Message();
 
     // Print (filename):(line number): (message).
     if (!message.IsEmpty()) {
         v8::String::Utf8Value filename(message->GetScriptResourceName());
-        const char* filename_string = ToCString(filename);
+        String filename_string = FromV8String(filename);
         int linenum = message->GetLineNumber();
         if (lineMap != NULL) {
             EmersonLineMap::iterator iter = lineMap->find(linenum);
@@ -100,7 +100,7 @@ String exceptionAsString(v8::TryCatch& try_catch, EmersonLineMap* lineMap) {
         os << filename_string << ':' << linenum << ": " << exception_string << "\n";
         // Print line of source code.
         v8::String::Utf8Value sourceline(message->GetSourceLine());
-        const char* sourceline_string = ToCString(sourceline);
+        String sourceline_string = FromV8String(sourceline);
         os << sourceline_string << "\n";
         // Print wavy underline (GetUnderline is deprecated).
         int start = message->GetStartColumn();
@@ -113,7 +113,7 @@ String exceptionAsString(v8::TryCatch& try_catch, EmersonLineMap* lineMap) {
     }
     v8::String::Utf8Value stack_trace(try_catch.StackTrace());
     if (stack_trace.length() > 0) {
-      const char* stack_trace_string = ToCString(stack_trace);
+      String stack_trace_string = FromV8String(stack_trace);
       os << stack_trace_string << "\n";
     }
     return os.str();
@@ -255,7 +255,7 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
         v8::Handle<v8::Value> result = protectedEval(script, &origin, new_ctx, mContext, true);
         if (!result.IsEmpty()) {
             v8::String::Utf8Value exception(result);
-            const char* exception_string = ToCString(exception);
+            String exception_string = FromV8String(exception);
             JSLOG(error,"Initial script threw an exception: " << exception_string);
         }
 
@@ -552,7 +552,7 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
     HandleScope handle_scope;
     String em_script_str = toCompile;
     EmersonLineMap lineMap;
-    
+
     if(em_script_str.size() > 0 &&em_script_str.at(em_script_str.size() -1) != '\n')
         em_script_str.push_back('\n');
 
@@ -560,7 +560,7 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
 
     try {
         int em_compile_err = 0;
-        
+
         String js_script_str;
         bool successfullyCompiled = emerson_compile(String("eval statement"), em_script_str.c_str(),
             js_script_str, em_compile_err, handleEmersonRecognitionError,
@@ -578,7 +578,7 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
         return v8::ThrowException(err);
     }
 
-    
+
     JSLOG(error, "Got a compiler error in internalEval");
     return v8::String::New("");
 }
@@ -627,7 +627,7 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
             v8::String::Utf8Value parent_script_name(em_script_name->ResourceName());
 
             String js_script_str;
-            bool successfullyCompiled = emerson_compile(String(ToCString(parent_script_name)), em_script_str_new.c_str(),
+            bool successfullyCompiled = emerson_compile(FromV8String(parent_script_name), em_script_str_new.c_str(),
                                                         js_script_str, em_compile_err, handleEmersonRecognitionError,
                                                         &lineMap);
 
@@ -701,8 +701,8 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
 
 
     if (!result.IsEmpty() && !result->IsUndefined()) {
-        v8::String::AsciiValue ascii(result);
-        JSLOG(detailed, "Script result: " << *ascii);
+        v8::String::Utf8Value text_val(result);
+        JSLOG(detailed, "Script result: " << FromV8String(text_val));
     }
 
     postEvalOps();

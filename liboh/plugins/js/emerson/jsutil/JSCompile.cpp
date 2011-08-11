@@ -34,7 +34,7 @@ char* read_js_file_as_string(char* js_file_name)
 			}
 			myfile.close();
 			return output;
-		}	
+		}
 		else
 		{
 			cout << "Could not open the file " << js_file_name << endl;
@@ -61,7 +61,9 @@ v8::Handle<v8::Value> Print(const v8::Arguments& args) {
             printf(" ");
         }
         //convert the args[i] type to normal char* string
-        v8::String::AsciiValue str(args[i]);
+        // FIXME we should really escape things here to deal with unprintable
+        // characters, fix up nulls so they don't terminate printing, etc.
+        v8::String::Utf8Value str(args[i]);
         printf("%s", *str);
     }
     printf("\n");
@@ -76,10 +78,10 @@ v8::Handle<v8::Value> Print(const v8::Arguments& args) {
 
 
 int main(int argc, char* argv[]) {
-	
-		
-	
-	
+
+
+
+
 	// Create a stack-allocated handle scope.
 	HandleScope handle_scope;
 
@@ -87,29 +89,29 @@ int main(int argc, char* argv[]) {
 	// creating a global template
 
 	Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New();
-	global->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));	
-		
+	global->Set(v8::String::New("print"), v8::FunctionTemplate::New(Print));
+
 	// Create a new context.
 	Persistent<Context> context = Context::New(NULL, global);
-	
+
 
 	current_context = context;
 	// Enter the created context for compiling and
-	// running the hello world script. 
+	// running the hello world script.
 	Context::Scope context_scope(context);
 
 	//Local<Object> global = Context::GetCurrent()->Global();
-	
+
 	//...
 	//associates plus on script to the Plus function
-	
+
 	//create_entity_with_name("bhupesh", context);
-	
-	
+
+
 	Handle<String> source ;
 	Handle<Script> script;
 
-	// Get the JavaScript file as a string 
+	// Get the JavaScript file as a string
 	// arg[0] is the file name
 
 	if( argv[1] == NULL)
@@ -130,28 +132,25 @@ int main(int argc, char* argv[]) {
 
 	// Run the script to get the result.
 //	script->Run();
-	
+
 //	assert(f_value->IsFunction());
 //	Local<Function> f = Local<Function>::Cast(f_value);
 //	f->Call(Context::GetCurrent()->Global(), 0, NULL);
 
 	//Local<Value> args[2] = {v8::Number::New(3), v8::Number::New(4)};
-	
-	
+
+
 
 	//Local<Number> result = (f->Call(Context::GetCurrent()->Global(), 2, args))->ToNumber();
-	
-	
+
+
 	//int num = result->Int32Value();
 	//printf("%d\n", num);
-		 
-	
+
+
 	// Dispose the persistent context.
 	context.Dispose();
-	
-	
+
+
 	return 0;
 }
-
-
-

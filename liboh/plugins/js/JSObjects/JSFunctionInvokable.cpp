@@ -42,7 +42,7 @@ namespace JS
    {
      /*
      v8::String::Utf8Value error(try_catch.Exception());
-     const char* cMsg = ToCString(error);
+     String cMsg = FromV8String(error);
      std::cerr << cMsg << "\n";
      */
    }
