@@ -443,6 +443,10 @@ void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
           new_bbs->setDefaultWidth( (bboard->aspectRatio > 0.f) ? bboard->aspectRatio : 1.f);
           new_bbs->setDefaultHeight(1.f);
           new_bbs->createBillboard(Ogre::Vector3(0,0,0), Ogre::ColourValue(1.f, 1.f, 1.f, 1.f));
+          // The BillboardSet ends up with some bizarre settings for
+          // bounds. Force them to be what we want manually: radius =
+          // 1 and bounds for the box that fit in there (1/sqrt(3) sides)
+          new_bbs->setBounds(Ogre::AxisAlignedBox(Ogre::Vector3(-.57735f, -.57735f, -.57735f), Ogre::Vector3(.57735f, .57735f, .57735f)), 1.f);
       } catch (Ogre::InvalidParametersException &) {
         SILOG(ogre,error,"Got invalid parameters");
         throw;
