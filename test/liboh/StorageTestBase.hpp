@@ -282,20 +282,115 @@ public:
         );
         waitForTransaction();
 
-        // After erase, a read should fail
-        String keys[2] = { String("a"), String("b") };
-        String vals[2] = { String("a"), String("b") };
-        for(int i = 0; i < 2; i++) {
-            _storage->beginTransaction(_buckets[0]);
-            _storage->read(_buckets[0], keys[i]);
-            ReadSet rs;
-            rs[keys[i]] = vals[i];
-            _storage->commitTransaction(_buckets[0],
-                std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs, _1, _2)
-            );
-        }
+        _storage->read(_buckets[0], "a",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->read(_buckets[0], "f",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+    }
+
+    void testAtmoicWrite() {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "a", "abcde");
+        _storage->write(_buckets[0], "f", "fghij");
+        _storage->read(_buckets[0], "x");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        ReadSet rs;
+        rs["a"] = "abcde";
+        rs["f"] = "fghij";
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->read(_buckets[0], "a");
+        _storage->read(_buckets[0], "f");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs, _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->write(_buckets[0], "a", "abcde");
+        _storage->write(_buckets[0], "f", "fghij");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->read(_buckets[0], "a");
+        _storage->read(_buckets[0], "f");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs, _1, _2)
+        );
         waitForTransaction();
     }
+
+    void testAtmoicWriteErase() {
+        using std::tr1::placeholders::_1;
+        using std::tr1::placeholders::_2;
+
+        ReadSet rs1;
+        rs1["a"] = "abcde";
+
+        ReadSet rs2;
+        rs2["k"] = "klmno";
+
+        _storage->erase(_buckets[0], "k",
+             std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+         );
+         waitForTransaction();
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->erase(_buckets[0], "a");
+        _storage->erase(_buckets[0], "f");
+        _storage->read(_buckets[0], "x");
+        _storage->write(_buckets[0], "k", "klmno");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->read(_buckets[0], "a",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs1, _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->read(_buckets[0], "k",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs2, _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->beginTransaction(_buckets[0]);
+        _storage->erase(_buckets[0], "a");
+        _storage->erase(_buckets[0], "f");
+        _storage->write(_buckets[0], "k", "klmno");
+        _storage->commitTransaction(_buckets[0],
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, ReadSet(), _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->read(_buckets[0], "a",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, false, rs1, _1, _2)
+        );
+        waitForTransaction();
+
+        _storage->read(_buckets[0], "k",
+            std::tr1::bind(&StorageTestBase::checkReadValues, this, true, rs2, _1, _2)
+        );
+        waitForTransaction();
+    }
+
 };
 
 const OH::Storage::Bucket StorageTestBase::_buckets[2] = {
