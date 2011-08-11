@@ -54,6 +54,7 @@ namespace Graphics {
 
 class OgreRenderer;
 class Entity;
+class WebView;
 
 class SIRIKATA_OGRE_EXPORT EntityListener {
   public:
@@ -89,6 +90,9 @@ protected:
 
     bool mActiveCDNArchive;
     unsigned int mCDNArchive;
+
+    typedef std::vector<WebView*> WebMaterialList;
+    WebMaterialList mWebMaterials;
 
     // We need to track this because Ogre doesn't seem to do the right
     // thing if you toggle visibility with cascading, then later add

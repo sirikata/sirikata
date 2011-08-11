@@ -38,6 +38,9 @@
 #include <sirikata/ogre/Lights.hpp>
 #include <sirikata/core/network/IOStrandImpl.hpp>
 #include <sirikata/core/transfer/URL.hpp>
+#include <sirikata/ogre/Util.hpp>
+#include <sirikata/ogre/WebViewManager.hpp>
+#include <FreeImage.h>
 
 #undef nil
 
@@ -385,10 +388,6 @@ void Entity::unbindTexture(const std::string &textureName) {
 
 void Entity::loadMesh(const String& meshname)
 {
-    unloadEntity();
-
-    mReplacedMaterials.clear();
-
     Ogre::Entity* new_entity = NULL;
     try {
       try {
@@ -430,9 +429,6 @@ void Entity::loadMesh(const String& meshname)
 
 void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
 {
-    unloadEntity();
-    mReplacedMaterials.clear();
-
     // With the material in place, create the Billboard(Set)
     Ogre::BillboardSet* new_bbs = NULL;
     try {
@@ -474,7 +470,12 @@ void Entity::unloadMesh() {
         getScene()->getSceneManager()->destroyEntity(meshObj);
         mOgreObject=NULL;
     }
+    // Even though these are common in both, we only want to do them if we had
+    // an entity.
     mReplacedMaterials.clear();
+    for(WebMaterialList::iterator it = mWebMaterials.begin(); it != mWebMaterials.end(); it++)
+        WebViewManager::getSingleton().destroyWebView(*it);
+    mWebMaterials.clear();
 }
 
 void Entity::unloadBillboard() {
@@ -484,7 +485,12 @@ void Entity::unloadBillboard() {
         getScene()->getSceneManager()->destroyBillboardSet(bbObj);
         mOgreObject = NULL;
     }
+    // Even though these are common in both, we only want to do them if we had
+    // an entity.
     mReplacedMaterials.clear();
+    for(WebMaterialList::iterator it = mWebMaterials.begin(); it != mWebMaterials.end(); it++)
+        WebViewManager::getSingleton().destroyWebView(*it);
+    mWebMaterials.clear();
 }
 
 void Entity::setSelected(bool selected) {
@@ -1570,6 +1576,9 @@ void Entity::createMesh(Liveness::Token alive) {
         }
     }
 
+    // Clear out any old data if we have any left
+    unloadEntity();
+
     MeshdataPtr mdptr( std::tr1::dynamic_pointer_cast<Meshdata>(visptr) );
     if (mdptr) {
         createMeshdata(mdptr, usingDefault, assetDownload);
@@ -1614,7 +1623,26 @@ void Entity::loadDependentTextures(AssetDownloadTaskPtr assetDownload, bool usin
                 (*mTextureFingerprints)[tex_data.request->getURI().toString()] = id;
 
                 fixOgreURI(id);
-                CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+
+                // This could be a regular texture or a . If its ever a static
+                // image, we want to decode it directly...
+                FIMEMORY* mem_img_data = FreeImage_OpenMemory((BYTE*)tex_data.response->data(), tex_data.response->size());
+                FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeFromMemory(mem_img_data);
+                FreeImage_CloseMemory(mem_img_data);
+                if (fif != FIF_UNKNOWN) {
+                    CDNArchiveFactory::getSingleton().addArchiveData(mCDNArchive,id,SparseData(tex_data.response));
+                }
+                else if (tex_data.request->getURI().scheme() == "http") {
+                    // Or, if its an http URL, we can try displaying it in a webview
+                    OGRE_LOG(detailed,"Using webview for " << id << ": " << tex_data.request->getURI());
+                    WebView* web_mat = WebViewManager::getSingleton().createWebViewMaterial(
+                        mScene->context(),
+                        id,
+                        512, 512 // Completely arbitrary...
+                    );
+                    web_mat->loadURL(tex_data.request->getURI().toString());
+                    mWebMaterials.push_back(web_mat);
+                }
             }
         }
     }
