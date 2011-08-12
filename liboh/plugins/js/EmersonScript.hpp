@@ -307,6 +307,9 @@ private:
     /*
       Deserializes the object contained in js_msg, checks if have any pattern
       handlers that match it, and dispatch their callbacks if there are.
+
+      If have any handlers that match pattern of message, dispatch their associated
+      callbacks.
      */
     bool handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
 
@@ -345,14 +348,6 @@ private:
      */
     void finishContextClear(JSContextStruct* jscont);
 
-   /**
-      Deserializes the jsmessage that a presence on this entity with
-      sporef dst received from a presence in the world with sporef src.
-
-      If have any handlers that match pattern of message, dispatch their associated
-      callbacks.
-   */
-    bool deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg);
 
     //looks through all previously connected presneces (located in mPresences).
     //returns the corresponding jspresencestruct that has a spaceobjectreference

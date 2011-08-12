@@ -100,7 +100,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> debug_fileRead(const String& filename);
 
 
-    v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
+    v8::Handle<v8::Value> deserialize(const String& toDeserialize);
 
     v8::Handle<v8::Value> struct_rootReset();
 

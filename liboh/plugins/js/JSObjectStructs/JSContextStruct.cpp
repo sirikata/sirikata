@@ -392,24 +392,40 @@ bool JSContextStruct::canReceiveMessagesFor(const SpaceObjectReference& receiver
     return false;
 }
 
-v8::Handle<v8::Value> JSContextStruct::deserializeObject(const String& toDeserialize)
+v8::Handle<v8::Value> JSContextStruct::deserialize(const String& toDeserialize)
 {
     v8::HandleScope handle_scope;
+    CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
+
+    
     Sirikata::JS::Protocol::JSMessage js_msg;
     bool parsed = js_msg.ParseFromString(toDeserialize);
 
+    if (parsed)
+    {
+        bool deserializedSuccess;
+        v8::Handle<v8::Object> obj = JSSerializer::deserializeObject(emerScript, js_msg,deserializedSuccess);
+    
+        if (!deserializedSuccess)
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
+    
+        return handle_scope.Close(obj);
+    }
+
+    //if it does not parse as a js_msg, then we should try to parse it as a
+    //jsfieldval
+    Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
+    parsed = jsFieldVal.ParseFromString(toDeserialize);
     if (!parsed)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error deserializing string.")));
+        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not parse string.")));
 
-    CHECK_EMERSON_SCRIPT_ERROR(emerScript,deserialize,jsObjScript);
-    bool deserializedSuccess;
-    v8::Handle<v8::Object> obj = JSSerializer::deserializeObject(emerScript, js_msg,deserializedSuccess);
-
+    bool deserializedSuccess = false;
+    v8::Handle<v8::Value> returner = JSSerializer::deserializeMessage(emerScript, jsFieldVal, deserializedSuccess);
 
     if (!deserializedSuccess)
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
-
-    return handle_scope.Close(obj);
+            return v8::ThrowException( v8::Exception::Error(v8::String::New("Error could not deserialize object")));
+    
+    return handle_scope.Close(returner);
 }
 
 

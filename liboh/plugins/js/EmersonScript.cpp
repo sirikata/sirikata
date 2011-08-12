@@ -675,16 +675,6 @@ void EmersonScript::registerFixupSuspendable(JSSuspendable* jssusp, uint32 contI
 
 
 
-bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const std::string& payload)
-{
-    Sirikata::JS::Protocol::JSMessage js_msg;
-    bool parsed = js_msg.ParseFromString(payload);
-
-    if (! parsed)
-        return false;
-
-    return deserializeMsgAndDispatch(src,dst,js_msg);
-}
 
 void EmersonScript::registerContextForClear(JSContextStruct* jscont)
 {
@@ -712,9 +702,20 @@ void EmersonScript::finishContextClear(JSContextStruct* jscont)
     }
 }
 
-
-bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, const SpaceObjectReference& dst, Sirikata::JS::Protocol::JSMessage js_msg)
+bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const SpaceObjectReference& dst, const String& payload)
 {
+    Sirikata::JS::Protocol::JSMessage jsMsg;
+    Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
+    bool isJSMsg   = jsMsg.ParseFromString(payload);
+    bool isJSField = false;
+    if (!isJSMsg)
+        isJSField = jsFieldVal.ParseFromString(payload);
+
+    //if can't decode the payload as a jsmessage or
+    //a jsfieldval, then return false;
+    if (!(isJSMsg || isJSField))
+        return false;
+    
 
     if (isStopped()) {
         JSLOG(warn, "Ignoring message after shutdown request.");
@@ -737,7 +738,6 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
     }
 
 
-
     for (std::vector<JSContextStruct*>::iterator curContIter = currentContexts.begin();
          curContIter != currentContexts.end();
          ++curContIter)
@@ -756,9 +756,19 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
             v8::Handle<v8::Object> msgSender =createVisiblePersistent(SpaceObjectReference(src.space(),src.object()), JSProxyPtr() ,receiver->mContext);
 
             //try deserialization
-            bool deserializeWorks;
-            v8::Handle<v8::Object> msgObj = JSSerializer::deserializeObject( this, js_msg,deserializeWorks);
+            bool deserializeWorks =false;
 
+            v8::Handle<v8::Value> msgVal;
+            if (isJSMsg)
+            {
+                //try to decode as object.
+                msgVal = JSSerializer::deserializeObject( this, jsMsg,deserializeWorks);
+            }
+            else
+            {
+                //try to decode as a value.
+                msgVal = JSSerializer::deserializeMessage(this,jsFieldVal,deserializeWorks);
+            }
             if (! deserializeWorks)
             {
                 JSLOG(error, "Deserialization Failed!!");
@@ -767,7 +777,7 @@ bool EmersonScript::deserializeMsgAndDispatch(const SpaceObjectReference& src, c
             }
 
             v8::Handle<v8::Value> argv[3];
-            argv[0] =msgObj;
+            argv[0] =msgVal;
             argv[1] = msgSender;
             argv[2] = v8::String::New (dst.toString().c_str(), dst.toString().size());
             invokeCallback(receiver,receiver->presenceMessageCallback,3,argv);
@@ -797,10 +807,11 @@ void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const 
     SpaceObjectReference to  (dst.space(), dst.object());
     SpaceObjectReference from(src.space(), src.object());
 
-    Sirikata::JS::Protocol::JSMessage js_msg;
-    bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
-
-    deserializeMsgAndDispatch(from,to,js_msg);
+    JSLOG(error, "Error handling unreliable message.  Not currently parsing message");
+    
+    // Sirikata::JS::Protocol::JSMessage js_msg;
+    // bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
+    //    deserializeMsgAndDispatch(from,to,js_msg);
 }
 
 
