@@ -150,6 +150,23 @@ void JSSerializer::serializePresence(v8::Local<v8::Object> jsPresence, Sirikata:
   fillVisible(jsmessage, presStruct->getSporef());
 }
 
+
+
+std::string JSSerializer::serializeMessage(v8::Local<v8::Value> v8Val, int32 toStamp)
+{
+    ObjectVec allObjs;
+    Sirikata::JS::Protocol::JSFieldValue jsfield;
+    v8::HandleScope handleScope;
+    serializeFieldValueInternal(jsfield,v8Val,toStamp, allObjs);
+
+    String serializedFieldValue;
+    jsfield.SerializeToString(&serializedFieldValue);
+
+    unmarkSerialized(allObjs);
+    return serializedFieldValue;
+}
+
+
 std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toStampWith)
 {
   ObjectVec allObjs;
@@ -273,6 +290,8 @@ void JSSerializer::annotateObject(ObjectVec& objVec, v8::Handle<v8::Object> v8Ob
 }
 
 
+
+
 void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata::JS::Protocol::IJSMessage& jsmessage,int32 & toStampWith,ObjectVec& objVec)
 {
     //otherwise assuming it is a v8 object for now
@@ -323,7 +342,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         }
     }
 
-    bool wantBeforeAndAfter = false;
 
     std::vector<String> properties = getOwnPropertyNames(v8Obj);
     for( unsigned int i = 0; i < properties.size(); i++)
@@ -333,9 +351,7 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         v8::Local<v8::Value> prop_val;
 
         if (properties[i] == JSSERIALIZER_PROTOTYPE_NAME)
-        {
             prop_val = v8Obj->GetPrototype();
-        }
         else
             prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
         
@@ -357,137 +373,140 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
             INLINE_STR_CONV(v8Func->ToString(),cStrMsgBody2, "error decoding string in serializeObjectInternal");
 
-            if ((cStrMsgBody2.find("{ [native code] }") != String::npos) && (cStrMsgBody2 != FUNCTION_CONSTRUCTOR_TEXT))
+            if ((cStrMsgBody2.find("{ [native code] }") != String::npos) &&
+                (cStrMsgBody2 != FUNCTION_CONSTRUCTOR_TEXT))
             {
                 continue;
             }
         }
 
-        
         Sirikata::JS::Protocol::IJSField jsf = jsmessage.add_fields();
         Sirikata::JS::Protocol::IJSFieldValue jsf_value = jsf.mutable_value();
 
         // create a JSField out of this
         jsf.set_name(prop_name);
+        serializeFieldValueInternal(jsf_value,prop_val,toStampWith,objVec);
+    }
+}
 
 
-        /* Check if the value is a function, object, bool, etc. */
-        if(prop_val->IsFunction())
+void JSSerializer::serializeFieldValueInternal(Sirikata::JS::Protocol::IJSFieldValue& jsf_value,
+                                               v8::Handle<v8::Value> prop_val,
+                                               int32 & toStampWith,
+                                               ObjectVec& objVec)
+{
+    /* Check if the value is a function, object, bool, etc. */
+    if(prop_val->IsFunction())
+    {
+        v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val->ToObject());
+        v8::Local<v8::Value> hiddenValue = v8Func->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
+
+        if (hiddenValue.IsEmpty())
         {
-            v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
-            v8::Local<v8::Value> hiddenValue = v8Func->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
+            //means that we have not already stamped this function object
+            //as having been serialized.  need to serialize it now.
+            //annotateObject(objVec,v8Func,toStampWith);
+            Sirikata::JS::Protocol::IJSMessage ijs_m =jsf_value.mutable_o_value();
+            serializeObjectInternal(v8Func, ijs_m, toStampWith,objVec);
+        }
+        else
+        {
+            //we have already stamped this function object as having been
+            //serialized.  Instead of serializing it again, point to
+            //the old version.
 
-            
-            if (hiddenValue.IsEmpty())
-            {
-                //means that we have not already stamped this function object
-                //as having been serialized.  need to serialize it now.
-                //annotateObject(objVec,v8Func,toStampWith);
-                //lkjs;
-                Sirikata::JS::Protocol::IJSMessage ijs_m =jsf_value.mutable_o_value();
-                serializeObjectInternal(v8Func, ijs_m, toStampWith,objVec);
-                //serializeFunctionInternal(v8Func, jsf_value,toStampWith);
-                //lkjs;
-            }
+            if (hiddenValue->IsInt32())
+                pointOtherObject(hiddenValue->ToInt32()->Value(),jsf_value);
             else
-            {
-                //we have already stamped this function object as having been
-                //serialized.  Instead of serializing it again, point to
-                //the old version.
-
-                if (hiddenValue->IsInt32())
-                    pointOtherObject(hiddenValue->ToInt32()->Value(),jsf_value);
-                else
-                    JSLOG(error,"Error in serialization.  Hidden value was not an int32");
-            }
-        }
-        else if(prop_val->IsArray())
-        {
-            /* If this value is an object , then recursively call the serlialize on this */
-            v8::Local<v8::Array> v8Array = v8::Local<v8::Array>::Cast(prop_val);
-            v8::Local<v8::Value> hiddenValue = v8Array->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
-            if (hiddenValue.IsEmpty())
-            {
-                Sirikata::JS::Protocol::IJSMessage ijs_m =jsf_value.mutable_a_value();
-                serializeObjectInternal(v8Array, ijs_m, toStampWith,objVec);
-            }
-            else
-            {
-                //we have already stamped this function object as having been
-                //serialized.  Instead of serializing it again, point to
-                //the old version.
-                if (hiddenValue->IsInt32())
-                    pointOtherObject(hiddenValue->ToInt32()->Value(),jsf_value);
-                else
-                    JSLOG(error,"Error in serialization.  Hidden value was not an int32");
-            }
-        }
-        else if(prop_val->IsObject())
-        {
-            v8::Local<v8::Object> v8obj = v8::Local<v8::Object>::Cast(prop_val);
-            
-            v8::Local<v8::Value> hiddenValue = v8obj->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
-
-            if (hiddenValue.IsEmpty())
-            {
-                //check if it's the root object.
-                v8::Handle<v8::Object> tmpObj = v8::Object::New();
-
-                if (prop_val->Equals(tmpObj->GetPrototype()))
-                {
-                    Sirikata::JS::Protocol::IJSMessage ijs_o = jsf_value.mutable_root_object();
-                    serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;                    
-                }
-                else
-                {
-                    Sirikata::JS::Protocol::IJSMessage    ijs_o = jsf_value.mutable_o_value();
-                    serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;                    
-                }
-                
-
-            }
-            else
-            {
-                if (hiddenValue->IsInt32())
-                    pointOtherObject(hiddenValue->ToInt32()->Value(),jsf_value);
-                else
-                    JSLOG(error,"Error in serialization.  Hidden value was not an int32");
-            }
-        }
-        else if(prop_val->IsInt32())
-        {
-            int32_t i_value = prop_val->Int32Value();
-            jsf_value.set_i_value(i_value);
-        }
-        else if(prop_val->IsUint32())
-        {
-            uint32 ui_value = prop_val->Uint32Value();
-            jsf_value.set_ui_value(ui_value);
-        }
-        else if(prop_val->IsString())
-        {
-            INLINE_STR_CONV(prop_val,s_value, "error decoding string in serializeObjectInternal");
-            jsf_value.set_s_value(s_value);
-        }
-        else if(prop_val->IsNumber())
-        {
-            float64 d_value = prop_val->NumberValue();
-            jsf_value.set_d_value(d_value);
-        }
-        else if(prop_val->IsBoolean())
-        {
-            bool b_value = prop_val->BooleanValue();
-            jsf_value.set_b_value(b_value);
-        }
-        else if(prop_val->IsDate())
-        {
-        }
-        else if(prop_val->IsRegExp())
-        {
+                JSLOG(error,"Error in serialization.  Hidden value was not an int32");
         }
     }
+    else if(prop_val->IsArray())
+    {
+        /* If this value is an object , then recursively call the serlialize on this */
+        v8::Local<v8::Array> v8Array = v8::Local<v8::Array>::Cast(prop_val->ToObject());
+        v8::Local<v8::Value> hiddenValue = v8Array->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
+        if (hiddenValue.IsEmpty())
+        {
+            Sirikata::JS::Protocol::IJSMessage ijs_m =jsf_value.mutable_a_value();
+            serializeObjectInternal(v8Array, ijs_m, toStampWith,objVec);
+        }
+        else
+        {
+            //we have already stamped this function object as having been
+            //serialized.  Instead of serializing it again, point to
+            //the old version.
+            if (hiddenValue->IsInt32())
+                pointOtherObject(hiddenValue->ToInt32()->Value(),jsf_value);
+            else
+                JSLOG(error,"Error in serialization.  Hidden value was not an int32");
+        }
+    }
+    else if(prop_val->IsObject())
+    {
+        v8::Local<v8::Object> v8obj = prop_val->ToObject();
+        
+        v8::Local<v8::Value> hiddenValue = v8obj->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
+        
+        if (hiddenValue.IsEmpty())
+        {
+            //check if it's the root object.
+            v8::Handle<v8::Object> tmpObj = v8::Object::New();
 
+            if (prop_val->Equals(tmpObj->GetPrototype()))
+            {
+                Sirikata::JS::Protocol::IJSMessage ijs_o = jsf_value.mutable_root_object();
+                serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;                    
+            }
+            else
+            {
+                Sirikata::JS::Protocol::IJSMessage    ijs_o = jsf_value.mutable_o_value();
+                serializeObjectInternal(v8obj, ijs_o, toStampWith,objVec);;                    
+            }
+        }
+        else
+        {
+            if (hiddenValue->IsInt32())
+                pointOtherObject(hiddenValue->ToInt32()->Value(),jsf_value);
+            else
+                JSLOG(error,"Error in serialization.  Hidden value was not an int32");
+        }
+    }
+    else if(prop_val->IsInt32())
+    {
+        int32_t i_value = prop_val->Int32Value();
+        jsf_value.set_i_value(i_value);
+    }
+    else if(prop_val->IsUint32())
+    {
+        uint32 ui_value = prop_val->Uint32Value();
+        jsf_value.set_ui_value(ui_value);
+    }
+    else if(prop_val->IsString())
+    {
+        INLINE_STR_CONV(prop_val,s_value, "error decoding string in serializeObjectInternal");
+        jsf_value.set_s_value(s_value);
+    }
+    else if(prop_val->IsNumber())
+    {
+        float64 d_value = prop_val->NumberValue();
+        jsf_value.set_d_value(d_value);
+    }
+    else if(prop_val->IsBoolean())
+    {
+        bool b_value = prop_val->BooleanValue();
+        jsf_value.set_b_value(b_value);
+    }
+    else if(prop_val->IsDate())
+    {
+        JSLOG(error, "Have not yet added serialization for date object directly.");
+    }
+    else if(prop_val->IsRegExp())
+    {
+        JSLOG(error, "Have not yet added serialization for regexp object directly.");
+    }
 }
+
 
 /**
    This function runs through the map of values toFixUp, pointing them to the
@@ -585,6 +604,10 @@ void JSSerializer::shallowCopyFields(v8::Handle<v8::Object> dst, v8::Handle<v8::
 }
 
 
+
+/**
+   Used for deprecated messages that consist of only an object.
+ */
 v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScript, Sirikata::JS::Protocol::JSMessage jsmessage,bool& deserializeSuccessful)
 {
     v8::HandleScope handle_scope;
@@ -610,9 +633,47 @@ v8::Handle<v8::Object> JSSerializer::deserializeObject( EmersonScript* emerScrip
     //return whether fixups worked or not.
     deserializeSuccessful = deserializePerformFixups(labeledObjs,toFixUp);
 
-    //unmark deserialized
+    //had added a bunch of hidden values to objects to help notate what should
+    //have been the root object.  remove that here.
     unmarkDeserialized(labeledObjs);
     return handle_scope.Close(deserializeTo);
+}
+
+
+
+v8::Handle<v8::Value> JSSerializer::deserializeMessage(EmersonScript* emerScript,Sirikata::JS::Protocol::JSFieldValue jsfieldval, bool& deserializeSuccessful)
+{
+    v8::HandleScope handle_scope;
+    ObjectMap labeledObjs;
+    FixupMap toFixUp;
+
+    int32 toLoopTo = 0;
+    v8::Handle<v8::Value> returner = deserializeFieldValue(emerScript,
+        jsfieldval,labeledObjs,toFixUp,toLoopTo);
+
+    
+    if (!returner.IsEmpty())
+        deserializeSuccessful = deserializePerformFixups(labeledObjs, toFixUp);
+    else
+    {
+        //means that either deserialization failed, or we tried to deserialize
+        //a root object.
+
+        //if they tried to send over the root object, then just set returner to it
+        //directly
+        if ((jsfieldval.has_root_object()) && (!labeledObjs.empty()))
+        {
+            deserializeSuccessful = true;
+            returner = labeledObjs.begin()->second;
+        }
+        else
+            deserializeSuccessful = false;
+    }
+
+    //had added a bunch of hidden values to objects to help notate what should
+    //have been the root object.  remove that here.
+    unmarkDeserialized(labeledObjs);
+    return handle_scope.Close(returner);
 }
 
 
@@ -678,7 +739,8 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
       return true;
     }
 
-    
+
+    int32 toLoopTo = 0;
     for(int i = 0; i < jsmessage.fields_size(); i++)
     {
         Sirikata::JS::Protocol::JSField jsf = jsmessage.fields(i);
@@ -686,122 +748,133 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
         Sirikata::JS::Protocol::JSFieldValue jsvalue = jsf.value();
         String fieldname = jsf.name();
 
-        
+        v8::Handle<v8::Value> val = deserializeFieldValue(emerScript, jsvalue,labeledObjs,toFixUp,toLoopTo);
         v8::Local<v8::String> fieldkey = v8::String::New(fieldname.c_str(), fieldname.size());
-        v8::Handle<v8::Value> val;
 
-        if(jsvalue.has_s_value())
+        if (val.IsEmpty())
         {
-            String str1 = jsvalue.s_value();
-            val = v8::String::New(str1.c_str(), str1.size());
+            //means that we'll have to add this field to deserializedObject
+            //later, either because field is pointing to a looped object or
+            //because it's pointing to the root object.
+            toFixUp[toLoopTo].push_back(LoopedObjPointer(deserializeTo,fieldname,toLoopTo));
         }
-        else if(jsvalue.has_i_value())
+        else if (fieldname == JSSERIALIZER_PROTOTYPE_NAME)
         {
-            val = v8::Integer::New(jsvalue.i_value());
-        }
-        else if(jsvalue.has_ui_value())
-        {
-            val = v8::Integer::NewFromUnsigned(jsvalue.ui_value());
-        }
-        else if (jsvalue.has_root_object())
-        {
-            //instead of modifying the root object directly, will write all
-            //fields.
-            v8::Handle<v8::Object>rootObj = v8::Object::New();
-            rootObj->SetHiddenValue(v8::String::New(JSSERIALIZER_ROOT_OBJ_TOKEN),v8::Boolean::New(true));
-            Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.root_object();
-            JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, rootObj,labeledObjs,toFixUp);
-            labeledObjs[jsvalue.root_object().msg_id()] = rootObj;
-            shallowCopyFields(deserializeTo,rootObj);
-            continue;
-        }
-        
-        else if(jsvalue.has_o_value())
-        {
-            //check if what is to be serialized is a function or a plain-old object
-            Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
-
-            //we're dealing with a function
-            if (internal_js_message.has_f_value())
-            {
-                v8::Handle<v8::Function>intFuncObj;
-                if (internal_js_message.f_value() == FUNCTION_CONSTRUCTOR_TEXT)
-                {
-                    v8::Local<v8::Function> tmpFun = emerScript->functionValue("function(){}");
-                    if ((tmpFun->Has(v8::String::New("constructor"))) &&
-                        (tmpFun->Get(v8::String::New("constructor"))->IsFunction()))
-                    {
-                        intFuncObj = v8::Handle<v8::Function>::Cast(tmpFun->Get(v8::String::New("constructor")));
-                    }
-                    else
-                    {
-                        JSLOG(error, "Error setting the constructor of an object.  Setting to dummy constructor.");
-                        intFuncObj = tmpFun;
-                    }
-                }
-                else
-                    intFuncObj = emerScript->functionValue(internal_js_message.f_value());
-
-
-                v8::Handle<v8::Object> tmpObjer = v8::Handle<v8::Object>::Cast(intFuncObj);
-                JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, tmpObjer,labeledObjs,toFixUp);
-                val = intFuncObj;
-                labeledObjs[jsvalue.o_value().msg_id()] = intFuncObj;
-            }
-            else
-            {
-                v8::Handle<v8::Object>intDesObj = v8::Object::New();
-                JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
-                val = intDesObj;
-                labeledObjs[jsvalue.o_value().msg_id()] = intDesObj;
-            }
-
-
-            
-        }
-        else if(jsvalue.has_a_value())
-        {
-            v8::Handle<v8::Array> intDesArr = v8::Array::New();
-            v8::Handle<v8::Object> intDesObj(intDesArr);
-            Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.a_value();
-
-            JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
-            val = intDesObj;
-            labeledObjs[jsvalue.a_value().msg_id()] = intDesObj;
-        }
-        else if(jsvalue.has_d_value())
-        {
-            val = v8::Number::New(jsvalue.d_value());
-        }
-        else if(jsvalue.has_b_value())
-        {
-            val = v8::Boolean::New(jsvalue.b_value());
-        }
-        else if (jsvalue.has_loop_pointer())
-        {
-            toFixUp[jsvalue.loop_pointer()].push_back(LoopedObjPointer(deserializeTo,fieldname,jsvalue.loop_pointer()));
-            continue;
-        }
-
-
-        
-        if (fieldname == JSSERIALIZER_PROTOTYPE_NAME)
-        {
-            if (!val.IsEmpty() && !val->IsUndefined() && !val->IsNull())
+            if (!val->IsUndefined() && !val->IsNull())
             {
                 if (val->IsObject())
                     setPrototype(deserializeTo,val->ToObject());
                 else
                     deserializeTo->SetPrototype(val);
             }
-            
         }
-        else {
-            if (!val.IsEmpty())
-                deserializeTo->Set(fieldkey, val);
-        }
+        else
+            deserializeTo->Set(fieldkey, val);
     }
     return true;
+}
+
+
+//Note: can return val where val.IsEmpty is true, which means that we should
+//treat this val as a looped pointer.  In this case, returns id to loop to in toLoopTo.
+v8::Handle<v8::Value> JSSerializer::deserializeFieldValue(EmersonScript* emerScript,
+    Sirikata::JS::Protocol::JSFieldValue jsvalue, ObjectMap& labeledObjs,FixupMap& toFixUp,
+    int32& toLoopTo)
+{
+    v8::Handle<v8::Value> val;
+
+    if(jsvalue.has_s_value())
+    {
+        String str1 = jsvalue.s_value();
+        val = v8::String::New(str1.c_str(), str1.size());
+    }
+    else if(jsvalue.has_i_value())
+    {
+        val = v8::Integer::New(jsvalue.i_value());
+    }
+    else if(jsvalue.has_ui_value())
+    {
+        val = v8::Integer::NewFromUnsigned(jsvalue.ui_value());
+    }
+
+    else if(jsvalue.has_o_value())
+    {
+        //check if what is to be serialized is a function or a plain-old object
+        Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
+
+        //we're dealing with a function
+        if (internal_js_message.has_f_value())
+        {
+            v8::Handle<v8::Function>intFuncObj;
+            if (internal_js_message.f_value() == FUNCTION_CONSTRUCTOR_TEXT)
+            {
+                v8::Local<v8::Function> tmpFun = emerScript->functionValue("function(){}");
+                if ((tmpFun->Has(v8::String::New("constructor"))) &&
+                    (tmpFun->Get(v8::String::New("constructor"))->IsFunction()))
+                {
+                    intFuncObj = v8::Handle<v8::Function>::Cast(tmpFun->Get(v8::String::New("constructor")));
+                }
+                else
+                {
+                    JSLOG(error, "Error setting the constructor of an object.  Setting to dummy constructor.");
+                    intFuncObj = tmpFun;
+                }
+            }
+            else
+                intFuncObj = emerScript->functionValue(internal_js_message.f_value());
+
+            v8::Handle<v8::Object> tmpObjer = v8::Handle<v8::Object>::Cast(intFuncObj);
+            JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, tmpObjer,labeledObjs,toFixUp);
+            val = intFuncObj;
+            labeledObjs[jsvalue.o_value().msg_id()] = intFuncObj;
+        }
+        else
+        {
+            v8::Handle<v8::Object>intDesObj = v8::Object::New();
+            JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
+            val = intDesObj;
+            labeledObjs[jsvalue.o_value().msg_id()] = intDesObj;
+        }
+    }
+    else if(jsvalue.has_a_value())
+    {
+        v8::Handle<v8::Array> intDesArr = v8::Array::New();
+        v8::Handle<v8::Object> intDesObj(intDesArr);
+        Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.a_value();
+
+        JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
+        val = intDesObj;
+        labeledObjs[jsvalue.a_value().msg_id()] = intDesObj;
+    }
+    else if(jsvalue.has_d_value())
+    {
+        val = v8::Number::New(jsvalue.d_value());
+    }
+    else if(jsvalue.has_b_value())
+    {
+        val = v8::Boolean::New(jsvalue.b_value());
+    }
+    else if (jsvalue.has_loop_pointer())
+    {
+        toLoopTo = jsvalue.loop_pointer();
+        //note: intentionally not setting val here, will return empty
+    }
+    else if (jsvalue.has_root_object())
+    {
+        //instead of modifying the root object directly, will write all
+        //fields.
+        v8::Handle<v8::Object>rootObj = v8::Object::New();
+        rootObj->SetHiddenValue(v8::String::New(JSSERIALIZER_ROOT_OBJ_TOKEN),v8::Boolean::New(true));
+        Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.root_object();
+        JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, rootObj,labeledObjs,toFixUp);
+        labeledObjs[jsvalue.root_object().msg_id()] = rootObj;
+
+        //shallowCopyFields(deserializeTo,rootObj);
+        toLoopTo = jsvalue.root_object().msg_id();
+        //note: intentionally not setting val here: val is empty as a result.
+    }
+    
+    return val;
 }
 
 
