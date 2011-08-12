@@ -29,7 +29,7 @@ namespace JSSystem {
 
 /**
    @param Which presence to send from.
-   @param Message object to send.
+   @param Message value to send.
    @param Visible to send to.
    @param (Optional) Error handler function.
 
@@ -50,15 +50,8 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     if (jspres == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str())));
 
-    //decode string argument
-    v8::Handle<v8::Value> messageBody = args[1];
-    if(!messageBody->IsObject())
-        return v8::ThrowException(v8::Exception::Error(v8::String::New("Message should be an object.")) );
-
-    //serialize the object to send
-    Local<v8::Object> v8Object = messageBody->ToObject();
-    std::string serialized_message = JSSerializer::serializeObject(v8Object);
-
+    //convert the message value to send to a string.
+    std::string serialized_message = JSSerializer::serializeMessage(args[1]);
 
     //visible to send to
     v8::Handle<v8::Value> visToSendTo = args[2];
@@ -157,14 +150,10 @@ v8::Handle<v8::Value> root_sendSandbox(const v8::Arguments& args)
     //get jssystemstruct
     INLINE_SYSTEM_CONV_ERROR(args.This(),sendSandbox,this,jssys);
 
-    //decode message object.
-    if (! args[0]->IsObject())
-        V8_EXCEPTION_CSTR("Error.  Message to send must be an object.");
+    //decode message.
+    String serializedMessage = JSSerializer::serializeMessage(args[0]);
 
-    Local<v8::Object> v8MsgObject = args[0]->ToObject();
-    String serializedMessage = JSSerializer::serializeObject(v8MsgObject);
-
-
+    
     //recipeint == null implies send to parent (if it exists).
     JSContextStruct* recipient = NULL;
     if (! args[1]->IsNull())
@@ -443,11 +432,8 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error calling serialize.  Must pass in at least one argument to be serialized.")));
 
-    if (!args[0]->IsObject())
-        return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Must pass in an *object* to serialize.")));
 
-    Local<v8::Object> v8Object = args[0]->ToObject();
-    String stringifiedObject = JSSerializer::serializeObject(v8Object);
+    String stringifiedValue = JSSerializer::serializeMessage(args[0]);
 
     String errorMessage = "Error decoding error message when serializing object";
     JSSystemStruct* jsfake  = JSSystemStruct::decodeSystemStruct(args.This(), errorMessage);
@@ -456,7 +442,7 @@ v8::Handle<v8::Value> root_serialize(const v8::Arguments& args)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
 
-    v8::Handle<v8::Value> returner = strToUint16Str(stringifiedObject);
+    v8::Handle<v8::Value> returner = strToUint16Str(stringifiedValue);
 
     return handle_scope.Close(returner);
 }
@@ -523,8 +509,8 @@ v8::Handle<v8::Value> root_deserialize(const v8::Arguments& args)
 
     if (jssys == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New( errMsg.c_str(), errMsg.length())));
-
-    return jssys->deserializeObject(serString);
+    
+    return jssys->deserialize(serString);
 }
 
 v8::Handle<v8::Value> root_headless(const v8::Arguments& args)

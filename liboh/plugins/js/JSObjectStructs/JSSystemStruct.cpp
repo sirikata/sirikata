@@ -132,9 +132,9 @@ JSSystemStruct::~JSSystemStruct()
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::deserializeObject(const String& toDeserialize)
+v8::Handle<v8::Value> JSSystemStruct::deserialize(const String& toDeserialize)
 {
-    return associatedContext->deserializeObject(toDeserialize);
+    return associatedContext->deserialize(toDeserialize);
 }
 
 v8::Handle<v8::Value> JSSystemStruct::checkHeadless()

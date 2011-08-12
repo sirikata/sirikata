@@ -111,7 +111,7 @@ struct JSSystemStruct
 
     v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl);
 
-    v8::Handle<v8::Value> deserializeObject(const String& toDeserialize);
+    v8::Handle<v8::Value> deserialize(const String& toDeserialize);
 
     // Trigger an event handler
     v8::Handle<v8::Value> struct_event(v8::Persistent<v8::Function>& cb);
