@@ -1563,6 +1563,7 @@ void Entity::createMesh(Liveness::Token alive) {
       mCurrentAnimation->setEnabled(false);
       mCurrentAnimation = NULL;
     }
+    mAnimationList.clear();
 
     //get the mesh data and check that it is valid.
     bool usingDefault = false;
