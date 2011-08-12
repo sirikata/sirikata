@@ -39,7 +39,7 @@ function runTests()
     if (!hasFailed)
         mTest.success('Got all the way through serializations.');
 
-    system.self.disconnect();    
+    system.killEntity();
 }
 
 //testSerialize empty object
