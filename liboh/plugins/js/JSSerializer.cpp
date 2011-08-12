@@ -165,10 +165,6 @@ std::string JSSerializer::serializeObject(v8::Local<v8::Value> v8Val,int32 toSta
 
   std::string serialized_message;
   jsmessage.SerializeToString(&serialized_message);
-
-  std::cout<<"\n\nDEBUGGING\n";
-  debug_printSerialized(jsmessage,"debug");
-  std::cout<<"\n\n";
   
   unmarkSerialized(allObjs);
   return serialized_message;
@@ -342,14 +338,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
         }
         else
             prop_val = v8Obj->Get( v8::String::New(properties[i].c_str(), properties[i].size()) );
-
-
-        std::cout<<"\nWorking with property name: "<<prop_name<<"\n";
-        if (prop_name == "constructor")
-        {
-            wantBeforeAndAfter = true;
-            std::cout<<"\nTo break on.\n";
-        }
         
         /* This is a little gross, but currently necessary. If something is
          * referring to native code, we shouldn't be shipping it. This means we
@@ -371,7 +359,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
 
             if ((cStrMsgBody2.find("{ [native code] }") != String::npos) && (cStrMsgBody2 != FUNCTION_CONSTRUCTOR_TEXT))
             {
-                std::cout<<"\n\nDEBUG: screened function: "<<cStrMsgBody2<<"\n\n";
                 continue;
             }
         }
@@ -390,12 +377,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
             v8::Local<v8::Function> v8Func = v8::Local<v8::Function>::Cast(prop_val);
             v8::Local<v8::Value> hiddenValue = v8Func->GetHiddenValue(v8::String::New(JSSERIALIZER_TOKEN_FIELD_NAME));
 
-            if (wantBeforeAndAfter)
-            {
-                std::cout<<"\n\n";
-                debug_printSerialized(jsmessage, "before");
-                std::cout<<"\n\n";
-            }
             
             if (hiddenValue.IsEmpty())
             {
@@ -419,15 +400,6 @@ void JSSerializer::serializeObjectInternal(v8::Local<v8::Value> v8Val, Sirikata:
                 else
                     JSLOG(error,"Error in serialization.  Hidden value was not an int32");
             }
-
-            if (wantBeforeAndAfter)
-            {
-                std::cout<<"\n\n";
-                debug_printSerialized(jsmessage, "after");
-                std::cout<<"\n\n";
-            }
-            
-            
         }
         else if(prop_val->IsArray())
         {
@@ -561,10 +533,6 @@ void JSSerializer::setPrototype(v8::Handle<v8::Object> toSetProtoOf, v8::Handle<
     if (toSetProtoOf->IsFunction())
     {
         v8::Handle<v8::Function> toSetOnFunc = v8::Handle<v8::Function>::Cast(toSetProtoOf);
-        INLINE_STR_CONV(toSetOnFunc->ToString(), strFuncBefore,"nope");
-        std::cout<<"\n\nBEFORE\n"<<strFuncBefore<<"\n\n";
-
-
         if (!toSetTo->GetHiddenValue(v8::String::New(JSSERIALIZER_ROOT_OBJ_TOKEN)).IsEmpty())
         {
             //means that we are pointing to the serialized version of
@@ -578,13 +546,9 @@ void JSSerializer::setPrototype(v8::Handle<v8::Object> toSetProtoOf, v8::Handle<
         {
             v8::Handle<v8::Function> toSetToFunc = v8::Handle<v8::Function>::Cast(toSetTo);
             toSetOnFunc->SetPrototype(toSetToFunc);
-            std::cout<<"\nSetting func\n";
         }
         else
             toSetOnFunc->SetPrototype(toSetTo);
-
-        INLINE_STR_CONV(toSetOnFunc->ToString(), strFuncAfter,"nope");
-        std::cout<<"\n\nAfter\n"<<strFuncAfter<<"\n\n";
     }
     else
     {
@@ -748,14 +712,12 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.root_object();
             JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, rootObj,labeledObjs,toFixUp);
             labeledObjs[jsvalue.root_object().msg_id()] = rootObj;
-            std::cout<<"\n\nSetting an id for root obj with id: "<<jsvalue.root_object().msg_id()<<"\n\n";
             shallowCopyFields(deserializeTo,rootObj);
             continue;
         }
         
         else if(jsvalue.has_o_value())
         {
-            std::cout<<"\n\nDEBUG: This is msg id: "<<jsvalue.o_value().msg_id()<<"\n\n\n";
             //check if what is to be serialized is a function or a plain-old object
             Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.o_value();
 
@@ -765,13 +727,10 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
                 v8::Handle<v8::Function>intFuncObj;
                 if (internal_js_message.f_value() == FUNCTION_CONSTRUCTOR_TEXT)
                 {
-                    std::cout<<"\n\nHas function constructor text\n\n";
-                    
                     v8::Local<v8::Function> tmpFun = emerScript->functionValue("function(){}");
                     if ((tmpFun->Has(v8::String::New("constructor"))) &&
                         (tmpFun->Get(v8::String::New("constructor"))->IsFunction()))
                     {
-                        std::cout<<"\n\nDEBUG: Got into check\n\n";
                         intFuncObj = v8::Handle<v8::Function>::Cast(tmpFun->Get(v8::String::New("constructor")));
                     }
                     else
@@ -785,10 +744,6 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
 
 
                 v8::Handle<v8::Object> tmpObjer = v8::Handle<v8::Object>::Cast(intFuncObj);
-                //lkjs;
-//                JSSerializer::deserializeObjectInternal(emerScript,
-//                internal_js_message,
-//                v8::Handle<v8::Object>::Cast(intFuncObj),labeledObjs,toFixUp);
                 JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, tmpObjer,labeledObjs,toFixUp);
                 val = intFuncObj;
                 labeledObjs[jsvalue.o_value().msg_id()] = intFuncObj;
