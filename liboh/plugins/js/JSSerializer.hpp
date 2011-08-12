@@ -17,6 +17,8 @@ namespace JS {
 
 const static int32 JSSERIALIZER_TOKEN= 30130;
 const static char* JSSERIALIZER_TOKEN_FIELD_NAME = "__JSSERIALIZER_TOKEN_FIELD_NAME&*^%$__";
+const static char* JSSERIALIZER_ROOT_OBJ_TOKEN   = "__JSDESERIALIZER_ROOT_OBJECT_NAME__";
+
 
 //Mult identify prototype of objects uniquely.  Cannot use "prototype" because
 //functions have prototype objects.  Must use a word that cannot be used to name
@@ -60,8 +62,10 @@ class JSSerializer
     static void annotateObject(ObjectVec& objVec, v8::Handle<v8::Object> v8Obj,int32 toStampWith);
 
     static void unmarkSerialized(ObjectVec& toUnmark);
+    static void unmarkDeserialized(ObjectMap& objMap);
 
-
+    static void setPrototype(v8::Handle<v8::Object> toSetProtoOf, v8::Handle<v8::Object> toSetTo);
+    
     static void serializeVisible(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
     static void fillVisible(Sirikata::JS::Protocol::IJSMessage&, const SpaceObjectReference& listenTo);// Reused by serializePresence
     static void serializePresence(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::IJSMessage&,int32& toStampWith,ObjectVec& allObjs);
@@ -72,6 +76,7 @@ class JSSerializer
     static void serializeAddressable(v8::Local<v8::Object> v8Obj, Sirikata::JS::Protocol::JSMessage&,ObjectVec& allObjs);
 
 
+    static void shallowCopyFields(v8::Handle<v8::Object> dst, v8::Handle<v8::Object> src);
     static bool deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& toFixUp);
 
 
