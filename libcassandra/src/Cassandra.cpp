@@ -40,14 +40,14 @@ namespace Sirikata {
 
 CassandraDB::CassandraDB(const String& host, int port) {
     libcassandra::CassandraFactory cf(host, port);
-    client=std::tr1::shared_ptr<libcassandra::Cassandra>(cf.create());
+    client=boost::shared_ptr<libcassandra::Cassandra>(cf.create());
     client->setKeyspace("sirikata");
 }
 
 CassandraDB::~CassandraDB() {
 }
 
-std::tr1::shared_ptr<libcassandra::Cassandra> CassandraDB::db() const {
+    boost::shared_ptr<libcassandra::Cassandra> CassandraDB::db() const {
     return client;
 }
 

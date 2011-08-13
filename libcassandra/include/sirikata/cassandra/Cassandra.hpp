@@ -55,9 +55,9 @@ public:
     CassandraDB(const String& host, int port);
     ~CassandraDB();
 
-    std::tr1::shared_ptr<libcassandra::Cassandra> db() const;
+    boost::shared_ptr<libcassandra::Cassandra> db() const;
 private:
-    std::tr1::shared_ptr<libcassandra::Cassandra> client;
+    boost::shared_ptr<libcassandra::Cassandra> client;
 };
 
 typedef std::tr1::shared_ptr<CassandraDB> CassandraDBPtr;
