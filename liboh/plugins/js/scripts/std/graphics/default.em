@@ -45,6 +45,7 @@ system.require('std/graphics/propertybox.em');
 system.require('std/graphics/presenceList.em');
 system.require('std/graphics/setMesh.em');
 system.require('std/graphics/axes.em');
+system.require('std/graphics/ezuiViewer.em');
 
 (
 function() {
@@ -76,6 +77,7 @@ function() {
         this._loadingUIs++; this._propertybox = new std.propertybox.PropertyBox(this, ui_finish_cb);
         this._loadingUIs++; this._presenceList = new std.graphics.PresenceList(this._pres, this._simulator, this._scripter, ui_finish_cb);
         this._loadingUIs++; this._setMesh = new std.graphics.SetMesh(this._simulator, ui_finish_cb);
+        this._loadingUIs++; this._ezui = new std.ezui.EZUI(this, ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedGraphicsUIReset = function(gfx) {
         this._camera.reinit();
@@ -87,6 +89,7 @@ function() {
         this._loadingUIs++; this._propertybox.onReset(ui_finish_cb);
         this._loadingUIs++; this._presenceList.onReset(ui_finish_cb);
         this._loadingUIs++; this._setMesh.onReset(ui_finish_cb);
+        this._loadingUIs++; this._ezui.onReset(ui_finish_cb);
     };
     std.graphics.DefaultGraphics.prototype.finishedUIInit = function(cb) {
         this._loadingUIs--;
@@ -152,6 +155,8 @@ function() {
         this._binding.addAction('updatePropertyBox', std.core.bind(this.updatePropertyBox, this));
         this._binding.addAction('forwardMouseReleaseToDragger', std.core.bind(this.forwardMouseReleaseToDragger, this));
         this._binding.addAction('stopDrag', std.core.bind(this.stopDrag, this));
+        this._binding.addFloat2Action('showEZUI', std.core.bind(this.showEZUI, this));
+        this._binding.addAction('hideEZUI', std.core.bind(this.hideEZUI, this));
 
         this._binding.addAction('startFreeRotate', std.core.bind(this.startFreeRotate, this));
         this._binding.addAction('freeRotateDrag', std.core.bind(this.freeRotateDrag, this));
@@ -223,6 +228,7 @@ function() {
             { key: ['mouse-drag', 1, '*'], action: 'forwardMouseDragToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'forwardMouseReleaseToDragger' },
             { key: ['mouse-release', 1, '*'], action: 'stopDrag' },
+            { key: ['mouse-press', 3, 'none'], action: 'showEZUI' },
             { key: ['mouse-press', 3, 'none' ], action: 'startFreeRotate' },
             { key: ['mouse-drag', 3, 'none'], action: 'freeRotateDrag' },
             { key: ['mouse-release', 3, 'none'], action: 'freeRotateRelease' }
@@ -514,5 +520,15 @@ function() {
         this._simulator.setMaxObjects(maxobjs);
     };
 
-    
+
+    std.graphics.DefaultGraphics.prototype.showEZUI = function (x, y) {
+        var ignore_self = this._camera.mode() == 'first';
+        var clicked = this._simulator.pick(x, y, ignore_self);
+        this._ezui.show(clicked, x, y);
+    };
+
+    std.graphics.DefaultGraphics.prototype.hideEZUI = function () {
+        this._ezui.hide();
+    };
+
 })();
