@@ -161,7 +161,6 @@ std::string JSSerializer::serializeMessage(v8::Local<v8::Value> v8Val, int32 toS
 
     String serializedFieldValue;
     jsfield.SerializeToString(&serializedFieldValue);
-
     unmarkSerialized(allObjs);
     return serializedFieldValue;
 }
@@ -199,28 +198,32 @@ void debug_printSerialized(Sirikata::JS::Protocol::JSMessage jm, String prepend)
         std::cout<<prepend<<":"<<jm.fields(s).name();
         std::cout<<"\n";
         if (jm.fields(s).has_value())
-        {
-            if (jm.fields(s).value().has_o_value())
-                debug_printSerialized(jm.fields(s).value().o_value(), prepend+ ":"+ jm.fields(s).name()  );
-            if (jm.fields(s).value().has_a_value())
-                debug_printSerialized(jm.fields(s).value().a_value(), prepend + ":" + jm.fields(s).name());
-            if (jm.fields(s).value().has_root_object())
-                debug_printSerialized(jm.fields(s).value().root_object(), prepend + ":" + jm.fields(s).name());
-            
-            if (jm.fields(s).value().has_s_value())
-                std::cout<<" s_val:     "<<jm.fields(s).value().s_value()<<"\n";
-            if (jm.fields(s).value().has_i_value())
-                std::cout<<" i_value:   "<<jm.fields(s).value().i_value()<<"\n";
-            if (jm.fields(s).value().has_b_value())
-                std::cout<<" b_value:   "<<jm.fields(s).value().b_value()<<"\n";
-            if (jm.fields(s).value().has_ui_value())
-                std::cout<<" ui_value:  "<<jm.fields(s).value().ui_value()<<"\n";
-            if (jm.fields(s).value().has_d_value())
-                std::cout<<" d_value:   "<<jm.fields(s).value().d_value()<<"\n";
-            if (jm.fields(s).value().has_loop_pointer())
-                std::cout<<" loop:      "<<jm.fields(s).value().loop_pointer()<<"\n";
-        }
+            debug_printSerializedFieldVal(jm.fields(s).value(),prepend, jm.fields(s).name());
     }
+}
+
+
+void debug_printSerializedFieldVal(Sirikata::JS::Protocol::JSFieldValue jsfieldval, String prepend,String name)
+{
+    if (jsfieldval.has_o_value())
+        debug_printSerialized(jsfieldval.o_value(), prepend+ ":"+ name  );
+    if (jsfieldval.has_a_value())
+        debug_printSerialized(jsfieldval.a_value(), prepend + ":" + name);
+    if (jsfieldval.has_root_object())
+        debug_printSerialized(jsfieldval.root_object(), prepend + ":" + name);
+            
+    if (jsfieldval.has_s_value())
+        std::cout<<" s_val:     "<<jsfieldval.s_value()<<"\n";
+    if (jsfieldval.has_i_value())
+        std::cout<<" i_value:   "<<jsfieldval.i_value()<<"\n";
+    if (jsfieldval.has_b_value())
+        std::cout<<" b_value:   "<<jsfieldval.b_value()<<"\n";
+    if (jsfieldval.has_ui_value())
+        std::cout<<" ui_value:  "<<jsfieldval.ui_value()<<"\n";
+    if (jsfieldval.has_d_value())
+        std::cout<<" d_value:   "<<jsfieldval.d_value()<<"\n";
+    if (jsfieldval.has_loop_pointer())
+        std::cout<<" loop:      "<<jsfieldval.loop_pointer()<<"\n";
 }
 
 
@@ -275,7 +278,6 @@ std::vector<String> getOwnPropertyNames(v8::Local<v8::Object> obj) {
 
     if (obj->Has(v8::String::New("constructor")))
         results.push_back("constructor");
-
     
     results.push_back(JSSERIALIZER_PROTOTYPE_NAME);
     return results;
@@ -549,37 +551,10 @@ bool JSSerializer::deserializePerformFixups(ObjectMap& labeledObjs, FixupMap& to
 
 void JSSerializer::setPrototype(v8::Handle<v8::Object> toSetProtoOf, v8::Handle<v8::Object> toSetTo)
 {
-    if (toSetProtoOf->IsFunction())
-    {
-        v8::Handle<v8::Function> toSetOnFunc = v8::Handle<v8::Function>::Cast(toSetProtoOf);
-        if (!toSetTo->GetHiddenValue(v8::String::New(JSSERIALIZER_ROOT_OBJ_TOKEN)).IsEmpty())
-        {
-            //means that we are pointing to the serialized version of
-            //the root object.
-            shallowCopyFields(toSetProtoOf, toSetTo);
-            return;
-        }
-
-            
-        if (toSetTo->IsFunction())
-        {
-            v8::Handle<v8::Function> toSetToFunc = v8::Handle<v8::Function>::Cast(toSetTo);
-            toSetOnFunc->SetPrototype(toSetToFunc);
-        }
-        else
-            toSetOnFunc->SetPrototype(toSetTo);
-    }
+    if (toSetTo->GetHiddenValue(v8::String::New(JSSERIALIZER_ROOT_OBJ_TOKEN)).IsEmpty())
+        shallowCopyFields(toSetProtoOf, toSetTo);
     else
-    {
-        if (toSetTo->IsFunction())
-        {
-            v8::Handle<v8::Function> toSetToFunc = v8::Handle<v8::Function>::Cast(toSetTo);
-            toSetProtoOf->SetPrototype(toSetToFunc);
-        }
-        else
-            toSetProtoOf->SetPrototype(toSetTo);
-    }
-    
+        toSetProtoOf->SetPrototype(toSetTo);
 }
 
 
@@ -763,7 +738,10 @@ bool JSSerializer::deserializeObjectInternal( EmersonScript* emerScript, Sirikat
             if (!val->IsUndefined() && !val->IsNull())
             {
                 if (val->IsObject())
+                {
+                    v8::Handle<v8::Array> tmpArray =v8::Array::New();
                     setPrototype(deserializeTo,val->ToObject());
+                }
                 else
                     deserializeTo->SetPrototype(val);
             }
@@ -841,7 +819,6 @@ v8::Handle<v8::Value> JSSerializer::deserializeFieldValue(EmersonScript* emerScr
         v8::Handle<v8::Array> intDesArr = v8::Array::New();
         v8::Handle<v8::Object> intDesObj(intDesArr);
         Sirikata::JS::Protocol::JSMessage internal_js_message = jsvalue.a_value();
-
         JSSerializer::deserializeObjectInternal(emerScript, internal_js_message, intDesObj,labeledObjs,toFixUp);
         val = intDesObj;
         labeledObjs[jsvalue.a_value().msg_id()] = intDesObj;

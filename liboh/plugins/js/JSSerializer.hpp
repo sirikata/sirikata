@@ -53,7 +53,7 @@ typedef std::map<int32, LoopedObjPointerList> FixupMap;
 typedef FixupMap::iterator FixupMapIter;
 
 void debug_printSerialized(Sirikata::JS::Protocol::JSMessage jm, String prepend);
-
+void debug_printSerializedFieldVal(Sirikata::JS::Protocol::JSFieldValue jsfieldval, String prepend,String name);
 
 class JSSerializer
 {
