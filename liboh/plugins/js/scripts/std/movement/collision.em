@@ -1,33 +1,63 @@
-/* collision.em
+/*  Sirikata
+ *  collision.em
  *
- * A library of standard collision functions for the generic Collision motion
- * controller
+ *  Copyright (c) 2011, William Monroe
+ *  All rights reserved.
  *
- * Author: Will Monroe
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions are
+ *  met:
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Sirikata nor the names of its contributors may
+ *    be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- * The typical usage of the Collision motion controller is
- *      new motion.Collision(presence, test, response);
- * test and response are functions called by Collision's machinery.  These two
- * callback functions will frequently fall into a few different general
- * categories that are implemented here to avoid code duplication.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+if(typeof(coll) === 'undefined')
+    /**
+     * @namespace
+     * A library of standard collision functions for the generic Collision motion
+     * controller<br /><br />
+     *
+     * The typical usage of the Collision motion controller is<br /><code>
+     *      new motion.Collision(presence, test, response);</code></br>
+     * <code>test</code> and <code>response</code> are functions called by
+     * Collision's machinery.  These two callback functions will frequently
+     * fall into a few different general categories that are implemented here
+     * to avoid code duplication.<br /><br />
  *
  * The coll module contains "metafunctions" -- themselves functions, but which
  * should not be passed directly into Collision; rather, when called with
  * certain arguments, they return a function that can be passed to Collision.
  * These arguments are used to customize the functions to meet different
- * requirements of the client.  For example:
+     * requirements of the client.  For example:<br /><code>
  *      new motion.Collision(presence, coll.TestSpheres(otherVisibles),
- *              coll.Bounce(.8));
+     *              coll.Bounce(.8));</code><br />
  * Be careful to always call the metafunctions, even when using all defaults
- * (when sometimes no parameters are necessary):
+     * (when sometimes no parameters are necessary):<br /><code>
  *      new motion.Collision(presence, coll.TestSpheres(otherVisibles),
- *              coll.Bounce()); // not just ...coll.Bounce); !
+     *              coll.Bounce()); // not just ...coll.Bounce); !</code><br />
  */
-
-
-if(typeof(coll) === 'undefined')
     coll = {};
 
+// TODO: this is a duplicate of motion.util.mass -- combine the two
 coll._mass = function(p) {
     if(typeof(p) === 'string')
         p = system.createVisible(p);
@@ -56,13 +86,13 @@ coll._mass = function(p) {
  */
 
 /**
- * @function TestSpheres(visibles)
- * @param visibles All other visibles to detect collisions against
- * @return A collision test function that tests the colliding presence (passed
- *      to the Collision motion controller) against the visibles listed in the
- *      parameter visibles using bounding spheres obtained from the scale
- *      field.  Collision normals, etc. are reported as if the presence and
- *      all visibles are spherical.
+ * @param {Array&lt;visible&gt;} visibles All other visibles to detect collisions
+ *      against
+ * @return {function(presence)->object} A collision test function that tests
+ *      the colliding presence (passed to the Collision motion controller)
+ *      against the visibles listed in the parameter visibles using bounding
+ *      spheres obtained from the scale field.  Collision normals, etc. are
+ *      reported as if the presence and all visibles are spherical.
  */
 coll.TestSpheres = function(visibles) {
     return function(presence) {
@@ -95,6 +125,17 @@ coll.TestSpheres = function(visibles) {
     };
 };
 
+/**
+ * @param {Array&lt;object&gt;} planes An array of planes to detect collisions
+ *      against.  Each plane is specified as an object with two
+ *      {@link util.Vec3} fields: <code>anchor</code>, a point on the plane,
+ *      and <code>normal</code>, a unit vector perpendicular to the plane.
+ * @return {function(presence)->object} A collision test function that tests
+ *      the colliding presence (passed to the Collision motion controller)
+ *      against the visibles listed in <code>visibles</code> using bounding
+ *      spheres obtained from the <code>scale</code> field.  Collision normals,
+ *      etc. are reported as if the presence is spherical.
+ */
 coll.TestSphereToPlanes = function(planes) {
     return function(presence) {
         for(p in planes) {
@@ -122,6 +163,17 @@ coll.TestSphereToPlanes = function(planes) {
     };
 };
 
+/**
+ * @param {util.Vec3} upper The position of the corner of the axis-aligned
+ *      bounding box on the most positive side in all three axes
+ * @param {util.Vec3} lower The position of the corner on the most negative
+ *      side in all three axes
+ * @return {function(presence)->object} A collision test function that tests
+ *      the colliding presence (passed to the Collision motion controller)
+ *      against the sides of an axis-aligned bounding box defined by the two
+ *      corners specified.  Collision normals, etc. are reported as if the
+ *      presence is spherical.
+ */
 coll.TestBounds = function(upper, lower) {
     return coll.TestSphereToPlanes([
         {anchor: upper, normal: <-1, 0, 0>},
@@ -142,9 +194,8 @@ coll.TestBounds = function(upper, lower) {
  */
 
 /**
- * @function Stop()
- * @return A collision response function that stops the colliding presence at
- *      the point of collision.
+ * @return {function(presence, object)->undefined} A collision response 
+ *      function that stops the colliding presence at the point of collision.
  */
 coll.Stop = function() {
     return function(presence, collision) {
@@ -156,12 +207,11 @@ coll.Stop = function() {
 };
 
 /**
- * @function Bounce(elast)
- * @param elast The elasticity of collisions.  For normal results, this should
- *      be a number between 0 and 1, inclusive.
- * @return A collision response function that bounces the colliding object off
- *      the other object at an equal angle, multiplying its velocity by the
- *      given elasticity.
+ * @param {number} elast The elasticity of collisions.  For normal results,
+ *      this should be a number between 0 and 1, inclusive.
+ * @return {function(presence, object)->undefined} A collision response
+ *      function that bounces the colliding object off the other object at an
+ *      equal angle, multiplying its velocity by the given elasticity.
  */
 coll.Bounce = function(elast) {
     if(typeof(elast) === 'undefined')
