@@ -42,6 +42,7 @@ std.simpleStorage.setScript(
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
         system.require('std/core/repeatingTimer.em');
+        system.require('std/graphics/ezui.em');
 
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable();
