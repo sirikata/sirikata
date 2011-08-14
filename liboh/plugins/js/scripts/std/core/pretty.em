@@ -35,6 +35,10 @@ if (typeof(std.core) === "undefined") /** @namespace */ std.core = {};
 
 system.require('std/escape.em');
 
+std.core.isArray = function(obj) {
+    return (obj.constructor.toString().indexOf("Array") != -1);
+};
+
 /**  
  * Converts an object to a string in a 'pretty' format, i.e. so it is
  *  human-readable, multiple lines, and handles indentation. If the
@@ -42,11 +46,18 @@ system.require('std/escape.em');
  *  the normal toString version will be returned.  Generally this
  *  should only be used on small, tree-like objects.
  */
-std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
+std.core.pretty = function(obj, options) {
+    if (typeof(options) !== 'object' || options == null) options = {};
+    
+    var valuesInQuotes = options.valuesInQuotes ? true : false;
+    var keysInQuotes = options.keysInQuotes ? true : false;
+    var arrayNotation = options.arrayNotation ? true : false;
     
     var visited = [];
 
     // Fast path -- if its not an object or array, we can just do the normal conversion
+    if (typeof(obj) === "string" && valuesInQuotes)
+        return Escape.escapeString(obj);
     if (typeof(obj) !== "object" || obj === null)
         return '' + obj;
 
@@ -94,6 +105,9 @@ std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
         }
         return null;
     };
+    var shouldPrintAsArray = function (obj) {
+        return arrayNotation && std.core.isArray(obj);
+    };
     
     var output = '';
     var obj_stack = [ {obj: obj, idx: -1} ];
@@ -109,11 +123,16 @@ std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
         // Check if we need to start this object
         if (cur.idx == -1) {
             // Start the object
-            output += '{';
+            if (shouldPrintAsArray(cur.obj)) {
+                output += '[';
+            } else {
+                output += '{';
+            }
             indent += ' ';
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
         }
-        else if (cur.idx < objectFields(cur.obj).length) {
+        else if ((shouldPrintAsArray(cur.obj) && cur.idx < cur.obj.length) ||
+                (!shouldPrintAsArray(cur.obj) && cur.idx < objectFields(cur.obj).length)) {
             // Setup processing of next child
 
             // Add a comma and either space or newline as appropriate
@@ -126,12 +145,21 @@ std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
 
             obj_stack.push( {obj: cur.obj, idx: cur.idx+1} );
             // And process this one, possibly triggering recursion
-            var key = objectFields(cur.obj)[cur.idx];
+            
+            var key;
+            if (shouldPrintAsArray(cur.obj)) {
+                key = cur.idx;
+            } else {
+                key = objectFields(cur.obj)[cur.idx];
+            }
             
             var child = cur.obj[key];
-            var displaykey = keysInQuotes ? Escape.escapeString(key) : key;
-            output += displaykey + ': ';
-
+            
+            if (!shouldPrintAsArray(cur.obj)) {
+                var displaykey = keysInQuotes ? Escape.escapeString(key) : key;
+                output += displaykey + ': ';
+            }
+            
             if (typeof(child) === "object" && child !== null) {
 
 
@@ -163,7 +191,7 @@ std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
             }
             else
             {
-                if (displayQuotes && typeof(child) === 'string')
+                if (valuesInQuotes && typeof(child) === 'string')
                     output += Escape.escapeString(child);
                 else
                     output += child;
@@ -178,8 +206,11 @@ std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
                 output += '\n' + indent;
             else
                 output += ' ';
-
-            output += '}';
+            if (shouldPrintAsArray(cur.obj)) {
+                output += ']';
+            } else {
+                output += '}';
+            }
 
             // No object stack push, we've finished with this object
         }
@@ -190,5 +221,20 @@ std.core.pretty = function(obj,displayQuotes,keysInQuotes) {
 
 
 std.core.quotepretty = function(obj) {
-    return std.core.pretty(obj, true, true);
+    return std.core.pretty(obj,
+        {
+        valuesInQuotes: true,
+        keysInQuotes: true
+        }
+    );
+};
+
+std.core.serialize = function(obj) {
+    return std.core.pretty(obj,
+        {
+        valuesInQuotes: true,
+        keysInQuotes: true,
+        arrayNotation: true
+        }
+    );
 };
