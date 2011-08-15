@@ -47,6 +47,7 @@
 #include "CenterFilter.hpp"
 
 #include "TriangulateFilter.hpp"
+#include "ComputeNormalsFilter.hpp"
 
 static int common_filters_plugin_refcount = 0;
 
@@ -72,6 +73,8 @@ SIRIKATA_PLUGIN_EXPORT_C void init ()
         FilterFactory::getSingleton().registerConstructor("center", CenterFilter::create);
 
         FilterFactory::getSingleton().registerConstructor("triangulate", TriangulateFilter::create);
+
+        FilterFactory::getSingleton().registerConstructor("compute-normals", ComputeNormalsFilter::create);
     }
 
     ++common_filters_plugin_refcount;
@@ -114,6 +117,10 @@ SIRIKATA_PLUGIN_EXPORT_C void destroy ()
             FilterFactory::getSingleton().unregisterConstructor("scale");
 
             FilterFactory::getSingleton().unregisterConstructor("center");
+
+            FilterFactory::getSingleton().unregisterConstructor("triangulate");
+
+            FilterFactory::getSingleton().unregisterConstructor("compute-normals");
         }
     }
 }
