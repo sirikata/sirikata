@@ -35,6 +35,9 @@ function runTests()
     funcWithFields();
     prototypeObject();
     prototypeChain();
+
+    undefinedObject();
+    nullObject();
     
     if (!hasFailed)
         mTest.success('Got all the way through serializations.');
@@ -350,6 +353,26 @@ function prototypeChain()
     var deserialized = system.deserialize(serialized);
     if (deserialized.field !== a.field)
         failed('error serializing and deserializng chained prototypes.');
+}
+
+function undefinedObject()
+{
+    var toSerialize  = undefined;
+    var serialized   = system.serialize(toSerialize);
+    var deserialized = system.deserialize(serialized);
+
+    if (typeof(deserialized) !== 'undefined')
+        failed('error when serializing and deserializing undefined');
+}
+
+function nullObject()
+{
+    var toSerialized = null;
+    var serialized   = system.serialize(toSerialize);
+    var deserialized = system.deserialize(serialized);
+
+    if (deserialized !== null)
+        failed('error when serializing and deserializing null');
 }
 
 

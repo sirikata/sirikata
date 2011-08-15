@@ -444,6 +444,15 @@ void JSSerializer::serializeFieldValueInternal(Sirikata::JS::Protocol::IJSFieldV
                 JSLOG(error,"Error in serialization.  Hidden value was not an int32");
         }
     }
+
+    else if (prop_val->IsNull())
+    {
+        jsf_value.set_null_value(true);
+    }
+    else if (prop_val->IsUndefined())
+    {
+        jsf_value.set_undefined_value(true);
+    }
     else if(prop_val->IsObject())
     {
         v8::Local<v8::Object> v8obj = prop_val->ToObject();
@@ -774,7 +783,14 @@ v8::Handle<v8::Value> JSSerializer::deserializeFieldValue(EmersonScript* emerScr
     {
         val = v8::Integer::NewFromUnsigned(jsvalue.ui_value());
     }
-
+    else if (jsvalue.has_undefined_value())
+    {
+        val = v8::Undefined();
+    }
+    else if (jsvalue.has_null_value())
+    {
+        val = v8::Null();
+    }
     else if(jsvalue.has_o_value())
     {
         //check if what is to be serialized is a function or a plain-old object
