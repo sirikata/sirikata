@@ -103,6 +103,7 @@ void copySubset(const SubMeshGeometry& orig, const std::vector<int>& prims, SubM
         output->primitives.push_back(SubMeshGeometry::Primitive());
         const SubMeshGeometry::Primitive& orig_prim = orig.primitives[*prim_it];
         SubMeshGeometry::Primitive& new_prim = output->primitives.back();
+        new_prim.primitiveType = orig_prim.primitiveType;
         // NOTE: This is a special case for the transformation we want -- there
         // should only be one material so they all get mapped to 0.
         new_prim.materialId = 0;
