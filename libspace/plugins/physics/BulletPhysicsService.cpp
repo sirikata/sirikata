@@ -124,7 +124,7 @@ BulletPhysicsService::BulletPhysicsService(SpaceContext* ctx, LocationUpdatePoli
         // FIXME these have to be consistent with the ones in OgreRenderer.cpp
         // (actually, with anything on the client, which will soon mean the
         // scripting layer as well) or the simulations won't match
-        // up. In this case, we can omit reduce-draw-calls, used by
+        // up. In this case, we can omit reduce-draw-calls & compute-normals, used by
         // Ogre, because all we actually care about is the adjustment
         // of the mesh to be centered (affecting both the collision
         // mesh and the bounds when used for collision).

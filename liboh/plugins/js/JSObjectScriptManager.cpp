@@ -94,6 +94,7 @@ JSObjectScriptManager::JSObjectScriptManager(ObjectHostContext* ctx, const Sirik
             // space bullet plugin and scripting plugins that expose mesh data
             std::vector<String> names_and_args;
             names_and_args.push_back("center"); names_and_args.push_back("");
+            names_and_args.push_back("compute-normals"); names_and_args.push_back("");
             mModelFilter = new Mesh::CompositeFilter(names_and_args);
         }
         catch(Mesh::CompositeFilter::Exception e) {
