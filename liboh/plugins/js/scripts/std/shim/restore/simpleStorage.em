@@ -45,7 +45,10 @@ if (typeof(std.simpleStorage) != 'undefined')
     // *never* get in here unless it is due to a system-initiated
     // *connection.
     var clearablePresConn = system.onPresenceConnected(
-        function() {
+        function(pres, clearable) {
+
+            //we don't want to fire this callback more than one time.
+            clearable.clear();
             // If presence key lookup finished unsuccessfully, we can
             // invoke the user code now, otherwise save system.self so
             // it can be used when that lookup finishes.

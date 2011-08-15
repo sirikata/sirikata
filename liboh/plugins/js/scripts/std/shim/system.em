@@ -760,13 +760,13 @@ function PresenceEntry(sporef, presObj)
       /** @ignore */
       system.__wrapPresConnCB = function(callback)
       {
-          var returner = function(presConn)
+          var returner = function(presConn, /**only for entity-wide onPresenceConnected call*/clearable)
           {
               system.__addToPresencesArray(presConn);
               this.addToSelfMap(presConn);
               this.__setBehindSelf(presConn);
               if (typeof(callback) === 'function')
-                  callback(presConn);
+                  callback(presConn,clearable);
           };
           return std.core.bind(returner,this);
       };
