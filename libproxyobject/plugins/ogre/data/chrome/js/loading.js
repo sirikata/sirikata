@@ -28,11 +28,10 @@
 
      hideLoadScreen = function() {
          $('#loadpanel').remove();
-         $('body').css({'background-color':'transparent'});
 
-         // Clear out hideLoadingScreen so we'll GC everything in here
+         // Clear out hideLoadScreen so we'll GC everything in here
          // and since the loading screen won't be pulled up again
-         delete hideLoadingScreen;
+         delete hideLoadScreen;
      };
  }
 )();
