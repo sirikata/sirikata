@@ -27,6 +27,8 @@ message JSFieldValue
         // points to the prototype of a common type such as vec3
         optional int32 loop_pointer = 9;
         optional JSMessage root_object = 10;
+        optional bool undefined_value = 11;
+        optional bool null_value = 12;
 }
 
 
