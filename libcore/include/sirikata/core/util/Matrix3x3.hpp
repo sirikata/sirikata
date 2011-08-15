@@ -182,15 +182,15 @@ public:
     Matrix3x3 inverse() const
     {
         Matrix3x3 inverted;
-        inverted.setCol(0, Vector3x(
+        inverted.setRow(0, Vector3x(
                 (*this)(1,1)*(*this)(2,2) - (*this)(1,2)*(*this)(2,1),
                 (*this)(0,2)*(*this)(2,1) - (*this)(0,1)*(*this)(2,2),
                 (*this)(0,1)*(*this)(1,2) - (*this)(0,2)*(*this)(1,1)));
-        inverted.setCol(1, Vector3x(
+        inverted.setRow(1, Vector3x(
                 (*this)(1,2)*(*this)(2,0) - (*this)(1,0)*(*this)(2,2),
                 (*this)(0,0)*(*this)(2,2) - (*this)(0,2)*(*this)(2,0),
                 (*this)(0,2)*(*this)(1,0) - (*this)(0,0)*(*this)(1,2)));
-        inverted.setCol(2, Vector3x(
+        inverted.setRow(2, Vector3x(
                 (*this)(1,0)*(*this)(2,1) - (*this)(1,1)*(*this)(2,0),
                 (*this)(0,1)*(*this)(2,0) - (*this)(0,0)*(*this)(2,1),
                 (*this)(0,0)*(*this)(1,1) - (*this)(0,1)*(*this)(1,0)));
