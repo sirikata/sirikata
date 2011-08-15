@@ -31,7 +31,9 @@ var logEvent = function(name) {
 };
 
 system.onPresenceConnected(
-    function() {
+    function(newPres, clearable) {
+        clearable.clear();
+        
         // 3 handlers
         var presenceConnectedCallback = function() {
             logEvent('createPresenceCallback');
