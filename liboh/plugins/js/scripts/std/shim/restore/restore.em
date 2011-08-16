@@ -13,13 +13,31 @@ if (typeof(std.persist) === 'undefined')
       */
      var allPresStillRest = {};
 
-     var mRestoring = false;
-
      function registerPresenceStillRestoring(keyName, presObjID)
      {
          if (allPresStillRest[keyName] === undefined)
              allPresStillRest[keyName] = {};
          allPresStillRest[keyName][presObjID] = presObjID;
+     }
+
+     //removes the presence with name presObjID from the allPresStilRest 
+     //If all presences that were registered to be restored have been, then
+     //execute cb.
+     function deregisterPresenceStillRestoring(keyName,presObjID,cb)
+     {
+         delete allPresStillRest[keyName][presObjID];
+         if (Object.keys(allPresStillRest[keyName]).length == 0) {
+             delete allPresStillRest[keyName];
+             cb(true, null); // Not sure about this being null....
+         }
+     }
+
+     //returns a bool.  If all the presences associated the restoration id keyName
+     //have been restored, then return true.  Otherwise, return false.
+     function allPresencesRestored(keyName)
+     {
+         return (!(allPresStillRest[keyName] !== undefined
+                   && Object.keys(allPresStillRest[keyName]).length != 0));
      }
 
 
@@ -46,11 +64,9 @@ if (typeof(std.persist) === 'undefined')
          {
              //insert the presence into nameService;
              nameService.insertObjectWithName(system.self,presObjID);
-             delete allPresStillRest[keyName][presObjID];
-             if (Object.keys(allPresStillRest[keyName]).length == 0) {
-                 delete allPresStillRest[keyName];
-                 cb(true, null); // Not sure about this being null....
-             }
+             //removes this presence from the list of outstanding restores.
+             //if all presences have been restored, executes cb.
+             deregisterPresenceStillRestoring(keyName,presObjID,cb);
         };
          return returner;
      }
@@ -560,15 +576,6 @@ if (typeof(std.persist) === 'undefined')
      };
 
 
-     /**
-      Returns true if we're in the middle of a restore operation.
-      Otherwise, returns false.
-      */
-     std.persist.inRestore = function()
-     {
-         return mRestoring;
-     };
-
 
      /**
       @see std.persist.restoreFromAndGetNamesAsync
@@ -593,10 +600,6 @@ if (typeof(std.persist) === 'undefined')
       */
      std.persist.restoreFromAndGetNamesAsync = function (keyName,id,cb)
      {
-         if (std.persist.inRestore())
-             throw new Error('Error, cannot request additional restores when in middle of current restore.  Check back later.');
-         mRestoring = true;
-
          var nameService = new std.persist.NameService();
          var ptrsToFix = [];
 
@@ -621,20 +624,18 @@ if (typeof(std.persist) === 'undefined')
          }
 
          if (!success) {
-             mRestoring = false;
              cb(false);
              return;
          }
-         if (allPresStillRest[keyName] !== undefined && Object.keys(allPresStillRest[keyName]).length != 0) {
+         if (!allPresencesRestored(keyName))
+         {
              system.print("Error: Shouldn't get finishRestoreFromAndGetNamesAsync callback until all presences are restored.\n");
-             mRestoring = false;
              cb(false);
              return;
          }
 
          // Success
          performPtrFinalFixups(ptrsToFix,nameService);
-         mRestoring = false;
          cb(true,returner,nameService);
      };
 
