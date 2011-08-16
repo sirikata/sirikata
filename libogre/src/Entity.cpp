@@ -120,7 +120,8 @@ Entity::Entity(OgreRenderer *scene, const String& name)
    mMovingIter(scene->mMovingEntities.end()),
    mVisible(true),
    mCurrentAnimation(NULL),
-   mInitialAnimationName("")
+   mInitialAnimationName(""), 
+   mMeshLoaded(false)
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
 
@@ -246,8 +247,8 @@ void Entity::setAnimation(const String& name) {
     }
 
     if (name.empty()) return;
-
-    if (mOgreObject == NULL) {
+    
+    if (mOgreObject == NULL || mMeshLoaded == false) {
       mInitialAnimationName = name;
       return;
     }
@@ -425,6 +426,13 @@ void Entity::loadMesh(const String& meshname)
 
     init(new_entity);
     fixTextures();
+
+    mMeshLoaded = true;
+
+    if (!mInitialAnimationName.empty()) {
+      setAnimation(mInitialAnimationName);
+      mInitialAnimationName = "";
+    }
 }
 
 void Entity::loadBillboard(Mesh::BillboardPtr bboard, const String& meshname)
@@ -480,6 +488,8 @@ void Entity::unloadMesh() {
     for(WebMaterialList::iterator it = mWebMaterials.begin(); it != mWebMaterials.end(); it++)
         WebViewManager::getSingleton().destroyWebView(*it);
     mWebMaterials.clear();
+
+    mMeshLoaded = false;
 }
 
 void Entity::unloadBillboard() {
@@ -515,6 +525,8 @@ void Entity::display(Transfer::URI const& meshFile)
     // If it's the same mesh *and* we still have it around or are working on it, just leave it alone
     if (mURI == meshFile && (mAssetDownload || mOgreObject))
         return;
+
+    mMeshLoaded = false;
 
     // Otherwise, start the download process
     mURI = meshFile;
@@ -1773,12 +1785,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
             mSceneNode->addChild(xformnode);
             //light->setDebugDisplayEnabled(true);
         }
-    }
-
-    if (!mInitialAnimationName.empty()) {
-      setAnimation(mInitialAnimationName);
-      mInitialAnimationName = "";
-    }
+    }    
 }
 
 void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {

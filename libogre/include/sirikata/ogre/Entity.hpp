@@ -107,6 +107,7 @@ protected:
     AssetDownloadTaskPtr mAssetDownload;
 
     std::set<String> mAnimationList;
+    bool mMeshLoaded;
 
     void fixTextures();
 
