@@ -41,11 +41,13 @@ std.simpleStorage.setScript(
         system.require('std/shim/restore/persistService.em');
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
+        system.require('std/movement/animatable.em');
         system.require('std/core/repeatingTimer.em');
         system.require('std/graphics/ezui.em');
 
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable();
+        animatable = new std.movement.Animatable();
 
         var init = function(presConnectClearable) {
             var storeFunc = function() {
