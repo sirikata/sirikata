@@ -48,11 +48,11 @@ FilterDataPtr ComputeNormalsFilter::apply(FilterDataPtr input) {
                         submesh.normals[prim_it->indices[tri_idx*3+1]] += nrm;
                         submesh.normals[prim_it->indices[tri_idx*3+2]] += nrm;
                     }
-
-                    // Normalize each normal
-                    for(int vidx = 0; vidx < submesh.normals.size(); vidx++)
-                        if (submesh.normals[vidx] != Vector3f(0,0,0)) submesh.normals[vidx].normalizeThis();
                 }
+
+                // Normalize each normal
+                for(int vidx = 0; vidx < submesh.normals.size(); vidx++)
+                    if (submesh.normals[vidx] != Vector3f(0,0,0)) submesh.normals[vidx].normalizeThis();
             }
 
             // Since we processed as a mesh, no need to check other types
