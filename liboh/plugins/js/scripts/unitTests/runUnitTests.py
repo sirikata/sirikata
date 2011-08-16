@@ -140,6 +140,16 @@ def registerTests():
                                duration=10);
     testArray.append(serializationTest);
     
+
+    #storageTest: tests system.storageBeginTransaction, system.storageCommit, system.storageErase, system.storageRead, system.storageWrite, serialization, timeout,killEntity
+    storageTestInfo = CSVConstructorInfo(script_type="js",
+                                         script_contents="system.import('unitTests/emTests/storageTest.em');");
+    storageTest     = csvTest.CSVTest("storageTest",
+                               touches=['storageBeginTransaction', 'storageCommit', 'storageErase', 'storageRead', 'storageWrite', 'serialization', 'timeout', 'killEntity'],
+                               entityConstructorInfo=[storageTestInfo],
+                               duration=10);
+    testArray.append(storageTest);
+    
     
 
     global manager
