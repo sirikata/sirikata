@@ -12,41 +12,61 @@ if (typeof(std) === "undefined") /** @namespace */ std = {};
          return name + '.' + subname;
      };
 
-/**
- Clears anything that's already stored in the entry prependKey
- */
-ObjectWriter = function(entryName)
-{
-    this.mEntryName = entryName;
-    this.recsToWrite = [];
+     /**
+      Clears anything that's already stored in the entry prependKey
 
-    this.flush = function(cb)
-    {
-        system.storageBeginTransaction();
-        for (var s in this.recsToWrite)
-        {
-            var entryName = this.recsToWrite[s][0];
-            var id  = this.recsToWrite[s][1].getID();
-            var rec = this.recsToWrite[s][1].generateRecordObject();
-            var serRec = system.serialize(rec);
-            system.storageWrite(keyName(entryName, id),serRec);
-        }
+      @param {bool} queueTransactions If true, then don't create a new
+      transaction and commit it after calling flush. Just return.
+      
+      */
+     ObjectWriter = function(entryName,queueTransactions)
+     {
+         this.mEntryName = entryName;
+         this.recsToWrite = [];
+         this.queueTransactions = queueTransactions;
+     };
 
-        system.storageCommit(cb);
-        this.recsToWrite = [];
-    };
 
-    this.addRecord = function(rec)
-    {
+     /**
+      @param {function} cb If ObjectWriter is not in queueTransactions
+      mode (ie, this.queueTransactions is false), then will begin a
+      transaction and commit that transaction, passing cb into
+      system.storageCommit.  If in queueTransactions mode, then does
+      not start a transaction or commit it, but after flush is
+      finished, calls cb directly, passing no args.
+      */
+     ObjectWriter.prototype.flush = function (cb)
+     {
+         if (! this.queueTransactions)
+             system.storageBeginTransaction();
+         
+         for (var s in this.recsToWrite)
+         {
+             var entryName = this.recsToWrite[s][0];
+             var id  = this.recsToWrite[s][1].getID();
+             var rec = this.recsToWrite[s][1].generateRecordObject();
+             var serRec = system.serialize(rec);
+             system.storageWrite(keyName(entryName, id),serRec);
+         }
+
+         this.recsToWrite = [];
+         if (! this.queueTransactions)
+             system.storageCommit(cb);
+         else
+             cb();
+     };
+     
+     ObjectWriter.prototype.addRecord = function(rec)
+     {
         this.recsToWrite.push([this.mEntryName,rec]);
-    };
+     };
 
-    this.changeEntryName = function(newEntryName)
-    {
-        this.mEntryName = newEntryName;
-    };
-};
+     ObjectWriter.prototype.changeEntryName = function (newEntryName)
+     {
+        this.mEntryName = newEntryName;         
+     };
 
+     
 var readObjectCallback = function(keyname, cb, success, rs) {
     if (!success)
     {

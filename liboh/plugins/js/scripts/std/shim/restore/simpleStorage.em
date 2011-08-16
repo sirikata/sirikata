@@ -137,34 +137,25 @@ if (typeof(std.simpleStorage) != 'undefined')
 
         var presName = presToRestore.toString();
 
-        //FIXME: currently cannot batch erase and write operations simultaneously.
-        //As a result, mPres and actual presences in backend could get out of sync.
-        //When this bug is resolved, the following finished cb will look a lot more
-        //like the one in the above func.
-        var finishedErasedPres = function(success)
-        {
-            var finishedUpdatedMPres = function(success)
-            {
-                if (!success)
-                {
-                    system.print('\nError in simpleStorage.  Could not delete presence correctly\n');
-                }
-                presOperInProgress = false;
-                processNextPresenceEvent();
-            };
 
+        
+        system.storageBeginTransaction();
+        //remove 
+        system.storageErase(presName);
+        var toRevertOnFail = mPres[presName];
+        delete mPres[presName];
+        std.persist.checkpointPartialPersist(mPres,presKeyName, function(){}, true);
+        system.storageCommit(function (success)
+                            {
+                                if (!success)
+                                {
+                                    mPres[presName] = toRevertOnFail;
+                                    system.__debugPrint('\nError in simpleStorage.  Could not delete presence correctly\n');
+                                }
 
-            if (success)
-            {
-                delete mPres[presName];
-                std.persist.checkpointPartialPersist(mPres,presKeyName);
-                return;
-            }
-            presOperInProgress = false;
-            processNextPresenceEvent();
-        };
-
-        system.storageErase(presName,finishedErasePres);
+                                presOperInProgress = false;
+                                processNextPresenceEvent();
+                            });
     };
 
 

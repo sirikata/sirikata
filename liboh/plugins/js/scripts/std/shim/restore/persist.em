@@ -234,8 +234,7 @@ if (typeof(std.persist) === 'undefined')
     };
 
 
-     
-     
+          
      
    /**
     Currently, only call checkpointPartialPersist on objects that do not
@@ -249,11 +248,19 @@ if (typeof(std.persist) === 'undefined')
 
     @param {optional} cb Callback of the form function(bool success)
            which is invoked when operation completes.
+
+    @param {bool} (optional) queueTransactions If true, then request
+    that ObjectWriter does not begin a transaction when setting up,
+    and similarly does not call system.storageCommit() on completion.
+    Idea is that something else may want to call
+    checkpointPartialPersist several times before actually committing
+    the full transaction.
+    
     */
-    std.persist.checkpointPartialPersist = function (objToPersistFrom, keyName, cb)
+    std.persist.checkpointPartialPersist = function (objToPersistFrom, keyName, cb, queueTransactions)
     {
-        std.persist.persistMany([[objToPersistFrom,keyName]],cb);
-   };
+        std.persist.persistMany([[objToPersistFrom,keyName]],cb, queueTransactions);
+    };
 
 
 
@@ -261,12 +268,19 @@ if (typeof(std.persist) === 'undefined')
       @param {array} arrayOfObjKeyNames An array.  Each element in the
       array has two fields, the first is an object that will be
       persisted.  The second is a keyName used to access that object.
-
+      
       @param {optional} cb @see checkpointParitalPersist.
+
+      @param {optional} queueTransactions @see checkpointPartialPersist
       */
-     std.persist.persistMany = function (arrayOfObjKeyNames,cb)
+     std.persist.persistMany = function (arrayOfObjKeyNames,cb, queueTransactions)
      {
-         var backendWrite = new ObjectWriter('default');
+
+         var backendWrite = null;
+         if (typeof(queueTransactions) === 'boolean')
+             backendWrite = new ObjectWriter('default',queueTransactions);
+         else
+             backendWrite = new ObjectWriter('default',false);
 
          for (var s in arrayOfObjKeyNames)
          {
