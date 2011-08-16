@@ -60,6 +60,15 @@ public:
     int mNumSockets;
     std::vector<TCPSocket*>mSockets;
     std::map<TCPSocket*, std::string> mWebSocketResponses;
+
+    // Destroys the sockets associated with this IncompleteStreamState and
+    // clears out the data. Only use this for failed connections.
+    void destroy() {
+        for(std::vector<TCPSocket*>::iterator it = mSockets.begin(); it != mSockets.end(); it++)
+            delete *it;
+        mSockets.clear();
+        mWebSocketResponses.clear();
+    }
 };
 
 namespace {
@@ -103,6 +112,18 @@ std::string getWebSocketSecReply(const std::string& key1, const std::string& key
 
     return std::string((const char*)result, MD5_DIGEST_LENGTH);
 }
+
+
+void handleBuildStreamTimeout(UUID context) {
+    IncompleteStreamMap::iterator it = sIncompleteStreams.find(context);
+    // It already finished connecting
+    if (it == sIncompleteStreams.end()) return;
+
+    // Make sure we clean up the sockets which would otherwise remain open.
+    it->second.destroy();
+    sIncompleteStreams.erase(it);
+}
+
 
 }
 
@@ -240,6 +261,11 @@ void buildStream(TcpSstHeaderArray *buffer,
         sIncompleteStreams[context].mNumSockets=numConnections;
         where=sIncompleteStreams.find(context);
         assert(where!=sIncompleteStreams.end());
+        // Setup a timer to clean up the sockets if we don't complete it in time
+        data->strand->post(
+            Duration::seconds(10),
+            std::tr1::bind(&handleBuildStreamTimeout, context)
+        );
     }
     if ((int)numConnections!=where->second.mNumSockets) {
         SILOG(tcpsst,warning,"Single client disagrees on number of connections to establish: "<<numConnections<<" != "<<where->second.mNumSockets);
@@ -273,6 +299,7 @@ void buildStream(TcpSstHeaderArray *buffer,
 }
 
 namespace {
+
 class CheckWebSocketRequest {
     const Array<uint8,TCPStream::MaxWebSocketHeaderSize> *mArray;
     typedef boost::system::error_code ErrorCode;
