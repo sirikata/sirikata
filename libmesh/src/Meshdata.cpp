@@ -60,11 +60,20 @@ void SubMeshGeometry::append(const SubMeshGeometry& rhs, const Matrix4x4f& xform
     Matrix3x3f normal_xform = xform.extract3x3().inverseTranspose();
 
     int32 index_offset = this->positions.size();
+    bool first_append = (index_offset == 0);
     for(uint32 pi = 0; pi < rhs.positions.size(); pi++)
         this->positions.push_back(xform * rhs.positions[pi]);
+    if (!first_append &&
+        ((!this->normals.empty() && rhs.normals.empty()) ||
+            (this->normals.empty() && !rhs.normals.empty())))
+        SILOG(mesh, error, "SubMeshGeometry::append is appending SubMeshGeometries with and without normals.");
     for(uint32 ni = 0; ni < rhs.normals.size(); ni++)
         this->normals.push_back( normal_xform * rhs.normals[ni] );
     // FIXME tangents?
+    if (!first_append &&
+        ((!this->colors.empty() && rhs.colors.empty()) ||
+            (this->colors.empty() && !rhs.colors.empty())))
+        SILOG(mesh, error, "SubMeshGeometry::append is appending SubMeshGeometries with and without colors.");
     this->colors.insert(this->colors.end(), rhs.colors.begin(), rhs.colors.end());
 
     // FIXME: influenceStartIndex? jointindices? weights? inverseBindMatrices?
