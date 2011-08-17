@@ -190,6 +190,7 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
             Transfer::URI texURI( getURL(mAssetURI, *it) );
             addDependentDownload(texURI);
         }
+        startDependentDownloads();
 
         return;
     }
@@ -200,6 +201,7 @@ void AssetDownloadTask::handleAssetParsed(Mesh::VisualPtr vis) {
         // it
         Transfer::URI texURI( getURL(mAssetURI, bboard->image) );
         addDependentDownload(texURI);
+        startDependentDownloads();
         return;
     }
 
@@ -220,7 +222,13 @@ void AssetDownloadTask::addDependentDownload(const Transfer::URI& depUrl) {
         std::tr1::bind(&AssetDownloadTask::weakTextureDownloaded, getWeakPtr(), _1, _2)
     );
     mActiveDownloads[depUrl] = dl;
-    dl->start();
+}
+
+void AssetDownloadTask::startDependentDownloads() {
+    // Copy since we could get callbacks as soon as we start the downloads
+    ActiveDownloadMap downloads_copy(mActiveDownloads);
+    for(ActiveDownloadMap::iterator it = downloads_copy.begin(); it != downloads_copy.end(); it++)
+        it->second->start();
 }
 
 void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&thus, std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
@@ -231,6 +239,10 @@ void AssetDownloadTask::weakTextureDownloaded(const std::tr1::weak_ptr<AssetDown
 }
 
 void AssetDownloadTask::textureDownloaded(std::tr1::shared_ptr<ChunkRequest> request, std::tr1::shared_ptr<const DenseData> response) {
+    // This could be triggered by any CDN thread, protect access
+    // (mActiveDownloads, mDependencies)
+    boost::mutex::scoped_lock lok(mDependentDownloadMutex);
+
     if (!request) {
         failDownload();
         return;
