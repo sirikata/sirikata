@@ -228,6 +228,8 @@ Handle<v8::Value> setMesh(const v8::Arguments& args)
  */
 v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
 {
+    v8::HandleScope handle_scope;
+    
     if (args.Length() != 1)
         return v8::ThrowException( v8::Exception::Error(v8::String::New("ERROR: You need to specify exactly one argument to the runSimulation function. (It should probably be 'ogregraphics'.)\n\n")) );
 
@@ -244,7 +246,7 @@ v8::Handle<v8::Value>runSimulation(const v8::Arguments& args)
     if (! decodeStrSuccessful)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(strDecodeErrorMessage.c_str(), strDecodeErrorMessage.length())) );
 
-    return mStruct->runSimulation(simname);
+    return handle_scope.Close(mStruct->runSimulation(simname));
 }
 
 

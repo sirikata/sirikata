@@ -423,7 +423,7 @@ v8::Handle<v8::Value>JSPresenceStruct::runSimulation(String simname)
     tmpObj->SetInternalField(JSSIMOBJECT_JSOBJSCRIPT_FIELD,External::New(mParent));
     tmpObj->SetInternalField(JSSIMOBJECT_SIMULATION_FIELD,External::New(invokableObj));
     tmpObj->SetInternalField(TYPEID_FIELD, External::New(new String(JSSIMOBJECT_TYPEID_STRING)));
-    return tmpObj;
+    return scope.Close(tmpObj);
 }
 
 
