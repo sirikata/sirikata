@@ -37,8 +37,6 @@ function () {
                             me._ezuiWindow = gui;
                             handleSendMessageToController = function(msg) {
                                 if (msg) {
-                                    //system.print("##### HANDLE SEND MSG TO CTRLR #####\n");
-                                    //system.print(std.core.serialize(msg)+'\n');
                                     msg.vis = me._selected_visible.toString();
                                     msg >> me._selected_visible >> [];
                                 }
@@ -82,7 +80,6 @@ function () {
             return s;
         }
         if (respmsg.script) {
-            //system.print("###### in onRequestResponse RESPMSG: \n"+std.core.serialize(respmsg)+"\n");
             me._selected_visible = respmsg.self;
             var av = me._viewingAvatar;
             var pos = av.getPosition();
@@ -102,7 +99,6 @@ function () {
             if (typeof(respmsg.globalData) !== 'undefined') {
                 for (p in respmsg.globalData) {
                     if (respmsg.globalData.hasOwnProperty(p)) {
-                        //system.print("__set_global_data('"+p+"', "+std.core.serialize(respmsg.globalData[p])+");\n");
                         me._ezuiWindow.guiEval("__set_global_data('"+p+"', "+std.core.serialize(respmsg.globalData[p])+");");
                     }
                 }
@@ -152,14 +148,12 @@ function () {
 
 
     ui.EZUI.prototype.show = function(visible, x, y) {
-        //if (visible && this._selected_visible && visible.toString() == this._selected_visible.toString()) return;
-        //if user clicked on the same presence twice, do nothing
         this.x = x;
         this.y = y;
         if (visible) {
             // if we're displaying a UI for one presence and the user clicks on something else,
             // call __handle_ui_will_close so the UI can sync with its controller before it's dismissed.
-            if (this._selected_visible && visible.toString() == this._selected_visible.toString()) this._ezuiWindow.guiEval("__handle_ui_will_close();");
+            if (this._selected_visible && visible.toString() != this._selected_visible.toString()) this._ezuiWindow.guiEval("__handle_ui_will_close();");
             this.handleUpdateUI(visible);
         } else {
             this.hide();
@@ -181,7 +175,8 @@ function () {
         this._ezuiWindow.guiEval("__handle_user_data_changed("+std.core.pretty(data)+");");
     }*/
     
-    ezui_handleGlobalDataChanged = function(msg) {
+    ezui_handleGlobalDataChanged = function(msg, sender) {
+        if (sender.toString() != me._selected_visible) return;
         var d = msg.updatedGlobalData;
         var cmd = "__handle_global_data_changed("+std.core.serialize(d)+");";
         me._ezuiWindow.guiEval(cmd);

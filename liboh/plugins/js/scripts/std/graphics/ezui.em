@@ -9,6 +9,7 @@ var _ezui_on_user_data_did_update_callback = {};
 var _ezui_on_user_data_will_update_callback = {};
 var _ezui_button_callback = {};
 var _ezui_gdata_update_timer;
+var _ezui_rickroll = @write('<iframe width="425" height="349" src="http://www.youtube.com/embed/oHg5SJYRHA0" frameborder="0" allowfullscreen></iframe>')@;
 
 var ezui = {};
 
@@ -80,10 +81,7 @@ ezui.globalData = function (key, me) {
     return _ezui_global[key];
 }
 
-//var gdata_me;
 ezui.setGlobalData = function (key, value, me) {
-    //me = (me || system.self).toString();
-    //gdata_me = me;
     if (typeof(_ezui_global) === 'undefined') {
         _ezui_global = {};
     }
@@ -100,44 +98,56 @@ ezui_sendGdataUpdateMsg = function () {
     ezui.sendAllViewers(msg);
 }
 
-ezui_respondToRequest = function (req) {
+ezui_respondToRequest = function (req, sender) {
     var resp = {};
-    resp.self = system.self;
-    resp.script = _ezui_scripts[req.recipient];
-    
-    resp.userData = _ezui_users[req.sender];
-    if (typeof(resp.userData) === 'undefined') resp.userData = {};
-    
-    resp.globalData = _ezui_global;
-    if (typeof(resp.globalData) === 'undefined') resp.globalData = {};
-    
-    _ezui_curr_viewers[req.sender] = true;
-    if (typeof(_ezui_on_connection_callback[req.recipient]) === 'function') {
-        _ezui_on_connection_callback[req.recipient](req.sender);
+    if (sender.toString() == req.sender) {
+        //valid request
+        resp.self = system.self;
+        resp.script = _ezui_scripts[req.recipient];
+        
+        resp.userData = _ezui_users[req.sender];
+        if (typeof(resp.userData) === 'undefined') resp.userData = {};
+        
+        resp.globalData = _ezui_global;
+        if (typeof(resp.globalData) === 'undefined') resp.globalData = {};
+        
+        _ezui_curr_viewers[req.sender] = true;
+        if (typeof(_ezui_on_connection_callback[req.recipient]) === 'function') {
+            _ezui_on_connection_callback[req.recipient](req.sender);
+        }
+        req.makeReply(resp) >> [];
+    } else {
+        //user is trying to be funny.  Rickroll them.
+        resp.script = _ezui_rickroll;
+        resp.userData = ["you've", "been", "owned"];
+        resp.globalData = ["ha", "ha", "ha"];
+        req.makeReply(resp) >> [];
     }
-    
-    req.makeReply(resp) >> [];
 }
 ezui_respondToRequest << [{'ezuiRequest'::}];
 
-ezui_handleButtonEvent = function(msg) {
-    if (typeof(_ezui_button_callback[msg.vis]) === 'function') _ezui_button_callback[msg.vis](msg.ezui_button_pressed);
+ezui_handleButtonEvent = function(msg, sender) {
+    if (_ezui_curr_viewers[sender.toString()]) {
+        if (typeof(_ezui_button_callback[msg.vis]) === 'function') _ezui_button_callback[msg.vis](msg.ezui_button_pressed);
+    }
 }
 ezui_handleButtonEvent << [{'ezui_button_pressed'::}];
 
-ezui_disconnect = function(msg) {
-    if (_ezui_curr_viewers[msg.disconnect]) {
+ezui_disconnect = function(msg, sender) {
+    if (_ezui_curr_viewers[msg.disconnect] && sender.toString() == msg.disconnect) {
         _ezui_curr_viewers[msg.disconnect] = undefined;
     }
 }
 ezui_disconnect << [{'disconnect'::}];
 
-ezui_updateUserData = function (msg) {
-    var cb = _ezui_on_user_data_will_update_callback[msg.vis];
-    if (typeof(cb) === 'function') cb();
-    if (typeof(_ezui_users) === 'undefined') _ezui_users = {};
-    _ezui_users[msg.user] = msg.userData;
-    cb = _ezui_on_user_data_did_update_callback[msg.vis];
-    if (typeof(cb) === 'function') cb();
+ezui_updateUserData = function (msg, sender) {
+    if (_ezui_curr_viewers[sender.toString()] && msg.user == sender.toString()) {
+        var cb = _ezui_on_user_data_will_update_callback[msg.vis];
+        if (typeof(cb) === 'function') cb();
+        if (typeof(_ezui_users) === 'undefined') _ezui_users = {};
+        _ezui_users[msg.user] = msg.userData;
+        cb = _ezui_on_user_data_did_update_callback[msg.vis];
+        if (typeof(cb) === 'function') cb();
+    }
 }
 ezui_updateUserData << [{'userData'::}];
