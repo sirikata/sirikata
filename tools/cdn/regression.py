@@ -67,6 +67,7 @@ def generate_images(items, klass):
     if not os.path.exists(data_directory()): os.makedirs(data_directory())
 
     for item in items:
+        print 'Generating screenshot for', item
         sshot = filename_from_url(item, klass)
         # FIXME requiring running from a specific directory sucks,
         # currently required to be in root directory
@@ -95,9 +96,12 @@ def compute_diffs(items):
 def rebaseline(items):
     # This is simple, just copy over the new images to baseline
     for item in items:
-        sshot_baseline = filename_from_url(item, 'baseline')
-        sshot_new = filename_from_url(item, 'new')
-        shutil.copy(sshot_new, sshot_baseline)
+        try:
+            sshot_baseline = filename_from_url(item, 'baseline')
+            sshot_new = filename_from_url(item, 'new')
+            shutil.copy(sshot_new, sshot_baseline)
+        except IOError:
+            pass
 
 def main():
     if len(sys.argv) < 3:
