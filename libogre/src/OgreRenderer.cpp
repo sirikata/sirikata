@@ -495,7 +495,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     }
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
-    mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
+    mSceneManager->setAmbientLight(Ogre::ColourValue(1.0,1.0,1.0,1.0));
     sActiveOgreScenes.push_back(this);
 
     if (with_berkelium)

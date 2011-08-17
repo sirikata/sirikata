@@ -120,7 +120,7 @@ Entity::Entity(OgreRenderer *scene, const String& name)
    mMovingIter(scene->mMovingEntities.end()),
    mVisible(true),
    mCurrentAnimation(NULL),
-   mInitialAnimationName(""), 
+   mInitialAnimationName(""),
    mMeshLoaded(false)
 {
     mTextureFingerprints = std::tr1::shared_ptr<TextureBindingsMap>(new TextureBindingsMap());
@@ -247,7 +247,7 @@ void Entity::setAnimation(const String& name) {
     }
 
     if (name.empty()) return;
-    
+
     if (mOgreObject == NULL || mMeshLoaded == false) {
       mInitialAnimationName = name;
       return;
@@ -621,7 +621,7 @@ public:
         }
         for (size_t i=0;i<mMat->textures.size();++i) {
             MaterialEffectInfo::Texture tex=mMat->textures[i];
-            Ogre::Pass*pass=tech->getPass(0);
+            Ogre::Pass*pass = tech->getPass(0);
             if (tex.uri.length()==0) { // Flat colors
                 switch (tex.affecting) {
                 case MaterialEffectInfo::Texture::DIFFUSE:
@@ -652,7 +652,10 @@ public:
                 default:
                   break;
                 }
-            } else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE) { // or textured
+            }
+            else if (tex.affecting==MaterialEffectInfo::Texture::DIFFUSE ||
+                tex.affecting==MaterialEffectInfo::Texture::AMBIENT)
+            { // or textured
                 // FIXME other URI schemes besides URL
                 Transfer::URL url(mURI);
                 assert(!url.empty());
@@ -684,15 +687,11 @@ public:
                     switch (tex.affecting) {
                       case MaterialEffectInfo::Texture::DIFFUSE:
                         if (tech->getNumPasses()<=valid_passes) {
-                            pass=tech->createPass();
+                            pass = tech->createPass();
                             ++valid_passes;
                         }
                         pass->setDiffuse(ColourValue(1,1,1,1));
-/*
-                        pass->setAmbient(ColourValue(0,0,0,0));
-                        pass->setSelfIllumination(ColourValue(0,0,0,0));
-                        pass->setSpecular(ColourValue(0,0,0,0));
-*/
+
                         //pass->setIlluminationStage(IS_PER_LIGHT);
                         if (pass->getTextureUnitState(ogreTextureName) == 0) {
                           tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
@@ -703,25 +702,27 @@ public:
                         break;
                       case MaterialEffectInfo::Texture::AMBIENT:
                         if (tech->getNumPasses()<=valid_passes) {
-                            pass=tech->createPass();
+                            pass = tech->createPass();
                             ++valid_passes;
                         }
 
-                        pass->setDiffuse(ColourValue(0,0,0,0));
-                        pass->setSelfIllumination(ColourValue(0,0,0,0));
-                        pass->setSpecular(ColourValue(0,0,0,0));
+                        pass->setAmbient(ColourValue(1.0,1.0,1.0,1));
+                        // NOTE: Currently ambient and diffuse are mutually
+                        // exclusive. We need to make sure that the diffuse is
+                        // non-zero so it actually shades. Otherwise, the
+                        // ambient seems to have no effect. To do that, we set
+                        // it to black, but with non-zero alpha.
+                        pass->setDiffuse(ColourValue(0,0,0,1));
 
-                        pass->setAmbient(ColourValue(1,1,1,1));
-                        //tus->setColourOperation(LBO_MODULATE);
+                        if (pass->getTextureUnitState(ogreTextureName) == 0) {
+                          tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
+                          fixupTextureUnitState(tus,tex);
+                          tus->setColourOperation(LBO_MODULATE);
+                        }
 
                         pass->setIlluminationStage(IS_AMBIENT);
                         break;
                       case MaterialEffectInfo::Texture::EMISSION:
-/*
-                        pass->setDiffuse(ColourValue(0,0,0,0));
-                        pass->setAmbient(ColourValue(0,0,0,0));
-                        pass->setSpecular(ColourValue(0,0,0,0));
-*/
                         if (pass->getTextureUnitState(ogreTextureName) == 0) {
                           tus=pass->createTextureUnitState(ogreTextureName,tex.texCoord);
                           fixupTextureUnitState(tus,tex);
@@ -733,13 +734,10 @@ public:
                         break;
                       case MaterialEffectInfo::Texture::SPECULAR:
                         if (tech->getNumPasses()<=valid_passes) {
-                            pass=tech->createPass();
+                            pass = tech->createPass();
                             ++valid_passes;
                         }
 
-                        pass->setDiffuse(ColourValue(0,0,0,0));
-                        pass->setAmbient(ColourValue(0,0,0,0));
-                        pass->setSelfIllumination(ColourValue(0,0,0,0));
                         //pass->setIlluminationStage(IS_PER_LIGHT);
 
                         if (pass->getTextureUnitState(ogreTextureName) == 0) {
@@ -1785,7 +1783,7 @@ void Entity::createMeshdata(const MeshdataPtr& mdptr, bool usingDefault, AssetDo
             mSceneNode->addChild(xformnode);
             //light->setDebugDisplayEnabled(true);
         }
-    }    
+    }
 }
 
 void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, AssetDownloadTaskPtr assetDownload) {
@@ -1813,7 +1811,7 @@ void Entity::createBillboard(const BillboardPtr& bbptr, bool usingDefault, Asset
         tex.uri = bbptr->image;
         tex.color = Vector4f(1.f, 1.f, 1.f, 1.f);
         tex.texCoord = 0;
-        tex.affecting = MaterialEffectInfo::Texture::DIFFUSE;
+        tex.affecting = MaterialEffectInfo::Texture::AMBIENT;
         tex.samplerType = MaterialEffectInfo::Texture::SAMPLER_TYPE_2D;
         tex.minFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
         tex.magFilter = MaterialEffectInfo::Texture::SAMPLER_FILTER_LINEAR_MIPMAP_LINEAR;
