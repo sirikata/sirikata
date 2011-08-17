@@ -1638,6 +1638,10 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
         );
     }
 
+    if (name == "url") {
+        return Invokable::asAny(viewURL);
+    }
+
     return boost::any();
 }
 

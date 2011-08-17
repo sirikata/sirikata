@@ -259,6 +259,17 @@ function() {
         return this._simulator.addGUIModule(name, url, cb);
     };
 
+    /** Request that the given script text be added as a module in the UI. */
+    std.graphics.DefaultGraphics.prototype.addGUITextModule = function(name, js_text, cb) {
+        return this._simulator.addGUITextModule(name, js_text, cb);
+    };
+
+    /** Request that the given URL be presented as a widget. */
+    std.graphics.DefaultGraphics.prototype.createBrowser = function(name, url, cb) {
+        return this._simulator.createBrowser(name, url, cb);
+    };
+
+
     /** Get a list of animations associated with this entity. */
     std.graphics.DefaultGraphics.prototype.getAnimationList = function(vis) {
         if (!vis)
@@ -277,11 +288,6 @@ function() {
         return this._simulator.stopAnimation(vis);
     };
 
-
-    /** Request that the given script text be added as a module in the UI. */
-    std.graphics.DefaultGraphics.prototype.addGUITextModule = function(name, js_text, cb) {
-        return this._simulator.addGUITextModule(name, js_text, cb);
-    };
 
 
     //by default how to scale translational velocity from keypresses.  (movement
