@@ -707,9 +707,16 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
     Sirikata::JS::Protocol::JSMessage jsMsg;
     Sirikata::JS::Protocol::JSFieldValue jsFieldVal;
     bool isJSMsg   = jsMsg.ParseFromString(payload);
+    if (! isJSMsg)
+        isJSMsg = jsMsg.ParseFromArray(payload.data(),payload.size());
+    
     bool isJSField = false;
     if (!isJSMsg)
+    {
         isJSField = jsFieldVal.ParseFromString(payload);
+        if (!isJSField)
+            isJSField = jsFieldVal.ParseFromArray(payload.data(), payload.size());
+    }
 
     //if can't decode the payload as a jsmessage or
     //a jsfieldval, then return false;
@@ -806,13 +813,9 @@ void EmersonScript::handleScriptCommUnreliable (const ODP::Endpoint& src, const 
 {
     SpaceObjectReference to  (dst.space(), dst.object());
     SpaceObjectReference from(src.space(), src.object());
-
-    JSLOG(error, "Error handling unreliable message.  Not currently parsing message");
-    
-    // Sirikata::JS::Protocol::JSMessage js_msg;
-    // bool parsed = js_msg.ParseFromArray(payload.data(), payload.size());
-    //    deserializeMsgAndDispatch(from,to,js_msg);
+    handleScriptCommRead(from,to,String((const char*) payload.data(), payload.size()));
 }
+
 
 
 v8::Handle<v8::Value> EmersonScript::sendSandbox(const String& msgToSend, uint32 senderID, uint32 receiverID)

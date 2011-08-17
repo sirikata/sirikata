@@ -107,9 +107,9 @@ struct JSSystemStruct
     v8::Handle<v8::Value> struct_registerOnPresenceConnectedHandler(v8::Persistent<v8::Function> cb_persist);
     v8::Handle<v8::Value> struct_registerOnPresenceDisconnectedHandler(v8::Persistent<v8::Function> cb_persist);
 
+    //last bool indicates whether to send message reliably or unreliably.
+    v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl,bool reliable);
 
-
-    v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl);
 
     v8::Handle<v8::Value> deserialize(const String& toDeserialize);
 

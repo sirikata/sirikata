@@ -15,7 +15,9 @@ namespace Sirikata {
 namespace JS {
 namespace JSSystem {
 
-v8::Handle<v8::Value> sendMessage (const v8::Arguments& args);
+v8::Handle<v8::Value> sendMessageReliable (const v8::Arguments& args);
+v8::Handle<v8::Value> sendMessageUnreliable(const v8::Arguments& args);
+v8::Handle<v8::Value> sendMessage(const v8::Arguments&args, bool reliable);
 
 
 v8::Handle<v8::Value> root_canSendMessage(const v8::Arguments& args);
@@ -47,6 +49,7 @@ v8::Handle<v8::Value> evalInGlobal(const v8::Arguments& args);
 
 v8::Handle<v8::Value> setSandboxMessageCallback(const v8::Arguments& args);
 v8::Handle<v8::Value> setPresenceMessageCallback(const v8::Arguments& args);
+
 
 //storage functions
 v8::Handle<v8::Value> storageBeginTransaction(const v8::Arguments& args);

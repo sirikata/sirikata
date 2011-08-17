@@ -348,6 +348,8 @@ function PresenceEntry(sporef, presObj)
      };
 
 
+     
+
      /**
       @param {String} eraseKey (same as writeKey from storageCommit and readKey
       from storageRead).  Specifies the element in the backend storage system to
@@ -668,13 +670,25 @@ function PresenceEntry(sporef, presObj)
        @param Which presence to send from.
        @param Message object to send.
        @param Visible to send to.
-       @param (Optional) Error handler function.
        */
       system.sendMessage = function()
       {
           baseSystem.sendMessage.apply(baseSystem, arguments);
       };
 
+
+     /**
+      @function
+      @param Which presence to send from.
+      @param Message object to send.
+      @param Visible to send to.
+      */
+     system.sendMessageUnreliable = function()
+     {
+         baseSystem.sendMessageUnreliable.apply(baseSystem,arguments);
+     };
+     
+     
       /** @function
        *  @description Loads a file and evaluates its contents. Note
        *  that this version *always* imports the file, even if it was

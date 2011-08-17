@@ -36,7 +36,20 @@ namespace JSSystem {
    Sends a message to the presence associated with this visible object from the
    presence that can see this visible object.
  */
-v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
+v8::Handle<v8::Value> sendMessageReliable (const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    return handle_scope.Close(sendMessage(args,true));
+}
+
+v8::Handle<v8::Value> sendMessageUnreliable(const v8::Arguments& args)
+{
+    v8::HandleScope handle_scope;
+    return handle_scope.Close(sendMessage(args,false));
+}
+
+
+v8::Handle<v8::Value> sendMessage(const v8::Arguments&args, bool reliable)
 {
     if ((args.Length() != 4) && (args.Length() != 3))
     {
@@ -71,8 +84,11 @@ v8::Handle<v8::Value> sendMessage (const v8::Arguments& args)
     if (jsfake == NULL)
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())));
 
-    return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
+
+    return jsfake->sendMessageNoErrorHandler(jspres,serialized_message,jspl,reliable);
 }
+
+
 
 v8::Handle<v8::Value> evalInGlobal(const v8::Arguments& args)
 {

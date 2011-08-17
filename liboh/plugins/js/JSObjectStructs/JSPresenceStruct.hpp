@@ -212,6 +212,16 @@ private:
     if (! isConnected)                                                  \
         V8_EXCEPTION_CSTR("Error in " #where " presence was disconnected when called.");
 
+#define INLINE_PRESENCE_CONV_ERROR(toConvert,whereError,whichArg,whereWriteTo) \
+    JSPresenceStruct* whereWriteTo;                                     \
+    {                                                                   \
+        String _errMsg = "In " #whereError "cannot convert " #whichArg " to presence struct"; \
+        whereWriteTo = JSSystemStruct::decodeSystemStruct(toConvert,_errMsg); \
+        if (whereWriteTo == NULL)                                       \
+            return v8::ThrowException(v8::Exception::Error(v8::String::New(_errMsg.c_str(), _errMsg.length()))); \
+    }
+
+
 
 typedef std::vector<JSPresenceStruct*> JSPresVec;
 typedef JSPresVec::iterator JSPresVecIter;

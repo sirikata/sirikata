@@ -239,8 +239,9 @@ void JSObjectScriptManager::createSystemTemplate()
     mSystemTemplate->Set(v8::String::New("js_import"), v8::FunctionTemplate::New(JSSystem::root_jsimport));
     mSystemTemplate->Set(v8::String::New("js_require"), v8::FunctionTemplate::New(JSSystem::root_jsrequire));
 
-    mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessage));
-
+    mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessageReliable));
+    mSystemTemplate->Set(v8::String::New("sendMessageUnreliable"),v8::FunctionTemplate::New(JSSystem::sendMessageUnreliable));
+    
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));

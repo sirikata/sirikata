@@ -165,7 +165,7 @@ struct JSContextStruct : public JSSuspendable, public Liveness
     v8::Handle<v8::Value> struct_createTimeout(double period,v8::Persistent<v8::Function>& cb, uint32 contID,double timeRemaining, bool isSuspended, bool isCleared);
 
 
-    v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl);
+    v8::Handle<v8::Value> sendMessageNoErrorHandler(JSPresenceStruct* jspres,const String& serialized_message,JSPositionListener* jspl,bool reliable);
 
 
     //register cb_persist as the default handler that gets thrown
