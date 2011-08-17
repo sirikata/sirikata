@@ -40,7 +40,6 @@ namespace Mesh {
 
 Filter* ReduceDrawCalls(const String& args) {
     std::vector<String> names_and_args;
-    names_and_args.push_back("triangulate"); names_and_args.push_back("all");
     names_and_args.push_back("single-material-geometry"); names_and_args.push_back("");
     names_and_args.push_back("squash-materials"); names_and_args.push_back("");
     names_and_args.push_back("squash-primitives"); names_and_args.push_back("");
