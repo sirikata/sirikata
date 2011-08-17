@@ -662,14 +662,14 @@ void WebViewManager::handleRequestDrag(WebView* caller)
 }
 
 
-void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& args) {
+boost::any WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& args) {
 #if defined(HAVE_BERKELIUM)
     if (args.size() < 1) {
         SILOG(ogre,error,"event() must be called with at least one argument.  It should take the form event(name, other, args, follow)");
-        return;
+        return boost::any();
     }
 
-    if (!mInputManager) return;
+    if (!mInputManager) return boost::any();
 
     // We've passed all the checks, just convert everything and we're good to go
 //    String name = args[0].toString();
@@ -679,6 +679,7 @@ void WebViewManager::onRaiseWebViewEvent(WebView* webview, const JSArguments& ar
 
     mInputManager->fire(Task::EventPtr( new WebViewEvent(webview->getName(), args) ));
 #endif
+    return boost::any();
 }
 
 

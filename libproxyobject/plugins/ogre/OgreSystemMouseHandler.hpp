@@ -103,7 +103,7 @@ private:
     void onUIDirectoryListingFinished(String initial_path,
         std::tr1::shared_ptr<Transfer::DiskManager::ScanRequest::DirectoryListing> dirListing);
 
-    void onUIAction(WebView* webview, const JSArguments& args);
+    boost::any onUIAction(WebView* webview, const JSArguments& args);
 
     OgreSystem *mParent;
     std::vector<Task::SubscriptionId> mEvents;

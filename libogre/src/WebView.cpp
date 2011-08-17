@@ -219,7 +219,7 @@ void WebView::initializeWebView(
         Berkelium::Script::Variant(SIRIKATA_VERSION));
     webView->addBindOnStartLoading(WideString::point_to(L"sirikata.__event"),
                   Berkelium::Script::Variant::bindFunction(
-                      WideString::point_to(L"send"), false));
+                      WideString::point_to(L"send"), true));
     // Note that the setup here is a little weird -- single arguments
     // are passed through as their value, everything else as a single
     // array. Note also that we handle the event name separately
@@ -288,7 +288,7 @@ void WebView::setNavigatedCallback(NavigatedCallback cb) {
     mNavigatedCallback = cb;
 }
 
-void WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
+boost::any WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
     if (mReady) { // This is a reset
         if (mResetReadyCallback) mResetReadyCallback();
     }
@@ -296,9 +296,10 @@ void WebView::handleReadyCallback(WebView* wv, const JSArguments& args) {
         mReady = true;
         if (mReadyCallback) mReadyCallback();
     }
+    return boost::any();
 }
 
-void WebView::handleSetUIViewport(WebView* wv, const JSArguments& args) {
+boost::any WebView::handleSetUIViewport(WebView* wv, const JSArguments& args) {
     assert(args.size() == 4);
 
     int32 left = boost::lexical_cast<int32>(String(args[0].begin()));
@@ -307,11 +308,13 @@ void WebView::handleSetUIViewport(WebView* wv, const JSArguments& args) {
     int32 bottom = boost::lexical_cast<int32>(String(args[3].begin()));
 
     if (mUpdateViewportCallback) mUpdateViewportCallback(left, top, right, bottom);
+
+    return boost::any();
 }
 
-void WebView::userLog(WebView* wv, const JSArguments& args) {
+boost::any WebView::userLog(WebView* wv, const JSArguments& args) {
     if (args.size() == 0)
-        return; // not sure why they would do this
+        return boost::any(); // not sure why they would do this
 
     String level(args[0].begin());
     String msg;
@@ -335,12 +338,14 @@ void WebView::userLog(WebView* wv, const JSArguments& args) {
         SILOG(ui, detailed, msg);
     else if (level == "insane")
         SILOG(ui, insane, msg);
+
+    return boost::any();
 }
 
-void WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
+boost::any WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
     String name(args[0].begin());
     String url(args[1].begin());
-    if (url.empty() || name.empty()) return;
+    if (url.empty() || name.empty()) return boost::any();
     int32 w = 0, h = 0;
     if (args.size() >= 4) {
         w = boost::lexical_cast<int32>(String(args[2].begin()));
@@ -355,15 +360,17 @@ void WebView::handleOpenBrowser(WebView* wv, const JSArguments& args) {
         OverlayPosition(RP_CENTER), false, 70, TIER_MIDDLE, 0);
     child_wv->loadURL(url);
     child_wv->setTransparent(false);
+
+    return boost::any();
 }
 
-void WebView::handleListenToBrowser(WebView* wv, const JSArguments& args) {
+boost::any WebView::handleListenToBrowser(WebView* wv, const JSArguments& args) {
     String name(args[0].begin());
     String cb_name(args[1].begin());
-    if (name.empty() || cb_name.empty()) return;
+    if (name.empty() || cb_name.empty()) return boost::any();
 
     WebView* child_wv = WebViewManager::getSingleton().getWebView(name);
-    if (child_wv == NULL) return;
+    if (child_wv == NULL) return boost::any();
 
     child_wv->setNavigatedCallback(
         std::tr1::bind(
@@ -372,6 +379,8 @@ void WebView::handleListenToBrowser(WebView* wv, const JSArguments& args) {
             cb_name, std::tr1::placeholders::_1
         )
     );
+
+    return boost::any();
 }
 
 void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const String& cb_name, const String& url) {
@@ -398,10 +407,11 @@ void WebView::defaultEvent(const String& name) {
 #endif
 }
 
-void WebView::handleCloseBrowser(WebView* wv, const JSArguments& args) {
+boost::any WebView::handleCloseBrowser(WebView* wv, const JSArguments& args) {
     String name(args[0].begin());
-    if (name.empty()) return;
-    WebViewManager::getSingleton().destroyWebView(name);
+    if (!name.empty())
+        WebViewManager::getSingleton().destroyWebView(name);
+    return boost::any();
 }
 
 
@@ -1026,10 +1036,11 @@ void WebView::resize(int width, int height)
 }
 
 
-void WebView::dispatchToDelegate(const String& name, const JSArguments& args) {
+boost::any WebView::dispatchToDelegate(const String& name, const JSArguments& args) {
     std::map<std::string, JSDelegate>::iterator it = delegateMap.find(name);
     if (it != delegateMap.end())
-        it->second(this, args);
+        return it->second(this, args);
+    return boost::any();
 }
 
 
@@ -1440,10 +1451,54 @@ void WebView::onWidgetPaint(
     SILOG(webview,detailed,"onWidgetPaint");
 }
 
+namespace {
+
+Berkelium::Script::Variant translateAnyToVariant(const boost::any& a) {
+    if (a.empty()) return Berkelium::Script::Variant();
+
+    if (a.type() == typeid(bool)) {
+        return Berkelium::Script::Variant(boost::any_cast<bool>(a));
+    }
+    else if (a.type() == typeid(int8)) {
+        return Berkelium::Script::Variant((int)boost::any_cast<int8>(a));
+    }
+    else if (a.type() == typeid(uint8)) {
+        return Berkelium::Script::Variant((int)boost::any_cast<uint8>(a));
+    }
+    else if (a.type() == typeid(int16)) {
+        return Berkelium::Script::Variant((int)boost::any_cast<int16>(a));
+    }
+    else if (a.type() == typeid(uint16)) {
+        return Berkelium::Script::Variant((int)boost::any_cast<uint16>(a));
+    }
+    else if (a.type() == typeid(int32)) {
+        return Berkelium::Script::Variant((int)boost::any_cast<int32>(a));
+    }
+    else if (a.type() == typeid(uint32)) {
+        return Berkelium::Script::Variant((int)boost::any_cast<uint32>(a));
+    }
+    else if (a.type() == typeid(float32)) {
+        return Berkelium::Script::Variant((float64)boost::any_cast<float32>(a));
+    }
+    else if (a.type() == typeid(float64)) {
+        return Berkelium::Script::Variant((float64)boost::any_cast<float64>(a));
+    }
+    else if (a.type() == typeid(String)) {
+        String a_str = boost::any_cast<String>(a);
+        return Berkelium::Script::Variant(a_str.c_str());
+    }
+
+    // Default fallback case just returns undefined
+    return Berkelium::Script::Variant();
+}
+
+}
+
 void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLString origin, WideString funcName, Berkelium::Script::Variant *args, size_t numArgs) {
+    boost::any result;
     if (numArgs < 1) {
         if (replyMsg)
-            win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
+            win->synchronousScriptReturn(replyMsg, translateAnyToVariant(result));
         return;
     }
     const Berkelium::Script::Variant &name = args[0];
@@ -1466,13 +1521,13 @@ void WebView::onJavascriptCallback(Berkelium::Window *win, void* replyMsg, URLSt
             //argVector.push_back(JSArgument(temp.data(), temp.length()));
             argVector.push_back(JSArgument(s->data(), s->length()));
         }
-        dispatchToDelegate(nameStr, argVector);
+        result = dispatchToDelegate(nameStr, argVector);
         for (size_t j=0;j<argStorage.size();j++) {
             delete(argStorage[j]);
         }
     }
     if (replyMsg)
-        win->synchronousScriptReturn(replyMsg, Berkelium::Script::Variant());
+        win->synchronousScriptReturn(replyMsg, translateAnyToVariant(result));
 }
 
 #endif //HAVE_BERKELIUM
@@ -1586,7 +1641,7 @@ boost::any WebView::invoke(std::vector<boost::any>& params)
     return boost::any();
 }
 
-void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const JSArguments& args)
+boost::any WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const JSArguments& args)
 {
   std::vector<boost::any> params;
   // Do the translation here
@@ -1598,8 +1653,8 @@ void WebView::translateParamsAndInvoke(Invokable* _invokable, WebView* wv, const
   }
 
   //After translation
-  _invokable->invoke(params);
-
+  boost::any result = _invokable->invoke(params);
+  return result;
 }
 
 void WebView::forwardOnNavigateToInvokable(Invokable* _invokable, const String& url) {

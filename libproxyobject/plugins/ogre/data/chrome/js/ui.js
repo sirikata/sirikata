@@ -53,11 +53,12 @@ if (typeof(sirikata) === "undefined") {
         if (console && console.log && typeof(console.log) === "function") {
             console.log.apply(console, arguments);
         }
+        return undefined;
     };
     sirikata.event = function() {
         var args = [];
         for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
-        sirikata.__event.apply(this, args);
+        return sirikata.__event.apply(this, args);
     };
 }
 
