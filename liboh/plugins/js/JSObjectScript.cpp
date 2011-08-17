@@ -252,31 +252,6 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
         EvalContext new_ctx(ctx);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
 
-
-    //lkjs;
-    v8::Local<v8::Function> fValTmp = functionValue("function(){system.print('ooooo');}");
-    v8::Persistent<v8::Function> fVal = v8::Persistent<v8::Function>::New(fValTmp);
-    v8::Local<v8::Object> tmpObj = v8::Object::New();
- 
-    v8::Local<v8::Function> fValTmp2 = functionValue("function(){system.print('ooooo');}");
-    v8::Persistent<v8::Function> fVal2 = v8::Persistent<v8::Function>::New(fValTmp);
-    fVal2->SetPrototype(tmpObj);
-
-    
-    fVal->SetPrototype(fVal2);
- 
-    
-//    fVal->GetPrototype()->ToObject()->SetPrototype(tmpObj->GetPrototype());
-    //fVal->GetPrototype()->ToObject()->SetPrototype(tmpObj);
-    
-//    fVal->SetPrototype(tmpObj);
-
-
-    
-    v8::Local<v8::Object> global_obj = mContext->mContext->Global();
-    global_obj->Set(v8::String::New("bftm_debug"),fVal);
-//lkjs;
-
         
         v8::Handle<v8::Value> result = protectedEval(script, &origin, new_ctx, mContext, true);
         if (!result.IsEmpty()) {
