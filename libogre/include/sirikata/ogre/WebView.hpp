@@ -630,11 +630,13 @@ class SIRIKATA_OGRE_EXPORT WebView
          */
         boost::any handleOpenBrowser(WebView* wv, const JSArguments& args);
 
-        /** Setup a function name to be invoked on events. Currently
-         * only supports 'navigate' events of the form
-         * callback('navigate', url).
+        /** Handle a request to listen to a browser.
          */
         boost::any handleListenToBrowser(WebView* wv, const JSArguments& args);
+
+        /** Handle a request for the current URL of a browser.
+         */
+        boost::any handleGetBrowserURL(WebView* wv, const JSArguments& args);
 
         // Helper handler for forwarding navigation events to listener
         void forwardBrowserNavigatedCallback(Liveness::Token alive, const String& cb_name, const String& url);

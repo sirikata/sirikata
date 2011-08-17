@@ -246,6 +246,7 @@ void WebView::initializeWebView(
     if (!resetting) bind("__setViewport", std::tr1::bind(&WebView::handleSetUIViewport, this, _1, _2));
     if (!resetting) bind("__openBrowser", std::tr1::bind(&WebView::handleOpenBrowser, this, _1, _2));
     if (!resetting) bind("__listenToBrowser", std::tr1::bind(&WebView::handleListenToBrowser, this, _1, _2));
+    if (!resetting) bind("__getBrowserURL", std::tr1::bind(&WebView::handleGetBrowserURL, this, _1, _2));
     if (!resetting) bind("__closeBrowser", std::tr1::bind(&WebView::handleCloseBrowser, this, _1, _2));
     //make sure that the width and height of the border do not dominate the size
     if (viewWidth>mBorderLeft+mBorderRight&&viewHeight>mBorderTop+mBorderBottom) {
@@ -381,6 +382,16 @@ boost::any WebView::handleListenToBrowser(WebView* wv, const JSArguments& args) 
     );
 
     return boost::any();
+}
+
+boost::any WebView::handleGetBrowserURL(WebView* wv, const JSArguments& args) {
+    String name(args[0].begin());
+    if (name.empty()) return boost::any();
+
+    WebView* child_wv = WebViewManager::getSingleton().getWebView(name);
+    if (child_wv == NULL) return boost::any();
+
+    return boost::any( child_wv->viewURL );
 }
 
 void WebView::forwardBrowserNavigatedCallback(Liveness::Token alive, const String& cb_name, const String& url) {

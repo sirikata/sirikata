@@ -128,6 +128,11 @@ sirikata.listenToBrowser = function(name, cb) {
     sirikata.__event.apply(this, ['__listenToBrowser', stringify(name), handler_name]);
 };
 
+/** Get the current browser URL. */
+sirikata.getBrowserURL = function(name) {
+    return sirikata.__event.apply(this, ['__getBrowserURL', stringify(name)]);
+};
+
 /** Close the browser with the given name. */
 sirikata.closeBrowser = function(name) {
     sirikata.__event.apply(this, ['__closeBrowser', stringify(name)]);
