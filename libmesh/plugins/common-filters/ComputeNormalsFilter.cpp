@@ -23,6 +23,7 @@ FilterDataPtr ComputeNormalsFilter::apply(FilterDataPtr input) {
 
             for(SubMeshGeometryList::iterator sm_it = mesh->geometry.begin(); sm_it != mesh->geometry.end(); sm_it++) {
                 SubMeshGeometry& submesh = *sm_it;
+                uint32 non_zero_normals = submesh.normals.size() > 0;
                 if (submesh.normals.size() == submesh.positions.size()) continue;
 
                 // If we don't have matching normals, clear & compute
@@ -31,6 +32,15 @@ FilterDataPtr ComputeNormalsFilter::apply(FilterDataPtr input) {
                 submesh.normals.resize(submesh.positions.size(), Vector3f(0, 0, 0));
 
                 for(std::vector<SubMeshGeometry::Primitive>::iterator prim_it = submesh.primitives.begin(); prim_it != submesh.primitives.end(); prim_it++) {
+                    // Lines and points don't need normals
+                    if (prim_it->primitiveType == SubMeshGeometry::Primitive::POINTS ||
+                        prim_it->primitiveType == SubMeshGeometry::Primitive::LINES ||
+                        prim_it->primitiveType == SubMeshGeometry::Primitive::LINESTRIPS) {
+                        if (non_zero_normals)
+                            SILOG(compute-normals-filter, warn, "Found mismatching number of normals and positions for points, lines, or linestrips.  Model is probably broken.");
+                        continue;
+                    }
+
                     if (prim_it->primitiveType != SubMeshGeometry::Primitive::TRIANGLES) {
                         SILOG(compute-normals-filter, warn, "Tried to apply ComputeNormalsFilter to non-triangles primitive.");
                         continue;
