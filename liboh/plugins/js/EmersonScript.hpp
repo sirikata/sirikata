@@ -219,8 +219,8 @@ public:
     //wraps the c++ presence structure in a v8 object.
     v8::Local<v8::Object> wrapPresence(JSPresenceStruct* presToWrap, v8::Persistent<v8::Context>* ctxToWrapIn);
 
-
-
+    //If a simulation for presence with sporef, sporef, and name simname already
+    //exist, just return an object corresponding to those.
     Sirikata::JS::JSInvokableObject::JSInvokableObjectInt* runSimulation(const SpaceObjectReference& sporef, const String& simname);
 
     /**

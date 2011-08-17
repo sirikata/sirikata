@@ -3,6 +3,7 @@
 #include "JSFields.hpp"
 #include "JSFunctionInvokable.hpp"
 #include "JSInvokableUtil.hpp"
+#include "JSObjectsUtils.hpp"
 
 #include <sirikata/core/network/Asio.hpp>
 #include <cassert>
@@ -20,11 +21,13 @@ v8::Handle<v8::Value> invoke(const v8::Arguments& args)
     EmersonScript* caller;
     JSInvokableObjectInt* invokableObj;
 
-  bool decoded = decodeJSInvokableObject(args.This(), caller, invokableObj);
-  assert(decoded);
+    bool decoded = decodeJSInvokableObject(args.This(), caller, invokableObj);
 
+    if (! decoded) 
+        V8_EXCEPTION_CSTR("Could not decode invokable js object");
 
-  assert(invokableObj);
+    if (! invokableObj)
+        V8_EXCEPTION_CSTR("Null field in invokable object");
 
   /*
   create a vector of boost::any params here

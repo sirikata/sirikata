@@ -102,7 +102,11 @@ TimeSteppedSimulation* HostedObject::runSimulation(const SpaceObjectReference& s
     if (stopped()) return sim;
 
     PresenceDataMap::iterator psd_it = mPresenceData->find(sporef);
-    assert (psd_it != mPresenceData->end());
+    if (psd_it == mPresenceData->end())
+    {
+        HO_LOG(error, "Error requesting to run a simulation for a presence that does not exist.");
+        return NULL;
+    }
 
     PerPresenceData& pd =  psd_it->second;
     addSimListeners(pd,simName,sim);
