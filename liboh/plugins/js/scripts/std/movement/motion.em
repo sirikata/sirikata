@@ -547,7 +547,7 @@ motion.Collision = motion.Motion.extend(/** @lends motion.Collision# */{
          */
 		self.responseFn = responseFn;
 		
-        var onCollisionMessage = function(message, sender) {
+        self._onCollisionMessage = function(message, sender) {
             // make sure that collision is always from the receiving object's
             // perspective
             if(message.collision.other.id === presence.toString()) {
@@ -562,16 +562,17 @@ motion.Collision = motion.Motion.extend(/** @lends motion.Collision# */{
             self.responseFn(presence, message.collision);
         };
 
-        onCollisionMessage << [{'action':'collision':},
+        self._collisionHandler = (self._onCollisionMessage <<
+                                  [{'action':'collision':},
                 {'id':presence.toString():},
-			       {'collision'::}];
+                                   {'collision'::}]);
 		
         if(!('handlers' in motion.Collision))
             motion.Collision.handlers = {};
         if(!(presence.toString() in motion.Collision.handlers))
             motion.Collision.handlers[presence.toString()] = [];
         motion.Collision.handlers[presence.toString()].
-                         push(onCollisionMessage);
+                         push(self._onCollisionMessage);
 
         var sendCollisionEvent = function(msg, id) {
             if(id in motion.Collision.handlers) {
@@ -606,12 +607,22 @@ motion.Collision = motion.Motion.extend(/** @lends motion.Collision# */{
 	},
 
     suspend: function() {
-        this.collisionHandler.suspend();
+        this._collisionHandler.suspend();
+        var handlers = motion.Collision.handlers[this.presence.toString()];
+        for(var i in handlers) {
+            if(handlers[i] === this._onCollisionMessage) {
+                handlers.splice(i, 1);
+                break;
+            }
+        }
         this._super();
     },
 
     reset: function() {
-        this.collisionHandler.reset();
+        this.suspend(); // remove the handler so we don't register it twice
+        this._collisionHandler.reset();
+        motion.Collision.handlers[this.presence.toString()].
+                         push(this._onCollisionMessage);
         this._super();
 	}
 });
