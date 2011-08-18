@@ -1189,7 +1189,11 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchiveFactory.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/CDNArchivePlugin.cpp
   ${LIBOGRE_SOURCE_DIR}/resourceManager/ReplacingDataStream.cpp
+  ${LIBOGRE_SOURCE_DIR}/Util.cpp
   ${LIBOGRE_SOURCE_DIR}/Camera.cpp
+  ${LIBOGRE_SOURCE_DIR}/ManualMaterialLoader.cpp
+  ${LIBOGRE_SOURCE_DIR}/ManualSkeletonLoader.cpp
+  ${LIBOGRE_SOURCE_DIR}/ManualMeshLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   ${LIBOGRE_SOURCE_DIR}/OverlayPosition.cpp

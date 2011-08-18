@@ -33,6 +33,7 @@
 #define SIRIKATA_OGRE_ENTITY_HPP__
 
 #include <sirikata/ogre/Platform.hpp>
+#include <sirikata/ogre/Util.hpp>
 #include <OgreMovableObject.h>
 #include <OgreRenderable.h>
 #include <OgreSceneManager.h>
@@ -67,7 +68,6 @@ class SIRIKATA_OGRE_EXPORT EntityListener {
 class SIRIKATA_OGRE_EXPORT Entity : public Provider<EntityListener*>, public Liveness {
 public:
     typedef std::map<int, std::pair<String, Ogre::MaterialPtr> > ReplacedMaterialMap;
-    typedef std::map<String, String > TextureBindingsMap;
 protected:
     OgreRenderer *const mScene;
     String mName;
@@ -80,7 +80,7 @@ protected:
     ReplacedMaterialMap mReplacedMaterials;
     TextureBindingsMap mTextureBindings;
 
-    std::tr1::shared_ptr<TextureBindingsMap> mTextureFingerprints;
+    TextureBindingsMapPtr mTextureFingerprints;
 
     typedef std::vector<Ogre::Light*> LightList;
     LightList mLights;
