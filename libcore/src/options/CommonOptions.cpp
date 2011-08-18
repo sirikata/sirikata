@@ -94,7 +94,7 @@ void setLogOutput() {
     String logfile = GetOptionValue<String>(OPT_LOG_FILE);
     if (logfile != "" && logfile != "-") {
         // Try to open the log file
-        std::ostream* logfs = new std::ofstream(logfile.c_str());
+        std::ostream* logfs = new std::ofstream(logfile.c_str(), std::ios_base::out | std::ios_base::app);
         if (*logfs) {
             Sirikata::Logging::setLogStream(logfs);
             return;
