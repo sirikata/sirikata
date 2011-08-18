@@ -131,31 +131,27 @@ v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::H
     v8::Context::Scope context_scope(ctx);
 
     TryCatch try_catch;
-
-
+    
     Handle<Value> result;
     if (target != NULL && !(*target)->IsNull() && !(*target)->IsUndefined()) {
-        JSLOG(insane,"ProtectedJSCallback with target given.");
         result = cb->Call(*target, argc, argv);
     } else {
-        JSLOG(insane,"ProtectedJSCallback without target given.");
         result = cb->Call(ctx->Global(), argc, argv);
     }
 
     if (try_catch.HasCaught())
     {
-
         printException(try_catch);
         if (exc != NULL)
             *exc = exceptionAsString(try_catch, NULL);
 
-
         return v8::Handle<v8::Value>();
     }
-
-
     return result;
 }
+
+
+
 
 v8::Handle<v8::Value> ProtectedJSCallbackFull(v8::Handle<v8::Context> ctx, v8::Handle<v8::Object> *target, v8::Handle<v8::Function> cb, String* exc = NULL) {
     return ProtectedJSCallbackFull(ctx, target, cb, 0, NULL, exc);
@@ -174,17 +170,27 @@ void printException(v8::TryCatch& try_catch) {
 
 
 
-JSObjectScript::EvalContext::EvalContext()
+JSObjectScript::EvalContext::EvalContext(JSContextStruct* jsctx)
  : currentScriptDir(),
    currentScriptBaseDir(),
-   currentOutputStream(&std::cout)
+   currentOutputStream(&std::cout),
+   jscont(jsctx)
 {}
 
 JSObjectScript::EvalContext::EvalContext(const EvalContext& rhs)
  : currentScriptDir(rhs.currentScriptDir),
    currentScriptBaseDir(rhs.currentScriptBaseDir),
-   currentOutputStream(rhs.currentOutputStream)
+   currentOutputStream(rhs.currentOutputStream),
+   jscont(rhs.jscont)
 {}
+
+JSObjectScript::EvalContext::EvalContext(const EvalContext& rhs, JSContextStruct* jsctx)
+ : currentScriptDir(rhs.currentScriptDir),
+   currentScriptBaseDir(rhs.currentScriptBaseDir),
+   currentOutputStream(rhs.currentOutputStream),
+   jscont(jsctx)
+{}
+
 
 boost::filesystem::path JSObjectScript::EvalContext::getFullRelativeScriptDir() const {
     using namespace boost::filesystem;
@@ -231,15 +237,17 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
     OptionSet* options = OptionSet::getOptions("jsobjectscript", this);
     options->parse(args);
 
-    // By default, our eval context has:
-    // 1. Empty currentScriptDir, indicating it should only use explicitly
-    //    specified search paths.
-    mEvalContextStack.push(EvalContext());
-
+    
     v8::HandleScope handle_scope;
 
     SpaceObjectReference sporef = SpaceObjectReference::null();
     mContext = new JSContextStruct(this, NULL,sporef, Capabilities::getFullCapabilities(),mManager->mContextGlobalTemplate,contIDTracker,NULL);
+
+    // By default, our eval context has:
+    // 1. Empty currentScriptDir, indicating it should only use explicitly
+    //    specified search paths.
+    // 2. mContext as its JSContextStruct
+    mEvalContextStack.push(EvalContext(mContext));
 
     mContStructMap[contIDTracker] = mContext;
     ++contIDTracker;
@@ -249,21 +257,17 @@ void JSObjectScript::initialize(const String& args, const String& script,int32 m
         JSLOG(detailed,"Have an initial script to execute.  Executing.");
 
         EvalContext& ctx = mEvalContextStack.top();
-        EvalContext new_ctx(ctx);
+        EvalContext new_ctx(ctx,mContext);
         v8::ScriptOrigin origin(v8::String::New("(original_import)"));
 
-        
         v8::Handle<v8::Value> result = protectedEval(script, &origin, new_ctx, mContext, true);
         if (!result.IsEmpty()) {
             v8::String::Utf8Value exception(result);
             String exception_string = FromV8String(exception);
             JSLOG(error,"Initial script threw an exception: " << exception_string);
         }
-
         mContext->struct_setScript(script);
     }
-
-    
 }
 
 
@@ -300,6 +304,21 @@ void JSObjectScript::stop() {
 bool JSObjectScript::isStopped()
 {
     return stopCalled;
+}
+
+
+void JSObjectScript::shimImportAndEvalScript(JSContextStruct* jscont, const String& toEval)
+{
+    if (mEvalContextStack.empty())
+        mEvalContextStack.push(EvalContext(jscont));
+    else
+        mEvalContextStack.push(EvalContext(mEvalContextStack.top(),jscont));
+
+    import("std/shim.em",false);
+    v8::ScriptOrigin origin(v8::String::New("(reset_script)"));
+    internalEval( toEval,&origin, true,true);
+
+    mEvalContextStack.pop();
 }
 
 
@@ -472,8 +491,15 @@ v8::Handle<v8::Value> JSObjectScript::debug_fileWrite(const String& strToWrite,c
 }
 
 
+void JSObjectScript::printExceptionToScript(const String& exc)
+{
+    if (mEvalContextStack.empty())
+    {
+        JSLOG(error, "Error when printing exception.  Eval context stack improperly maintained.  Aborting.");
+        return;
+    }
 
-void JSObjectScript::printExceptionToScript(JSContextStruct* ctx, const String& exc) {
+    JSContextStruct* ctx = mEvalContextStack.top().jscont;
     v8::Handle<v8::Object> sysobj = ctx->struct_getSystem();
     v8::Handle<v8::Value> printval = sysobj->Get(v8::String::New("print"));
     if (printval.IsEmpty() || !printval->IsFunction()) return;
@@ -487,19 +513,6 @@ void JSObjectScript::printExceptionToScript(JSContextStruct* ctx, const String& 
     postEvalOps();
 }
 
-v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
-    String exc;
-    preEvalOps();
-    v8::Handle<v8::Value> retval = ProtectedJSCallbackFull(ctx->mContext, target, cb, argc, argv, &exc);
-    postEvalOps();
-    if (retval.IsEmpty())
-    {
-        preEvalOps();
-        printExceptionToScript(ctx, exc);
-        postEvalOps();
-    }
-    return retval;
-}
 
 v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[]) {
     return invokeCallback(ctx, NULL, cb, argc, argv);
@@ -581,23 +594,32 @@ v8::Handle<v8::Value> JSObjectScript::emersonCompileString(const String& toCompi
         return v8::ThrowException(err);
     }
 
-
     JSLOG(error, "Got a compiler error in internalEval");
     return v8::String::New("");
 }
 
 
+v8::Handle<v8::Context> JSObjectScript::getCurrentV8Context()
+{
+    if (mEvalContextStack.empty())
+    {
+        JSLOG(error, "Error: context stack is empty.  Returning context associated with root instead.");
+        return mContext->mContext;
+    }
+
+    return mEvalContextStack.top().jscont->mContext;
+}
 
 
 
-v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ctx, const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc)
+v8::Handle<v8::Value> JSObjectScript::internalEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, bool is_emerson, bool return_exc)
 {
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctx);
+    //reads context value from the top of the context stack.
+    v8::Context::Scope context_scope(getCurrentV8Context());
     EmersonLineMap lineMap;
 
     TryCatch try_catch;
-
     preEvalOps();
 
     // Special casing emerson compilation
@@ -692,7 +714,6 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
 
     // Execute
     v8::Handle<v8::Value> result = script->Run();
-
     if (try_catch.HasCaught()) {
         printException(try_catch, &lineMap);
         postEvalOps();
@@ -718,13 +739,10 @@ v8::Handle<v8::Value> JSObjectScript::internalEval(v8::Persistent<v8::Context>ct
 
 
 
-v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, JSContextStruct* jscs, bool return_exc, bool isJS)
+v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str, v8::ScriptOrigin* em_script_name, const EvalContext& new_ctx, bool return_exc, bool isJS)
 {
     ScopedEvalContext sec(this, new_ctx);
-    if (jscs == NULL)
-        return internalEval(mContext->mContext, em_script_str, em_script_name, !isJS, return_exc);
-
-    return internalEval(jscs->mContext, em_script_str, em_script_name, !isJS, return_exc);
+    return internalEval(em_script_str, em_script_name, !isJS, return_exc);
 }
 
 
@@ -736,10 +754,10 @@ v8::Handle<v8::Value> JSObjectScript::protectedEval(const String& em_script_str,
   compiling anonymous functions.  Ie, if didn't add those in, it may not compile
   anonymous functions.)
  */
-v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8::Context>ctx, v8::Handle<v8::Function>&cb)
+v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Handle<v8::Function>&cb)
 {
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctx);
+    v8::Context::Scope context_scope(getCurrentV8Context());
 
     TryCatch try_catch;
 
@@ -756,8 +774,9 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Persistent<v8
     v8Source += ");";
 
     ScriptOrigin cb_origin = cb->GetScriptOrigin();
-    v8::Handle<v8::Value> compileFuncResult = internalEval(ctx, v8Source, &cb_origin, false);
+    v8::Handle<v8::Value> compileFuncResult = internalEval(v8Source, &cb_origin, false);
 
+    
     if (! compileFuncResult->IsFunction())
     {
         String errorMessage = "Uncaught exception: function passed in did not compile to a function";
@@ -791,70 +810,6 @@ v8::Handle<v8::Value> JSObjectScript::checkResources()
 }
 
 
-/*
-  This function grabs the string associated with cb, and recompiles it in the
-  context ctx.  It then calls the newly recompiled function from within ctx with
-  args specified by argv and argc.
- */
-v8::Handle<v8::Value> JSObjectScript::ProtectedJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
-{
-
-    v8::Handle<v8::Value> compiledFunc = compileFunctionInContext(ctx,cb);
-    if (! compiledFunc->IsFunction())
-    {
-        JSLOG(error, "Callback did not compile to a function in ProtectedJSFunctionInContext.  Aborting execution.");
-        //will be error message, or whatever else it compiled to.
-        return compiledFunc;
-    }
-
-    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunc);
-    return executeJSFunctionInContext(ctx,funcInCtx,argc,target,argv);
-}
-
-
-/*
-  This function takes the result of compileFunctionInContext, and executes it
-  within context ctx.
- */
-v8::Handle<v8::Value> JSObjectScript::executeJSFunctionInContext(v8::Persistent<v8::Context> ctx, v8::Handle<v8::Function> funcInCtx,int argc, v8::Handle<v8::Object>*target, v8::Handle<v8::Value> argv[])
-{
-    v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(ctx);
-
-    TryCatch try_catch;
-    preEvalOps();
-
-    v8::Handle<v8::Value> result;
-    bool targetGiven = false;
-    if (target!=NULL)
-    {
-        if (((*target)->IsNull() || (*target)->IsUndefined()))
-        {
-            JSLOG(insane,"executeJSFunctionInContext with target given.");
-            result = funcInCtx->Call(*target, argc, argv);
-            targetGiven = true;
-        }
-    }
-
-    if (!targetGiven)
-    {
-        JSLOG(insane,"executeJSFunctionInContext without target given.");
-        result = funcInCtx->Call(ctx->Global(), argc, argv);
-    }
-
-    //check if any errors have occurred.
-    if (try_catch.HasCaught()) {
-        JSLOG(error,"Error in executeJSFunctionInContext");
-        printException(try_catch);
-        postEvalOps();
-        return try_catch.Exception();
-    }
-
-    postEvalOps();
-    return result;
-}
-
-
 void JSObjectScript::preEvalOps()
 {
     if (mNestedEvalCounter < 0)
@@ -872,23 +827,49 @@ void JSObjectScript::postEvalOps()
 }
 
 
+v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::Handle<v8::Object>* target, v8::Handle<v8::Function>& cb, int argc, v8::Handle<v8::Value> argv[])
+{
+    if (mEvalContextStack.empty())
+        mEvalContextStack.push(EvalContext(ctx));
+    else
+        mEvalContextStack.push(EvalContext(mEvalContextStack.top(),ctx));
+            
+    ScopedEvalContext sec (this,EvalContext(ctx));
+    String exc;
+    preEvalOps();
+    v8::Handle<v8::Value> retval = ProtectedJSCallbackFull(ctx->mContext, target, cb, argc, argv, &exc);
+    postEvalOps();
+    if (retval.IsEmpty())
+    {
+        preEvalOps();
+        printExceptionToScript(exc);
+        postEvalOps();
+    }
+
+    mEvalContextStack.pop();
+    return retval;
+}
+
+
 /*
   executeInSandbox takes in a context, that you want to execute the function
   funcToCall in.  argv are the arguments to funcToCall from the current context,
   and are counted by argc.
  */
-v8::Handle<v8::Value>JSObjectScript::executeInSandbox(v8::Persistent<v8::Context> &contExecIn, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
+v8::Handle<v8::Value>JSObjectScript::executeInSandbox(JSContextStruct* jscont, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
+    ScopedEvalContext(this,EvalContext(jscont));
+
     JSLOG(insane, "executing script in alternate context");
+    v8::Handle<v8::Value> compiledFunc = compileFunctionInContext(funcToCall);
+    if (! compiledFunc->IsFunction())
+        V8_EXCEPTION_CSTR("Error when calling execute from sandbox.  Could not re-compile function object.");
 
-    //entering new context associated with
-    JSLOG(insane, "entering new context associated with JSContextStruct.");
-    v8::Context::Scope context_scope(contExecIn);
 
-    JSLOG(insane, "Evaluating function in context associated with JSContextStruct.");
-    ProtectedJSFunctionInContext(contExecIn, NULL,funcToCall, argc, argv);
-
-    JSLOG(insane, "execution in alternate context complete");
+    v8::Handle<v8::Function> funcInCtx = v8::Handle<v8::Function>::Cast(compiledFunc);
+    preEvalOps();
+    ProtectedJSCallbackFull(jscont->mContext, NULL,funcInCtx, 0, NULL);
+    postEvalOps();
     return v8::Undefined();
 }
 
@@ -956,15 +937,24 @@ void JSObjectScript::resolveImport(const String& filename, boost::filesystem::pa
     return;
 }
 
-v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,JSContextStruct* jscont,bool isJS)
+
+v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::path& full_filename, const boost::filesystem::path& full_base_dir,bool isJS)
 {
+    if (mEvalContextStack.empty())
+    {
+        JSLOG(error, "Error in absolute import.  Not within a context to import from.  Aborting call");
+        return v8::Undefined();
+    }
+    
+    JSContextStruct* jscont = mEvalContextStack.top().jscont;
+    
     //to prevent infinite cycles
     if (!checkResourcesCPP())
         return v8::ThrowException( v8::Exception::Error(v8::String::New("Error.  Detected a potential infinite loop in imports.  Aborting.")));
 
 
     v8::HandleScope handle_scope;
-    v8::Context::Scope context_scope(jscont ? jscont->mContext : mContext->mContext);
+    v8::Context::Scope context_scope(jscont->mContext);
 
     JSLOG(detailed, " Performing import on absolute path: " << full_filename.string());
 
@@ -999,7 +989,7 @@ v8::Handle<v8::Value> JSObjectScript::absoluteImport(const boost::filesystem::pa
 
     mImportedFiles[jscont->getContextID()].insert( full_filename.string() );
 
-    v8::Handle<v8::Value> returner = protectedEval(contents, &origin, new_ctx,jscont,false,isJS);
+    v8::Handle<v8::Value> returner = protectedEval(contents, &origin, new_ctx,false,isJS);
     return  handle_scope.Close(returner);
 }
 
@@ -1034,10 +1024,11 @@ v8::Handle<v8::Value> JSObjectScript::evalInGlobal(const String& contents, v8::S
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextStruct* jscont, bool isJS)
+v8::Handle<v8::Value> JSObjectScript::import(const String& filename,  bool isJS)
 {
     JSLOG(detailed, "Importing: " << filename);
-
+    v8::HandleScope handle_scope;
+    
     std::string* fileToFind= NULL;
 
     if (! isJS)
@@ -1060,14 +1051,24 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
         errorMessage+=filename;
         return v8::ThrowException( v8::Exception::Error(v8::String::New(errorMessage.c_str())) );
     }
-    return absoluteImport(full_filename, full_base,jscont,isJS);
+
+    return handle_scope.Close(absoluteImport(full_filename, full_base,isJS));
 }
 
 
-v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextStruct* jscont,bool isJS)
+v8::Handle<v8::Value> JSObjectScript::require(const String& filename,bool isJS)
 {
-    JSLOG(detailed, "Requiring: " << filename);
 
+    if (mEvalContextStack.empty())
+    {
+        JSLOG(error, "Error in require.  Not within a context to require from.  Aborting call");
+        return v8::Undefined();
+    }
+    
+    JSContextStruct* jscont = mEvalContextStack.top().jscont;
+    
+    JSLOG(detailed, "Requiring: " << filename);
+    HandleScope handle_scope;
     std::string* fileToFind= NULL;
     if (! isJS)
         fileToFind =  extensionize(filename);
@@ -1101,7 +1102,7 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
         }
     }
 
-    return absoluteImport(full_filename, full_base,jscont,isJS);
+    return handle_scope.Close(absoluteImport(full_filename, full_base,isJS));
 }
 
 v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,const SpaceObjectReference& canSendTo,uint32 capNum, JSContextStruct*& internalContextField, JSContextStruct* creator)
@@ -1120,7 +1121,8 @@ v8::Local<v8::Object> JSObjectScript::createContext(JSPresenceStruct* jspres,con
 }
 
 
-
+//lkjs
+//Careful during serialization.  Need to add to context stack before deserializing.
 v8::Local<v8::Function> JSObjectScript::functionValue(const String& js_script_str)
 {
   v8::HandleScope handle_scope;
@@ -1134,11 +1136,9 @@ v8::Local<v8::Function> JSObjectScript::functionValue(const String& js_script_st
   counter++;
 
   v8::ScriptOrigin origin(v8::String::New("(deserialized)"));
-  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, new_code, &origin, false));
+  v8::Local<v8::Value> v = v8::Local<v8::Value>::New(internalEval(new_code, &origin, false));
   if (!v->IsFunction())
-  {
-      v = v8::Local<v8::Value>::New(internalEval(mContext->mContext, "function(){}", &origin, false));
-  }
+      v = v8::Local<v8::Value>::New(internalEval("function(){}", &origin, false));
 
   v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(v);
   return handle_scope.Close(f);

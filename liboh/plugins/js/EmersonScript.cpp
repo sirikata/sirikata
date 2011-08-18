@@ -760,6 +760,8 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             if (receiver->presenceMessageCallback.IsEmpty())
                 continue;
 
+            //stack maintenance
+            mEvalContextStack.push(EvalContext(receiver));
             v8::HandleScope handle_scope;
             v8::Context::Scope context_scope (receiver->mContext);
 
@@ -783,6 +785,9 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             {
                 JSLOG(error, "Deserialization Failed!!");
                 mHandlingEvent =false;
+
+                //match removing the context that we appended to stack.
+                mEvalContextStack.pop();
                 return false;
             }
 
@@ -791,6 +796,9 @@ bool EmersonScript::handleScriptCommRead(const SpaceObjectReference& src, const 
             argv[1] = msgSender;
             argv[2] = v8::String::New (dst.toString().c_str(), dst.toString().size());
             invokeCallback(receiver,receiver->presenceMessageCallback,3,argv);
+
+            //match removing the context that we appended to stack.
+            mEvalContextStack.pop();
         }
     }
 
