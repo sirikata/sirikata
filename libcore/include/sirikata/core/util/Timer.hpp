@@ -51,6 +51,18 @@ public:
     // Get offset to convert local time (the standard for most of this API) to UTC.
     static Duration getUTCOffset();
 
+    /** Get the current local time as a string, e.g. 2002-Jan-01
+     *  10:00:01.123456789. Useful for reporting the real date when something
+     *  happened.
+     */
+    static String nowAsString();
+
+    /** Get the current time, in UTC, as a string, e.g. 2002-Jan-01
+     *  10:00:01.123456789. Useful for reporting the real date when something
+     *  happened.
+     */
+    static String nowUTCAsString();
+
     Timer();
     ~Timer();
 

@@ -84,6 +84,14 @@ Time Timer::now() {
     return Time::null() + Duration::microseconds( since_start.total_microseconds() ) + sOffset.read();
 }
 
+String Timer::nowAsString() {
+    return String(boost::posix_time::to_simple_string(boost::posix_time::microsec_clock::local_time()));
+}
+
+String Timer::nowUTCAsString() {
+    return String(boost::posix_time::to_simple_string(boost::posix_time::microsec_clock::universal_time()));
+}
+
 Duration Timer::elapsed() const{
     boost::posix_time::time_duration since_start = boost::posix_time::microsec_clock::local_time() - mStart->val;
     return Duration::microseconds( since_start.total_microseconds() );
