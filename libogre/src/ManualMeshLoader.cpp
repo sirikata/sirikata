@@ -8,6 +8,8 @@
 #include <OgreHardwareBufferManager.h>
 #include <sirikata/ogre/OgreConversions.hpp>
 
+#undef nil
+
 namespace Sirikata {
 namespace Graphics {
 

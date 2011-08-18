@@ -45,8 +45,6 @@
 #include "ManualSkeletonLoader.hpp"
 #include "ManualMeshLoader.hpp"
 
-#undef nil
-
 using namespace Sirikata::Transfer;
 
 namespace Sirikata {
