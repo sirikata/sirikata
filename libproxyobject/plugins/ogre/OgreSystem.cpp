@@ -45,8 +45,9 @@
 #include <sirikata/ogre/input/InputDevice.hpp>
 #include <sirikata/ogre/input/InputEvents.hpp>
 #include "OgreMeshRaytrace.hpp"
-
+#include <sirikata/ogre/Camera.hpp>
 #include <stdio.h>
+#include <sirikata/ogre/ResourceDownloadPlanner.hpp>
 
 using namespace std;
 
@@ -81,7 +82,6 @@ void OgreSystem::attachCamera(const String &renderTargetName, Camera* entity) {
     OgreRenderer::attachCamera(renderTargetName, entity);
 
     if (renderTargetName.empty()) {
-        dlPlanner->setCamera(entity);
         std::vector<String> cubeMapNames;
 
         std::vector<Vector3f> cubeMapOffsets;
@@ -154,9 +154,6 @@ bool OgreSystem::initialize(VWObjectPtr viewer, const SpaceObjectReference& pres
     ProxyManagerPtr proxyManager = mViewer->presence(presenceid);
     mViewer->addListener((SessionEventListener*)this);
     proxyManager->addListener(this);
-
-    //initialize the Resource Download Planner
-    dlPlanner = new SAngleDownloadPlanner(mContext);
 
     allocMouseHandler();
 
@@ -287,7 +284,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
         mesh = new ProxyEntity(this,p);
     mesh->initializeToProxy(p);
     mEntityMap[p->getObjectReference()] = mesh;
-    dlPlanner->addNewObject(p,mesh);
+    mDownloadPlanner->addNewObject(p,mesh);
     // Force validation. In the case of existing ProxyObjects, this
     // should trigger the download + display process
     mesh->validated(p);
@@ -314,7 +311,7 @@ void OgreSystem::onCreateProxy(ProxyObjectPtr p)
 
 void OgreSystem::onDestroyProxy(ProxyObjectPtr p)
 {
-    dlPlanner->removeObject(p);
+    mDownloadPlanner->removeObject(p);
     // FIXME don't delete here because we want to mask proximity
     // additions/removals that aren't due to actual connect/disconnect.
     // See also ProxyEntity.cpp:destroy().
@@ -637,8 +634,6 @@ boost::any OgreSystem::invoke(vector<boost::any>& params)
         return stopAnimation(params);
     else if (name == "setInheritScale")
         return setInheritScale(params);
-    else if (name == "setMaxObjects")
-        return setMaxObjects(params);
     else
         return OgreRenderer::invoke(params);
 
@@ -1246,17 +1241,6 @@ boost::any OgreSystem::axis(vector<boost::any>& params) {
 
     return boost::any();
 }
-
-boost::any OgreSystem::setMaxObjects(vector<boost::any>& params) {
-    if (params.size() < 2) return boost::any();
-    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
-    uint32 new_max_objects = Invokable::anyAsNumeric(params[1]);
-
-    dlPlanner->setMaxObjects(new_max_objects);
-
-    return boost::any();
-}
-
 
 }
 }

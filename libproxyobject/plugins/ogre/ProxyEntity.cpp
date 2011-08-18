@@ -32,6 +32,7 @@
 
 #include "ProxyEntity.hpp"
 #include <sirikata/ogre/OgreRenderer.hpp>
+#include <sirikata/ogre/ResourceDownloadPlanner.hpp>
 
 using namespace Sirikata::Transfer;
 
@@ -155,12 +156,13 @@ void ProxyEntity::extrapolateLocation(TemporalValue<Location>::Time current) {
 
 void ProxyEntity::onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& meshFile,const SpaceObjectReference& sporef )
 {
-
+    getScene()->downloadPlanner()->updateObject(proxy);
 }
 
 void ProxyEntity::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObjectReference& sporef )
 {
     updateScale(scale);
+    getScene()->downloadPlanner()->updateObject(proxy);
 }
 
 

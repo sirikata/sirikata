@@ -59,6 +59,7 @@ class Camera;
 class Entity;
 
 class CDNArchivePlugin;
+class ResourceDownloadPlanner;
 
 using Input::SDLInputManager;
 
@@ -85,6 +86,8 @@ public:
     const Vector3d& getOffset() const { return mFloatingPointOffset; }
 
     virtual Transfer::TransferPoolPtr transferPool();
+
+    ResourceDownloadPlanner* downloadPlanner() { return mDownloadPlanner; }
 
     virtual Ogre::RenderTarget* createRenderTarget(const String &name, uint32 width, uint32 height, bool automipmap, int pixelFmt);
     virtual Ogre::RenderTarget* createRenderTarget(String name,uint32 width=0, uint32 height=0);
@@ -192,6 +195,7 @@ public:
 
     // Set handler to be called on each tick, i.e. before each frame
     boost::any setOnTick(std::vector<boost::any>& params);
+    boost::any setMaxObjects(std::vector<boost::any>& params);
 
     static Ogre::Root* sRoot;
     static Ogre::Plugin* sCDNArchivePlugin;
@@ -251,6 +255,8 @@ public:
 
     Transfer::TransferPoolPtr mTransferPool;
 
+
+    ResourceDownloadPlanner* mDownloadPlanner;
 
     typedef std::tr1::unordered_map<String,Entity*> SceneEntitiesMap;
     SceneEntitiesMap mSceneEntities;

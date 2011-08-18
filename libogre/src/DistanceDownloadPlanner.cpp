@@ -33,7 +33,6 @@
 
 #include "DistanceDownloadPlanner.hpp"
 #include <sirikata/ogre/Entity.hpp>
-#include "SAngleDownloadPlanner.hpp"
 #include <stdlib.h>
 #include <algorithm>
 #include <math.h>
@@ -44,6 +43,7 @@ using namespace Sirikata::Transfer;
 using namespace Sirikata::Graphics;
 
 namespace Sirikata {
+namespace Graphics {
 
 DistanceDownloadPlanner::DistanceDownloadPlanner(Context* c)
  : ResourceDownloadPlanner(c)
@@ -82,24 +82,22 @@ void DistanceDownloadPlanner::removeResource(const SpaceObjectReference& sporef)
 
 
 void DistanceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh) {
-    p->MeshProvider::addListener(this);
     addResource(new Resource(mesh, p));
 }
 
-void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
-    p->MeshProvider::removeListener(this);
-    removeResource(p->getObjectReference());
-}
-
-void DistanceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile,const SpaceObjectReference& sporef)
-{
-    Resource* r = findResource(proxy->getObjectReference());
+void DistanceDownloadPlanner::updateObject(ProxyObjectPtr p) {
+    Resource* r = findResource(p->getObjectReference());
     URI last_file = r->file;
-    r->file = meshFile;
-    proxy->priority = calculatePriority(proxy);
+    r->file = p->getMesh();
+    p->priority = calculatePriority(p);
     if (r->file != last_file && r->loaded)
         r->mesh->display(r->file);
 }
+
+void DistanceDownloadPlanner::removeObject(ProxyObjectPtr p) {
+    removeResource(p->getObjectReference());
+}
+
 
 double DistanceDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
 {
@@ -229,6 +227,7 @@ void DistanceDownloadPlanner::poll()
 
 void DistanceDownloadPlanner::stop()
 {
+}
 
-}
-}
+} // namespace Graphics
+} // namespace Sirikata

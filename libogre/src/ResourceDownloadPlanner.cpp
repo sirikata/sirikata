@@ -1,5 +1,5 @@
 /*  Meru
- *  ResourceDownloadPlanner.hpp
+ *  ResourceDownloadTask.cpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -30,48 +30,64 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
-#define _RESOURCE_DOWNLOAD_PLANNER_HPP
-
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
+#include <sirikata/ogre/ResourceDownloadPlanner.hpp>
+#include <stdlib.h>
+#include <algorithm>
+#include <sirikata/proxyobject/ProxyObject.hpp>
+#include <sirikata/proxyobject/ProxyManager.hpp>
 #include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyCreationListener.hpp>
-#include <sirikata/ogre/Camera.hpp>
-#include <vector>
-#include <sirikata/core/transfer/URI.hpp>
+
+using namespace std;
+using namespace Sirikata;
+using namespace Sirikata::Transfer;
+using namespace Sirikata::Graphics;
+
+#define frequency 1.0
 
 namespace Sirikata {
-namespace Graphics{
-class Entity;
-}
+namespace Graphics {
 
-class ResourceDownloadPlanner : public MeshListener, public PollingService
+ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
+ : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll"),
+   mMaxLoaded(2500)
 {
-public:
-    ResourceDownloadPlanner(Context* c);
-    ~ResourceDownloadPlanner();
-
-    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
-    virtual void removeObject(ProxyObjectPtr p) = 0;
-    virtual void setCamera(Graphics::Camera *entity);
-
-    //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
-    virtual void onSetScale (ProxyObjectPtr proxy, float32 newScale,const SpaceObjectReference& sporef );
-
-    //PollingService interface
-    virtual void poll();
-    virtual void stop();
-
-    virtual void setMaxObjects(int32 new_max);
-protected:
-    Graphics::Camera *camera;
-    int32 mMaxLoaded;
-};
+    c->add(this);
+    camera = NULL;
 }
 
-#endif
+ResourceDownloadPlanner::~ResourceDownloadPlanner()
+{
+
+}
+
+void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
+{
+
+}
+
+void ResourceDownloadPlanner::updateObject(ProxyObjectPtr p)
+{
+
+}
+
+void ResourceDownloadPlanner::setCamera(Camera *entity)
+{
+    camera = entity;
+}
+
+void ResourceDownloadPlanner::poll()
+{
+
+}
+
+void ResourceDownloadPlanner::stop()
+{
+
+}
+
+void ResourceDownloadPlanner::setMaxObjects(int32 new_max) {
+    mMaxLoaded = new_max;
+}
+
+} // namespace Graphics
+} // namespace Sirikata

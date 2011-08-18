@@ -1,5 +1,5 @@
 /*  Meru
- *  ResourceDownloadTask.cpp
+ *  ResourceDownloadPlanner.hpp
  *
  *  Copyright (c) 2009, Stanford University
  *  All rights reserved.
@@ -30,44 +30,42 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "SAngleDownloadPlanner.hpp"
-#include <sirikata/core/util/SolidAngle.hpp>
+#ifndef _RESOURCE_DOWNLOAD_PLANNER_HPP
+#define _RESOURCE_DOWNLOAD_PLANNER_HPP
+
+#include <sirikata/core/service/PollingService.hpp>
+#include <sirikata/core/service/Context.hpp>
+#include <sirikata/ogre/Camera.hpp>
+#include <sirikata/core/transfer/URI.hpp>
+#include <sirikata/proxyobject/ProxyObject.hpp>
 
 namespace Sirikata {
+namespace Graphics {
 
-SAngleDownloadPlanner::SAngleDownloadPlanner(Context* c)
- : DistanceDownloadPlanner(c)
+class Entity;
+
+class SIRIKATA_OGRE_EXPORT ResourceDownloadPlanner : public PollingService
 {
+public:
+    ResourceDownloadPlanner(Context* c);
+    ~ResourceDownloadPlanner();
 
-}
+    virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
+    virtual void updateObject(ProxyObjectPtr p);
+    virtual void removeObject(ProxyObjectPtr p) = 0;
+    virtual void setCamera(Graphics::Camera *entity);
 
-SAngleDownloadPlanner::~SAngleDownloadPlanner()
-{
+    //PollingService interface
+    virtual void poll();
+    virtual void stop();
 
-}
+    virtual void setMaxObjects(int32 new_max);
+protected:
+    Graphics::Camera *camera;
+    int32 mMaxLoaded;
+};
 
-bool withinBound(float radius, Vector3d objLoc, Vector3d cameraLoc)
-{
-    if (cameraLoc.x < objLoc.x - radius || cameraLoc.x > objLoc.x + radius) return false;
-    if (cameraLoc.y < objLoc.y - radius || cameraLoc.y > objLoc.y + radius) return false;
-    if (cameraLoc.z < objLoc.z - radius || cameraLoc.z > objLoc.z + radius) return false;
-    return true;
-}
+} // namespace Graphics
+} // namespace Sirikata
 
-
-double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
-{
-    if (camera == NULL) return 0;
-
-    float radius = proxy->getBounds().radius();
-    Vector3d objLoc = proxy->getPosition();
-    Vector3d cameraLoc = camera->getPosition();
-
-    if (withinBound(radius, objLoc, cameraLoc)) return 0.99;
-
-    Vector3d diff = cameraLoc - objLoc;
-    SolidAngle sa = SolidAngle::fromCenterRadius((Vector3f)diff, radius);
-    float priority = (sa.asFloat())/(SolidAngle::Max.asFloat());
-    return (double)priority;
-}
-}
+#endif

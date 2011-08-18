@@ -1195,6 +1195,9 @@ SET(LIBOGRE_SOURCES
   ${LIBOGRE_SOURCE_DIR}/ManualSkeletonLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/ManualMeshLoader.cpp
   ${LIBOGRE_SOURCE_DIR}/Entity.cpp
+  ${LIBOGRE_SOURCE_DIR}/ResourceDownloadPlanner.cpp
+  ${LIBOGRE_SOURCE_DIR}/DistanceDownloadPlanner.cpp
+  ${LIBOGRE_SOURCE_DIR}/SAngleDownloadPlanner.cpp
   ${LIBOGRE_SOURCE_DIR}/OgreRenderer.cpp
   ${LIBOGRE_SOURCE_DIR}/OverlayPosition.cpp
   ${LIBOGRE_SOURCE_DIR}/ViewportOverlay.cpp
@@ -1329,10 +1332,7 @@ SET(LIBPROXYOBJECT_PLUGIN_OGREGRAPHICS_SOURCES
   ${GFX}/OgreSystemMouseHandler.cpp
   ${GFX}/ProxyEntity.cpp
   ${GFX}/OgrePlugin.cpp
-${GFX}/resourceManager/ResourceDownloadPlanner.cpp
-${GFX}/resourceManager/DistanceDownloadPlanner.cpp
-${GFX}/resourceManager/SAngleDownloadPlanner.cpp
-        )
+  )
 
 SET(LIBSPACE_PLUGIN_CRAQ_DIR ${LIBSPACE_PLUGIN_DIR}/craq)
 SET(LIBSPACE_PLUGIN_CRAQ_SOURCES
