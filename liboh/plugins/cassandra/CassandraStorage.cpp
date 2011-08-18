@@ -73,11 +73,9 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
       case Read:
           {
               try{
-                  //(*rs)[key]=db->db()->getColumnValue(bucket.rawHexData(), "Persistence", key);
                   keys.push_back(key);  // push the key into mKeys for batch read
               }
               catch (...){
-                  //std::cout <<"Read Exception Caught"<<std::endl;
                   success = false;
               }
           }
@@ -87,10 +85,8 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
               try{
             	  SuperColumnTuple tuple(CF_NAME, bucket.rawHexData(), timestamp, key, *value, false);
                   ColTuples.push_back(tuple); // push the tuple into mSuperColumnTuples for batch write
-                  //db->db()->insertColumn(bucket.rawHexData(), "Persistence", key, value->c_str());
               }
               catch (...){
-                  //std::cout <<"Write Exception Caught"<<std::endl;
                   success = false;
               }
           }
@@ -100,10 +96,8 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
               try{
             	  SuperColumnTuple tuple(CF_NAME, bucket.rawHexData(), timestamp, key, "", true);
                   ColTuples.push_back(tuple);  // push the tuple into mSuperColumnTuples for batch erase
-                  //db->db()->remove(bucket.rawHexData(), "Persistence", "", key);
               }
               catch (...){
-                  //std::cout <<"Erase Exception Caught"<<std::endl;
                   success = false;
               }
           }

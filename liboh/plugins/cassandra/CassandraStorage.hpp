@@ -86,6 +86,7 @@ private:
         StorageAction& operator=(const StorageAction& rhs);
 
         // Executes this action. Assumes the owning CassandraStorage has setup the transaction.
+
         bool execute(CassandraDBPtr db, const Bucket& bucket, SuperColumnTuples& ColTuples, Keys& keys, ReadSet* rs, const String& timestamp="@");
 
         // Bucket is implicit, passed into execute
@@ -115,6 +116,7 @@ private:
 
     // A few helper methods that wrap cassandra operations.
     bool CassandraBeginTransaction();
+
     bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs, const String& timestamp="@");
 
 

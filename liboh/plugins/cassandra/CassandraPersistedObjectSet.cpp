@@ -81,6 +81,7 @@ void CassandraPersistedObjectSet::stop() {
     mIOService = NULL;
 }
 
+
 void CassandraPersistedObjectSet::requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp) {
     mIOService->post(
         std::tr1::bind(&CassandraPersistedObjectSet::performUpdate, this, internal_id, script_type, script_args, script_contents, cb, timestamp)
@@ -91,26 +92,17 @@ void CassandraPersistedObjectSet::performUpdate(const UUID& internal_id, const S
     bool success = true;
 
     String id_str = internal_id.rawHexData();
-    /*SuperColumnTuples supColTuples;
-    SuperColumnTuple T1(CF_NAME, mOHostID, id_str, "script_type", script_type, false);
-    SuperColumnTuple T2(CF_NAME, mOHostID, id_str, "script_args", script_args, false);
-    SuperColumnTuple T3(CF_NAME, mOHostID, id_str, "script_contents", script_contents, false);
-    supColTuples.push_back(T1);
-    supColTuples.push_back(T2);
-    supColTuples.push_back(T3);*/
 
     // FIXME need a better way to wrap these three values
     String script_value = "#type#"+script_type+"#args#"+script_args+"#contents#"+script_contents;
 
     try{
-        //mDB->db()->batchMutate(supColTuples);
         mDB->db()->insertColumn(mOHostID, CF_NAME, timestamp, id_str, script_value);
     }
     catch(...){
         std::cout <<"Exception Caught when perform Update"<<std::endl;
         success = false;
     }
-    //supColTuples.clear();
 
     if (cb != 0)
         mContext->mainStrand->post(std::tr1::bind(cb, success));

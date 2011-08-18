@@ -72,10 +72,6 @@ void CassandraObjectFactory::generate(const String& timestamp) {
         String script_args=script_value.substr(script_value.find("#args#")+6,script_value.find("#contents#")-script_value.find("#args#")-6);
         String script_contents=script_value.substr(script_value.find("#contents#")+10);
 
-        /*String script_args((*it).columns[0].value);
-        String script_contents((*it).columns[1].value);
-        String script_type((*it).columns[2].value);*/
-
         if (!script_type.empty()) {
             ObjectInfo info;
             info.id = UUID(object_str, UUID::HexString());

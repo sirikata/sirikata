@@ -65,16 +65,6 @@ public:
     virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="@");
 
 private:
-    /*typedef std::tr1::tuple<std::string,  //column family
-                            std::string,  //key
-                            std::string,  //super column name
-                            std::string,  //column name
-                            std::string,  //value
-                            bool          //is_delete
-                          > SuperColumnTuple;
-
-    typedef std::vector<SuperColumnTuple> SuperColumnTuples;*/
-
 
     void initDB();
     void performUpdate(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="@");

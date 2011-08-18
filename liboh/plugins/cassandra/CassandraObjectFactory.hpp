@@ -51,7 +51,6 @@ public:
 
 private:
     typedef org::apache::cassandra::Column Column;
-    //typedef org::apache::cassandra::SuperColumn SuperColumn;
     typedef org::apache::cassandra::SliceRange SliceRange;
 
     void connectObjects();
