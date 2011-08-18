@@ -909,15 +909,8 @@ void JSObjectScript::print(const String& str) {
 //takes in a name of a file to read from and execute all instructions within.
 //also takes in a context to do so in.  If this context is null, just use
 //mContext instead.
-void JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out,JSContextStruct* contextCtx)
+void JSObjectScript::resolveImport(const String& filename, boost::filesystem::path* full_file_out, boost::filesystem::path* base_path_out)
 {
-    v8::HandleScope handle_scope;
-
-    if (contextCtx == NULL)
-        contextCtx = mContext;
-
-    v8::Context::Scope(contextCtx->mContext);
-
     using namespace boost::filesystem;
 
     // Search through the import paths to find the file to import, searching the
@@ -1058,7 +1051,7 @@ v8::Handle<v8::Value> JSObjectScript::import(const String& filename, JSContextSt
       return v8::ThrowException( v8::Exception::Error(v8::String::New(errMsg.c_str()) ) );;
     }
     boost::filesystem::path full_filename, full_base;
-    resolveImport(*fileToFind, &full_filename, &full_base,jscont);
+    resolveImport(*fileToFind, &full_filename, &full_base);
     delete fileToFind;
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
@@ -1088,7 +1081,7 @@ v8::Handle<v8::Value> JSObjectScript::require(const String& filename,JSContextSt
     }
 
     boost::filesystem::path full_filename, full_base;
-    resolveImport(*fileToFind, &full_filename, &full_base,jscont);
+    resolveImport(*fileToFind, &full_filename, &full_base);
     delete fileToFind;
     // If we still haven't filled this in, we just can't find the file.
     if (full_filename.empty())
