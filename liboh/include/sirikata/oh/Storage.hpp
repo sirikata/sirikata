@@ -89,12 +89,12 @@ public:
     virtual void stop() {}
 
     /** Begin a transaction. */
-    virtual void beginTransaction(const Bucket& bucket) = 0;
+    virtual void beginTransaction(const Bucket& bucket, const String& timestamp="@") = 0;
     /** Completes a transaction and requests that it be written to
        Flushes all outstanding events (writes and removes) from pending queue.
        Resets pending queue as well.
     */
-    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0) = 0;
+    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="@") = 0;
 
    /**
       @param {Key} key the key to erase
@@ -107,7 +107,7 @@ public:
       Queues the item to be removed from the backend.  Does not actually delete
       until the flush operation is called.
    */
-    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0) = 0;
+    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@") = 0;
 
 
     /**
@@ -125,7 +125,7 @@ public:
                      otherwise. Does not indicated success of actual
                      write operation.
     */
-    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0) = 0;
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="@") = 0;
 
     /**
        @param {Key} key the key to erase
@@ -136,7 +136,7 @@ public:
                      otherwise. Does not indicated success of actual
                      write operation.
      */
-    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0) = 0;
+    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@") = 0;
 };
 
 

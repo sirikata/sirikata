@@ -294,12 +294,12 @@ SQLiteStorage::Transaction* SQLiteStorage::getTransaction(const Bucket& bucket, 
     return mTransactions[bucket];
 }
 
-void SQLiteStorage::beginTransaction(const Bucket& bucket) {
+void SQLiteStorage::beginTransaction(const Bucket& bucket, const String& timestamp) {
     // FIXME should probably throw an exception if one already exists
     getTransaction(bucket);
 }
 
-void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb)
+void SQLiteStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb, const String& timestamp)
 {
     Transaction* trans = getTransaction(bucket);
 
@@ -356,7 +356,7 @@ void SQLiteStorage::completeCommit(const Bucket& bucket, Transaction* trans, Com
     if (cb) cb(success, rs);
 }
 
-bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb) {
+bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
     trans->push_back(StorageAction());
@@ -372,7 +372,7 @@ bool SQLiteStorage::erase(const Bucket& bucket, const Key& key, const CommitCall
 }
 
 
-bool SQLiteStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb) {
+bool SQLiteStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
     trans->push_back(StorageAction());
@@ -388,7 +388,7 @@ bool SQLiteStorage::write(const Bucket& bucket, const Key& key, const String& st
     return true;
 }
 
-bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb) {
+bool SQLiteStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
     trans->push_back(StorageAction());

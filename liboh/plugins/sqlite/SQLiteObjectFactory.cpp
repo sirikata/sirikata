@@ -47,7 +47,7 @@ SQLiteObjectFactory::SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh,
 {
 }
 
-void SQLiteObjectFactory::generate() {
+void SQLiteObjectFactory::generate(const String& timestamp) {
     SQLiteDBPtr db = SQLite::getSingleton().open(mDBFilename);
     sqlite3_busy_timeout(db->db(), 1000);
 

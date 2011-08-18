@@ -67,7 +67,7 @@ CassandraStorage::StorageAction& CassandraStorage::StorageAction::operator=(cons
     return *this;
 }
 
-bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& bucket, ColumnTuples& ColTuples, Keys& keys, ReadSet* rs) {
+bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& bucket, SuperColumnTuples& ColTuples, Keys& keys, ReadSet* rs, const String& timestamp) {
     bool success = true;
     switch(type) {
       case Read:
@@ -85,8 +85,8 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
       case Write:
           {
               try{
-                  ColumnTuple tuple(CF_NAME, bucket.rawHexData(), key, *value, false);
-                  ColTuples.push_back(tuple); // push the tuple into mColumnTuples for batch write
+            	  SuperColumnTuple tuple(CF_NAME, bucket.rawHexData(), timestamp, key, *value, false);
+                  ColTuples.push_back(tuple); // push the tuple into mSuperColumnTuples for batch write
                   //db->db()->insertColumn(bucket.rawHexData(), "Persistence", key, value->c_str());
               }
               catch (...){
@@ -98,8 +98,8 @@ bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& b
       case Erase:
           {
               try{
-                  ColumnTuple tuple(CF_NAME, bucket.rawHexData(), key, "", true);
-                  ColTuples.push_back(tuple);  // push the tuple into mColumnTuples for batch erase
+            	  SuperColumnTuple tuple(CF_NAME, bucket.rawHexData(), timestamp, key, "", true);
+                  ColTuples.push_back(tuple);  // push the tuple into mSuperColumnTuples for batch erase
                   //db->db()->remove(bucket.rawHexData(), "Persistence", "", key);
               }
               catch (...){
@@ -143,7 +143,7 @@ void CassandraStorage::initDB() {
 }
 
 bool CassandraStorage::CassandraBeginTransaction() {
-    if (mColumnTuples.size()!=0|| mKeys.size()!=0){
+    if (mSuperColumnTuples.size()!=0|| mKeys.size()!=0){
         std::cout<<"Transaction List is not empty"<<std::endl;
         return false;
     }
@@ -151,19 +151,19 @@ bool CassandraStorage::CassandraBeginTransaction() {
         return true;
 }
 
-bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs) {
+bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs, const String& timestamp) {
     if(mKeys.size()>0){
         try{
-            *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, mKeys);  // batch read
+            *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, mKeys);  // batch read
         }
         catch(...){
             //std::cout <<"Exception Caught when Batch Read"<<std::endl;
             return false;
         }
     }
-    if(mColumnTuples.size()>0){
+    if(mSuperColumnTuples.size()>0){
         try{
-            db->db()->batchMutate(mColumnTuples);  // batch write/erase
+            db->db()->batchMutate(mSuperColumnTuples);  // batch write/erase
         }
         catch(...){
             std::cout <<"Exception Caught when Batch Write/Erase"<<std::endl;
@@ -171,7 +171,7 @@ bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, 
         }
     }
     mKeys.clear();
-    mColumnTuples.clear();
+    mSuperColumnTuples.clear();
     return true;
 }
 
@@ -196,13 +196,13 @@ CassandraStorage::Transaction* CassandraStorage::getTransaction(const Bucket& bu
     return mTransactions[bucket];
 }
 
-void CassandraStorage::beginTransaction(const Bucket& bucket) {
+void CassandraStorage::beginTransaction(const Bucket& bucket, const String& timestamp) {
     getTransaction(bucket);
     mKeys.clear();
-    mColumnTuples.clear();
+    mSuperColumnTuples.clear();
 }
 
-void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb){
+void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb, const String& timestamp){
     Transaction* trans = getTransaction(bucket);
 
     //can remove from mTransactions
@@ -216,33 +216,33 @@ void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallb
     }
 
     mIOService->post(
-        std::tr1::bind(&CassandraStorage::executeCommit, this, bucket, trans, cb)
+        std::tr1::bind(&CassandraStorage::executeCommit, this, bucket, trans, cb, timestamp)
     );
 }
 
 // Executes a commit. Runs in a separate thread, so the transaction is
 // passed in directly
-void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb) {
+void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp) {
     ReadSet* rs = new ReadSet;
 
     bool success = true;
     success = CassandraBeginTransaction();
     for (Transaction::iterator it = trans->begin(); success && it != trans->end(); it++) {
-        success = success && (*it).execute(mDB, bucket, mColumnTuples, mKeys, rs);
+        success = success && (*it).execute(mDB, bucket, mSuperColumnTuples, mKeys, rs, timestamp);
         if (!success) {
             break;
         }
     }
 
     if (success) {
-        success = CassandraCommit(mDB, bucket, rs);
+        success = CassandraCommit(mDB, bucket, rs, timestamp);
     }
 
     if (rs->empty() || !success) {
         delete rs;
         rs = NULL;
         mKeys.clear();
-        mColumnTuples.clear();
+        mSuperColumnTuples.clear();
     }
 
     mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, success, rs));
@@ -256,7 +256,7 @@ void CassandraStorage::completeCommit(Transaction* trans, CommitCallback cb, boo
     if (cb) cb(success, rs);
 }
 
-bool CassandraStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb) {
+bool CassandraStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
     trans->push_back(StorageAction());
@@ -266,12 +266,12 @@ bool CassandraStorage::erase(const Bucket& bucket, const Key& key, const CommitC
 
     // Run commit if this is a one-off transaction
     if (is_new)
-        commitTransaction(bucket, cb);
+        commitTransaction(bucket, cb, timestamp);
 
     return true;
 }
 
-bool CassandraStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb) {
+bool CassandraStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
     trans->push_back(StorageAction());
@@ -282,12 +282,12 @@ bool CassandraStorage::write(const Bucket& bucket, const Key& key, const String&
 
     // Run commit if this is a one-off transaction
     if (is_new)
-        commitTransaction(bucket, cb);
+        commitTransaction(bucket, cb, timestamp);
 
     return true;
 }
 
-bool CassandraStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb) {
+bool CassandraStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp) {
     bool is_new = false;
     Transaction* trans = getTransaction(bucket, &is_new);
     trans->push_back(StorageAction());
@@ -297,7 +297,7 @@ bool CassandraStorage::read(const Bucket& bucket, const Key& key, const CommitCa
 
     // Run commit if this is a one-off transaction
     if (is_new)
-        commitTransaction(bucket, cb);
+        commitTransaction(bucket, cb, timestamp);
 
     return true;
 }

@@ -47,7 +47,7 @@ public:
     SQLiteObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& filename);
     virtual ~SQLiteObjectFactory() {}
 
-    virtual void generate();
+    virtual void generate(const String& timestamp="@");
 
 private:
     void connectObjects();

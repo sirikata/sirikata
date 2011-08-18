@@ -62,7 +62,7 @@ public:
     virtual void start();
     virtual void stop();
 
-    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb);
+    virtual void requestPersistedObject(const UUID& internal_id, const String& script_type, const String& script_args, const String& script_contents, RequestCallback cb, const String& timestamp="@");
 
 private:
     void initDB();

@@ -167,12 +167,12 @@ boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const 
     return mDir / bucket.toString() / key;
 }
 
-void FileStorage::beginTransaction(const Bucket& bucket) {
+void FileStorage::beginTransaction(const Bucket& bucket, const String& timestamp) {
     if (mActiveTransactions.find(bucket) == mActiveTransactions.end())
         mActiveTransactions.insert(bucket);
 }
 
-void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb) {
+void FileStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb, const String& timestamp) {
     // Clear active transaction since we're finishing it
     if (mActiveTransactions.find(bucket) != mActiveTransactions.end())
         mActiveTransactions.erase(bucket);
@@ -205,7 +205,7 @@ bool FileStorage::haveUnflushedEvents(const Bucket& bucket)
 }
 
 
-bool FileStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb)
+bool FileStorage::erase(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp)
 {
     FileStorageClearItem* fbci = new FileStorageClearItem(getStoragePath(bucket, key));
     unflushedEvents[bucket].push_back(fbci);
@@ -218,7 +218,7 @@ bool FileStorage::erase(const Bucket& bucket, const Key& key, const CommitCallba
 }
 
 
-bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb)
+bool FileStorage::write(const Bucket& bucket, const Key& key, const String& strToWrite, const CommitCallback& cb, const String& timestamp)
 {
     if (!boost::filesystem::exists(getStoragePath(bucket)))
         boost::filesystem::create_directory(getStoragePath(bucket));
@@ -254,7 +254,7 @@ bool FileStorage::clearOutstanding(const Bucket& bucket)
     return true;
 }
 
-bool FileStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb)
+bool FileStorage::read(const Bucket& bucket, const Key& key, const CommitCallback& cb, const String& timestamp)
 {
     boost::filesystem::path path = getStoragePath(bucket, key);
 

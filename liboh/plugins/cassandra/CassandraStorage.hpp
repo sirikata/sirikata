@@ -50,23 +50,23 @@ public:
     virtual void start();
     virtual void stop();
 
-    virtual void beginTransaction(const Bucket& bucket);
-    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0);
-    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0);
-    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0);
-    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0);
+    virtual void beginTransaction(const Bucket& bucket, const String& timestamp="@");
+    virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="@");
+    virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@");
+    virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="@");
+    virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@");
 
 private:
-    typedef std::tr1::tuple<std::string,  //Cassandra column family
-                            std::string,  //Cassandra key
-                            std::string,  //Cassandra column name
-                            std::string,  //Cassandra value
-                            bool          //true:earse, false:write
-                           > ColumnTuple;
+    typedef std::tr1::tuple<std::string,  //column family
+                            std::string,  //row key
+                            std::string,  //super column name
+                            std::string,  //column name
+                            std::string,  //value
+                            bool          //is_delete
+                          > SuperColumnTuple;
 
-    typedef std::vector<ColumnTuple> ColumnTuples;
+    typedef std::vector<SuperColumnTuple> SuperColumnTuples;
     typedef std::vector<String> Keys;
-    typedef std::vector<org::apache::cassandra::Column> Columns;
 
     // StorageActions are individual actions to take, i.e. read, write,
     // erase. We queue them up in a list and eventually fire them off in a
@@ -86,7 +86,7 @@ private:
         StorageAction& operator=(const StorageAction& rhs);
 
         // Executes this action. Assumes the owning CassandraStorage has setup the transaction.
-        bool execute(CassandraDBPtr db, const Bucket& bucket, ColumnTuples& ColTuples, Keys& keys, ReadSet* rs);
+        bool execute(CassandraDBPtr db, const Bucket& bucket, SuperColumnTuples& ColTuples, Keys& keys, ReadSet* rs, const String& timestamp="@");
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -107,7 +107,7 @@ private:
 
     // Executes a commit. Runs in a separate thread, so the transaction is
     // passed in directly
-    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb);
+    void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp="@");
 
     // Complete a commit back in the main thread, cleaning it up and dispatching
     // the callback
@@ -115,12 +115,12 @@ private:
 
     // A few helper methods that wrap cassandra operations.
     bool CassandraBeginTransaction();
-    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs);
+    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs, const String& timestamp="@");
 
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
-    ColumnTuples mColumnTuples;  //tuples for batch write/erase
+    SuperColumnTuples mSuperColumnTuples;
     Keys mKeys;                  //keys for batch read
     String mDBHost;              //host name or ip address for Cassandra server
     int mDBPort;

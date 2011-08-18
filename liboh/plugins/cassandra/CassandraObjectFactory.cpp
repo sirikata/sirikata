@@ -49,25 +49,32 @@ CassandraObjectFactory::CassandraObjectFactory(ObjectHostContext* ctx, ObjectHos
 {
 }
 
-void CassandraObjectFactory::generate() {
+void CassandraObjectFactory::generate(const String& timestamp) {
     CassandraDBPtr db = Cassandra::getSingleton().open(mDBHost, mDBPort);
 
-    std::vector<SuperColumn> superColumns;
+    std::vector<Column> Columns;
     try{
         SliceRange range;
-        range.count=1000000;
-        superColumns = db->db()->getSuperColumns(mOHostID, CF_NAME, range);
+        range.count=1000000; // set large enough to get all the objects of the object host
+        Columns = db->db()->getColumns(mOHostID, CF_NAME, timestamp, range);
     }
     catch(...){
         std::cout <<"Exception Caught when get object lists"<<std::endl;
         return;
     }
 
-    for (std::vector<SuperColumn>::iterator it= superColumns.begin(); it != superColumns.end(); ++it) {
+    for (std::vector<Column>::iterator it= Columns.begin(); it != Columns.end(); ++it) {
         String object_str((*it).name);
-        String script_args((*it).columns[0].value);
+
+        //current value format is <"#type#"+script_type+"#args#"+script_args+"#contents#"+script_contents>
+        String script_value((*it).value);
+        String script_type=script_value.substr(6,script_value.find("#args#")-6);
+        String script_args=script_value.substr(script_value.find("#args#")+6,script_value.find("#contents#")-script_value.find("#args#")-6);
+        String script_contents=script_value.substr(script_value.find("#contents#")+10);
+
+        /*String script_args((*it).columns[0].value);
         String script_contents((*it).columns[1].value);
-        String script_type((*it).columns[2].value);
+        String script_type((*it).columns[2].value);*/
 
         if (!script_type.empty()) {
             ObjectInfo info;

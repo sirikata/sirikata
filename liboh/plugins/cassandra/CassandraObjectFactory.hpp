@@ -43,16 +43,15 @@ namespace Sirikata {
 /** CassandraObjectFactory generates objects from an input Cassandra file. */
 class CassandraObjectFactory : public ObjectFactory {
 public:
-    typedef std::vector<String> StringList;
 
     CassandraObjectFactory(ObjectHostContext* ctx, ObjectHost* oh, const SpaceID& space, const String& host, int port, const String& oh_id);
     virtual ~CassandraObjectFactory() {}
 
-    virtual void generate();
+    virtual void generate(const String& timestamp="@");
 
 private:
     typedef org::apache::cassandra::Column Column;
-    typedef org::apache::cassandra::SuperColumn SuperColumn;
+    //typedef org::apache::cassandra::SuperColumn SuperColumn;
     typedef org::apache::cassandra::SliceRange SliceRange;
 
     void connectObjects();
