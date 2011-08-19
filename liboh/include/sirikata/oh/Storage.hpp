@@ -89,7 +89,7 @@ public:
     virtual void stop() {}
 
     /** Begin a transaction. */
-    virtual void beginTransaction(const Bucket& bucket, const String& timestamp="@") = 0;
+    virtual void beginTransaction(const Bucket& bucket) = 0;
     /** Completes a transaction and requests that it be written to
        Flushes all outstanding events (writes and removes) from pending queue.
        Resets pending queue as well.

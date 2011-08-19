@@ -52,7 +52,7 @@ public:
     FileStorage(ObjectHostContext* ctx, const String& dir);
     ~FileStorage();
 
-    virtual void beginTransaction(const Bucket& bucket, const String& timestamp="@");
+    virtual void beginTransaction(const Bucket& bucket);
     virtual void commitTransaction(const Bucket& bucket, const CommitCallback& cb = 0, const String& timestamp="@");
     virtual bool erase(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@");
     virtual bool write(const Bucket& bucket, const Key& key, const String& value, const CommitCallback& cb = 0, const String& timestamp="@");

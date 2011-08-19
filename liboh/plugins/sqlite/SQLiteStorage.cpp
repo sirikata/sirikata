@@ -294,7 +294,7 @@ SQLiteStorage::Transaction* SQLiteStorage::getTransaction(const Bucket& bucket, 
     return mTransactions[bucket];
 }
 
-void SQLiteStorage::beginTransaction(const Bucket& bucket, const String& timestamp) {
+void SQLiteStorage::beginTransaction(const Bucket& bucket) {
     // FIXME should probably throw an exception if one already exists
     getTransaction(bucket);
 }

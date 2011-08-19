@@ -190,7 +190,7 @@ CassandraStorage::Transaction* CassandraStorage::getTransaction(const Bucket& bu
     return mTransactions[bucket];
 }
 
-void CassandraStorage::beginTransaction(const Bucket& bucket, const String& timestamp) {
+void CassandraStorage::beginTransaction(const Bucket& bucket) {
     getTransaction(bucket);
     mKeys.clear();
     mSuperColumnTuples.clear();

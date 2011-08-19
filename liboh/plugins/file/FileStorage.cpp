@@ -167,7 +167,7 @@ boost::filesystem::path FileStorage::getStoragePath(const Bucket& bucket, const 
     return mDir / bucket.toString() / key;
 }
 
-void FileStorage::beginTransaction(const Bucket& bucket, const String& timestamp) {
+void FileStorage::beginTransaction(const Bucket& bucket) {
     if (mActiveTransactions.find(bucket) == mActiveTransactions.end())
         mActiveTransactions.insert(bucket);
 }
