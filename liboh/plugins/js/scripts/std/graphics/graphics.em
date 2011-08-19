@@ -123,14 +123,14 @@ function() {
       this.invoke('startAnimation', vis, anim_name);
   
       if (!responseToMsg)
-        this._animationInfo.sendAnimationInfo("AnimationInfo", vis.toString(), anim_name);
+        this._animationInfo.sendAnimationInfo("AnimationInfo", vis, anim_name);
     };
 
     std.graphics.Graphics.prototype.stopAnimation = function(vis, responseToMsg) {
       this.invoke('stopAnimation', vis);
 
       if (!responseToMsg)
-        this._animationInfo.sendAnimationInfo("AnimationInfo", vis.toString(), "");
+        this._animationInfo.sendAnimationInfo("AnimationInfo", vis, "");
     };
 
 

@@ -96,9 +96,9 @@ presType4 = {
 
 system.onPresenceConnected(stage1);
 
-function stage1()
+function stage1(presConn, clearable)
 {
-    system.onPresenceConnected(function(){});
+    clearable.clear();
     for (var s = 0; s < numPresencesOfEachType; ++s)
     {
         system.createPresence(presType1);

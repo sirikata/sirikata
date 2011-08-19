@@ -176,4 +176,10 @@ function() {
     std.graphics.GUI.prototype.onException = function(cb) {
         this._gui.invoke("onException", cb);
     };
+
+    /** Get the current URL. Should only be used on browsers, not regular GUIs, since the GUI URL won't be meaningful. */
+    std.graphics.GUI.prototype.url = function() {
+        return this._gui.invoke("url");
+    };
+
 })();

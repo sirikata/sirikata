@@ -30,67 +30,27 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ResourceDownloadPlanner.hpp"
-#include <stdlib.h>
-#include <algorithm>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include <sirikata/proxyobject/ProxyManager.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
+#ifndef _SANGLE_DOWNLOAD_PLANNER_HPP
+#define _SANGLE_DOWNLOAD_PLANNER_HPP
 
-using namespace std;
-using namespace Sirikata;
-using namespace Sirikata::Transfer;
-using namespace Sirikata::Graphics;
-
-#define frequency 1.0
+#include "DistanceDownloadPlanner.hpp"
 
 namespace Sirikata {
+namespace Graphics {
 
-ResourceDownloadPlanner::ResourceDownloadPlanner(Context *c)
- : PollingService(c->mainStrand, Duration::seconds(frequency), c, "Resource Download Planner Poll"),
-   mMaxLoaded(2500)
+class SAngleDownloadPlanner : public DistanceDownloadPlanner
 {
-    c->add(this);
-    camera = NULL;
-}
+public:
+    SAngleDownloadPlanner(Context *c);
+    ~SAngleDownloadPlanner();
 
-ResourceDownloadPlanner::~ResourceDownloadPlanner()
-{
+protected:
+    virtual double calculatePriority(ProxyObjectPtr proxy);
 
-}
+};
 
-void ResourceDownloadPlanner::addNewObject(ProxyObjectPtr p, Entity *mesh)
-{
+} // namespace Graphics
+} // namespace Sirikata
 
-}
 
-void ResourceDownloadPlanner::setCamera(Camera *entity)
-{
-    camera = entity;
-}
-
-void ResourceDownloadPlanner::onSetMesh(ProxyObjectPtr proxy, URI const &meshFile,const SpaceObjectReference& sporef)
-{
-
-}
-
-void ResourceDownloadPlanner::onSetScale (ProxyObjectPtr proxy, float32 scale,const SpaceObjectReference& sporef)
-{
-
-}
-
-void ResourceDownloadPlanner::poll()
-{
-
-}
-
-void ResourceDownloadPlanner::stop()
-{
-
-}
-
-void ResourceDownloadPlanner::setMaxObjects(int32 new_max) {
-    mMaxLoaded = new_max;
-}
-
-}
+#endif

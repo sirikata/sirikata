@@ -36,6 +36,7 @@
 #include <sirikata/ogre/OgreConversions.hpp>
 #include "ProxyEntity.hpp"
 #include <sirikata/ogre/Entity.hpp>
+#include <sirikata/ogre/Camera.hpp>
 
 class xTest :public Ogre::RenderTargetListener{
 public:

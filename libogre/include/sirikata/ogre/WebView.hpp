@@ -76,12 +76,16 @@ class WebView;
     using Berkelium::URLString;
 #endif
 
-	typedef std::tr1::function<void (WebView*, const JSArguments&)> JSDelegate;
+/** Delegate for method calls from JS -> C++. If the call is
+ *  synchronous, the value will be translated to a JS value if
+ *  possible.
+ */
+typedef std::tr1::function<boost::any (WebView*, const JSArguments&)> JSDelegate;
 
-	/**
-	* A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
-	* as an Ogre Material) that can optionally be contained within a viewport overlay.
-	*/
+/**
+ * A 'WebView' is essentially an offscreen browser window rendered to a dynamic texture (encapsulated
+ * as an Ogre Material) that can optionally be contained within a viewport overlay.
+ */
 class SIRIKATA_OGRE_EXPORT WebView
         : public Ogre::ManualResourceLoader
 #ifdef HAVE_BERKELIUM
@@ -557,7 +561,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 		bool isPointOverMe(int x, int y);
 
         // helper for onJavascriptCallback, defaultEvent
-        void dispatchToDelegate(const String& name, const JSArguments& args);
+        boost::any dispatchToDelegate(const String& name, const JSArguments& args);
 
 #ifdef HAVE_BERKELIUM
         void onAddressBarChanged(Berkelium::Window*, URLString url);
@@ -602,7 +606,7 @@ class SIRIKATA_OGRE_EXPORT WebView
 
      virtual boost::any invoke(std::vector<boost::any>& params);
      // Helpers for invokable calls that produce callbacks later
-     void translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
+     boost::any translateParamsAndInvoke(Invokable*, WebView*, const JSArguments&);
      void forwardOnNavigateToInvokable(Invokable* _invokable, const String& url);
 
 
@@ -610,34 +614,36 @@ class SIRIKATA_OGRE_EXPORT WebView
          * guaranteed to always occur -- it only happens if
          * sirikata.event('__ready') is triggered from within the page.
          */
-        void handleReadyCallback(WebView* wv, const JSArguments& args);
+        boost::any handleReadyCallback(WebView* wv, const JSArguments& args);
 
         /** Handle callback from page indicating what portion of the screen
          *  should be drawn to, i.e. the region unobscured by UI elements.
          */
-        void handleSetUIViewport(WebView* wv, const JSArguments& args);
+        boost::any handleSetUIViewport(WebView* wv, const JSArguments& args);
 
         /** Pass user logging request on to logging system. */
-        void userLog(WebView* wv, const JSArguments& args);
+        boost::any userLog(WebView* wv, const JSArguments& args);
 
         /** Handle request by UI to open a *new* browser, not a link in a
          * browser. This is critical because it is necessary to isolate the
          * browser instead of just, e.g., using an iframe.
          */
-        void handleOpenBrowser(WebView* wv, const JSArguments& args);
+        boost::any handleOpenBrowser(WebView* wv, const JSArguments& args);
 
-        /** Setup a function name to be invoked on events. Currently
-         * only supports 'navigate' events of the form
-         * callback('navigate', url).
+        /** Handle a request to listen to a browser.
          */
-        void handleListenToBrowser(WebView* wv, const JSArguments& args);
+        boost::any handleListenToBrowser(WebView* wv, const JSArguments& args);
+
+        /** Handle a request for the current URL of a browser.
+         */
+        boost::any handleGetBrowserURL(WebView* wv, const JSArguments& args);
 
         // Helper handler for forwarding navigation events to listener
         void forwardBrowserNavigatedCallback(Liveness::Token alive, const String& cb_name, const String& url);
 
         /** Close child browser by the given name.
          */
-        void handleCloseBrowser(WebView* wv, const JSArguments& args);
+        boost::any handleCloseBrowser(WebView* wv, const JSArguments& args);
 
         // Helper handler for when a webview goes unresponsive.
         void handleUnresponsiveTimeout(Liveness::Token alive);

@@ -81,10 +81,10 @@ SIRIKATA_FUNCTION_EXPORT void finishLog();
         if (SILOGP(module,lvl)) {                                       \
             std::ostringstream __log_stream;                            \
             __log_stream << value;                                      \
-            (*Sirikata::Logging::SirikataLogStream) << __log_stream.str(); \
+            (*Sirikata::Logging::SirikataLogStream) << __log_stream.str() << std::endl; \
         }                                                               \
     } while (0)
-# define SILOGBARE(module,lvl,value) SILOGNOCR(module,lvl,value << std::endl)
+# define SILOGBARE(module,lvl,value) SILOGNOCR(module,lvl,value)
 #else
 # define SILOGP(module,lvl) false
 # define SILOGNOCR(module,lvl,value)

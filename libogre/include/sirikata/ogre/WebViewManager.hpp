@@ -307,7 +307,7 @@ protected:
      *    WebViewEvent.args = [some, other, args]
      *  Note that if the first argument is not a string, then no event will be generated.
      */
-    void onRaiseWebViewEvent(WebView* webview, const JSArguments& args);
+    boost::any onRaiseWebViewEvent(WebView* webview, const JSArguments& args);
 public:
 	Sirikata::Task::EventResponse onMouseMove(Sirikata::Task::EventPtr evt);
 	Sirikata::Task::EventResponse onMousePressed(Sirikata::Task::EventPtr evt);

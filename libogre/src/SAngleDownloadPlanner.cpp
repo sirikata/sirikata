@@ -30,31 +30,47 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SANGLE_DOWNLOAD_PLANNER_HPP
-#define _SANGLE_DOWNLOAD_PLANNER_HPP
-
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include <sirikata/proxyobject/ProxyObject.hpp>
-#include "DistanceDownloadPlanner.hpp"
-#include <vector>
+#include "SAngleDownloadPlanner.hpp"
+#include <sirikata/core/util/SolidAngle.hpp>
 
 namespace Sirikata {
+namespace Graphics {
 
-class SAngleDownloadPlanner : public DistanceDownloadPlanner
+SAngleDownloadPlanner::SAngleDownloadPlanner(Context* c)
+ : DistanceDownloadPlanner(c)
 {
-public:
-    SAngleDownloadPlanner(Context *c);
-    ~SAngleDownloadPlanner();
 
-protected:
-    virtual double calculatePriority(ProxyObjectPtr proxy);
-
-};
 }
 
-#endif
+SAngleDownloadPlanner::~SAngleDownloadPlanner()
+{
+
+}
+
+bool withinBound(float radius, Vector3d objLoc, Vector3d cameraLoc)
+{
+    if (cameraLoc.x < objLoc.x - radius || cameraLoc.x > objLoc.x + radius) return false;
+    if (cameraLoc.y < objLoc.y - radius || cameraLoc.y > objLoc.y + radius) return false;
+    if (cameraLoc.z < objLoc.z - radius || cameraLoc.z > objLoc.z + radius) return false;
+    return true;
+}
+
+
+double SAngleDownloadPlanner::calculatePriority(ProxyObjectPtr proxy)
+{
+    if (camera == NULL) return 0;
+
+    float radius = proxy->getBounds().radius();
+    Vector3d objLoc = proxy->getPosition();
+    Vector3d cameraLoc = camera->getPosition();
+
+    if (withinBound(radius, objLoc, cameraLoc)) return 0.99;
+
+    Vector3d diff = cameraLoc - objLoc;
+    SolidAngle sa = SolidAngle::fromCenterRadius((Vector3f)diff, radius);
+    float priority = (sa.asFloat())/(SolidAngle::Max.asFloat());
+    return (double)priority;
+}
+
+} // namespace Graphics
+} // namespace Sirikata

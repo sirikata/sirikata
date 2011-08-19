@@ -297,6 +297,15 @@ function PresenceEntry(sporef, presObj)
      {
          return baseSystem.storageBeginTransaction.apply(baseSystem, arguments);
      };
+     
+     /**
+      
+        @param {function} (optional) callback to execute after commit is
+        complete.  This function takes two arguments: 1) bool (whether the
+        commit succeeded or failed; 2) an object containing all the objects that
+        we requested to read as fields (if we requested no reads, then this is
+        undefined.
+      */
      system.storageCommit = function()
      {
          if (arguments.length == 1 && typeof(arguments[0] === 'function'))
@@ -305,6 +314,14 @@ function PresenceEntry(sporef, presObj)
              return baseSystem.storageCommit.apply(baseSystem, arguments);
      };
 
+     /**
+      @param {String} writeKey The field to write these data into.  Later, can
+      use writeKey to read from stored data.
+      @param {String} data serialized data to put in storage.
+      @param {function} (optional) cb Callback to execute when write has completed. Takes a
+      single argument: bool as to whether the write succeeded (true) or failed
+      (false).
+      */
      system.storageWrite = function()
      {
          if (arguments.length == 3 && typeof(arguments[2] === 'function'))
@@ -312,6 +329,16 @@ function PresenceEntry(sporef, presObj)
          else
              return baseSystem.storageWrite.apply(baseSystem, arguments);
      };
+
+     /**
+      @param {String} readKey (same as writeKey from storageCommit).  Specifies
+      the key in the backend storage system to read data from.
+
+      @param {function} cb Callback to execute when read finishes.  Takes two
+      arguments: 1) bool (true if read succeeded, false if read failed); 2) If
+      read succeeded, the value of the field read in (if read failed, undefined).
+
+      */
      system.storageRead = function()
      {
          if (arguments.length == 2 && typeof(arguments[1] === 'function'))
@@ -319,6 +346,18 @@ function PresenceEntry(sporef, presObj)
          else
              return baseSystem.storageRead.apply(baseSystem, arguments);
      };
+
+
+     
+
+     /**
+      @param {String} eraseKey (same as writeKey from storageCommit and readKey
+      from storageRead).  Specifies the element in the backend storage system to
+      remove.
+
+      @param {function} cb Callback to execute when remove finishes.  Takes a
+      single argument: bool (true if remov is successful, false otherwise).
+      */
      system.storageErase = function()
      {
          if (arguments.length == 2 && typeof(arguments[1] === 'function'))
@@ -327,6 +366,7 @@ function PresenceEntry(sporef, presObj)
              return baseSystem.storageErase.apply(baseSystem, arguments);
      };
 
+     
      /**
       @ignore
       */
@@ -630,13 +670,25 @@ function PresenceEntry(sporef, presObj)
        @param Which presence to send from.
        @param Message object to send.
        @param Visible to send to.
-       @param (Optional) Error handler function.
        */
       system.sendMessage = function()
       {
           baseSystem.sendMessage.apply(baseSystem, arguments);
       };
 
+
+     /**
+      @function
+      @param Which presence to send from.
+      @param Message object to send.
+      @param Visible to send to.
+      */
+     system.sendMessageUnreliable = function()
+     {
+         baseSystem.sendMessageUnreliable.apply(baseSystem,arguments);
+     };
+     
+     
       /** @function
        *  @description Loads a file and evaluates its contents. Note
        *  that this version *always* imports the file, even if it was
@@ -760,13 +812,13 @@ function PresenceEntry(sporef, presObj)
       /** @ignore */
       system.__wrapPresConnCB = function(callback)
       {
-          var returner = function(presConn)
+          var returner = function(presConn, /**only for entity-wide onPresenceConnected call*/clearable)
           {
               system.__addToPresencesArray(presConn);
               this.addToSelfMap(presConn);
               this.__setBehindSelf(presConn);
               if (typeof(callback) === 'function')
-                  callback(presConn);
+                  callback(presConn,clearable);
           };
           return std.core.bind(returner,this);
       };

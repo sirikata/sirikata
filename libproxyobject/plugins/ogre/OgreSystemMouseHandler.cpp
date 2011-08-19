@@ -762,11 +762,11 @@ void OgreSystemMouseHandler::onUIDirectoryListingFinished(String initial_path,
     mUIWidgetView->evaluateJS(os.str());
 }
 
-void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& args) {
+boost::any OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& args) {
     printf("ui action event fired arg length = %d\n", (int)args.size());
     if (args.size() < 1) {
         printf("expected at least 1 argument, returning.\n");
-        return;
+        return boost::any();
     }
 
     String action_triggered(args[0].data());
@@ -778,7 +778,7 @@ void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& arg
     } else if(action_triggered == "action_directory_list_request") {
         if(args.size() != 2) {
             printf("expected 2 arguments, returning.\n");
-            return;
+            return boost::any();
         }
         String pathRequested(args[1].data());
         std::tr1::shared_ptr<Transfer::DiskManager::DiskRequest> scan_req(
@@ -786,6 +786,8 @@ void OgreSystemMouseHandler::onUIAction(WebView* webview, const JSArguments& arg
                 std::tr1::bind(&OgreSystemMouseHandler::onUIDirectoryListingFinished, this, pathRequested, _1)));
         Transfer::DiskManager::getSingleton().addRequest(scan_req);
     }
+
+    return boost::any();
 }
 
 void OgreSystemMouseHandler::ensureUI() {

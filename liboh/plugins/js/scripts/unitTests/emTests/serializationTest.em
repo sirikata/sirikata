@@ -367,7 +367,7 @@ function undefinedObject()
 
 function nullObject()
 {
-    var toSerialized = null;
+    var toSerialize  = null;
     var serialized   = system.serialize(toSerialize);
     var deserialized = system.deserialize(serialized);
 

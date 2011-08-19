@@ -38,9 +38,6 @@
 #include <sirikata/ogre/OgreHeaders.hpp>
 #include <OgreResourceManager.h>
 #include <OgrePixelFormat.h>
-#include "resourceManager/ResourceDownloadPlanner.hpp"
-#include "resourceManager/DistanceDownloadPlanner.hpp"
-#include "resourceManager/SAngleDownloadPlanner.hpp"
 
 #include <sirikata/ogre/task/EventManager.hpp>
 #include <sirikata/core/task/WorkQueue.hpp>
@@ -241,12 +238,9 @@ public:
     boost::any startAnimation(std::vector<boost::any>& params);
     boost::any stopAnimation(std::vector<boost::any>& params);
 
-    boost::any setMaxObjects(std::vector<boost::any>& params);
-
     ~OgreSystem();
 
 private:
-    ResourceDownloadPlanner *dlPlanner;
     void instantiateAllObjects(ProxyManagerPtr pop);
     double clamp(const double& val);
 

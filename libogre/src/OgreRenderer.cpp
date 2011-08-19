@@ -59,6 +59,10 @@
 #include <sirikata/ogre/WebViewManager.hpp>
 
 
+#include "DistanceDownloadPlanner.hpp"
+#include "SAngleDownloadPlanner.hpp"
+
+
 //volatile char assert_thread_support_is_gequal_2[OGRE_THREAD_SUPPORT*2-3]={0};
 //volatile char assert_thread_support_is_lequal_2[5-OGRE_THREAD_SUPPORT*2]={0};
 //enable the below when NEDMALLOC is turned off, so we can verify that NEDMALLOC is off
@@ -259,15 +263,19 @@ OgreRenderer::OgreRenderer(Context* ctx)
    mLastFrameTime(Task::LocalTime::now()),
    mOnTickCallback(NULL),
    mModelParser( ModelsSystemFactory::getSingleton ().getConstructor ( "any" ) ( "" ) ),
+   mDownloadPlanner(NULL),
    mNextFrameScreenshotFile("")
 {
+    mDownloadPlanner = new SAngleDownloadPlanner(mContext);
+
     try {
         // These have to be consistent with any other simulations -- e.g. the
         // space bullet plugin and scripting plugins that expose mesh data
         std::vector<String> names_and_args;
+        names_and_args.push_back("triangulate"); names_and_args.push_back("all");
+        names_and_args.push_back("compute-normals"); names_and_args.push_back("");
         names_and_args.push_back("reduce-draw-calls"); names_and_args.push_back("");
         names_and_args.push_back("center"); names_and_args.push_back("");
-        names_and_args.push_back("compute-normals"); names_and_args.push_back("");
         mModelFilter = new Mesh::CompositeFilter(names_and_args);
     }
     catch(Mesh::CompositeFilter::Exception e) {
@@ -494,7 +502,7 @@ bool OgreRenderer::initialize(const String& options, bool with_berkelium) {
     }
     mSceneManager->setShadowTechnique(shadowTechnique->as<Ogre::ShadowTechnique>());
     mSceneManager->setShadowFarDistance(shadowFarDistance->as<float32>());
-    mSceneManager->setAmbientLight(Ogre::ColourValue(0.0,0.0,0.0,0));
+    mSceneManager->setAmbientLight(Ogre::ColourValue(1.0,1.0,1.0,1.0));
     sActiveOgreScenes.push_back(this);
 
     if (with_berkelium)
@@ -870,6 +878,8 @@ boost::any OgreRenderer::invoke(std::vector<boost::any>& params) {
 
     if (name == "onTick")
         return setOnTick(params);
+    else if (name == "setMaxObjects")
+        return setMaxObjects(params);
     else
         SILOG(ogre, warn, "Function " << name << " was invoked but this function was not found.");
 
@@ -882,6 +892,16 @@ boost::any OgreRenderer::setOnTick(std::vector<boost::any>& params) {
 
     Invokable* handler = Invokable::anyAsInvokable(params[1]);
     mOnTickCallback = handler;
+    return boost::any();
+}
+
+boost::any OgreRenderer::setMaxObjects(std::vector<boost::any>& params) {
+    if (params.size() < 2) return boost::any();
+    if (!Invokable::anyIsNumeric(params[1])) return boost::any();
+    uint32 new_max_objects = Invokable::anyAsNumeric(params[1]);
+
+    mDownloadPlanner->setMaxObjects(new_max_objects);
+
     return boost::any();
 }
 
@@ -926,6 +946,7 @@ int32 OgreRenderer::parallaxShadowSteps() {
 }
 
 void OgreRenderer::attachCamera(const String &renderTargetName, Camera* entity) {
+    mDownloadPlanner->setCamera(entity);
     mAttachedCameras.insert(entity);
 }
 

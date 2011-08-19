@@ -53,11 +53,12 @@ if (typeof(sirikata) === "undefined") {
         if (console && console.log && typeof(console.log) === "function") {
             console.log.apply(console, arguments);
         }
+        return undefined;
     };
     sirikata.event = function() {
         var args = [];
         for(var i = 0; i < arguments.length; i++) { args.push(arguments[i]); }
-        sirikata.__event.apply(this, args);
+        return sirikata.__event.apply(this, args);
     };
 }
 
@@ -125,6 +126,11 @@ sirikata.listenToBrowser = function(name, cb) {
     // Build and register string name of handler
     var handler_name = 'sirikata.__listenToBrowserHandlers["' + rand_key + '"]';
     sirikata.__event.apply(this, ['__listenToBrowser', stringify(name), handler_name]);
+};
+
+/** Get the current browser URL. */
+sirikata.getBrowserURL = function(name) {
+    return sirikata.__event.apply(this, ['__getBrowserURL', stringify(name)]);
 };
 
 /** Close the browser with the given name. */

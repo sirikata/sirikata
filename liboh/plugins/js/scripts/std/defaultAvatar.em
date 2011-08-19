@@ -42,11 +42,12 @@ std.simpleStorage.setScript(
         system.require('std/shim/restore/persistService.em');
         system.require('std/script/scriptable.em');
         system.require('std/movement/movable.em');
+        system.require('std/movement/animatable.em');
         system.require('std/graphics/default.em');
-
         
         scriptable = new std.script.Scriptable();
         movable = new std.movement.Movable(true); // Self only
+        animatable = new std.movement.Animatable();
         
         // For convenience in debugging, figuring out who's trying to
         // contact you, etc, while we don't have a UI for it, print

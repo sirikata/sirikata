@@ -43,80 +43,55 @@ std.graphics.AnimationInfo = system.Class.extend(
     {
         init: function(pres, sim) {
             this._pres = pres;
-
             this._subscription_group = [];
 
             if (sim) {
               this._simulator = sim;
+              var animationRequestHandler = std.core.bind(this.onAnimationMessage, this);
+              animationRequestHandler << [{"animationInfo"::}];
             }
 
-            this._animation_map = new Array();
-
-            var p  = new util.Pattern("name", "support_animation");
-            std.core.bind(this.onTestMessage, this) << p;
             this._pres.onProxAdded(std.core.bind(this.proxAddedCallback, this), true);
         },
 
 
-        // Send a message to all subscribers of animation information.
-        sendAll: function(msg) {
-            for(var i = 0; i < this._subscription_group.length; i++) {
-                //system.__debugPrint("Sending anim msg to " + this._subscription_group[i] + " \n");
-                msg >> this._subscription_group[i] >> [];
-            }
-        },
-
         // Handles requests to send an animation info messages.
-        sendAnimationInfo: function(cmd, vis_addr, anim_name) {
+        sendAnimationInfo: function(cmd, vis_addr, anim_name, retryAttempt) {
+            if (retryAttempt == 5) return;
+      
             if (!anim_name) {
               anim_name="";
             }
 
-            if (cmd == 'AnimationInfo' && vis_addr) {
-                this.sendAll( { 'animation_info' : '1', 'vis_addr' : vis_addr, 'anim_name' : anim_name } );
-                this._animation_map[vis_addr] = anim_name;
+            if (!retryAttempt) {
+              retryAttempt = 0;
             }
+
+            var msg = { "animationRequest" : "1",  "setAnimation" : "1",  "animationName" : anim_name  };
+
+            msg >> vis_addr >> [std.core.bind(this.handleAnimationResponse, this), 5, std.core.bind(this.sendAnimationInfo, this, cmd, vis_addr, anim_name, retryAttempt+1) ];
         },
 
         // Handler for animation msgs from others.
         onAnimationMessage: function(msg, sender) {
+            msg.makeReply( {} ) >> [];
+
             if (!this._simulator) return;
 
-            //system.__debugPrint("Received anim msg: " + msg.vis_addr + " : " + msg.anim_name + "\n");
-          
             var visibleMap = system.getProxSet(system.self);
             for (var key in visibleMap) {
-              if (msg.vis_addr == key) {
-                this._simulator.startAnimation(visibleMap[key], msg.anim_name, true);
+              if (sender == key) {
+                this._simulator.startAnimation(sender, msg.animationName, true);
               }
            }
         },
 
-        // Handle an initial message from a new neighbor, adding them and listening for messages from them.
-        handleNewAnimationSubscriber: function(msg, sender) {
-            if (msg.support_animation != 'yes') return;
-
-            for(var i = 0; i < this._subscription_group.length; i++) {
-                if(this._subscription_group[i].toString() == sender.toString())
-                    return;
-            }
-
-
-            this._subscription_group.push(sender);
-            var p = new util.Pattern("animation_info");
-            std.core.bind(this.onAnimationMessage, this) << p << sender;
-           
-            for (var i in this._animation_map) {
-              //system.__debugPrint("sending introductory anim msg: " + i + " : " + this._animation_map[i] + "\n");
-              var msg = { 'animation_info' : '1', 'vis_addr' : i, 'anim_name' : this._animation_map[i] };
-              msg >> sender >> [];
-            }
+        handleAnimationResponse: function(msg, sender) {
         },
 
         proxAddedCallback: function(new_addr_obj) {
             if(system.self.toString() == new_addr_obj.toString())
                 return;
-
 
             this.sendIntro(new_addr_obj, 5);
         },
@@ -124,14 +99,11 @@ std.graphics.AnimationInfo = system.Class.extend(
         sendIntro: function(new_addr_obj, retries) {
             if (retries == 0) return;
 
-            var test_msg = { "name" : "support_animation" };
             //also register a callback
-            test_msg >> new_addr_obj >> [std.core.bind(this.handleNewAnimationSubscriber, this), 2, std.core.bind(this.sendIntro, this, new_addr_obj, retries-1)];
+            var msg = { "animationRequest" : "1", "intro" : "1"  };
+            msg >> new_addr_obj >> [std.core.bind(this.handleAnimationResponse, this), 5, std.core.bind(this.sendIntro, this, new_addr_obj, retries-1) ];
+
         },
 
-        // Reply to probes for what protocols we support.
-        onTestMessage: function(msg, sender) {
-            msg.makeReply( { "support_animation": "yes" } ) >> [];
-        }
     }
 );

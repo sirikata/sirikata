@@ -33,6 +33,7 @@
 #include <sirikata/core/options/CommonOptions.hpp>
 #include <sirikata/core/options/Options.hpp>
 #include <sirikata/core/util/Time.hpp>
+#include <sirikata/core/util/Timer.hpp>
 
 namespace Sirikata {
 
@@ -42,7 +43,7 @@ void InitOptions() {
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_atLeastLevel) )
         .addOption( reinterpret_cast<Sirikata::OptionValue*>(Sirikata_Logging_OptionValue_moduleLevel) )
 
-        .addOption(new OptionValue("version","false",Sirikata::OptionValueType<bool>(),"Report version number."))
+        .addOption(new OptionValue("version","true",Sirikata::OptionValueType<bool>(),"Report version number."))
 
         .addOption(new OptionValue(OPT_CRASHREPORT_URL,"http://crashes.sirikata.com/report",Sirikata::OptionValueType<String>(),"URL to report crashes to."))
 
@@ -94,7 +95,7 @@ void setLogOutput() {
     String logfile = GetOptionValue<String>(OPT_LOG_FILE);
     if (logfile != "" && logfile != "-") {
         // Try to open the log file
-        std::ostream* logfs = new std::ofstream(logfile.c_str());
+        std::ostream* logfs = new std::ofstream(logfile.c_str(), std::ios_base::out | std::ios_base::app);
         if (*logfs) {
             Sirikata::Logging::setLogStream(logfs);
             return;
@@ -107,6 +108,7 @@ void setLogOutput() {
 void reportVersion() {
     bool do_version = GetOptionValue<bool>("version");
     if (!do_version) return;
+    SILOG(core,info,"Sirikata started at " << Timer::nowAsString());
     SILOG(core,info,"Sirikata version " << SIRIKATA_VERSION << " (git #" << SIRIKATA_GIT_REVISION << ")");
 }
 

@@ -77,6 +77,9 @@ private:
     void handleAssetParsed(Mesh::VisualPtr md);
 
     void addDependentDownload(const Transfer::URI& depUrl);
+    // Start is separate from add so we can be sure mActiveDownloads isn't being
+    // modified after we start the downloads, except by the completion handler
+    void startDependentDownloads();
 
     static void weakTextureDownloaded(const std::tr1::weak_ptr<AssetDownloadTask>&,std::tr1::shared_ptr<Transfer::ChunkRequest> request,
         std::tr1::shared_ptr<const Transfer::DenseData> response);
@@ -105,6 +108,8 @@ private:
     // Active downloads, for making sure shared_ptrs stick around and for cancelling
     typedef std::map<Transfer::URI, Transfer::ResourceDownloadTaskPtr> ActiveDownloadMap;
     ActiveDownloadMap mActiveDownloads;
+
+    boost::mutex mDependentDownloadMutex;
 };
 typedef std::tr1::shared_ptr<AssetDownloadTask> AssetDownloadTaskPtr;
 

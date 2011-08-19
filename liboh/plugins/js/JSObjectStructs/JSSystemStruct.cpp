@@ -166,7 +166,7 @@ v8::Handle<v8::Value> JSSystemStruct::struct_canImport()
 }
 
 
-v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl)
+v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct* jspres, const String& serialized_message,JSPositionListener* jspl,bool reliable)
 {
 
     //checking capability for this presence
@@ -179,8 +179,11 @@ v8::Handle<v8::Value> JSSystemStruct::sendMessageNoErrorHandler(JSPresenceStruct
         }
     }
 
-    return associatedContext->sendMessageNoErrorHandler(jspres,serialized_message,jspl);
+    return associatedContext->sendMessageNoErrorHandler(jspres,serialized_message,jspl,reliable);
 }
+
+
+
 
 v8::Handle<v8::Value> JSSystemStruct::setSandboxMessageCallback(v8::Persistent<v8::Function> callback)
 {

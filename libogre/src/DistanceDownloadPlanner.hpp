@@ -33,19 +33,10 @@
 #ifndef _DISTANCE_DOWNLOAD_PLANNER_HPP
 #define _DISTANCE_DOWNLOAD_PLANNER_HPP
 
-#include <sirikata/core/transfer/URI.hpp>
-#include <sirikata/core/util/ListenerProvider.hpp>
-#include <sirikata/core/service/PollingService.hpp>
-#include <sirikata/core/service/Context.hpp>
-#include <sirikata/mesh/ModelsSystem.hpp>
-#include <sirikata/proxyobject/MeshListener.hpp>
-#include "ResourceDownloadPlanner.hpp"
-#include <vector>
+#include <sirikata/ogre/ResourceDownloadPlanner.hpp>
 
 namespace Sirikata {
-namespace Graphics{
-class Entity;
-}
+namespace Graphics {
 
 class DistanceDownloadPlanner : public ResourceDownloadPlanner
 {
@@ -54,10 +45,8 @@ public:
     ~DistanceDownloadPlanner();
 
     virtual void addNewObject(ProxyObjectPtr p, Graphics::Entity *mesh);
+    virtual void updateObject(ProxyObjectPtr p);
     virtual void removeObject(ProxyObjectPtr p);
-
-    //MeshListener interface
-    virtual void onSetMesh (ProxyObjectPtr proxy, Transfer::URI const& newMesh,const SpaceObjectReference& sporef);
 
     //PollingService interface
     virtual void poll();
@@ -128,6 +117,8 @@ protected:
 
 
 };
-}
+
+} // namespace Graphics
+} // namespace Sirikata
 
 #endif
