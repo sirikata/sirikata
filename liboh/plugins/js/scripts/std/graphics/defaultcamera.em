@@ -72,6 +72,8 @@ function() {
                     } else {
                         var step = util.exp(-dt*2);
                         pos = goalPos - toGoal.div(toGoalLen).mul(toGoalLen*step);
+                        if (this._lastOrientation.dot(goalOrient) < 0)
+                            this._lastOrientation = this._lastOrientation.neg();
                         orient = (goalOrient.mul(1-step).add(this._lastOrientation.mul(step))).normal();
                     }
                 }
