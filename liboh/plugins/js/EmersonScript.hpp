@@ -357,8 +357,8 @@ private:
     //debugging code to output the sporefs of all the presences that I have in mPresences
     void printMPresences();
 
-
-    std::map< SpaceObjectReference ,ODP::Port* >mMessagingPortMap;
+    typedef std::map<SpaceObjectReference, ODP::Port*> MessagingPortMap;
+    MessagingPortMap mMessagingPortMap;
 
 
     void callbackUnconnected(ProxyObjectPtr proxy, HostedObject::PresenceToken token);

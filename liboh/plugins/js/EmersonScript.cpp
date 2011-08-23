@@ -538,6 +538,13 @@ void EmersonScript::stop() {
     mParent->removeListener((SessionEventListener*)this);
 
     mPresences.clear();
+
+    // Delete messaging ports
+    for(MessagingPortMap::iterator messaging_it = mMessagingPortMap.begin();
+        messaging_it != mMessagingPortMap.end();
+        messaging_it++)
+        delete messaging_it->second;
+    mMessagingPortMap.clear();
 }
 
 bool EmersonScript::valid() const
@@ -930,6 +937,13 @@ void EmersonScript::removePresenceData(const SpaceObjectReference& sporefToDelet
     PresenceMapIter pIter = mPresences.find(sporefToDelete);
     if (pIter != mPresences.end())
         mPresences.erase(pIter);
+
+    // Remove the ODP::Port used for unreliable messaging
+    MessagingPortMap::iterator messaging_it = mMessagingPortMap.find(sporefToDelete);
+    if (messaging_it != mMessagingPortMap.end()) {
+        delete messaging_it->second;
+        mMessagingPortMap.erase(messaging_it);
+    }
 }
 
 
