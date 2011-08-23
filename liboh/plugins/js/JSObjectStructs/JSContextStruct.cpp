@@ -852,7 +852,6 @@ v8::Handle<v8::Value> JSContextStruct::struct_executeScript(v8::Handle<v8::Funct
     for (int s=1; s < args.Length(); ++s)
         argv[s-1] = args[s];
 
-
     v8::Handle<v8::Value> returner =  jsObjScript->executeInSandbox(this,funcToCall, argc,argv);
 
     delete argv; //free additional memory.

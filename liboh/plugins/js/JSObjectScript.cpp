@@ -758,7 +758,7 @@ v8::Handle<v8::Value> JSObjectScript::compileFunctionInContext(v8::Handle<v8::Fu
 {
     v8::HandleScope handle_scope;
     v8::Context::Scope context_scope(getCurrentV8Context());
-
+    
     TryCatch try_catch;
 
     String errorMessage= "Cannot interpret callback function as string while executing in context.  ";
@@ -858,8 +858,8 @@ v8::Handle<v8::Value> JSObjectScript::invokeCallback(JSContextStruct* ctx, v8::H
  */
 v8::Handle<v8::Value>JSObjectScript::executeInSandbox(JSContextStruct* jscont, v8::Handle<v8::Function> funcToCall,int argc, v8::Handle<v8::Value>* argv)
 {
-    ScopedEvalContext(this,EvalContext(jscont));
-
+    ScopedEvalContext scopedContext(this,EvalContext(jscont));
+    
     JSLOG(insane, "executing script in alternate context");
     v8::Handle<v8::Value> compiledFunc = compileFunctionInContext(funcToCall);
     if (! compiledFunc->IsFunction())
