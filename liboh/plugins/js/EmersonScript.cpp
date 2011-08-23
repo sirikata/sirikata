@@ -1146,7 +1146,6 @@ void EmersonScript::setPhysicsFunction(const SpaceObjectReference sporef, const 
 }
 
 
-//just sets the solid angle query for the object.
 void EmersonScript::setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa)
 {
     mParent->requestQueryUpdate(
@@ -1163,6 +1162,20 @@ SolidAngle EmersonScript::getQueryAngle(const SpaceObjectReference sporef)
     return returner;
 }
 
+
+void EmersonScript::setQueryCount(const SpaceObjectReference sporef, const uint32 count)
+{
+    mParent->requestQueryUpdate(
+        sporef.space(), sporef.object(),
+        mParent->requestQueryAngle(sporef.space(), sporef.object()),
+        count
+    );
+}
+
+uint32 EmersonScript::getQueryCount(const SpaceObjectReference sporef)
+{
+    return mParent->requestQueryMaxResults(sporef.space(),sporef.object());
+}
 
 } // namespace JS
 } // namespace Sirikata

@@ -141,6 +141,7 @@ v8::Handle<v8::Value> JSPresenceStruct::getAllData()
     returner->Set(v8::String::New("suspendedVelocity"),CreateJSResult(curContext,mSuspendedVelocity));
 
     returner->Set(v8::String::New("solidAngleQuery"),struct_getQueryAngle());
+    returner->Set(v8::String::New("queryCount"),struct_getQueryCount());
 
 
 
@@ -308,6 +309,27 @@ v8::Handle<v8::Value> JSPresenceStruct::setQueryAngleFunction(SolidAngle new_qa)
     mQuery = new_qa;
     return v8::Undefined();
 }
+
+//FIXME: should store query count locally instead of requiring a request through
+//EmersonScript to hosted object.
+uint32 JSPresenceStruct::getQueryCount()
+{
+    return mParent->getQueryCount(getSporef());
+}
+
+v8::Handle<v8::Value> JSPresenceStruct::struct_getQueryCount()
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("getQueryCount");
+    return v8::Integer::New(getQueryCount());
+}
+
+v8::Handle<v8::Value> JSPresenceStruct::setQueryCount(uint32 new_qc)
+{
+    INLINE_CHECK_IS_CONNECTED_ERROR("setQueryCount");
+    mParent->setQueryCount(getSporef(), new_qc);
+    return v8::Undefined();
+}
+
 
 v8::Handle<v8::Value> JSPresenceStruct::setVisualScaleFunction(float new_scale)
 {

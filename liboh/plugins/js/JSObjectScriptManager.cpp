@@ -241,7 +241,7 @@ void JSObjectScriptManager::createSystemTemplate()
 
     mSystemTemplate->Set(v8::String::New("sendMessage"), v8::FunctionTemplate::New(JSSystem::sendMessageReliable));
     mSystemTemplate->Set(v8::String::New("sendMessageUnreliable"),v8::FunctionTemplate::New(JSSystem::sendMessageUnreliable));
-    
+
     mSystemTemplate->Set(v8::String::New("import"), v8::FunctionTemplate::New(JSSystem::root_import));
 
     mSystemTemplate->Set(v8::String::New("http"), v8::FunctionTemplate::New(JSSystem::root_http));
@@ -471,6 +471,8 @@ void JSObjectScriptManager::createPresenceTemplate()
   // Query angle
   proto_t->Set(v8::String::New("setQueryAngle"),v8::FunctionTemplate::New(JSPresence::setQueryAngle));
   proto_t->Set(v8::String::New("getQueryAngle"), v8::FunctionTemplate::New(JSPresence::getQueryAngle));
+  proto_t->Set(v8::String::New("setQueryCount"),v8::FunctionTemplate::New(JSPresence::setQueryCount));
+  proto_t->Set(v8::String::New("getQueryCount"), v8::FunctionTemplate::New(JSPresence::getQueryCount));
 
   //set up graphics
   proto_t->Set(v8::String::New("_runSimulation"),v8::FunctionTemplate::New(JSPresence::runSimulation));

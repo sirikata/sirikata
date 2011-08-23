@@ -104,6 +104,13 @@ Object.defineProperty(system.__presence_constructor__.prototype, "queryAngle",
                       }
 );
 
+Object.defineProperty(system.__presence_constructor__.prototype, "queryCount",
+                      {
+                          get: function() { return this.getQueryCount(); },
+                          set: function() { return this.setQueryCount.apply(this, arguments); },
+                          enumerable: true
+                      }
+);
 
 Object.defineProperty(system.__presence_constructor__.prototype, "velocity",
                       {
@@ -356,6 +363,19 @@ system.__presence_constructor__.prototype.__getType = function()
     presence.prototype.getQueryAngle = function(){};
 
 
+    /**@function
+       @description Sets the maximum number of results to be returned
+            by the query issued from this presence.
+       @param count the maximum number of results.
+    */
+    presence.prototype.setQueryCount = function(/** int */ count){};
+
+    /**@function
+       @description Returns the maximum number of results requested
+       for this presence's query
+    */
+    presence.prototype.getQueryCount = function(){};
+
 
       /** @function
        *  @description Returns the (decoded) physics settings of the presence.
@@ -494,6 +514,7 @@ system.__presence_constructor__.prototype.__getType = function()
      // arguments
 
      var orig_setQueryAngle = system.__presence_constructor__.prototype.setQueryAngle;
+     var orig_setQueryCount = system.__presence_constructor__.prototype.setQueryCount;
      var orig_setPosition = system.__presence_constructor__.prototype.setPosition;
      var orig_setVelocity = system.__presence_constructor__.prototype.setVelocity;
      var orig_setOrientation = system.__presence_constructor__.prototype.setOrientation;
@@ -511,6 +532,15 @@ system.__presence_constructor__.prototype.__getType = function()
              throw new RangeError('presence.setQueryAngle expects a value between 0 and 12.5664');
 
          return orig_setQueryAngle.apply(this, [v]);
+     };
+
+     system.__presence_constructor__.prototype.setQueryCount = function(v) {
+         if (typeof(v) !== 'number')
+             throw new TypeError('presence.setQueryCount expects a number');
+         if (infiniteOrNaN(v) || v < 0)
+             throw new RangeError('presence.setQueryCount expects a value greater than 0');
+
+         return orig_setQueryCount.apply(this, [v]);
      };
 
      system.__presence_constructor__.prototype.setPosition = function(v) {

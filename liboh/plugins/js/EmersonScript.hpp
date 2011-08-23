@@ -189,6 +189,8 @@ public:
 
     void setQueryAngleFunction(const SpaceObjectReference sporef, const SolidAngle& sa);
     SolidAngle getQueryAngle(const SpaceObjectReference sporef);
+    void setQueryCount(const SpaceObjectReference sporef, const uint32 count);
+    uint32 getQueryCount(const SpaceObjectReference sporef);
 
 
     v8::Handle<v8::Value> getPhysicsFunction(const SpaceObjectReference sporef);

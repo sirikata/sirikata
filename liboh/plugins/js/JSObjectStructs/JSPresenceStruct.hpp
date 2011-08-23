@@ -147,6 +147,11 @@ struct JSPresenceStruct : public JSPositionListener,
     SolidAngle getQueryAngle();
     v8::Handle<v8::Value>  struct_getQueryAngle();
     v8::Handle<v8::Value>  setQueryAngleFunction(SolidAngle new_qa);
+    uint32 getQueryCount();
+    v8::Handle<v8::Value>  struct_getQueryCount();
+    v8::Handle<v8::Value>  setQueryCount(uint32 new_qc);
+
+
     v8::Handle<v8::Value>  setOrientationVelFunction(Quaternion newOrientationVel);
     v8::Handle<v8::Value>  struct_setVelocity(const Vector3f& newVel);
     v8::Handle<v8::Value>  struct_setPosition(Vector3f newPos);
