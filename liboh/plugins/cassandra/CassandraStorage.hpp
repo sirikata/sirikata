@@ -57,16 +57,17 @@ public:
     virtual bool read(const Bucket& bucket, const Key& key, const CommitCallback& cb = 0, const String& timestamp="@");
 
 private:
-    typedef std::tr1::tuple<std::string,  //column family
-                            std::string,  //row key
-                            std::string,  //super column name
-                            std::string,  //column name
-                            std::string,  //value
-                            bool          //is_delete
-                          > SuperColumnTuple;
 
-    typedef std::vector<SuperColumnTuple> SuperColumnTuples;
     typedef std::vector<String> Keys;
+    typedef org::apache::cassandra::Column Column;
+    typedef std::vector<Column> Columns;
+
+    typedef std::tr1::tuple<String,   //column family
+                            String,   //row key
+                            String,   //super column name
+                            Columns,  //columns to write
+                            Keys      //keys to erase
+                          > batchTuple;
 
     // StorageActions are individual actions to take, i.e. read, write,
     // erase. We queue them up in a list and eventually fire them off in a
@@ -85,9 +86,8 @@ private:
 
         StorageAction& operator=(const StorageAction& rhs);
 
-        // Executes this action. Assumes the owning CassandraStorage has setup the transaction.
-
-        bool execute(CassandraDBPtr db, const Bucket& bucket, SuperColumnTuples& ColTuples, Keys& keys, ReadSet* rs, const String& timestamp="@");
+        // Executes this action: push to list and wait for commitment
+        void execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, const String& timestamp="@");
 
         // Bucket is implicit, passed into execute
         Type type;
@@ -110,20 +110,15 @@ private:
     // passed in directly
     void executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp="@");
 
-    // Complete a commit back in the main thread, cleaning it up and dispatching
-    // the callback
+    // Complete a commit back in the main thread, cleaning it up and dispatching the callback
     void completeCommit(Transaction* trans, CommitCallback cb, bool success, ReadSet* rs);
 
-    // A few helper methods that wrap cassandra operations.
-    bool CassandraBeginTransaction();
-
-    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs, const String& timestamp="@");
+    // Call libcassandra methods to commit transcation
+    bool CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp="@");
 
 
     ObjectHostContext* mContext;
     BucketTransactions mTransactions;
-    SuperColumnTuples mSuperColumnTuples;
-    Keys mKeys;                  //keys for batch read
     String mDBHost;              //host name or ip address for Cassandra server
     int mDBPort;
     CassandraDBPtr mDB;

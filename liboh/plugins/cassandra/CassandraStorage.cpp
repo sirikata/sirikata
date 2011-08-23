@@ -67,46 +67,31 @@ CassandraStorage::StorageAction& CassandraStorage::StorageAction::operator=(cons
     return *this;
 }
 
-bool CassandraStorage::StorageAction::execute(CassandraDBPtr db, const Bucket& bucket, SuperColumnTuples& ColTuples, Keys& keys, ReadSet* rs, const String& timestamp) {
-    bool success = true;
+void CassandraStorage::StorageAction::execute(const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, const String& timestamp) {
     switch(type) {
       case Read:
-          {
-              try{
-                  keys.push_back(key);  // push the key into mKeys for batch read
-              }
-              catch (...){
-                  success = false;
-              }
-          }
+        {
+            (*readKeys).push_back(key);
+        }
         break;
       case Write:
-          {
-              try{
-            	  SuperColumnTuple tuple(CF_NAME, bucket.rawHexData(), timestamp, key, *value, false);
-                  ColTuples.push_back(tuple); // push the tuple into mSuperColumnTuples for batch write
-              }
-              catch (...){
-                  success = false;
-              }
-          }
+        {
+            Column col;
+            col.name = key;
+            col.value = *value;
+            col.timestamp = libcassandra::createTimestamp();
+            (*columns).push_back(col);
+        }
         break;
       case Erase:
-          {
-              try{
-            	  SuperColumnTuple tuple(CF_NAME, bucket.rawHexData(), timestamp, key, "", true);
-                  ColTuples.push_back(tuple);  // push the tuple into mSuperColumnTuples for batch erase
-              }
-              catch (...){
-                  success = false;
-              }
-          }
+        {
+            (*eraseKeys).push_back(key);
+        }
         break;
       case Error:
         SILOG(cassandra-storage, fatal, "Tried to execute an invalid StorageAction.");
         break;
     };
-    return success;
 }
 
 CassandraStorage::CassandraStorage(ObjectHostContext* ctx, const String& host, int port)
@@ -133,39 +118,30 @@ void CassandraStorage::start() {
 void CassandraStorage::initDB() {
     CassandraDBPtr db = Cassandra::getSingleton().open(mDBHost, mDBPort);
     mDB = db;
-
 }
 
-bool CassandraStorage::CassandraBeginTransaction() {
-    if (mSuperColumnTuples.size()!=0|| mKeys.size()!=0){
-        std::cout<<"Transaction List is not empty"<<std::endl;
-        return false;
-    }
-    else
-        return true;
-}
-
-bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, ReadSet* rs, const String& timestamp) {
-    if(mKeys.size()>0){
+bool CassandraStorage::CassandraCommit(CassandraDBPtr db, const Bucket& bucket, Columns* columns, Keys* eraseKeys, Keys* readKeys, ReadSet* rs, const String& timestamp) {
+    if((*readKeys).size()>0){
         try{
-            *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, mKeys);  // batch read
+            *rs=db->db()->getColumnsValues(bucket.rawHexData(),CF_NAME, timestamp, *readKeys);  // batch read
         }
         catch(...){
-            //std::cout <<"Exception Caught when Batch Read"<<std::endl;
             return false;
         }
     }
-    if(mSuperColumnTuples.size()>0){
+    if((*columns).size()>0 || (*eraseKeys).size()>0){
         try{
-            db->db()->batchMutate(mSuperColumnTuples);  // batch write/erase
+            batchTuple tuple=batchTuple(CF_NAME, bucket.rawHexData(), timestamp, *columns, *eraseKeys);
+            db->db()->batchMutate(tuple);
         }
         catch(...){
             std::cout <<"Exception Caught when Batch Write/Erase"<<std::endl;
             return false;
         }
     }
-    mKeys.clear();
-    mSuperColumnTuples.clear();
+    delete columns;
+    delete eraseKeys;
+    delete readKeys;
     return true;
 }
 
@@ -191,9 +167,8 @@ CassandraStorage::Transaction* CassandraStorage::getTransaction(const Bucket& bu
 }
 
 void CassandraStorage::beginTransaction(const Bucket& bucket) {
+    // FIXME should probably throw an exception if one already exists
     getTransaction(bucket);
-    mKeys.clear();
-    mSuperColumnTuples.clear();
 }
 
 void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallback& cb, const String& timestamp){
@@ -218,25 +193,20 @@ void CassandraStorage::commitTransaction(const Bucket& bucket, const CommitCallb
 // passed in directly
 void CassandraStorage::executeCommit(const Bucket& bucket, Transaction* trans, CommitCallback cb, const String& timestamp) {
     ReadSet* rs = new ReadSet;
+    Columns* columns = new Columns;
+    Keys* eraseKeys = new Keys;
+    Keys* readKeys = new Keys;
+
+    for (Transaction::iterator it = trans->begin(); it != trans->end(); it++) {
+        (*it).execute(bucket, columns, eraseKeys, readKeys, timestamp);
+    }
 
     bool success = true;
-    success = CassandraBeginTransaction();
-    for (Transaction::iterator it = trans->begin(); success && it != trans->end(); it++) {
-        success = success && (*it).execute(mDB, bucket, mSuperColumnTuples, mKeys, rs, timestamp);
-        if (!success) {
-            break;
-        }
-    }
-
-    if (success) {
-        success = CassandraCommit(mDB, bucket, rs, timestamp);
-    }
+    success = CassandraCommit(mDB, bucket, columns, eraseKeys, readKeys, rs, timestamp);
 
     if (rs->empty() || !success) {
         delete rs;
         rs = NULL;
-        mKeys.clear();
-        mSuperColumnTuples.clear();
     }
 
     mContext->mainStrand->post(std::tr1::bind(&CassandraStorage::completeCommit, this, trans, cb, success, rs));
